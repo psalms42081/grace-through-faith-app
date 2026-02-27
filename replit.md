@@ -24,7 +24,7 @@ app/                    # Expo Router screens
     index.tsx           # Home screen (Verse of Day, Quick Actions, Devotional banner)
     read.tsx            # Bible Reader — Book selector (OT/NT grouped pills)
     search.tsx          # Search (keyword + reference parsing)
-    study.tsx           # Study tools (Word Study, Context, Historic Voices, Application)
+    study.tsx           # Study tools (Word Study, Context, Historic Voices, Application) — Context & Historic Voices tabs use full 66-book/chapter picker
     explore.tsx         # Maps & Timeline
   read/
     [bookId]/

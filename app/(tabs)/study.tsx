@@ -319,141 +319,216 @@ function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
   );
 }
 
-function ContextTab({ theme }: { theme: typeof Colors.light }) {
-  const [selectedBook, setSelectedBook] = useState<{ bookId: number; chapter: number; bookName: string } | null>(null);
+interface BibleBook {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+}
 
-  const FEATURED_CHAPTERS = [
-    { label: "Genesis 1", bookId: 1, chapter: 1, bookName: "Genesis" },
-    { label: "Psalm 23", bookId: 19, chapter: 23, bookName: "Psalms" },
-    { label: "Isaiah 53", bookId: 23, chapter: 53, bookName: "Isaiah" },
-    { label: "John 3", bookId: 43, chapter: 3, bookName: "John" },
-    { label: "Romans 8", bookId: 45, chapter: 8, bookName: "Romans" },
-  ];
+function ContextTab({ theme }: { theme: typeof Colors.light }) {
+  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+
+  const { data: books } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
 
   const { data: contextCards, isLoading } = useQuery<ContextCard[]>({
-    queryKey: [`/api/context?book=${selectedBook?.bookId}&chapter=${selectedBook?.chapter}`],
-    enabled: !!selectedBook,
+    queryKey: [`/api/context?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+    enabled: !!selectedBook && !!selectedChapter,
   });
 
   const hasCards = contextCards && contextCards.length > 0;
 
+  const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
+  const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+
+  const handleBookSelect = (book: BibleBook) => {
+    if (selectedBook?.id === book.id) {
+      setSelectedBook(null);
+      setSelectedChapter(null);
+    } else {
+      setSelectedBook(book);
+      setSelectedChapter(null);
+    }
+  };
+
+  const handleChapterSelect = (ch: number) => {
+    setSelectedChapter(ch);
+  };
+
+  const chapters = selectedBook
+    ? Array.from({ length: selectedBook.chapterCount }, (_, i) => i + 1)
+    : [];
+
   return (
     <View style={styles.tabContent}>
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        Select a Chapter
-      </Text>
-      <View style={styles.passagePills}>
-        {FEATURED_CHAPTERS.map((c) => {
-          const isActive = selectedBook?.bookId === c.bookId && selectedBook?.chapter === c.chapter;
-          return (
-            <Pressable
-              key={c.label}
-              onPress={() => setSelectedBook(c)}
-              style={[
-                styles.passagePill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Text style={[styles.passagePillText, { color: isActive ? "#fff" : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-                {c.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       {!selectedBook && (
-        <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={[styles.emptyIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="time" size={28} color={theme.accent} />
+        <>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Old Testament
+          </Text>
+          <View style={styles.passagePills}>
+            {otBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => handleBookSelect(b)}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-            Historical Context
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 16 }]}>
+            New Testament
           </Text>
-          <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Select a chapter above to see its historical background, cultural notes, author information, and thematic overview.
-          </Text>
-        </View>
+          <View style={styles.passagePills}>
+            {ntBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => handleBookSelect(b)}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
       )}
 
-      {isLoading && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
-        </View>
+      {selectedBook && !selectedChapter && (
+        <>
+          <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              All Books
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name}
+          </Text>
+          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {selectedBook.chapterCount} chapters · {selectedBook.testament === "OT" ? "Old Testament" : "New Testament"}
+          </Text>
+          <View style={styles.chapterGrid}>
+            {chapters.map((ch) => (
+              <Pressable
+                key={ch}
+                onPress={() => handleChapterSelect(ch)}
+                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {ch}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
       )}
 
-      {hasCards && contextCards!.map((card) => (
-        <View key={card.id} style={[styles.contextCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={styles.contextCardHeader}>
-            <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18" }]}>
-              <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                {(card.category || "general").replace(/_/g, " ")}
-              </Text>
-            </View>
-          </View>
-          <Text style={[styles.contextTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-            {card.title}
+      {selectedBook && selectedChapter && (
+        <>
+          <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name}
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name} {selectedChapter}
           </Text>
-          <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {card.content}
-          </Text>
-          {card.themes && card.themes.length > 0 && (
-            <View style={styles.themePills}>
-              {card.themes.map((t, i) => (
-                <View key={i} style={[styles.themePill, { backgroundColor: theme.primary + "22" }]}>
-                  <Text style={[styles.themePillText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
-                    {t}
-                  </Text>
-                </View>
-              ))}
+
+          {isLoading && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={theme.accent} />
             </View>
           )}
-        </View>
-      ))}
 
-      {selectedBook && !isLoading && !hasCards && (
-        <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
-          <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            No context data available for this chapter yet.
-          </Text>
-        </View>
-      )}
+          {hasCards && contextCards!.map((card) => (
+            <View key={card.id} style={[styles.contextCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.contextCardHeader}>
+                <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18" }]}>
+                  <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    {(card.category || "general").replace(/_/g, " ")}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.contextTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                {card.title}
+              </Text>
+              <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                {card.content}
+              </Text>
+              {card.themes && card.themes.length > 0 && (
+                <View style={styles.themePills}>
+                  {card.themes.map((t, i) => (
+                    <View key={i} style={[styles.themePill, { backgroundColor: theme.primary + "22" }]}>
+                      <Text style={[styles.themePillText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
+                        {t}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
 
-      {selectedBook && hasCards && (
-        <Pressable
-          onPress={() => router.push(`/passage-context?bookId=${selectedBook.bookId}&chapter=${selectedBook.chapter}&bookName=${encodeURIComponent(selectedBook.bookName)}`)}
-          style={[styles.viewFullBtn, { backgroundColor: theme.accent }]}
-        >
-          <Text style={[styles.viewFullText, { fontFamily: "Inter_600SemiBold" }]}>
-            View Full Passage Study
-          </Text>
-          <Ionicons name="arrow-forward" size={16} color="#fff" />
-        </Pressable>
+          {!isLoading && !hasCards && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                No Context Data Yet
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Historical context for {selectedBook.name} {selectedChapter} hasn't been added yet. Context data is currently available for Genesis 1, Psalm 23, Isaiah 53, John 1, John 3, Romans 8, and Revelation 21.
+              </Text>
+            </View>
+          )}
+
+          {hasCards && (
+            <Pressable
+              onPress={() => router.push(`/passage-context?bookId=${selectedBook.id}&chapter=${selectedChapter}&bookName=${encodeURIComponent(selectedBook.name)}`)}
+              style={[styles.viewFullBtn, { backgroundColor: theme.accent }]}
+            >
+              <Text style={[styles.viewFullText, { fontFamily: "Inter_600SemiBold" }]}>
+                View Full Passage Study
+              </Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </Pressable>
+          )}
+        </>
       )}
     </View>
   );
 }
 
 function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light; commentators: Commentator[] }) {
-  const [selectedChapter, setSelectedChapter] = useState<{ bookId: number; chapter: number; label: string } | null>(null);
+  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
 
-  const CHAPTERS = [
-    { label: "Genesis 1", bookId: 1, chapter: 1 },
-    { label: "Psalm 23", bookId: 19, chapter: 23 },
-    { label: "John 3", bookId: 43, chapter: 3 },
-    { label: "Romans 8", bookId: 45, chapter: 8 },
-  ];
+  const { data: books } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
 
   const { data: commentaryData, isLoading } = useQuery<CommentaryResult[]>({
-    queryKey: [`/api/commentary?book=${selectedChapter?.bookId}&chapter=${selectedChapter?.chapter}`],
-    enabled: !!selectedChapter,
+    queryKey: [`/api/commentary?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+    enabled: !!selectedBook && !!selectedChapter,
   });
 
   const hasCommentary = commentaryData && commentaryData.length > 0;
+
+  const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
+  const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+
+  const chapters = selectedBook
+    ? Array.from({ length: selectedBook.chapterCount }, (_, i) => i + 1)
+    : [];
 
   return (
     <View style={styles.tabContent}>
@@ -510,70 +585,124 @@ function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light
       <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
         Browse Commentary
       </Text>
-      <View style={styles.passagePills}>
-        {CHAPTERS.map((c) => {
-          const isActive = selectedChapter?.label === c.label;
-          return (
-            <Pressable
-              key={c.label}
-              onPress={() => setSelectedChapter(c)}
-              style={[
-                styles.passagePill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Text style={[styles.passagePillText, { color: isActive ? "#fff" : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-                {c.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
 
-      {isLoading && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
+      {!selectedBook && (
+        <View style={styles.passagePills}>
+          {[...otBooks.slice(0, 5), ...ntBooks.slice(0, 5)].length > 0 ? (
+            <>
+              {otBooks.map((b) => (
+                <Pressable
+                  key={b.id}
+                  onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                  style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    {b.abbreviation}
+                  </Text>
+                </Pressable>
+              ))}
+              <View style={{ width: "100%", height: 8 }} />
+              {ntBooks.map((b) => (
+                <Pressable
+                  key={b.id}
+                  onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                  style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    {b.abbreviation}
+                  </Text>
+                </Pressable>
+              ))}
+            </>
+          ) : null}
         </View>
       )}
 
-      {hasCommentary && commentaryData!.map((cr) => (
-        <View key={cr.entry.id} style={[styles.commentaryCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={styles.commentaryHeader}>
-            <View style={[styles.avatarSmall, { backgroundColor: theme.primary }]}>
-              <Ionicons name="person" size={14} color={Colors.light.accent} />
-            </View>
-            <Text style={[styles.commentaryAuthor, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {cr.commentator.name}
+      {selectedBook && !selectedChapter && (
+        <>
+          <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              All Books
             </Text>
-            {cr.entry.verseStart && (
-              <View style={[styles.verseBadge, { backgroundColor: theme.accent + "18" }]}>
-                <Text style={[styles.verseRange, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  vv. {cr.entry.verseStart}{cr.entry.verseEnd && cr.entry.verseEnd !== cr.entry.verseStart ? `-${cr.entry.verseEnd}` : ""}
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name}
+          </Text>
+          <View style={styles.chapterGrid}>
+            {chapters.map((ch) => (
+              <Pressable
+                key={ch}
+                onPress={() => setSelectedChapter(ch)}
+                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {ch}
                 </Text>
-              </View>
-            )}
+              </Pressable>
+            ))}
           </View>
-          {cr.entry.title && (
-            <Text style={[styles.commentaryTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {cr.entry.title}
-            </Text>
-          )}
-          <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={6}>
-            {cr.entry.content}
-          </Text>
-        </View>
-      ))}
+        </>
+      )}
 
-      {selectedChapter && !isLoading && !hasCommentary && (
-        <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
-          <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            No commentary available for this chapter yet.
+      {selectedBook && selectedChapter && (
+        <>
+          <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name}
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name} {selectedChapter}
           </Text>
-        </View>
+
+          {isLoading && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={theme.accent} />
+            </View>
+          )}
+
+          {hasCommentary && commentaryData!.map((cr) => (
+            <View key={cr.entry.id} style={[styles.commentaryCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.commentaryHeader}>
+                <View style={[styles.avatarSmall, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="person" size={14} color={Colors.light.accent} />
+                </View>
+                <Text style={[styles.commentaryAuthor, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {cr.commentator.name}
+                </Text>
+                {cr.entry.verseStart && (
+                  <View style={[styles.verseBadge, { backgroundColor: theme.accent + "18" }]}>
+                    <Text style={[styles.verseRange, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      vv. {cr.entry.verseStart}{cr.entry.verseEnd && cr.entry.verseEnd !== cr.entry.verseStart ? `-${cr.entry.verseEnd}` : ""}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {cr.entry.title && (
+                <Text style={[styles.commentaryTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  {cr.entry.title}
+                </Text>
+              )}
+              <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={6}>
+                {cr.entry.content}
+              </Text>
+            </View>
+          ))}
+
+          {!isLoading && !hasCommentary && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                No Commentary Yet
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Commentary for {selectedBook.name} {selectedChapter} hasn't been added yet. Commentary is currently available for Genesis 1, Psalm 23, John 1, John 3, Romans 8, and Revelation 21.
+              </Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -810,4 +939,35 @@ const styles = StyleSheet.create({
   layerNum: { fontSize: 11, letterSpacing: 0.5, marginBottom: 2 },
   layerName: { fontSize: 16, marginBottom: 3 },
   layerDesc: { fontSize: 13, lineHeight: 19 },
+  bookPill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  bookPillText: { fontSize: 12 },
+  backRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
+  backText: { fontSize: 14 },
+  pickerBookName: { fontSize: 22, marginBottom: 4 },
+  pickerMeta: { fontSize: 13, marginBottom: 12 },
+  chapterGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  chapterCell: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chapterNum: { fontSize: 14 },
 });
