@@ -1,29 +1,266 @@
-// template
-import { StyleSheet, Text, View } from "react-native";
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  useColorScheme,
+  Platform,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/colors";
 
-export default function TabOneScreen() {
+const VERSE_OF_DAY = {
+  text: "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+  reference: "John 3:16",
+  translation: "KJV",
+};
+
+const QUICK_ACTIONS = [
+  { icon: "book-outline" as const, label: "Continue Reading", subtitle: "Genesis 1" },
+  { icon: "search-outline" as const, label: "Search Scripture", subtitle: "Find passages" },
+  { icon: "bookmark-outline" as const, label: "My Bookmarks", subtitle: "Saved verses" },
+  { icon: "journal-outline" as const, label: "My Journal", subtitle: "Personal notes" },
+];
+
+export default function HomeScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const theme = isDark ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
+
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your Replit app will be here</Text>
-      <Text style={styles.text}>Please wait until we finish building it</Text>
-    </View>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: topPad + 16, paddingBottom: bottomPad + 120 },
+      ]}
+      showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="automatic"
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            Good morning
+          </Text>
+          <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Scripture Study
+          </Text>
+        </View>
+        <Pressable
+          style={[styles.settingsBtn, { backgroundColor: theme.backgroundSecondary }]}
+          hitSlop={8}
+        >
+          <Ionicons name="settings-outline" size={20} color={theme.textSecondary} />
+        </Pressable>
+      </View>
+
+      {/* Verse of the Day */}
+      <View style={[styles.verseCard, { backgroundColor: theme.primary }]}>
+        <View style={styles.verseBadge}>
+          <Ionicons name="sunny" size={12} color={Colors.light.accent} />
+          <Text style={[styles.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+            Verse of the Day
+          </Text>
+        </View>
+        <Text style={[styles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+          "{VERSE_OF_DAY.text}"
+        </Text>
+        <View style={styles.verseFooter}>
+          <Text style={[styles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
+            — {VERSE_OF_DAY.reference}
+          </Text>
+          <Text style={[styles.verseTrans, { fontFamily: "Inter_400Regular" }]}>
+            {VERSE_OF_DAY.translation}
+          </Text>
+        </View>
+      </View>
+
+      {/* Today's Devotional Banner */}
+      <View style={[styles.devotionalBanner, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <View style={styles.devotionalLeft}>
+          <View style={[styles.devotionalIcon, { backgroundColor: theme.accent + "22" }]}>
+            <Ionicons name="flame" size={22} color={theme.accent} />
+          </View>
+          <View style={styles.devotionalTextBlock}>
+            <Text style={[styles.devotionalLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+              Daily Devotional
+            </Text>
+            <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              No active plan
+            </Text>
+            <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Enroll in a plan to begin
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          style={[styles.enrollBtn, { backgroundColor: theme.accent }]}
+          hitSlop={8}
+        >
+          <Text style={[styles.enrollBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+            Browse Plans
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Quick Actions */}
+      <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+        Quick Access
+      </Text>
+      <View style={styles.quickGrid}>
+        {QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.label}
+            style={({ pressed }) => [
+              styles.quickCard,
+              { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
+            ]}
+          >
+            <View style={[styles.quickIconCircle, { backgroundColor: theme.accent + "18" }]}>
+              <Ionicons name={action.icon} size={22} color={theme.accent} />
+            </View>
+            <Text style={[styles.quickLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {action.label}
+            </Text>
+            <Text style={[styles.quickSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {action.subtitle}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Reading Plans */}
+      <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+        Featured Plans
+      </Text>
+      <View style={[styles.plansEmpty, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <Ionicons name="calendar-outline" size={32} color={theme.textMuted} />
+        <Text style={[styles.plansEmptyTitle, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
+          Plans coming soon
+        </Text>
+        <Text style={[styles.plansEmptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Devotional plans will be available after Bible data is imported in Milestone 2.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 2 },
+  appName: { fontSize: 26, letterSpacing: 0.2 },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  verseCard: {
+    borderRadius: 18,
+    padding: 22,
+    marginBottom: 16,
+  },
+  verseBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 14,
+  },
+  verseBadgeText: {
+    color: "#C9933A",
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  verseText: {
+    color: "#EDE5D5",
+    fontSize: 17,
+    lineHeight: 28,
+    marginBottom: 16,
+  },
+  verseFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  verseRef: { color: "#C9933A", fontSize: 14 },
+  verseTrans: { color: "rgba(237,229,213,0.5)", fontSize: 12 },
+  devotionalBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  devotionalLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  devotionalIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  devotionalTextBlock: { flex: 1 },
+  devotionalLabel: { fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 2 },
+  devotionalTitle: { fontSize: 15, marginBottom: 1 },
+  devotionalSub: { fontSize: 12 },
+  enrollBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  enrollBtnText: { color: "#fff", fontSize: 13 },
+  sectionTitle: { fontSize: 18, marginBottom: 14 },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 28,
+  },
+  quickCard: {
+    width: "47%",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
     gap: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
+  quickIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
   },
-  text: {
-    fontSize: 16,
-    textAlign: "center",
-    paddingHorizontal: 20,
+  quickLabel: { fontSize: 14 },
+  quickSub: { fontSize: 11 },
+  plansEmpty: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 28,
+    alignItems: "center",
+    gap: 10,
   },
+  plansEmptyTitle: { fontSize: 16, marginTop: 4 },
+  plansEmptySub: { fontSize: 13, textAlign: "center", lineHeight: 20 },
 });
