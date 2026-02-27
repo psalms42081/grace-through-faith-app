@@ -5,32 +5,24 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  ActivityIndicator,
   useColorScheme,
   Platform,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
-const OT_BOOKS = [
-  "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
-  "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
-  "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra",
-  "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
-  "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations",
-  "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
-  "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk",
-  "Zephaniah", "Haggai", "Zechariah", "Malachi",
-];
-
-const NT_BOOKS = [
-  "Matthew", "Mark", "Luke", "John", "Acts",
-  "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
-  "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians",
-  "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews",
-  "James", "1 Peter", "2 Peter", "1 John", "2 John",
-  "3 John", "Jude", "Revelation",
-];
+interface BibleBook {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+  orderIndex: number;
+}
 
 export default function ReadScreen() {
   const colorScheme = useColorScheme();
@@ -41,9 +33,15 @@ export default function ReadScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const { data: books, isLoading, error } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
+
+  const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
+  const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
-      {/* Sticky Header */}
       <View
         style={[
           styles.stickyHeader,
@@ -69,76 +67,89 @@ export default function ReadScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
-      >
-        {/* Translation Badge */}
-        <Pressable style={[styles.translationBadge, { backgroundColor: theme.accent + "22", borderColor: theme.accent + "55" }]}>
-          <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            KJV — King James Version
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : error ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
+          <Text style={{ color: theme.text, fontFamily: "Lora_500Medium", fontSize: 17, marginTop: 10 }}>
+            Unable to load books
           </Text>
-          <Ionicons name="chevron-down" size={13} color={theme.accent} />
-        </Pressable>
-
-        {/* Old Testament */}
-        <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-          Old Testament
-        </Text>
-        <View style={styles.booksGrid}>
-          {OT_BOOKS.map((book) => (
-            <Pressable
-              key={book}
-              style={({ pressed }) => [
-                styles.bookPill,
-                {
-                  backgroundColor: theme.backgroundCard,
-                  borderColor: theme.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
-                {book}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* New Testament */}
-        <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 24 }]}>
-          New Testament
-        </Text>
-        <View style={styles.booksGrid}>
-          {NT_BOOKS.map((book) => (
-            <Pressable
-              key={book}
-              style={({ pressed }) => [
-                styles.bookPill,
-                {
-                  backgroundColor: theme.backgroundCard,
-                  borderColor: theme.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
-                {book}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Data Notice */}
-        <View style={[styles.notice, { backgroundColor: theme.primary + "22", borderColor: theme.primary + "44" }]}>
-          <Ionicons name="information-circle-outline" size={18} color={theme.primary} />
-          <Text style={[styles.noticeText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Bible text will load here after KJV data is imported in Milestone 2.
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+            {(error as Error).message}
           </Text>
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <Pressable style={[styles.translationBadge, { backgroundColor: theme.accent + "22", borderColor: theme.accent + "55" }]}>
+            <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              KJV — King James Version
+            </Text>
+            <Ionicons name="chevron-down" size={13} color={theme.accent} />
+          </Pressable>
+
+          <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Old Testament
+          </Text>
+          <View style={styles.booksGrid}>
+            {otBooks.map((book) => (
+              <Pressable
+                key={book.id}
+                onPress={() => router.push(`/read/${book.id}`)}
+                style={({ pressed }) => [
+                  styles.bookPill,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
+                  {book.name}
+                </Text>
+                <Text style={[styles.bookChapters, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {book.chapterCount}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 24 }]}>
+            New Testament
+          </Text>
+          <View style={styles.booksGrid}>
+            {ntBooks.map((book) => (
+              <Pressable
+                key={book.id}
+                onPress={() => router.push(`/read/${book.id}`)}
+                style={({ pressed }) => [
+                  styles.bookPill,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
+                  {book.name}
+                </Text>
+                <Text style={[styles.bookChapters, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {book.chapterCount}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -162,6 +173,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16 },
   translationBadge: {
@@ -188,20 +200,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bookPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   bookPillText: { fontSize: 13 },
-  notice: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 28,
-  },
-  noticeText: { flex: 1, fontSize: 13, lineHeight: 20 },
+  bookChapters: { fontSize: 10 },
 });

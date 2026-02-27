@@ -18,14 +18,18 @@ A mobile-first Bible study app for all Christian ministries featuring the "4-Lay
 ## Project Structure
 ```
 app/                    # Expo Router screens
-  _layout.tsx           # Root layout with providers, fonts
+  _layout.tsx           # Root layout with providers, fonts, themed Stack headers
   (tabs)/
     _layout.tsx         # Tab navigation (5 tabs: Home, Read, Search, Study, Explore)
     index.tsx           # Home screen (Verse of Day, Quick Actions, Devotional banner)
-    read.tsx            # Bible Reader (Book selector, KJV text display)
+    read.tsx            # Bible Reader — Book selector (OT/NT grouped pills)
     search.tsx          # Search (keyword + reference parsing)
     study.tsx           # Study tools (Word Study, Context, Historic Voices, Application)
     explore.tsx         # Maps & Timeline
+  read/
+    [bookId]/
+      index.tsx         # Chapter picker grid (book info card + chapter numbers)
+      [chapter].tsx     # Verse reader (scripture text, prev/next navigation)
 assets/                 # App icon, splash screen
 components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
 constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
@@ -36,8 +40,12 @@ server/
   db.ts                 # Drizzle ORM database connection
   storage.ts            # Legacy in-memory storage (users only)
 shared/schema.ts        # Drizzle ORM schema (all database tables)
-scripts/                # Data import scripts directory (for future milestones)
-data/                   # Raw JSON data directory (user-provided)
+scripts/
+  seed-books.ts         # Seeds 66 Bible books + KJV translation metadata
+  download-kjv.ts       # Downloads public domain KJV JSON from GitHub
+  import-kjv.ts         # Imports KJV verse text into bible_verse table
+data/
+  kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
 
 ## Database Tables (23 total)
@@ -50,6 +58,11 @@ data/                   # Raw JSON data directory (user-provided)
 - **Illustrations:** illustration, illustration_link
 - **Devotionals:** devotional_plan, devotional_day, user_plan_enrollment, user_plan_progress
 - **User:** users, user_note, user_highlight, user_bookmark
+
+## Data Pipeline
+- KJV public domain text sourced from github.com/aruljohn/Bible-kjv
+- 31,102 verses across 66 books imported into PostgreSQL
+- Scripts: `download-kjv.ts` -> `seed-books.ts` -> `import-kjv.ts`
 
 ## API Endpoints
 - `GET /api/books` — List all Bible books
@@ -73,7 +86,7 @@ data/                   # Raw JSON data directory (user-provided)
 
 ## Build Milestones
 - [x] **Milestone 1:** Foundation — App shell, DB schema, tab navigation, API skeleton
-- [ ] **Milestone 2:** Core Bible Data & Reader UI
+- [x] **Milestone 2:** Core Bible Data & Reader UI — KJV import, book/chapter/verse navigation
 - [ ] **Milestone 3:** Search Engine
 - [ ] **Milestone 4:** Bottom Sheet UX & Context Layer
 - [ ] **Milestone 5:** Word Study & Historic Voices
@@ -89,6 +102,12 @@ data/                   # Raw JSON data directory (user-provided)
 - Background (parchment): #F5EFE0
 - Text (ink): #2C1810
 - Supports light/dark mode
+
+## Navigation Flow
+- Read tab shows all 66 books grouped by OT/NT as pill buttons
+- Tapping a book navigates to chapter picker with book info card + numbered grid
+- Tapping a chapter opens the verse reader with full KJV text
+- Verse reader has prev/next chapter navigation at bottom
 
 ## Workflows
 - `Start Backend` — Runs Express server on port 5000
