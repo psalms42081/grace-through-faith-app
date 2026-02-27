@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Linking,
   useColorScheme,
   Platform,
 } from "react-native";
@@ -21,11 +22,20 @@ const TABS: { id: Tab; label: string; icon: React.ComponentProps<typeof Ionicons
   { id: "application", label: "Application", icon: "heart-outline" },
 ];
 
-const COMMENTATORS = [
-  { name: "Matthew Henry", dates: "1662–1714", tradition: "Reformed" },
-  { name: "Jamieson, Fausset & Brown", dates: "1871", tradition: "Presbyterian" },
-  { name: "Adam Clarke", dates: "1762–1832", tradition: "Wesleyan" },
-  { name: "John Gill", dates: "1697–1771", tradition: "Baptist" },
+interface Commentator {
+  name: string;
+  dates: string;
+  tradition: string;
+  isPublicDomain: boolean;
+  externalUrl?: string;
+}
+
+const COMMENTATORS: Commentator[] = [
+  { name: "Matthew Henry", dates: "1662–1714", tradition: "Reformed", isPublicDomain: true },
+  { name: "Jamieson, Fausset & Brown", dates: "1871", tradition: "Presbyterian", isPublicDomain: true },
+  { name: "Adam Clarke", dates: "1762–1832", tradition: "Wesleyan", isPublicDomain: true },
+  { name: "John Gill", dates: "1697–1771", tradition: "Baptist", isPublicDomain: true },
+  { name: "Ellen G. White", dates: "1827–1915", tradition: "Adventist", isPublicDomain: false, externalUrl: "https://egwwritings.org" },
 ];
 
 export default function StudyScreen() {
@@ -169,16 +179,28 @@ function ContextTab({ theme }: { theme: typeof Colors.light }) {
   );
 }
 
-function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light; commentators: { name: string; dates: string; tradition: string }[] }) {
+function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light; commentators: Commentator[] }) {
   return (
     <View style={styles.tabContent}>
       <Text style={[styles.previewLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
         Featured Commentators
       </Text>
       {commentators.map((c) => (
-        <View
+        <Pressable
           key={c.name}
-          style={[styles.commentatorCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+          onPress={() => {
+            if (c.externalUrl) {
+              Linking.openURL(c.externalUrl);
+            }
+          }}
+          style={({ pressed }) => [
+            styles.commentatorCard,
+            {
+              backgroundColor: theme.backgroundCard,
+              borderColor: theme.border,
+              opacity: pressed && c.externalUrl ? 0.75 : 1,
+            },
+          ]}
         >
           <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
             <Ionicons name="person" size={20} color={Colors.light.accent} />
@@ -191,12 +213,23 @@ function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light
               {c.dates} · {c.tradition}
             </Text>
           </View>
-          <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
-            <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-              Public Domain
-            </Text>
-          </View>
-        </View>
+          {c.isPublicDomain ? (
+            <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
+              <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                Public Domain
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.externalBadgeRow}>
+              <View style={[styles.pdBadge, { backgroundColor: theme.bookmarkBlue + "22" }]}>
+                <Text style={[styles.pdText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                  External
+                </Text>
+              </View>
+              <Ionicons name="open-outline" size={14} color={theme.bookmarkBlue} />
+            </View>
+          )}
+        </Pressable>
       ))}
       <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginTop: 16 }]}>
         <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" }]}>
@@ -333,6 +366,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pdText: { fontSize: 10 },
+  externalBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   appLayer: {
     borderRadius: 16,
     padding: 20,
