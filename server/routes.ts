@@ -418,6 +418,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/location/:id/verses", async (req, res) => {
+    try {
+      const rows = await db
+        .select({
+          verseId: locationVerseMaps.verseId,
+          note: locationVerseMaps.note,
+          bookId: bibleVerses.bookId,
+          chapter: bibleVerses.chapter,
+          verse: bibleVerses.verse,
+          text: bibleVerses.text,
+        })
+        .from(locationVerseMaps)
+        .innerJoin(bibleVerses, eq(locationVerseMaps.verseId, bibleVerses.id))
+        .where(eq(locationVerseMaps.locationId, req.params.id));
+      return res.json(rows);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/timeline/:id/verses", async (req, res) => {
+    try {
+      const rows = await db
+        .select({
+          verseId: eventVerseMaps.verseId,
+          bookId: bibleVerses.bookId,
+          chapter: bibleVerses.chapter,
+          verse: bibleVerses.verse,
+          text: bibleVerses.text,
+        })
+        .from(eventVerseMaps)
+        .innerJoin(bibleVerses, eq(eventVerseMaps.verseId, bibleVerses.id))
+        .where(eq(eventVerseMaps.eventId, req.params.id));
+      return res.json(rows);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // ─── DEVOTIONALS ─────────────────────────────────────────────────────────────
 
   app.get("/api/devotionals/plans", async (_req, res) => {

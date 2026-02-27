@@ -50,6 +50,8 @@ scripts/
   seed-strongs.ts       # Seeds 17 Strong's entries + 16 verse-word mappings
   seed-strongs-expanded.ts # Seeds 65 additional Strong's entries + 204 word mappings
   seed-application.ts   # Seeds 12 application templates (Then/Now, reflection, prayer)
+  seed-locations.ts     # Seeds 28 biblical locations + 55 verse mappings
+  seed-timeline.ts      # Seeds 36 timeline events + 74 verse mappings
 data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
@@ -83,7 +85,10 @@ data/
 - `GET /api/commentary?book=&chapter=` — Commentary entries
 - `GET /api/application?book=&chapter=` — Application templates
 - `GET /api/location` — All locations
+- `GET /api/location/:id` — Location detail
+- `GET /api/location/:id/verses` — Verses linked to a location
 - `GET /api/timeline` — All timeline events
+- `GET /api/timeline/:id/verses` — Verses linked to a timeline event
 - `GET /api/devotionals/plans` — Published devotional plans
 - `POST /api/devotionals/enroll` — Enroll in a plan
 - `GET /api/devotionals/today?userId=` — Get today's devotional
@@ -99,7 +104,7 @@ data/
 - [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
 - [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
 - [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
-- [ ] **Milestone 7:** Maps & Timeline
+- [x] **Milestone 7:** Maps & Timeline — 28 biblical locations (grouped by type: cities, regions, mountains, bodies of water) with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab replaces hardcoded data
 - [ ] **Milestone 8:** Devotionals MVP
 - [ ] **Milestone 9:** Offline PWA Support
 - [ ] **Milestone 10:** Polish & Deploy

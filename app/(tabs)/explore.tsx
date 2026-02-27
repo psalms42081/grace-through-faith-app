@@ -7,28 +7,59 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
 type Tab = "maps" | "timeline";
 
-const TIMELINE_PREVIEW = [
-  { period: "Patriarchs", year: "2166–1805 BC", events: ["Birth of Abraham", "Joseph in Egypt", "The Exodus"] },
-  { period: "Conquest & Judges", year: "1406–1050 BC", events: ["Joshua conquers Canaan", "Deborah leads Israel", "Samson's ministry"] },
-  { period: "United Kingdom", year: "1050–931 BC", events: ["Saul anointed king", "David's reign", "Solomon's Temple built"] },
-  { period: "Divided Kingdom", year: "931–586 BC", events: ["Kingdom splits", "Elijah & Elisha", "Fall of Jerusalem"] },
-  { period: "Exile & Return", year: "586–400 BC", events: ["Babylonian captivity", "Return under Zerubbabel", "Nehemiah rebuilds walls"] },
-  { period: "New Testament", year: "4 BC–100 AD", events: ["Birth of Jesus", "Pentecost", "Paul's missionary journeys"] },
-];
+interface Location {
+  id: string;
+  name: string;
+  modernName: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  description: string | null;
+  locationType: string | null;
+  era: string | null;
+}
 
-const MAP_REGIONS = [
-  { name: "Ancient Near East", places: ["Mesopotamia", "Babylon", "Ur of the Chaldees"], icon: "globe-outline" as const },
-  { name: "The Holy Land", places: ["Jerusalem", "Bethlehem", "Nazareth", "Jericho"], icon: "location-outline" as const },
-  { name: "Egypt & Sinai", places: ["Goshen", "Mt. Sinai", "Wilderness of Paran"], icon: "map-outline" as const },
-  { name: "Paul's Journeys", places: ["Antioch", "Ephesus", "Corinth", "Rome"], icon: "navigate-outline" as const },
-];
+interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  yearApprox: number | null;
+  yearLabel: string | null;
+  period: string | null;
+  category: string | null;
+  locationId: string | null;
+}
+
+interface LinkedVerse {
+  verseId: string;
+  bookId: number;
+  chapter: number;
+  verse: number;
+  text: string;
+  note?: string | null;
+}
+
+const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  city: "business-outline",
+  region: "globe-outline",
+  body_of_water: "water-outline",
+  mountain: "triangle-outline",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  city: "Cities",
+  region: "Regions",
+  body_of_water: "Bodies of Water",
+  mountain: "Mountains",
+};
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -42,12 +73,10 @@ export default function ExploreScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Explore
         </Text>
-        {/* Toggle */}
         <View style={[styles.toggle, { backgroundColor: theme.backgroundSecondary }]}>
           {(["maps", "timeline"] as Tab[]).map((t) => (
             <Pressable
@@ -83,7 +112,6 @@ export default function ExploreScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         {activeTab === "maps" ? (
           <MapsTab theme={theme} />
@@ -96,94 +124,318 @@ export default function ExploreScreen() {
 }
 
 function MapsTab({ theme }: { theme: typeof Colors.light }) {
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+
+  const { data: locations, isLoading } = useQuery<Location[]>({
+    queryKey: ["/api/location"],
+  });
+
+  const { data: linkedVerses } = useQuery<LinkedVerse[]>({
+    queryKey: [`/api/location/${selectedLocation?.id}/verses`],
+    enabled: !!selectedLocation,
+  });
+
+  const grouped = React.useMemo(() => {
+    if (!locations) return {};
+    const g: Record<string, Location[]> = {};
+    for (const loc of locations) {
+      const type = loc.locationType || "other";
+      if (!g[type]) g[type] = [];
+      g[type].push(loc);
+    }
+    return g;
+  }, [locations]);
+
+  const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
+
+  if (selectedLocation) {
+    return (
+      <View style={styles.tabContent}>
+        <Pressable onPress={() => setSelectedLocation(null)} style={styles.backRow}>
+          <Ionicons name="chevron-back" size={16} color={theme.accent} />
+          <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            All Locations
+          </Text>
+        </Pressable>
+
+        <View style={[styles.detailHeader, { backgroundColor: theme.primary }]}>
+          <Ionicons name={TYPE_ICONS[selectedLocation.locationType || "city"] || "location-outline"} size={28} color={Colors.light.accent} />
+          <Text style={[styles.detailTitle, { fontFamily: "Lora_700Bold" }]}>
+            {selectedLocation.name}
+          </Text>
+          {selectedLocation.modernName && (
+            <Text style={[styles.detailModern, { fontFamily: "Inter_400Regular" }]}>
+              Modern: {selectedLocation.modernName}
+            </Text>
+          )}
+        </View>
+
+        {selectedLocation.era && (
+          <View style={[styles.metaBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" }]}>
+            <Text style={[styles.metaBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedLocation.era}
+            </Text>
+          </View>
+        )}
+
+        {selectedLocation.description && (
+          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
+              <Text style={[styles.cardHeaderLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Description
+              </Text>
+            </View>
+            <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {selectedLocation.description}
+            </Text>
+          </View>
+        )}
+
+        {selectedLocation.latitude && selectedLocation.longitude && (
+          <View style={[styles.coordRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Ionicons name="navigate-outline" size={14} color={theme.textMuted} />
+            <Text style={[styles.coordText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {selectedLocation.latitude}, {selectedLocation.longitude}
+            </Text>
+          </View>
+        )}
+
+        {linkedVerses && linkedVerses.length > 0 && (
+          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="book-outline" size={16} color={theme.bookmarkBlue} />
+              <Text style={[styles.cardHeaderLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                Referenced Verses ({linkedVerses.length})
+              </Text>
+            </View>
+            {linkedVerses.map((v) => (
+              <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
+                {v.note && (
+                  <Text style={[styles.verseNote, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    {v.note}
+                  </Text>
+                )}
+                <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                  {v.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.tabContent}>
-      {/* Map placeholder */}
       <View style={[styles.mapPlaceholder, { backgroundColor: theme.primary }]}>
         <Ionicons name="map" size={48} color={Colors.light.accent} />
         <Text style={[styles.mapPlaceholderTitle, { fontFamily: "Lora_600SemiBold" }]}>
-          Ancient Holy Land
+          Biblical Locations
         </Text>
         <Text style={[styles.mapPlaceholderSub, { fontFamily: "Inter_400Regular" }]}>
-          Interactive map with biblical locations, eras, and verse links available in Milestone 7.
+          {locations ? `${locations.length} locations across the ancient world` : "Loading locations..."}
         </Text>
       </View>
 
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        Geographic Regions
-      </Text>
-      {MAP_REGIONS.map((region) => (
-        <Pressable
-          key={region.name}
-          style={({ pressed }) => [
-            styles.regionCard,
-            {
-              backgroundColor: theme.backgroundCard,
-              borderColor: theme.border,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <View style={[styles.regionIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name={region.icon} size={22} color={theme.accent} />
-          </View>
-          <View style={styles.regionInfo}>
-            <Text style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {region.name}
+      {isLoading && (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color={theme.accent} />
+        </View>
+      )}
+
+      {typeOrder.map((type) => {
+        const locs = grouped[type];
+        if (!locs || locs.length === 0) return null;
+        return (
+          <React.Fragment key={type}>
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              {TYPE_LABELS[type] || type}
             </Text>
-            <Text style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {region.places.join(" · ")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-        </Pressable>
-      ))}
+            {locs.map((loc) => (
+              <Pressable
+                key={loc.id}
+                onPress={() => setSelectedLocation(loc)}
+                style={({ pressed }) => [
+                  styles.regionCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.regionIcon, { backgroundColor: theme.accent + "18" }]}>
+                  <Ionicons name={TYPE_ICONS[type] || "location-outline"} size={22} color={theme.accent} />
+                </View>
+                <View style={styles.regionInfo}>
+                  <Text style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                    {loc.name}
+                  </Text>
+                  <Text style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                    {[loc.modernName, loc.era].filter(Boolean).join(" · ")}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </React.Fragment>
+        );
+      })}
     </View>
   );
 }
 
 function TimelineTab({ theme }: { theme: typeof Colors.light }) {
+  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
+
+  const { data: events, isLoading } = useQuery<TimelineEvent[]>({
+    queryKey: ["/api/timeline"],
+  });
+
+  const { data: linkedVerses } = useQuery<LinkedVerse[]>({
+    queryKey: [`/api/timeline/${selectedEvent?.id}/verses`],
+    enabled: !!selectedEvent,
+  });
+
+  const grouped = React.useMemo(() => {
+    if (!events) return [];
+    const g: Record<string, TimelineEvent[]> = {};
+    const order: string[] = [];
+    for (const ev of events) {
+      const p = ev.period || "Unknown";
+      if (!g[p]) {
+        g[p] = [];
+        order.push(p);
+      }
+      g[p].push(ev);
+    }
+    return order.map((p) => ({ period: p, events: g[p] }));
+  }, [events]);
+
+  if (selectedEvent) {
+    return (
+      <View style={styles.tabContent}>
+        <Pressable onPress={() => setSelectedEvent(null)} style={styles.backRow}>
+          <Ionicons name="chevron-back" size={16} color={theme.accent} />
+          <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            Timeline
+          </Text>
+        </Pressable>
+
+        <View style={[styles.detailHeader, { backgroundColor: theme.primary }]}>
+          <Ionicons name="time-outline" size={28} color={Colors.light.accent} />
+          <Text style={[styles.detailTitle, { fontFamily: "Lora_700Bold" }]}>
+            {selectedEvent.title}
+          </Text>
+          {selectedEvent.yearLabel && (
+            <Text style={[styles.detailModern, { fontFamily: "Inter_400Regular" }]}>
+              {selectedEvent.yearLabel}
+            </Text>
+          )}
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          {selectedEvent.period && (
+            <View style={[styles.metaBadge, { backgroundColor: theme.accent + "18" }]}>
+              <Text style={[styles.metaBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                {selectedEvent.period}
+              </Text>
+            </View>
+          )}
+          {selectedEvent.category && (
+            <View style={[styles.metaBadge, { backgroundColor: theme.bookmarkBlue + "18" }]}>
+              <Text style={[styles.metaBadgeText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                {selectedEvent.category}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {selectedEvent.description && (
+          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
+              <Text style={[styles.cardHeaderLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Description
+              </Text>
+            </View>
+            <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {selectedEvent.description}
+            </Text>
+          </View>
+        )}
+
+        {linkedVerses && linkedVerses.length > 0 && (
+          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="book-outline" size={16} color={theme.bookmarkBlue} />
+              <Text style={[styles.cardHeaderLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                Key Verses ({linkedVerses.length})
+              </Text>
+            </View>
+            {linkedVerses.map((v) => (
+              <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
+                <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                  {v.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.tabContent}>
       <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
         Biblical History
       </Text>
-      {TIMELINE_PREVIEW.map((period, index) => (
-        <View key={period.period} style={styles.timelineRow}>
-          {/* Spine */}
+
+      {isLoading && (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color={theme.accent} />
+        </View>
+      )}
+
+      {grouped.map((group, gi) => (
+        <View key={group.period} style={styles.timelineRow}>
           <View style={styles.spineLine}>
             <View style={[styles.spineDot, { backgroundColor: theme.accent }]} />
-            {index < TIMELINE_PREVIEW.length - 1 && (
+            {gi < grouped.length - 1 && (
               <View style={[styles.spineTrail, { backgroundColor: theme.border }]} />
             )}
           </View>
-          {/* Card */}
           <View style={[styles.timelineCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <Text style={[styles.periodYear, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {period.year}
+              {group.events[0]?.yearLabel || ""}
+              {group.events.length > 1 && group.events[group.events.length - 1]?.yearLabel
+                ? ` \u2013 ${group.events[group.events.length - 1]?.yearLabel}`
+                : ""}
             </Text>
             <Text style={[styles.periodName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {period.period}
+              {group.period}
             </Text>
             <View style={styles.eventsList}>
-              {period.events.map((event) => (
-                <View key={event} style={styles.eventRow}>
+              {group.events.map((ev) => (
+                <Pressable
+                  key={ev.id}
+                  onPress={() => setSelectedEvent(ev)}
+                  style={({ pressed }) => [styles.eventRow, { opacity: pressed ? 0.6 : 1 }]}
+                >
                   <View style={[styles.eventDot, { backgroundColor: theme.accent + "88" }]} />
                   <Text style={[styles.eventText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {event}
+                    {ev.title}
                   </Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={12} color={theme.textMuted} />
+                </Pressable>
               ))}
             </View>
           </View>
         </View>
       ))}
-      <View style={[styles.timelineNote, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <Ionicons name="information-circle-outline" size={16} color={theme.textMuted} />
-        <Text style={[styles.noteText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Events link directly to Bible verses in Milestone 7.
-        </Text>
-      </View>
     </View>
   );
 }
@@ -284,14 +536,59 @@ const styles = StyleSheet.create({
   eventsList: { gap: 6 },
   eventRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   eventDot: { width: 5, height: 5, borderRadius: 3 },
-  eventText: { fontSize: 13, lineHeight: 18 },
-  timelineNote: {
+  eventText: { fontSize: 13, lineHeight: 18, flex: 1 },
+  loadingBox: { alignItems: "center", paddingVertical: 30, gap: 10 },
+  backRow: {
     flexDirection: "row",
-    gap: 8,
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
+    gap: 4,
+    marginBottom: 4,
   },
-  noteText: { flex: 1, fontSize: 13 },
+  backText: { fontSize: 14 },
+  detailHeader: {
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    gap: 10,
+  },
+  detailTitle: { color: "#EDE5D5", fontSize: 20, textAlign: "center" },
+  detailModern: { color: "rgba(237,229,213,0.65)", fontSize: 13 },
+  metaBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  metaBadgeText: { fontSize: 11, letterSpacing: 0.3 },
+  detailCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  cardHeaderLabel: { fontSize: 12, letterSpacing: 0.3 },
+  cardBody: { fontSize: 14, lineHeight: 22 },
+  coordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  coordText: { fontSize: 12 },
+  verseRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 4,
+  },
+  verseNote: { fontSize: 11, letterSpacing: 0.3 },
+  verseText: { fontSize: 14, lineHeight: 22 },
 });
