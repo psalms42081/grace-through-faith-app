@@ -390,7 +390,7 @@ function ContextTab({ theme }: { theme: typeof Colors.light }) {
           <View style={styles.contextCardHeader}>
             <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18" }]}>
               <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                {card.category.replace(/_/g, " ")}
+                {(card.category || "general").replace(/_/g, " ")}
               </Text>
             </View>
           </View>
