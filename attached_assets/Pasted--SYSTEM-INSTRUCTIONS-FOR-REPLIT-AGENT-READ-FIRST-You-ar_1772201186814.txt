@@ -1,0 +1,167 @@
+🤖 SYSTEM INSTRUCTIONS FOR REPLIT AGENT (READ FIRST)
+You are an expert Next.js, TypeScript, Tailwind, and Prisma developer. I am handing you the Master Blueprint for a Hybrid Bible Study App. 
+
+Because this is a large, complex application, you MUST follow these strict Rules of Engagement to prevent context-window overflow and broken builds:
+
+1. STRICT MILESTONE PROGRESSION: You will build this exactly one milestone at a time, strictly following Section 12.
+2. DO NOT JUMP AHEAD: Do not write database schemas, API routes, or UI components for Milestone 3 if we are on Milestone 1. 
+3. STOP AND WAIT: After completing the code for a single milestone, you MUST STOP. Output a message saying: "Milestone X complete. Please test [feature]. Say 'Proceed to Milestone Y' when you are ready." Do not write any more code until I give you the exact "Proceed" command.
+4. DO NOT HALLUCINATE DATA: Do not attempt to generate the text of the Bible, Strong's dictionary, or map coordinates. I will provide `.json` files in a `/data` folder for the import scripts.
+5. TYPE SAFETY: Use strictly typed interfaces for all JSONB database fields.
+
+If you understand these rules, read the blueprint below, initialize the project, execute Milestone 1, and then STOP.
+
+------------------------------------------------------------
+HYBRID BIBLE STUDY APP — MASTER BLUEPRINT
+Version: v2.3 (Hybrid + Denomination-safe + Devotionals + AI Prompt Optimized)
+
+GOAL
+Build a mobile-first Bible study app for all Christian ministries:
+- Scripture-first
+- Original-language tools (Hebrew/Greek via Strong’s initially)
+- Ancient Holy Land maps + timelines + illustrations
+- Historic public-domain commentary (Matthew Henry, JFB, etc.)
+- Modern structured study layers (Context + Application)
+- Daily devotional plans customized to the user (privacy-first)
+- Start Free; later one-time purchase unlocks premium modules
+
+NON-GOALS
+- No polemics / “which denomination is correct”
+- No rehosting copyrighted modern commentaries without license
+- No “AI pastor” (AI is excluded for now)
+- No denomination mode in Phase 1 (denom “Perspectives” only Phase 2)
+
+------------------------------------------------------------
+1) REPLIT-FRIENDLY TECH STACK
+Frontend: Next.js (App Router) + TypeScript, Tailwind CSS, Zustand (UI state), TanStack Query
+Backend: Next.js API routes, PostgreSQL + Prisma
+Search: Postgres FTS (Full Text Search) via GIN indexes for fast performance.
+Offline: PWA service worker, IndexedDB (for caching today's devotional + viewed chapters)
+Deployment: Replit Deployments
+
+------------------------------------------------------------
+2) PRODUCT PHILOSOPHY: THE “4-LAYER STUDY MODEL”
+Every passage is presented in layers. 
+UX RULE: Use a "Progressive Disclosure / Bottom Sheet" UI. The Bible text (Layer 1) takes up the main screen. When a verse is tapped, Layers 2, 3, and 4 slide up from the bottom in a drawer/tabbed interface.
+
+LAYER 1 — TEXT: Bible text (KJV), Cross refs, Word study (Strong’s)
+LAYER 2 — CONTEXT: Historical notes, Timeline anchors, Geography & maps
+LAYER 3 — HISTORIC VOICES: Classic commentaries (Matthew Henry, JFB)
+LAYER 4 — APPLICATION: "Then/Now" bullets, reflection questions, prayer prompt, user journaling.
+
+DEVOTIONALS MUST USE THIS SAME MODEL in a “daily” format.
+
+------------------------------------------------------------
+3) DENOMINATION POLICY
+A) Neutral tone ("interprets", "teaches"). No polemics.
+B) No misrepresentation. Avoid fringe sects.
+C) Implementation: 
+   - Phase 1: NO denomination mode. 
+   - Phase 2: Add “Perspectives” tab for disputed topics.
+D) Devotionals: Strictly Christ-centered, non-sectarian. 
+
+------------------------------------------------------------
+4) MVP FEATURES (PHASE 1: FREE)
+A) Reader (KJV): Book -> Chapter -> verse list. Offline caching.
+B) Search: Reference parsing (“John 3:16”) and Keyword search.
+C) Word Study (Strong’s): Tap verse word -> Strong’s entry (id, lemma, gloss).
+D) Context Cards: Book & Chapter context.
+E) Maps (Basic): Ancient Holy Land locations linked to verses.
+F) Timeline (Basic): Curated events linked to verses.
+G) Historic Commentary: Excerpts from PD sources (Henry, JFB).
+H) Application Layer: Then/Now bullets, questions, user journaling.
+I) DAILY DEVOTIONAL PLANS: 
+   - User chooses goals/time-budget.
+   - Daily item includes: Passage, Context, Key Term (Word Study), Map Location, Timeline Event, Historic Voice, Reflection, Prayer.
+
+------------------------------------------------------------
+5) PHASE 2 FEATURES (IGNORE FOR NOW - DO NOT BUILD YET)
+- Perspectives Tab (Doctrinal topics)
+- Adaptive Devotionals
+- Maps 2.0 (Era overlays)
+
+------------------------------------------------------------
+6) DATA MODEL (PRISMA TABLES)
+Use `JSONB` for JSON arrays. Add text search indexes to verse content.
+
+Core: bible_translation, bible_book, bible_verse
+Word Study: strong_entry, verse_strong_map
+Context: context_card
+Historic: commentator, commentary_entry
+Application: application_template, user_journal_entry
+Maps/Timeline: location, location_verse_map, timeline_event, event_verse_map
+Illustrations: illustration, illustration_link
+Devotionals: devotional_plan, devotional_day, user_plan_enrollment, user_plan_progress
+User: user, user_note, user_highlight, user_bookmark
+
+------------------------------------------------------------
+7) DATA INGESTION
+Scripts belong in `/scripts`. I (the user) will provide the raw JSON files in a `/data` folder. 
+Scripts needed: import-kjv.ts, import-strongs.ts, import-commentary.ts, import-maps.ts, import-timeline.ts, import-devotionals.ts.
+
+------------------------------------------------------------
+8) API ROUTES
+Endpoints:
+GET /api/passage, GET /api/verse, GET /api/search, GET /api/strong, GET /api/context, GET /api/commentary, GET /api/application, GET /api/location, GET /api/timeline.
+Devotional Endpoints:
+GET /api/devotionals/plans, POST /api/devotionals/enroll, GET /api/devotionals/today, POST /api/devotionals/complete.
+
+------------------------------------------------------------
+9) UI SCREENS (MOBILE-FIRST)
+Bottom Nav: Home, Read, Search, Study, Maps, Timeline
+HOME SCREEN: "Today's Devotional" card, Continue Plan.
+DEVOTIONAL VIEW: Renders the 4-layer model daily components.
+READ SCREEN: Reader + Bottom Sheet for Context/Historic/Application.
+
+------------------------------------------------------------
+10) OFFLINE REQUIREMENTS (PWA)
+Read-only caching via IndexedDB for daily devotional + current chapter. Sync journal entries online.
+
+------------------------------------------------------------
+11) MONETIZATION (IGNORE FOR NOW)
+
+------------------------------------------------------------
+12) STRICT BUILD ORDER (AGENT STATE MACHINE)
+
+AGENT INSTRUCTION: You must execute these exactly one at a time. After completing a milestone, you MUST stop, ask me to test, and wait for the exact words "Proceed to Milestone X".
+
+[ ] MILESTONE 1: Foundation
+- Action: Setup Next.js App Router, Tailwind, Prisma, Postgres. Create the exact Prisma schema defined in Section 6. Add GIN indexes for verses. Run the migration. Set up the basic Bottom Navigation UI layout. 
+- Agent STOP condition: Wait for user to confirm database is active and app shell loads.
+
+[ ] MILESTONE 2: Core Bible Data & Reader UI
+- Action: Create `/scripts/import-kjv.ts` (expecting data from `/data/kjv.json`). Create API routes for `/api/passage`. Build the `/read` screen UI where a user can select Genesis -> Chapter 1 and read verses.
+- Agent STOP condition: Wait for user to provide the JSON, run the script, and confirm Genesis 1 renders on the screen.
+
+[ ] MILESTONE 3: Search Engine
+- Action: Build `/api/search`. Implement keyword search and reference parsing (e.g., jumping to "John 3:16"). Build `/search` UI screen.
+- Agent STOP condition: Wait for user to test search functionality.
+
+[ ] MILESTONE 4: The Bottom Sheet UX & Context Layer
+- Action: Implement the "Progressive Disclosure" Bottom Sheet in the Read UI. Create the `/scripts/import-context.ts` and context API. Make the Bottom Sheet slide up when a verse is tapped, showing Context data.
+- Agent STOP condition: Wait for user to test clicking a verse and seeing the Context tab in the Bottom Sheet.
+
+[ ] MILESTONE 5: Word Study & Historic Voices
+- Action: Create import scripts for Strongs and Commentary. Build APIs. Add "Word Study" and "Historic Voices" tabs to the Read UI Bottom Sheet.
+- Agent STOP condition: Wait for user to test Strongs popup and Commentary tabs.
+
+[ ] MILESTONE 6: Application Layer & Journaling
+- Action: Build the Application APIs. Add the "Application" tab to the Bottom Sheet with Then/Now bullets. Implement a form for users to save journal entries to the DB.
+- Agent STOP condition: Wait for user to save a journal entry.
+
+[ ] MILESTONE 7: Maps & Timeline (Visuals)
+- Action: Create Map/Timeline tables & import scripts. Build basic Map UI and Timeline UI screens. Link them to API.
+- Agent STOP condition: Wait for user to test Map and Timeline screens.
+
+[ ] MILESTONE 8: Devotionals MVP (The Core Loop)
+- Action: Create the Devotionals DB schema & import script. Build the Home Screen. Build the `/api/devotionals/*` endpoints. Build the Devotional View screen pulling in all layers (Passage, Context, Key Term, Where, When, Historic, Journal).
+- Agent STOP condition: Wait for user to enroll in a plan, view today's devotional, and complete it.
+
+[ ] MILESTONE 9: Offline PWA Support
+- Action: Implement next-pwa service worker. Add IndexedDB caching logic so the user's current Devotional day and currently opened Bible chapter work entirely offline.
+- Agent STOP condition: Wait for user to test offline mode.
+
+[ ] MILESTONE 10: Polish & Deploy
+- Action: Final UI spacing checks, mobile responsiveness, error boundaries, loading skeletons. 
+
+AGENT INSTRUCTION: Do you understand these rules? If so, immediately begin executing MILESTONE 1 ONLY, then stop and wait for my confirmation.
