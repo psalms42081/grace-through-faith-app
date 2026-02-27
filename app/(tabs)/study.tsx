@@ -398,7 +398,7 @@ function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
                 No Word Data Yet
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Strong's Concordance data for {selectedBook.name} {selectedChapter}:{selectedVerse} hasn't been mapped yet. Word study data is currently available for Genesis 1:1, Psalm 23:1, John 1:1, and John 3:16.
+                Strong's Concordance data for {selectedBook.name} {selectedChapter}:{selectedVerse} hasn't been mapped yet. Word study data is available for key verses across Genesis, Exodus, Deuteronomy, Psalms, Proverbs, Isaiah, Jeremiah, Daniel, Micah, Habakkuk, Matthew, John, Acts, Romans, 1 Corinthians, Galatians, Ephesians, Philippians, 2 Timothy, Hebrews, James, 1 Peter, 1 John, and Revelation.
               </Text>
             </View>
           )}
