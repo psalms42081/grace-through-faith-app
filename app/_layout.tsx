@@ -42,6 +42,16 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
+      <Stack.Screen
+        name="verse-actions"
+        options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.5, 0.75],
+          sheetGrabberVisible: true,
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen name="passage-context" options={{ headerShown: true }} />
     </Stack>
   );
 }

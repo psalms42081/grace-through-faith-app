@@ -30,6 +30,8 @@ app/                    # Expo Router screens
     [bookId]/
       index.tsx         # Chapter picker grid (book info card + chapter numbers)
       [chapter].tsx     # Verse reader (scripture text, prev/next navigation)
+  verse-actions.tsx     # FormSheet — verse actions (copy, highlight, bookmark, study)
+  passage-context.tsx   # Passage study screen (context cards + commentary)
 assets/                 # App icon, splash screen
 components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
 constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
@@ -87,8 +89,8 @@ data/
 ## Build Milestones
 - [x] **Milestone 1:** Foundation — App shell, DB schema, tab navigation, API skeleton
 - [x] **Milestone 2:** Core Bible Data & Reader UI — KJV import, book/chapter/verse navigation
-- [ ] **Milestone 3:** Search Engine
-- [ ] **Milestone 4:** Bottom Sheet UX & Context Layer
+- [x] **Milestone 3:** Search Engine — keyword search with highlighting, reference parsing (John 3:16)
+- [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
 - [ ] **Milestone 5:** Word Study & Historic Voices
 - [ ] **Milestone 6:** Application Layer & Journaling
 - [ ] **Milestone 7:** Maps & Timeline

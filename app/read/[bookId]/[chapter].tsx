@@ -111,9 +111,22 @@ export default function VerseReaderScreen() {
     </View>
   ), [canGoPrev, canGoNext, chapterNum, totalChapters, theme, bottomPad, goToPrev, goToNext]);
 
+  const handleVerseTap = useCallback((item: Verse) => {
+    router.push({
+      pathname: "/verse-actions",
+      params: {
+        bookId,
+        chapter,
+        verse: String(item.verse),
+        text: item.text,
+        bookName,
+      },
+    });
+  }, [bookId, chapter, bookName]);
+
   const renderVerse = useCallback(({ item }: { item: Verse }) => (
-    <VerseRow item={item} theme={theme} />
-  ), [theme]);
+    <VerseRow item={item} theme={theme} onPress={() => handleVerseTap(item)} />
+  ), [theme, handleVerseTap]);
 
   return (
     <>
@@ -122,8 +135,16 @@ export default function VerseReaderScreen() {
           title: `${bookName} ${chapter}`,
           headerRight: () => (
             <View style={styles.headerRight}>
-              <Pressable hitSlop={8} style={styles.headerBtn}>
-                <Ionicons name="text" size={18} color={theme.textSecondary} />
+              <Pressable
+                hitSlop={8}
+                style={styles.headerBtn}
+                onPress={() =>
+                  router.push(
+                    `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
+                  )
+                }
+              >
+                <Ionicons name="layers-outline" size={18} color={theme.textSecondary} />
               </Pressable>
               <Pressable hitSlop={8} style={styles.headerBtn}>
                 <Ionicons name="bookmark-outline" size={18} color={theme.textSecondary} />
@@ -174,12 +195,19 @@ export default function VerseReaderScreen() {
   );
 }
 
-function VerseRow({ item, theme }: { item: Verse; theme: typeof Colors.light }) {
+function VerseRow({ item, theme, onPress }: { item: Verse; theme: typeof Colors.light; onPress: () => void }) {
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }) => [
         styles.verseRow,
-        { opacity: pressed ? 0.7 : 1 },
+        {
+          opacity: pressed ? 0.7 : 1,
+          backgroundColor: pressed ? theme.backgroundSecondary : "transparent",
+          borderRadius: 8,
+          marginHorizontal: -6,
+          paddingHorizontal: 6,
+        },
       ]}
     >
       <Text style={[styles.verseNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>

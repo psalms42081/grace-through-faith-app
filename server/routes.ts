@@ -134,12 +134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/search", async (req, res) => {
     try {
-      const { q, translation = "KJV" } = req.query;
+      const { q, translation = "KJV", limit: limitStr = "50" } = req.query;
       if (!q) {
         return res.status(400).json({ error: "q (query) is required" });
       }
 
       const query = String(q).trim();
+      const resultLimit = Math.min(Number(limitStr) || 50, 100);
 
       const translationRecord = await db
         .select()
@@ -152,17 +153,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = await db
-        .select()
+        .select({
+          id: bibleVerses.id,
+          bookId: bibleVerses.bookId,
+          chapter: bibleVerses.chapter,
+          verse: bibleVerses.verse,
+          text: bibleVerses.text,
+          bookName: bibleBooks.name,
+          bookAbbreviation: bibleBooks.abbreviation,
+        })
         .from(bibleVerses)
+        .innerJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
         .where(
           and(
             eq(bibleVerses.translationId, translationRecord[0].id),
             ilike(bibleVerses.text, `%${query}%`)
           )
         )
-        .limit(50);
+        .orderBy(bibleBooks.orderIndex, bibleVerses.chapter, bibleVerses.verse)
+        .limit(resultLimit);
 
-      return res.json({ results, total: results.length });
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(bibleVerses)
+        .where(
+          and(
+            eq(bibleVerses.translationId, translationRecord[0].id),
+            ilike(bibleVerses.text, `%${query}%`)
+          )
+        );
+
+      const totalCount = Number(countResult[0]?.count ?? 0);
+
+      return res.json({ results, total: totalCount, returned: results.length });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/search/reference", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ error: "q (query) is required" });
+      }
+
+      const query = String(q).trim();
+
+      const refMatch = query.match(/^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
+      if (!refMatch) {
+        return res.json({ isReference: false });
+      }
+
+      const [, bookPart, chapterStr, verseStr, verseEndStr] = refMatch;
+      const bookName = bookPart.trim().toLowerCase();
+
+      const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+      const matchedBook = allBooks.find((b) =>
+        b.name.toLowerCase() === bookName ||
+        b.abbreviation.toLowerCase() === bookName ||
+        b.name.toLowerCase().startsWith(bookName) ||
+        b.name.toLowerCase().replace(/\s+/g, "").startsWith(bookName.replace(/\s+/g, ""))
+      );
+
+      if (!matchedBook) {
+        return res.json({ isReference: false });
+      }
+
+      return res.json({
+        isReference: true,
+        bookId: matchedBook.id,
+        bookName: matchedBook.name,
+        chapter: parseInt(chapterStr, 10),
+        verse: verseStr ? parseInt(verseStr, 10) : null,
+        verseEnd: verseEndStr ? parseInt(verseEndStr, 10) : null,
+      });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
