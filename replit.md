@@ -46,6 +46,8 @@ scripts/
   seed-books.ts         # Seeds 66 Bible books + KJV translation metadata
   download-kjv.ts       # Downloads public domain KJV JSON from GitHub
   import-kjv.ts         # Imports KJV verse text into bible_verse table
+  seed-context.ts       # Seeds 9 context cards + 4 commentators + 6 commentary entries
+  seed-strongs.ts       # Seeds 17 Strong's entries + 16 verse-word mappings
 data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
@@ -91,7 +93,7 @@ data/
 - [x] **Milestone 2:** Core Bible Data & Reader UI — KJV import, book/chapter/verse navigation
 - [x] **Milestone 3:** Search Engine — keyword search with highlighting, reference parsing (John 3:16)
 - [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
-- [ ] **Milestone 5:** Word Study & Historic Voices
+- [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
 - [ ] **Milestone 6:** Application Layer & Journaling
 - [ ] **Milestone 7:** Maps & Timeline
 - [ ] **Milestone 8:** Devotionals MVP

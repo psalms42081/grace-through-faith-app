@@ -46,12 +46,13 @@ function RootLayoutNav() {
         name="verse-actions"
         options={{
           presentation: "formSheet",
-          sheetAllowedDetents: [0.5, 0.75],
+          sheetAllowedDetents: [0.55, 0.8],
           sheetGrabberVisible: true,
           headerShown: true,
         }}
       />
       <Stack.Screen name="passage-context" options={{ headerShown: true }} />
+      <Stack.Screen name="word-study" options={{ headerShown: false }} />
     </Stack>
   );
 }

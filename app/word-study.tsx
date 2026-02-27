@@ -1,0 +1,414 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  useColorScheme,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
+import { useLocalSearchParams, router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/colors";
+
+interface StrongEntry {
+  id: string;
+  language: string;
+  lemma: string;
+  transliteration: string | null;
+  pronunciation: string | null;
+  definition: string;
+  extendedDefinition: string | null;
+  kjvUsage: string | null;
+  derivation: string | null;
+}
+
+interface WordMapping {
+  map: {
+    id: string;
+    verseId: string;
+    strongId: string;
+    wordPosition: number;
+    originalWord: string;
+    translatedWord: string | null;
+  };
+  entry: StrongEntry | null;
+}
+
+export default function WordStudyScreen() {
+  const params = useLocalSearchParams<{
+    verseId: string;
+    bookName: string;
+    chapter: string;
+    verse: string;
+    verseText: string;
+  }>();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const theme = isDark ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
+
+  const { data: wordMappings, isLoading, error } = useQuery<WordMapping[]>({
+    queryKey: [`/api/strong/verse/${params.verseId}`],
+    enabled: !!params.verseId,
+  });
+
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const languageLabel = (lang: string) =>
+    lang === "he" ? "Hebrew" : lang === "gr" ? "Greek" : lang;
+
+  const hasData = wordMappings && wordMappings.length > 0;
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: topPad + 12,
+            backgroundColor: theme.background,
+            borderBottomColor: theme.border,
+          },
+        ]}
+      >
+        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={theme.accent} />
+        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: theme.text, fontFamily: "Lora_700Bold" },
+            ]}
+          >
+            Word Study
+          </Text>
+          <Text
+            style={[
+              styles.headerSub,
+              { color: theme.textSecondary, fontFamily: "Inter_400Regular" },
+            ]}
+          >
+            {params.bookName} {params.chapter}:{params.verse}
+          </Text>
+        </View>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={[
+            styles.verseCard,
+            { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+          ]}
+        >
+          <View style={styles.verseRefRow}>
+            <Ionicons name="book-outline" size={14} color={theme.accent} />
+            <Text
+              style={[
+                styles.verseRef,
+                { color: theme.accent, fontFamily: "Inter_600SemiBold" },
+              ]}
+            >
+              {params.bookName} {params.chapter}:{params.verse}
+            </Text>
+            <View style={[styles.translationBadge, { backgroundColor: theme.accent + "18" }]}>
+              <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                KJV
+              </Text>
+            </View>
+          </View>
+          <Text
+            style={[
+              styles.verseText,
+              { color: theme.text, fontFamily: "Lora_400Regular" },
+            ]}
+          >
+            {params.verseText}
+          </Text>
+        </View>
+
+        {isLoading && (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={theme.accent} />
+            <Text
+              style={[
+                styles.loadingText,
+                { color: theme.textMuted, fontFamily: "Inter_400Regular" },
+              ]}
+            >
+              Loading word analysis...
+            </Text>
+          </View>
+        )}
+
+        {error && (
+          <View style={[styles.errorBox, { backgroundColor: theme.danger + "18", borderColor: theme.danger + "44" }]}>
+            <Ionicons name="alert-circle" size={18} color={theme.danger} />
+            <Text style={[styles.errorText, { color: theme.danger, fontFamily: "Inter_400Regular" }]}>
+              Failed to load word data
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && !error && !hasData && (
+          <View
+            style={[
+              styles.emptyBox,
+              { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+            ]}
+          >
+            <View style={[styles.emptyIcon, { backgroundColor: theme.accent + "18" }]}>
+              <Ionicons name="language" size={28} color={theme.accent} />
+            </View>
+            <Text
+              style={[
+                styles.emptyTitle,
+                { color: theme.text, fontFamily: "Lora_600SemiBold" },
+              ]}
+            >
+              No Word Data Available
+            </Text>
+            <Text
+              style={[
+                styles.emptyBody,
+                { color: theme.textMuted, fontFamily: "Inter_400Regular" },
+              ]}
+            >
+              Word study data for this verse has not been mapped yet. Key passages
+              like Genesis 1:1, Psalm 23:1, John 1:1, and John 3:16 have full word
+              analysis available.
+            </Text>
+          </View>
+        )}
+
+        {hasData && (
+          <>
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" },
+              ]}
+            >
+              Original Language Words
+            </Text>
+            {wordMappings.map((wm, i) => {
+              const entry = wm.entry;
+              if (!entry) return null;
+              return (
+                <View
+                  key={wm.map.id || i}
+                  style={[
+                    styles.wordCard,
+                    { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                  ]}
+                >
+                  <View style={styles.wordHeader}>
+                    <View style={styles.wordTitleRow}>
+                      <Text
+                        style={[
+                          styles.originalWord,
+                          { color: theme.text, fontFamily: "Lora_700Bold" },
+                        ]}
+                      >
+                        {entry.lemma}
+                      </Text>
+                      <View style={[styles.langBadge, { backgroundColor: entry.language === "he" ? "#4A6741" + "22" : "#3B5998" + "22" }]}>
+                        <Text style={[styles.langText, { color: entry.language === "he" ? "#4A6741" : "#3B5998", fontFamily: "Inter_600SemiBold" }]}>
+                          {languageLabel(entry.language)}
+                        </Text>
+                      </View>
+                      <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
+                        <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          {entry.id}
+                        </Text>
+                      </View>
+                    </View>
+                    {wm.map.translatedWord && (
+                      <View style={styles.translationRow}>
+                        <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
+                        <Text
+                          style={[
+                            styles.translatedWord,
+                            { color: theme.textSecondary, fontFamily: "Inter_500Medium" },
+                          ]}
+                        >
+                          "{wm.map.translatedWord}"
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {entry.transliteration && (
+                    <View style={styles.detailRow}>
+                      <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                        Transliteration
+                      </Text>
+                      <Text style={[styles.detailValue, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                        {entry.transliteration}
+                        {entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                      Definition
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                      {entry.definition}
+                    </Text>
+                  </View>
+
+                  {entry.extendedDefinition && (
+                    <View style={styles.detailRow}>
+                      <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                        Extended
+                      </Text>
+                      <Text style={[styles.detailValue, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                        {entry.extendedDefinition}
+                      </Text>
+                    </View>
+                  )}
+
+                  {entry.kjvUsage && (
+                    <View style={styles.usageSection}>
+                      <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                        KJV Usage
+                      </Text>
+                      <View style={styles.usagePills}>
+                        {entry.kjvUsage.split(",").map((u, j) => (
+                          <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
+                            <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                              {u.trim()}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {entry.derivation && (
+                    <View style={[styles.derivationRow, { borderTopColor: theme.border }]}>
+                      <Ionicons name="git-branch-outline" size={13} color={theme.textMuted} />
+                      <Text style={[styles.derivationText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        {entry.derivation}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  backBtn: { width: 36 },
+  headerCenter: { flex: 1, alignItems: "center" },
+  headerTitle: { fontSize: 18 },
+  headerSub: { fontSize: 12, marginTop: 2 },
+  scrollView: { flex: 1 },
+  content: { padding: 20, gap: 16 },
+  verseCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    gap: 10,
+  },
+  verseRefRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  verseRef: { fontSize: 13 },
+  translationBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  translationText: { fontSize: 10 },
+  verseText: { fontSize: 16, lineHeight: 26 },
+  loadingBox: { alignItems: "center", paddingVertical: 40, gap: 12 },
+  loadingText: { fontSize: 13 },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+  },
+  errorText: { fontSize: 13 },
+  emptyBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: { fontSize: 17, textAlign: "center" },
+  emptyBody: { fontSize: 14, textAlign: "center", lineHeight: 22 },
+  sectionLabel: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginTop: 4,
+  },
+  wordCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    gap: 14,
+  },
+  wordHeader: { gap: 6 },
+  wordTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  originalWord: { fontSize: 24 },
+  langBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  langText: { fontSize: 10 },
+  strongBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  strongNum: { fontSize: 10 },
+  translationRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  translatedWord: { fontSize: 14, fontStyle: "italic" },
+  detailRow: { gap: 4 },
+  detailLabel: { fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase" },
+  detailValue: { fontSize: 14, lineHeight: 22 },
+  usageSection: { gap: 8 },
+  usagePills: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  usagePill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  usagePillText: { fontSize: 11 },
+  derivationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
+    marginTop: 2,
+  },
+  derivationText: { fontSize: 12, flex: 1, lineHeight: 18 },
+});

@@ -120,6 +120,7 @@ export default function VerseReaderScreen() {
         verse: String(item.verse),
         text: item.text,
         bookName,
+        verseId: item.id,
       },
     });
   }, [bookId, chapter, bookName]);

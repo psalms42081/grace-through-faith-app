@@ -15,13 +15,14 @@ import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
 
 export default function VerseActionsSheet() {
-  const { bookId, chapter, verse, text, bookName } =
+  const { bookId, chapter, verse, text, bookName, verseId } =
     useLocalSearchParams<{
       bookId: string;
       chapter: string;
       verse: string;
       text: string;
       bookName: string;
+      verseId: string;
     }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -41,6 +42,13 @@ export default function VerseActionsSheet() {
       router.push(`/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
     }, 300);
   }, [bookId, chapter, bookName]);
+
+  const handleWordStudy = useCallback(() => {
+    router.back();
+    setTimeout(() => {
+      router.push(`/word-study?verseId=${encodeURIComponent(verseId || "")}&bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&verseText=${encodeURIComponent(text || "")}`);
+    }, 300);
+  }, [verseId, bookName, chapter, verse, text]);
 
   const handleHighlight = useCallback(() => {
     router.back();
@@ -97,6 +105,13 @@ export default function VerseActionsSheet() {
             theme={theme}
             onPress={handleBookmark}
             color={theme.bookmarkBlue}
+          />
+          <ActionButton
+            icon="language-outline"
+            label="Words"
+            theme={theme}
+            onPress={handleWordStudy}
+            color="#3B5998"
           />
           <ActionButton
             icon="library-outline"
