@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
+import { apiRequest } from "@/lib/query-client";
 
 export default function VerseActionsSheet() {
   const { bookId, chapter, verse, text, bookName, verseId, translation } =
@@ -53,13 +54,43 @@ export default function VerseActionsSheet() {
     }, 300);
   }, [verseId, bookName, chapter, verse, text]);
 
-  const handleHighlight = useCallback(() => {
-    router.back();
-  }, []);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  const handleBookmark = useCallback(() => {
-    router.back();
-  }, []);
+  const handleHighlight = useCallback(async () => {
+    try {
+      await apiRequest("POST", "/api/highlights", {
+        userId: "guest",
+        verseId: verseId || `${bookId}_${chapter}_${verse}`,
+        color: "yellow",
+      });
+      setFeedbackMsg("Highlighted!");
+      setTimeout(() => router.back(), 600);
+    } catch {
+      setFeedbackMsg("Failed to highlight");
+      setTimeout(() => {
+        setFeedbackMsg(null);
+        router.back();
+      }, 800);
+    }
+  }, [verseId, bookId, chapter, verse]);
+
+  const handleBookmark = useCallback(async () => {
+    try {
+      await apiRequest("POST", "/api/bookmarks", {
+        userId: "guest",
+        verseId: verseId || `${bookId}_${chapter}_${verse}`,
+        label: reference,
+      });
+      setFeedbackMsg("Bookmarked!");
+      setTimeout(() => router.back(), 600);
+    } catch {
+      setFeedbackMsg("Failed to bookmark");
+      setTimeout(() => {
+        setFeedbackMsg(null);
+        router.back();
+      }, 800);
+    }
+  }, [verseId, bookId, chapter, verse, reference]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -87,6 +118,25 @@ export default function VerseActionsSheet() {
             </Text>
           </View>
         </View>
+
+        {feedbackMsg && (
+          <View style={[styles.feedbackBanner, {
+            backgroundColor: feedbackMsg.startsWith("Failed") ? theme.error + "20" : theme.success + "20",
+            borderColor: feedbackMsg.startsWith("Failed") ? theme.error + "40" : theme.success + "40",
+          }]}>
+            <Ionicons
+              name={feedbackMsg.startsWith("Failed") ? "alert-circle" : "checkmark-circle"}
+              size={18}
+              color={feedbackMsg.startsWith("Failed") ? theme.error : theme.success}
+            />
+            <Text style={[styles.feedbackText, {
+              color: feedbackMsg.startsWith("Failed") ? theme.error : theme.success,
+              fontFamily: "Inter_600SemiBold",
+            }]}>
+              {feedbackMsg}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.actionsGrid}>
           <ActionButton
@@ -206,4 +256,17 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
   },
   actionLabel: { fontSize: 13 },
+  feedbackBanner: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  feedbackText: {
+    fontSize: 14,
+  },
 });

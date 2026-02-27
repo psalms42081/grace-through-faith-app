@@ -22,10 +22,20 @@ import {
   userNotes,
   userHighlights,
   userBookmarks,
+  users,
 } from "../shared/schema";
 import { eq, and, ilike, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  db.select().from(users).where(eq(users.id, "guest")).then((rows) => {
+    if (rows.length === 0) {
+      db.insert(users).values({ id: "guest", username: "guest", password: "guest" }).then(() => {
+        console.log("Guest user created");
+      });
+    }
+  });
+
 
   // ─── PASSAGE ────────────────────────────────────────────────────────────────
 

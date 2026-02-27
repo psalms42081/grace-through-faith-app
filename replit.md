@@ -48,6 +48,8 @@ scripts/
   import-kjv.ts         # Imports KJV verse text into bible_verse table
   seed-context.ts       # Seeds 9 context cards + 4 commentators + 6 commentary entries
   seed-strongs.ts       # Seeds 17 Strong's entries + 16 verse-word mappings
+  seed-strongs-expanded.ts # Seeds 65 additional Strong's entries + 204 word mappings
+  seed-application.ts   # Seeds 12 application templates (Then/Now, reflection, prayer)
 data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
@@ -96,7 +98,7 @@ data/
 - [x] **Milestone 3:** Search Engine — keyword search with highlighting, reference parsing (John 3:16)
 - [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
 - [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
-- [ ] **Milestone 6:** Application Layer & Journaling
+- [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
 - [ ] **Milestone 7:** Maps & Timeline
 - [ ] **Milestone 8:** Devotionals MVP
 - [ ] **Milestone 9:** Offline PWA Support

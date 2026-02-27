@@ -59,6 +59,17 @@ interface ContextCard {
   themes: string[] | null;
 }
 
+interface AppTemplate {
+  id: string;
+  bookId: number;
+  chapter: number;
+  thenContext: string;
+  nowApplication: string;
+  reflectionQuestions: string[];
+  prayerPrompt: string | null;
+  keyTheme: string | null;
+}
+
 interface CommentaryResult {
   entry: {
     id: string;
@@ -790,39 +801,220 @@ function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light
 }
 
 function ApplicationTab({ theme }: { theme: typeof Colors.light }) {
+  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+
+  const { data: books } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
+
+  const { data: templates, isLoading, isError } = useQuery<AppTemplate[]>({
+    queryKey: [`/api/application?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+    enabled: !!selectedBook && !!selectedChapter,
+  });
+
+  const hasData = templates && templates.length > 0;
+  const template = hasData ? templates![0] : null;
+
+  const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
+  const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+
+  const chapters = selectedBook
+    ? Array.from({ length: selectedBook.chapterCount }, (_, i) => i + 1)
+    : [];
+
   return (
     <View style={styles.tabContent}>
       <View style={[styles.appLayer, { backgroundColor: theme.primary }]}>
         <Text style={[styles.appLayerTitle, { fontFamily: "Lora_600SemiBold" }]}>
-          The 4-Layer Study Model
+          Layer 4: Application
         </Text>
         <Text style={[styles.appLayerSub, { fontFamily: "Inter_400Regular" }]}>
-          Every passage is presented with progressive depth -- from the raw text to your personal application.
+          Bridge the ancient text to your life today -- Then vs. Now context, reflection questions, and prayer prompts.
         </Text>
       </View>
-      {[
-        { layer: "Layer 1", name: "Text", desc: "KJV scripture, cross references, word study", icon: "book" as const },
-        { layer: "Layer 2", name: "Context", desc: "Historical notes, geography, timeline anchors", icon: "map" as const },
-        { layer: "Layer 3", name: "Historic Voices", desc: "Classic commentary from the Church Fathers", icon: "chatbubble-ellipses" as const },
-        { layer: "Layer 4", name: "Application", desc: "Then/Now, reflection, prayer, journaling", icon: "heart" as const },
-      ].map((layer) => (
-        <View key={layer.layer} style={[styles.layerRow, { borderColor: theme.border }]}>
-          <View style={[styles.layerIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name={layer.icon} size={18} color={theme.accent} />
+
+      {!selectedBook && (
+        <>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Old Testament
+          </Text>
+          <View style={styles.passagePills}>
+            {otBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          <View style={styles.layerText}>
-            <Text style={[styles.layerNum, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              {layer.layer}
-            </Text>
-            <Text style={[styles.layerName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {layer.name}
-            </Text>
-            <Text style={[styles.layerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {layer.desc}
-            </Text>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 16 }]}>
+            New Testament
+          </Text>
+          <View style={styles.passagePills}>
+            {ntBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-        </View>
-      ))}
+        </>
+      )}
+
+      {selectedBook && !selectedChapter && (
+        <>
+          <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              All Books
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name}
+          </Text>
+          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {selectedBook.chapterCount} chapters · {selectedBook.testament === "OT" ? "Old Testament" : "New Testament"}
+          </Text>
+          <View style={styles.chapterGrid}>
+            {chapters.map((ch) => (
+              <Pressable
+                key={ch}
+                onPress={() => setSelectedChapter(ch)}
+                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {ch}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+
+      {selectedBook && selectedChapter && (
+        <>
+          <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name}
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name} {selectedChapter}
+          </Text>
+
+          {isLoading && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={theme.accent} />
+            </View>
+          )}
+
+          {template && (
+            <>
+              {template.keyTheme && (
+                <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" }]}>
+                  <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    {template.keyTheme}
+                  </Text>
+                </View>
+              )}
+
+              <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={styles.appCardHeader}>
+                  <Ionicons name="time-outline" size={16} color={theme.accent} />
+                  <Text style={[styles.appCardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Then (Historical Context)
+                  </Text>
+                </View>
+                <Text style={[styles.appCardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {template.thenContext}
+                </Text>
+              </View>
+
+              <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={styles.appCardHeader}>
+                  <Ionicons name="today-outline" size={16} color={theme.success} />
+                  <Text style={[styles.appCardLabel, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                    Now (Modern Application)
+                  </Text>
+                </View>
+                <Text style={[styles.appCardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {template.nowApplication}
+                </Text>
+              </View>
+
+              {template.reflectionQuestions && template.reflectionQuestions.length > 0 && (
+                <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <View style={styles.appCardHeader}>
+                    <Ionicons name="help-circle-outline" size={16} color={theme.bookmarkBlue} />
+                    <Text style={[styles.appCardLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                      Reflection Questions
+                    </Text>
+                  </View>
+                  {template.reflectionQuestions.map((q, i) => (
+                    <View key={i} style={styles.questionRow}>
+                      <Text style={[styles.questionNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {i + 1}.
+                      </Text>
+                      <Text style={[styles.questionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                        {q}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {template.prayerPrompt && (
+                <View style={[styles.appCard, { backgroundColor: theme.primary + "12", borderColor: theme.primary + "30" }]}>
+                  <View style={styles.appCardHeader}>
+                    <Ionicons name="hand-left-outline" size={16} color={theme.primary} />
+                    <Text style={[styles.appCardLabel, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
+                      Prayer Prompt
+                    </Text>
+                  </View>
+                  <Text style={[styles.appCardBody, { color: theme.text, fontFamily: "Lora_400Regular", fontStyle: "italic" as const }]}>
+                    {template.prayerPrompt}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {isError && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="warning-outline" size={24} color={theme.error} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                Unable to Load
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Could not fetch application data for this chapter. Please check your connection and try again.
+              </Text>
+            </View>
+          )}
+
+          {!isLoading && !isError && !hasData && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                No Application Data Yet
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Application templates for {selectedBook.name} {selectedChapter} haven't been added yet. Templates are available for Genesis 1, Genesis 12, Exodus 14, Psalm 23, Isaiah 53, Daniel 8, Matthew 5, John 1, John 3, Romans 8, 1 Corinthians 13, and Revelation 21.
+              </Text>
+            </View>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -1051,4 +1243,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   chapterNum: { fontSize: 14 },
+  appCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  appCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  appCardLabel: { fontSize: 12, letterSpacing: 0.3 },
+  appCardBody: { fontSize: 14, lineHeight: 22 },
+  questionRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  questionNum: { fontSize: 14, width: 20, textAlign: "right" as const },
+  questionText: { fontSize: 14, lineHeight: 22, flex: 1 },
 });
