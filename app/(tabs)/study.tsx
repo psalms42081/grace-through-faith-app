@@ -74,12 +74,6 @@ interface CommentaryResult {
   };
 }
 
-const FEATURED_PASSAGES = [
-  { label: "Genesis 1:1", bookId: 1, chapter: 1, verse: 1, bookName: "Genesis" },
-  { label: "Psalm 23:1", bookId: 19, chapter: 23, verse: 1, bookName: "Psalms" },
-  { label: "John 1:1", bookId: 43, chapter: 1, verse: 1, bookName: "John" },
-  { label: "John 3:16", bookId: 43, chapter: 3, verse: 16, bookName: "John" },
-];
 
 export default function StudyScreen() {
   const colorScheme = useColorScheme();
@@ -157,15 +151,29 @@ export default function StudyScreen() {
   );
 }
 
-function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
-  const [selectedPassage, setSelectedPassage] = useState<typeof FEATURED_PASSAGES[0] | null>(null);
+interface BibleBook {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+}
 
-  const verseQuery = useQuery<{ book: any; chapter: number; verses: { id: string; verse: number; text: string }[] }>({
-    queryKey: [`/api/passage?book=${selectedPassage?.bookId}&chapter=${selectedPassage?.chapter}&translation=KJV`],
-    enabled: !!selectedPassage,
+function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
+  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+
+  const { data: books } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
   });
 
-  const targetVerse = verseQuery.data?.verses?.find(v => v.verse === selectedPassage?.verse);
+  const passageQuery = useQuery<{ book: any; chapter: number; verses: { id: string; verse: number; text: string }[] }>({
+    queryKey: [`/api/passage?book=${selectedBook?.id}&chapter=${selectedChapter}&translation=KJV`],
+    enabled: !!selectedBook && !!selectedChapter,
+  });
+
+  const targetVerse = passageQuery.data?.verses?.find(v => v.verse === selectedVerse);
 
   const wordQuery = useQuery<{ map: any; entry: StrongEntry | null }[]>({
     queryKey: [`/api/strong/verse/${targetVerse?.id}`],
@@ -174,157 +182,230 @@ function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
 
   const hasWords = wordQuery.data && wordQuery.data.length > 0;
 
+  const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
+  const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+
+  const chapters = selectedBook
+    ? Array.from({ length: selectedBook.chapterCount }, (_, i) => i + 1)
+    : [];
+
+  const verses = passageQuery.data?.verses ?? [];
+
   return (
     <View style={styles.tabContent}>
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        Select a Passage
-      </Text>
-      <View style={styles.passagePills}>
-        {FEATURED_PASSAGES.map((p) => {
-          const isActive = selectedPassage?.label === p.label;
-          return (
-            <Pressable
-              key={p.label}
-              onPress={() => setSelectedPassage(p)}
-              style={[
-                styles.passagePill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Text style={[styles.passagePillText, { color: isActive ? "#fff" : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-                {p.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {!selectedPassage && (
-        <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={[styles.emptyIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="language" size={28} color={theme.accent} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-            Original Language Tools
-          </Text>
-          <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Select a passage above to see each word's original Hebrew or Greek meaning from Strong's Concordance.
-          </Text>
-        </View>
-      )}
-
-      {selectedPassage && verseQuery.isLoading && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
-        </View>
-      )}
-
-      {selectedPassage && targetVerse && (
-        <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={styles.verseRefRow}>
-            <Ionicons name="book-outline" size={14} color={theme.accent} />
-            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedPassage.label}
-            </Text>
-          </View>
-          <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-            {targetVerse.text}
-          </Text>
-        </View>
-      )}
-
-      {wordQuery.isLoading && targetVerse && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
-          <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Loading word analysis...
-          </Text>
-        </View>
-      )}
-
-      {hasWords && (
+      {!selectedBook && (
         <>
           <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Original Language Words
+            Old Testament
           </Text>
-          {wordQuery.data!.map((wm, i) => {
-            const entry = wm.entry;
-            if (!entry) return null;
-            const langColor = entry.language === "he" ? "#4A6741" : "#3B5998";
-            return (
-              <View
-                key={wm.map.id || i}
-                style={[styles.wordCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+          <View style={styles.passagePills}>
+            {otBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); setSelectedVerse(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
               >
-                <View style={styles.wordHeader}>
-                  <Text style={[styles.lemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                    {entry.lemma}
-                  </Text>
-                  <View style={[styles.langBadge, { backgroundColor: langColor + "22" }]}>
-                    <Text style={[styles.langText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
-                      {entry.language === "he" ? "Hebrew" : "Greek"}
-                    </Text>
-                  </View>
-                  <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                    <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {entry.id}
-                    </Text>
-                  </View>
-                </View>
-                {wm.map.translatedWord && (
-                  <View style={styles.translationRow}>
-                    <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
-                    <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                      "{wm.map.translatedWord}"
-                    </Text>
-                  </View>
-                )}
-                {entry.transliteration && (
-                  <Text style={[styles.transliteration, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
-                  </Text>
-                )}
-                <Text style={[styles.definition, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                  {entry.definition}
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
                 </Text>
-                {entry.kjvUsage && (
-                  <View style={styles.usagePills}>
-                    {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
-                      <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
-                        <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                          {u.trim()}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            );
-          })}
+              </Pressable>
+            ))}
+          </View>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 16 }]}>
+            New Testament
+          </Text>
+          <View style={styles.passagePills}>
+            {ntBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); setSelectedVerse(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </>
       )}
 
-      {selectedPassage && targetVerse && !wordQuery.isLoading && !hasWords && (
-        <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
-          <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Word data for this verse has not been mapped yet.
+      {selectedBook && !selectedChapter && (
+        <>
+          <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); setSelectedVerse(null); }} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              All Books
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name}
           </Text>
-        </View>
+          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {selectedBook.chapterCount} chapters · {selectedBook.testament === "OT" ? "Old Testament" : "New Testament"}
+          </Text>
+          <View style={styles.chapterGrid}>
+            {chapters.map((ch) => (
+              <Pressable
+                key={ch}
+                onPress={() => { setSelectedChapter(ch); setSelectedVerse(null); }}
+                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {ch}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+
+      {selectedBook && selectedChapter && !selectedVerse && (
+        <>
+          <Pressable onPress={() => { setSelectedChapter(null); setSelectedVerse(null); }} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name}
+            </Text>
+          </Pressable>
+          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            {selectedBook.name} {selectedChapter}
+          </Text>
+          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Select a verse for word study
+          </Text>
+
+          {passageQuery.isLoading && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={theme.accent} />
+            </View>
+          )}
+
+          <View style={styles.chapterGrid}>
+            {verses.map((v) => (
+              <Pressable
+                key={v.verse}
+                onPress={() => setSelectedVerse(v.verse)}
+                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {v.verse}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
+
+      {selectedBook && selectedChapter && selectedVerse && (
+        <>
+          <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
+            <Ionicons name="chevron-back" size={16} color={theme.accent} />
+            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name} {selectedChapter}
+            </Text>
+          </Pressable>
+
+          {targetVerse && (
+            <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.verseRefRow}>
+                <Ionicons name="book-outline" size={14} color={theme.accent} />
+                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {selectedBook.name} {selectedChapter}:{selectedVerse}
+                </Text>
+              </View>
+              <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {targetVerse.text}
+              </Text>
+            </View>
+          )}
+
+          {wordQuery.isLoading && targetVerse && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Loading word analysis...
+              </Text>
+            </View>
+          )}
+
+          {hasWords && (
+            <>
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                Original Language Words
+              </Text>
+              {wordQuery.data!.map((wm, i) => {
+                const entry = wm.entry;
+                if (!entry) return null;
+                const langColor = entry.language === "he" ? "#4A6741" : "#3B5998";
+                return (
+                  <View
+                    key={wm.map.id || i}
+                    style={[styles.wordCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                  >
+                    <View style={styles.wordHeader}>
+                      <Text style={[styles.lemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                        {entry.lemma}
+                      </Text>
+                      <View style={[styles.langBadge, { backgroundColor: langColor + "22" }]}>
+                        <Text style={[styles.langText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
+                          {entry.language === "he" ? "Hebrew" : "Greek"}
+                        </Text>
+                      </View>
+                      <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
+                        <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          {entry.id}
+                        </Text>
+                      </View>
+                    </View>
+                    {wm.map.translatedWord && (
+                      <View style={styles.translationRow}>
+                        <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
+                        <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                          "{wm.map.translatedWord}"
+                        </Text>
+                      </View>
+                    )}
+                    {entry.transliteration && (
+                      <Text style={[styles.transliteration, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                        {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                      </Text>
+                    )}
+                    <Text style={[styles.definition, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                      {entry.definition}
+                    </Text>
+                    {entry.kjvUsage && (
+                      <View style={styles.usagePills}>
+                        {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
+                          <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
+                            <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                              {u.trim()}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          {targetVerse && !wordQuery.isLoading && !hasWords && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                No Word Data Yet
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Strong's Concordance data for {selectedBook.name} {selectedChapter}:{selectedVerse} hasn't been mapped yet. Word study data is currently available for Genesis 1:1, Psalm 23:1, John 1:1, and John 3:16.
+              </Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
-}
-
-interface BibleBook {
-  id: number;
-  name: string;
-  abbreviation: string;
-  testament: string;
-  chapterCount: number;
 }
 
 function ContextTab({ theme }: { theme: typeof Colors.light }) {
