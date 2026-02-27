@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
+const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
+type Translation = (typeof TRANSLATIONS)[number];
+
 interface Verse {
   id: string;
   verse: number;
@@ -28,14 +31,16 @@ interface PassageResponse {
 }
 
 export default function VerseReaderScreen() {
-  const { bookId, chapter } = useLocalSearchParams<{ bookId: string; chapter: string }>();
+  const { bookId, chapter, translation: txParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const initialTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : "KJV";
+  const [translation, setTranslation] = useState<Translation>(initialTx);
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
-    queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=KJV`],
+    queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
 
   const bookName = data?.book?.name ?? "";
@@ -46,12 +51,12 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const goToPrev = useCallback(() => {
-    if (canGoPrev) router.replace(`/read/${bookId}/${chapterNum - 1}`);
-  }, [bookId, chapterNum, canGoPrev]);
+    if (canGoPrev) router.replace(`/read/${bookId}/${chapterNum - 1}?translation=${translation}`);
+  }, [bookId, chapterNum, canGoPrev, translation]);
 
   const goToNext = useCallback(() => {
-    if (canGoNext) router.replace(`/read/${bookId}/${chapterNum + 1}`);
-  }, [bookId, chapterNum, canGoNext]);
+    if (canGoNext) router.replace(`/read/${bookId}/${chapterNum + 1}?translation=${translation}`);
+  }, [bookId, chapterNum, canGoNext, translation]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -61,8 +66,38 @@ export default function VerseReaderScreen() {
         Chapter {chapter}
       </Text>
       <View style={[styles.dividerLine, { backgroundColor: theme.accent }]} />
+      <View style={styles.translationRow}>
+        {TRANSLATIONS.map((t) => {
+          const isActive = translation === t;
+          return (
+            <Pressable
+              key={t}
+              onPress={() => setTranslation(t)}
+              style={[
+                styles.translationPill,
+                {
+                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
+                  borderColor: isActive ? theme.accent : theme.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.translationPillText,
+                  {
+                    color: isActive ? "#fff" : theme.textSecondary,
+                    fontFamily: isActive ? "Inter_700Bold" : "Inter_500Medium",
+                  },
+                ]}
+              >
+                {t}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
-  ), [chapter, theme]);
+  ), [chapter, theme, translation]);
 
   const footerComponent = useMemo(() => (
     <View style={[styles.navFooter, { paddingBottom: bottomPad + 20 }]}>
@@ -121,9 +156,10 @@ export default function VerseReaderScreen() {
         text: item.text,
         bookName,
         verseId: item.id,
+        translation,
       },
     });
-  }, [bookId, chapter, bookName]);
+  }, [bookId, chapter, bookName, translation]);
 
   const renderVerse = useCallback(({ item }: { item: Verse }) => (
     <VerseRow item={item} theme={theme} onPress={() => handleVerseTap(item)} />
@@ -234,6 +270,14 @@ const styles = StyleSheet.create({
   chapterHeader: { alignItems: "center", paddingVertical: 20, gap: 12 },
   chapterTitle: { fontSize: 22 },
   dividerLine: { width: 40, height: 2, borderRadius: 1 },
+  translationRow: { flexDirection: "row", gap: 8, marginTop: 4 },
+  translationPill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  translationPillText: { fontSize: 12 },
   verseRow: {
     flexDirection: "row",
     paddingVertical: 6,

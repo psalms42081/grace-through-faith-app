@@ -64,9 +64,11 @@ data/
 - **User:** users, user_note, user_highlight, user_bookmark
 
 ## Data Pipeline
-- KJV public domain text sourced from github.com/aruljohn/Bible-kjv
-- 31,102 verses across 66 books imported into PostgreSQL
-- Scripts: `download-kjv.ts` -> `seed-books.ts` -> `import-kjv.ts`
+- **KJV** (King James Version) — public domain, sourced from github.com/aruljohn/Bible-kjv
+- **ASV** (American Standard Version, 1901) — public domain, sourced from github.com/bibleapi/bibleapi-bibles-json
+- **WEB** (World English Bible) — public domain, sourced from github.com/TehShrike/world-english-bible
+- 93,308 total verses (31,103 per translation x 3) across 66 books imported into PostgreSQL
+- Scripts: `seed-books.ts` -> `download-kjv.ts` -> `import-kjv.ts` -> `download-translations.ts` -> `import-translations.ts`
 
 ## API Endpoints
 - `GET /api/books` — List all Bible books

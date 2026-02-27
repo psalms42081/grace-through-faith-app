@@ -16,7 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
-import { apiRequest } from "@/lib/query-client";
+
+const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
+type Translation = (typeof TRANSLATIONS)[number];
 
 const SUGGESTIONS = [
   { label: "John 3:16", type: "ref" },
@@ -63,6 +65,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [focused, setFocused] = useState(false);
+  const [translation, setTranslation] = useState<Translation>("KJV");
   const inputRef = useRef<TextInput>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -74,7 +77,7 @@ export default function SearchScreen() {
   });
 
   const { data: searchData, isLoading: searchLoading, error: searchError } = useQuery<SearchResponse>({
-    queryKey: [`/api/search?q=${encodeURIComponent(activeQuery)}&translation=KJV&limit=50`],
+    queryKey: [`/api/search?q=${encodeURIComponent(activeQuery)}&translation=${translation}&limit=50`],
     enabled: activeQuery.length > 0 && !refData?.isReference,
   });
 
@@ -92,12 +95,12 @@ export default function SearchScreen() {
 
   const handleGoToReference = useCallback(() => {
     if (!refData?.isReference || !refData.bookId) return;
-    router.push(`/read/${refData.bookId}/${refData.chapter}`);
-  }, [refData]);
+    router.push(`/read/${refData.bookId}/${refData.chapter}?translation=${translation}`);
+  }, [refData, translation]);
 
   const handleResultPress = useCallback((result: SearchResult) => {
-    router.push(`/read/${result.bookId}/${result.chapter}`);
-  }, []);
+    router.push(`/read/${result.bookId}/${result.chapter}?translation=${translation}`);
+  }, [translation]);
 
   const handleClear = useCallback(() => {
     setQuery("");
@@ -194,6 +197,37 @@ export default function SearchScreen() {
             </Pressable>
           )}
         </View>
+      </View>
+
+      <View style={styles.translationBar}>
+        {TRANSLATIONS.map((t) => {
+          const isActive = translation === t;
+          return (
+            <Pressable
+              key={t}
+              onPress={() => setTranslation(t)}
+              style={[
+                styles.txPill,
+                {
+                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
+                  borderColor: isActive ? theme.accent : theme.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.txPillText,
+                  {
+                    color: isActive ? "#fff" : theme.textSecondary,
+                    fontFamily: isActive ? "Inter_700Bold" : "Inter_500Medium",
+                  },
+                ]}
+              >
+                {t}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {showSuggestions ? (
@@ -403,4 +437,17 @@ const styles = StyleSheet.create({
   errorSub: { fontSize: 13, textAlign: "center" as const },
   emptyState: { alignItems: "center" as const, gap: 10, paddingTop: 60 },
   emptyText: { fontSize: 14, textAlign: "center" as const },
+  translationBar: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  txPill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  txPillText: { fontSize: 11 },
 });

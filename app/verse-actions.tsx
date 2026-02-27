@@ -15,7 +15,7 @@ import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
 
 export default function VerseActionsSheet() {
-  const { bookId, chapter, verse, text, bookName, verseId } =
+  const { bookId, chapter, verse, text, bookName, verseId, translation } =
     useLocalSearchParams<{
       bookId: string;
       chapter: string;
@@ -23,6 +23,7 @@ export default function VerseActionsSheet() {
       text: string;
       bookName: string;
       verseId: string;
+      translation: string;
     }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -31,10 +32,12 @@ export default function VerseActionsSheet() {
 
   const reference = `${bookName} ${chapter}:${verse}`;
 
+  const txLabel = translation || "KJV";
+
   const handleCopy = useCallback(async () => {
-    await Clipboard.setStringAsync(`${text}\n— ${reference} (KJV)`);
+    await Clipboard.setStringAsync(`${text}\n\u2014 ${reference} (${txLabel})`);
     router.back();
-  }, [text, reference]);
+  }, [text, reference, txLabel]);
 
   const handleStudy = useCallback(() => {
     router.back();
@@ -80,7 +83,7 @@ export default function VerseActionsSheet() {
           </Text>
           <View style={[styles.translationTag, { backgroundColor: theme.accent + "18" }]}>
             <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              KJV
+              {txLabel}
             </Text>
           </View>
         </View>
