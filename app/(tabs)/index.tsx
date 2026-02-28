@@ -36,10 +36,10 @@ const DAILY_VERSES = [
 ];
 
 const STUDY_LAYERS = [
-  { icon: "book-outline" as const, title: "Read", desc: "Scripture in KJV, ASV & WEB" },
-  { icon: "search-outline" as const, title: "Study", desc: "Greek & Hebrew word origins" },
-  { icon: "earth-outline" as const, title: "Context", desc: "History, culture & geography" },
-  { icon: "chatbubbles-outline" as const, title: "Voices", desc: "Historic commentary & insight" },
+  { icon: "book-outline" as const, num: "1", title: "Text", desc: "Read the Scripture", detail: "Read the passage in multiple translations (KJV, ASV, WEB) to see how different scholars have rendered the original languages." },
+  { icon: "search-outline" as const, num: "2", title: "Context", desc: "Understand the setting", detail: "Explore the historical and cultural background \u2014 who wrote it, when, to whom, and why. See the passage in its full biblical context." },
+  { icon: "library-outline" as const, num: "3", title: "Historic Voices", desc: "Learn from the faithful", detail: "Hear from trusted commentators throughout church history, including Ellen White\u2019s writings, to deepen your understanding." },
+  { icon: "heart-outline" as const, num: "4", title: "Application", desc: "Live the Word", detail: "Bring it home \u2014 practical reflection questions and journaling prompts to apply what you\u2019ve learned to your daily walk with God." },
 ];
 
 function getGreeting(): string {
@@ -519,12 +519,22 @@ function AdultHomeScreen() {
         <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Grace through Faith
         </Text>
-        <View style={styles.welcomeTagline}>
-          <View style={[styles.crossMark, { backgroundColor: theme.accent }]} />
-          <Text style={[styles.taglineText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Dive deeper into the Word, one layer at a time
-          </Text>
+      </View>
+
+      <View style={[styles.welcomeCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.accent + "30" }]}>
+        <View style={[styles.welcomeIconRow]}>
+          <Ionicons name="book" size={22} color={theme.accent} />
+          <Ionicons name="layers" size={22} color={theme.accent} style={{ marginLeft: -4 }} />
         </View>
+        <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Study the Bible like never before
+        </Text>
+        <Text style={[styles.welcomeBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          Grace through Faith guides you through Scripture using a unique four-layer approach. Instead of just reading, you'll understand the original languages, explore the historical context, hear from faithful voices across the centuries, and discover how to apply God's Word to your life today.
+        </Text>
+        <Text style={[styles.welcomeBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular", marginTop: 8 }]}>
+          For all Christians, of every denomination. For seekers, for scholars, for families.
+        </Text>
       </View>
 
       <LinearGradient
@@ -571,49 +581,54 @@ function AdultHomeScreen() {
         </View>
       </LinearGradient>
 
-      <GoldDivider theme={theme} />
-
-      <Pressable
-        onPress={() => router.push("/(tabs)/study")}
-        style={({ pressed }) => [
-          styles.studyModelCard,
-          {
-            backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
-            borderColor: theme.accent + "35",
-            opacity: pressed ? 0.9 : 1,
-          },
-        ]}
-      >
+      <View style={styles.studyModelSection}>
         <View style={styles.studyModelHeader}>
           <View style={[styles.studyModelIconWrap, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="layers-outline" size={22} color={theme.accent} />
+            <Ionicons name="layers-outline" size={24} color={theme.accent} />
           </View>
-          <View style={styles.studyModelHeaderText}>
-            <Text style={[styles.studyModelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              The 4-Layer Study Model
-            </Text>
-            <Text style={[styles.studyModelSubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Go beyond surface-level reading
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.accent} />
+          <Text style={[styles.studyModelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            The 4-Layer Study Model
+          </Text>
         </View>
+        <Text style={[styles.studyModelIntro, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          Each passage is studied through four layers, building from the text itself to personal transformation:
+        </Text>
 
-        <View style={styles.studyLayersRow}>
-          {STUDY_LAYERS.map((layer, i) => (
-            <View key={layer.title} style={styles.studyLayerItem}>
-              <View style={[styles.studyLayerDot, { backgroundColor: theme.accent + (i === 0 ? "FF" : i === 1 ? "CC" : i === 2 ? "88" : "55") }]} />
-              <Ionicons name={layer.icon} size={18} color={theme.accent} />
-              <Text style={[styles.studyLayerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {layer.title}
-              </Text>
-              <Text style={[styles.studyLayerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-                {layer.desc}
-              </Text>
+        {STUDY_LAYERS.map((layer, i) => (
+          <View
+            key={layer.title}
+            style={[styles.layerCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.accent + (i === 0 ? "40" : i === 1 ? "30" : i === 2 ? "25" : "20") }]}
+          >
+            <View style={styles.layerCardTop}>
+              <View style={[styles.layerNumCircle, { backgroundColor: theme.accent + "15" }]}>
+                <Text style={[styles.layerNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
+              </View>
+              <Ionicons name={layer.icon} size={20} color={theme.accent} />
+              <View style={styles.layerCardTitleBlock}>
+                <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                  {layer.title}
+                </Text>
+                <Text style={[styles.layerSubtitle, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                  {layer.desc}
+                </Text>
+              </View>
             </View>
-          ))}
-        </View>
-      </Pressable>
+            <Text style={[styles.layerDetail, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {layer.detail}
+            </Text>
+          </View>
+        ))}
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/study")}
+          style={({ pressed }) => [styles.tryStudyBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={[styles.tryStudyBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+            Try a Study Now
+          </Text>
+        </Pressable>
+      </View>
 
       <GoldDivider theme={theme} />
 
@@ -798,21 +813,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  appName: { fontSize: 28, letterSpacing: 0.2, marginBottom: 10 },
-  welcomeTagline: {
+  appName: { fontSize: 28, letterSpacing: 0.2, marginBottom: 0 },
+  welcomeCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+    marginBottom: 20,
+  },
+  welcomeIconRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8,
+    marginBottom: 10,
   },
-  crossMark: {
-    width: 2,
-    height: 16,
-    borderRadius: 1,
+  welcomeTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    marginBottom: 10,
   },
-  taglineText: { fontSize: 13, letterSpacing: 0.2 },
+  welcomeBody: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
   verseCard: {
     borderRadius: 20,
     marginBottom: 20,
@@ -888,17 +912,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
   },
-  studyModelCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
-    marginVertical: 12,
+  studyModelSection: {
+    marginBottom: 8,
   },
   studyModelHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 18,
+    marginBottom: 10,
   },
   studyModelIconWrap: {
     width: 44,
@@ -907,29 +928,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  studyModelHeaderText: {
-    flex: 1,
+  studyModelTitle: { fontSize: 20 },
+  studyModelIntro: { fontSize: 14, lineHeight: 21, marginBottom: 14 },
+  layerCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 10,
   },
-  studyModelTitle: { fontSize: 16 },
-  studyModelSubtitle: { fontSize: 12, marginTop: 2 },
-  studyLayersRow: {
+  layerCardTop: {
     flexDirection: "row",
-    gap: 8,
-  },
-  studyLayerItem: {
-    flex: 1,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 8,
+    gap: 10,
+    marginBottom: 8,
   },
-  studyLayerDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 4,
+  layerNumCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  studyLayerTitle: { fontSize: 12, marginTop: 2 },
-  studyLayerDesc: { fontSize: 10, textAlign: "center", lineHeight: 14 },
+  layerNum: { fontSize: 14 },
+  layerCardTitleBlock: { flex: 1 },
+  layerTitle: { fontSize: 16 },
+  layerSubtitle: { fontSize: 12, marginTop: 1 },
+  layerDetail: { fontSize: 13, lineHeight: 20 },
+  tryStudyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  tryStudyBtnText: { color: "#fff", fontSize: 15 },
   devotionalBanner: {
     borderRadius: 18,
     borderWidth: 1,
