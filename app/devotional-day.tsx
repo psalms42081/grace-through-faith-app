@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   TextInput,
+  Linking,
 } from "react-native";
 import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -255,6 +256,37 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
+        {day.historicVoiceExcerpt && (
+          <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="library-outline" size={16} color="#8B5CF6" />
+              <Text style={[styles.cardLabel, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                Further Reading
+              </Text>
+            </View>
+            <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {day.historicVoiceExcerpt.replace(/\(https:\/\/egwwritings\.org\S*/g, "").replace(/\s+/g, " ").trim().replace(/[—\-,.\s]+$/, ".")}
+            </Text>
+            {day.historicVoiceExcerpt.includes("egwwritings.org") ? (
+              <Pressable
+                onPress={() => {
+                  const url = day.historicVoiceExcerpt!.match(/https:\/\/egwwritings\.org\S*/)?.[0]?.replace(/[).]+$/, "");
+                  if (url) Linking.openURL(url);
+                }}
+                style={[styles.egwLink, { backgroundColor: "#8B5CF6" + "15" }]}
+                testID="egw-link"
+                accessibilityRole="link"
+                accessibilityLabel="Read on Ellen G. White Writings"
+              >
+                <Ionicons name="open-outline" size={14} color="#8B5CF6" />
+                <Text style={[styles.egwLinkText, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                  Read on Ellen G. White Writings
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
+
         {day.reflectionQuestions && day.reflectionQuestions.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
@@ -447,4 +479,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   browseBtnText: { color: "#fff", fontSize: 14 },
+  egwLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginTop: 12,
+    alignSelf: "flex-start",
+  },
+  egwLinkText: { fontSize: 13 },
 });
