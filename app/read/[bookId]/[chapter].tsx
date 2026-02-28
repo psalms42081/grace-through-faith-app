@@ -185,6 +185,8 @@ export default function VerseReaderScreen() {
     }
   }, []);
 
+  const BATCH_SIZE = 5;
+
   const speakVerseAI = useCallback(async (index: number, session: number) => {
     if (session !== sessionRef.current) return;
 
@@ -206,8 +208,11 @@ export default function VerseReaderScreen() {
       flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
     } catch {}
 
-    const verse = verses[index];
-    const textToSpeak = `${verse.text}`;
+    const batchEnd = Math.min(index + BATCH_SIZE, verses.length);
+    const batchVerses = verses.slice(index, batchEnd);
+    const textToSpeak = batchVerses
+      .map((v) => `${v.verse}. ${v.text}`)
+      .join("\n\n");
 
     try {
       const apiUrl = getApiUrl();
@@ -233,7 +238,7 @@ export default function VerseReaderScreen() {
         const blob = await response.blob();
         audioUri = URL.createObjectURL(blob);
       } else {
-        const fileUri = `${FileSystem.cacheDirectory}tts_verse_${index}_${Date.now()}.mp3`;
+        const fileUri = `${FileSystem.cacheDirectory}tts_batch_${index}_${Date.now()}.mp3`;
         const arrayBuffer = await response.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
         const binChunks: string[] = [];
@@ -254,6 +259,7 @@ export default function VerseReaderScreen() {
       playerRef.current = player;
 
       setIsLoadingAudio(false);
+      setSpeakingVerseIndex(batchEnd - 1);
 
       await new Promise<void>((resolve) => {
         const subscription = player.addListener("playbackStatusUpdate", (status: any) => {
@@ -267,7 +273,7 @@ export default function VerseReaderScreen() {
 
       if (session === sessionRef.current) {
         cleanupPlayer();
-        speakVerseAI(index + 1, session);
+        speakVerseAI(batchEnd, session);
       }
     } catch {
       if (session !== sessionRef.current) return;

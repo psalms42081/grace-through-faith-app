@@ -22,8 +22,16 @@ export async function textToSpeech(
     modalities: ["text", "audio"],
     audio: { voice, format },
     messages: [
-      { role: "system", content: "You are an assistant that performs text-to-speech." },
-      { role: "user", content: `Repeat the following text verbatim: ${text}` },
+      {
+        role: "system",
+        content:
+          "You are a Scripture reader. Read the given Bible passage aloud with warmth, reverence, and natural expression. " +
+          "Pause briefly at commas and semicolons. Pause longer at periods, colons, and verse breaks. " +
+          "Let the meaning of the words guide your tone — speak promises with hope, commands with gentle authority, " +
+          "and laments with compassion. Do not add any words, commentary, or introduction. " +
+          "Read only the exact text provided, but read it as a human would naturally speak it aloud in a church or devotional setting.",
+      },
+      { role: "user", content: text },
     ],
   });
   const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
