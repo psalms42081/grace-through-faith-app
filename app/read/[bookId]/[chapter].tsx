@@ -13,7 +13,8 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { Audio } from "expo-av";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -71,7 +72,7 @@ export default function VerseReaderScreen() {
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
   const selectedVoiceRef = useRef<VoiceId>("nova");
 
   useEffect(() => {
@@ -84,9 +85,8 @@ export default function VerseReaderScreen() {
   }, []);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({
+    setAudioModeAsync({
       playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
     }).catch(() => {});
   }, []);
 
@@ -105,18 +105,18 @@ export default function VerseReaderScreen() {
     versesRef.current = data?.verses ?? [];
   }, [data?.verses]);
 
-  const cleanupSound = useCallback(async () => {
-    if (soundRef.current) {
+  const cleanupPlayer = useCallback(() => {
+    if (playerRef.current) {
       try {
-        await soundRef.current.unloadAsync();
+        playerRef.current.remove();
       } catch {}
-      soundRef.current = null;
+      playerRef.current = null;
     }
   }, []);
 
   const resetPlayback = useCallback(() => {
     sessionRef.current += 1;
-    cleanupSound();
+    cleanupPlayer();
     Speech.stop();
     setIsSpeaking(false);
     setIsPaused(false);
@@ -124,7 +124,7 @@ export default function VerseReaderScreen() {
     setIsLoadingAudio(false);
     setUsingFallback(false);
     currentIndexRef.current = -1;
-  }, [cleanupSound]);
+  }, [cleanupPlayer]);
 
   useEffect(() => {
     resetPlayback();
@@ -133,10 +133,10 @@ export default function VerseReaderScreen() {
   useEffect(() => {
     return () => {
       sessionRef.current += 1;
-      cleanupSound();
+      cleanupPlayer();
       Speech.stop();
     };
-  }, [cleanupSound]);
+  }, [cleanupPlayer]);
 
   const speakVerseFallback = useCallback((index: number, session: number) => {
     if (session !== sessionRef.current) return;
@@ -225,7 +225,7 @@ export default function VerseReaderScreen() {
 
       if (session !== sessionRef.current) return;
 
-      await cleanupSound();
+      cleanupPlayer();
 
       let audioUri: string;
 
@@ -251,24 +251,24 @@ export default function VerseReaderScreen() {
 
       if (session !== sessionRef.current) return;
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { rate: speechRateRef.current, shouldPlay: true }
-      );
-      soundRef.current = sound;
+      const player = createAudioPlayer({ uri: audioUri });
+      player.playbackRate = speechRateRef.current;
+      playerRef.current = player;
 
       setIsLoadingAudio(false);
 
       await new Promise<void>((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
+        const subscription = player.addListener("playbackStatusUpdate", (status: any) => {
+          if (status.didJustFinish) {
+            subscription.remove();
             resolve();
           }
         });
+        player.play();
       });
 
       if (session === sessionRef.current) {
-        await cleanupSound();
+        cleanupPlayer();
         speakVerseAI(index + 1, session);
       }
     } catch {
@@ -301,13 +301,13 @@ export default function VerseReaderScreen() {
     speakVerseAI(0, session);
   }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback]);
 
-  const handlePause = useCallback(async () => {
+  const handlePause = useCallback(() => {
     if (usingFallback) {
       Speech.stop();
     } else {
       try {
-        if (soundRef.current) {
-          await soundRef.current.pauseAsync();
+        if (playerRef.current) {
+          playerRef.current.pause();
         }
       } catch {}
     }
@@ -328,12 +328,12 @@ export default function VerseReaderScreen() {
         Speech.stop();
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
-        cleanupSound();
+        cleanupPlayer();
         Speech.stop();
         speakVerseAI(currentIndexRef.current, sessionRef.current);
       }
     }
-  }, [isSpeaking, usingFallback, speakVerseFallback, speakVerseAI, cleanupSound]);
+  }, [isSpeaking, usingFallback, speakVerseFallback, speakVerseAI, cleanupPlayer]);
 
   const handleVoiceChange = useCallback((voice: VoiceId) => {
     selectedVoiceRef.current = voice;
@@ -341,10 +341,10 @@ export default function VerseReaderScreen() {
     setShowVoicePicker(false);
     AsyncStorage.setItem(VOICE_STORAGE_KEY, voice).catch(() => {});
     if (isSpeaking && currentIndexRef.current >= 0 && !usingFallback) {
-      cleanupSound();
+      cleanupPlayer();
       speakVerseAI(currentIndexRef.current, sessionRef.current);
     }
-  }, [isSpeaking, usingFallback, speakVerseAI, cleanupSound]);
+  }, [isSpeaking, usingFallback, speakVerseAI, cleanupPlayer]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
