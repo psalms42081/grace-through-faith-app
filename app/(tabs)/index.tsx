@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -14,11 +14,29 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
-const VERSE_OF_DAY = {
-  text: "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
-  reference: "John 3:16",
-  translation: "KJV",
-};
+const DAILY_VERSES = [
+  { text: "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.", reference: "John 3:16" },
+  { text: "The Lord is my shepherd; I shall not want.", reference: "Psalm 23:1" },
+  { text: "Trust in the Lord with all thine heart; and lean not unto thine own understanding.", reference: "Proverbs 3:5" },
+  { text: "I can do all things through Christ which strengtheneth me.", reference: "Philippians 4:13" },
+  { text: "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the Lord thy God is with thee whithersoever thou goest.", reference: "Joshua 1:9" },
+  { text: "But they that wait upon the Lord shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.", reference: "Isaiah 40:31" },
+  { text: "And we know that all things work together for good to them that love God, to them who are the called according to his purpose.", reference: "Romans 8:28" },
+];
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getTodaysVerse() {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
+}
 
 interface Plan {
   id: string;
@@ -47,6 +65,9 @@ export default function HomeScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const greeting = useMemo(() => getGreeting(), []);
+  const verse = useMemo(() => getTodaysVerse(), []);
+
   const { data: todayData } = useQuery<TodayResponse>({
     queryKey: ["/api/devotionals/today?userId=guest"],
   });
@@ -72,18 +93,12 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Good morning
+            {greeting}
           </Text>
           <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Scripture Study
           </Text>
         </View>
-        <Pressable
-          style={[styles.settingsBtn, { backgroundColor: theme.backgroundSecondary }]}
-          hitSlop={8}
-        >
-          <Ionicons name="settings-outline" size={20} color={theme.textSecondary} />
-        </Pressable>
       </View>
 
       <View style={[styles.verseCard, { backgroundColor: theme.primary }]}>
@@ -94,14 +109,14 @@ export default function HomeScreen() {
           </Text>
         </View>
         <Text style={[styles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-          "{VERSE_OF_DAY.text}"
+          "{verse.text}"
         </Text>
         <View style={styles.verseFooter}>
           <Text style={[styles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
-            — {VERSE_OF_DAY.reference}
+            — {verse.reference}
           </Text>
           <Text style={[styles.verseTrans, { fontFamily: "Inter_400Regular" }]}>
-            {VERSE_OF_DAY.translation}
+            KJV
           </Text>
         </View>
       </View>
@@ -167,7 +182,7 @@ export default function HomeScreen() {
       </Text>
       <View style={styles.quickGrid}>
         {[
-          { icon: "book-outline" as const, label: "Continue Reading", subtitle: "Genesis 1", onPress: () => router.push("/(tabs)/read") },
+          { icon: "book-outline" as const, label: "Continue Reading", subtitle: "Pick up where you left off", onPress: () => router.push("/(tabs)/read") },
           { icon: "search-outline" as const, label: "Search Scripture", subtitle: "Find passages", onPress: () => router.push("/(tabs)/search") },
           { icon: "compass-outline" as const, label: "Explore Maps", subtitle: "Places & events", onPress: () => router.push("/(tabs)/explore") },
           { icon: "school-outline" as const, label: "Study Tools", subtitle: "Word & context", onPress: () => router.push("/(tabs)/study") },
@@ -243,13 +258,6 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 2 },
   appName: { fontSize: 26, letterSpacing: 0.2 },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   verseCard: {
     borderRadius: 18,
     padding: 22,

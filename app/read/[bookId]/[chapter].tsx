@@ -56,7 +56,11 @@ export default function VerseReaderScreen() {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      setTtsAvailable(typeof window !== "undefined" && "speechSynthesis" in window);
+      const supported =
+        typeof window !== "undefined" &&
+        "speechSynthesis" in window &&
+        typeof SpeechSynthesisUtterance !== "undefined";
+      setTtsAvailable(supported);
     } else {
       setTtsAvailable(true);
     }
