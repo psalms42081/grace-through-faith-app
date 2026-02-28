@@ -212,9 +212,6 @@ function GetStartedPage({ onGetStarted }: { onGetStarted: () => void }) {
           </Text>
           <Ionicons name="arrow-forward" size={20} color={NAVY} />
         </Pressable>
-        <Text style={[pageStyles.startNote, { fontFamily: "Inter_400Regular" }]}>
-          All denominations welcome
-        </Text>
       </Animated.View>
     </View>
   );

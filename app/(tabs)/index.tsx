@@ -532,9 +532,6 @@ function AdultHomeScreen() {
         <Text style={[styles.welcomeBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           Grace through Faith guides you through Scripture using a unique four-layer approach. Instead of just reading, you'll understand the original languages, explore the historical context, hear from faithful voices across the centuries, and discover how to apply God's Word to your life today.
         </Text>
-        <Text style={[styles.welcomeBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular", marginTop: 8 }]}>
-          For all Christians, of every denomination. For seekers, for scholars, for families.
-        </Text>
       </View>
 
       <LinearGradient
