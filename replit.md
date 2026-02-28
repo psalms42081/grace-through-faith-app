@@ -1,190 +1,43 @@
 # Grace through Faith — Bible Study App
 
 ## Overview
-A mobile-first Bible study app for all Christian ministries featuring the "4-Layer Study Model":
-- **Layer 1 — Text:** KJV Bible text, cross references, word study (Strong's)
-- **Layer 2 — Context:** Historical notes, timeline anchors, geography & maps
-- **Layer 3 — Historic Voices:** Classic commentaries (Matthew Henry, JFB, etc.)
-- **Layer 4 — Application:** Then/Now bullets, reflection questions, prayer prompt, journaling
+A mobile-first Bible study app for all Christian ministries, featuring a "4-Layer Study Model" (Text, Context, Historic Voices, Application). The project aims to provide an immersive and comprehensive Bible study experience with AI-powered content generation and offline capabilities. It incorporates features like a Kids Club, devotional plans, prayer journaling, and a deep, YouVersion-inspired dark mode.
 
-## Tech Stack
-- **Frontend:** Expo (React Native) with Expo Router, TypeScript
-- **Backend:** Express.js with TypeScript
-- **Database:** PostgreSQL with Drizzle ORM
-- **State Management:** TanStack Query (server state), React context (shared UI state)
-- **Fonts:** Lora (serif, for scripture/headings), Inter (sans-serif, for UI)
-- **Icons:** @expo/vector-icons (Ionicons)
-- **TTS:** OpenAI AI Integration (gpt-audio model) via `/api/tts` endpoint, with expo-speech device fallback. 6 voices: Nova, Shimmer (female), Alloy (neutral), Echo, Fable, Onyx (male). Note: Replit integration does not support `/audio/speech` endpoint (tts-1/tts-1-hd), so gpt-audio chat completions with audio modality is used
-- **Audio Playback:** expo-audio for playing AI-generated audio
-- **AI Study Generation:** OpenAI gpt-4o-mini for on-demand generation via `/api/context/generate`, `/api/commentary/generate`, `/api/application/generate` — any chapter in the Bible can have Context, Commentary, and Application data generated on demand
-- **Offline:** React Query persistence via AsyncStorage (30-day gcTime, offlineFirst)
+## User Preferences
+I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 
-## Project Structure
-```
-app/                    # Expo Router screens
-  _layout.tsx           # Root layout with providers, fonts, onboarding check
-  onboarding.tsx        # 4-page swipeable welcome flow (first launch only)
-  (tabs)/
-    _layout.tsx         # Tab navigation (5 tabs: Home, Read, Search, Study, Discover)
-    index.tsx           # Home screen (Verse of Day, Continue Reading, Streak, Quick Actions)
-    read.tsx            # Bible Reader — Book selector (OT/NT grouped pills)
-    search.tsx          # Search (keyword + reference parsing)
-    study.tsx           # Study tools (Word Study, Context, Historic Voices, Application)
-    explore.tsx         # Discover page (Continue Reading, Streaks, Topics, Plans, Maps/Timeline)
-  read/
-    [bookId]/
-      index.tsx         # Chapter picker grid (book info card + chapter numbers)
-      [chapter].tsx     # Verse reader (scripture text, TTS with voice selection)
-  verse-actions.tsx     # FormSheet — verse actions (copy, highlight, bookmark, study)
-  passage-context.tsx   # Passage study screen (context cards + commentary)
-  devotionals.tsx       # Devotional plans browser & enrollment
-  devotional-day.tsx    # Daily reading screen with journal & progress
-  kids-story/[id].tsx   # Kids story reader with memory verse, quiz, completion
-  prayer-journal.tsx    # Prayer Journal (CRUD, categories, active/answered filter)
-  topic/[id].tsx        # Topic exploration (12 topics, curated verses)
-  maps-timeline.tsx     # Bible Maps & Timeline (relocated from Explore tab)
-  (tabs)/
-    kids-stories.tsx    # Kids stories browser (collections + stories)
-    kids-learn.tsx      # Kids learn hub (quizzes + memory verses)
-    kids-stars.tsx      # Kids progress (stars, badges, streaks, exit PIN modal)
-context/
-  KidsModeContext.tsx   # Kids mode state (toggle, PIN, age group, AsyncStorage)
-assets/                 # App icon, splash screen
-components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
-constants/colors.ts     # Theme colors (dark: #050507 bg, #141518 cards, #1C1D22 elevated; gold #C9933A accent; borderless design)
-lib/query-client.ts     # TanStack Query setup with API fetch helpers
-server/
-  index.ts              # Express server entry point
-  routes.ts             # API routes (passage, search, strong, context, commentary, TTS)
-  db.ts                 # Drizzle ORM database connection
-  replit_integrations/  # OpenAI AI Integration (audio TTS, chat, image)
-shared/schema.ts        # Drizzle ORM schema (all database tables)
-scripts/                # Data import scripts (KJV, ASV, WEB, context, Strong's, etc.)
-data/
-  kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
-```
+## System Architecture
+The application is built with a mobile-first approach using **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for the database. **TanStack Query** manages server state with offline persistence via AsyncStorage, and React context handles shared UI state.
 
-## Database Tables (33 total)
-- **Core:** bible_translation, bible_book, bible_verse
-- **Word Study:** strong_entry, verse_strong_map
-- **Context:** context_card
-- **Commentary:** commentator, commentary_entry
-- **Application:** application_template
-- **Maps/Timeline:** location, location_verse_map, timeline_event, event_verse_map
-- **Illustrations:** illustration, illustration_link
-- **Devotionals:** devotional_plan, devotional_day, user_plan_enrollment, user_plan_progress
-- **User:** users, user_note, user_highlight, user_bookmark
-- **Kids Club:** kids_collection, kids_story, kids_quiz_question, kids_progress, kids_badge, kids_user_badge, kids_streak
-- **Prayer Journal:** prayer_request (userId, title, content, category, answered, answeredAt)
-- **Reading Tracking:** reading_history (userId, bookId, bookName, chapter, translation, readAt), reading_streak (userId, currentStreak, longestStreak, lastReadDate)
+**UI/UX Decisions:**
+- **Color Scheme:** Deep dark mode (`#050507` near-black) for an immersive experience, with a warm gold accent (`#C9933A`). Kids Mode uses a distinct palette.
+- **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI text.
+- **Icons:** Ionicons from `@expo/vector-icons`.
+- **Design Philosophy:** Borderless design, YouVersion-inspired immersive dark theme, with a focus on readability and clear information hierarchy. The Bible reader features a centered book name, large chapter number, and continuous prose with inline superscript verse numbers.
+- **Onboarding:** A 4-page swipeable welcome flow for first-time users.
+- **Kids Club:** A dedicated section with KidsModeContext for age-appropriate content and progress tracking, including quizzes and stories.
 
-## Data Pipeline
-- **KJV** (King James Version) — public domain, sourced from github.com/aruljohn/Bible-kjv
-- **ASV** (American Standard Version, 1901) — public domain, sourced from github.com/bibleapi/bibleapi-bibles-json
-- **WEB** (World English Bible) — public domain, sourced from github.com/TehShrike/world-english-bible
-- 93,308 total verses (31,103 per translation x 3) across 66 books imported into PostgreSQL
-- Scripts: `seed-books.ts` -> `download-kjv.ts` -> `import-kjv.ts` -> `download-translations.ts` -> `import-translations.ts`
+**Technical Implementations & Feature Specifications:**
+- **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB), historical context, classic commentaries, and application-focused content (reflection questions, prayer prompts, journaling).
+- **AI Integration:** OpenAI's gpt-4o-mini generates on-demand context, commentary, and application data for any Bible chapter, which is then cached to the database.
+- **Text-to-Speech (TTS):** Uses OpenAI's gpt-audio model via a server-side API (`/api/tts`) with multiple voice options (Nova, Shimmer, Alloy, Echo, Onyx). `expo-speech` serves as a device fallback. Playback is handled by `expo-av`.
+- **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience with a 30-day garbage collection time.
+- **Search:** Keyword search with highlighting and reference parsing (e.g., "John 3:16").
+- **User Features:** Notes, highlights, bookmarks, prayer journal (CRUD), and reading history with streak tracking.
+- **Devotionals:** Browser for various devotional plans, enrollment, daily reading, and progress tracking.
+- **Maps & Timeline:** Interactive maps with locations linked to verses and a timeline of biblical events.
+- **Illustrations:** AI-generated watercolor illustrations enhance visual content.
 
-## API Endpoints
-- `GET /api/books` — List all Bible books
-- `GET /api/passage?book=&chapter=&translation=` — Get verses for a chapter
-- `GET /api/verse?book=&chapter=&verse=&translation=` — Get single verse
-- `GET /api/search?q=&translation=` — Full-text search
-- `GET /api/strong/:id` — Strong's entry
-- `GET /api/strong/verse/:verseId` — Strong's mappings for a verse
-- `GET /api/context?book=&chapter=` — Context cards
-- `POST /api/context/generate` — AI-generated context (auto-caches to DB)
-- `GET /api/commentary?book=&chapter=` — Commentary entries
-- `GET /api/application?book=&chapter=` — Application templates
-- `GET /api/location` — All locations
-- `GET /api/location/:id` — Location detail
-- `GET /api/location/:id/verses` — Verses linked to a location
-- `GET /api/timeline` — All timeline events
-- `GET /api/timeline/:id/verses` — Verses linked to a timeline event
-- `GET /api/devotionals/plans` — Published devotional plans
-- `GET /api/devotionals/plans/:planId/days` — Days in a plan
-- `POST /api/devotionals/enroll` — Enroll in a plan
-- `GET /api/devotionals/today?userId=` — Get today's devotional
-- `POST /api/devotionals/complete` — Mark day complete
-- `GET/POST /api/notes/:userId` — User notes
-- `GET/POST /api/highlights/:userId` — User highlights
-- `GET/POST/DELETE /api/bookmarks/:userId` — User bookmarks
-- `POST /api/tts` — Text-to-speech (OpenAI gpt-audio, accepts `{text, voice}`)
-- **Prayer Journal:**
-- `GET /api/prayers?userId=` — List prayers
-- `POST /api/prayers` — Create prayer request
-- `PATCH /api/prayers/:id` — Update prayer (mark answered, edit)
-- `DELETE /api/prayers/:id` — Delete prayer
-- **Reading Tracking:**
-- `POST /api/reading-history` — Log chapter read (auto-updates streak)
-- `GET /api/reading-history/recent?userId=` — Recent reading history
-- `GET /api/reading-streaks?userId=` — Get streak data
-- **Kids Club:**
-- `GET /api/kids/collections?ageGroup=` — Kids story collections
-- `GET /api/kids/collections/:id/stories` — Stories in a collection
-- `GET /api/kids/stories/:id` — Single story with full content
-- `GET /api/kids/stories/:id/quiz` — Quiz questions for a story
-- `POST /api/kids/progress/complete` — Mark story complete
-- `POST /api/kids/progress/quiz` — Submit quiz score
-- `POST /api/kids/progress/memorize` — Mark verse memorized
-- `GET /api/kids/progress/:userId` — User's progress
-- `GET /api/kids/badges` — All badges
-- `GET /api/kids/badges/:userId` — User's earned badges
-- `GET /api/kids/streak/:userId` — Streak info
-- `POST /api/kids/streak/update` — Update streak
-- `GET /api/kids/daily?ageGroup=` — Today's suggested story
-
-## Build Milestones
-- [x] **Milestone 1:** Foundation — App shell, DB schema, tab navigation, API skeleton
-- [x] **Milestone 2:** Core Bible Data & Reader UI — KJV import, book/chapter/verse navigation
-- [x] **Milestone 3:** Search Engine — keyword search with highlighting, reference parsing (John 3:16)
-- [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
-- [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
-- [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
-- [x] **Milestone 7:** Maps & Timeline — 28 biblical locations with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab
-- [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking
-- [x] **Milestone 9:** Text-to-Speech & Offline Support — expo-speech TTS with play/pause/stop controls and speed selector; React Query persistence via AsyncStorage for offline-first data caching
-- [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse, deployment configured (autoscale)
-- [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-audio playback, expo-speech fallback; new app icon
-- [x] **Milestone 12:** UX Polish — Scrollable onboarding pages; AI-generated context for any chapter (gpt-4o-mini, cached to DB); redesigned immersive home screen with gradient verse card, 4-Layer teaser, and visual dividers; consolidated study tools (no more double-ups); verse-actions routes to Study tab
-- [x] **Milestone 13:** Explore & Devotionals Expansion — Verse references now show book name + chapter:verse (e.g., "Micah 5:2") in Explore tab; 28 locations enriched with historical Wikimedia Commons images (old paintings/engravings); 5 new devotional plans (Women of the Bible, Prophets & Prophecy, Parables of Jesus, Walking Through the Wilderness, The Armor of God) for 8 total; home screen shows "View All" when >3 plans
-- [x] **Milestone 14:** Kids Club Phase 1 + Deep Study Devotionals — 5 new devotional plans for deeper Bible study (The Sabbath Rest, Daniel's Prophecies — End-Time Visions, God's Health Blueprint, The Heavenly Sanctuary, Death Sleep and Resurrection) with Ellen G. White commentary references linking to egwwritings.org; "Further Reading" card added to devotional day screen; total 13 plans; Kids Club Phase 1
-- [x] **Milestone 15:** Illustrations — 27 AI-generated watercolor illustrations; kids welcome banner, Bible study hero, devotional landscape; Full children's Bible study section with KidsModeContext, 7 DB tables, 13 API endpoints, conditional tab navigation, 4 collections, 20 stories, 60 quiz questions, 5 badges seeded
-- [x] **Milestone 16:** YouVersion-Inspired Visual Overhaul — Deep dark mode (#050507 near-black); Bible reader redesigned with centered book name + large chapter number + continuous prose layout with inline superscript verse numbers + bottom nav bar with play/chapter controls + always-visible voice/speed selection; home screen with larger verse card and bolder typography and more spacing; Bible book index with bold "Bible" header and cleaner grid; search screen with colorful topic discovery chips and popular passages section
-
-## Color Theme
-- Primary (deep navy): #1A1F3C
-- Accent (warm gold): #C9933A
-- Background light (parchment): #F5EFE0
-- Background dark (near-black): #050507
-- Text light (ink): #2C1810
-- Text dark: #F0EBE0
-- Card dark: #18191F
-- Supports light/dark mode (dark mode inspired by YouVersion's deep immersive black)
-- **Kids Mode:** Soft blue (#4A90D9), Sunshine gold (#F5A623), Warm cream (#FFF8E7), Charcoal (#3C3C3C)
-
-## Key Design Rules
-- No emojis anywhere in the app
-- Use @expo/vector-icons (Ionicons) for all icons
-- Ellen G. White: always external link to egwwritings.org, never embed text
-- Lora serif for headings/scripture, Inter sans-serif for UI text
-
-## Navigation Flow
-- First launch: 4-page onboarding → "Get Started" → Home
-- Read tab shows all 66 books grouped by OT/NT as pill buttons with bold "Bible" header
-- Tapping a book navigates to chapter picker with book info card + numbered grid
-- Tapping a chapter opens the verse reader with centered book name, large chapter number, continuous prose with inline superscript verse numbers
-- Verse reader has bottom bar with play/pause, prev/next chapter arrows, centered chapter label
-- Voice and speed selection always visible in bottom bar; audio status shown during playback
-- All data cached offline via AsyncStorage (offlineFirst strategy)
-
-## TTS Architecture
-- **Primary:** OpenAI gpt-audio model via Replit AI Integration (server-side `/api/tts`)
-- **Voices:** Nova (female), Shimmer (female), Alloy (neutral), Echo (male), Onyx (male)
-- **Playback:** expo-av Sound for both web and native
-- **Fallback:** expo-speech (device TTS) when API unavailable or offline
-- **Persistence:** Selected voice stored in AsyncStorage (`@grace-through-faith/tts-voice`)
-
-## Workflows
-- `Start Backend` — Runs Express server on port 5000
-- `Start Frontend` — Runs Expo dev server on port 8081
+## External Dependencies
+- **OpenAI API:**
+    - `gpt-4o-mini`: For on-demand AI generation of context, commentary, and application content.
+    - `gpt-audio model`: For Text-to-Speech functionality via the `/api/tts` endpoint.
+- **PostgreSQL:** Primary database for all application data, managed by Drizzle ORM.
+- **Expo & React Native Ecosystem:**
+    - `expo-router`: For navigation.
+    - `@expo/vector-icons`: For UI icons.
+    - `expo-speech`: Device TTS fallback.
+    - `expo-av`: For audio playback.
+- **AsyncStorage:** For client-side data persistence and offline caching.
+- **egwwritings.org:** External link for Ellen G. White commentary references.
+- **Wikimedia Commons:** Source for historical images used in locations.

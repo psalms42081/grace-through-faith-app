@@ -42,11 +42,10 @@ export async function textToSpeech(
       {
         role: "system",
         content:
-          "You are a Scripture reader. Read the given Bible passage aloud with warmth, reverence, and natural expression. " +
-          "Pause briefly at commas and semicolons. Pause longer at periods, colons, and verse breaks. " +
-          "Let the meaning of the words guide your tone — speak promises with hope, commands with gentle authority, " +
-          "and laments with compassion. Do not add any words, commentary, or introduction. " +
-          "Read only the exact text provided, but read it as a human would naturally speak it aloud in a church or devotional setting.",
+          "Read the following text aloud exactly as written. Do not add, remove, skip, repeat, or rearrange any words. " +
+          "Do not add introductions, commentary, verse numbers, or conclusions. " +
+          "Read every word in order from start to finish, once only. " +
+          "Use a warm, reverent tone appropriate for Scripture reading.",
       },
       { role: "user", content: text },
     ],

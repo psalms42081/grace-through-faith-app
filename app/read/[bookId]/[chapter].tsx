@@ -27,7 +27,7 @@ type Translation = (typeof TRANSLATIONS)[number];
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
-const VOICE_OPTIONS = [
+const AI_VOICE_OPTIONS = [
   { id: "nova", label: "Nova", description: "Warm, expressive", gender: "female" },
   { id: "shimmer", label: "Shimmer", description: "Gentle, clear", gender: "female" },
   { id: "alloy", label: "Alloy", description: "Balanced, neutral", gender: "neutral" },
@@ -35,9 +35,19 @@ const VOICE_OPTIONS = [
   { id: "fable", label: "Fable", description: "Rich, storytelling", gender: "male" },
   { id: "onyx", label: "Onyx", description: "Deep, authoritative", gender: "male" },
 ] as const;
-type VoiceId = (typeof VOICE_OPTIONS)[number]["id"];
+type AIVoiceId = (typeof AI_VOICE_OPTIONS)[number]["id"];
+
+interface DeviceVoice {
+  identifier: string;
+  name: string;
+  language: string;
+  quality: string;
+}
 
 const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
+const VOICE_ID_STORAGE_KEY = "@grace-through-faith/tts-voice-id";
+
+const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
 interface Verse {
   id: string;
@@ -380,7 +390,9 @@ export default function VerseReaderScreen() {
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState<VoiceId>("nova");
+  const [selectedVoice, setSelectedVoice] = useState("nova");
+  const [selectedDeviceVoiceId, setSelectedDeviceVoiceId] = useState<string | null>(null);
+  const [deviceVoices, setDeviceVoices] = useState<DeviceVoice[]>([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -389,17 +401,42 @@ export default function VerseReaderScreen() {
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
   const playerRef = useRef<AudioPlayer | null>(null);
-  const selectedVoiceRef = useRef<VoiceId>("nova");
+  const selectedVoiceRef = useRef("nova");
+  const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const verseLayoutsRef = useRef<Record<number, { y: number; height: number }>>({});
   const scrollContentOffsetRef = useRef(0);
 
   useEffect(() => {
-    AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
-      if (saved && VOICE_OPTIONS.some((v) => v.id === saved)) {
-        setSelectedVoice(saved as VoiceId);
-        selectedVoiceRef.current = saved as VoiceId;
-      }
-    });
+    if (isMobile) {
+      Speech.getAvailableVoicesAsync().then((voices) => {
+        const englishVoices = voices
+          .filter((v) => v.language.startsWith("en"))
+          .map((v) => ({
+            identifier: v.identifier,
+            name: v.name,
+            language: v.language,
+            quality: (v as any).quality || "Default",
+          }));
+        setDeviceVoices(englishVoices);
+      }).catch(() => {});
+
+      AsyncStorage.getItem(VOICE_ID_STORAGE_KEY).then((saved) => {
+        if (saved) {
+          setSelectedDeviceVoiceId(saved);
+          selectedDeviceVoiceIdRef.current = saved;
+          const shortName = saved.split(".").pop()?.split("-")[0] || saved;
+          setSelectedVoice(shortName);
+          selectedVoiceRef.current = shortName;
+        }
+      }).catch(() => {});
+    } else {
+      AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
+        if (saved && AI_VOICE_OPTIONS.some((v) => v.id === saved)) {
+          setSelectedVoice(saved);
+          selectedVoiceRef.current = saved;
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -489,25 +526,28 @@ export default function VerseReaderScreen() {
     setSpeakingVerseIndex(index);
 
     const verse = verses[index];
-    const textToSpeak = `${verse.verse}. ${verse.text}`;
+    const textToSpeak = verse.text;
+
+    const speechOptions: any = {
+      rate: speechRateRef.current,
+      voice: selectedDeviceVoiceIdRef.current || undefined,
+      onDone: () => {
+        if (session === sessionRef.current) {
+          speakVerseFallback(index + 1, session);
+        }
+      },
+      onStopped: () => {},
+      onError: () => {
+        if (session === sessionRef.current) {
+          setIsSpeaking(false);
+          setIsPaused(false);
+          setSpeakingVerseIndex(-1);
+        }
+      },
+    };
 
     try {
-      Speech.speak(textToSpeak, {
-        rate: speechRateRef.current,
-        onDone: () => {
-          if (session === sessionRef.current) {
-            speakVerseFallback(index + 1, session);
-          }
-        },
-        onStopped: () => {},
-        onError: () => {
-          if (session === sessionRef.current) {
-            setIsSpeaking(false);
-            setIsPaused(false);
-            setSpeakingVerseIndex(-1);
-          }
-        },
-      });
+      Speech.speak(textToSpeak, speechOptions);
     } catch {
       setIsSpeaking(false);
       setIsPaused(false);
@@ -516,7 +556,7 @@ export default function VerseReaderScreen() {
     }
   }, []);
 
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 3;
 
   const speakVerseAI = useCallback(async (index: number, session: number) => {
     if (session !== sessionRef.current) return;
@@ -538,8 +578,8 @@ export default function VerseReaderScreen() {
     const batchEnd = Math.min(index + BATCH_SIZE, verses.length);
     const batchVerses = verses.slice(index, batchEnd);
     const textToSpeak = batchVerses
-      .map((v) => `${v.verse}. ${v.text}`)
-      .join("\n\n");
+      .map((v) => v.text)
+      .join(" ");
 
     try {
       const apiUrl = getApiUrl();
@@ -640,7 +680,7 @@ export default function VerseReaderScreen() {
     if (isPaused && currentIndexRef.current >= 0) {
       setIsPaused(false);
       setIsSpeaking(true);
-      if (usingFallback) {
+      if (isMobile || usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
         speakVerseAI(currentIndexRef.current, sessionRef.current);
@@ -651,8 +691,13 @@ export default function VerseReaderScreen() {
     const session = ++sessionRef.current;
     setIsSpeaking(true);
     setIsPaused(false);
-    setUsingFallback(false);
-    speakVerseAI(0, session);
+    if (isMobile) {
+      setUsingFallback(true);
+      speakVerseFallback(0, session);
+    } else {
+      setUsingFallback(false);
+      speakVerseAI(0, session);
+    }
   }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback]);
 
   const handlePause = useCallback(() => {
@@ -678,29 +723,41 @@ export default function VerseReaderScreen() {
     setSpeechRate(rate);
     setShowSpeedPicker(false);
     if (isSpeaking && currentIndexRef.current >= 0) {
-      if (usingFallback) {
-        Speech.stop();
+      Speech.stop();
+      cleanupPlayer();
+      if (isMobile || usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
-        cleanupPlayer();
-        Speech.stop();
         speakVerseAI(currentIndexRef.current, sessionRef.current);
       }
     }
   }, [isSpeaking, usingFallback, speakVerseFallback, speakVerseAI, cleanupPlayer]);
 
-  const handleVoiceChange = useCallback((voice: VoiceId) => {
-    selectedVoiceRef.current = voice;
-    setSelectedVoice(voice);
+  const handleVoiceChange = useCallback((voiceId: string, deviceVoiceIdentifier?: string) => {
     setShowVoicePicker(false);
-    AsyncStorage.setItem(VOICE_STORAGE_KEY, voice).catch(() => {});
-    setUsingFallback(false);
-    if (isSpeaking && currentIndexRef.current >= 0) {
-      cleanupPlayer();
-      Speech.stop();
-      speakVerseAI(currentIndexRef.current, sessionRef.current);
+    if (isMobile && deviceVoiceIdentifier) {
+      selectedDeviceVoiceIdRef.current = deviceVoiceIdentifier;
+      setSelectedDeviceVoiceId(deviceVoiceIdentifier);
+      const shortName = deviceVoiceIdentifier.split(".").pop()?.replace(/-/g, " ") || voiceId;
+      setSelectedVoice(voiceId);
+      selectedVoiceRef.current = voiceId;
+      AsyncStorage.setItem(VOICE_ID_STORAGE_KEY, deviceVoiceIdentifier).catch(() => {});
+      AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
+    } else {
+      selectedVoiceRef.current = voiceId;
+      setSelectedVoice(voiceId);
+      AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
     }
-  }, [isSpeaking, speakVerseAI, cleanupPlayer]);
+    if (isSpeaking && currentIndexRef.current >= 0) {
+      Speech.stop();
+      cleanupPlayer();
+      if (isMobile) {
+        speakVerseFallback(currentIndexRef.current, sessionRef.current);
+      } else {
+        speakVerseAI(currentIndexRef.current, sessionRef.current);
+      }
+    }
+  }, [isSpeaking, speakVerseAI, speakVerseFallback, cleanupPlayer]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
@@ -735,7 +792,9 @@ export default function VerseReaderScreen() {
     });
   }, [bookId, chapter, bookName, translation]);
 
-  const currentVoiceLabel = VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Nova";
+  const currentVoiceLabel = isMobile
+    ? (selectedVoice || "Default")
+    : (AI_VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Nova");
 
   const verses = data?.verses ?? [];
 
@@ -897,49 +956,98 @@ export default function VerseReaderScreen() {
               {showVoicePicker && (
                 <View style={[styles.voicePopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
                   <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-                    {(["female", "neutral", "male"] as const).map((gender) => {
-                      const voices = VOICE_OPTIONS.filter((v) => v.gender === gender);
-                      const sectionLabel = gender === "female" ? "Female Voices" : gender === "male" ? "Male Voices" : "Neutral";
-                      return (
-                        <View key={gender}>
-                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: gender === "female" ? 8 : 14, paddingBottom: 4, textTransform: "uppercase" }}>
-                            {sectionLabel}
-                          </Text>
-                          {voices.map((v) => (
-                            <Pressable
-                              key={v.id}
-                              onPress={() => handleVoiceChange(v.id)}
-                              style={[
-                                styles.voiceOption,
-                                selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
-                              ]}
-                            >
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                                <Ionicons
-                                  name={selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
-                                  size={18}
-                                  color={selectedVoice === v.id ? theme.accent : theme.textMuted}
-                                />
-                                <View style={{ flex: 1 }}>
-                                  <Text style={[
-                                    styles.voiceOptionLabel,
-                                    {
-                                      color: selectedVoice === v.id ? theme.accent : theme.text,
-                                      fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                                    },
-                                  ]}>
-                                    {v.label}
-                                  </Text>
-                                  <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-                                    {v.description}
-                                  </Text>
+                    {isMobile ? (
+                      <>
+                        {deviceVoices.length === 0 ? (
+                          <View style={{ padding: 16, alignItems: "center" as const }}>
+                            <ActivityIndicator size="small" color={theme.accent} />
+                            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 8 }}>
+                              Loading device voices...
+                            </Text>
+                          </View>
+                        ) : (
+                          deviceVoices.map((dv) => {
+                            const isSelected = selectedDeviceVoiceId === dv.identifier;
+                            return (
+                              <Pressable
+                                key={dv.identifier}
+                                onPress={() => handleVoiceChange(dv.name, dv.identifier)}
+                                style={[
+                                  styles.voiceOption,
+                                  isSelected && { backgroundColor: theme.accent + "15" },
+                                ]}
+                              >
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                                  <Ionicons
+                                    name={isSelected ? "radio-button-on" : "radio-button-off"}
+                                    size={18}
+                                    color={isSelected ? theme.accent : theme.textMuted}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={[
+                                      styles.voiceOptionLabel,
+                                      {
+                                        color: isSelected ? theme.accent : theme.text,
+                                        fontFamily: isSelected ? "Inter_700Bold" : "Inter_500Medium",
+                                      },
+                                    ]} numberOfLines={1}>
+                                      {dv.name}
+                                    </Text>
+                                    <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 }} numberOfLines={1}>
+                                      {dv.language}
+                                    </Text>
+                                  </View>
                                 </View>
-                              </View>
-                            </Pressable>
-                          ))}
-                        </View>
-                      );
-                    })}
+                              </Pressable>
+                            );
+                          })
+                        )}
+                      </>
+                    ) : (
+                      (["female", "neutral", "male"] as const).map((gender) => {
+                        const voices = AI_VOICE_OPTIONS.filter((v) => v.gender === gender);
+                        const sectionLabel = gender === "female" ? "Female Voices" : gender === "male" ? "Male Voices" : "Neutral";
+                        return (
+                          <View key={gender}>
+                            <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: gender === "female" ? 8 : 14, paddingBottom: 4, textTransform: "uppercase" }}>
+                              {sectionLabel}
+                            </Text>
+                            {voices.map((v) => (
+                              <Pressable
+                                key={v.id}
+                                onPress={() => handleVoiceChange(v.id)}
+                                style={[
+                                  styles.voiceOption,
+                                  selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
+                                ]}
+                              >
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                                  <Ionicons
+                                    name={selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                                    size={18}
+                                    color={selectedVoice === v.id ? theme.accent : theme.textMuted}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={[
+                                      styles.voiceOptionLabel,
+                                      {
+                                        color: selectedVoice === v.id ? theme.accent : theme.text,
+                                        fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                                      },
+                                    ]}>
+                                      {v.label}
+                                    </Text>
+                                    <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                                      {v.description}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </Pressable>
+                            ))}
+                          </View>
+                        );
+                      })
+                    )}
                   </ScrollView>
                 </View>
               )}
