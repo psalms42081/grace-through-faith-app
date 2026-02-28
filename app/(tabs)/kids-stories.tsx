@@ -51,6 +51,12 @@ const COLLECTION_ICONS: Record<string, string> = {
   "sunny": "sunny",
 };
 
+function useImageBaseUrl() {
+  return React.useMemo(() => {
+    try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
+  }, []);
+}
+
 export default function KidsStoriesScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -58,6 +64,7 @@ export default function KidsStoriesScreen() {
   const insets = useSafeAreaInsets();
   const { ageGroup, setAgeGroup } = useKidsMode();
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
+  const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -120,9 +127,9 @@ export default function KidsStoriesScreen() {
                   onPress={() => setSelectedCollection(col)}
                   style={[styles.collectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                 >
-                  {col.imageUrl ? (
+                  {col.imageUrl && baseUrl ? (
                     <Image
-                      source={{ uri: `${getApiUrl().replace(/\/$/, "")}${col.imageUrl}` }}
+                      source={{ uri: `${baseUrl}${col.imageUrl}` }}
                       style={styles.collectionImage}
                       resizeMode="cover"
                     />
@@ -172,13 +179,13 @@ export default function KidsStoriesScreen() {
                 All Collections
               </Text>
             </Pressable>
-            {selectedCollection.imageUrl && (
+            {selectedCollection.imageUrl && baseUrl ? (
               <Image
-                source={{ uri: `${getApiUrl().replace(/\/$/, "")}${selectedCollection.imageUrl}` }}
+                source={{ uri: `${baseUrl}${selectedCollection.imageUrl}` }}
                 style={styles.collectionBanner}
                 resizeMode="cover"
               />
-            )}
+            ) : null}
             <Text style={[styles.collectionHeading, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               {selectedCollection.title}
             </Text>
@@ -198,9 +205,9 @@ export default function KidsStoriesScreen() {
                   onPress={() => router.push(`/kids-story/${story.id}`)}
                   style={[styles.storyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                 >
-                  {story.imageUrl ? (
+                  {story.imageUrl && baseUrl ? (
                     <Image
-                      source={{ uri: `${getApiUrl().replace(/\/$/, "")}${story.imageUrl}` }}
+                      source={{ uri: `${baseUrl}${story.imageUrl}` }}
                       style={styles.storyThumb}
                       resizeMode="cover"
                     />

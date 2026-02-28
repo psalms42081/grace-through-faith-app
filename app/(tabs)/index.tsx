@@ -91,12 +91,23 @@ const KIDS_VERSES = [
   { text: "Be strong and of a good courage.", reference: "Joshua 1:9" },
 ];
 
+function useImageBaseUrl() {
+  return useMemo(() => {
+    try {
+      return getApiUrl().replace(/\/$/, "");
+    } catch {
+      return "";
+    }
+  }, []);
+}
+
 function KidsHomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
   const { ageGroup } = useKidsMode();
+  const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -142,11 +153,13 @@ function KidsHomeScreen() {
         </Text>
       </View>
 
-      <Image
-        source={{ uri: `${getApiUrl().replace(/\/$/, "")}/assets/images/app/kids-welcome.png` }}
-        style={kidsStyles.welcomeImage}
-        resizeMode="cover"
-      />
+      {baseUrl ? (
+        <Image
+          source={{ uri: `${baseUrl}/assets/images/app/kids-welcome.png` }}
+          style={kidsStyles.welcomeImage}
+          resizeMode="cover"
+        />
+      ) : null}
 
       <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
         <Ionicons name="sunny" size={20} color="rgba(255,255,255,0.7)" />
@@ -196,9 +209,9 @@ function KidsHomeScreen() {
           style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
           testID="daily-story"
         >
-          {dailyStory.imageUrl ? (
+          {dailyStory.imageUrl && baseUrl ? (
             <Image
-              source={{ uri: `${getApiUrl().replace(/\/$/, "")}${dailyStory.imageUrl}` }}
+              source={{ uri: `${baseUrl}${dailyStory.imageUrl}` }}
               style={kidsStyles.dailyImage}
               resizeMode="cover"
             />
@@ -328,6 +341,7 @@ function AdultHomeScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { enterKidsMode } = useKidsMode();
+  const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -566,11 +580,15 @@ function AdultHomeScreen() {
         ]}
         testID="enter-kids-mode"
       >
-        <Image
-          source={{ uri: `${getApiUrl().replace(/\/$/, "")}/assets/images/app/kids-welcome.png` }}
-          style={styles.kidsClubImage}
-          resizeMode="cover"
-        />
+        {baseUrl ? (
+          <Image
+            source={{ uri: `${baseUrl}/assets/images/app/kids-welcome.png` }}
+            style={styles.kidsClubImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons name="people" size={26} color="#fff" />
+        )}
         <View style={styles.kidsClubInfo}>
           <Text style={[styles.kidsClubTitle, { fontFamily: "Inter_600SemiBold" }]}>Kids Club</Text>
           <Text style={[styles.kidsClubDesc, { fontFamily: "Inter_400Regular" }]}>

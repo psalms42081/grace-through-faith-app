@@ -36,6 +36,12 @@ interface Story {
   estimatedMinutes: number;
 }
 
+function useImageBaseUrl() {
+  return React.useMemo(() => {
+    try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
+  }, []);
+}
+
 export default function KidsStoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme();
@@ -46,6 +52,7 @@ export default function KidsStoryScreen() {
   const queryClient = useQueryClient();
   const [completed, setCompleted] = useState(false);
   const starScale = useRef(new Animated.Value(0)).current;
+  const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -123,13 +130,13 @@ export default function KidsStoryScreen() {
           </Text>
         </View>
 
-        {story.imageUrl && (
+        {story.imageUrl && baseUrl ? (
           <Image
-            source={{ uri: `${getApiUrl().replace(/\/$/, "")}${story.imageUrl}` }}
+            source={{ uri: `${baseUrl}${story.imageUrl}` }}
             style={styles.heroImage}
             resizeMode="cover"
           />
-        )}
+        ) : null}
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
