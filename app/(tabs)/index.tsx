@@ -482,7 +482,6 @@ function AdultHomeScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { enterKidsMode } = useKidsMode();
-  const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -508,7 +507,7 @@ function AdultHomeScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPad + 12, paddingBottom: bottomPad + 120 },
+        { paddingTop: topPad + 12, paddingBottom: bottomPad + 100 },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -516,21 +515,8 @@ function AdultHomeScreen() {
         <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           {greeting}
         </Text>
-        <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Grace through Faith
-        </Text>
-      </View>
-
-      <View style={[styles.welcomeCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.accent + "30" }]}>
-        <View style={[styles.welcomeIconRow]}>
-          <Ionicons name="book" size={22} color={theme.accent} />
-          <Ionicons name="layers" size={22} color={theme.accent} style={{ marginLeft: -4 }} />
-        </View>
-        <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Study the Bible like never before
-        </Text>
-        <Text style={[styles.welcomeBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Grace through Faith guides you through Scripture using a unique four-layer approach. Instead of just reading, you'll understand the original languages, explore the historical context, hear from faithful voices across the centuries, and discover how to apply God's Word to your life today.
+        <Text style={[styles.tagline, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Dive deeper into the Word
         </Text>
       </View>
 
@@ -541,13 +527,6 @@ function AdultHomeScreen() {
         style={styles.verseCard}
       >
         <View style={styles.verseCardInner}>
-          <View style={styles.verseCornerTL}>
-            <Ionicons name="remove-outline" size={20} color="#C9933A40" style={{ transform: [{ rotate: "45deg" }] }} />
-          </View>
-          <View style={styles.verseCornerBR}>
-            <Ionicons name="remove-outline" size={20} color="#C9933A40" style={{ transform: [{ rotate: "45deg" }] }} />
-          </View>
-
           <View style={styles.verseBadge}>
             <Ionicons name="sunny" size={13} color="#C9933A" />
             <Text style={[styles.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
@@ -555,127 +534,58 @@ function AdultHomeScreen() {
             </Text>
           </View>
 
-          <View style={styles.verseQuoteMark}>
-            <Text style={[styles.quoteGlyph, { fontFamily: "Lora_700Bold" }]}>{"\u201C"}</Text>
-          </View>
-
           <Text style={[styles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-            {verse.text}
+            {"\u201C"}{verse.text}{"\u201D"}
           </Text>
-
-          <View style={styles.verseGoldRule} />
 
           <View style={styles.verseFooter}>
             <Text style={[styles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
               {verse.reference}
             </Text>
             <View style={styles.verseTransBadge}>
-              <Text style={[styles.verseTrans, { fontFamily: "Inter_500Medium" }]}>
-                KJV
-              </Text>
+              <Text style={[styles.verseTrans, { fontFamily: "Inter_500Medium" }]}>KJV</Text>
             </View>
           </View>
         </View>
       </LinearGradient>
 
-      <View style={styles.studyModelSection}>
-        <View style={styles.studyModelHeader}>
-          <View style={[styles.studyModelIconWrap, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="layers-outline" size={24} color={theme.accent} />
-          </View>
-          <Text style={[styles.studyModelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            The 4-Layer Study Model
-          </Text>
-        </View>
-        <Text style={[styles.studyModelIntro, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Each passage is studied through four layers, building from the text itself to personal transformation:
+      <Pressable
+        onPress={() => router.push("/(tabs)/study")}
+        style={({ pressed }) => [
+          styles.studyModelCard,
+          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border, opacity: pressed ? 0.92 : 1 },
+        ]}
+      >
+        <Text style={[styles.studyModelLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          HOW IT WORKS
         </Text>
-
-        {STUDY_LAYERS.map((layer, i) => (
-          <View
-            key={layer.title}
-            style={[styles.layerCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.accent + (i === 0 ? "40" : i === 1 ? "30" : i === 2 ? "25" : "20") }]}
-          >
-            <View style={styles.layerCardTop}>
-              <View style={[styles.layerNumCircle, { backgroundColor: theme.accent + "15" }]}>
+        <Text style={[styles.studyModelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          The 4-Layer Study Model
+        </Text>
+        <View style={styles.layersRow}>
+          {STUDY_LAYERS.map((layer) => (
+            <View key={layer.title} style={styles.layerItem}>
+              <View style={[styles.layerIcon, { backgroundColor: theme.accent + "12" }]}>
                 <Text style={[styles.layerNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
               </View>
-              <Ionicons name={layer.icon} size={20} color={theme.accent} />
-              <View style={styles.layerCardTitleBlock}>
-                <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                  {layer.title}
-                </Text>
-                <Text style={[styles.layerSubtitle, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                  {layer.desc}
-                </Text>
-              </View>
+              <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {layer.title}
+              </Text>
             </View>
-            <Text style={[styles.layerDetail, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {layer.detail}
-            </Text>
-          </View>
-        ))}
-
-        <Pressable
-          onPress={() => router.push("/(tabs)/study")}
-          style={({ pressed }) => [styles.tryStudyBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={[styles.tryStudyBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-            Try a Study Now
+          ))}
+        </View>
+        <View style={styles.studyModelFooter}>
+          <Text style={[styles.studyModelFooterText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            Read, understand context, hear historic voices, then apply
           </Text>
-        </Pressable>
-      </View>
-
-      <GoldDivider theme={theme} />
-
-      <View style={[styles.devotionalBanner, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <View style={styles.devotionalTop}>
-          <View style={[styles.devotionalIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="flame" size={22} color={theme.accent} />
-          </View>
-          <View style={styles.devotionalTextBlock}>
-            <Text style={[styles.devotionalLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-              Daily Devotional
-            </Text>
-            {hasActivePlan ? (
-              <>
-                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  Day {todayData!.today!.dayNumber}: {todayData!.today!.title}
-                </Text>
-                <View style={styles.progressRow}>
-                  <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-                    <View style={[styles.progressFill, { backgroundColor: theme.accent, width: `${Math.min((progress / total) * 100, 100)}%` as any }]} />
-                  </View>
-                  <Text style={[styles.progressText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {progress}/{total}
-                  </Text>
-                </View>
-              </>
-            ) : planComplete ? (
-              <>
-                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  Plan Complete
-                </Text>
-                <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Start a new plan to continue growing
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  Begin Your Journey
-                </Text>
-                <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Enroll in a guided reading plan
-                </Text>
-              </>
-            )}
+          <View style={[styles.studyModelArrow, { backgroundColor: theme.accent }]}>
+            <Ionicons name="arrow-forward" size={14} color="#fff" />
           </View>
         </View>
+      </Pressable>
+
+      <View style={styles.actionRow}>
         <Pressable
-          style={[styles.enrollBtn, { backgroundColor: theme.accent }]}
-          hitSlop={8}
           onPress={() => {
             if (hasActivePlan) {
               router.push("/devotional-day");
@@ -683,124 +593,87 @@ function AdultHomeScreen() {
               router.push("/devotionals");
             }
           }}
+          style={({ pressed }) => [
+            styles.actionCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+          ]}
         >
-          <Ionicons name={hasActivePlan ? "arrow-forward" : "add"} size={16} color="#fff" style={{ marginRight: 4 }} />
-          <Text style={[styles.enrollBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-            {hasActivePlan ? "Continue" : "Browse Plans"}
+          <Ionicons name="flame" size={24} color={theme.accent} />
+          <Text style={[styles.actionCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {hasActivePlan ? "Continue" : "Devotionals"}
+          </Text>
+          {hasActivePlan && (
+            <View style={[styles.actionProgress, { backgroundColor: theme.border }]}>
+              <View style={[styles.actionProgressFill, { backgroundColor: theme.accent, width: `${Math.min((progress / total) * 100, 100)}%` as any }]} />
+            </View>
+          )}
+          {!hasActivePlan && (
+            <Text style={[styles.actionCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Guided plans
+            </Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={() => enterKidsMode()}
+          style={({ pressed }) => [
+            styles.actionCard,
+            { backgroundColor: "#4A90D9", borderColor: "#4A90D9", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="enter-kids-mode"
+        >
+          <Ionicons name="people" size={24} color="#fff" />
+          <Text style={[styles.actionCardTitle, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+            Kids Club
+          </Text>
+          <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular" }]}>
+            Stories & quizzes
           </Text>
         </Pressable>
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-          Quick Access
-        </Text>
-        <View style={[styles.sectionAccent, { backgroundColor: theme.accent }]} />
-      </View>
-      <View style={styles.quickGrid}>
-        {[
-          { icon: "book-outline" as const, label: "Read", subtitle: "Pick up where you left off", onPress: () => router.push("/(tabs)/read"), color: "#3B82F6" },
-          { icon: "search-outline" as const, label: "Search", subtitle: "Find passages & topics", onPress: () => router.push("/(tabs)/search"), color: "#8B5CF6" },
-          { icon: "compass-outline" as const, label: "Explore", subtitle: "Maps, places & events", onPress: () => router.push("/(tabs)/explore"), color: "#10B981" },
-          { icon: "school-outline" as const, label: "Study", subtitle: "Word study & context", onPress: () => router.push("/(tabs)/study"), color: "#C9933A" },
-        ].map((action) => (
-          <Pressable
-            key={action.label}
-            onPress={action.onPress}
-            style={({ pressed }) => [
-              styles.quickCard,
-              { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
-            ]}
-          >
-            <View style={[styles.quickIconCircle, { backgroundColor: action.color + "15" }]}>
-              <Ionicons name={action.icon} size={22} color={action.color} />
-            </View>
-            <Text style={[styles.quickLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {action.label}
-            </Text>
-            <Text style={[styles.quickSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {action.subtitle}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Pressable
-        onPress={() => enterKidsMode()}
-        style={({ pressed }) => [
-          styles.kidsClubBanner,
-          { backgroundColor: "#4A90D9", opacity: pressed ? 0.85 : 1 },
-        ]}
-        testID="enter-kids-mode"
-      >
-        {baseUrl ? (
-          <Image
-            source={{ uri: `${baseUrl}/assets/images/app/kids-welcome.png` }}
-            style={styles.kidsClubImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <Ionicons name="people" size={26} color="#fff" />
-        )}
-        <View style={styles.kidsClubInfo}>
-          <Text style={[styles.kidsClubTitle, { fontFamily: "Inter_600SemiBold" }]}>Kids Club</Text>
-          <Text style={[styles.kidsClubDesc, { fontFamily: "Inter_400Regular" }]}>
-            Bible stories, quizzes & memory verses for children
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
-      </Pressable>
-
       {plans && plans.length > 0 && (
-        <>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderRow}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  Featured Plans
+        <View style={styles.plansSection}>
+          <View style={styles.plansSectionHeader}>
+            <Text style={[styles.plansSectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Featured Plans
+            </Text>
+            {plans.length > 3 && (
+              <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
+                <Text style={[styles.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  View All
                 </Text>
-                <View style={[styles.sectionAccent, { backgroundColor: theme.accent }]} />
-              </View>
-              {plans.length > 3 && (
-                <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
-                  <Text style={[styles.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    View All
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-          <View style={styles.plansGrid}>
-            {plans.slice(0, 3).map((plan, i) => (
-              <Pressable
-                key={plan.id}
-                onPress={() => router.push("/devotionals")}
-                style={({ pressed }) => [
-                  styles.planPreview,
-                  { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
-                ]}
-              >
-                <View style={[styles.planPreviewIcon, { backgroundColor: theme.accent + "18" }]}>
-                  <Ionicons
-                    name={i === 0 ? "heart-outline" : i === 1 ? "leaf-outline" : "star-outline"}
-                    size={20}
-                    color={theme.accent}
-                  />
-                </View>
-                <View style={styles.planPreviewTextWrap}>
-                  <Text style={[styles.planPreviewTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-                    {plan.title}
-                  </Text>
-                  <Text style={[styles.planPreviewMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {plan.totalDays} days
-                    {plan.estimatedMinutesPerDay ? ` · ~${plan.estimatedMinutesPerDay} min/day` : ""}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
               </Pressable>
-            ))}
+            )}
           </View>
-        </>
+          {plans.slice(0, 3).map((plan, i) => (
+            <Pressable
+              key={plan.id}
+              onPress={() => router.push("/devotionals")}
+              style={({ pressed }) => [
+                styles.planRow,
+                { borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <View style={[styles.planIcon, { backgroundColor: theme.accent + "12" }]}>
+                <Ionicons
+                  name={i === 0 ? "heart-outline" : i === 1 ? "leaf-outline" : "star-outline"}
+                  size={18}
+                  color={theme.accent}
+                />
+              </View>
+              <View style={styles.planText}>
+                <Text style={[styles.planTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                  {plan.title}
+                </Text>
+                <Text style={[styles.planMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {plan.totalDays} days{plan.estimatedMinutesPerDay ? ` · ~${plan.estimatedMinutesPerDay} min/day` : ""}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+            </Pressable>
+          ))}
+        </View>
       )}
     </ScrollView>
   );
@@ -809,55 +682,22 @@ function AdultHomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
-  header: {
-    marginBottom: 16,
-  },
+  header: { marginBottom: 16 },
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  appName: { fontSize: 28, letterSpacing: 0.2, marginBottom: 0 },
-  welcomeCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 20,
-  },
-  welcomeIconRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 10,
-  },
-  welcomeTitle: {
-    fontSize: 20,
-    lineHeight: 26,
-    marginBottom: 10,
-  },
-  welcomeBody: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
+  tagline: { fontSize: 24, letterSpacing: 0.2 },
   verseCard: {
-    borderRadius: 20,
-    marginBottom: 20,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: "hidden",
   },
   verseCardInner: {
-    padding: 26,
-    position: "relative",
-  },
-  verseCornerTL: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-  },
-  verseCornerBR: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
+    padding: 22,
   },
   verseBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   verseBadgeText: {
     color: "#C9933A",
@@ -865,24 +705,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
-  verseQuoteMark: {
-    marginBottom: -8,
-    marginTop: -4,
-  },
-  quoteGlyph: {
-    color: "#C9933A50",
-    fontSize: 48,
-    lineHeight: 52,
-  },
   verseText: {
     color: "#EDE5D5",
-    fontSize: 18,
-    lineHeight: 30,
-    marginBottom: 20,
-  },
-  verseGoldRule: {
-    height: 1,
-    backgroundColor: "#C9933A30",
+    fontSize: 17,
+    lineHeight: 28,
     marginBottom: 16,
   },
   verseFooter: {
@@ -890,7 +716,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  verseRef: { color: "#C9933A", fontSize: 15 },
+  verseRef: { color: "#C9933A", fontSize: 14 },
   verseTransBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -898,6 +724,100 @@ const styles = StyleSheet.create({
     backgroundColor: "#C9933A20",
   },
   verseTrans: { color: "#C9933A", fontSize: 11, letterSpacing: 0.5 },
+  studyModelCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  studyModelLabel: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+  studyModelTitle: { fontSize: 18, marginBottom: 16 },
+  layersRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  layerItem: {
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  layerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  layerNum: { fontSize: 16 },
+  layerTitle: { fontSize: 11 },
+  studyModelFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  studyModelFooterText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  studyModelArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  actionCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 6,
+  },
+  actionCardTitle: { fontSize: 15, marginTop: 4 },
+  actionCardSub: { fontSize: 12 },
+  actionProgress: {
+    height: 3,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginTop: 4,
+  },
+  actionProgressFill: {
+    height: 3,
+    borderRadius: 2,
+  },
+  plansSection: { marginBottom: 8 },
+  plansSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  plansSectionTitle: { fontSize: 18 },
+  viewAllText: { fontSize: 13 },
+  planRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  planIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planText: { flex: 1 },
+  planTitle: { fontSize: 14 },
+  planMeta: { fontSize: 12, marginTop: 2 },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -909,171 +829,4 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
   },
-  studyModelSection: {
-    marginBottom: 8,
-  },
-  studyModelHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 10,
-  },
-  studyModelIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  studyModelTitle: { fontSize: 20 },
-  studyModelIntro: { fontSize: 14, lineHeight: 21, marginBottom: 14 },
-  layerCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 10,
-  },
-  layerCardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
-  },
-  layerNumCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  layerNum: { fontSize: 14 },
-  layerCardTitleBlock: { flex: 1 },
-  layerTitle: { fontSize: 16 },
-  layerSubtitle: { fontSize: 12, marginTop: 1 },
-  layerDetail: { fontSize: 13, lineHeight: 20 },
-  tryStudyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  tryStudyBtnText: { color: "#fff", fontSize: 15 },
-  devotionalBanner: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 18,
-    marginTop: 12,
-    marginBottom: 28,
-  },
-  devotionalTop: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 14 },
-  devotionalIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  devotionalTextBlock: { flex: 1 },
-  devotionalLabel: { fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 3 },
-  devotionalTitle: { fontSize: 15, marginBottom: 6 },
-  devotionalSub: { fontSize: 12 },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 2,
-  },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  progressText: { fontSize: 11 },
-  enrollBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-  },
-  enrollBtnText: { color: "#fff", fontSize: 14 },
-  sectionHeader: {
-    marginBottom: 14,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  viewAllText: { fontSize: 13 },
-  sectionTitle: { fontSize: 19, marginBottom: 4 },
-  sectionAccent: {
-    width: 28,
-    height: 3,
-    borderRadius: 2,
-  },
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 28,
-  },
-  quickCard: {
-    width: "47%" as any,
-    flexGrow: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 6,
-  },
-  quickIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  quickLabel: { fontSize: 15 },
-  quickSub: { fontSize: 11, lineHeight: 15 },
-  plansGrid: { gap: 10, marginBottom: 8 },
-  planPreview: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  planPreviewIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  planPreviewTextWrap: { flex: 1 },
-  planPreviewTitle: { fontSize: 15 },
-  planPreviewMeta: { fontSize: 12, marginTop: 2 },
-  kidsClubBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 24,
-    gap: 14,
-  },
-  kidsClubImage: { width: 52, height: 52, borderRadius: 12 },
-  kidsClubInfo: { flex: 1 },
-  kidsClubTitle: { color: "#fff", fontSize: 16, marginBottom: 2 },
-  kidsClubDesc: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
 });
