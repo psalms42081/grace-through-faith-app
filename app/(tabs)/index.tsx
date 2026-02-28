@@ -522,19 +522,20 @@ function AdultHomeScreen() {
           {greeting}
         </Text>
         <Text style={[styles.tagline, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Dive deeper into the Word
+          Dive deeper{"\n"}into the Word
         </Text>
       </View>
 
       <LinearGradient
-        colors={isDark ? ["#161A32", "#0E1125", "#0A0C1A"] : ["#1A1F3C", "#141833", "#0F1228"]}
+        colors={isDark ? ["#14172E", "#0D1028", "#080A18"] : ["#1A1F3C", "#141833", "#0F1228"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.verseCard}
       >
+        <View style={styles.verseCardAccent} />
         <View style={styles.verseCardInner}>
           <View style={styles.verseBadge}>
-            <Ionicons name="sunny" size={14} color="#C9933A" />
+            <View style={styles.verseBadgeDot} />
             <Text style={[styles.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
               Verse of the Day
             </Text>
@@ -559,7 +560,7 @@ function AdultHomeScreen() {
         onPress={() => router.push("/(tabs)/study")}
         style={({ pressed }) => [
           styles.studyModelCard,
-          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.92 : 1 },
+          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.92 : 1 },
         ]}
       >
         <Text style={[styles.studyModelLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
@@ -569,11 +570,19 @@ function AdultHomeScreen() {
           The 4-Layer Study Model
         </Text>
         <View style={styles.layersRow}>
-          {STUDY_LAYERS.map((layer) => (
+          {STUDY_LAYERS.map((layer, idx) => (
             <View key={layer.title} style={styles.layerItem}>
-              <View style={[styles.layerIcon, { backgroundColor: theme.accent + "15" }]}>
-                <Text style={[styles.layerNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
-              </View>
+              <LinearGradient
+                colors={[
+                  ["#C9933A", "#A87828"],
+                  ["#2E7D32", "#1B5E20"],
+                  ["#3B6CB5", "#2A4F8F"],
+                  ["#8B5CF6", "#6D3BD4"],
+                ][idx] as [string, string]}
+                style={styles.layerIcon}
+              >
+                <Text style={[styles.layerNum, { color: "#fff", fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
+              </LinearGradient>
               <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                 {layer.title}
               </Text>
@@ -587,9 +596,9 @@ function AdultHomeScreen() {
           <Text style={[styles.studyModelFooterText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             Read, understand context, hear historic voices, then apply
           </Text>
-          <View style={[styles.studyModelArrow, { backgroundColor: theme.accent }]}>
+          <LinearGradient colors={["#C9933A", "#A87828"]} style={styles.studyModelArrow}>
             <Ionicons name="arrow-forward" size={16} color="#fff" />
-          </View>
+          </LinearGradient>
         </View>
       </Pressable>
 
@@ -602,47 +611,52 @@ function AdultHomeScreen() {
               router.push("/devotionals");
             }
           }}
-          style={({ pressed }) => [
-            styles.actionCard,
-            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.85 : 1 },
-          ]}
+          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
         >
-          <View style={[styles.actionIconWrap, { backgroundColor: theme.accent + "15" }]}>
-            <Ionicons name="flame" size={22} color={theme.accent} />
-          </View>
-          <Text style={[styles.actionCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {hasActivePlan ? "Continue Plan" : "Devotionals"}
-          </Text>
-          {hasActivePlan && (
-            <View style={[styles.actionProgress, { backgroundColor: theme.border }]}>
-              <View style={[styles.actionProgressFill, { backgroundColor: theme.accent, width: `${Math.min((progress / total) * 100, 100)}%` as any }]} />
+          <LinearGradient
+            colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
+            style={styles.actionCard}
+          >
+            <View style={[styles.actionIconWrap, { backgroundColor: theme.accent + "20" }]}>
+              <Ionicons name="flame" size={22} color={theme.accent} />
             </View>
-          )}
-          {!hasActivePlan && (
-            <Text style={[styles.actionCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Guided plans
+            <Text style={[styles.actionCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {hasActivePlan ? "Continue Plan" : "Devotionals"}
             </Text>
-          )}
+            {hasActivePlan && (
+              <View style={[styles.actionProgress, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
+                <View style={[styles.actionProgressFill, { backgroundColor: theme.accent, width: `${Math.min((progress / total) * 100, 100)}%` as any }]} />
+              </View>
+            )}
+            {!hasActivePlan && (
+              <Text style={[styles.actionCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Guided plans
+              </Text>
+            )}
+          </LinearGradient>
         </Pressable>
 
         <Pressable
           onPress={() => enterKidsMode()}
-          style={({ pressed }) => [
-            styles.actionCard,
-            styles.kidsCard,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
+          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
           testID="enter-kids-mode"
         >
-          <View style={styles.kidsIconWrap}>
-            <Ionicons name="people" size={22} color="#fff" />
-          </View>
-          <Text style={[styles.actionCardTitle, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
-            Kids Club
-          </Text>
-          <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.7)", fontFamily: "Inter_400Regular" }]}>
-            Stories & quizzes
-          </Text>
+          <LinearGradient
+            colors={["#4A90D9", "#3570B0"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.actionCard}
+          >
+            <View style={styles.kidsIconWrap}>
+              <Ionicons name="people" size={22} color="#fff" />
+            </View>
+            <Text style={[styles.actionCardTitle, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+              Kids Club
+            </Text>
+            <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.7)", fontFamily: "Inter_400Regular" }]}>
+              Stories & quizzes
+            </Text>
+          </LinearGradient>
         </Pressable>
       </View>
 
@@ -666,7 +680,7 @@ function AdultHomeScreen() {
               onPress={() => router.push("/devotionals")}
               style={({ pressed }) => [
                 styles.planRow,
-                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.75 : 1 },
+                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.75 : 1 },
               ]}
             >
               <LinearGradient
@@ -675,7 +689,7 @@ function AdultHomeScreen() {
               >
                 <Ionicons
                   name={i === 0 ? "heart" : i === 1 ? "leaf" : "star"}
-                  size={16}
+                  size={18}
                   color="#fff"
                 />
               </LinearGradient>
@@ -684,10 +698,10 @@ function AdultHomeScreen() {
                   {plan.title}
                 </Text>
                 <Text style={[styles.planMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {plan.totalDays} days{plan.estimatedMinutesPerDay ? ` · ~${plan.estimatedMinutesPerDay} min/day` : ""}
+                  {plan.totalDays} days{plan.estimatedMinutesPerDay ? ` \u00B7 ~${plan.estimatedMinutesPerDay} min/day` : ""}
                 </Text>
               </View>
-              <View style={[styles.planArrow, { backgroundColor: theme.accent + "12" }]}>
+              <View style={[styles.planArrow, { backgroundColor: theme.accent + "15" }]}>
                 <Ionicons name="chevron-forward" size={14} color={theme.accent} />
               </View>
             </Pressable>
@@ -701,42 +715,59 @@ function AdultHomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 22 },
-  header: { marginBottom: 24 },
-  greeting: { fontSize: 14, letterSpacing: 0.5, marginBottom: 6 },
-  tagline: { fontSize: 28, letterSpacing: 0.1, lineHeight: 36 },
+  header: { marginBottom: 28 },
+  greeting: { fontSize: 14, letterSpacing: 0.5, marginBottom: 8 },
+  tagline: { fontSize: 32, letterSpacing: -0.3, lineHeight: 40 },
   verseCard: {
-    borderRadius: 20,
-    marginBottom: 24,
+    borderRadius: 24,
+    marginBottom: 28,
     overflow: "hidden",
+  },
+  verseCardAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 4,
+    height: "100%",
+    backgroundColor: "#C9933A",
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
   },
   verseCardInner: {
     padding: 28,
-    paddingVertical: 32,
+    paddingVertical: 36,
+    paddingLeft: 32,
   },
   verseBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginBottom: 18,
+    gap: 8,
+    marginBottom: 20,
+  },
+  verseBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#C9933A",
   },
   verseBadgeText: {
     color: "#C9933A",
     fontSize: 11,
-    letterSpacing: 1.8,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   verseText: {
     color: "#EDE5D5",
-    fontSize: 20,
-    lineHeight: 34,
-    marginBottom: 22,
+    fontSize: 22,
+    lineHeight: 36,
+    marginBottom: 24,
   },
   verseFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  verseRef: { color: "#C9933A", fontSize: 15 },
+  verseRef: { color: "#C9933A", fontSize: 16 },
   verseTransBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -745,31 +776,30 @@ const styles = StyleSheet.create({
   },
   verseTrans: { color: "#C9933A", fontSize: 11, letterSpacing: 0.5 },
   studyModelCard: {
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 22,
     padding: 24,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   studyModelLabel: {
     fontSize: 11,
     letterSpacing: 1.5,
     marginBottom: 8,
   },
-  studyModelTitle: { fontSize: 21, marginBottom: 20 },
+  studyModelTitle: { fontSize: 22, marginBottom: 22 },
   layersRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 22,
   },
   layerItem: {
     alignItems: "center",
-    gap: 6,
+    gap: 7,
     flex: 1,
   },
   layerIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
@@ -781,103 +811,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(201,147,58,0.12)",
-    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(201,147,58,0.15)",
+    paddingTop: 18,
   },
   studyModelFooterText: { flex: 1, fontSize: 13, lineHeight: 19 },
   studyModelArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
   },
   actionRow: {
     flexDirection: "row",
     gap: 14,
-    marginBottom: 28,
+    marginBottom: 32,
   },
   actionCard: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
+    borderRadius: 20,
+    padding: 22,
     gap: 8,
   },
-  kidsCard: {
-    backgroundColor: "#4A90D9",
-    borderColor: "#4A90D9",
-    borderWidth: 0,
-  },
   actionIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
   },
   kidsIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
   },
-  actionCardTitle: { fontSize: 16, marginTop: 2 },
+  actionCardTitle: { fontSize: 17, marginTop: 2 },
   actionCardSub: { fontSize: 12, lineHeight: 17 },
   actionProgress: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
     overflow: "hidden",
-    marginTop: 4,
+    marginTop: 6,
   },
   actionProgressFill: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
   },
-  plansSection: { marginBottom: 12 },
+  plansSection: { marginBottom: 16 },
   plansSectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  plansSectionTitle: { fontSize: 22 },
+  plansSectionTitle: { fontSize: 24 },
   viewAllText: { fontSize: 13 },
   planRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+    gap: 16,
+    padding: 18,
+    borderRadius: 18,
     marginBottom: 10,
   },
   planIconGradient: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
   },
   planIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
   },
   planText: { flex: 1 },
-  planTitle: { fontSize: 15 },
+  planTitle: { fontSize: 16 },
   planMeta: { fontSize: 12, marginTop: 3 },
   planArrow: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },

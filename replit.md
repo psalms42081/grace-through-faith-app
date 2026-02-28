@@ -48,7 +48,7 @@ context/
   KidsModeContext.tsx   # Kids mode state (toggle, PIN, age group, AsyncStorage)
 assets/                 # App icon, splash screen
 components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
-constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
+constants/colors.ts     # Theme colors (dark: #050507 bg, #141518 cards, #1C1D22 elevated; gold #C9933A accent; borderless design)
 lib/query-client.ts     # TanStack Query setup with API fetch helpers
 server/
   index.ts              # Express server entry point

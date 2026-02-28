@@ -101,8 +101,7 @@ export default function ReadScreen() {
                 style={({ pressed }) => [
                   styles.bookPill,
                   {
-                    backgroundColor: pressed ? theme.accent + "15" : theme.backgroundCard,
-                    borderColor: pressed ? theme.accent + "40" : theme.border,
+                    backgroundColor: pressed ? (isDark ? theme.accent + "18" : theme.accent + "12") : (isDark ? theme.backgroundCard : theme.backgroundCard),
                   },
                 ]}
               >
@@ -116,7 +115,7 @@ export default function ReadScreen() {
             ))}
           </View>
 
-          <View style={[styles.testamentSection, { marginTop: 36 }]}>
+          <View style={[styles.testamentSection, { marginTop: 40 }]}>
             <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
               New Testament
             </Text>
@@ -132,8 +131,7 @@ export default function ReadScreen() {
                 style={({ pressed }) => [
                   styles.bookPill,
                   {
-                    backgroundColor: pressed ? theme.accent + "15" : theme.backgroundCard,
-                    borderColor: pressed ? theme.accent + "40" : theme.border,
+                    backgroundColor: pressed ? (isDark ? theme.accent + "18" : theme.accent + "12") : (isDark ? theme.backgroundCard : theme.backgroundCard),
                   },
                 ]}
               >
@@ -156,13 +154,13 @@ const styles = StyleSheet.create({
   wrapper: { flex: 1 },
   stickyHeader: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 18,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: 36,
     letterSpacing: -0.5,
   },
   translationPill: {
@@ -185,7 +183,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 18,
     paddingBottom: 8,
   },
   testamentLabel: {
@@ -205,16 +203,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   bookPillText: {
     fontSize: 14,
   },
   bookChapters: {
     fontSize: 11,
-    opacity: 0.7,
+    opacity: 0.6,
   },
 });

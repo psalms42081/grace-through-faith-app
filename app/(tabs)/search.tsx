@@ -182,13 +182,14 @@ export default function SearchScreen() {
           style={[
             styles.searchBar,
             {
-              backgroundColor: isDark ? "#111218" : "#FFF8EC",
-              borderColor: focused ? theme.accent : "transparent",
-              shadowColor: focused ? theme.accent : "#000",
-              shadowOpacity: focused ? 0.15 : (isDark ? 0 : 0.06),
-              shadowRadius: focused ? 12 : 8,
-              shadowOffset: { width: 0, height: focused ? 2 : 4 },
-              elevation: focused ? 4 : 2,
+              backgroundColor: isDark ? "#0E0F14" : "#FFF8EC",
+              borderColor: focused ? theme.accent + "50" : "transparent",
+              borderWidth: focused ? 1.5 : 0,
+              shadowColor: "#000",
+              shadowOpacity: isDark ? 0 : 0.04,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 1,
             },
           ]}
         >
@@ -227,8 +228,7 @@ export default function SearchScreen() {
                 style={[
                   styles.txPill,
                   {
-                    backgroundColor: isActive ? theme.accent : "transparent",
-                    borderColor: isActive ? theme.accent : theme.border,
+                    backgroundColor: isActive ? theme.accent : (isDark ? "#111218" : "#F0E8D8"),
                   },
                 ]}
               >
@@ -419,10 +419,10 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 16,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    borderWidth: 0,
+    borderRadius: 18,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     gap: 10,
     marginBottom: 14,
   },
@@ -440,10 +440,10 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   txPill: {
-    borderWidth: 1,
+    borderWidth: 0,
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingVertical: 8,
   },
   txPillText: { fontSize: 12, letterSpacing: 0.5 },
   listContent: { paddingHorizontal: 24, paddingTop: 14 },

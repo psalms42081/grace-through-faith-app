@@ -427,7 +427,7 @@ export default function VerseReaderScreen() {
                 style={styles.headerBtn}
                 onPress={() => setShowTranslationPicker(!showTranslationPicker)}
               >
-                <View style={[styles.translationBadge, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={[styles.translationBadge, { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard }]}>
                   <Ionicons name="globe-outline" size={13} color={theme.textSecondary} />
                   <Text style={[styles.translationBadgeText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                     {translation}
@@ -478,7 +478,7 @@ export default function VerseReaderScreen() {
               showsVerticalScrollIndicator={false}
             >
               {showTranslationPicker && (
-                <View style={[styles.translationDropdown, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
                   {TRANSLATIONS.map((t) => {
                     const isActiveT = translation === t;
                     return (
@@ -553,7 +553,7 @@ export default function VerseReaderScreen() {
               },
             ]}>
               {showVoicePicker && (
-                <View style={[styles.voicePopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={[styles.voicePopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
                   {VOICE_OPTIONS.map((v) => (
                     <Pressable
                       key={v.id}
@@ -581,7 +581,7 @@ export default function VerseReaderScreen() {
               )}
 
               {showSpeedPicker && (
-                <View style={[styles.speedPopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                <View style={[styles.speedPopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
                   {SPEED_OPTIONS.map((s) => (
                     <Pressable
                       key={s}
@@ -650,12 +650,12 @@ export default function VerseReaderScreen() {
                   onPress={isSpeaking ? handlePause : handlePlay}
                   hitSlop={8}
                   testID="play-pause-button"
-                  style={styles.playBtn}
+                  style={[styles.playBtn, { backgroundColor: theme.accent }]}
                 >
                   <Ionicons
                     name={isSpeaking ? "pause" : "play"}
-                    size={20}
-                    color={theme.text}
+                    size={18}
+                    color="#fff"
                   />
                 </Pressable>
 
@@ -670,9 +670,9 @@ export default function VerseReaderScreen() {
                     onPress={goToPrev}
                     disabled={!canGoPrev}
                     hitSlop={8}
-                    style={{ opacity: canGoPrev ? 1 : 0.25 }}
+                    style={[styles.navArrow, { opacity: canGoPrev ? 1 : 0.25 }]}
                   >
-                    <Ionicons name="chevron-back" size={22} color={theme.text} />
+                    <Ionicons name="chevron-back" size={20} color={theme.text} />
                   </Pressable>
 
                   <Text style={[styles.navChapterLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -683,9 +683,9 @@ export default function VerseReaderScreen() {
                     onPress={goToNext}
                     disabled={!canGoNext}
                     hitSlop={8}
-                    style={{ opacity: canGoNext ? 1 : 0.25 }}
+                    style={[styles.navArrow, { opacity: canGoNext ? 1 : 0.25 }]}
                   >
-                    <Ionicons name="chevron-forward" size={22} color={theme.text} />
+                    <Ionicons name="chevron-forward" size={20} color={theme.text} />
                   </Pressable>
                 </View>
               </View>
@@ -706,10 +706,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderWidth: 1,
     borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   translationBadgeText: { fontSize: 12 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
@@ -718,8 +717,7 @@ const styles = StyleSheet.create({
   errorSub: { fontSize: 13, textAlign: "center" },
   scrollContent: { paddingHorizontal: 28, paddingTop: 8 },
   translationDropdown: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
   },
@@ -727,73 +725,75 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
   },
   translationOptionText: { fontSize: 15 },
   translationOptionDesc: { fontSize: 12 },
   chapterHeader: {
     alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 32,
-    gap: 2,
+    paddingTop: 20,
+    paddingBottom: 40,
+    gap: 0,
   },
   bookNameHeader: {
-    fontSize: 18,
-    letterSpacing: 0.5,
+    fontSize: 16,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    opacity: 0.6,
+    marginBottom: 4,
   },
   chapterNumber: {
-    fontSize: 56,
-    lineHeight: 66,
+    fontSize: 64,
+    lineHeight: 74,
   },
   proseContainer: {
     paddingBottom: 24,
   },
   proseText: {
-    fontSize: 20,
-    lineHeight: 34,
+    fontSize: 21,
+    lineHeight: 36,
   },
   verseNum: {
-    fontSize: 12,
-    lineHeight: 34,
+    fontSize: 11,
+    lineHeight: 36,
   },
   bottomBar: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingHorizontal: 16,
   },
   audioStatusBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginBottom: 8,
   },
   audioStatusLeft: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
   },
   voiceChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 5,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  voiceChipText: { fontSize: 11 },
+  voiceChipText: { fontSize: 12 },
   speedChip: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  speedChipText: { fontSize: 11 },
+  speedChipText: { fontSize: 12 },
   audioStatusRight: {
     flexDirection: "row",
     alignItems: "center",
@@ -803,36 +803,42 @@ const styles = StyleSheet.create({
   navRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   playBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
   },
   stopBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 2,
+    marginLeft: 4,
   },
   navCenter: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 20,
+  },
+  navArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   navChapterLabel: {
-    fontSize: 14,
+    fontSize: 15,
   },
   voicePopup: {
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
     marginBottom: 8,
     overflow: "hidden",
   },
@@ -840,22 +846,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
   voiceOptionLabel: { fontSize: 14 },
   voiceOptionDesc: { fontSize: 12 },
   speedPopup: {
     flexDirection: "row",
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
     marginBottom: 8,
     overflow: "hidden",
   },
   speedOption: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   speedOptionText: { fontSize: 13 },
 });
