@@ -96,7 +96,7 @@ export default function HomeScreen() {
             {greeting}
           </Text>
           <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Scripture Study
+            Grace through Faith
           </Text>
         </View>
       </View>

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Scripture Study",
-    "slug": "scripture-study",
+    "name": "Grace through Faith",
+    "slug": "grace-through-faith",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "scripturStudy",
+    "scheme": "graceThroughFaith",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {

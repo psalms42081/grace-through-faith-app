@@ -5,7 +5,7 @@ import * as https from "https";
 function download(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const makeRequest = (requestUrl: string) => {
-      https.get(requestUrl, { headers: { "User-Agent": "scripture-study-app" } }, (res) => {
+      https.get(requestUrl, { headers: { "User-Agent": "grace-through-faith-app" } }, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           const redirectUrl = res.headers.location;
           if (redirectUrl) { makeRequest(redirectUrl); return; }
