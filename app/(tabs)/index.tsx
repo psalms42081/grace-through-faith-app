@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Platform,
   Dimensions,
   Image,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -106,8 +109,10 @@ function KidsHomeScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
-  const { ageGroup } = useKidsMode();
+  const { ageGroup, exitKidsMode, pin } = useKidsMode();
   const baseUrl = useImageBaseUrl();
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [exitPin, setExitPin] = useState("");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -145,13 +150,92 @@ function KidsHomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          {greeting}
-        </Text>
-        <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Kids Club
-        </Text>
+        <View style={kidsStyles.headerRow}>
+          <View>
+            <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {greeting}
+            </Text>
+            <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Kids Club
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              if (!pin) {
+                exitKidsMode("");
+              } else {
+                setShowExitModal(true);
+              }
+            }}
+            style={[kidsStyles.exitBtn, { backgroundColor: theme.textMuted + "20" }]}
+            testID="exit-kids-mode"
+          >
+            <Ionicons name="log-out-outline" size={18} color={theme.textSecondary} />
+            <Text style={[kidsStyles.exitBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+              Exit
+            </Text>
+          </Pressable>
+        </View>
       </View>
+
+      <Modal
+        visible={showExitModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExitModal(false)}
+      >
+        <View style={kidsStyles.modalOverlay}>
+          <View style={[kidsStyles.modalBox, { backgroundColor: theme.backgroundCard }]}>
+            <Text style={[kidsStyles.modalTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Exit Kids Mode
+            </Text>
+            <Text style={[kidsStyles.modalDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Enter your PIN to switch back
+            </Text>
+            <TextInput
+              value={exitPin}
+              onChangeText={setExitPin}
+              placeholder="Enter PIN"
+              placeholderTextColor={theme.textMuted}
+              secureTextEntry
+              keyboardType="number-pad"
+              style={[kidsStyles.modalInput, { color: theme.text, borderColor: theme.border, fontFamily: "Inter_400Regular" }]}
+              testID="exit-pin-input"
+            />
+            <View style={kidsStyles.modalBtns}>
+              <Pressable
+                onPress={() => { setShowExitModal(false); setExitPin(""); }}
+                style={[kidsStyles.modalCancelBtn, { borderColor: theme.border }]}
+              >
+                <Text style={[kidsStyles.modalCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  const ok = await exitKidsMode(exitPin);
+                  if (ok) {
+                    setShowExitModal(false);
+                    setExitPin("");
+                  } else {
+                    if (Platform.OS === "web") {
+                      window.alert("Incorrect PIN");
+                    } else {
+                      Alert.alert("Incorrect PIN", "Please try again.");
+                    }
+                  }
+                }}
+                style={[kidsStyles.modalConfirmBtn, { backgroundColor: theme.accent }]}
+                testID="exit-confirm"
+              >
+                <Text style={[kidsStyles.modalConfirmText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Exit
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {baseUrl ? (
         <Image
@@ -262,6 +346,63 @@ function KidsHomeScreen() {
 }
 
 const kidsStyles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  exitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  exitBtnText: { fontSize: 13 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+  modalBox: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+  },
+  modalTitle: { fontSize: 20, marginBottom: 6 },
+  modalDesc: { fontSize: 14, marginBottom: 18, textAlign: "center" },
+  modalInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlign: "center",
+    letterSpacing: 4,
+    marginBottom: 18,
+  },
+  modalBtns: { flexDirection: "row", gap: 10, width: "100%" },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  modalCancelText: { fontSize: 15 },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalConfirmText: { color: "#fff", fontSize: 15 },
   welcomeImage: {
     width: "100%" as any,
     height: 140,
