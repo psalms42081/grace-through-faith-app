@@ -338,11 +338,13 @@ export default function VerseReaderScreen() {
     setSelectedVoice(voice);
     setShowVoicePicker(false);
     AsyncStorage.setItem(VOICE_STORAGE_KEY, voice).catch(() => {});
-    if (isSpeaking && currentIndexRef.current >= 0 && !usingFallback) {
+    setUsingFallback(false);
+    if (isSpeaking && currentIndexRef.current >= 0) {
       cleanupPlayer();
+      Speech.stop();
       speakVerseAI(currentIndexRef.current, sessionRef.current);
     }
-  }, [isSpeaking, usingFallback, speakVerseAI, cleanupPlayer]);
+  }, [isSpeaking, speakVerseAI, cleanupPlayer]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {

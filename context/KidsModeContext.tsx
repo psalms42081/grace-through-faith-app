@@ -40,12 +40,12 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [modeVal, pinVal, ageVal] = await Promise.all([
-          AsyncStorage.getItem(KIDS_MODE_KEY),
+        const [pinVal, ageVal] = await Promise.all([
           AsyncStorage.getItem(KIDS_PIN_KEY),
           AsyncStorage.getItem(KIDS_AGE_GROUP_KEY),
         ]);
-        setIsKidsMode(modeVal === "true");
+        await AsyncStorage.setItem(KIDS_MODE_KEY, "false");
+        setIsKidsMode(false);
         setPinState(pinVal);
         if (ageVal === "little_lambs" || ageVal === "young_disciples") {
           setAgeGroupState(ageVal);
