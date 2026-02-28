@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  Image,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 interface Story {
   id: string;
@@ -25,6 +26,7 @@ interface Story {
   bookId: number | null;
   chapter: number | null;
   ageGroup: string;
+  imageUrl: string | null;
   storyText: string;
   memoryVerse: string | null;
   memoryVerseRef: string | null;
@@ -120,6 +122,14 @@ export default function KidsStoryScreen() {
             ~{story.estimatedMinutes} min read
           </Text>
         </View>
+
+        {story.imageUrl && (
+          <Image
+            source={{ uri: `${getApiUrl().replace(/\/$/, "")}${story.imageUrl}` }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+        )}
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
@@ -274,6 +284,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   timeText: { fontSize: 12 },
+  heroImage: {
+    width: "100%" as any,
+    height: 220,
+    borderRadius: 16,
+    marginTop: 12,
+  },
   divider: { height: 1, marginVertical: 20 },
   storyText: {},
   memoryCard: {

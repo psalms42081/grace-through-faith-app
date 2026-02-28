@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Platform,
   Dimensions,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
+import { getApiUrl } from "@/lib/query-client";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -111,7 +113,7 @@ function KidsHomeScreen() {
     return KIDS_VERSES[dayOfYear % KIDS_VERSES.length];
   }, []);
 
-  const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number }>({
+  const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number; imageUrl: string | null }>({
     queryKey: [`/api/kids/daily?ageGroup=${ageGroup}`],
   });
 
@@ -139,6 +141,12 @@ function KidsHomeScreen() {
           Kids Club
         </Text>
       </View>
+
+      <Image
+        source={{ uri: `${getApiUrl().replace(/\/$/, "")}/assets/images/app/kids-welcome.png` }}
+        style={kidsStyles.welcomeImage}
+        resizeMode="cover"
+      />
 
       <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
         <Ionicons name="sunny" size={20} color="rgba(255,255,255,0.7)" />
@@ -188,9 +196,17 @@ function KidsHomeScreen() {
           style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
           testID="daily-story"
         >
-          <View style={[kidsStyles.dailyIcon, { backgroundColor: theme.accent + "20" }]}>
-            <Ionicons name="book" size={28} color={theme.accent} />
-          </View>
+          {dailyStory.imageUrl ? (
+            <Image
+              source={{ uri: `${getApiUrl().replace(/\/$/, "")}${dailyStory.imageUrl}` }}
+              style={kidsStyles.dailyImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[kidsStyles.dailyIcon, { backgroundColor: theme.accent + "20" }]}>
+              <Ionicons name="book" size={28} color={theme.accent} />
+            </View>
+          )}
           <View style={kidsStyles.dailyInfo}>
             <Text style={[kidsStyles.dailyLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
               Today's Story
@@ -233,6 +249,12 @@ function KidsHomeScreen() {
 }
 
 const kidsStyles = StyleSheet.create({
+  welcomeImage: {
+    width: "100%" as any,
+    height: 140,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
   verseCard: {
     padding: 20,
     borderRadius: 18,
@@ -273,7 +295,8 @@ const kidsStyles = StyleSheet.create({
     borderWidth: 1.5,
     marginBottom: 16,
   },
-  dailyIcon: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 14 },
+  dailyImage: { width: 60, height: 60, borderRadius: 14, marginRight: 14 },
+  dailyIcon: { width: 60, height: 60, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 14 },
   dailyInfo: { flex: 1 },
   dailyLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
   dailyTitle: { fontSize: 16, marginBottom: 2 },
@@ -543,7 +566,11 @@ function AdultHomeScreen() {
         ]}
         testID="enter-kids-mode"
       >
-        <Ionicons name="people" size={26} color="#fff" />
+        <Image
+          source={{ uri: `${getApiUrl().replace(/\/$/, "")}/assets/images/app/kids-welcome.png` }}
+          style={styles.kidsClubImage}
+          resizeMode="cover"
+        />
         <View style={styles.kidsClubInfo}>
           <Text style={[styles.kidsClubTitle, { fontFamily: "Inter_600SemiBold" }]}>Kids Club</Text>
           <Text style={[styles.kidsClubDesc, { fontFamily: "Inter_400Regular" }]}>
@@ -855,6 +882,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 14,
   },
+  kidsClubImage: { width: 52, height: 52, borderRadius: 12 },
   kidsClubInfo: { flex: 1 },
   kidsClubTitle: { color: "#fff", fontSize: 16, marginBottom: 2 },
   kidsClubDesc: { color: "rgba(255,255,255,0.8)", fontSize: 12 },

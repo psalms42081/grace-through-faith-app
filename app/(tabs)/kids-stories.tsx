@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
+import { getApiUrl } from "@/lib/query-client";
 
 interface Collection {
   id: string;
@@ -23,6 +24,7 @@ interface Collection {
   description: string | null;
   ageGroup: string;
   icon: string | null;
+  imageUrl: string | null;
   storyCount: number;
   orderIndex: number;
 }
@@ -35,6 +37,7 @@ interface Story {
   orderInCollection: number;
   estimatedMinutes: number;
   memoryVerseRef: string | null;
+  imageUrl: string | null;
 }
 
 const COLLECTION_ICONS: Record<string, string> = {
@@ -117,13 +120,21 @@ export default function KidsStoriesScreen() {
                   onPress={() => setSelectedCollection(col)}
                   style={[styles.collectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                 >
-                  <View style={[styles.collectionIcon, { backgroundColor: theme.accent + "20" }]}>
-                    <Ionicons
-                      name={(COLLECTION_ICONS[col.icon || "book"] || "book") as any}
-                      size={28}
-                      color={theme.accent}
+                  {col.imageUrl ? (
+                    <Image
+                      source={{ uri: `${getApiUrl().replace(/\/$/, "")}${col.imageUrl}` }}
+                      style={styles.collectionImage}
+                      resizeMode="cover"
                     />
-                  </View>
+                  ) : (
+                    <View style={[styles.collectionIcon, { backgroundColor: theme.accent + "20" }]}>
+                      <Ionicons
+                        name={(COLLECTION_ICONS[col.icon || "book"] || "book") as any}
+                        size={28}
+                        color={theme.accent}
+                      />
+                    </View>
+                  )}
                   <View style={styles.collectionInfo}>
                     <Text style={[styles.collectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
                       {col.title}
@@ -161,6 +172,13 @@ export default function KidsStoriesScreen() {
                 All Collections
               </Text>
             </Pressable>
+            {selectedCollection.imageUrl && (
+              <Image
+                source={{ uri: `${getApiUrl().replace(/\/$/, "")}${selectedCollection.imageUrl}` }}
+                style={styles.collectionBanner}
+                resizeMode="cover"
+              />
+            )}
             <Text style={[styles.collectionHeading, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               {selectedCollection.title}
             </Text>
@@ -180,11 +198,19 @@ export default function KidsStoriesScreen() {
                   onPress={() => router.push(`/kids-story/${story.id}`)}
                   style={[styles.storyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                 >
-                  <View style={[styles.storyNumber, { backgroundColor: theme.accent }]}>
-                    <Text style={[styles.storyNumberText, { fontFamily: "Inter_700Bold" }]}>
-                      {story.orderInCollection}
-                    </Text>
-                  </View>
+                  {story.imageUrl ? (
+                    <Image
+                      source={{ uri: `${getApiUrl().replace(/\/$/, "")}${story.imageUrl}` }}
+                      style={styles.storyThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.storyNumber, { backgroundColor: theme.accent }]}>
+                      <Text style={[styles.storyNumberText, { fontFamily: "Inter_700Bold" }]}>
+                        {story.orderInCollection}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.storyInfo}>
                     <Text style={[styles.storyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                       {story.title}
@@ -234,9 +260,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
   },
+  collectionImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    marginRight: 14,
+  },
   collectionIcon: {
-    width: 52,
-    height: 52,
+    width: 72,
+    height: 72,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -248,6 +280,12 @@ const styles = StyleSheet.create({
   collectionMeta: { fontSize: 12 },
   backRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8, marginTop: 4 },
   backText: { fontSize: 14 },
+  collectionBanner: {
+    width: "100%" as any,
+    height: 160,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
   collectionHeading: { fontSize: 24, marginBottom: 4 },
   collectionSubhead: { fontSize: 14, lineHeight: 20, marginBottom: 16 },
   storyCard: {
@@ -258,10 +296,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 10,
   },
+  storyThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginRight: 12,
+  },
   storyNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
