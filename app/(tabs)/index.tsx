@@ -497,6 +497,17 @@ function AdultHomeScreen() {
     queryKey: ["/api/devotionals/plans"],
   });
 
+  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
+    queryKey: ["/api/reading-history/recent?userId=guest"],
+  });
+
+  const { data: streakData } = useQuery<{ currentStreak: number; longestStreak: number }>({
+    queryKey: ["/api/reading-streaks?userId=guest"],
+  });
+
+  const lastRead = recentReads?.[0];
+  const streak = streakData?.currentStreak ?? 0;
+
   const hasActivePlan = todayData?.today != null;
   const planComplete = todayData?.planComplete;
   const progress = todayData?.completedCount ?? 0;
@@ -555,6 +566,34 @@ function AdultHomeScreen() {
           </View>
         </View>
       </LinearGradient>
+
+      {(lastRead || streak > 0) && (
+        <View style={styles.continueStreakRow}>
+          {lastRead && (
+            <Pressable
+              onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
+              style={({ pressed }) => [
+                styles.continueReadCard,
+                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1, flex: streak > 0 ? 1 : undefined },
+              ]}
+              testID="home-continue-reading"
+            >
+              <Ionicons name="book" size={20} color={theme.accent} />
+              <Text style={[styles.continueReadLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>CONTINUE</Text>
+              <Text style={[styles.continueReadTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+                {lastRead.bookName} {lastRead.chapter}
+              </Text>
+            </Pressable>
+          )}
+          {streak > 0 && (
+            <View style={[styles.streakHomeCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+              <Ionicons name="flame" size={22} color="#FF6B35" />
+              <Text style={[styles.streakHomeNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+              <Text style={[styles.streakHomeLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Day Streak</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <Pressable
         onPress={() => router.push("/(tabs)/study")}
@@ -903,6 +942,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  continueStreakRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 28,
+  },
+  continueReadCard: {
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    gap: 6,
+  },
+  continueReadLabel: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+  continueReadTitle: {
+    fontSize: 15,
+    marginTop: 2,
+  },
+  streakHomeCard: {
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    gap: 4,
+    minWidth: 90,
+  },
+  streakHomeNum: { fontSize: 26 },
+  streakHomeLabel: { fontSize: 11 },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",

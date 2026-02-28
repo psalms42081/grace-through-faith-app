@@ -58,8 +58,8 @@ function NativeTabLayout() {
         <Label>Study</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="explore">
-        <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>Explore</Label>
+        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
+        <Label>Discover</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="kids-stories" options={{ href: null }} />
       <NativeTabs.Trigger name="kids-learn" options={{ href: null }} />
@@ -160,10 +160,10 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Explore",
+          title: "Discover",
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map" size={size} color={color} />
+            <Ionicons name="compass" size={size} color={color} />
           ),
         }}
       />

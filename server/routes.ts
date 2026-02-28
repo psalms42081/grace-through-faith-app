@@ -32,8 +32,11 @@ import {
   kidsBadges,
   kidsUserBadges,
   kidsStreaks,
+  prayerRequests,
+  readingHistory,
+  readingStreaks,
 } from "../shared/schema";
-import { eq, and, ilike, sql, desc } from "drizzle-orm";
+import { eq, and, ilike, sql, desc, asc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -1141,6 +1144,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const todayStory = stories[dayOfYear % stories.length];
       return res.json(todayStory);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
+
+  app.get("/api/prayers", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const prayers = await db
+        .select()
+        .from(prayerRequests)
+        .where(eq(prayerRequests.userId, userId))
+        .orderBy(desc(prayerRequests.createdAt));
+      return res.json(prayers);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/prayers", async (req, res) => {
+    try {
+      const { userId = "guest", title, content, category = "personal" } = req.body;
+      if (!title) return res.status(400).json({ error: "Title is required" });
+      const [prayer] = await db
+        .insert(prayerRequests)
+        .values({ userId, title, content, category })
+        .returning();
+      return res.json(prayer);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/prayers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates: Record<string, any> = {};
+      if (req.body.title !== undefined) updates.title = req.body.title;
+      if (req.body.content !== undefined) updates.content = req.body.content;
+      if (req.body.category !== undefined) updates.category = req.body.category;
+      if (req.body.answered !== undefined) {
+        updates.answered = req.body.answered;
+        updates.answeredAt = req.body.answered ? new Date() : null;
+      }
+      updates.updatedAt = new Date();
+      const [updated] = await db
+        .update(prayerRequests)
+        .set(updates)
+        .where(eq(prayerRequests.id, id))
+        .returning();
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      return res.json(updated);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/prayers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(prayerRequests).where(eq(prayerRequests.id, id));
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── READING HISTORY & STREAKS ─────────────────────────────────────────────
+
+  app.post("/api/reading-history", async (req, res) => {
+    try {
+      const { userId = "guest", bookId, bookName, chapter, translation = "KJV" } = req.body;
+      if (!bookId || !chapter || !bookName) {
+        return res.status(400).json({ error: "bookId, bookName, and chapter are required" });
+      }
+
+      const [entry] = await db
+        .insert(readingHistory)
+        .values({ userId, bookId: Number(bookId), bookName, chapter: Number(chapter), translation })
+        .returning();
+
+      const today = new Date().toISOString().split("T")[0];
+      const existing = await db
+        .select()
+        .from(readingStreaks)
+        .where(eq(readingStreaks.userId, userId));
+
+      if (existing.length === 0) {
+        await db.insert(readingStreaks).values({
+          userId,
+          currentStreak: 1,
+          longestStreak: 1,
+          lastReadDate: today,
+        });
+      } else {
+        const streak = existing[0];
+        const lastDate = streak.lastReadDate;
+        if (lastDate === today) {
+          // already read today
+        } else {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split("T")[0];
+          let newStreak = 1;
+          if (lastDate === yesterdayStr) {
+            newStreak = (streak.currentStreak ?? 0) + 1;
+          }
+          const newLongest = Math.max(newStreak, streak.longestStreak ?? 0);
+          await db
+            .update(readingStreaks)
+            .set({ currentStreak: newStreak, longestStreak: newLongest, lastReadDate: today })
+            .where(eq(readingStreaks.userId, userId));
+        }
+      }
+
+      return res.json(entry);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/reading-history/recent", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const recent = await db
+        .select()
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, userId))
+        .orderBy(desc(readingHistory.readAt))
+        .limit(5);
+      return res.json(recent);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/reading-streaks", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const [streak] = await db
+        .select()
+        .from(readingStreaks)
+        .where(eq(readingStreaks.userId, userId));
+      if (!streak) {
+        return res.json({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
+      }
+      const today = new Date().toISOString().split("T")[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      if (streak.lastReadDate !== today && streak.lastReadDate !== yesterdayStr) {
+        await db
+          .update(readingStreaks)
+          .set({ currentStreak: 0 })
+          .where(eq(readingStreaks.userId, userId));
+        return res.json({ currentStreak: 0, longestStreak: streak.longestStreak ?? 0, lastReadDate: streak.lastReadDate });
+      }
+      return res.json(streak);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });

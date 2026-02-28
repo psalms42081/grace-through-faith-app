@@ -608,3 +608,61 @@ export type KidsProgress = typeof kidsProgress.$inferSelect;
 export type KidsBadge = typeof kidsBadges.$inferSelect;
 export type KidsUserBadge = typeof kidsUserBadges.$inferSelect;
 export type KidsStreak = typeof kidsStreaks.$inferSelect;
+
+// ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
+
+export const prayerRequests = pgTable(
+  "prayer_request",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    title: text("title").notNull(),
+    content: text("content"),
+    category: varchar("category", { length: 30 }).default("personal").notNull(),
+    answered: boolean("answered").default(false),
+    answeredAt: timestamp("answered_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("prayer_user_idx").on(table.userId),
+  })
+);
+
+export type PrayerRequest = typeof prayerRequests.$inferSelect;
+
+// ─── READING HISTORY & STREAKS ───────────────────────────────────────────────
+
+export const readingHistory = pgTable(
+  "reading_history",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    bookId: integer("book_id").notNull(),
+    bookName: text("book_name").notNull(),
+    chapter: integer("chapter").notNull(),
+    translation: varchar("translation", { length: 10 }).default("KJV"),
+    readAt: timestamp("read_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("reading_history_user_idx").on(table.userId),
+    readAtIdx: index("reading_history_read_at_idx").on(table.readAt),
+  })
+);
+
+export const readingStreaks = pgTable("reading_streak", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastReadDate: text("last_read_date"),
+});
+
+export type ReadingHistory = typeof readingHistory.$inferSelect;
+export type ReadingStreak = typeof readingStreaks.$inferSelect;

@@ -25,12 +25,12 @@ app/                    # Expo Router screens
   _layout.tsx           # Root layout with providers, fonts, onboarding check
   onboarding.tsx        # 4-page swipeable welcome flow (first launch only)
   (tabs)/
-    _layout.tsx         # Tab navigation (5 tabs: Home, Read, Search, Study, Explore)
-    index.tsx           # Home screen (Verse of Day, Quick Actions, Devotional banner)
+    _layout.tsx         # Tab navigation (5 tabs: Home, Read, Search, Study, Discover)
+    index.tsx           # Home screen (Verse of Day, Continue Reading, Streak, Quick Actions)
     read.tsx            # Bible Reader — Book selector (OT/NT grouped pills)
     search.tsx          # Search (keyword + reference parsing)
     study.tsx           # Study tools (Word Study, Context, Historic Voices, Application)
-    explore.tsx         # Maps & Timeline
+    explore.tsx         # Discover page (Continue Reading, Streaks, Topics, Plans, Maps/Timeline)
   read/
     [bookId]/
       index.tsx         # Chapter picker grid (book info card + chapter numbers)
@@ -40,6 +40,9 @@ app/                    # Expo Router screens
   devotionals.tsx       # Devotional plans browser & enrollment
   devotional-day.tsx    # Daily reading screen with journal & progress
   kids-story/[id].tsx   # Kids story reader with memory verse, quiz, completion
+  prayer-journal.tsx    # Prayer Journal (CRUD, categories, active/answered filter)
+  topic/[id].tsx        # Topic exploration (12 topics, curated verses)
+  maps-timeline.tsx     # Bible Maps & Timeline (relocated from Explore tab)
   (tabs)/
     kids-stories.tsx    # Kids stories browser (collections + stories)
     kids-learn.tsx      # Kids learn hub (quizzes + memory verses)
@@ -61,7 +64,7 @@ data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
 
-## Database Tables (30 total)
+## Database Tables (33 total)
 - **Core:** bible_translation, bible_book, bible_verse
 - **Word Study:** strong_entry, verse_strong_map
 - **Context:** context_card
@@ -72,6 +75,8 @@ data/
 - **Devotionals:** devotional_plan, devotional_day, user_plan_enrollment, user_plan_progress
 - **User:** users, user_note, user_highlight, user_bookmark
 - **Kids Club:** kids_collection, kids_story, kids_quiz_question, kids_progress, kids_badge, kids_user_badge, kids_streak
+- **Prayer Journal:** prayer_request (userId, title, content, category, answered, answeredAt)
+- **Reading Tracking:** reading_history (userId, bookId, bookName, chapter, translation, readAt), reading_streak (userId, currentStreak, longestStreak, lastReadDate)
 
 ## Data Pipeline
 - **KJV** (King James Version) — public domain, sourced from github.com/aruljohn/Bible-kjv
@@ -105,6 +110,15 @@ data/
 - `GET/POST /api/highlights/:userId` — User highlights
 - `GET/POST/DELETE /api/bookmarks/:userId` — User bookmarks
 - `POST /api/tts` — Text-to-speech (OpenAI gpt-audio, accepts `{text, voice}`)
+- **Prayer Journal:**
+- `GET /api/prayers?userId=` — List prayers
+- `POST /api/prayers` — Create prayer request
+- `PATCH /api/prayers/:id` — Update prayer (mark answered, edit)
+- `DELETE /api/prayers/:id` — Delete prayer
+- **Reading Tracking:**
+- `POST /api/reading-history` — Log chapter read (auto-updates streak)
+- `GET /api/reading-history/recent?userId=` — Recent reading history
+- `GET /api/reading-streaks?userId=` — Get streak data
 - **Kids Club:**
 - `GET /api/kids/collections?ageGroup=` — Kids story collections
 - `GET /api/kids/collections/:id/stories` — Stories in a collection

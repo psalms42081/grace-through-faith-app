@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -8,107 +8,89 @@ import {
   useColorScheme,
   Platform,
   ActivityIndicator,
-  Image,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 
-type Tab = "maps" | "timeline";
-
-interface Location {
+interface RecentRead {
   id: string;
-  name: string;
-  modernName: string | null;
-  latitude: string | null;
-  longitude: string | null;
-  description: string | null;
-  imageUrl: string | null;
-  locationType: string | null;
-  era: string | null;
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  translation: string;
+  readAt: string;
 }
 
-interface TimelineEvent {
+interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastReadDate: string | null;
+}
+
+interface Plan {
   id: string;
   title: string;
-  description: string | null;
-  yearApprox: number | null;
-  yearLabel: string | null;
-  period: string | null;
-  category: string | null;
-  locationId: string | null;
+  description: string;
+  totalDays: number;
+  theme: string | null;
 }
 
-interface LinkedVerse {
-  verseId: string;
-  bookId: number;
-  chapter: number;
-  verse: number;
-  text: string;
-  bookName: string;
-  note?: string | null;
-}
+const TOPICS = [
+  { id: "love", title: "Love", icon: "heart" as const, gradient: ["#E8456B", "#C2185B"] as [string, string] },
+  { id: "faith", title: "Faith", icon: "shield" as const, gradient: ["#5B86E5", "#36D1DC"] as [string, string] },
+  { id: "prayer", title: "Prayer", icon: "hand-left" as const, gradient: ["#8B5CF6", "#6D3BD4"] as [string, string] },
+  { id: "forgiveness", title: "Forgiveness", icon: "refresh" as const, gradient: ["#2E7D32", "#66BB6A"] as [string, string] },
+  { id: "comfort", title: "Comfort", icon: "heart-half" as const, gradient: ["#FF6B35", "#F5A623"] as [string, string] },
+  { id: "wisdom", title: "Wisdom", icon: "bulb" as const, gradient: ["#C9933A", "#A87828"] as [string, string] },
+  { id: "strength", title: "Strength", icon: "fitness" as const, gradient: ["#E65100", "#FF8F00"] as [string, string] },
+  { id: "peace", title: "Peace", icon: "leaf" as const, gradient: ["#00796B", "#4DB6AC"] as [string, string] },
+  { id: "hope", title: "Hope", icon: "sunny" as const, gradient: ["#1565C0", "#42A5F5"] as [string, string] },
+  { id: "grace", title: "Grace", icon: "gift" as const, gradient: ["#AD1457", "#EC407A"] as [string, string] },
+  { id: "courage", title: "Courage", icon: "flag" as const, gradient: ["#4527A0", "#7C4DFF"] as [string, string] },
+  { id: "joy", title: "Joy", icon: "sparkles" as const, gradient: ["#F9A825", "#FDD835"] as [string, string] },
+];
 
-const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  city: "business-outline",
-  region: "globe-outline",
-  body_of_water: "water-outline",
-  mountain: "triangle-outline",
-};
+const INSPIRATIONS = [
+  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const },
+  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const },
+  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const },
+];
 
-const TYPE_LABELS: Record<string, string> = {
-  city: "Cities",
-  region: "Regions",
-  body_of_water: "Bodies of Water",
-  mountain: "Mountains",
-};
-
-export default function ExploreScreen() {
+export default function DiscoverScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<Tab>("maps");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const { data: recentReads } = useQuery<RecentRead[]>({
+    queryKey: ["/api/reading-history/recent?userId=guest"],
+  });
+
+  const { data: streakData } = useQuery<StreakData>({
+    queryKey: ["/api/reading-streaks?userId=guest"],
+  });
+
+  const { data: plans } = useQuery<Plan[]>({
+    queryKey: ["/api/devotionals/plans"],
+  });
+
+  const lastRead = recentReads?.[0];
+  const streak = streakData?.currentStreak ?? 0;
+  const longestStreak = streakData?.longestStreak ?? 0;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Explore
+          Discover
         </Text>
-        <View style={[styles.toggle, { backgroundColor: theme.backgroundSecondary }]}>
-          {(["maps", "timeline"] as Tab[]).map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => setActiveTab(t)}
-              style={[
-                styles.toggleBtn,
-                activeTab === t && { backgroundColor: theme.accent },
-              ]}
-            >
-              <Ionicons
-                name={t === "maps" ? "map" : "time"}
-                size={14}
-                color={activeTab === t ? "#fff" : theme.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.toggleText,
-                  {
-                    color: activeTab === t ? "#fff" : theme.textSecondary,
-                    fontFamily: activeTab === t ? "Inter_600SemiBold" : "Inter_500Medium",
-                  },
-                ]}
-              >
-                {t === "maps" ? "Maps" : "Timeline"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
       <ScrollView
@@ -116,348 +98,199 @@ export default function ExploreScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "maps" ? (
-          <MapsTab theme={theme} />
-        ) : (
-          <TimelineTab theme={theme} />
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-function MapsTab({ theme }: { theme: typeof Colors.light }) {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-
-  const { data: locations, isLoading } = useQuery<Location[]>({
-    queryKey: ["/api/location"],
-  });
-
-  const { data: linkedVerses } = useQuery<LinkedVerse[]>({
-    queryKey: [`/api/location/${selectedLocation?.id}/verses`],
-    enabled: !!selectedLocation,
-  });
-
-  const grouped = React.useMemo(() => {
-    if (!locations) return {};
-    const g: Record<string, Location[]> = {};
-    for (const loc of locations) {
-      const type = loc.locationType || "other";
-      if (!g[type]) g[type] = [];
-      g[type].push(loc);
-    }
-    return g;
-  }, [locations]);
-
-  const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
-
-  if (selectedLocation) {
-    return (
-      <View style={styles.tabContent}>
-        <Pressable onPress={() => setSelectedLocation(null)} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={16} color={theme.accent} />
-          <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            All Locations
-          </Text>
-        </Pressable>
-
-        <View style={[styles.detailHeader, { backgroundColor: theme.primary }]}>
-          <Ionicons name={TYPE_ICONS[selectedLocation.locationType || "city"] || "location-outline"} size={28} color={Colors.light.accent} />
-          <Text style={[styles.detailTitle, { fontFamily: "Lora_700Bold" }]}>
-            {selectedLocation.name}
-          </Text>
-          {selectedLocation.modernName && (
-            <Text style={[styles.detailModern, { fontFamily: "Inter_400Regular" }]}>
-              Modern: {selectedLocation.modernName}
-            </Text>
-          )}
-        </View>
-
-        {selectedLocation.imageUrl && (
-          <View style={[styles.imageContainer, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Image
-              source={{ uri: selectedLocation.imageUrl }}
-              style={styles.locationImage}
-              resizeMode="cover"
-            />
-            <Text style={[styles.imageCaption, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Historical depiction of {selectedLocation.name}
-            </Text>
-          </View>
-        )}
-
-        {selectedLocation.era && (
-          <View style={[styles.metaBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" }]}>
-            <Text style={[styles.metaBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedLocation.era}
-            </Text>
-          </View>
-        )}
-
-        {selectedLocation.description && (
-          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
-              <Text style={[styles.cardHeaderLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                Description
+        {lastRead && (
+          <Pressable
+            onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
+            style={({ pressed }) => [
+              styles.continueCard,
+              { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+            ]}
+            testID="continue-reading"
+          >
+            <View style={[styles.continueIcon, { backgroundColor: theme.accent + "18" }]}>
+              <Ionicons name="book" size={22} color={theme.accent} />
+            </View>
+            <View style={styles.continueInfo}>
+              <Text style={[styles.continueLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                CONTINUE READING
+              </Text>
+              <Text style={[styles.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                {lastRead.bookName} {lastRead.chapter}
+              </Text>
+              <Text style={[styles.continueSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {lastRead.translation || "KJV"}
               </Text>
             </View>
-            <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {selectedLocation.description}
+            <LinearGradient colors={["#C9933A", "#A87828"]} style={styles.continueArrow}>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </LinearGradient>
+          </Pressable>
+        )}
+
+        <View style={styles.streakRow}>
+          <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+            <Ionicons name="flame" size={28} color="#FF6B35" />
+            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Current{"\n"}Streak
             </Text>
           </View>
-        )}
-
-        {selectedLocation.latitude && selectedLocation.longitude && (
-          <View style={[styles.coordRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Ionicons name="navigate-outline" size={14} color={theme.textMuted} />
-            <Text style={[styles.coordText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {selectedLocation.latitude}, {selectedLocation.longitude}
+          <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+            <Ionicons name="trophy" size={28} color={theme.accent} />
+            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
+            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Longest{"\n"}Streak
             </Text>
           </View>
-        )}
-
-        {linkedVerses && linkedVerses.length > 0 && (
-          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="book-outline" size={16} color={theme.bookmarkBlue} />
-              <Text style={[styles.cardHeaderLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                Referenced Verses ({linkedVerses.length})
-              </Text>
-            </View>
-            {linkedVerses.map((v) => (
-              <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
-                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {v.bookName} {v.chapter}:{v.verse}
-                </Text>
-                {v.note && (
-                  <Text style={[styles.verseNote, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {v.note}
-                  </Text>
-                )}
-                <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                  {v.text}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.tabContent}>
-      <View style={[styles.mapPlaceholder, { backgroundColor: theme.primary }]}>
-        <Ionicons name="map" size={48} color={Colors.light.accent} />
-        <Text style={[styles.mapPlaceholderTitle, { fontFamily: "Lora_600SemiBold" }]}>
-          Biblical Locations
-        </Text>
-        <Text style={[styles.mapPlaceholderSub, { fontFamily: "Inter_400Regular" }]}>
-          {locations ? `${locations.length} locations across the ancient world` : "Loading locations..."}
-        </Text>
-      </View>
-
-      {isLoading && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
+          <Pressable
+            onPress={() => router.push("/prayer-journal")}
+            style={({ pressed }) => [
+              styles.streakCard,
+              { backgroundColor: isDark ? "#1A142A" : "#F5F0FF", opacity: pressed ? 0.85 : 1 },
+            ]}
+            testID="prayer-journal-card"
+          >
+            <Ionicons name="journal" size={28} color="#8B5CF6" />
+            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              <Ionicons name="add" size={20} color="#8B5CF6" />
+            </Text>
+            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Prayer{"\n"}Journal
+            </Text>
+          </Pressable>
         </View>
-      )}
 
-      {typeOrder.map((type) => {
-        const locs = grouped[type];
-        if (!locs || locs.length === 0) return null;
-        return (
-          <React.Fragment key={type}>
-            <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              {TYPE_LABELS[type] || type}
-            </Text>
-            {locs.map((loc) => (
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Daily Inspiration
+          </Text>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inspirationScroll}>
+          {INSPIRATIONS.map((item, i) => (
+            <LinearGradient
+              key={i}
+              colors={item.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.inspirationCard}
+            >
+              <Ionicons name={item.icon} size={28} color="rgba(255,255,255,0.8)" />
+              <Text style={[styles.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
+              <Text style={[styles.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
+            </LinearGradient>
+          ))}
+        </ScrollView>
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Topics to Explore
+          </Text>
+        </View>
+
+        <View style={styles.topicsGrid}>
+          {TOPICS.map((topic) => (
+            <Pressable
+              key={topic.id}
+              onPress={() => router.push(`/topic/${topic.id}`)}
+              style={({ pressed }) => [styles.topicCard, { opacity: pressed ? 0.8 : 1 }]}
+              testID={`topic-${topic.id}`}
+            >
+              <LinearGradient
+                colors={topic.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.topicGradient}
+              >
+                <Ionicons name={topic.icon} size={22} color="rgba(255,255,255,0.9)" />
+                <Text style={[styles.topicTitle, { fontFamily: "Inter_600SemiBold" }]}>{topic.title}</Text>
+              </LinearGradient>
+            </Pressable>
+          ))}
+        </View>
+
+        {plans && plans.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                Featured Plans
+              </Text>
+              {plans.length > 3 && (
+                <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
+                  <Text style={[styles.viewAll, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>View All</Text>
+                </Pressable>
+              )}
+            </View>
+            {plans.slice(0, 3).map((plan, i) => (
               <Pressable
-                key={loc.id}
-                onPress={() => setSelectedLocation(loc)}
+                key={plan.id}
+                onPress={() => router.push("/devotionals")}
                 style={({ pressed }) => [
-                  styles.regionCard,
-                  {
-                    backgroundColor: theme.backgroundCard,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.75 : 1,
-                  },
+                  styles.planCard,
+                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
                 ]}
               >
-                <View style={[styles.regionIcon, { backgroundColor: theme.accent + "18" }]}>
-                  <Ionicons name={TYPE_ICONS[type] || "location-outline"} size={22} color={theme.accent} />
-                </View>
-                <View style={styles.regionInfo}>
-                  <Text style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                    {loc.name}
-                  </Text>
-                  <Text style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {[loc.modernName, loc.era].filter(Boolean).join(" · ")}
-                  </Text>
+                <LinearGradient
+                  colors={[
+                    ["#C9933A", "#A87828"],
+                    ["#2E7D32", "#1B5E20"],
+                    ["#1A1F3C", "#0D1025"],
+                  ][i % 3] as [string, string]}
+                  style={styles.planIcon}
+                >
+                  <Ionicons name={["heart", "leaf", "star"][i % 3] as any} size={18} color="#fff" />
+                </LinearGradient>
+                <View style={styles.planInfo}>
+                  <Text style={[styles.planTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{plan.title}</Text>
+                  <Text style={[styles.planMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{plan.totalDays} days</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
               </Pressable>
             ))}
-          </React.Fragment>
-        );
-      })}
-    </View>
-  );
-}
-
-function TimelineTab({ theme }: { theme: typeof Colors.light }) {
-  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
-
-  const { data: events, isLoading } = useQuery<TimelineEvent[]>({
-    queryKey: ["/api/timeline"],
-  });
-
-  const { data: linkedVerses } = useQuery<LinkedVerse[]>({
-    queryKey: [`/api/timeline/${selectedEvent?.id}/verses`],
-    enabled: !!selectedEvent,
-  });
-
-  const grouped = React.useMemo(() => {
-    if (!events) return [];
-    const g: Record<string, TimelineEvent[]> = {};
-    const order: string[] = [];
-    for (const ev of events) {
-      const p = ev.period || "Unknown";
-      if (!g[p]) {
-        g[p] = [];
-        order.push(p);
-      }
-      g[p].push(ev);
-    }
-    return order.map((p) => ({ period: p, events: g[p] }));
-  }, [events]);
-
-  if (selectedEvent) {
-    return (
-      <View style={styles.tabContent}>
-        <Pressable onPress={() => setSelectedEvent(null)} style={styles.backRow}>
-          <Ionicons name="chevron-back" size={16} color={theme.accent} />
-          <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            Timeline
-          </Text>
-        </Pressable>
-
-        <View style={[styles.detailHeader, { backgroundColor: theme.primary }]}>
-          <Ionicons name="time-outline" size={28} color={Colors.light.accent} />
-          <Text style={[styles.detailTitle, { fontFamily: "Lora_700Bold" }]}>
-            {selectedEvent.title}
-          </Text>
-          {selectedEvent.yearLabel && (
-            <Text style={[styles.detailModern, { fontFamily: "Inter_400Regular" }]}>
-              {selectedEvent.yearLabel}
-            </Text>
-          )}
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          {selectedEvent.period && (
-            <View style={[styles.metaBadge, { backgroundColor: theme.accent + "18" }]}>
-              <Text style={[styles.metaBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                {selectedEvent.period}
-              </Text>
-            </View>
-          )}
-          {selectedEvent.category && (
-            <View style={[styles.metaBadge, { backgroundColor: theme.bookmarkBlue + "18" }]}>
-              <Text style={[styles.metaBadgeText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                {selectedEvent.category}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {selectedEvent.description && (
-          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
-              <Text style={[styles.cardHeaderLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                Description
-              </Text>
-            </View>
-            <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {selectedEvent.description}
-            </Text>
-          </View>
+          </>
         )}
 
-        {linkedVerses && linkedVerses.length > 0 && (
-          <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="book-outline" size={16} color={theme.bookmarkBlue} />
-              <Text style={[styles.cardHeaderLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                Key Verses ({linkedVerses.length})
-              </Text>
-            </View>
-            {linkedVerses.map((v) => (
-              <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
-                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {v.bookName} {v.chapter}:{v.verse}
-                </Text>
-                <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                  {v.text}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.tabContent}>
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        Biblical History
-      </Text>
-
-      {isLoading && (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={theme.accent} />
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            More to Explore
+          </Text>
         </View>
-      )}
 
-      {grouped.map((group, gi) => (
-        <View key={group.period} style={styles.timelineRow}>
-          <View style={styles.spineLine}>
-            <View style={[styles.spineDot, { backgroundColor: theme.accent }]} />
-            {gi < grouped.length - 1 && (
-              <View style={[styles.spineTrail, { backgroundColor: theme.border }]} />
-            )}
-          </View>
-          <View style={[styles.timelineCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Text style={[styles.periodYear, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {group.events[0]?.yearLabel || ""}
-              {group.events.length > 1 && group.events[group.events.length - 1]?.yearLabel
-                ? ` \u2013 ${group.events[group.events.length - 1]?.yearLabel}`
-                : ""}
-            </Text>
-            <Text style={[styles.periodName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {group.period}
-            </Text>
-            <View style={styles.eventsList}>
-              {group.events.map((ev) => (
-                <Pressable
-                  key={ev.id}
-                  onPress={() => setSelectedEvent(ev)}
-                  style={({ pressed }) => [styles.eventRow, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <View style={[styles.eventDot, { backgroundColor: theme.accent + "88" }]} />
-                  <Text style={[styles.eventText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {ev.title}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={12} color={theme.textMuted} />
-                </Pressable>
-              ))}
-            </View>
-          </View>
+        <View style={styles.exploreCards}>
+          <Pressable
+            onPress={() => router.push("/maps-timeline?tab=maps")}
+            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            testID="maps-card"
+          >
+            <LinearGradient
+              colors={["#1A1F3C", "#0D1025"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.exploreCard}
+            >
+              <Ionicons name="map" size={28} color="rgba(237,229,213,0.8)" />
+              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Bible Maps</Text>
+              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
+            </LinearGradient>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/maps-timeline?tab=timeline")}
+            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            testID="timeline-card"
+          >
+            <LinearGradient
+              colors={["#2E7D32", "#1B5E20"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.exploreCard}
+            >
+              <Ionicons name="time" size={28} color="rgba(255,255,255,0.8)" />
+              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Timeline</Text>
+              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
+            </LinearGradient>
+          </Pressable>
         </View>
-      ))}
+      </ScrollView>
     </View>
   );
 }
@@ -465,169 +298,126 @@ function TimelineTab({ theme }: { theme: typeof Colors.light }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
   },
   title: { fontSize: 24 },
-  toggle: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 3,
-    gap: 2,
-  },
-  toggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-  },
-  toggleText: { fontSize: 13 },
   scrollView: { flex: 1 },
-  content: { padding: 20 },
-  tabContent: { gap: 12 },
-  mapPlaceholder: {
-    borderRadius: 18,
-    padding: 32,
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
-  },
-  mapPlaceholderTitle: { color: "#EDE5D5", fontSize: 18 },
-  mapPlaceholderSub: { color: "rgba(237,229,213,0.65)", fontSize: 13, textAlign: "center", lineHeight: 20 },
-  sectionLabel: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  regionCard: {
+  content: { paddingHorizontal: 22 },
+  continueCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
+    borderRadius: 18,
+    padding: 18,
     gap: 14,
+    marginBottom: 20,
   },
-  regionIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+  continueIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },
-  regionInfo: { flex: 1 },
-  regionName: { fontSize: 15, marginBottom: 3 },
-  regionPlaces: { fontSize: 12 },
-  timelineRow: {
-    flexDirection: "row",
-    gap: 14,
-  },
-  spineLine: {
-    alignItems: "center",
-    width: 16,
-    paddingTop: 14,
-  },
-  spineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  spineTrail: {
-    flex: 1,
-    width: 2,
-    marginTop: 4,
-    marginBottom: -4,
-    borderRadius: 1,
-  },
-  timelineCard: {
-    flex: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
-  },
-  periodYear: { fontSize: 11, letterSpacing: 0.5, marginBottom: 4 },
-  periodName: { fontSize: 16, marginBottom: 10 },
-  eventsList: { gap: 6 },
-  eventRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  eventDot: { width: 5, height: 5, borderRadius: 3 },
-  eventText: { fontSize: 13, lineHeight: 18, flex: 1 },
-  loadingBox: { alignItems: "center", paddingVertical: 30, gap: 10 },
-  backRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  continueInfo: { flex: 1 },
+  continueLabel: {
+    fontSize: 10,
+    letterSpacing: 1.5,
     marginBottom: 4,
   },
-  backText: { fontSize: 14 },
-  detailHeader: {
+  continueTitle: { fontSize: 17, marginBottom: 2 },
+  continueSub: { fontSize: 12 },
+  continueArrow: {
+    width: 36,
+    height: 36,
     borderRadius: 18,
-    padding: 24,
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
   },
-  detailTitle: { color: "#EDE5D5", fontSize: 20, textAlign: "center" },
-  detailModern: { color: "rgba(237,229,213,0.65)", fontSize: 13 },
-  metaBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  metaBadgeText: { fontSize: 11, letterSpacing: 0.3 },
-  detailCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    gap: 10,
-  },
-  cardHeaderRow: {
+  streakRow: {
     flexDirection: "row",
+    gap: 10,
+    marginBottom: 28,
+  },
+  streakCard: {
+    flex: 1,
     alignItems: "center",
-    gap: 8,
-    marginBottom: 2,
+    borderRadius: 18,
+    paddingVertical: 18,
+    gap: 6,
   },
-  cardHeaderLabel: { fontSize: 12, letterSpacing: 0.3 },
-  cardBody: { fontSize: 14, lineHeight: 22 },
-  imageContainer: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  locationImage: {
-    width: "100%",
-    height: 200,
-  },
-  imageCaption: {
-    fontSize: 11,
-    textAlign: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    letterSpacing: 0.2,
-  },
-  coordRow: {
+  streakNum: { fontSize: 26 },
+  streakLabel: { fontSize: 11, textAlign: "center" as const, lineHeight: 15 },
+  sectionHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    marginBottom: 16,
   },
-  coordText: { fontSize: 12 },
-  verseRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
+  sectionTitle: { fontSize: 22 },
+  viewAll: { fontSize: 13 },
+  inspirationScroll: {
+    gap: 12,
     paddingBottom: 4,
-    gap: 4,
+    marginBottom: 28,
   },
-  verseRef: { fontSize: 12, letterSpacing: 0.3 },
-  verseNote: { fontSize: 11, letterSpacing: 0.3 },
-  verseText: { fontSize: 14, lineHeight: 22 },
+  inspirationCard: {
+    width: 200,
+    borderRadius: 20,
+    padding: 22,
+    gap: 10,
+  },
+  inspirationTitle: { color: "#fff", fontSize: 17 },
+  inspirationSub: { color: "rgba(255,255,255,0.65)", fontSize: 13 },
+  topicsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 28,
+  },
+  topicCard: {
+    width: "31%" as any,
+    minWidth: 95,
+    flexGrow: 1,
+  },
+  topicGradient: {
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+    minHeight: 90,
+    justifyContent: "center",
+  },
+  topicTitle: { color: "#fff", fontSize: 13 },
+  planCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+    marginBottom: 10,
+  },
+  planIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planInfo: { flex: 1 },
+  planTitle: { fontSize: 15, marginBottom: 2 },
+  planMeta: { fontSize: 12 },
+  exploreCards: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  exploreCard: {
+    borderRadius: 20,
+    padding: 22,
+    gap: 8,
+    minHeight: 130,
+  },
+  exploreCardTitle: { color: "#EDE5D5", fontSize: 16, marginTop: 4 },
+  exploreCardSub: { color: "rgba(237,229,213,0.6)", fontSize: 12 },
 });

@@ -18,7 +18,7 @@ import type { AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
-import { getApiUrl } from "@/lib/query-client";
+import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
@@ -107,6 +107,23 @@ export default function VerseReaderScreen() {
   useEffect(() => {
     versesRef.current = data?.verses ?? [];
   }, [data?.verses]);
+
+  useEffect(() => {
+    if (data?.book?.name && bookId && chapter) {
+      apiRequest("POST", "/api/reading-history", {
+        userId: "guest",
+        bookId: Number(bookId),
+        bookName: data.book.name,
+        chapter: Number(chapter),
+        translation,
+      })
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/reading-history/recent?userId=guest"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/reading-streaks?userId=guest"] });
+        })
+        .catch(() => {});
+    }
+  }, [data?.book?.name, bookId, chapter, translation]);
 
   const cleanupPlayer = useCallback(() => {
     if (playerRef.current) {
