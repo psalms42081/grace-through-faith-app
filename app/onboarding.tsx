@@ -9,6 +9,7 @@ import {
   Platform,
   FlatList,
   ViewToken,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -100,42 +101,45 @@ function StudyModelPage() {
   ];
 
   return (
-    <View style={pageStyles.container}>
-      <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
-        <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-          WHAT MAKES US DIFFERENT
-        </Text>
-        <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-          The 4-Layer{"\n"}Study Model
-        </Text>
-      </Animated.View>
-      <View style={pageStyles.layersContainer}>
-        {layers.map((layer, i) => (
-          <Animated.View
-            key={layer.title}
-            entering={FadeIn.delay(400 + i * 150).duration(600)}
-            style={pageStyles.layerCard}
-          >
-            <View style={pageStyles.layerIconWrap}>
-              <Ionicons name={layer.icon} size={24} color={GOLD} />
-            </View>
-            <View style={pageStyles.layerTextWrap}>
-              <Text style={[pageStyles.layerTitle, { fontFamily: "Lora_600SemiBold" }]}>
-                {layer.title}
-              </Text>
-              <Text style={[pageStyles.layerDesc, { fontFamily: "Inter_400Regular" }]}>
-                {layer.desc}
-              </Text>
-            </View>
-            <View style={pageStyles.layerNumber}>
-              <Text style={[pageStyles.layerNum, { fontFamily: "Inter_700Bold" }]}>
-                {i + 1}
-              </Text>
-            </View>
-          </Animated.View>
-        ))}
+    <ScrollView style={pageStyles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={pageStyles.container}>
+        <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
+          <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
+            WHAT MAKES US DIFFERENT
+          </Text>
+          <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
+            The 4-Layer{"\n"}Study Model
+          </Text>
+        </Animated.View>
+        <View style={pageStyles.layersContainer}>
+          {layers.map((layer, i) => (
+            <Animated.View
+              key={layer.title}
+              entering={FadeIn.delay(400 + i * 150).duration(600)}
+              style={pageStyles.layerCard}
+            >
+              <View style={pageStyles.layerIconWrap}>
+                <Ionicons name={layer.icon} size={24} color={GOLD} />
+              </View>
+              <View style={pageStyles.layerTextWrap}>
+                <Text style={[pageStyles.layerTitle, { fontFamily: "Lora_600SemiBold" }]}>
+                  {layer.title}
+                </Text>
+                <Text style={[pageStyles.layerDesc, { fontFamily: "Inter_400Regular" }]}>
+                  {layer.desc}
+                </Text>
+              </View>
+              <View style={pageStyles.layerNumber}>
+                <Text style={[pageStyles.layerNum, { fontFamily: "Inter_700Bold" }]}>
+                  {i + 1}
+                </Text>
+              </View>
+            </Animated.View>
+          ))}
+        </View>
+        <View style={pageStyles.bottomPadding} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -150,35 +154,38 @@ function FeaturesPage() {
   ];
 
   return (
-    <View style={pageStyles.container}>
-      <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
-        <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-          POWERFUL TOOLS
-        </Text>
-        <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-          Everything You{"\n"}Need to Study
-        </Text>
-      </Animated.View>
-      <View style={pageStyles.featuresGrid}>
-        {features.map((f, i) => (
-          <Animated.View
-            key={f.label}
-            entering={FadeIn.delay(350 + i * 100).duration(500)}
-            style={pageStyles.featureItem}
-          >
-            <View style={pageStyles.featureIconWrap}>
-              <Ionicons name={f.icon} size={22} color={GOLD} />
-            </View>
-            <Text style={[pageStyles.featureLabel, { fontFamily: "Inter_600SemiBold" }]}>
-              {f.label}
-            </Text>
-            <Text style={[pageStyles.featureSub, { fontFamily: "Inter_400Regular" }]}>
-              {f.sub}
-            </Text>
-          </Animated.View>
-        ))}
+    <ScrollView style={pageStyles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={pageStyles.container}>
+        <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
+          <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
+            POWERFUL TOOLS
+          </Text>
+          <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
+            Everything You{"\n"}Need to Study
+          </Text>
+        </Animated.View>
+        <View style={pageStyles.featuresGrid}>
+          {features.map((f, i) => (
+            <Animated.View
+              key={f.label}
+              entering={FadeIn.delay(350 + i * 100).duration(500)}
+              style={pageStyles.featureItem}
+            >
+              <View style={pageStyles.featureIconWrap}>
+                <Ionicons name={f.icon} size={22} color={GOLD} />
+              </View>
+              <Text style={[pageStyles.featureLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                {f.label}
+              </Text>
+              <Text style={[pageStyles.featureSub, { fontFamily: "Inter_400Regular" }]}>
+                {f.sub}
+              </Text>
+            </Animated.View>
+          ))}
+        </View>
+        <View style={pageStyles.bottomPadding} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -385,6 +392,10 @@ const dotStyles = StyleSheet.create({
 });
 
 const pageStyles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+    width: SCREEN_WIDTH,
+  },
   container: {
     flex: 1,
     width: SCREEN_WIDTH,
@@ -601,5 +612,8 @@ const pageStyles = StyleSheet.create({
   startNote: {
     fontSize: 12,
     color: "rgba(237, 229, 213, 0.35)",
+  },
+  bottomPadding: {
+    height: 40,
   },
 });

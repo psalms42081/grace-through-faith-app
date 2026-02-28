@@ -43,16 +43,16 @@ export default function VerseActionsSheet() {
   const handleStudy = useCallback(() => {
     router.back();
     setTimeout(() => {
-      router.push(`/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
+      router.push(`/(tabs)/study?tab=context&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
     }, 300);
   }, [bookId, chapter, bookName]);
 
   const handleWordStudy = useCallback(() => {
     router.back();
     setTimeout(() => {
-      router.push(`/word-study?verseId=${encodeURIComponent(verseId || "")}&bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&verseText=${encodeURIComponent(text || "")}`);
+      router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&verse=${verse}&verseId=${encodeURIComponent(verseId || "")}&verseText=${encodeURIComponent(text || "")}&bookName=${encodeURIComponent(bookName || "")}`);
     }, 300);
-  }, [verseId, bookName, chapter, verse, text]);
+  }, [verseId, bookName, chapter, verse, text, bookId]);
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 

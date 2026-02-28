@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
+import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 type Tab = "word" | "context" | "voices" | "application";
@@ -55,7 +56,12 @@ interface ContextCard {
   id: string;
   title: string;
   content: string;
-  category: string;
+  category?: string;
+  historicalBackground?: string | null;
+  culturalNotes?: string | null;
+  authorInfo?: string | null;
+  dateWritten?: string | null;
+  audience?: string | null;
   themes: string[] | null;
 }
 
@@ -91,7 +97,25 @@ export default function StudyScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<Tab>("word");
+  const params = useLocalSearchParams<{
+    tab?: string;
+    bookId?: string;
+    chapter?: string;
+    verse?: string;
+    verseId?: string;
+    verseText?: string;
+    bookName?: string;
+  }>();
+  const validTabs: Tab[] = ["word", "context", "voices", "application"];
+  const [activeTab, setActiveTab] = useState<Tab>(
+    params.tab && validTabs.includes(params.tab as Tab) ? (params.tab as Tab) : "word"
+  );
+
+  useEffect(() => {
+    if (params.tab && ["word", "context", "voices", "application"].includes(params.tab)) {
+      setActiveTab(params.tab as Tab);
+    }
+  }, [params.tab]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -153,10 +177,10 @@ export default function StudyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "word" && <WordStudyTab theme={theme} />}
-        {activeTab === "context" && <ContextTab theme={theme} />}
-        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} />}
-        {activeTab === "application" && <ApplicationTab theme={theme} />}
+        {activeTab === "word" && <WordStudyTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} initialBookName={params.bookName} />}
+        {activeTab === "context" && <ContextTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
+        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
+        {activeTab === "application" && <ApplicationTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
       </ScrollView>
     </View>
   );
@@ -170,14 +194,25 @@ interface BibleBook {
   chapterCount: number;
 }
 
-function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
+function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, initialVerseId, initialVerseText, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialBookName?: string }) {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
-  const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
+  const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse ? parseInt(initialVerse) : null);
+  const [didInit, setDidInit] = useState(false);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
   });
+
+  useEffect(() => {
+    if (books && initialBookId && !didInit) {
+      const book = books.find(b => b.id === parseInt(initialBookId));
+      if (book) {
+        setSelectedBook(book);
+        setDidInit(true);
+      }
+    }
+  }, [books, initialBookId, didInit]);
 
   const passageQuery = useQuery<{ book: any; chapter: number; verses: { id: string; verse: number; text: string }[] }>({
     queryKey: [`/api/passage?book=${selectedBook?.id}&chapter=${selectedChapter}&translation=KJV`],
@@ -419,17 +454,45 @@ function WordStudyTab({ theme }: { theme: typeof Colors.light }) {
   );
 }
 
-function ContextTab({ theme }: { theme: typeof Colors.light }) {
+function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
+  const [didInit, setDidInit] = useState(false);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
   });
 
+  useEffect(() => {
+    if (books && initialBookId && !didInit) {
+      const book = books.find(b => b.id === parseInt(initialBookId));
+      if (book) {
+        setSelectedBook(book);
+        setDidInit(true);
+      }
+    }
+  }, [books, initialBookId, didInit]);
+
+  const qc = useQueryClient();
+
   const { data: contextCards, isLoading } = useQuery<ContextCard[]>({
     queryKey: [`/api/context?book=${selectedBook?.id}&chapter=${selectedChapter}`],
     enabled: !!selectedBook && !!selectedChapter,
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/context/generate", {
+        bookId: selectedBook!.id,
+        chapter: selectedChapter,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: [`/api/context?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+      });
+    },
   });
 
   const hasCards = contextCards && contextCards.length > 0;
@@ -544,21 +607,66 @@ function ContextTab({ theme }: { theme: typeof Colors.light }) {
 
           {hasCards && contextCards!.map((card) => (
             <View key={card.id} style={[styles.contextCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <View style={styles.contextCardHeader}>
-                <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18" }]}>
-                  <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    {(card.category || "general").replace(/_/g, " ")}
-                  </Text>
-                </View>
-              </View>
               <Text style={[styles.contextTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
                 {card.title}
               </Text>
               <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                 {card.content}
               </Text>
+
+              {card.historicalBackground && (
+                <View style={{ marginTop: 16 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <Ionicons name="time-outline" size={14} color={theme.accent} />
+                    <Text style={{ color: theme.accent, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
+                      Historical Background
+                    </Text>
+                  </View>
+                  <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {card.historicalBackground}
+                  </Text>
+                </View>
+              )}
+
+              {card.culturalNotes && (
+                <View style={{ marginTop: 16 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <Ionicons name="globe-outline" size={14} color={theme.accent} />
+                    <Text style={{ color: theme.accent, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
+                      Cultural Notes
+                    </Text>
+                  </View>
+                  <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {card.culturalNotes}
+                  </Text>
+                </View>
+              )}
+
+              {(card.authorInfo || card.dateWritten || card.audience) && (
+                <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {card.authorInfo && (
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                      <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Author</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.authorInfo}</Text>
+                    </View>
+                  )}
+                  {card.dateWritten && (
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                      <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Date</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.dateWritten}</Text>
+                    </View>
+                  )}
+                  {card.audience && (
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                      <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Audience</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.audience}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {card.themes && card.themes.length > 0 && (
-                <View style={styles.themePills}>
+                <View style={[styles.themePills, { marginTop: 16 }]}>
                   {card.themes.map((t, i) => (
                     <View key={i} style={[styles.themePill, { backgroundColor: theme.primary + "22" }]}>
                       <Text style={[styles.themePillText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
@@ -571,42 +679,80 @@ function ContextTab({ theme }: { theme: typeof Colors.light }) {
             </View>
           ))}
 
-          {!isLoading && !hasCards && (
+          {generateMutation.isPending && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                No Context Data Yet
+                Generating Context
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Historical context for {selectedBook.name} {selectedChapter} hasn't been added yet. Context data is currently available for Genesis 1, Psalm 23, Isaiah 53, John 1, John 3, Romans 8, and Revelation 21.
+                Preparing historical and cultural context for {selectedBook.name} {selectedChapter}...
               </Text>
             </View>
           )}
 
-          {hasCards && (
-            <Pressable
-              onPress={() => router.push(`/passage-context?bookId=${selectedBook.id}&chapter=${selectedChapter}&bookName=${encodeURIComponent(selectedBook.name)}`)}
-              style={[styles.viewFullBtn, { backgroundColor: theme.accent }]}
-            >
-              <Text style={[styles.viewFullText, { fontFamily: "Inter_600SemiBold" }]}>
-                View Full Passage Study
+          {!isLoading && !hasCards && !generateMutation.isPending && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="sparkles-outline" size={24} color={theme.accent} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                Explore This Chapter
               </Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
-            </Pressable>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Generate historical background, cultural notes, and key themes for {selectedBook.name} {selectedChapter}.
+              </Text>
+              <Pressable
+                onPress={() => generateMutation.mutate()}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 14,
+                    backgroundColor: theme.accent,
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    gap: 8,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="sparkles" size={16} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                  Generate Context
+                </Text>
+              </Pressable>
+              {generateMutation.isError && (
+                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                  Failed to generate. Please try again.
+                </Text>
+              )}
+            </View>
           )}
+
         </>
       )}
     </View>
   );
 }
 
-function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light; commentators: Commentator[] }) {
+function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; commentators: Commentator[]; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
+  const [didInit, setDidInit] = useState(false);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
   });
+
+  useEffect(() => {
+    if (books && initialBookId && !didInit) {
+      const book = books.find(b => b.id === parseInt(initialBookId));
+      if (book) {
+        setSelectedBook(book);
+        setDidInit(true);
+      }
+    }
+  }, [books, initialBookId, didInit]);
 
   const { data: commentaryData, isLoading } = useQuery<CommentaryResult[]>({
     queryKey: [`/api/commentary?book=${selectedBook?.id}&chapter=${selectedChapter}`],
@@ -624,90 +770,86 @@ function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light
 
   return (
     <View style={styles.tabContent}>
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-        Featured Commentators
-      </Text>
-      {commentators.map((c) => (
-        <Pressable
-          key={c.name}
-          onPress={() => {
-            if (c.externalUrl) {
-              Linking.openURL(c.externalUrl);
-            }
-          }}
-          style={({ pressed }) => [
-            styles.commentatorCard,
-            {
-              backgroundColor: theme.backgroundCard,
-              borderColor: theme.border,
-              opacity: pressed && c.externalUrl ? 0.75 : 1,
-            },
-          ]}
-        >
-          <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-            <Ionicons name="person" size={20} color={Colors.light.accent} />
+      {!selectedBook && (
+        <>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Browse Commentary
+          </Text>
+          <View style={styles.passagePills}>
+            {otBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
+            {ntBooks.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
+                style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              >
+                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                  {b.abbreviation}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          <View style={styles.commentatorInfo}>
-            <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {c.name}
-            </Text>
-            <Text style={[styles.commentatorMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {c.dates} · {c.tradition}
-            </Text>
-          </View>
-          {c.isPublicDomain ? (
-            <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
-              <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-                Public Domain
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.externalBadgeRow}>
-              <View style={[styles.pdBadge, { backgroundColor: theme.bookmarkBlue + "22" }]}>
-                <Text style={[styles.pdText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                  External
+
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
+            Featured Commentators
+          </Text>
+          {commentators.map((c) => (
+            <Pressable
+              key={c.name}
+              onPress={() => {
+                if (c.externalUrl) {
+                  Linking.openURL(c.externalUrl);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.commentatorCard,
+                {
+                  backgroundColor: theme.backgroundCard,
+                  borderColor: theme.border,
+                  opacity: pressed && c.externalUrl ? 0.75 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
+                <Ionicons name="person" size={20} color={Colors.light.accent} />
+              </View>
+              <View style={styles.commentatorInfo}>
+                <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  {c.name}
+                </Text>
+                <Text style={[styles.commentatorMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {c.dates} · {c.tradition}
                 </Text>
               </View>
-              <Ionicons name="open-outline" size={14} color={theme.bookmarkBlue} />
-            </View>
-          )}
-        </Pressable>
-      ))}
-
-      <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
-        Browse Commentary
-      </Text>
-
-      {!selectedBook && (
-        <View style={styles.passagePills}>
-          {[...otBooks.slice(0, 5), ...ntBooks.slice(0, 5)].length > 0 ? (
-            <>
-              {otBooks.map((b) => (
-                <Pressable
-                  key={b.id}
-                  onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
-                  style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                >
-                  <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    {b.abbreviation}
+              {c.isPublicDomain ? (
+                <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
+                  <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                    Public Domain
                   </Text>
-                </Pressable>
-              ))}
-              <View style={{ width: "100%", height: 8 }} />
-              {ntBooks.map((b) => (
-                <Pressable
-                  key={b.id}
-                  onPress={() => { setSelectedBook(b); setSelectedChapter(null); }}
-                  style={[styles.bookPill, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                >
-                  <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    {b.abbreviation}
-                  </Text>
-                </Pressable>
-              ))}
-            </>
-          ) : null}
-        </View>
+                </View>
+              ) : (
+                <View style={styles.externalBadgeRow}>
+                  <View style={[styles.pdBadge, { backgroundColor: theme.bookmarkBlue + "22" }]}>
+                    <Text style={[styles.pdText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                      External
+                    </Text>
+                  </View>
+                  <Ionicons name="open-outline" size={14} color={theme.bookmarkBlue} />
+                </View>
+              )}
+            </Pressable>
+          ))}
+        </>
       )}
 
       {selectedBook && !selectedChapter && (
@@ -800,13 +942,24 @@ function HistoricVoicesTab({ theme, commentators }: { theme: typeof Colors.light
   );
 }
 
-function ApplicationTab({ theme }: { theme: typeof Colors.light }) {
+function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
+  const [didInit, setDidInit] = useState(false);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
   });
+
+  useEffect(() => {
+    if (books && initialBookId && !didInit) {
+      const book = books.find(b => b.id === parseInt(initialBookId));
+      if (book) {
+        setSelectedBook(book);
+        setDidInit(true);
+      }
+    }
+  }, [books, initialBookId, didInit]);
 
   const { data: templates, isLoading, isError } = useQuery<AppTemplate[]>({
     queryKey: [`/api/application?book=${selectedBook?.id}&chapter=${selectedChapter}`],

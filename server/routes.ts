@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import OpenAI from "openai";
 import { textToSpeech, isValidVoice } from "./openai-tts";
 import { db } from "./db";
 import {
@@ -311,6 +312,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/context/generate", async (req, res) => {
+    try {
+      const { bookId, chapter } = req.body;
+      if (!bookId || !chapter) {
+        return res.status(400).json({ error: "bookId and chapter are required" });
+      }
+
+      const existing = await db
+        .select()
+        .from(contextCards)
+        .where(
+          and(
+            eq(contextCards.bookId, Number(bookId)),
+            eq(contextCards.chapter, Number(chapter))
+          )
+        );
+
+      if (existing.length > 0) {
+        return res.json(existing);
+      }
+
+      const bookRows = await db
+        .select()
+        .from(bibleBooks)
+        .where(eq(bibleBooks.id, Number(bookId)));
+
+      if (bookRows.length === 0) {
+        return res.status(404).json({ error: "Book not found" });
+      }
+
+      const bookName = bookRows[0].name;
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions.`,
+          },
+          {
+            role: "user",
+            content: `Provide historical context for ${bookName} chapter ${chapter}. Return JSON with these fields:
+{
+  "title": "A descriptive title for this chapter's context",
+  "content": "2-3 paragraph overview of what this chapter covers and its significance",
+  "historicalBackground": "2-3 paragraphs on the historical setting, when/where events took place",
+  "culturalNotes": "1-2 paragraphs on cultural practices, customs, or norms relevant to understanding this chapter",
+  "authorInfo": "Brief note on the traditional author of this book",
+  "dateWritten": "Approximate date or range when this book was written",
+  "audience": "Who was the original audience for this text",
+  "themes": ["theme1", "theme2", "theme3"]
+}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1200,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "{}";
+      let parsed: any;
+      try {
+        const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+        parsed = JSON.parse(cleaned);
+      } catch (parseErr) {
+        console.error("Failed to parse AI response:", raw.substring(0, 500));
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      const [inserted] = await db
+        .insert(contextCards)
+        .values({
+          bookId: Number(bookId),
+          chapter: Number(chapter),
+          title: parsed.title || `${bookName} ${chapter}`,
+          content: parsed.content || "",
+          historicalBackground: parsed.historicalBackground || null,
+          culturalNotes: parsed.culturalNotes || null,
+          authorInfo: parsed.authorInfo || null,
+          dateWritten: parsed.dateWritten || null,
+          audience: parsed.audience || null,
+          themes: Array.isArray(parsed.themes) ? parsed.themes : [],
+        })
+        .returning();
+
+      return res.json([inserted]);
+    } catch (err) {
+      console.error("Context generation error:", err);
+      return res.status(500).json({ error: "Failed to generate context" });
     }
   });
 

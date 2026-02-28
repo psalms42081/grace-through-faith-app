@@ -15,7 +15,8 @@ A mobile-first Bible study app for all Christian ministries featuring the "4-Lay
 - **Fonts:** Lora (serif, for scripture/headings), Inter (sans-serif, for UI)
 - **Icons:** @expo/vector-icons (Ionicons)
 - **TTS:** OpenAI AI Integration (gpt-audio model) via `/api/tts` endpoint, with expo-speech fallback
-- **Audio Playback:** expo-av for playing AI-generated audio
+- **Audio Playback:** expo-audio for playing AI-generated audio
+- **AI Context:** OpenAI gpt-4o-mini for on-demand context generation via `/api/context/generate`
 - **Offline:** React Query persistence via AsyncStorage (30-day gcTime, offlineFirst)
 
 ## Project Structure
@@ -79,6 +80,7 @@ data/
 - `GET /api/strong/:id` — Strong's entry
 - `GET /api/strong/verse/:verseId` — Strong's mappings for a verse
 - `GET /api/context?book=&chapter=` — Context cards
+- `POST /api/context/generate` — AI-generated context (auto-caches to DB)
 - `GET /api/commentary?book=&chapter=` — Commentary entries
 - `GET /api/application?book=&chapter=` — Application templates
 - `GET /api/location` — All locations
@@ -107,7 +109,8 @@ data/
 - [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking
 - [x] **Milestone 9:** Text-to-Speech & Offline Support — expo-speech TTS with play/pause/stop controls and speed selector; React Query persistence via AsyncStorage for offline-first data caching
 - [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse, deployment configured (autoscale)
-- [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-av playback, expo-speech fallback; new app icon
+- [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-audio playback, expo-speech fallback; new app icon
+- [x] **Milestone 12:** UX Polish — Scrollable onboarding pages; AI-generated context for any chapter (gpt-4o-mini, cached to DB); redesigned immersive home screen with gradient verse card, 4-Layer teaser, and visual dividers; consolidated study tools (no more double-ups); verse-actions routes to Study tab
 
 ## Color Theme
 - Primary (deep navy): #1A1F3C
