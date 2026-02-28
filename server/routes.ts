@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import { textToSpeech } from "./replit_integrations/audio/client";
 import { db } from "./db";
 import {
   bibleBooks,
@@ -704,6 +705,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── TEXT-TO-SPEECH ──────────────────────────────────────────────────────────
+
+  const TTS_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
+  type TTSVoice = (typeof TTS_VOICES)[number];
+
+  app.post("/api/tts", async (req, res) => {
+    try {
+      const { text, voice = "alloy" } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "text is required" });
+      }
+      const selectedVoice: TTSVoice = TTS_VOICES.includes(voice) ? voice : "alloy";
+      const audioBuffer = await textToSpeech(text, selectedVoice, "mp3");
+      res.set({
+        "Content-Type": "audio/mpeg",
+        "Content-Length": String(audioBuffer.length),
+        "Cache-Control": "public, max-age=86400",
+      });
+      return res.send(audioBuffer);
+    } catch (err) {
+      console.error("TTS error:", err);
+      return res.status(500).json({ error: "Text-to-speech failed" });
     }
   });
 

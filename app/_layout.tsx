@@ -1,10 +1,11 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, asyncStoragePersister } from "@/lib/query-client";
 import Colors from "@/constants/colors";
@@ -23,6 +24,8 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 
+const ONBOARDING_KEY = "@grace-through-faith/onboarded";
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootLayoutNav() {
@@ -39,6 +42,7 @@ function RootLayoutNav() {
         headerTitleStyle: { fontFamily: "Lora_600SemiBold", fontSize: 17 },
       }}
     >
+      <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
@@ -71,14 +75,26 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((value) => {
+        if (!value) {
+          router.replace("/onboarding");
+        }
+      })
+      .catch(() => {})
+      .finally(() => setOnboardingChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && onboardingChecked) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, onboardingChecked]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !onboardingChecked) return null;
 
   return (
     <ErrorBoundary>

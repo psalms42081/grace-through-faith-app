@@ -1,4 +1,4 @@
-# Scripture Study — Hybrid Bible Study App
+# Grace through Faith — Bible Study App
 
 ## Overview
 A mobile-first Bible study app for all Christian ministries featuring the "4-Layer Study Model":
@@ -14,22 +14,26 @@ A mobile-first Bible study app for all Christian ministries featuring the "4-Lay
 - **State Management:** TanStack Query (server state), React context (shared UI state)
 - **Fonts:** Lora (serif, for scripture/headings), Inter (sans-serif, for UI)
 - **Icons:** @expo/vector-icons (Ionicons)
+- **TTS:** OpenAI AI Integration (gpt-audio model) via `/api/tts` endpoint, with expo-speech fallback
+- **Audio Playback:** expo-av for playing AI-generated audio
+- **Offline:** React Query persistence via AsyncStorage (30-day gcTime, offlineFirst)
 
 ## Project Structure
 ```
 app/                    # Expo Router screens
-  _layout.tsx           # Root layout with providers, fonts, themed Stack headers
+  _layout.tsx           # Root layout with providers, fonts, onboarding check
+  onboarding.tsx        # 4-page swipeable welcome flow (first launch only)
   (tabs)/
     _layout.tsx         # Tab navigation (5 tabs: Home, Read, Search, Study, Explore)
     index.tsx           # Home screen (Verse of Day, Quick Actions, Devotional banner)
     read.tsx            # Bible Reader — Book selector (OT/NT grouped pills)
     search.tsx          # Search (keyword + reference parsing)
-    study.tsx           # Study tools (Word Study, Context, Historic Voices, Application) — Context & Historic Voices tabs use full 66-book/chapter picker
+    study.tsx           # Study tools (Word Study, Context, Historic Voices, Application)
     explore.tsx         # Maps & Timeline
   read/
     [bookId]/
       index.tsx         # Chapter picker grid (book info card + chapter numbers)
-      [chapter].tsx     # Verse reader (scripture text, prev/next navigation)
+      [chapter].tsx     # Verse reader (scripture text, TTS with voice selection)
   verse-actions.tsx     # FormSheet — verse actions (copy, highlight, bookmark, study)
   passage-context.tsx   # Passage study screen (context cards + commentary)
   devotionals.tsx       # Devotional plans browser & enrollment
@@ -40,21 +44,11 @@ constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
 lib/query-client.ts     # TanStack Query setup with API fetch helpers
 server/
   index.ts              # Express server entry point
-  routes.ts             # API routes (passage, search, strong, context, commentary, etc.)
+  routes.ts             # API routes (passage, search, strong, context, commentary, TTS)
   db.ts                 # Drizzle ORM database connection
-  storage.ts            # Legacy in-memory storage (users only)
+  replit_integrations/  # OpenAI AI Integration (audio TTS, chat, image)
 shared/schema.ts        # Drizzle ORM schema (all database tables)
-scripts/
-  seed-books.ts         # Seeds 66 Bible books + KJV translation metadata
-  download-kjv.ts       # Downloads public domain KJV JSON from GitHub
-  import-kjv.ts         # Imports KJV verse text into bible_verse table
-  seed-context.ts       # Seeds 9 context cards + 4 commentators + 6 commentary entries
-  seed-strongs.ts       # Seeds 17 Strong's entries + 16 verse-word mappings
-  seed-strongs-expanded.ts # Seeds 65 additional Strong's entries + 204 word mappings
-  seed-application.ts   # Seeds 12 application templates (Then/Now, reflection, prayer)
-  seed-locations.ts     # Seeds 28 biblical locations + 55 verse mappings
-  seed-timeline.ts      # Seeds 36 timeline events + 74 verse mappings
-  seed-devotionals.ts   # Seeds 3 devotional plans + 19 days with content
+scripts/                # Data import scripts (KJV, ASV, WEB, context, Strong's, etc.)
 data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
@@ -100,6 +94,7 @@ data/
 - `GET/POST /api/notes/:userId` — User notes
 - `GET/POST /api/highlights/:userId` — User highlights
 - `GET/POST/DELETE /api/bookmarks/:userId` — User bookmarks
+- `POST /api/tts` — Text-to-speech (OpenAI gpt-audio, accepts `{text, voice}`)
 
 ## Build Milestones
 - [x] **Milestone 1:** Foundation — App shell, DB schema, tab navigation, API skeleton
@@ -108,10 +103,11 @@ data/
 - [x] **Milestone 4:** Bottom Sheet UX & Context Layer — verse action sheet, passage context/commentary
 - [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
 - [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
-- [x] **Milestone 7:** Maps & Timeline — 28 biblical locations (grouped by type: cities, regions, mountains, bodies of water) with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab replaces hardcoded data
-- [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking, home screen integration with active plan status
-- [x] **Milestone 9:** Text-to-Speech & Offline Support — expo-speech TTS with play/pause/stop controls and speed selector (0.75x-1.5x) in verse reader, verse highlighting during playback; React Query persistence via AsyncStorage for offline-first data caching (30-day cache, offlineFirst network mode)
-- [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse (7 verses), removed placeholder settings button, improved Quick Access subtitles, TTS platform guard for Android WebView, deployment configured (autoscale)
+- [x] **Milestone 7:** Maps & Timeline — 28 biblical locations with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab
+- [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking
+- [x] **Milestone 9:** Text-to-Speech & Offline Support — expo-speech TTS with play/pause/stop controls and speed selector; React Query persistence via AsyncStorage for offline-first data caching
+- [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse, deployment configured (autoscale)
+- [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-av playback, expo-speech fallback; new app icon
 
 ## Color Theme
 - Primary (deep navy): #1A1F3C
@@ -120,13 +116,27 @@ data/
 - Text (ink): #2C1810
 - Supports light/dark mode
 
+## Key Design Rules
+- No emojis anywhere in the app
+- Use @expo/vector-icons (Ionicons) for all icons
+- Ellen G. White: always external link to egwwritings.org, never embed text
+- Lora serif for headings/scripture, Inter sans-serif for UI text
+
 ## Navigation Flow
+- First launch: 4-page onboarding → "Get Started" → Home
 - Read tab shows all 66 books grouped by OT/NT as pill buttons
 - Tapping a book navigates to chapter picker with book info card + numbered grid
 - Tapping a chapter opens the verse reader with full KJV text
 - Verse reader has prev/next chapter navigation at bottom
-- Verse reader has audio playback bar with play/pause/stop and speed controls
+- Verse reader has audio playback bar with voice selection and speed controls
 - All data cached offline via AsyncStorage (offlineFirst strategy)
+
+## TTS Architecture
+- **Primary:** OpenAI gpt-audio model via Replit AI Integration (server-side `/api/tts`)
+- **Voices:** Nova (female), Shimmer (female), Alloy (neutral), Echo (male), Onyx (male)
+- **Playback:** expo-av Sound for both web and native
+- **Fallback:** expo-speech (device TTS) when API unavailable or offline
+- **Persistence:** Selected voice stored in AsyncStorage (`@grace-through-faith/tts-voice`)
 
 ## Workflows
 - `Start Backend` — Runs Express server on port 5000

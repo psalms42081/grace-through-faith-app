@@ -13,13 +13,28 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
+import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
+
+const VOICE_OPTIONS = [
+  { id: "nova", label: "Nova", description: "Female" },
+  { id: "shimmer", label: "Shimmer", description: "Female" },
+  { id: "alloy", label: "Alloy", description: "Neutral" },
+  { id: "echo", label: "Echo", description: "Male" },
+  { id: "onyx", label: "Onyx", description: "Male" },
+] as const;
+type VoiceId = (typeof VOICE_OPTIONS)[number]["id"];
+
+const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
 
 interface Verse {
   id: string;
@@ -47,23 +62,32 @@ export default function VerseReaderScreen() {
   const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
   const [speechRate, setSpeechRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
-  const [ttsAvailable, setTtsAvailable] = useState(true);
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<VoiceId>("nova");
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const sessionRef = useRef(0);
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const selectedVoiceRef = useRef<VoiceId>("nova");
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      const supported =
-        typeof window !== "undefined" &&
-        "speechSynthesis" in window &&
-        typeof SpeechSynthesisUtterance !== "undefined";
-      setTtsAvailable(supported);
-    } else {
-      setTtsAvailable(true);
-    }
+    AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
+      if (saved && VOICE_OPTIONS.some((v) => v.id === saved)) {
+        setSelectedVoice(saved as VoiceId);
+        selectedVoiceRef.current = saved as VoiceId;
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+    }).catch(() => {});
   }, []);
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
@@ -81,14 +105,26 @@ export default function VerseReaderScreen() {
     versesRef.current = data?.verses ?? [];
   }, [data?.verses]);
 
+  const cleanupSound = useCallback(async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.unloadAsync();
+      } catch {}
+      soundRef.current = null;
+    }
+  }, []);
+
   const resetPlayback = useCallback(() => {
     sessionRef.current += 1;
+    cleanupSound();
     Speech.stop();
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeakingVerseIndex(-1);
+    setIsLoadingAudio(false);
+    setUsingFallback(false);
     currentIndexRef.current = -1;
-  }, []);
+  }, [cleanupSound]);
 
   useEffect(() => {
     resetPlayback();
@@ -97,11 +133,12 @@ export default function VerseReaderScreen() {
   useEffect(() => {
     return () => {
       sessionRef.current += 1;
+      cleanupSound();
       Speech.stop();
     };
-  }, []);
+  }, [cleanupSound]);
 
-  const speakVerse = useCallback((index: number, session: number) => {
+  const speakVerseFallback = useCallback((index: number, session: number) => {
     if (session !== sessionRef.current) return;
 
     const verses = versesRef.current;
@@ -128,7 +165,7 @@ export default function VerseReaderScreen() {
         rate: speechRateRef.current,
         onDone: () => {
           if (session === sessionRef.current) {
-            speakVerse(index + 1, session);
+            speakVerseFallback(index + 1, session);
           }
         },
         onStopped: () => {},
@@ -148,6 +185,100 @@ export default function VerseReaderScreen() {
     }
   }, []);
 
+  const speakVerseAI = useCallback(async (index: number, session: number) => {
+    if (session !== sessionRef.current) return;
+
+    const verses = versesRef.current;
+    if (index < 0 || index >= verses.length) {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setSpeakingVerseIndex(-1);
+      setIsLoadingAudio(false);
+      currentIndexRef.current = -1;
+      return;
+    }
+
+    currentIndexRef.current = index;
+    setSpeakingVerseIndex(index);
+    setIsLoadingAudio(true);
+
+    try {
+      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
+    } catch {}
+
+    const verse = verses[index];
+    const textToSpeak = `${verse.text}`;
+
+    try {
+      const apiUrl = getApiUrl();
+      const url = new URL("/api/tts", apiUrl);
+
+      const response = await fetch(url.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textToSpeak, voice: selectedVoiceRef.current }),
+      });
+
+      if (!response.ok) {
+        throw new Error("TTS API failed");
+      }
+
+      if (session !== sessionRef.current) return;
+
+      await cleanupSound();
+
+      let audioUri: string;
+
+      if (Platform.OS === "web") {
+        const blob = await response.blob();
+        audioUri = URL.createObjectURL(blob);
+      } else {
+        const fileUri = `${FileSystem.cacheDirectory}tts_verse_${index}_${Date.now()}.mp3`;
+        const arrayBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        const base64Data = btoa(binary);
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        audioUri = fileUri;
+      }
+
+      if (session !== sessionRef.current) return;
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { rate: speechRateRef.current, shouldPlay: true }
+      );
+      soundRef.current = sound;
+
+      setIsLoadingAudio(false);
+
+      await new Promise<void>((resolve) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            resolve();
+          }
+        });
+      });
+
+      if (session === sessionRef.current) {
+        await cleanupSound();
+        speakVerseAI(index + 1, session);
+      }
+    } catch {
+      if (session !== sessionRef.current) return;
+      setUsingFallback(true);
+      setIsLoadingAudio(false);
+      speakVerseFallback(index, session);
+    }
+  }, [cleanupSound, speakVerseFallback]);
+
   const handlePlay = useCallback(() => {
     const verses = versesRef.current;
     if (!verses.length) return;
@@ -155,21 +286,34 @@ export default function VerseReaderScreen() {
     if (isPaused && currentIndexRef.current >= 0) {
       setIsPaused(false);
       setIsSpeaking(true);
-      speakVerse(currentIndexRef.current, sessionRef.current);
+      if (usingFallback) {
+        speakVerseFallback(currentIndexRef.current, sessionRef.current);
+      } else {
+        speakVerseAI(currentIndexRef.current, sessionRef.current);
+      }
       return;
     }
 
     const session = ++sessionRef.current;
     setIsSpeaking(true);
     setIsPaused(false);
-    speakVerse(0, session);
-  }, [isPaused, speakVerse]);
+    setUsingFallback(false);
+    speakVerseAI(0, session);
+  }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback]);
 
-  const handlePause = useCallback(() => {
-    Speech.stop();
+  const handlePause = useCallback(async () => {
+    if (usingFallback) {
+      Speech.stop();
+    } else {
+      try {
+        if (soundRef.current) {
+          await soundRef.current.pauseAsync();
+        }
+      } catch {}
+    }
     setIsPaused(true);
     setIsSpeaking(false);
-  }, []);
+  }, [usingFallback]);
 
   const handleStop = useCallback(() => {
     resetPlayback();
@@ -180,10 +324,27 @@ export default function VerseReaderScreen() {
     setSpeechRate(rate);
     setShowSpeedPicker(false);
     if (isSpeaking && currentIndexRef.current >= 0) {
-      Speech.stop();
-      speakVerse(currentIndexRef.current, sessionRef.current);
+      if (usingFallback) {
+        Speech.stop();
+        speakVerseFallback(currentIndexRef.current, sessionRef.current);
+      } else {
+        cleanupSound();
+        Speech.stop();
+        speakVerseAI(currentIndexRef.current, sessionRef.current);
+      }
     }
-  }, [isSpeaking, speakVerse]);
+  }, [isSpeaking, usingFallback, speakVerseFallback, speakVerseAI, cleanupSound]);
+
+  const handleVoiceChange = useCallback((voice: VoiceId) => {
+    selectedVoiceRef.current = voice;
+    setSelectedVoice(voice);
+    setShowVoicePicker(false);
+    AsyncStorage.setItem(VOICE_STORAGE_KEY, voice).catch(() => {});
+    if (isSpeaking && currentIndexRef.current >= 0 && !usingFallback) {
+      cleanupSound();
+      speakVerseAI(currentIndexRef.current, sessionRef.current);
+    }
+  }, [isSpeaking, usingFallback, speakVerseAI, cleanupSound]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
@@ -321,6 +482,8 @@ export default function VerseReaderScreen() {
     }, 200);
   }, []);
 
+  const currentVoiceLabel = VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Nova";
+
   return (
     <>
       <Stack.Screen
@@ -390,7 +553,7 @@ export default function VerseReaderScreen() {
           />
         )}
 
-        {ttsAvailable && !isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
+        {!isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
           <View style={[
             styles.audioBar,
             {
@@ -398,6 +561,34 @@ export default function VerseReaderScreen() {
               paddingBottom: bottomPad + 8,
             },
           ]}>
+            {showVoicePicker && (
+              <View style={[styles.voicePopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                {VOICE_OPTIONS.map((v) => (
+                  <Pressable
+                    key={v.id}
+                    onPress={() => handleVoiceChange(v.id)}
+                    style={[
+                      styles.voiceOption,
+                      selectedVoice === v.id && { backgroundColor: theme.accent + "22" },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.voiceOptionLabel,
+                      {
+                        color: selectedVoice === v.id ? theme.accent : theme.text,
+                        fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                      },
+                    ]}>
+                      {v.label}
+                    </Text>
+                    <Text style={[styles.voiceOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {v.description}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
             {showSpeedPicker && (
               <View style={[styles.speedPopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
                 {SPEED_OPTIONS.map((s) => (
@@ -424,21 +615,42 @@ export default function VerseReaderScreen() {
             )}
 
             <View style={styles.audioControls}>
-              <Pressable
-                onPress={() => setShowSpeedPicker(!showSpeedPicker)}
-                style={[styles.speedBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
-                testID="speed-button"
-              >
-                <Text style={[styles.speedBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  {speechRate}x
-                </Text>
-              </Pressable>
+              <View style={styles.leftControls}>
+                <Pressable
+                  onPress={() => { setShowVoicePicker(!showVoicePicker); setShowSpeedPicker(false); }}
+                  style={[styles.voiceBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
+                  testID="voice-button"
+                >
+                  <Ionicons name="mic-outline" size={14} color="rgba(255,255,255,0.85)" />
+                  <Text style={[styles.voiceBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                    {currentVoiceLabel}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => { setShowSpeedPicker(!showSpeedPicker); setShowVoicePicker(false); }}
+                  style={[styles.speedBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
+                  testID="speed-button"
+                >
+                  <Text style={[styles.speedBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                    {speechRate}x
+                  </Text>
+                </Pressable>
+              </View>
 
               {isActive && (
                 <View style={styles.verseIndicator}>
-                  <Ionicons name="volume-high" size={14} color={Colors.light.accent} />
+                  {isLoadingAudio ? (
+                    <ActivityIndicator size="small" color={Colors.light.accent} />
+                  ) : (
+                    <Ionicons name="volume-high" size={14} color={Colors.light.accent} />
+                  )}
                   <Text style={[styles.verseIndicatorText, { fontFamily: "Inter_500Medium" }]}>
-                    {isPaused ? "Paused" : `Verse ${(data?.verses ?? [])[speakingVerseIndex]?.verse ?? ""}`}
+                    {isLoadingAudio
+                      ? "Loading..."
+                      : isPaused
+                        ? "Paused"
+                        : `Verse ${(data?.verses ?? [])[speakingVerseIndex]?.verse ?? ""}`}
                   </Text>
                 </View>
               )}
@@ -580,6 +792,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  leftControls: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  voiceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  voiceBtnText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+  },
   speedBtn: {
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -589,6 +817,21 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     fontSize: 13,
   },
+  voicePopup: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  voiceOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  voiceOptionLabel: { fontSize: 14 },
+  voiceOptionDesc: { fontSize: 12 },
   speedPopup: {
     flexDirection: "row",
     borderRadius: 10,

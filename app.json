@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.scripturStudy"
+      "bundleIdentifier": "com.graceThroughFaith"
     },
     "android": {
-      "package": "com.scripturStudy",
+      "package": "com.graceThroughFaith",
       "adaptiveIcon": {
         "backgroundColor": "#1A1F3C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
