@@ -5,8 +5,6 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const CHAT_FALLBACK_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
-
 const TTS_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"] as const;
 export type TTSVoice = (typeof TTS_VOICES)[number];
 
@@ -14,36 +12,32 @@ export function isValidVoice(voice: string): voice is TTSVoice {
   return TTS_VOICES.includes(voice as TTSVoice);
 }
 
-function getChatFallbackVoice(voice: TTSVoice): (typeof CHAT_FALLBACK_VOICES)[number] {
-  if ((CHAT_FALLBACK_VOICES as readonly string[]).includes(voice)) {
-    return voice as (typeof CHAT_FALLBACK_VOICES)[number];
-  }
-  const mapping: Record<string, (typeof CHAT_FALLBACK_VOICES)[number]> = {
-    coral: "nova",
-    sage: "shimmer",
-    ash: "echo",
-  };
-  return mapping[voice] || "nova";
-}
+const SUPPORTED_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
 
-async function tryTTSHD(text: string, voice: TTSVoice, format: "wav" | "mp3"): Promise<Buffer> {
-  const response = await openai.audio.speech.create({
-    model: "tts-1-hd",
-    voice: voice as any,
-    input: text,
-    response_format: format,
-    speed: 1.0,
-  });
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
+const VOICE_FALLBACK: Record<string, (typeof SUPPORTED_AUDIO_VOICES)[number]> = {
+  alloy: "alloy",
+  echo: "echo",
+  fable: "fable",
+  onyx: "onyx",
+  nova: "nova",
+  shimmer: "shimmer",
+  ash: "onyx",
+  coral: "shimmer",
+  sage: "nova",
+};
 
-async function tryChatAudio(text: string, voice: TTSVoice, format: "wav" | "mp3"): Promise<Buffer> {
-  const fallbackVoice = getChatFallbackVoice(voice);
+export async function textToSpeech(
+  text: string,
+  voice: TTSVoice = "nova",
+  format: "wav" | "mp3" = "mp3"
+): Promise<Buffer> {
+  const audioVoice = VOICE_FALLBACK[voice] || "nova";
+  console.log(`[TTS] voice="${voice}" → audioVoice="${audioVoice}", text=${text.length} chars`);
+
   const response = await openai.chat.completions.create({
     model: "gpt-audio",
     modalities: ["text", "audio"],
-    audio: { voice: fallbackVoice, format },
+    audio: { voice: audioVoice, format },
     messages: [
       {
         role: "system",
@@ -57,25 +51,10 @@ async function tryChatAudio(text: string, voice: TTSVoice, format: "wav" | "mp3"
       { role: "user", content: text },
     ],
   });
-  const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
-  if (!audioData) throw new Error("No audio data in chat response");
-  return Buffer.from(audioData, "base64");
-}
 
-export async function textToSpeech(
-  text: string,
-  voice: TTSVoice = "nova",
-  format: "wav" | "mp3" = "mp3"
-): Promise<Buffer> {
-  try {
-    return await tryTTSHD(text, voice, format);
-  } catch (hdErr: any) {
-    console.warn(`tts-1-hd failed (${hdErr?.status || hdErr?.message}), falling back to gpt-audio`);
-    try {
-      return await tryChatAudio(text, voice, format);
-    } catch (chatErr: any) {
-      console.error("Both TTS methods failed:", chatErr?.message);
-      throw chatErr;
-    }
-  }
+  const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
+  if (!audioData) throw new Error("No audio data returned");
+  const buf = Buffer.from(audioData, "base64");
+  console.log(`[TTS] Success: voice="${audioVoice}", ${buf.length} bytes`);
+  return buf;
 }

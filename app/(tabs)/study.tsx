@@ -754,9 +754,25 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
     }
   }, [books, initialBookId, didInit]);
 
+  const queryClient = useQueryClient();
+  const commentaryQueryKey = `/api/commentary?book=${selectedBook?.id}&chapter=${selectedChapter}`;
+
   const { data: commentaryData, isLoading } = useQuery<CommentaryResult[]>({
-    queryKey: [`/api/commentary?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+    queryKey: [commentaryQueryKey],
     enabled: !!selectedBook && !!selectedChapter,
+  });
+
+  const generateCommentaryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/commentary/generate", {
+        bookId: selectedBook!.id,
+        chapter: selectedChapter,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData([commentaryQueryKey], data);
+    },
   });
 
   const hasCommentary = commentaryData && commentaryData.length > 0;
@@ -925,15 +941,53 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
             </View>
           ))}
 
-          {!isLoading && !hasCommentary && (
+          {generateCommentaryMutation.isPending && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                No Commentary Yet
+                Generating Commentary
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Commentary for {selectedBook.name} {selectedChapter} hasn't been added yet. Commentary is currently available for Genesis 1, Psalm 23, John 1, John 3, Romans 8, and Revelation 21.
+                Creating scholarly commentary for {selectedBook.name} {selectedChapter}...
               </Text>
+            </View>
+          )}
+
+          {!isLoading && !hasCommentary && !generateCommentaryMutation.isPending && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="sparkles-outline" size={24} color={theme.accent} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                Explore Commentary
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Generate commentary from classic scholars for {selectedBook.name} {selectedChapter}.
+              </Text>
+              <Pressable
+                onPress={() => generateCommentaryMutation.mutate()}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 14,
+                    backgroundColor: theme.accent,
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    gap: 8,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="sparkles" size={16} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                  Generate Commentary
+                </Text>
+              </Pressable>
+              {generateCommentaryMutation.isError && (
+                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                  Failed to generate. Please try again.
+                </Text>
+              )}
             </View>
           )}
         </>
@@ -961,9 +1015,25 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
     }
   }, [books, initialBookId, didInit]);
 
+  const queryClient = useQueryClient();
+  const appQueryKey = `/api/application?book=${selectedBook?.id}&chapter=${selectedChapter}`;
+
   const { data: templates, isLoading, isError } = useQuery<AppTemplate[]>({
-    queryKey: [`/api/application?book=${selectedBook?.id}&chapter=${selectedChapter}`],
+    queryKey: [appQueryKey],
     enabled: !!selectedBook && !!selectedChapter,
+  });
+
+  const generateAppMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/application/generate", {
+        bookId: selectedBook!.id,
+        chapter: selectedChapter,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData([appQueryKey], data);
+    },
   });
 
   const hasData = templates && templates.length > 0;
@@ -1155,15 +1225,53 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
             </View>
           )}
 
-          {!isLoading && !isError && !hasData && (
+          {generateAppMutation.isPending && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                No Application Data Yet
+                Generating Application
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Application templates for {selectedBook.name} {selectedChapter} haven't been added yet. Templates are available for Genesis 1, Genesis 12, Exodus 14, Psalm 23, Isaiah 53, Daniel 8, Matthew 5, John 1, John 3, Romans 8, 1 Corinthians 13, and Revelation 21.
+                Creating Then & Now application study for {selectedBook.name} {selectedChapter}...
               </Text>
+            </View>
+          )}
+
+          {!isLoading && !isError && !hasData && !generateAppMutation.isPending && (
+            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="sparkles-outline" size={24} color={theme.accent} />
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                Apply This Chapter
+              </Text>
+              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Generate a Then & Now study with reflection questions and prayer prompts for {selectedBook.name} {selectedChapter}.
+              </Text>
+              <Pressable
+                onPress={() => generateAppMutation.mutate()}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 14,
+                    backgroundColor: theme.accent,
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    gap: 8,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="sparkles" size={16} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                  Generate Application
+                </Text>
+              </Pressable>
+              {generateAppMutation.isError && (
+                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                  Failed to generate. Please try again.
+                </Text>
+              )}
             </View>
           )}
         </>

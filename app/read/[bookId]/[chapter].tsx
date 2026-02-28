@@ -28,15 +28,12 @@ type Translation = (typeof TRANSLATIONS)[number];
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
 const VOICE_OPTIONS = [
-  { id: "nova", label: "Nova", description: "Female", gender: "female" },
-  { id: "shimmer", label: "Shimmer", description: "Female", gender: "female" },
-  { id: "coral", label: "Coral", description: "Female", gender: "female" },
-  { id: "sage", label: "Sage", description: "Female", gender: "female" },
-  { id: "alloy", label: "Alloy", description: "Neutral", gender: "neutral" },
-  { id: "echo", label: "Echo", description: "Male", gender: "male" },
-  { id: "ash", label: "Ash", description: "Male", gender: "male" },
-  { id: "fable", label: "Fable", description: "Male", gender: "male" },
-  { id: "onyx", label: "Onyx", description: "Male", gender: "male" },
+  { id: "nova", label: "Nova", description: "Warm, expressive", gender: "female" },
+  { id: "shimmer", label: "Shimmer", description: "Gentle, clear", gender: "female" },
+  { id: "alloy", label: "Alloy", description: "Balanced, neutral", gender: "neutral" },
+  { id: "echo", label: "Echo", description: "Smooth, measured", gender: "male" },
+  { id: "fable", label: "Fable", description: "Rich, storytelling", gender: "male" },
+  { id: "onyx", label: "Onyx", description: "Deep, authoritative", gender: "male" },
 ] as const;
 type VoiceId = (typeof VOICE_OPTIONS)[number]["id"];
 
@@ -917,21 +914,26 @@ export default function VerseReaderScreen() {
                                 selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
                               ]}
                             >
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                                 <Ionicons
                                   name={selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
                                   size={18}
                                   color={selectedVoice === v.id ? theme.accent : theme.textMuted}
                                 />
-                                <Text style={[
-                                  styles.voiceOptionLabel,
-                                  {
-                                    color: selectedVoice === v.id ? theme.accent : theme.text,
-                                    fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                                  },
-                                ]}>
-                                  {v.label}
-                                </Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={[
+                                    styles.voiceOptionLabel,
+                                    {
+                                      color: selectedVoice === v.id ? theme.accent : theme.text,
+                                      fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                                    },
+                                  ]}>
+                                    {v.label}
+                                  </Text>
+                                  <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                                    {v.description}
+                                  </Text>
+                                </View>
                               </View>
                             </Pressable>
                           ))}

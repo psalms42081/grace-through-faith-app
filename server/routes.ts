@@ -451,6 +451,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/commentary/generate", async (req, res) => {
+    try {
+      const { bookId, chapter } = req.body;
+      if (!bookId || !chapter) {
+        return res.status(400).json({ error: "bookId and chapter are required" });
+      }
+
+      const existing = await db
+        .select({ entry: commentaryEntries, commentator: commentators })
+        .from(commentaryEntries)
+        .leftJoin(commentators, eq(commentaryEntries.commentatorId, commentators.id))
+        .where(
+          and(
+            eq(commentaryEntries.bookId, Number(bookId)),
+            eq(commentaryEntries.chapter, Number(chapter))
+          )
+        );
+
+      if (existing.length > 0) {
+        return res.json(existing);
+      }
+
+      const bookRows = await db
+        .select()
+        .from(bibleBooks)
+        .where(eq(bibleBooks.id, Number(bookId)));
+
+      if (bookRows.length === 0) {
+        return res.status(404).json({ error: "Book not found" });
+      }
+
+      const bookName = bookRows[0].name;
+
+      const existingCommentators = await db.select().from(commentators);
+      const commentatorMap: Record<string, string> = {};
+      for (const c of existingCommentators) {
+        commentatorMap[c.name] = c.id;
+      }
+
+      const neededCommentators = [
+        { id: "matthew-henry", name: "Matthew Henry", dates: "1662–1714", tradition: "Reformed" },
+        { id: "jfb", name: "Jamieson, Fausset & Brown", dates: "1871", tradition: "Presbyterian" },
+        { id: "adam-clarke", name: "Adam Clarke", dates: "1762–1832", tradition: "Wesleyan" },
+      ];
+
+      for (const c of neededCommentators) {
+        if (!commentatorMap[c.name]) {
+          await db.insert(commentators).values({ id: c.id, name: c.name, dates: c.dates, tradition: c.tradition }).onConflictDoNothing();
+          commentatorMap[c.name] = c.id;
+        }
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Bible commentary scholar. Produce concise, reverent commentary in the style of classic Protestant commentators. Return valid JSON only, no markdown.`,
+          },
+          {
+            role: "user",
+            content: `Write 3 short commentary entries for ${bookName} chapter ${chapter}, each from a different commentator perspective. Return a JSON array:
+[
+  {
+    "commentatorName": "Matthew Henry",
+    "title": "Brief descriptive title",
+    "content": "2-3 paragraph commentary in Matthew Henry's devotional and practical style"
+  },
+  {
+    "commentatorName": "Jamieson, Fausset & Brown",
+    "title": "Brief descriptive title",
+    "content": "2-3 paragraph commentary in the JFB exegetical style"
+  },
+  {
+    "commentatorName": "Adam Clarke",
+    "title": "Brief descriptive title",
+    "content": "2-3 paragraph commentary in Adam Clarke's methodical Wesleyan style"
+  }
+]`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      let parsed: any[];
+      try {
+        const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        console.error("Failed to parse commentary AI response:", raw.substring(0, 500));
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      const results: any[] = [];
+      for (const entry of parsed) {
+        const cId = commentatorMap[entry.commentatorName];
+        if (!cId) continue;
+        const [inserted] = await db
+          .insert(commentaryEntries)
+          .values({
+            commentatorId: cId,
+            bookId: Number(bookId),
+            chapter: Number(chapter),
+            content: entry.content || "",
+            title: entry.title || null,
+          })
+          .returning();
+
+        const cRow = existingCommentators.find(c => c.id === cId) || neededCommentators.find(c => c.id === cId);
+        results.push({ entry: inserted, commentator: cRow });
+      }
+
+      return res.json(results);
+    } catch (err) {
+      console.error("Commentary generation error:", err);
+      return res.status(500).json({ error: "Failed to generate commentary" });
+    }
+  });
+
   // ─── APPLICATION ─────────────────────────────────────────────────────────────
 
   app.get("/api/application", async (req, res) => {
@@ -476,6 +602,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/application/generate", async (req, res) => {
+    try {
+      const { bookId, chapter } = req.body;
+      if (!bookId || !chapter) {
+        return res.status(400).json({ error: "bookId and chapter are required" });
+      }
+
+      const existing = await db
+        .select()
+        .from(applicationTemplates)
+        .where(
+          and(
+            eq(applicationTemplates.bookId, Number(bookId)),
+            eq(applicationTemplates.chapter, Number(chapter))
+          )
+        );
+
+      if (existing.length > 0) {
+        return res.json(existing);
+      }
+
+      const bookRows = await db
+        .select()
+        .from(bibleBooks)
+        .where(eq(bibleBooks.id, Number(bookId)));
+
+      if (bookRows.length === 0) {
+        return res.status(404).json({ error: "Book not found" });
+      }
+
+      const bookName = bookRows[0].name;
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions.`,
+          },
+          {
+            role: "user",
+            content: `Create a "Then & Now" application study for ${bookName} chapter ${chapter}. Return JSON:
+{
+  "thenContext": "2-3 paragraphs explaining what this passage meant to its original audience — their situation, challenges, and how they would have understood it",
+  "nowApplication": "2-3 paragraphs on how this passage applies to believers today — practical, real-world applications for daily life",
+  "reflectionQuestions": ["Question 1 for personal reflection", "Question 2", "Question 3", "Question 4"],
+  "prayerPrompt": "A brief prayer prompt that helps the reader respond to this passage in prayer",
+  "keyTheme": "One word or short phrase capturing the main theme"
+}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "{}";
+      let parsed: any;
+      try {
+        const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        console.error("Failed to parse application AI response:", raw.substring(0, 500));
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      const [inserted] = await db
+        .insert(applicationTemplates)
+        .values({
+          bookId: Number(bookId),
+          chapter: Number(chapter),
+          thenContext: parsed.thenContext || "",
+          nowApplication: parsed.nowApplication || "",
+          reflectionQuestions: Array.isArray(parsed.reflectionQuestions) ? parsed.reflectionQuestions : [],
+          prayerPrompt: parsed.prayerPrompt || null,
+          keyTheme: parsed.keyTheme || null,
+        })
+        .returning();
+
+      return res.json([inserted]);
+    } catch (err) {
+      console.error("Application generation error:", err);
+      return res.status(500).json({ error: "Failed to generate application data" });
     }
   });
 
@@ -823,11 +1039,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tts", async (req, res) => {
     try {
-      const { text, voice = "alloy" } = req.body;
+      const { text, voice = "nova" } = req.body;
       if (!text || typeof text !== "string") {
         return res.status(400).json({ error: "text is required" });
       }
-      const selectedVoice = isValidVoice(voice) ? voice : "alloy";
+      const selectedVoice = isValidVoice(voice) ? voice : "nova";
+      console.log(`[TTS Route] voice param="${voice}" → selected="${selectedVoice}"`);
       const audioBuffer = await textToSpeech(text, selectedVoice, "mp3");
       res.set({
         "Content-Type": "audio/mpeg",
