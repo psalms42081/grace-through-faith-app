@@ -89,7 +89,12 @@ export const asyncStoragePersister: Persister = {
     if (throttleTimer) clearTimeout(throttleTimer);
     throttleTimer = setTimeout(async () => {
       try {
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(client));
+        const serialized = JSON.stringify(client);
+        if (serialized.length > 5 * 1024 * 1024) {
+          await AsyncStorage.removeItem(CACHE_KEY);
+          return;
+        }
+        await AsyncStorage.setItem(CACHE_KEY, serialized);
       } catch {}
     }, 2000);
   },

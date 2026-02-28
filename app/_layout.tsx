@@ -76,23 +76,27 @@ export default function RootLayout() {
     Inter_700Bold,
   });
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
       .then((value) => {
-        if (!value) {
-          router.replace("/onboarding");
-        }
+        setNeedsOnboarding(!value);
       })
-      .catch(() => {})
+      .catch(() => {
+        setNeedsOnboarding(false);
+      })
       .finally(() => setOnboardingChecked(true));
   }, []);
 
   useEffect(() => {
     if (fontsLoaded && onboardingChecked) {
       SplashScreen.hideAsync().catch(() => {});
+      if (needsOnboarding) {
+        setTimeout(() => router.replace("/onboarding"), 50);
+      }
     }
-  }, [fontsLoaded, onboardingChecked]);
+  }, [fontsLoaded, onboardingChecked, needsOnboarding]);
 
   if (!fontsLoaded || !onboardingChecked) return null;
 

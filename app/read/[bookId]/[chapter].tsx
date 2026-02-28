@@ -236,13 +236,11 @@ export default function VerseReaderScreen() {
         const fileUri = `${FileSystem.cacheDirectory}tts_verse_${index}_${Date.now()}.mp3`;
         const arrayBuffer = await response.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
-        let binary = "";
-        const chunkSize = 8192;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        const binChunks: string[] = [];
+        for (let i = 0; i < bytes.length; i += 4096) {
+          binChunks.push(String.fromCharCode(...bytes.subarray(i, Math.min(i + 4096, bytes.length))));
         }
-        const base64Data = btoa(binary);
+        const base64Data = btoa(binChunks.join(""));
         await FileSystem.writeAsStringAsync(fileUri, base64Data, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -277,7 +275,7 @@ export default function VerseReaderScreen() {
       setIsLoadingAudio(false);
       speakVerseFallback(index, session);
     }
-  }, [cleanupSound, speakVerseFallback]);
+  }, [cleanupPlayer, speakVerseFallback]);
 
   const handlePlay = useCallback(() => {
     const verses = versesRef.current;
