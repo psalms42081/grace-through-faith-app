@@ -526,9 +526,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chapter: bibleVerses.chapter,
           verse: bibleVerses.verse,
           text: bibleVerses.text,
+          bookName: bibleBooks.name,
         })
         .from(locationVerseMaps)
         .innerJoin(bibleVerses, eq(locationVerseMaps.verseId, bibleVerses.id))
+        .innerJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
         .where(eq(locationVerseMaps.locationId, req.params.id));
       return res.json(rows);
     } catch (err) {
@@ -546,9 +548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chapter: bibleVerses.chapter,
           verse: bibleVerses.verse,
           text: bibleVerses.text,
+          bookName: bibleBooks.name,
         })
         .from(eventVerseMaps)
         .innerJoin(bibleVerses, eq(eventVerseMaps.verseId, bibleVerses.id))
+        .innerJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
         .where(eq(eventVerseMaps.eventId, req.params.id));
       return res.json(rows);
     } catch (err) {

@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +24,7 @@ interface Location {
   latitude: string | null;
   longitude: string | null;
   description: string | null;
+  imageUrl: string | null;
   locationType: string | null;
   era: string | null;
 }
@@ -44,6 +46,7 @@ interface LinkedVerse {
   chapter: number;
   verse: number;
   text: string;
+  bookName: string;
   note?: string | null;
 }
 
@@ -170,6 +173,19 @@ function MapsTab({ theme }: { theme: typeof Colors.light }) {
           )}
         </View>
 
+        {selectedLocation.imageUrl && (
+          <View style={[styles.imageContainer, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Image
+              source={{ uri: selectedLocation.imageUrl }}
+              style={styles.locationImage}
+              resizeMode="cover"
+            />
+            <Text style={[styles.imageCaption, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Historical depiction of {selectedLocation.name}
+            </Text>
+          </View>
+        )}
+
         {selectedLocation.era && (
           <View style={[styles.metaBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" }]}>
             <Text style={[styles.metaBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
@@ -211,8 +227,11 @@ function MapsTab({ theme }: { theme: typeof Colors.light }) {
             </View>
             {linkedVerses.map((v) => (
               <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
+                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {v.bookName} {v.chapter}:{v.verse}
+                </Text>
                 {v.note && (
-                  <Text style={[styles.verseNote, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[styles.verseNote, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                     {v.note}
                   </Text>
                 )}
@@ -377,6 +396,9 @@ function TimelineTab({ theme }: { theme: typeof Colors.light }) {
             </View>
             {linkedVerses.map((v) => (
               <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
+                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {v.bookName} {v.chapter}:{v.verse}
+                </Text>
                 <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
                   {v.text}
                 </Text>
@@ -573,6 +595,22 @@ const styles = StyleSheet.create({
   },
   cardHeaderLabel: { fontSize: 12, letterSpacing: 0.3 },
   cardBody: { fontSize: 14, lineHeight: 22 },
+  imageContainer: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  locationImage: {
+    width: "100%",
+    height: 200,
+  },
+  imageCaption: {
+    fontSize: 11,
+    textAlign: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    letterSpacing: 0.2,
+  },
   coordRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -589,6 +627,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     gap: 4,
   },
+  verseRef: { fontSize: 12, letterSpacing: 0.3 },
   verseNote: { fontSize: 11, letterSpacing: 0.3 },
   verseText: { fontSize: 14, lineHeight: 22 },
 });

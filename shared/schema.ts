@@ -208,6 +208,7 @@ export const locations = pgTable("location", {
   latitude: text("latitude"),
   longitude: text("longitude"),
   description: text("description"),
+  imageUrl: text("image_url"),
   locationType: varchar("location_type", { length: 50 }),
   era: text("era"),
 });

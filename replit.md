@@ -111,6 +111,7 @@ data/
 - [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse, deployment configured (autoscale)
 - [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-audio playback, expo-speech fallback; new app icon
 - [x] **Milestone 12:** UX Polish — Scrollable onboarding pages; AI-generated context for any chapter (gpt-4o-mini, cached to DB); redesigned immersive home screen with gradient verse card, 4-Layer teaser, and visual dividers; consolidated study tools (no more double-ups); verse-actions routes to Study tab
+- [x] **Milestone 13:** Explore & Devotionals Expansion — Verse references now show book name + chapter:verse (e.g., "Micah 5:2") in Explore tab; 28 locations enriched with historical Wikimedia Commons images (old paintings/engravings); 5 new devotional plans (Women of the Bible, Prophets & Prophecy, Parables of Jesus, Walking Through the Wilderness, The Armor of God) for 8 total; home screen shows "View All" when >3 plans; Kids Club feature plan documented
 
 ## Color Theme
 - Primary (deep navy): #1A1F3C

@@ -315,13 +315,24 @@ export default function HomeScreen() {
       {plans && plans.length > 0 && (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Featured Plans
-            </Text>
-            <View style={[styles.sectionAccent, { backgroundColor: theme.accent }]} />
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  Featured Plans
+                </Text>
+                <View style={[styles.sectionAccent, { backgroundColor: theme.accent }]} />
+              </View>
+              {plans.length > 3 && (
+                <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
+                  <Text style={[styles.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    View All
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           </View>
           <View style={styles.plansGrid}>
-            {plans.map((plan, i) => (
+            {plans.slice(0, 3).map((plan, i) => (
               <Pressable
                 key={plan.id}
                 onPress={() => router.push("/devotionals")}
@@ -540,6 +551,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: 14,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  viewAllText: { fontSize: 13 },
   sectionTitle: { fontSize: 19, marginBottom: 4 },
   sectionAccent: {
     width: 28,
