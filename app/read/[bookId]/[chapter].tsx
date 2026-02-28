@@ -47,11 +47,20 @@ export default function VerseReaderScreen() {
   const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
   const [speechRate, setSpeechRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
+  const [ttsAvailable, setTtsAvailable] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const sessionRef = useRef(0);
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      setTtsAvailable(typeof window !== "undefined" && "speechSynthesis" in window);
+    } else {
+      setTtsAvailable(true);
+    }
+  }, []);
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
@@ -110,22 +119,29 @@ export default function VerseReaderScreen() {
     const verse = verses[index];
     const textToSpeak = `${verse.verse}. ${verse.text}`;
 
-    Speech.speak(textToSpeak, {
-      rate: speechRateRef.current,
-      onDone: () => {
-        if (session === sessionRef.current) {
-          speakVerse(index + 1, session);
-        }
-      },
-      onStopped: () => {},
-      onError: () => {
-        if (session === sessionRef.current) {
-          setIsSpeaking(false);
-          setIsPaused(false);
-          setSpeakingVerseIndex(-1);
-        }
-      },
-    });
+    try {
+      Speech.speak(textToSpeak, {
+        rate: speechRateRef.current,
+        onDone: () => {
+          if (session === sessionRef.current) {
+            speakVerse(index + 1, session);
+          }
+        },
+        onStopped: () => {},
+        onError: () => {
+          if (session === sessionRef.current) {
+            setIsSpeaking(false);
+            setIsPaused(false);
+            setSpeakingVerseIndex(-1);
+          }
+        },
+      });
+    } catch {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setSpeakingVerseIndex(-1);
+      currentIndexRef.current = -1;
+    }
   }, []);
 
   const handlePlay = useCallback(() => {
@@ -370,7 +386,7 @@ export default function VerseReaderScreen() {
           />
         )}
 
-        {!isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
+        {ttsAvailable && !isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
           <View style={[
             styles.audioBar,
             {
