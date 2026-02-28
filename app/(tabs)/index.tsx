@@ -8,8 +8,10 @@ import {
   useColorScheme,
   Platform,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
 const VERSE_OF_DAY = {
@@ -18,12 +20,23 @@ const VERSE_OF_DAY = {
   translation: "KJV",
 };
 
-const QUICK_ACTIONS = [
-  { icon: "book-outline" as const, label: "Continue Reading", subtitle: "Genesis 1" },
-  { icon: "search-outline" as const, label: "Search Scripture", subtitle: "Find passages" },
-  { icon: "bookmark-outline" as const, label: "My Bookmarks", subtitle: "Saved verses" },
-  { icon: "journal-outline" as const, label: "My Journal", subtitle: "Personal notes" },
-];
+interface Plan {
+  id: string;
+  title: string;
+  description: string;
+  totalDays: number;
+  theme: string | null;
+  difficultyLevel: string | null;
+  estimatedMinutesPerDay: number | null;
+}
+
+interface TodayResponse {
+  today: { dayNumber: number; title: string; passageLabel: string | null } | null;
+  enrollment?: { planId: string };
+  completedCount?: number;
+  totalDays?: number;
+  planComplete?: boolean;
+}
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -34,6 +47,19 @@ export default function HomeScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const { data: todayData } = useQuery<TodayResponse>({
+    queryKey: ["/api/devotionals/today?userId=guest"],
+  });
+
+  const { data: plans } = useQuery<Plan[]>({
+    queryKey: ["/api/devotionals/plans"],
+  });
+
+  const hasActivePlan = todayData?.today != null;
+  const planComplete = todayData?.planComplete;
+  const progress = todayData?.completedCount ?? 0;
+  const total = todayData?.totalDays ?? 1;
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -42,9 +68,7 @@ export default function HomeScreen() {
         { paddingTop: topPad + 16, paddingBottom: bottomPad + 120 },
       ]}
       showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior="automatic"
     >
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
@@ -62,7 +86,6 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* Verse of the Day */}
       <View style={[styles.verseCard, { backgroundColor: theme.primary }]}>
         <View style={styles.verseBadge}>
           <Ionicons name="sunny" size={12} color={Colors.light.accent} />
@@ -83,7 +106,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Today's Devotional Banner */}
       <View style={[styles.devotionalBanner, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
         <View style={styles.devotionalLeft}>
           <View style={[styles.devotionalIcon, { backgroundColor: theme.accent + "22" }]}>
@@ -93,32 +115,66 @@ export default function HomeScreen() {
             <Text style={[styles.devotionalLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
               Daily Devotional
             </Text>
-            <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              No active plan
-            </Text>
-            <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Enroll in a plan to begin
-            </Text>
+            {hasActivePlan ? (
+              <>
+                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  Day {todayData!.today!.dayNumber}: {todayData!.today!.title}
+                </Text>
+                <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {progress}/{total} days completed
+                </Text>
+              </>
+            ) : planComplete ? (
+              <>
+                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  Plan Complete
+                </Text>
+                <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Start a new plan
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  No active plan
+                </Text>
+                <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Enroll in a plan to begin
+                </Text>
+              </>
+            )}
           </View>
         </View>
         <Pressable
           style={[styles.enrollBtn, { backgroundColor: theme.accent }]}
           hitSlop={8}
+          onPress={() => {
+            if (hasActivePlan) {
+              router.push("/devotional-day");
+            } else {
+              router.push("/devotionals");
+            }
+          }}
         >
           <Text style={[styles.enrollBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-            Browse Plans
+            {hasActivePlan ? "Continue" : "Browse Plans"}
           </Text>
         </Pressable>
       </View>
 
-      {/* Quick Actions */}
       <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
         Quick Access
       </Text>
       <View style={styles.quickGrid}>
-        {QUICK_ACTIONS.map((action) => (
+        {[
+          { icon: "book-outline" as const, label: "Continue Reading", subtitle: "Genesis 1", onPress: () => router.push("/(tabs)/read") },
+          { icon: "search-outline" as const, label: "Search Scripture", subtitle: "Find passages", onPress: () => router.push("/(tabs)/search") },
+          { icon: "compass-outline" as const, label: "Explore Maps", subtitle: "Places & events", onPress: () => router.push("/(tabs)/explore") },
+          { icon: "school-outline" as const, label: "Study Tools", subtitle: "Word & context", onPress: () => router.push("/(tabs)/study") },
+        ].map((action) => (
           <Pressable
             key={action.label}
+            onPress={action.onPress}
             style={({ pressed }) => [
               styles.quickCard,
               { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
@@ -137,19 +193,41 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Reading Plans */}
       <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
         Featured Plans
       </Text>
-      <View style={[styles.plansEmpty, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <Ionicons name="calendar-outline" size={32} color={theme.textMuted} />
-        <Text style={[styles.plansEmptyTitle, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
-          Plans coming soon
-        </Text>
-        <Text style={[styles.plansEmptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Devotional plans will be available after Bible data is imported in Milestone 2.
-        </Text>
-      </View>
+      {plans && plans.length > 0 ? (
+        <View style={styles.plansGrid}>
+          {plans.map((plan) => (
+            <Pressable
+              key={plan.id}
+              onPress={() => router.push("/devotionals")}
+              style={({ pressed }) => [
+                styles.planPreview,
+                { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <View style={[styles.planPreviewIcon, { backgroundColor: theme.accent + "18" }]}>
+                <Ionicons name="book-outline" size={20} color={theme.accent} />
+              </View>
+              <Text style={[styles.planPreviewTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+                {plan.title}
+              </Text>
+              <Text style={[styles.planPreviewMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {plan.totalDays} days
+                {plan.estimatedMinutesPerDay ? ` · ~${plan.estimatedMinutesPerDay} min` : ""}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <View style={[styles.plansEmpty, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <Ionicons name="calendar-outline" size={32} color={theme.textMuted} />
+          <Text style={[styles.plansEmptyTitle, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
+            Loading plans...
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -239,6 +317,7 @@ const styles = StyleSheet.create({
   },
   quickCard: {
     width: "47%",
+    flexGrow: 1,
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
@@ -254,6 +333,24 @@ const styles = StyleSheet.create({
   },
   quickLabel: { fontSize: 14 },
   quickSub: { fontSize: 11 },
+  plansGrid: { gap: 12 },
+  planPreview: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  planPreviewIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planPreviewTitle: { flex: 1, fontSize: 15 },
+  planPreviewMeta: { fontSize: 12 },
   plansEmpty: {
     borderRadius: 16,
     borderWidth: 1,
@@ -262,5 +359,4 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   plansEmptyTitle: { fontSize: 16, marginTop: 4 },
-  plansEmptySub: { fontSize: 13, textAlign: "center", lineHeight: 20 },
 });

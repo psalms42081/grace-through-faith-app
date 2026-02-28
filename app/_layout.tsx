@@ -53,6 +53,8 @@ function RootLayoutNav() {
       />
       <Stack.Screen name="passage-context" options={{ headerShown: true }} />
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
+      <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
+      <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
     </Stack>
   );
 }

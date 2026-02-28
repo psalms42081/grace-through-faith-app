@@ -474,6 +474,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/devotionals/plans/:planId/days", async (req, res) => {
+    try {
+      const days = await db
+        .select()
+        .from(devotionalDays)
+        .where(eq(devotionalDays.planId, req.params.planId))
+        .orderBy(devotionalDays.dayNumber);
+      return res.json(days);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.post("/api/devotionals/enroll", async (req, res) => {
     try {
       const { userId, planId } = req.body;

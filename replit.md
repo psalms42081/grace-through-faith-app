@@ -32,6 +32,8 @@ app/                    # Expo Router screens
       [chapter].tsx     # Verse reader (scripture text, prev/next navigation)
   verse-actions.tsx     # FormSheet — verse actions (copy, highlight, bookmark, study)
   passage-context.tsx   # Passage study screen (context cards + commentary)
+  devotionals.tsx       # Devotional plans browser & enrollment
+  devotional-day.tsx    # Daily reading screen with journal & progress
 assets/                 # App icon, splash screen
 components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
 constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
@@ -52,6 +54,7 @@ scripts/
   seed-application.ts   # Seeds 12 application templates (Then/Now, reflection, prayer)
   seed-locations.ts     # Seeds 28 biblical locations + 55 verse mappings
   seed-timeline.ts      # Seeds 36 timeline events + 74 verse mappings
+  seed-devotionals.ts   # Seeds 3 devotional plans + 19 days with content
 data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
@@ -90,6 +93,7 @@ data/
 - `GET /api/timeline` — All timeline events
 - `GET /api/timeline/:id/verses` — Verses linked to a timeline event
 - `GET /api/devotionals/plans` — Published devotional plans
+- `GET /api/devotionals/plans/:planId/days` — Days in a plan
 - `POST /api/devotionals/enroll` — Enroll in a plan
 - `GET /api/devotionals/today?userId=` — Get today's devotional
 - `POST /api/devotionals/complete` — Mark day complete
@@ -105,7 +109,7 @@ data/
 - [x] **Milestone 5:** Word Study & Historic Voices — Strong's concordance, word analysis, commentary browsing
 - [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
 - [x] **Milestone 7:** Maps & Timeline — 28 biblical locations (grouped by type: cities, regions, mountains, bodies of water) with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab replaces hardcoded data
-- [ ] **Milestone 8:** Devotionals MVP
+- [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking, home screen integration with active plan status
 - [ ] **Milestone 9:** Offline PWA Support
 - [ ] **Milestone 10:** Polish & Deploy
 
