@@ -28,11 +28,15 @@ type Translation = (typeof TRANSLATIONS)[number];
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
 const VOICE_OPTIONS = [
-  { id: "nova", label: "Nova", description: "Female" },
-  { id: "shimmer", label: "Shimmer", description: "Female" },
-  { id: "alloy", label: "Alloy", description: "Neutral" },
-  { id: "echo", label: "Echo", description: "Male" },
-  { id: "onyx", label: "Onyx", description: "Male" },
+  { id: "nova", label: "Nova", description: "Female", gender: "female" },
+  { id: "shimmer", label: "Shimmer", description: "Female", gender: "female" },
+  { id: "coral", label: "Coral", description: "Female", gender: "female" },
+  { id: "sage", label: "Sage", description: "Female", gender: "female" },
+  { id: "alloy", label: "Alloy", description: "Neutral", gender: "neutral" },
+  { id: "echo", label: "Echo", description: "Male", gender: "male" },
+  { id: "ash", label: "Ash", description: "Male", gender: "male" },
+  { id: "fable", label: "Fable", description: "Male", gender: "male" },
+  { id: "onyx", label: "Onyx", description: "Male", gender: "male" },
 ] as const;
 type VoiceId = (typeof VOICE_OPTIONS)[number]["id"];
 
@@ -895,29 +899,46 @@ export default function VerseReaderScreen() {
             ]}>
               {showVoicePicker && (
                 <View style={[styles.voicePopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
-                  {VOICE_OPTIONS.map((v) => (
-                    <Pressable
-                      key={v.id}
-                      onPress={() => handleVoiceChange(v.id)}
-                      style={[
-                        styles.voiceOption,
-                        selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
-                      ]}
-                    >
-                      <Text style={[
-                        styles.voiceOptionLabel,
-                        {
-                          color: selectedVoice === v.id ? theme.accent : theme.text,
-                          fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                        },
-                      ]}>
-                        {v.label}
-                      </Text>
-                      <Text style={[styles.voiceOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {v.description}
-                      </Text>
-                    </Pressable>
-                  ))}
+                  <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+                    {(["female", "neutral", "male"] as const).map((gender) => {
+                      const voices = VOICE_OPTIONS.filter((v) => v.gender === gender);
+                      const sectionLabel = gender === "female" ? "Female Voices" : gender === "male" ? "Male Voices" : "Neutral";
+                      return (
+                        <View key={gender}>
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: gender === "female" ? 8 : 14, paddingBottom: 4, textTransform: "uppercase" }}>
+                            {sectionLabel}
+                          </Text>
+                          {voices.map((v) => (
+                            <Pressable
+                              key={v.id}
+                              onPress={() => handleVoiceChange(v.id)}
+                              style={[
+                                styles.voiceOption,
+                                selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
+                              ]}
+                            >
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                <Ionicons
+                                  name={selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                                  size={18}
+                                  color={selectedVoice === v.id ? theme.accent : theme.textMuted}
+                                />
+                                <Text style={[
+                                  styles.voiceOptionLabel,
+                                  {
+                                    color: selectedVoice === v.id ? theme.accent : theme.text,
+                                    fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                                  },
+                                ]}>
+                                  {v.label}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1186,12 +1207,10 @@ const styles = StyleSheet.create({
   voiceOption: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
-  voiceOptionLabel: { fontSize: 14 },
-  voiceOptionDesc: { fontSize: 12 },
+  voiceOptionLabel: { fontSize: 15 },
   speedPopup: {
     flexDirection: "row",
     borderRadius: 14,

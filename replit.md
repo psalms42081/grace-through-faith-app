@@ -14,7 +14,7 @@ A mobile-first Bible study app for all Christian ministries featuring the "4-Lay
 - **State Management:** TanStack Query (server state), React context (shared UI state)
 - **Fonts:** Lora (serif, for scripture/headings), Inter (sans-serif, for UI)
 - **Icons:** @expo/vector-icons (Ionicons)
-- **TTS:** OpenAI AI Integration (gpt-audio model) via `/api/tts` endpoint, with expo-speech fallback
+- **TTS:** OpenAI AI Integration (tts-1-hd primary, gpt-audio fallback) via `/api/tts` endpoint, with expo-speech device fallback. 9 voices: Nova, Shimmer, Coral, Sage (female), Alloy (neutral), Echo, Ash, Fable, Onyx (male)
 - **Audio Playback:** expo-audio for playing AI-generated audio
 - **AI Context:** OpenAI gpt-4o-mini for on-demand context generation via `/api/context/generate`
 - **Offline:** React Query persistence via AsyncStorage (30-day gcTime, offlineFirst)
