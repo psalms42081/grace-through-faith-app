@@ -110,7 +110,7 @@ data/
 - [x] **Milestone 6:** Application Layer & Journaling — Application tab with book/chapter picker, Then/Now cards, reflection questions, prayer prompts; Highlight/Bookmark wired to real API with guest user auto-seed; 12 seeded templates
 - [x] **Milestone 7:** Maps & Timeline — 28 biblical locations (grouped by type: cities, regions, mountains, bodies of water) with detail views and linked verses; 36 timeline events across 10 periods with verse links; dynamic Explore tab replaces hardcoded data
 - [x] **Milestone 8:** Devotionals MVP — 3 seeded plans (19 days total), plan browser with enrollment, daily reading with scripture/context/reflection/prayer/journal, progress tracking, home screen integration with active plan status
-- [ ] **Milestone 9:** Offline PWA Support
+- [x] **Milestone 9:** Text-to-Speech & Offline Support — expo-speech TTS with play/pause/stop controls and speed selector (0.75x-1.5x) in verse reader, verse highlighting during playback; React Query persistence via AsyncStorage for offline-first data caching (30-day cache, offlineFirst network mode)
 - [ ] **Milestone 10:** Polish & Deploy
 
 ## Color Theme
@@ -125,6 +125,8 @@ data/
 - Tapping a book navigates to chapter picker with book info card + numbered grid
 - Tapping a chapter opens the verse reader with full KJV text
 - Verse reader has prev/next chapter navigation at bottom
+- Verse reader has audio playback bar with play/pause/stop and speed controls
+- All data cached offline via AsyncStorage (offlineFirst strategy)
 
 ## Workflows
 - `Start Backend` — Runs Express server on port 5000

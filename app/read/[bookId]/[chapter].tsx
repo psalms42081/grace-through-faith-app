@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,13 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import * as Speech from "expo-speech";
 import Colors from "@/constants/colors";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
+
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
 interface Verse {
   id: string;
@@ -39,6 +42,17 @@ export default function VerseReaderScreen() {
   const initialTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : "KJV";
   const [translation, setTranslation] = useState<Translation>(initialTx);
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
+  const [speechRate, setSpeechRate] = useState(1);
+  const [showSpeedPicker, setShowSpeedPicker] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+  const sessionRef = useRef(0);
+  const currentIndexRef = useRef(-1);
+  const versesRef = useRef<Verse[]>([]);
+  const speechRateRef = useRef(1);
+
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
@@ -50,15 +64,124 @@ export default function VerseReaderScreen() {
   const canGoPrev = chapterNum > 1;
   const canGoNext = chapterNum < totalChapters;
 
+  useEffect(() => {
+    versesRef.current = data?.verses ?? [];
+  }, [data?.verses]);
+
+  const resetPlayback = useCallback(() => {
+    sessionRef.current += 1;
+    Speech.stop();
+    setIsSpeaking(false);
+    setIsPaused(false);
+    setSpeakingVerseIndex(-1);
+    currentIndexRef.current = -1;
+  }, []);
+
+  useEffect(() => {
+    resetPlayback();
+  }, [bookId, chapter, translation, resetPlayback]);
+
+  useEffect(() => {
+    return () => {
+      sessionRef.current += 1;
+      Speech.stop();
+    };
+  }, []);
+
+  const speakVerse = useCallback((index: number, session: number) => {
+    if (session !== sessionRef.current) return;
+
+    const verses = versesRef.current;
+    if (index < 0 || index >= verses.length) {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setSpeakingVerseIndex(-1);
+      currentIndexRef.current = -1;
+      return;
+    }
+
+    currentIndexRef.current = index;
+    setSpeakingVerseIndex(index);
+
+    try {
+      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
+    } catch {}
+
+    const verse = verses[index];
+    const textToSpeak = `${verse.verse}. ${verse.text}`;
+
+    Speech.speak(textToSpeak, {
+      rate: speechRateRef.current,
+      onDone: () => {
+        if (session === sessionRef.current) {
+          speakVerse(index + 1, session);
+        }
+      },
+      onStopped: () => {},
+      onError: () => {
+        if (session === sessionRef.current) {
+          setIsSpeaking(false);
+          setIsPaused(false);
+          setSpeakingVerseIndex(-1);
+        }
+      },
+    });
+  }, []);
+
+  const handlePlay = useCallback(() => {
+    const verses = versesRef.current;
+    if (!verses.length) return;
+
+    if (isPaused && currentIndexRef.current >= 0) {
+      setIsPaused(false);
+      setIsSpeaking(true);
+      speakVerse(currentIndexRef.current, sessionRef.current);
+      return;
+    }
+
+    const session = ++sessionRef.current;
+    setIsSpeaking(true);
+    setIsPaused(false);
+    speakVerse(0, session);
+  }, [isPaused, speakVerse]);
+
+  const handlePause = useCallback(() => {
+    Speech.stop();
+    setIsPaused(true);
+    setIsSpeaking(false);
+  }, []);
+
+  const handleStop = useCallback(() => {
+    resetPlayback();
+  }, [resetPlayback]);
+
+  const handleSpeedChange = useCallback((rate: number) => {
+    speechRateRef.current = rate;
+    setSpeechRate(rate);
+    setShowSpeedPicker(false);
+    if (isSpeaking && currentIndexRef.current >= 0) {
+      Speech.stop();
+      speakVerse(currentIndexRef.current, sessionRef.current);
+    }
+  }, [isSpeaking, speakVerse]);
+
   const goToPrev = useCallback(() => {
-    if (canGoPrev) router.replace(`/read/${bookId}/${chapterNum - 1}?translation=${translation}`);
-  }, [bookId, chapterNum, canGoPrev, translation]);
+    if (canGoPrev) {
+      handleStop();
+      router.replace(`/read/${bookId}/${chapterNum - 1}?translation=${translation}`);
+    }
+  }, [bookId, chapterNum, canGoPrev, translation, handleStop]);
 
   const goToNext = useCallback(() => {
-    if (canGoNext) router.replace(`/read/${bookId}/${chapterNum + 1}?translation=${translation}`);
-  }, [bookId, chapterNum, canGoNext, translation]);
+    if (canGoNext) {
+      handleStop();
+      router.replace(`/read/${bookId}/${chapterNum + 1}?translation=${translation}`);
+    }
+  }, [bookId, chapterNum, canGoNext, translation, handleStop]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const isActive = isSpeaking || isPaused;
 
   const headerComponent = useMemo(() => (
     <View style={styles.chapterHeader}>
@@ -68,7 +191,7 @@ export default function VerseReaderScreen() {
       <View style={[styles.dividerLine, { backgroundColor: theme.accent }]} />
       <View style={styles.translationRow}>
         {TRANSLATIONS.map((t) => {
-          const isActive = translation === t;
+          const isActiveT = translation === t;
           return (
             <Pressable
               key={t}
@@ -76,8 +199,8 @@ export default function VerseReaderScreen() {
               style={[
                 styles.translationPill,
                 {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
+                  backgroundColor: isActiveT ? theme.accent : theme.backgroundCard,
+                  borderColor: isActiveT ? theme.accent : theme.border,
                 },
               ]}
             >
@@ -85,8 +208,8 @@ export default function VerseReaderScreen() {
                 style={[
                   styles.translationPillText,
                   {
-                    color: isActive ? "#fff" : theme.textSecondary,
-                    fontFamily: isActive ? "Inter_700Bold" : "Inter_500Medium",
+                    color: isActiveT ? "#fff" : theme.textSecondary,
+                    fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
                   },
                 ]}
               >
@@ -161,9 +284,22 @@ export default function VerseReaderScreen() {
     });
   }, [bookId, chapter, bookName, translation]);
 
-  const renderVerse = useCallback(({ item }: { item: Verse }) => (
-    <VerseRow item={item} theme={theme} onPress={() => handleVerseTap(item)} />
-  ), [theme, handleVerseTap]);
+  const renderVerse = useCallback(({ item, index }: { item: Verse; index: number }) => (
+    <VerseRow
+      item={item}
+      theme={theme}
+      isHighlighted={index === speakingVerseIndex}
+      onPress={() => handleVerseTap(item)}
+    />
+  ), [theme, handleVerseTap, speakingVerseIndex]);
+
+  const onScrollToIndexFailed = useCallback((info: { index: number; averageItemLength: number }) => {
+    setTimeout(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.3 });
+      } catch {}
+    }, 200);
+  }, []);
 
   return (
     <>
@@ -210,13 +346,19 @@ export default function VerseReaderScreen() {
           </View>
         ) : (
           <FlatList
+            ref={flatListRef}
             data={data?.verses ?? []}
             keyExtractor={(item) => item.id}
             renderItem={renderVerse}
-            contentContainerStyle={styles.verseList}
+            extraData={speakingVerseIndex}
+            contentContainerStyle={[
+              styles.verseList,
+              isActive ? { paddingBottom: 80 } : undefined,
+            ]}
             ListHeaderComponent={headerComponent}
             ListFooterComponent={footerComponent}
             showsVerticalScrollIndicator={false}
+            onScrollToIndexFailed={onScrollToIndexFailed}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="book-outline" size={36} color={theme.textMuted} />
@@ -227,12 +369,97 @@ export default function VerseReaderScreen() {
             }
           />
         )}
+
+        {!isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
+          <View style={[
+            styles.audioBar,
+            {
+              backgroundColor: theme.primary,
+              paddingBottom: bottomPad + 8,
+            },
+          ]}>
+            {showSpeedPicker && (
+              <View style={[styles.speedPopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                {SPEED_OPTIONS.map((s) => (
+                  <Pressable
+                    key={s}
+                    onPress={() => handleSpeedChange(s)}
+                    style={[
+                      styles.speedOption,
+                      speechRate === s && { backgroundColor: theme.accent + "22" },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.speedOptionText,
+                      {
+                        color: speechRate === s ? theme.accent : theme.text,
+                        fontFamily: speechRate === s ? "Inter_700Bold" : "Inter_500Medium",
+                      },
+                    ]}>
+                      {s}x
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.audioControls}>
+              <Pressable
+                onPress={() => setShowSpeedPicker(!showSpeedPicker)}
+                style={[styles.speedBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
+                testID="speed-button"
+              >
+                <Text style={[styles.speedBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  {speechRate}x
+                </Text>
+              </Pressable>
+
+              {isActive && (
+                <View style={styles.verseIndicator}>
+                  <Ionicons name="volume-high" size={14} color={Colors.light.accent} />
+                  <Text style={[styles.verseIndicatorText, { fontFamily: "Inter_500Medium" }]}>
+                    {isPaused ? "Paused" : `Verse ${(data?.verses ?? [])[speakingVerseIndex]?.verse ?? ""}`}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.playControls}>
+                {isActive && (
+                  <Pressable onPress={handleStop} hitSlop={8} testID="stop-button">
+                    <Ionicons name="stop-circle" size={32} color="rgba(255,255,255,0.7)" />
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={isSpeaking ? handlePause : handlePlay}
+                  hitSlop={8}
+                  testID="play-pause-button"
+                >
+                  <Ionicons
+                    name={isSpeaking ? "pause-circle" : "play-circle"}
+                    size={44}
+                    color={Colors.light.accent}
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </>
   );
 }
 
-function VerseRow({ item, theme, onPress }: { item: Verse; theme: typeof Colors.light; onPress: () => void }) {
+function VerseRow({
+  item,
+  theme,
+  isHighlighted,
+  onPress,
+}: {
+  item: Verse;
+  theme: typeof Colors.light;
+  isHighlighted: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -240,17 +467,35 @@ function VerseRow({ item, theme, onPress }: { item: Verse; theme: typeof Colors.
         styles.verseRow,
         {
           opacity: pressed ? 0.7 : 1,
-          backgroundColor: pressed ? theme.backgroundSecondary : "transparent",
+          backgroundColor: isHighlighted
+            ? theme.accent + "18"
+            : pressed
+              ? theme.backgroundSecondary
+              : "transparent",
           borderRadius: 8,
           marginHorizontal: -6,
           paddingHorizontal: 6,
+          borderLeftWidth: isHighlighted ? 3 : 0,
+          borderLeftColor: isHighlighted ? theme.accent : "transparent",
         },
       ]}
     >
-      <Text style={[styles.verseNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+      <Text style={[
+        styles.verseNum,
+        {
+          color: isHighlighted ? theme.accent : theme.accent,
+          fontFamily: isHighlighted ? "Inter_700Bold" : "Inter_600SemiBold",
+        },
+      ]}>
         {item.verse}
       </Text>
-      <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+      <Text style={[
+        styles.verseText,
+        {
+          color: theme.text,
+          fontFamily: "Lora_400Regular",
+        },
+      ]}>
         {item.text}
       </Text>
     </Pressable>
@@ -302,4 +547,55 @@ const styles = StyleSheet.create({
   navLabel: { fontSize: 13 },
   emptyContainer: { alignItems: "center", gap: 10, paddingTop: 60 },
   emptyText: { fontSize: 14, textAlign: "center" },
+  audioBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+  },
+  audioControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  speedBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  speedBtnText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+  },
+  speedPopup: {
+    flexDirection: "row",
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  speedOption: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  speedOptionText: { fontSize: 13 },
+  verseIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    justifyContent: "center",
+  },
+  verseIndicatorText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+  },
+  playControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
 });

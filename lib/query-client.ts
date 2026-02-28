@@ -1,10 +1,8 @@
 import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import type { Persister } from "@tanstack/react-query-persist-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/**
- * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
- * @returns {string} The API base URL
- */
 export function getApiUrl(): string {
   let host = process.env.EXPO_PUBLIC_DOMAIN;
 
@@ -64,6 +62,8 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -71,10 +71,39 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
+      gcTime: TWENTY_FOUR_HOURS * 30,
       retry: false,
+      networkMode: "offlineFirst",
     },
     mutations: {
       retry: false,
     },
   },
 });
+
+const CACHE_KEY = "scripture-study-cache";
+let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+
+export const asyncStoragePersister: Persister = {
+  persistClient: async (client) => {
+    if (throttleTimer) clearTimeout(throttleTimer);
+    throttleTimer = setTimeout(async () => {
+      try {
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(client));
+      } catch {}
+    }, 2000);
+  },
+  restoreClient: async () => {
+    try {
+      const data = await AsyncStorage.getItem(CACHE_KEY);
+      return data ? JSON.parse(data) : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+  removeClient: async () => {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEY);
+    } catch {}
+  },
+};
