@@ -8,6 +8,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, asyncStoragePersister } from "@/lib/query-client";
+import { KidsModeProvider } from "@/context/KidsModeContext";
 import Colors from "@/constants/colors";
 import {
   useFonts,
@@ -59,6 +60,7 @@ function RootLayoutNav() {
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
       <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
+      <Stack.Screen name="kids-story/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -106,11 +108,13 @@ export default function RootLayout() {
         client={queryClient}
         persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 * 30 }}
       >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <KeyboardProvider>
-            <RootLayoutNav />
-          </KeyboardProvider>
-        </GestureHandlerRootView>
+        <KidsModeProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <KeyboardProvider>
+              <RootLayoutNav />
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </KidsModeProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>
   );

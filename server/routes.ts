@@ -25,8 +25,15 @@ import {
   userHighlights,
   userBookmarks,
   users,
+  kidsCollections,
+  kidsStories,
+  kidsQuizQuestions,
+  kidsProgress,
+  kidsBadges,
+  kidsUserBadges,
+  kidsStreaks,
 } from "../shared/schema";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { eq, and, ilike, sql, desc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -828,6 +835,315 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("TTS error:", err);
       return res.status(500).json({ error: "Text-to-speech failed" });
+    }
+  });
+
+  // ─── KIDS CLUB ───────────────────────────────────────────────────────────────
+
+  app.get("/api/kids/collections", async (req, res) => {
+    try {
+      const { ageGroup } = req.query;
+      const conditions = [eq(kidsCollections.published, true)];
+      if (ageGroup) {
+        conditions.push(eq(kidsCollections.ageGroup, String(ageGroup)));
+      }
+      const collections = await db
+        .select()
+        .from(kidsCollections)
+        .where(and(...conditions))
+        .orderBy(kidsCollections.orderIndex);
+      return res.json(collections);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/collections/:id/stories", async (req, res) => {
+    try {
+      const stories = await db
+        .select()
+        .from(kidsStories)
+        .where(
+          and(
+            eq(kidsStories.collectionId, req.params.id),
+            eq(kidsStories.published, true)
+          )
+        )
+        .orderBy(kidsStories.orderInCollection);
+      return res.json(stories);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/stories/:id", async (req, res) => {
+    try {
+      const story = await db
+        .select()
+        .from(kidsStories)
+        .where(eq(kidsStories.id, req.params.id))
+        .limit(1);
+      if (!story.length) {
+        return res.status(404).json({ error: "Story not found" });
+      }
+      return res.json(story[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/stories/:id/quiz", async (req, res) => {
+    try {
+      const questions = await db
+        .select()
+        .from(kidsQuizQuestions)
+        .where(eq(kidsQuizQuestions.storyId, req.params.id));
+      return res.json(questions);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/progress/complete", async (req, res) => {
+    try {
+      const { userId, storyId } = req.body;
+      if (!userId || !storyId) {
+        return res.status(400).json({ error: "userId and storyId are required" });
+      }
+      const existing = await db
+        .select()
+        .from(kidsProgress)
+        .where(
+          and(
+            eq(kidsProgress.userId, userId),
+            eq(kidsProgress.storyId, storyId)
+          )
+        )
+        .limit(1);
+      if (existing.length) {
+        const updated = await db
+          .update(kidsProgress)
+          .set({ completed: true, completedAt: new Date() })
+          .where(eq(kidsProgress.id, existing[0].id))
+          .returning();
+        return res.json(updated[0]);
+      }
+      const progress = await db
+        .insert(kidsProgress)
+        .values({ userId, storyId, completed: true, completedAt: new Date() })
+        .returning();
+      return res.json(progress[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/progress/quiz", async (req, res) => {
+    try {
+      const { userId, storyId, score } = req.body;
+      if (!userId || !storyId || score === undefined) {
+        return res.status(400).json({ error: "userId, storyId, and score are required" });
+      }
+      const existing = await db
+        .select()
+        .from(kidsProgress)
+        .where(
+          and(
+            eq(kidsProgress.userId, userId),
+            eq(kidsProgress.storyId, storyId)
+          )
+        )
+        .limit(1);
+      if (existing.length) {
+        const updated = await db
+          .update(kidsProgress)
+          .set({ quizScore: score })
+          .where(eq(kidsProgress.id, existing[0].id))
+          .returning();
+        return res.json(updated[0]);
+      }
+      const progress = await db
+        .insert(kidsProgress)
+        .values({ userId, storyId, quizScore: score })
+        .returning();
+      return res.json(progress[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/progress/memorize", async (req, res) => {
+    try {
+      const { userId, storyId } = req.body;
+      if (!userId || !storyId) {
+        return res.status(400).json({ error: "userId and storyId are required" });
+      }
+      const existing = await db
+        .select()
+        .from(kidsProgress)
+        .where(
+          and(
+            eq(kidsProgress.userId, userId),
+            eq(kidsProgress.storyId, storyId)
+          )
+        )
+        .limit(1);
+      if (existing.length) {
+        const updated = await db
+          .update(kidsProgress)
+          .set({ memoryVerseMemorized: true })
+          .where(eq(kidsProgress.id, existing[0].id))
+          .returning();
+        return res.json(updated[0]);
+      }
+      const progress = await db
+        .insert(kidsProgress)
+        .values({ userId, storyId, memoryVerseMemorized: true })
+        .returning();
+      return res.json(progress[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/progress/:userId", async (req, res) => {
+    try {
+      const progressRows = await db
+        .select()
+        .from(kidsProgress)
+        .where(eq(kidsProgress.userId, req.params.userId));
+      return res.json(progressRows);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/badges", async (_req, res) => {
+    try {
+      const badges = await db.select().from(kidsBadges);
+      return res.json(badges);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/badges/:userId", async (req, res) => {
+    try {
+      const userBadges = await db
+        .select({
+          userBadge: kidsUserBadges,
+          badge: kidsBadges,
+        })
+        .from(kidsUserBadges)
+        .innerJoin(kidsBadges, eq(kidsUserBadges.badgeId, kidsBadges.id))
+        .where(eq(kidsUserBadges.userId, req.params.userId));
+      const flattened = userBadges.map(ub => ({
+        ...ub.badge,
+        earnedAt: ub.userBadge.earnedAt,
+      }));
+      return res.json(flattened);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/streak/:userId", async (req, res) => {
+    try {
+      const streak = await db
+        .select()
+        .from(kidsStreaks)
+        .where(eq(kidsStreaks.userId, req.params.userId))
+        .limit(1);
+      if (!streak.length) {
+        return res.json({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
+      }
+      return res.json(streak[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/streak/update", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      const today = new Date().toISOString().split("T")[0];
+      const existing = await db
+        .select()
+        .from(kidsStreaks)
+        .where(eq(kidsStreaks.userId, userId))
+        .limit(1);
+      if (existing.length) {
+        const streak = existing[0];
+        if (streak.lastActivityDate === today) {
+          return res.json(streak);
+        }
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        const isConsecutive = streak.lastActivityDate === yesterday;
+        const newCurrent = isConsecutive ? (streak.currentStreak ?? 0) + 1 : 1;
+        const newLongest = Math.max(newCurrent, streak.longestStreak ?? 0);
+        const updated = await db
+          .update(kidsStreaks)
+          .set({
+            currentStreak: newCurrent,
+            longestStreak: newLongest,
+            lastActivityDate: today,
+          })
+          .where(eq(kidsStreaks.id, streak.id))
+          .returning();
+        return res.json(updated[0]);
+      }
+      const newStreak = await db
+        .insert(kidsStreaks)
+        .values({ userId, currentStreak: 1, longestStreak: 1, lastActivityDate: today })
+        .returning();
+      return res.json(newStreak[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/kids/daily", async (req, res) => {
+    try {
+      const { ageGroup } = req.query;
+      if (!ageGroup) {
+        return res.status(400).json({ error: "ageGroup is required" });
+      }
+      const stories = await db
+        .select()
+        .from(kidsStories)
+        .where(
+          and(
+            eq(kidsStories.ageGroup, String(ageGroup)),
+            eq(kidsStories.published, true)
+          )
+        )
+        .orderBy(kidsStories.orderInCollection);
+      if (!stories.length) {
+        return res.json(null);
+      }
+      const dayOfYear = Math.floor(
+        (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+      );
+      const todayStory = stories[dayOfYear % stories.length];
+      return res.json(todayStory);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 

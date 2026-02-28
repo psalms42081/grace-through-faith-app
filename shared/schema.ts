@@ -466,3 +466,143 @@ export const userBookmarks = pgTable(
 export type UserNote = typeof userNotes.$inferSelect;
 export type UserHighlight = typeof userHighlights.$inferSelect;
 export type UserBookmark = typeof userBookmarks.$inferSelect;
+
+// ─── KIDS CLUB ────────────────────────────────────────────────────────────────
+
+export const kidsCollections = pgTable("kids_collection", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  ageGroup: varchar("age_group", { length: 20 }).notNull(),
+  icon: varchar("icon", { length: 50 }),
+  storyCount: integer("story_count").default(0),
+  orderIndex: integer("order_index").default(0),
+  published: boolean("published").default(true),
+});
+
+export const kidsStories = pgTable(
+  "kids_story",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    scriptureRef: text("scripture_ref"),
+    bookId: integer("book_id").references(() => bibleBooks.id),
+    chapter: integer("chapter"),
+    ageGroup: varchar("age_group", { length: 20 }).notNull(),
+    collectionId: varchar("collection_id").references(() => kidsCollections.id),
+    orderInCollection: integer("order_in_collection").default(0),
+    storyText: text("story_text").notNull(),
+    memoryVerse: text("memory_verse"),
+    memoryVerseRef: text("memory_verse_ref"),
+    thinkQuestions: jsonb("think_questions").$type<string[]>().default([]),
+    prayerPrompt: text("prayer_prompt"),
+    activitySuggestion: text("activity_suggestion"),
+    estimatedMinutes: integer("estimated_minutes").default(5),
+    published: boolean("published").default(true),
+  },
+  (table) => ({
+    collectionIdx: index("kids_story_collection_idx").on(table.collectionId),
+    ageGroupIdx: index("kids_story_age_group_idx").on(table.ageGroup),
+  })
+);
+
+export const kidsQuizQuestions = pgTable(
+  "kids_quiz_question",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    storyId: varchar("story_id")
+      .notNull()
+      .references(() => kidsStories.id),
+    question: text("question").notNull(),
+    options: jsonb("options").$type<string[]>().notNull(),
+    correctIndex: integer("correct_index").notNull(),
+    explanation: text("explanation"),
+  },
+  (table) => ({
+    storyIdx: index("kids_quiz_story_idx").on(table.storyId),
+  })
+);
+
+export const kidsProgress = pgTable(
+  "kids_progress",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id),
+    storyId: varchar("story_id")
+      .notNull()
+      .references(() => kidsStories.id),
+    completed: boolean("completed").default(false),
+    quizScore: integer("quiz_score"),
+    memoryVerseMemorized: boolean("memory_verse_memorized").default(false),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => ({
+    userStoryUnique: uniqueIndex("kids_progress_user_story").on(
+      table.userId,
+      table.storyId
+    ),
+  })
+);
+
+export const kidsBadges = pgTable("kids_badge", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }),
+  requirement: text("requirement"),
+  requiredCount: integer("required_count").default(1),
+});
+
+export const kidsUserBadges = pgTable(
+  "kids_user_badge",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id),
+    badgeId: varchar("badge_id")
+      .notNull()
+      .references(() => kidsBadges.id),
+    earnedAt: timestamp("earned_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userBadgeUnique: uniqueIndex("kids_user_badge_unique").on(
+      table.userId,
+      table.badgeId
+    ),
+  })
+);
+
+export const kidsStreaks = pgTable("kids_streak", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastActivityDate: text("last_activity_date"),
+});
+
+export type KidsCollection = typeof kidsCollections.$inferSelect;
+export type KidsStory = typeof kidsStories.$inferSelect;
+export type KidsQuizQuestion = typeof kidsQuizQuestions.$inferSelect;
+export type KidsProgress = typeof kidsProgress.$inferSelect;
+export type KidsBadge = typeof kidsBadges.$inferSelect;
+export type KidsUserBadge = typeof kidsUserBadges.$inferSelect;
+export type KidsStreak = typeof kidsStreaks.$inferSelect;

@@ -6,8 +6,39 @@ import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import Colors from "@/constants/colors";
+import { KidsColors } from "@/constants/colors";
+import { useKidsMode } from "@/context/KidsModeContext";
 
 function NativeTabLayout() {
+  const { isKidsMode } = useKidsMode();
+
+  if (isKidsMode) {
+    return (
+      <NativeTabs>
+        <NativeTabs.Trigger name="index">
+          <Icon sf={{ default: "house", selected: "house.fill" }} />
+          <Label>Home</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="kids-stories">
+          <Icon sf={{ default: "book", selected: "book.fill" }} />
+          <Label>Stories</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="kids-learn">
+          <Icon sf={{ default: "graduationcap", selected: "graduationcap.fill" }} />
+          <Label>Learn</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="kids-stars">
+          <Icon sf={{ default: "star", selected: "star.fill" }} />
+          <Label>My Stars</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="read" options={{ href: null }} />
+        <NativeTabs.Trigger name="search" options={{ href: null }} />
+        <NativeTabs.Trigger name="study" options={{ href: null }} />
+        <NativeTabs.Trigger name="explore" options={{ href: null }} />
+      </NativeTabs>
+    );
+  }
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -30,6 +61,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "map", selected: "map.fill" }} />
         <Label>Explore</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="kids-stories" options={{ href: null }} />
+      <NativeTabs.Trigger name="kids-learn" options={{ href: null }} />
+      <NativeTabs.Trigger name="kids-stars" options={{ href: null }} />
     </NativeTabs>
   );
 }
@@ -37,7 +71,10 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { isKidsMode } = useKidsMode();
+  const theme = isKidsMode
+    ? (isDark ? KidsColors.dark : KidsColors.light)
+    : (isDark ? Colors.dark : Colors.light);
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -94,6 +131,7 @@ function ClassicTabLayout() {
         name="read"
         options={{
           title: "Read",
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
           ),
@@ -103,6 +141,7 @@ function ClassicTabLayout() {
         name="search"
         options={{
           title: "Search",
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),
@@ -112,6 +151,7 @@ function ClassicTabLayout() {
         name="study"
         options={{
           title: "Study",
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={color} />
           ),
@@ -121,8 +161,39 @@ function ClassicTabLayout() {
         name="explore"
         options={{
           title: "Explore",
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="kids-stories"
+        options={{
+          title: "Stories",
+          href: isKidsMode ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="kids-learn"
+        options={{
+          title: "Learn",
+          href: isKidsMode ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="school-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="kids-stars"
+        options={{
+          title: "My Stars",
+          href: isKidsMode ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="star-outline" size={size} color={color} />
           ),
         }}
       />

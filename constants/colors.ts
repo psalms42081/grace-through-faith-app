@@ -58,4 +58,69 @@ const Colors = {
   },
 };
 
+const kidsBlue = "#4A90D9";
+const kidsGold = "#F5A623";
+const kidsCream = "#FFF8E7";
+const kidsCharcoal = "#3C3C3C";
+
+const KidsColors = {
+  light: {
+    background: kidsCream,
+    backgroundSecondary: "#FFF3D6",
+    backgroundCard: "#FFFFFF",
+    surface: "#FFFFFF",
+    text: kidsCharcoal,
+    textSecondary: "#6B6B6B",
+    textMuted: "#999999",
+    accent: kidsBlue,
+    accentDark: "#3570B0",
+    primary: kidsBlue,
+    border: "#E8E0D0",
+    borderLight: "#F0E8D8",
+    tint: kidsBlue,
+    tabIconDefault: "#999999",
+    tabIconSelected: kidsBlue,
+    divider: "#E8E0D0",
+    error: "#E74C3C",
+    danger: "#E74C3C",
+    success: "#7ED321",
+    starGold: kidsGold,
+    purple: "#9B59B6",
+    bookmarkBlue: "#4A90D9",
+    highlightYellow: "rgba(245, 166, 35, 0.35)",
+    highlightPink: "rgba(255, 150, 150, 0.35)",
+    shimmer1: "#F0E8D8",
+    shimmer2: kidsCream,
+  },
+  dark: {
+    background: "#1A1A2E",
+    backgroundSecondary: "#222240",
+    backgroundCard: "#2A2A4A",
+    surface: "#2A2A4A",
+    text: "#F0E8D8",
+    textSecondary: "#A0A0B0",
+    textMuted: "#707080",
+    accent: "#6AABEF",
+    accentDark: "#4A90D9",
+    primary: "#6AABEF",
+    border: "#3A3A5A",
+    borderLight: "#2E2E4E",
+    tint: "#6AABEF",
+    tabIconDefault: "#707080",
+    tabIconSelected: "#6AABEF",
+    divider: "#3A3A5A",
+    error: "#FF6B6B",
+    danger: "#FF6B6B",
+    success: "#7ED321",
+    starGold: kidsGold,
+    purple: "#BB86FC",
+    bookmarkBlue: "#6AABEF",
+    highlightYellow: "rgba(245, 166, 35, 0.25)",
+    highlightPink: "rgba(255, 150, 150, 0.25)",
+    shimmer1: "#2A2A4A",
+    shimmer2: "#222240",
+  },
+};
+
+export { KidsColors };
 export default Colors;

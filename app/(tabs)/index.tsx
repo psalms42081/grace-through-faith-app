@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { KidsColors } from "@/constants/colors";
+import { useKidsMode } from "@/context/KidsModeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -77,11 +79,232 @@ function GoldDivider({ theme }: { theme: typeof Colors.dark }) {
   );
 }
 
+const KIDS_VERSES = [
+  { text: "God is love.", reference: "1 John 4:8" },
+  { text: "Be kind to one another.", reference: "Ephesians 4:32" },
+  { text: "The Lord is my shepherd; I shall not want.", reference: "Psalm 23:1" },
+  { text: "I can do all things through Christ which strengtheneth me.", reference: "Philippians 4:13" },
+  { text: "This is the day which the Lord hath made; we will rejoice and be glad in it.", reference: "Psalm 118:24" },
+  { text: "The Lord is my light and my salvation; whom shall I fear?", reference: "Psalm 27:1" },
+  { text: "Be strong and of a good courage.", reference: "Joshua 1:9" },
+];
+
+function KidsHomeScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const insets = useSafeAreaInsets();
+  const { ageGroup } = useKidsMode();
+
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
+  const verse = useMemo(() => {
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    return KIDS_VERSES[dayOfYear % KIDS_VERSES.length];
+  }, []);
+
+  const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number }>({
+    queryKey: [`/api/kids/daily?ageGroup=${ageGroup}`],
+  });
+
+  const { data: streak } = useQuery<{ currentStreak: number; longestStreak: number }>({
+    queryKey: ["/api/kids/streak/guest"],
+  });
+
+  const { data: progress } = useQuery<{ completed: boolean }[]>({
+    queryKey: ["/api/kids/progress/guest"],
+  });
+
+  const completedCount = progress?.filter(p => p.completed).length ?? 0;
+
+  return (
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: bottomPad + 120 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          {greeting}
+        </Text>
+        <Text style={[styles.appName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Kids Club
+        </Text>
+      </View>
+
+      <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
+        <Ionicons name="sunny" size={20} color="rgba(255,255,255,0.7)" />
+        <Text style={[kidsStyles.verseLabel, { fontFamily: "Inter_600SemiBold" }]}>Today's Verse</Text>
+        <Text style={[kidsStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+          "{verse.text}"
+        </Text>
+        <Text style={[kidsStyles.verseRef, { fontFamily: "Inter_600SemiBold" }]}>
+          {verse.reference}
+        </Text>
+      </View>
+
+      {streak && streak.currentStreak > 0 && (
+        <View style={[kidsStyles.streakBanner, { backgroundColor: "#FF6B35" + "15", borderColor: "#FF6B35" + "30" }]}>
+          <Ionicons name="flame" size={22} color="#FF6B35" />
+          <Text style={[kidsStyles.streakText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {streak.currentStreak} day streak!
+          </Text>
+          <Ionicons name="flame" size={22} color="#FF6B35" />
+        </View>
+      )}
+
+      <View style={kidsStyles.statsRow}>
+        <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <Ionicons name="star" size={24} color={(theme as any).starGold || theme.accent} />
+          <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+            {completedCount}
+          </Text>
+          <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Stories Read
+          </Text>
+        </View>
+        <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <Ionicons name="flame" size={24} color="#FF6B35" />
+          <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+            {streak?.currentStreak ?? 0}
+          </Text>
+          <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Day Streak
+          </Text>
+        </View>
+      </View>
+
+      {dailyStory && (
+        <Pressable
+          onPress={() => router.push(`/kids-story/${dailyStory.id}`)}
+          style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
+          testID="daily-story"
+        >
+          <View style={[kidsStyles.dailyIcon, { backgroundColor: theme.accent + "20" }]}>
+            <Ionicons name="book" size={28} color={theme.accent} />
+          </View>
+          <View style={kidsStyles.dailyInfo}>
+            <Text style={[kidsStyles.dailyLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              Today's Story
+            </Text>
+            <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              {dailyStory.title}
+            </Text>
+            {dailyStory.scriptureRef && (
+              <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {dailyStory.scriptureRef}
+              </Text>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
+        </Pressable>
+      )}
+
+      <View style={kidsStyles.quickActions}>
+        <Pressable
+          onPress={() => router.push("/(tabs)/kids-stories")}
+          style={[kidsStyles.actionCard, { backgroundColor: theme.accent }]}
+          testID="browse-stories"
+        >
+          <Ionicons name="book-outline" size={28} color="#fff" />
+          <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Browse Stories</Text>
+          <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Read Bible stories</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/(tabs)/kids-learn")}
+          style={[kidsStyles.actionCard, { backgroundColor: (theme as any).purple || theme.accent }]}
+          testID="take-quiz"
+        >
+          <Ionicons name="school-outline" size={28} color="#fff" />
+          <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Learn</Text>
+          <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Quizzes & verses</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
+const kidsStyles = StyleSheet.create({
+  verseCard: {
+    padding: 20,
+    borderRadius: 18,
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  verseLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12 },
+  verseText: { color: "#fff", fontSize: 18, lineHeight: 26, textAlign: "center" },
+  verseRef: { color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 },
+  streakBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  streakText: { fontSize: 15 },
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  statBox: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+  },
+  statNum: { fontSize: 24 },
+  statLabel: { fontSize: 11 },
+  dailyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 16,
+  },
+  dailyIcon: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 14 },
+  dailyInfo: { flex: 1 },
+  dailyLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
+  dailyTitle: { fontSize: 16, marginBottom: 2 },
+  dailyRef: { fontSize: 12 },
+  quickActions: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  actionCard: {
+    flex: 1,
+    padding: 18,
+    borderRadius: 14,
+    gap: 6,
+  },
+  actionTitle: { color: "#fff", fontSize: 15, marginTop: 4 },
+  actionDesc: { color: "rgba(255,255,255,0.75)", fontSize: 12 },
+});
+
 export default function HomeScreen() {
+  const { isKidsMode } = useKidsMode();
+
+  if (isKidsMode) {
+    return <KidsHomeScreen />;
+  }
+
+  return <AdultHomeScreen />;
+}
+
+function AdultHomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { enterKidsMode } = useKidsMode();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -311,6 +534,24 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </View>
+
+      <Pressable
+        onPress={() => enterKidsMode()}
+        style={({ pressed }) => [
+          styles.kidsClubBanner,
+          { backgroundColor: "#4A90D9", opacity: pressed ? 0.85 : 1 },
+        ]}
+        testID="enter-kids-mode"
+      >
+        <Ionicons name="people" size={26} color="#fff" />
+        <View style={styles.kidsClubInfo}>
+          <Text style={[styles.kidsClubTitle, { fontFamily: "Inter_600SemiBold" }]}>Kids Club</Text>
+          <Text style={[styles.kidsClubDesc, { fontFamily: "Inter_400Regular" }]}>
+            Bible stories, quizzes & memory verses for children
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
+      </Pressable>
 
       {plans && plans.length > 0 && (
         <>
@@ -606,4 +847,15 @@ const styles = StyleSheet.create({
   planPreviewTextWrap: { flex: 1 },
   planPreviewTitle: { fontSize: 15 },
   planPreviewMeta: { fontSize: 12, marginTop: 2 },
+  kidsClubBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 24,
+    gap: 14,
+  },
+  kidsClubInfo: { flex: 1 },
+  kidsClubTitle: { color: "#fff", fontSize: 16, marginBottom: 2 },
+  kidsClubDesc: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
 });

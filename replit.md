@@ -39,6 +39,13 @@ app/                    # Expo Router screens
   passage-context.tsx   # Passage study screen (context cards + commentary)
   devotionals.tsx       # Devotional plans browser & enrollment
   devotional-day.tsx    # Daily reading screen with journal & progress
+  kids-story/[id].tsx   # Kids story reader with memory verse, quiz, completion
+  (tabs)/
+    kids-stories.tsx    # Kids stories browser (collections + stories)
+    kids-learn.tsx      # Kids learn hub (quizzes + memory verses)
+    kids-stars.tsx      # Kids progress (stars, badges, streaks, exit PIN modal)
+context/
+  KidsModeContext.tsx   # Kids mode state (toggle, PIN, age group, AsyncStorage)
 assets/                 # App icon, splash screen
 components/             # Reusable components (ErrorBoundary, ErrorFallback, etc.)
 constants/colors.ts     # Theme colors (warm parchment/navy/gold palette)
@@ -54,7 +61,7 @@ data/
   kjv.json              # Downloaded KJV Bible data (4.7 MB, 66 books, 31,102 verses)
 ```
 
-## Database Tables (23 total)
+## Database Tables (30 total)
 - **Core:** bible_translation, bible_book, bible_verse
 - **Word Study:** strong_entry, verse_strong_map
 - **Context:** context_card
@@ -64,6 +71,7 @@ data/
 - **Illustrations:** illustration, illustration_link
 - **Devotionals:** devotional_plan, devotional_day, user_plan_enrollment, user_plan_progress
 - **User:** users, user_note, user_highlight, user_bookmark
+- **Kids Club:** kids_collection, kids_story, kids_quiz_question, kids_progress, kids_badge, kids_user_badge, kids_streak
 
 ## Data Pipeline
 - **KJV** (King James Version) — public domain, sourced from github.com/aruljohn/Bible-kjv
@@ -97,6 +105,20 @@ data/
 - `GET/POST /api/highlights/:userId` — User highlights
 - `GET/POST/DELETE /api/bookmarks/:userId` — User bookmarks
 - `POST /api/tts` — Text-to-speech (OpenAI gpt-audio, accepts `{text, voice}`)
+- **Kids Club:**
+- `GET /api/kids/collections?ageGroup=` — Kids story collections
+- `GET /api/kids/collections/:id/stories` — Stories in a collection
+- `GET /api/kids/stories/:id` — Single story with full content
+- `GET /api/kids/stories/:id/quiz` — Quiz questions for a story
+- `POST /api/kids/progress/complete` — Mark story complete
+- `POST /api/kids/progress/quiz` — Submit quiz score
+- `POST /api/kids/progress/memorize` — Mark verse memorized
+- `GET /api/kids/progress/:userId` — User's progress
+- `GET /api/kids/badges` — All badges
+- `GET /api/kids/badges/:userId` — User's earned badges
+- `GET /api/kids/streak/:userId` — Streak info
+- `POST /api/kids/streak/update` — Update streak
+- `GET /api/kids/daily?ageGroup=` — Today's suggested story
 
 ## Build Milestones
 - [x] **Milestone 1:** Foundation — App shell, DB schema, tab navigation, API skeleton
@@ -111,7 +133,8 @@ data/
 - [x] **Milestone 10:** Polish & Deploy — dynamic time-of-day greeting, rotating daily verse, deployment configured (autoscale)
 - [x] **Milestone 11:** Rebrand, Onboarding & AI TTS — Rebranded to "Grace through Faith"; 4-page onboarding welcome flow (AsyncStorage tracked); OpenAI AI Integration TTS with 5 voice options (nova/shimmer/alloy/echo/onyx), expo-audio playback, expo-speech fallback; new app icon
 - [x] **Milestone 12:** UX Polish — Scrollable onboarding pages; AI-generated context for any chapter (gpt-4o-mini, cached to DB); redesigned immersive home screen with gradient verse card, 4-Layer teaser, and visual dividers; consolidated study tools (no more double-ups); verse-actions routes to Study tab
-- [x] **Milestone 13:** Explore & Devotionals Expansion — Verse references now show book name + chapter:verse (e.g., "Micah 5:2") in Explore tab; 28 locations enriched with historical Wikimedia Commons images (old paintings/engravings); 5 new devotional plans (Women of the Bible, Prophets & Prophecy, Parables of Jesus, Walking Through the Wilderness, The Armor of God) for 8 total; home screen shows "View All" when >3 plans; Kids Club feature plan documented
+- [x] **Milestone 13:** Explore & Devotionals Expansion — Verse references now show book name + chapter:verse (e.g., "Micah 5:2") in Explore tab; 28 locations enriched with historical Wikimedia Commons images (old paintings/engravings); 5 new devotional plans (Women of the Bible, Prophets & Prophecy, Parables of Jesus, Walking Through the Wilderness, The Armor of God) for 8 total; home screen shows "View All" when >3 plans
+- [x] **Milestone 14:** Kids Club Phase 1 — Full children's Bible study section with KidsModeContext (PIN-protected exit, age group toggle, AsyncStorage persistence); 7 new DB tables; 13 API endpoints; conditional tab navigation (Stories/Learn/My Stars tabs in kids mode); kids home screen with daily verse, streak banner, stats, today's story, quick actions; story reader with memory verse, think questions, prayer prompt, activity, star animation on completion; stories browser with collection/story views and age group filter; learn hub with interactive quiz engine and memory verse tracker; progress dashboard with stars, badges, streaks; 4 collections, 20 stories, 60 quiz questions, 5 badges seeded
 
 ## Color Theme
 - Primary (deep navy): #1A1F3C
@@ -119,6 +142,7 @@ data/
 - Background (parchment): #F5EFE0
 - Text (ink): #2C1810
 - Supports light/dark mode
+- **Kids Mode:** Soft blue (#4A90D9), Sunshine gold (#F5A623), Warm cream (#FFF8E7), Charcoal (#3C3C3C)
 
 ## Key Design Rules
 - No emojis anywhere in the app
