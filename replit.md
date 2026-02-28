@@ -135,14 +135,18 @@ data/
 - [x] **Milestone 12:** UX Polish — Scrollable onboarding pages; AI-generated context for any chapter (gpt-4o-mini, cached to DB); redesigned immersive home screen with gradient verse card, 4-Layer teaser, and visual dividers; consolidated study tools (no more double-ups); verse-actions routes to Study tab
 - [x] **Milestone 13:** Explore & Devotionals Expansion — Verse references now show book name + chapter:verse (e.g., "Micah 5:2") in Explore tab; 28 locations enriched with historical Wikimedia Commons images (old paintings/engravings); 5 new devotional plans (Women of the Bible, Prophets & Prophecy, Parables of Jesus, Walking Through the Wilderness, The Armor of God) for 8 total; home screen shows "View All" when >3 plans
 - [x] **Milestone 14:** Kids Club Phase 1 + Deep Study Devotionals — 5 new devotional plans for deeper Bible study (The Sabbath Rest, Daniel's Prophecies — End-Time Visions, God's Health Blueprint, The Heavenly Sanctuary, Death Sleep and Resurrection) with Ellen G. White commentary references linking to egwwritings.org; "Further Reading" card added to devotional day screen; total 13 plans; Kids Club Phase 1
-- [x] **Milestone 15:** Illustrations — 27 AI-generated watercolor illustrations added throughout the app; 4 collection cover images for Kids Club, 20 individual story illustrations, 3 app-level images (kids welcome, Bible study hero, devotional landscape); `imageUrl` field added to `kids_collection` and `kids_story` DB tables; images served via Express static middleware at /assets/images/; UI updated in kids-stories.tsx (collection cards, story thumbnails, collection banner), kids-story/[id].tsx (hero image), index.tsx (kids welcome banner, daily story thumbnail, Kids Club banner) — Full children's Bible study section with KidsModeContext (PIN-protected exit, age group toggle, AsyncStorage persistence); 7 new DB tables; 13 API endpoints; conditional tab navigation (Stories/Learn/My Stars tabs in kids mode); kids home screen with daily verse, streak banner, stats, today's story, quick actions; story reader with memory verse, think questions, prayer prompt, activity, star animation on completion; stories browser with collection/story views and age group filter; learn hub with interactive quiz engine and memory verse tracker; progress dashboard with stars, badges, streaks; 4 collections, 20 stories, 60 quiz questions, 5 badges seeded
+- [x] **Milestone 15:** Illustrations — 27 AI-generated watercolor illustrations; kids welcome banner, Bible study hero, devotional landscape; Full children's Bible study section with KidsModeContext, 7 DB tables, 13 API endpoints, conditional tab navigation, 4 collections, 20 stories, 60 quiz questions, 5 badges seeded
+- [x] **Milestone 16:** YouVersion-Inspired Visual Overhaul — Deep dark mode (#050507 near-black); Bible reader redesigned with centered book name + large chapter number + continuous prose layout with inline superscript verse numbers + bottom nav bar with play/chapter controls + always-visible voice/speed selection; home screen with larger verse card and bolder typography and more spacing; Bible book index with bold "Bible" header and cleaner grid; search screen with colorful topic discovery chips and popular passages section
 
 ## Color Theme
 - Primary (deep navy): #1A1F3C
 - Accent (warm gold): #C9933A
-- Background (parchment): #F5EFE0
-- Text (ink): #2C1810
-- Supports light/dark mode
+- Background light (parchment): #F5EFE0
+- Background dark (near-black): #050507
+- Text light (ink): #2C1810
+- Text dark: #F0EBE0
+- Card dark: #18191F
+- Supports light/dark mode (dark mode inspired by YouVersion's deep immersive black)
 - **Kids Mode:** Soft blue (#4A90D9), Sunshine gold (#F5A623), Warm cream (#FFF8E7), Charcoal (#3C3C3C)
 
 ## Key Design Rules
@@ -153,11 +157,11 @@ data/
 
 ## Navigation Flow
 - First launch: 4-page onboarding → "Get Started" → Home
-- Read tab shows all 66 books grouped by OT/NT as pill buttons
+- Read tab shows all 66 books grouped by OT/NT as pill buttons with bold "Bible" header
 - Tapping a book navigates to chapter picker with book info card + numbered grid
-- Tapping a chapter opens the verse reader with full KJV text
-- Verse reader has prev/next chapter navigation at bottom
-- Verse reader has audio playback bar with voice selection and speed controls
+- Tapping a chapter opens the verse reader with centered book name, large chapter number, continuous prose with inline superscript verse numbers
+- Verse reader has bottom bar with play/pause, prev/next chapter arrows, centered chapter label
+- Voice and speed selection always visible in bottom bar; audio status shown during playback
 - All data cached offline via AsyncStorage (offlineFirst strategy)
 
 ## TTS Architecture

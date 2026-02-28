@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Pressable,
   ActivityIndicator,
   useColorScheme,
@@ -64,16 +64,19 @@ export default function VerseReaderScreen() {
   const [speechRate, setSpeechRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<VoiceId>("nova");
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const sessionRef = useRef(0);
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
   const playerRef = useRef<AudioPlayer | null>(null);
   const selectedVoiceRef = useRef<VoiceId>("nova");
+  const verseLayoutsRef = useRef<Record<number, { y: number; height: number }>>({});
+  const scrollContentOffsetRef = useRef(0);
 
   useEffect(() => {
     AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
@@ -153,10 +156,6 @@ export default function VerseReaderScreen() {
     currentIndexRef.current = index;
     setSpeakingVerseIndex(index);
 
-    try {
-      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
-    } catch {}
-
     const verse = verses[index];
     const textToSpeak = `${verse.verse}. ${verse.text}`;
 
@@ -203,10 +202,6 @@ export default function VerseReaderScreen() {
     currentIndexRef.current = index;
     setSpeakingVerseIndex(index);
     setIsLoadingAudio(true);
-
-    try {
-      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
-    } catch {}
 
     const batchEnd = Math.min(index + BATCH_SIZE, verses.length);
     const batchVerses = verses.slice(index, batchEnd);
@@ -282,6 +277,29 @@ export default function VerseReaderScreen() {
       speakVerseFallback(index, session);
     }
   }, [cleanupPlayer, speakVerseFallback]);
+
+  const scrollToVerseEstimate = useCallback((index: number) => {
+    if (index < 0 || !scrollViewRef.current) return;
+    const verses = versesRef.current;
+    if (!verses.length) return;
+    const headerHeight = 120;
+    const avgCharsPerLine = 35;
+    const lineHeight = 34;
+    let yOffset = headerHeight;
+    for (let i = 0; i < index; i++) {
+      const charCount = verses[i].text.length + 4;
+      const lines = Math.ceil(charCount / avgCharsPerLine);
+      yOffset += lines * lineHeight;
+    }
+    const targetY = Math.max(0, yOffset - 120);
+    scrollViewRef.current.scrollTo({ y: targetY, animated: true });
+  }, []);
+
+  useEffect(() => {
+    if (speakingVerseIndex >= 0 && (isSpeaking || isPaused)) {
+      scrollToVerseEstimate(speakingVerseIndex);
+    }
+  }, [speakingVerseIndex, isSpeaking, isPaused, scrollToVerseEstimate]);
 
   const handlePlay = useCallback(() => {
     const verses = versesRef.current;
@@ -370,92 +388,6 @@ export default function VerseReaderScreen() {
 
   const isActive = isSpeaking || isPaused;
 
-  const headerComponent = useMemo(() => (
-    <View style={styles.chapterHeader}>
-      <Text style={[styles.chapterTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-        Chapter {chapter}
-      </Text>
-      <View style={[styles.dividerLine, { backgroundColor: theme.accent }]} />
-      <View style={styles.translationRow}>
-        {TRANSLATIONS.map((t) => {
-          const isActiveT = translation === t;
-          return (
-            <Pressable
-              key={t}
-              onPress={() => setTranslation(t)}
-              style={[
-                styles.translationPill,
-                {
-                  backgroundColor: isActiveT ? theme.accent : theme.backgroundCard,
-                  borderColor: isActiveT ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.translationPillText,
-                  {
-                    color: isActiveT ? "#fff" : theme.textSecondary,
-                    fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                  },
-                ]}
-              >
-                {t}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  ), [chapter, theme, translation]);
-
-  const footerComponent = useMemo(() => (
-    <View style={[styles.navFooter, { paddingBottom: bottomPad + 20 }]}>
-      <View style={[styles.navDivider, { backgroundColor: theme.divider }]} />
-      <View style={styles.navRow}>
-        <Pressable
-          onPress={goToPrev}
-          disabled={!canGoPrev}
-          style={({ pressed }) => [
-            styles.navBtn,
-            {
-              backgroundColor: canGoPrev ? theme.backgroundCard : "transparent",
-              borderColor: theme.border,
-              opacity: pressed ? 0.7 : canGoPrev ? 1 : 0.3,
-            },
-          ]}
-        >
-          <Ionicons name="chevron-back" size={16} color={canGoPrev ? theme.text : theme.textMuted} />
-          <Text style={[styles.navBtnText, { color: canGoPrev ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-            Prev
-          </Text>
-        </Pressable>
-
-        <Text style={[styles.navLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {chapterNum} of {totalChapters}
-        </Text>
-
-        <Pressable
-          onPress={goToNext}
-          disabled={!canGoNext}
-          style={({ pressed }) => [
-            styles.navBtn,
-            {
-              backgroundColor: canGoNext ? theme.backgroundCard : "transparent",
-              borderColor: theme.border,
-              opacity: pressed ? 0.7 : canGoNext ? 1 : 0.3,
-            },
-          ]}
-        >
-          <Text style={[styles.navBtnText, { color: canGoNext ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-            Next
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={canGoNext ? theme.text : theme.textMuted} />
-        </Pressable>
-      </View>
-    </View>
-  ), [canGoPrev, canGoNext, chapterNum, totalChapters, theme, bottomPad, goToPrev, goToNext]);
-
   const handleVerseTap = useCallback((item: Verse) => {
     router.push({
       pathname: "/verse-actions",
@@ -471,32 +403,37 @@ export default function VerseReaderScreen() {
     });
   }, [bookId, chapter, bookName, translation]);
 
-  const renderVerse = useCallback(({ item, index }: { item: Verse; index: number }) => (
-    <VerseRow
-      item={item}
-      theme={theme}
-      isHighlighted={index === speakingVerseIndex}
-      onPress={() => handleVerseTap(item)}
-    />
-  ), [theme, handleVerseTap, speakingVerseIndex]);
-
-  const onScrollToIndexFailed = useCallback((info: { index: number; averageItemLength: number }) => {
-    setTimeout(() => {
-      try {
-        flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.3 });
-      } catch {}
-    }, 200);
-  }, []);
-
   const currentVoiceLabel = VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Nova";
+
+  const verses = data?.verses ?? [];
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: `${bookName} ${chapter}`,
+          title: "",
+          headerStyle: { backgroundColor: theme.background },
+          headerShadowVisible: false,
+          headerTintColor: theme.text,
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.headerBackBtn}>
+              <Ionicons name="chevron-back" size={24} color={theme.text} />
+            </Pressable>
+          ),
           headerRight: () => (
             <View style={styles.headerRight}>
+              <Pressable
+                hitSlop={8}
+                style={styles.headerBtn}
+                onPress={() => setShowTranslationPicker(!showTranslationPicker)}
+              >
+                <View style={[styles.translationBadge, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Ionicons name="globe-outline" size={13} color={theme.textSecondary} />
+                  <Text style={[styles.translationBadgeText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {translation}
+                  </Text>
+                </View>
+              </Pressable>
               <Pressable
                 hitSlop={8}
                 style={styles.headerBtn}
@@ -506,10 +443,10 @@ export default function VerseReaderScreen() {
                   )
                 }
               >
-                <Ionicons name="layers-outline" size={18} color={theme.textSecondary} />
+                <Ionicons name="layers-outline" size={20} color={theme.textSecondary} />
               </Pressable>
               <Pressable hitSlop={8} style={styles.headerBtn}>
-                <Ionicons name="bookmark-outline" size={18} color={theme.textSecondary} />
+                <Ionicons name="bookmark-outline" size={20} color={theme.textSecondary} />
               </Pressable>
             </View>
           ),
@@ -519,9 +456,6 @@ export default function VerseReaderScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
-            <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Loading passage...
-            </Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -534,297 +468,370 @@ export default function VerseReaderScreen() {
             </Text>
           </View>
         ) : (
-          <FlatList
-            ref={flatListRef}
-            data={data?.verses ?? []}
-            keyExtractor={(item) => item.id}
-            renderItem={renderVerse}
-            extraData={speakingVerseIndex}
-            contentContainerStyle={[
-              styles.verseList,
-              isActive ? { paddingBottom: 80 } : undefined,
-            ]}
-            ListHeaderComponent={headerComponent}
-            ListFooterComponent={footerComponent}
-            showsVerticalScrollIndicator={false}
-            onScrollToIndexFailed={onScrollToIndexFailed}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="book-outline" size={36} color={theme.textMuted} />
-                <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  No verses found for this chapter.
-                </Text>
-              </View>
-            }
-          />
-        )}
-
-        {!isLoading && !error && (data?.verses?.length ?? 0) > 0 && (
-          <View style={[
-            styles.audioBar,
-            {
-              backgroundColor: theme.primary,
-              paddingBottom: bottomPad + 8,
-            },
-          ]}>
-            {showVoicePicker && (
-              <View style={[styles.voicePopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-                {VOICE_OPTIONS.map((v) => (
-                  <Pressable
-                    key={v.id}
-                    onPress={() => handleVoiceChange(v.id)}
-                    style={[
-                      styles.voiceOption,
-                      selectedVoice === v.id && { backgroundColor: theme.accent + "22" },
-                    ]}
-                  >
-                    <Text style={[
-                      styles.voiceOptionLabel,
-                      {
-                        color: selectedVoice === v.id ? theme.accent : theme.text,
-                        fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                      },
-                    ]}>
-                      {v.label}
-                    </Text>
-                    <Text style={[styles.voiceOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {v.description}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-
-            {showSpeedPicker && (
-              <View style={[styles.speedPopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-                {SPEED_OPTIONS.map((s) => (
-                  <Pressable
-                    key={s}
-                    onPress={() => handleSpeedChange(s)}
-                    style={[
-                      styles.speedOption,
-                      speechRate === s && { backgroundColor: theme.accent + "22" },
-                    ]}
-                  >
-                    <Text style={[
-                      styles.speedOptionText,
-                      {
-                        color: speechRate === s ? theme.accent : theme.text,
-                        fontFamily: speechRate === s ? "Inter_700Bold" : "Inter_500Medium",
-                      },
-                    ]}>
-                      {s}x
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.audioControls}>
-              <View style={styles.leftControls}>
-                <Pressable
-                  onPress={() => { setShowVoicePicker(!showVoicePicker); setShowSpeedPicker(false); }}
-                  style={[styles.voiceBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
-                  testID="voice-button"
-                >
-                  <Ionicons name="mic-outline" size={14} color="rgba(255,255,255,0.85)" />
-                  <Text style={[styles.voiceBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                    {currentVoiceLabel}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => { setShowSpeedPicker(!showSpeedPicker); setShowVoicePicker(false); }}
-                  style={[styles.speedBtn, { backgroundColor: "rgba(255,255,255,0.12)" }]}
-                  testID="speed-button"
-                >
-                  <Text style={[styles.speedBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                    {speechRate}x
-                  </Text>
-                </Pressable>
-              </View>
-
-              {isActive && (
-                <View style={styles.verseIndicator}>
-                  {isLoadingAudio ? (
-                    <ActivityIndicator size="small" color={Colors.light.accent} />
-                  ) : (
-                    <Ionicons name="volume-high" size={14} color={Colors.light.accent} />
-                  )}
-                  <Text style={[styles.verseIndicatorText, { fontFamily: "Inter_500Medium" }]}>
-                    {isLoadingAudio
-                      ? "Loading..."
-                      : isPaused
-                        ? "Paused"
-                        : `Verse ${(data?.verses ?? [])[speakingVerseIndex]?.verse ?? ""}`}
-                  </Text>
+          <>
+            <ScrollView
+              ref={scrollViewRef}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: 160 + bottomPad },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {showTranslationPicker && (
+                <View style={[styles.translationDropdown, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  {TRANSLATIONS.map((t) => {
+                    const isActiveT = translation === t;
+                    return (
+                      <Pressable
+                        key={t}
+                        onPress={() => { setTranslation(t); setShowTranslationPicker(false); }}
+                        style={[
+                          styles.translationOption,
+                          isActiveT && { backgroundColor: theme.accent + "15" },
+                        ]}
+                      >
+                        <Text style={[
+                          styles.translationOptionText,
+                          {
+                            color: isActiveT ? theme.accent : theme.text,
+                            fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
+                          },
+                        ]}>
+                          {t}
+                        </Text>
+                        <Text style={[styles.translationOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                          {t === "KJV" ? "King James Version" : t === "ASV" ? "American Standard" : "World English Bible"}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 
-              <View style={styles.playControls}>
-                {isActive && (
-                  <Pressable onPress={handleStop} hitSlop={8} testID="stop-button">
-                    <Ionicons name="stop-circle" size={32} color="rgba(255,255,255,0.7)" />
+              <View style={styles.chapterHeader}>
+                <Text style={[styles.bookNameHeader, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  {bookName}
+                </Text>
+                <Text style={[styles.chapterNumber, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                  {chapter}
+                </Text>
+              </View>
+
+              <View style={styles.proseContainer}>
+                <Text style={[styles.proseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                  {verses.map((v, i) => (
+                    <React.Fragment key={v.id}>
+                      <Text
+                        onPress={() => handleVerseTap(v)}
+                        style={[
+                          styles.proseText,
+                          {
+                            color: theme.text,
+                            fontFamily: "Lora_400Regular",
+                            backgroundColor: i === speakingVerseIndex ? theme.highlightYellow : "transparent",
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.verseNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          {" "}{v.verse}{" "}
+                        </Text>
+                        {v.text}
+                      </Text>
+                      {"  "}
+                    </React.Fragment>
+                  ))}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={[
+              styles.bottomBar,
+              {
+                backgroundColor: theme.background,
+                borderTopColor: theme.border,
+                paddingBottom: bottomPad + 8,
+              },
+            ]}>
+              {showVoicePicker && (
+                <View style={[styles.voicePopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  {VOICE_OPTIONS.map((v) => (
+                    <Pressable
+                      key={v.id}
+                      onPress={() => handleVoiceChange(v.id)}
+                      style={[
+                        styles.voiceOption,
+                        selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
+                      ]}
+                    >
+                      <Text style={[
+                        styles.voiceOptionLabel,
+                        {
+                          color: selectedVoice === v.id ? theme.accent : theme.text,
+                          fontFamily: selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                        },
+                      ]}>
+                        {v.label}
+                      </Text>
+                      <Text style={[styles.voiceOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        {v.description}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {showSpeedPicker && (
+                <View style={[styles.speedPopup, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  {SPEED_OPTIONS.map((s) => (
+                    <Pressable
+                      key={s}
+                      onPress={() => handleSpeedChange(s)}
+                      style={[
+                        styles.speedOption,
+                        speechRate === s && { backgroundColor: theme.accent + "15" },
+                      ]}
+                    >
+                      <Text style={[
+                        styles.speedOptionText,
+                        {
+                          color: speechRate === s ? theme.accent : theme.text,
+                          fontFamily: speechRate === s ? "Inter_700Bold" : "Inter_500Medium",
+                        },
+                      ]}>
+                        {s}x
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              <View style={[styles.audioStatusBar, { backgroundColor: theme.backgroundCard }]}>
+                <View style={styles.audioStatusLeft}>
+                  <Pressable
+                    onPress={() => { setShowVoicePicker(!showVoicePicker); setShowSpeedPicker(false); }}
+                    style={[styles.voiceChip, { backgroundColor: theme.accent + "15" }]}
+                    testID="voice-button"
+                  >
+                    <Ionicons name="mic-outline" size={13} color={theme.accent} />
+                    <Text style={[styles.voiceChipText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      {currentVoiceLabel}
+                    </Text>
                   </Pressable>
+                  <Pressable
+                    onPress={() => { setShowSpeedPicker(!showSpeedPicker); setShowVoicePicker(false); }}
+                    style={[styles.speedChip, { backgroundColor: theme.accent + "15" }]}
+                    testID="speed-button"
+                  >
+                    <Text style={[styles.speedChipText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      {speechRate}x
+                    </Text>
+                  </Pressable>
+                </View>
+                {isActive && (
+                  <View style={styles.audioStatusRight}>
+                    {isLoadingAudio ? (
+                      <ActivityIndicator size="small" color={theme.accent} />
+                    ) : (
+                      <Ionicons name="volume-high" size={14} color={theme.accent} />
+                    )}
+                    <Text style={[styles.audioStatusText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                      {isLoadingAudio
+                        ? "Loading..."
+                        : isPaused
+                          ? "Paused"
+                          : `Verse ${verses[speakingVerseIndex]?.verse ?? ""}`}
+                    </Text>
+                  </View>
                 )}
+              </View>
+
+              <View style={styles.navRow}>
                 <Pressable
                   onPress={isSpeaking ? handlePause : handlePlay}
                   hitSlop={8}
                   testID="play-pause-button"
+                  style={styles.playBtn}
                 >
                   <Ionicons
-                    name={isSpeaking ? "pause-circle" : "play-circle"}
-                    size={44}
-                    color={Colors.light.accent}
+                    name={isSpeaking ? "pause" : "play"}
+                    size={20}
+                    color={theme.text}
                   />
                 </Pressable>
+
+                {isActive && (
+                  <Pressable onPress={handleStop} hitSlop={8} testID="stop-button" style={styles.stopBtn}>
+                    <Ionicons name="stop" size={16} color={theme.textMuted} />
+                  </Pressable>
+                )}
+
+                <View style={styles.navCenter}>
+                  <Pressable
+                    onPress={goToPrev}
+                    disabled={!canGoPrev}
+                    hitSlop={8}
+                    style={{ opacity: canGoPrev ? 1 : 0.25 }}
+                  >
+                    <Ionicons name="chevron-back" size={22} color={theme.text} />
+                  </Pressable>
+
+                  <Text style={[styles.navChapterLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {bookName} {chapter}
+                  </Text>
+
+                  <Pressable
+                    onPress={goToNext}
+                    disabled={!canGoNext}
+                    hitSlop={8}
+                    style={{ opacity: canGoNext ? 1 : 0.25 }}
+                  >
+                    <Ionicons name="chevron-forward" size={22} color={theme.text} />
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </>
         )}
       </View>
     </>
   );
 }
 
-function VerseRow({
-  item,
-  theme,
-  isHighlighted,
-  onPress,
-}: {
-  item: Verse;
-  theme: typeof Colors.light;
-  isHighlighted: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.verseRow,
-        {
-          opacity: pressed ? 0.7 : 1,
-          backgroundColor: isHighlighted
-            ? theme.accent + "18"
-            : pressed
-              ? theme.backgroundSecondary
-              : "transparent",
-          borderRadius: 8,
-          marginHorizontal: -6,
-          paddingHorizontal: 6,
-          borderLeftWidth: isHighlighted ? 3 : 0,
-          borderLeftColor: isHighlighted ? theme.accent : "transparent",
-        },
-      ]}
-    >
-      <Text style={[
-        styles.verseNum,
-        {
-          color: isHighlighted ? theme.accent : theme.accent,
-          fontFamily: isHighlighted ? "Inter_700Bold" : "Inter_600SemiBold",
-        },
-      ]}>
-        {item.verse}
-      </Text>
-      <Text style={[
-        styles.verseText,
-        {
-          color: theme.text,
-          fontFamily: "Lora_400Regular",
-        },
-      ]}>
-        {item.text}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRight: { flexDirection: "row", gap: 12, marginRight: 4 },
+  headerRight: { flexDirection: "row", gap: 14, alignItems: "center" },
+  headerBackBtn: { padding: 4 },
   headerBtn: { padding: 4 },
+  translationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  translationBadgeText: { fontSize: 12 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadingText: { fontSize: 14 },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10, padding: 20 },
   errorText: { fontSize: 17 },
   errorSub: { fontSize: 13, textAlign: "center" },
-  verseList: { paddingHorizontal: 24, paddingTop: 8 },
-  chapterHeader: { alignItems: "center", paddingVertical: 20, gap: 12 },
-  chapterTitle: { fontSize: 22 },
-  dividerLine: { width: 40, height: 2, borderRadius: 1 },
-  translationRow: { flexDirection: "row", gap: 8, marginTop: 4 },
-  translationPill: {
+  scrollContent: { paddingHorizontal: 28, paddingTop: 8 },
+  translationDropdown: {
+    borderRadius: 14,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    overflow: "hidden",
+    marginBottom: 16,
   },
-  translationPillText: { fontSize: 12 },
-  verseRow: {
-    flexDirection: "row",
-    paddingVertical: 6,
-    gap: 8,
-    alignItems: "flex-start",
-  },
-  verseNum: { fontSize: 11, lineHeight: 26, minWidth: 22, textAlign: "right" },
-  verseText: { flex: 1, fontSize: 17, lineHeight: 28 },
-  navFooter: { paddingHorizontal: 0, paddingTop: 24 },
-  navDivider: { height: 1, marginBottom: 16 },
-  navRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  navBtn: {
+  translationOption: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  navBtnText: { fontSize: 14 },
-  navLabel: { fontSize: 13 },
-  emptyContainer: { alignItems: "center", gap: 10, paddingTop: 60 },
-  emptyText: { fontSize: 14, textAlign: "center" },
-  audioBar: {
+  translationOptionText: { fontSize: 15 },
+  translationOptionDesc: { fontSize: 12 },
+  chapterHeader: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 32,
+    gap: 2,
+  },
+  bookNameHeader: {
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  chapterNumber: {
+    fontSize: 56,
+    lineHeight: 66,
+  },
+  proseContainer: {
+    paddingBottom: 24,
+  },
+  proseText: {
+    fontSize: 20,
+    lineHeight: 34,
+  },
+  verseNum: {
+    fontSize: 12,
+    lineHeight: 34,
+  },
+  bottomBar: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
     paddingHorizontal: 16,
   },
-  audioControls: {
+  audioStatusBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
   },
-  leftControls: {
+  audioStatusLeft: {
     flexDirection: "row",
     gap: 6,
   },
-  voiceBtn: {
+  voiceChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  voiceBtnText: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 12,
-  },
-  speedBtn: {
+  voiceChipText: { fontSize: 11 },
+  speedChip: {
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  speedChipText: { fontSize: 11 },
+  audioStatusRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  audioStatusText: { fontSize: 12 },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
   },
-  speedBtnText: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 13,
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stopBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 2,
+  },
+  navCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  navChapterLabel: {
+    fontSize: 14,
   },
   voicePopup: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     marginBottom: 8,
     overflow: "hidden",
@@ -833,14 +840,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   voiceOptionLabel: { fontSize: 14 },
   voiceOptionDesc: { fontSize: 12 },
   speedPopup: {
     flexDirection: "row",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     marginBottom: 8,
     overflow: "hidden",
@@ -848,23 +855,7 @@ const styles = StyleSheet.create({
   speedOption: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   speedOptionText: { fontSize: 13 },
-  verseIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-    justifyContent: "center",
-  },
-  verseIndicatorText: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 13,
-  },
-  playControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
 });

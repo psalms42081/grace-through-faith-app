@@ -502,12 +502,18 @@ function AdultHomeScreen() {
   const progress = todayData?.completedCount ?? 0;
   const total = todayData?.totalDays ?? 1;
 
+  const PLAN_GRADIENTS: [string, string][] = [
+    ["#C9933A", "#A87828"],
+    ["#2E7D32", "#1B5E20"],
+    ["#1A1F3C", "#0D1025"],
+  ];
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPad + 12, paddingBottom: bottomPad + 100 },
+        { paddingTop: topPad + 16, paddingBottom: bottomPad + 120 },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -521,14 +527,14 @@ function AdultHomeScreen() {
       </View>
 
       <LinearGradient
-        colors={isDark ? ["#1A1F3C", "#12162A"] : ["#1A1F3C", "#141833"]}
+        colors={isDark ? ["#161A32", "#0E1125", "#0A0C1A"] : ["#1A1F3C", "#141833", "#0F1228"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.verseCard}
       >
         <View style={styles.verseCardInner}>
           <View style={styles.verseBadge}>
-            <Ionicons name="sunny" size={13} color="#C9933A" />
+            <Ionicons name="sunny" size={14} color="#C9933A" />
             <Text style={[styles.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
               Verse of the Day
             </Text>
@@ -553,7 +559,7 @@ function AdultHomeScreen() {
         onPress={() => router.push("/(tabs)/study")}
         style={({ pressed }) => [
           styles.studyModelCard,
-          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border, opacity: pressed ? 0.92 : 1 },
+          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.92 : 1 },
         ]}
       >
         <Text style={[styles.studyModelLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
@@ -565,11 +571,14 @@ function AdultHomeScreen() {
         <View style={styles.layersRow}>
           {STUDY_LAYERS.map((layer) => (
             <View key={layer.title} style={styles.layerItem}>
-              <View style={[styles.layerIcon, { backgroundColor: theme.accent + "12" }]}>
+              <View style={[styles.layerIcon, { backgroundColor: theme.accent + "15" }]}>
                 <Text style={[styles.layerNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
               </View>
               <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                 {layer.title}
+              </Text>
+              <Text style={[styles.layerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {layer.desc}
               </Text>
             </View>
           ))}
@@ -579,7 +588,7 @@ function AdultHomeScreen() {
             Read, understand context, hear historic voices, then apply
           </Text>
           <View style={[styles.studyModelArrow, { backgroundColor: theme.accent }]}>
-            <Ionicons name="arrow-forward" size={14} color="#fff" />
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
           </View>
         </View>
       </Pressable>
@@ -595,12 +604,14 @@ function AdultHomeScreen() {
           }}
           style={({ pressed }) => [
             styles.actionCard,
-            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          <Ionicons name="flame" size={24} color={theme.accent} />
+          <View style={[styles.actionIconWrap, { backgroundColor: theme.accent + "15" }]}>
+            <Ionicons name="flame" size={22} color={theme.accent} />
+          </View>
           <Text style={[styles.actionCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {hasActivePlan ? "Continue" : "Devotionals"}
+            {hasActivePlan ? "Continue Plan" : "Devotionals"}
           </Text>
           {hasActivePlan && (
             <View style={[styles.actionProgress, { backgroundColor: theme.border }]}>
@@ -618,15 +629,18 @@ function AdultHomeScreen() {
           onPress={() => enterKidsMode()}
           style={({ pressed }) => [
             styles.actionCard,
-            { backgroundColor: "#4A90D9", borderColor: "#4A90D9", opacity: pressed ? 0.85 : 1 },
+            styles.kidsCard,
+            { opacity: pressed ? 0.85 : 1 },
           ]}
           testID="enter-kids-mode"
         >
-          <Ionicons name="people" size={24} color="#fff" />
+          <View style={styles.kidsIconWrap}>
+            <Ionicons name="people" size={22} color="#fff" />
+          </View>
           <Text style={[styles.actionCardTitle, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
             Kids Club
           </Text>
-          <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.7)", fontFamily: "Inter_400Regular" }]}>
             Stories & quizzes
           </Text>
         </Pressable>
@@ -635,7 +649,7 @@ function AdultHomeScreen() {
       {plans && plans.length > 0 && (
         <View style={styles.plansSection}>
           <View style={styles.plansSectionHeader}>
-            <Text style={[styles.plansSectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+            <Text style={[styles.plansSectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               Featured Plans
             </Text>
             {plans.length > 3 && (
@@ -652,16 +666,19 @@ function AdultHomeScreen() {
               onPress={() => router.push("/devotionals")}
               style={({ pressed }) => [
                 styles.planRow,
-                { borderColor: theme.border, opacity: pressed ? 0.75 : 1 },
+                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: isDark ? theme.border : theme.borderLight, opacity: pressed ? 0.75 : 1 },
               ]}
             >
-              <View style={[styles.planIcon, { backgroundColor: theme.accent + "12" }]}>
+              <LinearGradient
+                colors={PLAN_GRADIENTS[i % PLAN_GRADIENTS.length]}
+                style={styles.planIconGradient}
+              >
                 <Ionicons
-                  name={i === 0 ? "heart-outline" : i === 1 ? "leaf-outline" : "star-outline"}
-                  size={18}
-                  color={theme.accent}
+                  name={i === 0 ? "heart" : i === 1 ? "leaf" : "star"}
+                  size={16}
+                  color="#fff"
                 />
-              </View>
+              </LinearGradient>
               <View style={styles.planText}>
                 <Text style={[styles.planTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
                   {plan.title}
@@ -670,7 +687,9 @@ function AdultHomeScreen() {
                   {plan.totalDays} days{plan.estimatedMinutesPerDay ? ` · ~${plan.estimatedMinutesPerDay} min/day` : ""}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              <View style={[styles.planArrow, { backgroundColor: theme.accent + "12" }]}>
+                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+              </View>
             </Pressable>
           ))}
         </View>
@@ -681,65 +700,66 @@ function AdultHomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 20 },
-  header: { marginBottom: 16 },
-  greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  tagline: { fontSize: 24, letterSpacing: 0.2 },
+  content: { paddingHorizontal: 22 },
+  header: { marginBottom: 24 },
+  greeting: { fontSize: 14, letterSpacing: 0.5, marginBottom: 6 },
+  tagline: { fontSize: 28, letterSpacing: 0.1, lineHeight: 36 },
   verseCard: {
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: 20,
+    marginBottom: 24,
     overflow: "hidden",
   },
   verseCardInner: {
-    padding: 22,
+    padding: 28,
+    paddingVertical: 32,
   },
   verseBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 14,
+    gap: 7,
+    marginBottom: 18,
   },
   verseBadgeText: {
     color: "#C9933A",
     fontSize: 11,
-    letterSpacing: 1.5,
+    letterSpacing: 1.8,
     textTransform: "uppercase",
   },
   verseText: {
     color: "#EDE5D5",
-    fontSize: 17,
-    lineHeight: 28,
-    marginBottom: 16,
+    fontSize: 20,
+    lineHeight: 34,
+    marginBottom: 22,
   },
   verseFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  verseRef: { color: "#C9933A", fontSize: 14 },
+  verseRef: { color: "#C9933A", fontSize: 15 },
   verseTransBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     backgroundColor: "#C9933A20",
   },
   verseTrans: { color: "#C9933A", fontSize: 11, letterSpacing: 0.5 },
   studyModelCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 18,
-    marginBottom: 16,
+    padding: 24,
+    marginBottom: 24,
   },
   studyModelLabel: {
     fontSize: 11,
-    letterSpacing: 1.2,
-    marginBottom: 6,
+    letterSpacing: 1.5,
+    marginBottom: 8,
   },
-  studyModelTitle: { fontSize: 18, marginBottom: 16 },
+  studyModelTitle: { fontSize: 21, marginBottom: 20 },
   layersRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   layerItem: {
     alignItems: "center",
@@ -747,77 +767,120 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   layerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 2,
   },
-  layerNum: { fontSize: 16 },
-  layerTitle: { fontSize: 11 },
+  layerNum: { fontSize: 18 },
+  layerTitle: { fontSize: 12 },
+  layerDesc: { fontSize: 10, textAlign: "center" as const, marginTop: 1 },
   studyModelFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(201,147,58,0.12)",
+    paddingTop: 16,
   },
-  studyModelFooterText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  studyModelFooterText: { flex: 1, fontSize: 13, lineHeight: 19 },
   studyModelArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
   actionRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
+    gap: 14,
+    marginBottom: 28,
   },
   actionCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 16,
-    gap: 6,
+    padding: 20,
+    gap: 8,
   },
-  actionCardTitle: { fontSize: 15, marginTop: 4 },
-  actionCardSub: { fontSize: 12 },
+  kidsCard: {
+    backgroundColor: "#4A90D9",
+    borderColor: "#4A90D9",
+    borderWidth: 0,
+  },
+  actionIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  kidsIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  actionCardTitle: { fontSize: 16, marginTop: 2 },
+  actionCardSub: { fontSize: 12, lineHeight: 17 },
   actionProgress: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
     overflow: "hidden",
     marginTop: 4,
   },
   actionProgressFill: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
   },
-  plansSection: { marginBottom: 8 },
+  plansSection: { marginBottom: 12 },
   plansSectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  plansSectionTitle: { fontSize: 18 },
+  plansSectionTitle: { fontSize: 22 },
   viewAllText: { fontSize: 13 },
   planRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  planIconGradient: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
   },
   planIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
   },
   planText: { flex: 1 },
-  planTitle: { fontSize: 14 },
-  planMeta: { fontSize: 12, marginTop: 2 },
+  planTitle: { fontSize: 15 },
+  planMeta: { fontSize: 12, marginTop: 3 },
+  planArrow: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",

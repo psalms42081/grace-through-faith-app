@@ -13,24 +13,31 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
 
-const SUGGESTIONS = [
-  { label: "John 3:16", type: "ref" },
-  { label: "Psalm 23", type: "ref" },
-  { label: "Romans 8:28", type: "ref" },
-  { label: "Genesis 1", type: "ref" },
-  { label: "love", type: "keyword" },
-  { label: "faith", type: "keyword" },
-  { label: "grace", type: "keyword" },
-  { label: "salvation", type: "keyword" },
-  { label: "wisdom", type: "keyword" },
-  { label: "prayer", type: "keyword" },
+const TOPIC_CHIPS = [
+  { label: "Love", icon: "heart-outline" as const, color: "#E8475F", bgLight: "rgba(232,71,95,0.12)", bgDark: "rgba(232,71,95,0.18)" },
+  { label: "Faith", icon: "shield-outline" as const, color: "#5B8DEF", bgLight: "rgba(91,141,239,0.12)", bgDark: "rgba(91,141,239,0.18)" },
+  { label: "Grace", icon: "sparkles-outline" as const, color: "#C9933A", bgLight: "rgba(201,147,58,0.12)", bgDark: "rgba(201,147,58,0.18)" },
+  { label: "Salvation", icon: "sunny-outline" as const, color: "#E8A838", bgLight: "rgba(232,168,56,0.12)", bgDark: "rgba(232,168,56,0.18)" },
+  { label: "Wisdom", icon: "bulb-outline" as const, color: "#9B6DD7", bgLight: "rgba(155,109,215,0.12)", bgDark: "rgba(155,109,215,0.18)" },
+  { label: "Prayer", icon: "hand-left-outline" as const, color: "#4ECCA3", bgLight: "rgba(78,204,163,0.12)", bgDark: "rgba(78,204,163,0.18)" },
+  { label: "Hope", icon: "leaf-outline" as const, color: "#56C596", bgLight: "rgba(86,197,150,0.12)", bgDark: "rgba(86,197,150,0.18)" },
+  { label: "Peace", icon: "water-outline" as const, color: "#6AABEF", bgLight: "rgba(106,171,239,0.12)", bgDark: "rgba(106,171,239,0.18)" },
+];
+
+const QUICK_REFS = [
+  { label: "John 3:16", subtitle: "For God so loved..." },
+  { label: "Psalm 23", subtitle: "The Lord is my shepherd..." },
+  { label: "Romans 8:28", subtitle: "All things work together..." },
+  { label: "Genesis 1", subtitle: "In the beginning..." },
+  { label: "Philippians 4:13", subtitle: "I can do all things..." },
+  { label: "Jeremiah 29:11", subtitle: "Plans to prosper you..." },
 ];
 
 interface SearchResult {
@@ -140,16 +147,17 @@ export default function SearchScreen() {
         styles.resultCard,
         {
           backgroundColor: theme.backgroundCard,
-          borderColor: theme.border,
           opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
       <View style={styles.resultHeader}>
-        <Text style={[styles.resultRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-          {item.bookName} {item.chapter}:{item.verse}
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color={theme.textMuted} />
+        <View style={[styles.resultRefBadge, { backgroundColor: theme.accent + "18" }]}>
+          <Text style={[styles.resultRef, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+            {item.bookName} {item.chapter}:{item.verse}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
       </View>
       <Text
         style={[styles.resultText, { color: theme.text, fontFamily: "Lora_400Regular" }]}
@@ -162,24 +170,35 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
+      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Search
         </Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Find verses, passages & topics
+        </Text>
+
         <View
           style={[
             styles.searchBar,
             {
-              backgroundColor: theme.backgroundSecondary,
-              borderColor: focused ? theme.accent : theme.border,
+              backgroundColor: isDark ? "#111218" : "#FFF8EC",
+              borderColor: focused ? theme.accent : "transparent",
+              shadowColor: focused ? theme.accent : "#000",
+              shadowOpacity: focused ? 0.15 : (isDark ? 0 : 0.06),
+              shadowRadius: focused ? 12 : 8,
+              shadowOffset: { width: 0, height: focused ? 2 : 4 },
+              elevation: focused ? 4 : 2,
             },
           ]}
         >
-          <Ionicons name="search" size={18} color={theme.textMuted} />
+          <View style={[styles.searchIconWrap, { backgroundColor: theme.accent + "15" }]}>
+            <Ionicons name="search" size={18} color={theme.accent} />
+          </View>
           <TextInput
             ref={inputRef}
             style={[styles.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-            placeholder='Search verses or type "John 3:16"'
+            placeholder='Verses, references, or topics...'
             placeholderTextColor={theme.textMuted}
             value={query}
             onChangeText={setQuery}
@@ -193,113 +212,153 @@ export default function SearchScreen() {
           />
           {query.length > 0 && (
             <Pressable onPress={handleClear} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+              <Ionicons name="close-circle" size={20} color={theme.textMuted} />
             </Pressable>
           )}
         </View>
-      </View>
 
-      <View style={styles.translationBar}>
-        {TRANSLATIONS.map((t) => {
-          const isActive = translation === t;
-          return (
-            <Pressable
-              key={t}
-              onPress={() => setTranslation(t)}
-              style={[
-                styles.txPill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Text
+        <View style={styles.translationBar}>
+          {TRANSLATIONS.map((t) => {
+            const isActive = translation === t;
+            return (
+              <Pressable
+                key={t}
+                onPress={() => setTranslation(t)}
                 style={[
-                  styles.txPillText,
+                  styles.txPill,
                   {
-                    color: isActive ? "#fff" : theme.textSecondary,
-                    fontFamily: isActive ? "Inter_700Bold" : "Inter_500Medium",
+                    backgroundColor: isActive ? theme.accent : "transparent",
+                    borderColor: isActive ? theme.accent : theme.border,
                   },
                 ]}
               >
-                {t}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.txPillText,
+                    {
+                      color: isActive ? "#fff" : theme.textSecondary,
+                      fontFamily: isActive ? "Inter_700Bold" : "Inter_500Medium",
+                    },
+                  ]}
+                >
+                  {t}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {showSuggestions ? (
         <FlatList
-          data={SUGGESTIONS}
-          keyExtractor={(item) => item.label}
+          data={[]}
+          keyExtractor={() => ""}
+          renderItem={() => null}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad + 120 }]}
+          showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              Suggestions
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => handleSuggestion(item.label)}
-              style={({ pressed }) => [
-                styles.suggestionRow,
-                {
-                  backgroundColor: theme.backgroundCard,
-                  borderColor: theme.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.suggestionIcon, { backgroundColor: theme.accent + "18" }]}>
-                <Ionicons
-                  name={item.type === "ref" ? "navigate-outline" : "search-outline"}
-                  size={16}
-                  color={theme.accent}
-                />
-              </View>
-              <Text style={[styles.suggestionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                {item.label}
+            <View>
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                Topics
               </Text>
-              <Ionicons name="arrow-forward" size={14} color={theme.textMuted} />
-            </Pressable>
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+              <View style={styles.topicGrid}>
+                {TOPIC_CHIPS.map((chip) => (
+                  <Pressable
+                    key={chip.label}
+                    onPress={() => handleSuggestion(chip.label.toLowerCase())}
+                    style={({ pressed }) => [
+                      styles.topicChip,
+                      {
+                        backgroundColor: isDark ? chip.bgDark : chip.bgLight,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name={chip.icon} size={18} color={chip.color} />
+                    <Text style={[styles.topicChipText, { color: isDark ? "#E0DAD0" : "#3A3530", fontFamily: "Inter_600SemiBold" }]}>
+                      {chip.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 28 }]}>
+                Popular Passages
+              </Text>
+              {QUICK_REFS.map((ref, idx) => (
+                <Pressable
+                  key={ref.label}
+                  onPress={() => handleSuggestion(ref.label)}
+                  style={({ pressed }) => [
+                    styles.quickRefRow,
+                    {
+                      backgroundColor: theme.backgroundCard,
+                      opacity: pressed ? 0.7 : 1,
+                      marginBottom: idx < QUICK_REFS.length - 1 ? 8 : 0,
+                    },
+                  ]}
+                >
+                  <View style={[styles.quickRefIcon, { backgroundColor: theme.accent + "15" }]}>
+                    <Ionicons name="book-outline" size={18} color={theme.accent} />
+                  </View>
+                  <View style={styles.quickRefContent}>
+                    <Text style={[styles.quickRefLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                      {ref.label}
+                    </Text>
+                    <Text style={[styles.quickRefSub, { color: theme.textMuted, fontFamily: "Lora_400Regular_Italic" }]} numberOfLines={1}>
+                      {ref.subtitle}
+                    </Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={16} color={theme.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          }
         />
       ) : isRef ? (
-        <View style={[styles.listContent, { paddingBottom: bottomPad + 120 }]}>
-          <Pressable
-            onPress={handleGoToReference}
-            style={({ pressed }) => [
-              styles.refCard,
-              {
-                backgroundColor: theme.primary,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.refIcon, { backgroundColor: "rgba(201,147,58,0.25)" }]}>
-              <Ionicons name="book" size={22} color="#C9933A" />
-            </View>
-            <View style={styles.refContent}>
-              <Text style={[styles.refLabel, { fontFamily: "Inter_500Medium" }]}>
-                Go to reference
-              </Text>
-              <Text style={[styles.refTitle, { fontFamily: "Lora_700Bold" }]}>
-                {refData?.bookName} {refData?.chapter}
-                {refData?.verse ? `:${refData.verse}` : ""}
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward-circle" size={28} color="#C9933A" />
-          </Pressable>
+        <FlatList
+          data={[]}
+          keyExtractor={() => ""}
+          renderItem={() => null}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad + 120 }]}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View>
+              <Pressable
+                onPress={handleGoToReference}
+                style={({ pressed }) => [
+                  styles.refCard,
+                  {
+                    backgroundColor: isDark ? "#18191F" : "#1A1F3C",
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.refIcon, { backgroundColor: "rgba(201,147,58,0.2)" }]}>
+                  <Ionicons name="book" size={24} color="#C9933A" />
+                </View>
+                <View style={styles.refContent}>
+                  <Text style={[styles.refLabel, { fontFamily: "Inter_500Medium" }]}>
+                    Go to reference
+                  </Text>
+                  <Text style={[styles.refTitle, { fontFamily: "Lora_700Bold" }]}>
+                    {refData?.bookName} {refData?.chapter}
+                    {refData?.verse ? `:${refData.verse}` : ""}
+                  </Text>
+                </View>
+                <View style={[styles.refArrow, { backgroundColor: "rgba(201,147,58,0.15)" }]}>
+                  <Ionicons name="arrow-forward" size={20} color="#C9933A" />
+                </View>
+              </Pressable>
 
-          {searchLoading ? (
-            <View style={styles.inlineLoading}>
-              <ActivityIndicator size="small" color={theme.accent} />
+              {searchLoading ? (
+                <View style={styles.inlineLoading}>
+                  <ActivityIndicator size="small" color={theme.accent} />
+                </View>
+              ) : null}
             </View>
-          ) : null}
-        </View>
+          }
+        />
       ) : searchLoading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.accent} />
@@ -309,8 +368,8 @@ export default function SearchScreen() {
         </View>
       ) : searchError ? (
         <View style={styles.centerLoading}>
-          <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
-          <Text style={[styles.errorText, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
+          <Ionicons name="alert-circle-outline" size={44} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
             Search failed
           </Text>
           <Text style={[styles.errorSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -326,7 +385,7 @@ export default function SearchScreen() {
           keyboardDismissMode="on-drag"
           ListHeaderComponent={
             <View style={styles.resultsHeader}>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
                 Results
               </Text>
               <Text style={[styles.resultCount, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -340,7 +399,7 @@ export default function SearchScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={36} color={theme.textMuted} />
+              <Ionicons name="search-outline" size={40} color={theme.textMuted} />
               <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 No verses found for "{activeQuery}"
               </Text>
@@ -354,100 +413,132 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 16 },
-  title: { fontSize: 24, marginBottom: 14 },
+  header: { paddingHorizontal: 24, paddingBottom: 8 },
+  title: { fontSize: 34, letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { fontSize: 15, marginBottom: 18 },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     gap: 10,
+    marginBottom: 14,
   },
-  searchInput: { flex: 1, fontSize: 15, padding: 0 },
-  listContent: { paddingHorizontal: 20, paddingTop: 8 },
-  sectionLabel: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase" as const,
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  suggestionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  suggestionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  searchIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
-  suggestionText: { flex: 1, fontSize: 15 },
-  refCard: {
+  searchInput: { flex: 1, fontSize: 16, padding: 0, paddingVertical: 6 },
+  translationBar: {
+    flexDirection: "row",
+    gap: 8,
+    paddingBottom: 6,
+  },
+  txPill: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  txPillText: { fontSize: 12, letterSpacing: 0.5 },
+  listContent: { paddingHorizontal: 24, paddingTop: 14 },
+  sectionLabel: {
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: "uppercase" as const,
+    marginBottom: 14,
+  },
+  topicGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  topicChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  topicChipText: { fontSize: 14 },
+  quickRefRow: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 16,
-    padding: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 14,
+  },
+  quickRefIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  quickRefContent: { flex: 1 },
+  quickRefLabel: { fontSize: 16, marginBottom: 2 },
+  quickRefSub: { fontSize: 13 },
+  refCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    padding: 20,
+    gap: 16,
     marginBottom: 16,
   },
   refIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
   refContent: { flex: 1 },
-  refLabel: { color: "rgba(237,229,213,0.6)", fontSize: 12, marginBottom: 2 },
-  refTitle: { color: "#EDE5D5", fontSize: 20 },
+  refLabel: { color: "rgba(237,229,213,0.55)", fontSize: 13, marginBottom: 3 },
+  refTitle: { color: "#EDE5D5", fontSize: 22 },
+  refArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
   resultsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 0,
-    marginTop: 4,
+    alignItems: "center",
+    marginBottom: 14,
   },
-  resultCount: { fontSize: 12 },
+  resultCount: { fontSize: 13 },
   resultCard: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
   },
   resultHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 10,
+  },
+  resultRefBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   resultRef: { fontSize: 13 },
-  resultText: { fontSize: 15, lineHeight: 22 },
-  centerLoading: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, gap: 12 },
-  loadingText: { fontSize: 14 },
-  inlineLoading: { alignItems: "center" as const, paddingTop: 20 },
-  errorText: { fontSize: 17 },
-  errorSub: { fontSize: 13, textAlign: "center" as const },
-  emptyState: { alignItems: "center" as const, gap: 10, paddingTop: 60 },
-  emptyText: { fontSize: 14, textAlign: "center" as const },
-  translationBar: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  txPill: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  txPillText: { fontSize: 11 },
+  resultText: { fontSize: 16, lineHeight: 24 },
+  centerLoading: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, gap: 14 },
+  loadingText: { fontSize: 15 },
+  inlineLoading: { alignItems: "center" as const, paddingTop: 24 },
+  errorText: { fontSize: 18 },
+  errorSub: { fontSize: 14, textAlign: "center" as const },
+  emptyState: { alignItems: "center" as const, gap: 12, paddingTop: 60 },
+  emptyText: { fontSize: 15, textAlign: "center" as const },
 });
