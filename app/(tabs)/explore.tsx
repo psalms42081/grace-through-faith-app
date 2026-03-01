@@ -7,37 +7,12 @@ import {
   Pressable,
   useColorScheme,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
-
-interface RecentRead {
-  id: string;
-  bookId: number;
-  bookName: string;
-  chapter: number;
-  translation: string;
-  readAt: string;
-}
-
-interface StreakData {
-  currentStreak: number;
-  longestStreak: number;
-  lastReadDate: string | null;
-}
-
-interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  totalDays: number;
-  theme: string | null;
-}
 
 const TOPICS = [
   { id: "love", title: "Love", icon: "heart" as const, gradient: ["#E8456B", "#C2185B"] as [string, string] },
@@ -55,9 +30,11 @@ const TOPICS = [
 ];
 
 const INSPIRATIONS = [
-  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const },
-  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const },
-  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const },
+  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5 },
+  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const, bookId: 49, chapter: 6 },
+  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const, bookId: 40, chapter: 6 },
+  { title: "The Beatitudes", subtitle: "Matthew 5:3-12", gradient: ["#8B5CF6", "#6D3BD4"] as [string, string], icon: "sparkles" as const, bookId: 40, chapter: 5 },
+  { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13 },
 ];
 
 export default function DiscoverScreen() {
@@ -68,22 +45,6 @@ export default function DiscoverScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-
-  const { data: recentReads } = useQuery<RecentRead[]>({
-    queryKey: ["/api/reading-history/recent?userId=guest"],
-  });
-
-  const { data: streakData } = useQuery<StreakData>({
-    queryKey: ["/api/reading-streaks?userId=guest"],
-  });
-
-  const { data: plans } = useQuery<Plan[]>({
-    queryKey: ["/api/devotionals/plans"],
-  });
-
-  const lastRead = recentReads?.[0];
-  const streak = streakData?.currentStreak ?? 0;
-  const longestStreak = streakData?.longestStreak ?? 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -98,87 +59,30 @@ export default function DiscoverScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {lastRead && (
-          <Pressable
-            onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
-            style={({ pressed }) => [
-              styles.continueCard,
-              { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-            ]}
-            testID="continue-reading"
-          >
-            <View style={[styles.continueIcon, { backgroundColor: theme.accent + "18" }]}>
-              <Ionicons name="book" size={22} color={theme.accent} />
-            </View>
-            <View style={styles.continueInfo}>
-              <Text style={[styles.continueLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                CONTINUE READING
-              </Text>
-              <Text style={[styles.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                {lastRead.bookName} {lastRead.chapter}
-              </Text>
-              <Text style={[styles.continueSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {lastRead.translation || "KJV"}
-              </Text>
-            </View>
-            <LinearGradient colors={["#C9933A", "#A87828"]} style={styles.continueArrow}>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
-            </LinearGradient>
-          </Pressable>
-        )}
-
-        <View style={styles.streakRow}>
-          <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-            <Ionicons name="flame" size={28} color="#FF6B35" />
-            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Current{"\n"}Streak
-            </Text>
-          </View>
-          <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-            <Ionicons name="trophy" size={28} color={theme.accent} />
-            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
-            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Longest{"\n"}Streak
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/prayer-journal")}
-            style={({ pressed }) => [
-              styles.streakCard,
-              { backgroundColor: isDark ? "#1A142A" : "#F5F0FF", opacity: pressed ? 0.85 : 1 },
-            ]}
-            testID="prayer-journal-card"
-          >
-            <Ionicons name="journal" size={28} color="#8B5CF6" />
-            <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-              <Ionicons name="add" size={20} color="#8B5CF6" />
-            </Text>
-            <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Prayer{"\n"}Journal
-            </Text>
-          </Pressable>
-        </View>
-
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Daily Inspiration
+            Popular Passages
           </Text>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inspirationScroll}>
           {INSPIRATIONS.map((item, i) => (
-            <LinearGradient
+            <Pressable
               key={i}
-              colors={item.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.inspirationCard}
+              onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
             >
-              <Ionicons name={item.icon} size={28} color="rgba(255,255,255,0.8)" />
-              <Text style={[styles.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
-              <Text style={[styles.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
-            </LinearGradient>
+              <LinearGradient
+                colors={item.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.inspirationCard}
+              >
+                <Ionicons name={item.icon} size={28} color="rgba(255,255,255,0.8)" />
+                <Text style={[styles.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
+                <Text style={[styles.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
+              </LinearGradient>
+            </Pressable>
           ))}
         </ScrollView>
 
@@ -208,47 +112,6 @@ export default function DiscoverScreen() {
             </Pressable>
           ))}
         </View>
-
-        {plans && plans.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                Featured Plans
-              </Text>
-              {plans.length > 3 && (
-                <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
-                  <Text style={[styles.viewAll, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>View All</Text>
-                </Pressable>
-              )}
-            </View>
-            {plans.slice(0, 3).map((plan, i) => (
-              <Pressable
-                key={plan.id}
-                onPress={() => router.push("/devotionals")}
-                style={({ pressed }) => [
-                  styles.planCard,
-                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <LinearGradient
-                  colors={[
-                    ["#C9933A", "#A87828"],
-                    ["#2E7D32", "#1B5E20"],
-                    ["#1A1F3C", "#0D1025"],
-                  ][i % 3] as [string, string]}
-                  style={styles.planIcon}
-                >
-                  <Ionicons name={["heart", "leaf", "star"][i % 3] as any} size={18} color="#fff" />
-                </LinearGradient>
-                <View style={styles.planInfo}>
-                  <Text style={[styles.planTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{plan.title}</Text>
-                  <Text style={[styles.planMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{plan.totalDays} days</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-              </Pressable>
-            ))}
-          </>
-        )}
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -291,9 +154,31 @@ export default function DiscoverScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          onPress={() => router.push("/prayer-journal")}
+          style={({ pressed }) => [
+            styles.prayerCard,
+            { backgroundColor: isDark ? "#1A142A" : "#F5F0FF", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="prayer-journal-card"
+        >
+          <View style={styles.prayerCardIcon}>
+            <Ionicons name="journal" size={24} color="#8B5CF6" />
+          </View>
+          <View style={styles.prayerCardInfo}>
+            <Text style={[styles.prayerCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Prayer Journal
+            </Text>
+            <Text style={[styles.prayerCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Record and track your prayers
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#8B5CF6" />
+        </Pressable>
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            More to Explore
+            Study Tools
           </Text>
         </View>
 
@@ -345,50 +230,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 24 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
-  continueCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    gap: 14,
-    marginBottom: 20,
-  },
-  continueIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  continueInfo: { flex: 1 },
-  continueLabel: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  continueTitle: { fontSize: 17, marginBottom: 2 },
-  continueSub: { fontSize: 12 },
-  continueArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  streakRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 28,
-  },
-  streakCard: {
-    flex: 1,
-    alignItems: "center",
-    borderRadius: 18,
-    paddingVertical: 18,
-    gap: 6,
-  },
-  streakNum: { fontSize: 26 },
-  streakLabel: { fontSize: 11, textAlign: "center" as const, lineHeight: 15 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -396,7 +237,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: { fontSize: 22 },
-  viewAll: { fontSize: 13 },
   inspirationScroll: {
     gap: 12,
     paddingBottom: 4,
@@ -430,24 +270,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topicTitle: { color: "#fff", fontSize: 13 },
-  planCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    marginBottom: 10,
-  },
-  planIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  planInfo: { flex: 1 },
-  planTitle: { fontSize: 15, marginBottom: 2 },
-  planMeta: { fontSize: 12 },
   exploreCards: {
     flexDirection: "row",
     gap: 12,
@@ -461,4 +283,23 @@ const styles = StyleSheet.create({
   },
   exploreCardTitle: { color: "#EDE5D5", fontSize: 16, marginTop: 4 },
   exploreCardSub: { color: "rgba(237,229,213,0.6)", fontSize: 12 },
+  prayerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    marginBottom: 28,
+  },
+  prayerCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(139,92,246,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  prayerCardInfo: { flex: 1 },
+  prayerCardTitle: { fontSize: 16, marginBottom: 2 },
+  prayerCardSub: { fontSize: 13 },
 });

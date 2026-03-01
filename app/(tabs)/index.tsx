@@ -596,7 +596,7 @@ function AdultHomeScreen() {
       )}
 
       <Pressable
-        onPress={() => router.push("/(tabs)/study")}
+        onPress={() => router.push("/(tabs)/read")}
         style={({ pressed }) => [
           styles.studyModelCard,
           { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.92 : 1 },
