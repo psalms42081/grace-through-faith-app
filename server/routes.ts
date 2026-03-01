@@ -615,7 +615,15 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
       const data = await resp.json() as any;
       const items = data?.chapter?.content;
       if (!Array.isArray(items) || items.length === 0) return null;
-      return { verses: items.filter((v: any) => v.content && v.content.trim()) };
+      return {
+        verses: items
+          .map((v: any) => {
+            const raw = v.content;
+            const text = Array.isArray(raw) ? raw.join("\n") : (typeof raw === "string" ? raw : "");
+            return { number: v.number, content: text };
+          })
+          .filter((v: any) => v.content && v.content.trim()),
+      };
     } catch {
       return null;
     }
