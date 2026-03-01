@@ -252,6 +252,47 @@ export default function DiscoverScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Christian Content
+          </Text>
+        </View>
+
+        <View style={styles.exploreCards}>
+          <Pressable
+            onPress={() => router.push("/music")}
+            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            testID="music-card"
+          >
+            <LinearGradient
+              colors={["#C9933A", "#8B6914"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.exploreCard}
+            >
+              <Ionicons name="musical-notes" size={28} color="rgba(255,255,255,0.9)" />
+              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Christian Music</Text>
+              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Worship & hymns</Text>
+            </LinearGradient>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/family")}
+            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            testID="family-card"
+          >
+            <LinearGradient
+              colors={["#5B86E5", "#1A3A6B"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.exploreCard}
+            >
+              <Ionicons name="people" size={28} color="rgba(255,255,255,0.9)" />
+              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Family & Faith</Text>
+              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>For the whole family</Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             More to Explore
           </Text>
         </View>

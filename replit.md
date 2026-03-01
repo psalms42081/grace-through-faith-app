@@ -26,6 +26,9 @@ The application is built with a mobile-first approach using **Expo (React Native
 - **User Features:** Notes, highlights, bookmarks, prayer journal (CRUD), and reading history with streak tracking.
 - **Devotionals:** Browser for various devotional plans, enrollment, daily reading, and progress tracking.
 - **Maps & Timeline:** Interactive maps with locations linked to verses and a timeline of biblical events.
+- **Christian Music:** Dedicated music section with Worship & Praise, Classic Hymns, Gospel, Instrumental, 3ABN Music, and Kids categories with external links.
+- **Family & Faith:** Family-focused Christian content section with marriage, parenting, devotionals, health, and faith TV content from 3ABN and Amazing Facts.
+- **Enhanced Topics:** Each topic page now includes curated media content (sermons, TV shows, teaching, music) from Amazing Facts (Doug Batchelor), 3ABN, and classic hymns alongside Scripture verses.
 - **Illustrations:** AI-generated watercolor illustrations enhance visual content.
 
 ## External Dependencies

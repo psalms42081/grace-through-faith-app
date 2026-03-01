@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  Linking,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,13 +22,36 @@ interface TopicVerse {
   chapter: number;
 }
 
+interface MediaItem {
+  title: string;
+  source: string;
+  type: "sermon" | "tv" | "teaching" | "music";
+  description: string;
+  url: string;
+}
+
 interface TopicData {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   gradient: [string, string];
   description: string;
   verses: TopicVerse[];
+  media: MediaItem[];
 }
+
+const MEDIA_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  sermon: "mic",
+  tv: "tv",
+  teaching: "school",
+  music: "musical-notes",
+};
+
+const MEDIA_TYPE_LABEL: Record<string, string> = {
+  sermon: "Sermon",
+  tv: "Watch",
+  teaching: "Teaching",
+  music: "Music",
+};
 
 const TOPICS: Record<string, TopicData> = {
   love: {
@@ -45,6 +69,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "John 15:13", text: "Greater love hath no man than this, that a man lay down his life for his friends.", bookId: 43, chapter: 15 },
       { reference: "Psalm 136:1", text: "O give thanks unto the Lord; for he is good: for his mercy endureth for ever.", bookId: 19, chapter: 136 },
     ],
+    media: [
+      { title: "God's Unconditional Love", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Understanding the depth of God's love for humanity", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+God%27s+unconditional+love+sermon" },
+      { title: "The Love Chapter Explained", source: "3ABN Today", type: "tv", description: "Deep dive into 1 Corinthians 13", url: "https://www.youtube.com/results?search_query=3ABN+Today+love+chapter+1+Corinthians+13" },
+      { title: "Love That Will Not Let Me Go", source: "Amazing Facts", type: "teaching", description: "How God pursues us with relentless love", url: "https://www.youtube.com/results?search_query=Amazing+Facts+love+will+not+let+go" },
+      { title: "O Love That Will Not Let Me Go", source: "Hymn", type: "music", description: "Classic hymn about God's unending love", url: "https://www.youtube.com/results?search_query=O+Love+That+Will+Not+Let+Me+Go+hymn" },
+    ],
   },
   faith: {
     title: "Faith",
@@ -60,6 +90,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "James 1:6", text: "But let him ask in faith, nothing wavering. For he that wavereth is like a wave of the sea driven with the wind and tossed.", bookId: 59, chapter: 1 },
       { reference: "Matthew 17:20", text: "If ye have faith as a grain of mustard seed, ye shall say unto this mountain, Remove hence to yonder place; and it shall remove; and nothing shall be impossible unto you.", bookId: 40, chapter: 17 },
       { reference: "Galatians 2:20", text: "I am crucified with Christ: nevertheless I live; yet not I, but Christ liveth in me: and the life which I now live in the flesh I live by the faith of the Son of God, who loved me, and gave himself for me.", bookId: 48, chapter: 2 },
+    ],
+    media: [
+      { title: "Heroes of Faith", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Exploring Hebrews 11 and the faith hall of fame", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+heroes+of+faith+Hebrews+11" },
+      { title: "Faith That Moves Mountains", source: "3ABN Today", type: "tv", description: "What does mountain-moving faith look like?", url: "https://www.youtube.com/results?search_query=3ABN+Today+faith+moves+mountains" },
+      { title: "Justified by Faith", source: "Amazing Facts", type: "teaching", description: "Understanding righteousness by faith alone", url: "https://www.youtube.com/results?search_query=Amazing+Facts+justified+by+faith" },
+      { title: "My Faith Has Found a Resting Place", source: "Hymn", type: "music", description: "A hymn of assurance and settled faith", url: "https://www.youtube.com/results?search_query=My+Faith+Has+Found+a+Resting+Place+hymn" },
     ],
   },
   prayer: {
@@ -77,6 +113,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Matthew 7:7", text: "Ask, and it shall be given you; seek, and ye shall find; knock, and it shall be opened unto you.", bookId: 40, chapter: 7 },
       { reference: "Romans 8:26", text: "Likewise the Spirit also helpeth our infirmities: for we know not what we should pray for as we ought: but the Spirit itself maketh intercession for us with groanings which cannot be uttered.", bookId: 45, chapter: 8 },
     ],
+    media: [
+      { title: "The Secret of Prayer", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Discovering the power of effective prayer", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+secret+of+prayer+sermon" },
+      { title: "Prayer Warriors", source: "3ABN Today", type: "tv", description: "Stories of answered prayers and prayer ministry", url: "https://www.youtube.com/results?search_query=3ABN+Today+prayer+warriors" },
+      { title: "The Lord's Prayer Explained", source: "Amazing Facts", type: "teaching", description: "Line-by-line study of the model prayer", url: "https://www.youtube.com/results?search_query=Amazing+Facts+Lords+Prayer+explained" },
+      { title: "Sweet Hour of Prayer", source: "Hymn", type: "music", description: "The beloved prayer hymn", url: "https://www.youtube.com/results?search_query=Sweet+Hour+of+Prayer+hymn" },
+    ],
   },
   forgiveness: {
     title: "Forgiveness",
@@ -92,6 +134,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Isaiah 1:18", text: "Come now, and let us reason together, saith the Lord: though your sins be as scarlet, they shall be as white as snow; though they be red like crimson, they shall be as wool.", bookId: 23, chapter: 1 },
       { reference: "Acts 3:19", text: "Repent ye therefore, and be converted, that your sins may be blotted out.", bookId: 44, chapter: 3 },
       { reference: "Micah 7:18", text: "Who is a God like unto thee, that pardoneth iniquity, and passeth by the transgression of the remnant of his heritage? he retaineth not his anger for ever, because he delighteth in mercy.", bookId: 33, chapter: 7 },
+    ],
+    media: [
+      { title: "The Power of Forgiveness", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "How forgiveness transforms lives and relationships", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+power+of+forgiveness+sermon" },
+      { title: "Freedom Through Forgiveness", source: "3ABN Today", type: "tv", description: "Real stories of people set free by forgiving", url: "https://www.youtube.com/results?search_query=3ABN+Today+freedom+through+forgiveness" },
+      { title: "Seventy Times Seven", source: "Amazing Facts", type: "teaching", description: "Jesus' radical teaching on unlimited forgiveness", url: "https://www.youtube.com/results?search_query=Amazing+Facts+seventy+times+seven+forgiveness" },
+      { title: "Forgiven", source: "3ABN Praise Him", type: "music", description: "Songs about God's mercy and pardon", url: "https://www.youtube.com/results?search_query=3ABN+Praise+Him+forgiven+music" },
     ],
   },
   comfort: {
@@ -109,6 +157,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Psalm 46:1", text: "God is our refuge and strength, a very present help in trouble.", bookId: 19, chapter: 46 },
       { reference: "Revelation 21:4", text: "And God shall wipe away all tears from their eyes; and there shall be no more death, neither sorrow, nor crying, neither shall there be any more pain.", bookId: 66, chapter: 21 },
     ],
+    media: [
+      { title: "God's Comfort in Suffering", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Finding God's presence in our darkest hours", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+comfort+suffering+sermon" },
+      { title: "Hope Beyond Grief", source: "3ABN Today", type: "tv", description: "Coping with loss through faith and Scripture", url: "https://www.youtube.com/results?search_query=3ABN+Today+hope+beyond+grief" },
+      { title: "When Bad Things Happen", source: "Amazing Facts", type: "teaching", description: "Understanding suffering from a Biblical perspective", url: "https://www.youtube.com/results?search_query=Amazing+Facts+why+bad+things+happen+Bible" },
+      { title: "It Is Well With My Soul", source: "Hymn", type: "music", description: "The timeless hymn of peace through trials", url: "https://www.youtube.com/results?search_query=It+Is+Well+With+My+Soul+hymn" },
+    ],
   },
   wisdom: {
     title: "Wisdom",
@@ -124,6 +178,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Proverbs 2:6", text: "For the Lord giveth wisdom: out of his mouth cometh knowledge and understanding.", bookId: 20, chapter: 2 },
       { reference: "Ecclesiastes 7:12", text: "For wisdom is a defence, and money is a defence: but the excellency of knowledge is, that wisdom giveth life to them that have it.", bookId: 21, chapter: 7 },
       { reference: "Proverbs 4:7", text: "Wisdom is the principal thing; therefore get wisdom: and with all thy getting get understanding.", bookId: 20, chapter: 4 },
+    ],
+    media: [
+      { title: "Solomon's Wisdom", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Lessons from the wisest man who ever lived", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+Solomon+wisdom+sermon" },
+      { title: "Wisdom for Today", source: "3ABN Today", type: "tv", description: "Applying Proverbs to modern life", url: "https://www.youtube.com/results?search_query=3ABN+Today+wisdom+Proverbs+modern+life" },
+      { title: "The Book of Proverbs", source: "Amazing Facts", type: "teaching", description: "Overview of practical wisdom from Proverbs", url: "https://www.youtube.com/results?search_query=Amazing+Facts+Book+of+Proverbs+study" },
+      { title: "Guide Me O Thou Great Jehovah", source: "Hymn", type: "music", description: "A prayer for God's guidance and wisdom", url: "https://www.youtube.com/results?search_query=Guide+Me+O+Thou+Great+Jehovah+hymn" },
     ],
   },
   strength: {
@@ -141,6 +201,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Psalm 27:1", text: "The Lord is my light and my salvation; whom shall I fear? the Lord is the strength of my life; of whom shall I be afraid?", bookId: 19, chapter: 27 },
       { reference: "Ephesians 6:10", text: "Finally, my brethren, be strong in the Lord, and in the power of his might.", bookId: 49, chapter: 6 },
     ],
+    media: [
+      { title: "Strength in Weakness", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "How God's power shows up in our weakness", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+strength+weakness+sermon" },
+      { title: "Armor of God Series", source: "3ABN", type: "tv", description: "Equipping believers with spiritual armor", url: "https://www.youtube.com/results?search_query=3ABN+armor+of+God+series" },
+      { title: "Overcoming Temptation", source: "Amazing Facts", type: "teaching", description: "Finding strength to resist through Christ", url: "https://www.youtube.com/results?search_query=Amazing+Facts+overcoming+temptation+Bible" },
+      { title: "A Mighty Fortress Is Our God", source: "Martin Luther", type: "music", description: "The Reformation hymn of God's might", url: "https://www.youtube.com/results?search_query=A+Mighty+Fortress+Is+Our+God+hymn" },
+    ],
   },
   peace: {
     title: "Peace",
@@ -156,6 +222,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Colossians 3:15", text: "And let the peace of God rule in your hearts, to the which also ye are called in one body; and be ye thankful.", bookId: 51, chapter: 3 },
       { reference: "Psalm 4:8", text: "I will both lay me down in peace, and sleep: for thou, Lord, only makest me dwell in safety.", bookId: 19, chapter: 4 },
       { reference: "Matthew 5:9", text: "Blessed are the peacemakers: for they shall be called the children of God.", bookId: 40, chapter: 5 },
+    ],
+    media: [
+      { title: "The Prince of Peace", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Finding true peace through Jesus Christ", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+Prince+of+Peace+sermon" },
+      { title: "Peace in the Storm", source: "3ABN Today", type: "tv", description: "Testimonies of finding calm in chaos", url: "https://www.youtube.com/results?search_query=3ABN+Today+peace+in+the+storm" },
+      { title: "Anxiety and the Bible", source: "Amazing Facts", type: "teaching", description: "Biblical strategies for overcoming worry", url: "https://www.youtube.com/results?search_query=Amazing+Facts+anxiety+worry+Bible+solution" },
+      { title: "Peace Like a River", source: "Hymn", type: "music", description: "When peace like a river attendeth my way", url: "https://www.youtube.com/results?search_query=Peace+Like+a+River+hymn+It+Is+Well" },
     ],
   },
   hope: {
@@ -173,6 +245,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "1 Peter 1:3", text: "Blessed be the God and Father of our Lord Jesus Christ, which according to his abundant mercy hath begotten us again unto a lively hope by the resurrection of Jesus Christ from the dead.", bookId: 60, chapter: 1 },
       { reference: "Psalm 42:11", text: "Why art thou cast down, O my soul? and why art thou disquieted within me? hope thou in God: for I shall yet praise him, who is the health of my countenance, and my God.", bookId: 19, chapter: 42 },
     ],
+    media: [
+      { title: "The Blessed Hope", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "The second coming of Christ — our greatest hope", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+blessed+hope+second+coming" },
+      { title: "Hope in Dark Times", source: "3ABN Today", type: "tv", description: "Finding hope when the world seems hopeless", url: "https://www.youtube.com/results?search_query=3ABN+Today+hope+dark+times" },
+      { title: "Revelation's Hope", source: "Amazing Facts", type: "teaching", description: "Hope-filled messages from the book of Revelation", url: "https://www.youtube.com/results?search_query=Amazing+Facts+Revelation+hope+prophecy" },
+      { title: "My Hope Is Built", source: "Edward Mote", type: "music", description: "On Christ the solid rock I stand", url: "https://www.youtube.com/results?search_query=My+Hope+Is+Built+hymn+solid+rock" },
+    ],
   },
   grace: {
     title: "Grace",
@@ -188,6 +266,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "James 4:6", text: "But he giveth more grace. Wherefore he saith, God resisteth the proud, but giveth grace unto the humble.", bookId: 59, chapter: 4 },
       { reference: "John 1:16", text: "And of his fulness have all we received, and grace for grace.", bookId: 43, chapter: 1 },
       { reference: "Hebrews 4:16", text: "Let us therefore come boldly unto the throne of grace, that we may obtain mercy, and find grace to help in time of need.", bookId: 58, chapter: 4 },
+    ],
+    media: [
+      { title: "Amazing Grace — The Story", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "The transforming power of God's grace", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+amazing+grace+sermon" },
+      { title: "Grace and Law", source: "3ABN Today", type: "tv", description: "Understanding the relationship between grace and obedience", url: "https://www.youtube.com/results?search_query=3ABN+Today+grace+and+law" },
+      { title: "Saved by Grace", source: "Amazing Facts", type: "teaching", description: "What it truly means to be saved by grace through faith", url: "https://www.youtube.com/results?search_query=Amazing+Facts+saved+by+grace+through+faith" },
+      { title: "Amazing Grace", source: "John Newton", type: "music", description: "The world's most beloved hymn", url: "https://www.youtube.com/results?search_query=Amazing+Grace+hymn+traditional" },
     ],
   },
   courage: {
@@ -205,6 +289,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Psalm 31:24", text: "Be of good courage, and he shall strengthen your heart, all ye that hope in the Lord.", bookId: 19, chapter: 31 },
       { reference: "1 Chronicles 28:20", text: "Be strong and of good courage, and do it: fear not, nor be dismayed: for the Lord God, even my God, will be with thee.", bookId: 13, chapter: 28 },
     ],
+    media: [
+      { title: "Courage in the Last Days", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Standing firm for truth in challenging times", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+courage+last+days+sermon" },
+      { title: "Daniel's Courage", source: "3ABN", type: "tv", description: "Lessons in courage from Daniel and the lion's den", url: "https://www.youtube.com/results?search_query=3ABN+Daniel+courage+lions+den" },
+      { title: "Dare to Stand Alone", source: "Amazing Facts", type: "teaching", description: "Being bold for God even when standing alone", url: "https://www.youtube.com/results?search_query=Amazing+Facts+dare+stand+alone+courage" },
+      { title: "Stand Up Stand Up for Jesus", source: "George Duffield", type: "music", description: "A rousing call to Christian courage", url: "https://www.youtube.com/results?search_query=Stand+Up+Stand+Up+for+Jesus+hymn" },
+    ],
   },
   joy: {
     title: "Joy",
@@ -221,6 +311,12 @@ const TOPICS: Record<string, TopicData> = {
       { reference: "Galatians 5:22", text: "But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith.", bookId: 48, chapter: 5 },
       { reference: "Philippians 4:4", text: "Rejoice in the Lord alway: and again I say, Rejoice.", bookId: 50, chapter: 4 },
     ],
+    media: [
+      { title: "The Joy of the Lord", source: "Doug Batchelor - Amazing Facts", type: "sermon", description: "Discovering joy that doesn't depend on circumstances", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+joy+of+the+Lord+sermon" },
+      { title: "Joy in the Journey", source: "3ABN Today", type: "tv", description: "Finding joy in every stage of the Christian walk", url: "https://www.youtube.com/results?search_query=3ABN+Today+joy+journey+Christian" },
+      { title: "Fruit of the Spirit: Joy", source: "Amazing Facts", type: "teaching", description: "Understanding joy as a fruit of the Spirit", url: "https://www.youtube.com/results?search_query=Amazing+Facts+fruit+Spirit+joy" },
+      { title: "Joyful Joyful We Adore Thee", source: "Henry van Dyke", type: "music", description: "Beethoven's Ode to Joy with Christian lyrics", url: "https://www.youtube.com/results?search_query=Joyful+Joyful+We+Adore+Thee+hymn" },
+    ],
   },
 };
 
@@ -233,6 +329,10 @@ export default function TopicScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const topic = TOPICS[id ?? ""] ?? TOPICS.love;
+
+  const openLink = (url: string) => {
+    Linking.openURL(url);
+  };
 
   return (
     <>
@@ -251,12 +351,20 @@ export default function TopicScreen() {
           <Ionicons name={topic.icon} size={40} color="rgba(255,255,255,0.9)" />
           <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>{topic.title}</Text>
           <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]}>{topic.description}</Text>
-          <View style={styles.heroBadge}>
-            <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>{topic.verses.length} Verses</Text>
+          <View style={styles.heroBadgeRow}>
+            <View style={styles.heroBadge}>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>{topic.verses.length} Verses</Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>{topic.media.length} Media</Text>
+            </View>
           </View>
         </LinearGradient>
 
         <View style={styles.versesSection}>
+          <Text style={[styles.sectionLabel, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Scripture
+          </Text>
           {topic.verses.map((v, i) => (
             <Pressable
               key={i}
@@ -278,6 +386,52 @@ export default function TopicScreen() {
             </Pressable>
           ))}
         </View>
+
+        <View style={styles.mediaSection}>
+          <Text style={[styles.sectionLabel, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Sermons & Teaching
+          </Text>
+          <Text style={[styles.sectionSubLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Content from Amazing Facts, 3ABN, and more
+          </Text>
+
+          {topic.media.map((item, idx) => (
+            <Pressable
+              key={idx}
+              onPress={() => openLink(item.url)}
+              style={({ pressed }) => [
+                styles.mediaCard,
+                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
+              ]}
+            >
+              <LinearGradient
+                colors={topic.gradient}
+                style={styles.mediaIconWrap}
+              >
+                <Ionicons name={MEDIA_TYPE_ICON[item.type] || "play"} size={16} color="#fff" />
+              </LinearGradient>
+              <View style={styles.mediaInfo}>
+                <View style={styles.mediaTopRow}>
+                  <Text style={[styles.mediaTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <View style={[styles.mediaTypeBadge, { backgroundColor: topic.gradient[0] + "18" }]}>
+                    <Text style={[styles.mediaTypeText, { color: topic.gradient[0], fontFamily: "Inter_600SemiBold" }]}>
+                      {MEDIA_TYPE_LABEL[item.type] || item.type}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.mediaSource, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  {item.source}
+                </Text>
+                <Text style={[styles.mediaDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              </View>
+              <Ionicons name="open-outline" size={16} color={theme.textMuted} />
+            </Pressable>
+          ))}
+        </View>
       </ScrollView>
     </>
   );
@@ -295,12 +449,12 @@ const styles = StyleSheet.create({
   },
   heroTitle: { color: "#fff", fontSize: 32 },
   heroDesc: { color: "rgba(255,255,255,0.85)", fontSize: 15, lineHeight: 22, textAlign: "center" },
+  heroBadgeRow: { flexDirection: "row", gap: 8, marginTop: 4 },
   heroBadge: {
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    marginTop: 4,
   },
   heroBadgeText: { color: "#fff", fontSize: 12 },
   versesSection: {
@@ -308,6 +462,8 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 12,
   },
+  sectionLabel: { fontSize: 22, marginBottom: 4 },
+  sectionSubLabel: { fontSize: 13, marginBottom: 8, marginTop: -4 },
   verseCard: {
     borderRadius: 18,
     padding: 18,
@@ -325,4 +481,38 @@ const styles = StyleSheet.create({
   },
   verseRef: { fontSize: 13 },
   verseText: { fontSize: 16, lineHeight: 26 },
+  mediaSection: {
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    gap: 10,
+  },
+  mediaCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  mediaIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mediaInfo: { flex: 1, gap: 2 },
+  mediaTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  mediaTitle: { fontSize: 15, flex: 1 },
+  mediaTypeBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  mediaTypeText: { fontSize: 10 },
+  mediaSource: { fontSize: 12 },
+  mediaDesc: { fontSize: 11, lineHeight: 16 },
 });
