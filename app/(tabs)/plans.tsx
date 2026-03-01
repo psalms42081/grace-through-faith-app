@@ -130,7 +130,7 @@ export default function PlansScreen() {
         >
           {hasActivePlan ? (
             <Pressable
-              onPress={() => router.push("/devotional-day")}
+              onPress={() => router.push(`/devotional-day?planId=${todayData?.enrollment?.planId || ""}`)}
               style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
             >
               <LinearGradient

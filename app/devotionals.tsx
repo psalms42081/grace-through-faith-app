@@ -70,9 +70,10 @@ export default function DevotionalsScreen() {
         planId,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/devotionals/today?userId=guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=guest&planId=${planId}`] });
       router.back();
       setTimeout(() => {
-        router.push("/devotional-day");
+        router.push(`/devotional-day?planId=${planId}`);
       }, 300);
     } catch {
       setEnrolling(false);

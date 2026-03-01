@@ -740,7 +740,9 @@ function AdultHomeScreen() {
 
       <Pressable
         onPress={() => {
-          if (hasActivePlan) {
+          if (hasActivePlan && todayData?.enrollment?.planId) {
+            router.push(`/devotional-day?planId=${todayData.enrollment.planId}`);
+          } else if (hasActivePlan) {
             router.push("/devotional-day");
           } else {
             router.push("/devotionals");

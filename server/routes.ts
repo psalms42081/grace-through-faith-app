@@ -952,20 +952,24 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
 
   app.get("/api/devotionals/today", async (req, res) => {
     try {
-      const { userId } = req.query;
+      const { userId, planId } = req.query;
       if (!userId) {
         return res.status(400).json({ error: "userId is required" });
+      }
+
+      const conditions = [
+        eq(userPlanEnrollments.userId, String(userId)),
+        eq(userPlanEnrollments.isActive, true),
+      ];
+      if (planId) {
+        conditions.push(eq(userPlanEnrollments.planId, String(planId)));
       }
 
       const activeEnrollment = await db
         .select()
         .from(userPlanEnrollments)
-        .where(
-          and(
-            eq(userPlanEnrollments.userId, String(userId)),
-            eq(userPlanEnrollments.isActive, true)
-          )
-        )
+        .where(and(...conditions))
+        .orderBy(desc(userPlanEnrollments.enrolledAt))
         .limit(1);
 
       if (!activeEnrollment.length) {

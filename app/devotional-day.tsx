@@ -11,7 +11,7 @@ import {
   TextInput,
   Linking,
 } from "react-native";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -61,6 +61,7 @@ interface PassageResponse {
 }
 
 export default function DevotionalDayScreen() {
+  const { planId } = useLocalSearchParams<{ planId?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
@@ -71,8 +72,12 @@ export default function DevotionalDayScreen() {
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const todayQueryKey = planId
+    ? `/api/devotionals/today?userId=guest&planId=${planId}`
+    : "/api/devotionals/today?userId=guest";
+
   const { data: todayData, isLoading } = useQuery<TodayResponse>({
-    queryKey: ["/api/devotionals/today?userId=guest"],
+    queryKey: [todayQueryKey],
   });
 
   const day = todayData?.today;
@@ -107,6 +112,7 @@ export default function DevotionalDayScreen() {
         journalEntry: journalText.trim() || null,
       });
       setCompleted(true);
+      queryClient.invalidateQueries({ queryKey: [todayQueryKey] });
       queryClient.invalidateQueries({ queryKey: ["/api/devotionals/today?userId=guest"] });
     } catch {
       setCompleting(false);
