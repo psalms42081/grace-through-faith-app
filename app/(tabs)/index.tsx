@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -476,6 +477,53 @@ export default function HomeScreen() {
   return <AdultHomeScreen />;
 }
 
+const VERSE_BACKGROUNDS = [
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80",
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80",
+  "https://images.unsplash.com/photo-1465056836900-8f1e940f1a04?w=800&q=80",
+  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&q=80",
+  "https://images.unsplash.com/photo-1518173946687-a3e33105820b?w=800&q=80",
+  "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
+];
+
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+interface WeeklyStreakData {
+  daysRead: boolean[];
+  perfectWeeks: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastReadDate: string | null;
+}
+
+function WeeklyCalendar({ data, theme, isDark }: { data: WeeklyStreakData; theme: typeof Colors.dark; isDark: boolean }) {
+  const todayIdx = new Date().getDay();
+  return (
+    <View style={s.weekRow}>
+      {DAY_LABELS.map((label, i) => {
+        const isToday = i === todayIdx;
+        const didRead = data.daysRead[i];
+        return (
+          <View key={i} style={s.weekDayCol}>
+            <Text style={[s.weekLabel, { color: isToday ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+              {label}
+            </Text>
+            <View
+              style={[
+                s.weekDot,
+                didRead && s.weekDotFilled,
+                isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 },
+                didRead && { backgroundColor: theme.accent },
+              ]}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function AdultHomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -488,6 +536,12 @@ function AdultHomeScreen() {
 
   const greeting = useMemo(() => getGreeting(), []);
   const verse = useMemo(() => getTodaysVerse(), []);
+  const bgImage = useMemo(() => {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+    );
+    return VERSE_BACKGROUNDS[dayOfYear % VERSE_BACKGROUNDS.length];
+  }, []);
 
   const { data: todayData } = useQuery<TodayResponse>({
     queryKey: ["/api/devotionals/today?userId=guest"],
@@ -501,250 +555,319 @@ function AdultHomeScreen() {
     queryKey: ["/api/reading-history/recent?userId=guest"],
   });
 
-  const { data: streakData } = useQuery<{ currentStreak: number; longestStreak: number }>({
-    queryKey: ["/api/reading-streaks?userId=guest"],
+  const { data: weeklyData } = useQuery<WeeklyStreakData>({
+    queryKey: ["/api/reading-streaks/weekly?userId=guest"],
   });
 
   const lastRead = recentReads?.[0];
-  const streak = streakData?.currentStreak ?? 0;
+  const streak = weeklyData?.currentStreak ?? 0;
+  const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
 
   const hasActivePlan = todayData?.today != null;
-  const planComplete = todayData?.planComplete;
   const progress = todayData?.completedCount ?? 0;
   const total = todayData?.totalDays ?? 1;
 
-  const PLAN_GRADIENTS: [string, string][] = [
+  const PLAN_COLORS: [string, string][] = [
     ["#C9933A", "#A87828"],
     ["#2E7D32", "#1B5E20"],
-    ["#1A1F3C", "#0D1025"],
+    ["#3B6CB5", "#2A4F8F"],
   ];
+  const PLAN_ICONS: ("heart" | "leaf" | "star" | "book" | "sunny")[] = ["heart", "leaf", "star", "book", "sunny"];
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[s.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
-        styles.content,
-        { paddingTop: topPad + 16, paddingBottom: bottomPad + 120 },
+        s.content,
+        { paddingTop: topPad + 12, paddingBottom: bottomPad + 120 },
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          {greeting}
-        </Text>
-        <Text style={[styles.tagline, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Dive deeper{"\n"}into the Word
-        </Text>
+      <View style={s.headerRow}>
+        <View>
+          <Text style={[s.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {greeting}
+          </Text>
+          <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Grace through Faith
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => enterKidsMode()}
+          style={[s.profileBtn, { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" }]}
+          testID="enter-kids-mode"
+        >
+          <Ionicons name="people" size={20} color={theme.accent} />
+        </Pressable>
       </View>
 
-      <LinearGradient
-        colors={isDark ? ["#14172E", "#0D1028", "#080A18"] : ["#1A1F3C", "#141833", "#0F1228"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.verseCard}
-      >
-        <View style={styles.verseCardAccent} />
-        <View style={styles.verseCardInner}>
-          <View style={styles.verseBadge}>
-            <View style={styles.verseBadgeDot} />
-            <Text style={[styles.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
-              Verse of the Day
-            </Text>
-          </View>
-
-          <Text style={[styles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-            {"\u201C"}{verse.text}{"\u201D"}
-          </Text>
-
-          <View style={styles.verseFooter}>
-            <Text style={[styles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
-              {verse.reference}
-            </Text>
-            <View style={styles.verseTransBadge}>
-              <Text style={[styles.verseTrans, { fontFamily: "Inter_500Medium" }]}>KJV</Text>
-            </View>
-          </View>
-        </View>
-      </LinearGradient>
-
-      {(lastRead || streak > 0) && (
-        <View style={styles.continueStreakRow}>
-          {lastRead && (
-            <Pressable
-              onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
-              style={({ pressed }) => [
-                styles.continueReadCard,
-                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1, flex: streak > 0 ? 1 : undefined },
-              ]}
-              testID="home-continue-reading"
-            >
-              <Ionicons name="book" size={20} color={theme.accent} />
-              <Text style={[styles.continueReadLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>CONTINUE</Text>
-              <Text style={[styles.continueReadTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-                {lastRead.bookName} {lastRead.chapter}
+      <View style={s.verseCardWrap}>
+        <ImageBackground
+          source={{ uri: bgImage }}
+          style={s.verseImageBg}
+          imageStyle={s.verseImageStyle}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
+            style={s.verseOverlay}
+          >
+            <View style={s.verseBadge}>
+              <View style={s.verseBadgeDot} />
+              <Text style={[s.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+                Verse of the Day
               </Text>
-            </Pressable>
-          )}
-          {streak > 0 && (
-            <View style={[styles.streakHomeCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-              <Ionicons name="flame" size={22} color="#FF6B35" />
-              <Text style={[styles.streakHomeNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-              <Text style={[styles.streakHomeLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Day Streak</Text>
             </View>
-          )}
+
+            <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+              {"\u201C"}{verse.text}{"\u201D"}
+            </Text>
+
+            <View style={s.verseFooter}>
+              <View>
+                <Text style={[s.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
+                  {verse.reference}
+                </Text>
+                <Text style={[s.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
+              </View>
+              <View style={s.verseActions}>
+                <Pressable style={s.verseActionBtn} hitSlop={8}>
+                  <Ionicons name="heart-outline" size={20} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+                <Pressable style={s.verseActionBtn} hitSlop={8}>
+                  <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+                <Pressable style={s.verseActionBtn} hitSlop={8}>
+                  <Ionicons name="bookmark-outline" size={20} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+              </View>
+            </View>
+          </LinearGradient>
+        </ImageBackground>
+      </View>
+
+      {weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) && (
+        <View style={[s.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+          <View style={s.streakHeader}>
+            <View style={s.streakLeft}>
+              <Ionicons name="flame" size={28} color="#FF6B35" />
+              <View>
+                <Text style={[s.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                  {streak}
+                </Text>
+                <Text style={[s.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Day Streak
+                </Text>
+              </View>
+            </View>
+            {perfectWeeks > 0 && (
+              <View style={[s.perfectBadge, { backgroundColor: theme.accent + "15" }]}>
+                <Ionicons name="trophy" size={14} color={theme.accent} />
+                <Text style={[s.perfectText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {perfectWeeks} Perfect {perfectWeeks === 1 ? "Week" : "Weeks"}
+                </Text>
+              </View>
+            )}
+          </View>
+          <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
         </View>
       )}
 
-      <Pressable
-        onPress={() => router.push("/(tabs)/read")}
-        style={({ pressed }) => [
-          styles.studyModelCard,
-          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.92 : 1 },
-        ]}
-      >
-        <Text style={[styles.studyModelLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-          HOW IT WORKS
-        </Text>
-        <Text style={[styles.studyModelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          The 4-Layer Study Model
-        </Text>
-        <View style={styles.layersRow}>
-          {STUDY_LAYERS.map((layer, idx) => (
-            <View key={layer.title} style={styles.layerItem}>
-              <LinearGradient
-                colors={[
-                  ["#C9933A", "#A87828"],
-                  ["#2E7D32", "#1B5E20"],
-                  ["#3B6CB5", "#2A4F8F"],
-                  ["#8B5CF6", "#6D3BD4"],
-                ][idx] as [string, string]}
-                style={styles.layerIcon}
-              >
-                <Text style={[styles.layerNum, { color: "#fff", fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
-              </LinearGradient>
-              <Text style={[styles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {layer.title}
-              </Text>
-              <Text style={[styles.layerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {layer.desc}
-              </Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.studyModelFooter}>
-          <Text style={[styles.studyModelFooterText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Read, understand context, hear historic voices, then apply
-          </Text>
-          <LinearGradient colors={["#C9933A", "#A87828"]} style={styles.studyModelArrow}>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
-          </LinearGradient>
-        </View>
-      </Pressable>
-
-      <View style={styles.actionRow}>
+      {lastRead && (
         <Pressable
-          onPress={() => {
-            if (hasActivePlan) {
-              router.push("/devotional-day");
-            } else {
-              router.push("/devotionals");
-            }
-          }}
-          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
+          style={({ pressed }) => [
+            s.continueCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="home-continue-reading"
         >
           <LinearGradient
-            colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
-            style={styles.actionCard}
+            colors={["#C9933A", "#A87828"]}
+            style={s.continueIcon}
           >
-            <View style={[styles.actionIconWrap, { backgroundColor: theme.accent + "20" }]}>
-              <Ionicons name="flame" size={22} color={theme.accent} />
-            </View>
-            <Text style={[styles.actionCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {hasActivePlan ? "Continue Plan" : "Devotionals"}
+            <Ionicons name="book" size={18} color="#fff" />
+          </LinearGradient>
+          <View style={s.continueInfo}>
+            <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Continue Reading
             </Text>
-            {hasActivePlan && (
-              <View style={[styles.actionProgress, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
-                <View style={[styles.actionProgressFill, { backgroundColor: theme.accent, width: `${Math.min((progress / total) * 100, 100)}%` as any }]} />
-              </View>
-            )}
-            {!hasActivePlan && (
-              <Text style={[styles.actionCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Guided plans
-              </Text>
-            )}
+            <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+              {lastRead.bookName} {lastRead.chapter}
+            </Text>
+          </View>
+          <Ionicons name="play-circle" size={32} color={theme.accent} />
+        </Pressable>
+      )}
+
+      <View style={s.guidedRow}>
+        <Pressable
+          onPress={() => router.push("/(tabs)/read")}
+          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+        >
+          <LinearGradient
+            colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.guidedCard}
+          >
+            <View style={s.guidedIconWrap}>
+              <Ionicons name="layers" size={20} color="#C9933A" />
+            </View>
+            <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
+            <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Deep Bible analysis</Text>
           </LinearGradient>
         </Pressable>
 
         <Pressable
-          onPress={() => enterKidsMode()}
-          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
-          testID="enter-kids-mode"
+          onPress={() => router.push("/prayer-journal")}
+          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
         >
           <LinearGradient
-            colors={["#4A90D9", "#3570B0"]}
+            colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.actionCard}
+            style={s.guidedCard}
           >
-            <View style={styles.kidsIconWrap}>
-              <Ionicons name="people" size={22} color="#fff" />
+            <View style={[s.guidedIconWrap, { backgroundColor: "rgba(102,187,106,0.15)" }]}>
+              <Ionicons name="journal" size={20} color="#66BB6A" />
             </View>
-            <Text style={[styles.actionCardTitle, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
-              Kids Club
-            </Text>
-            <Text style={[styles.actionCardSub, { color: "rgba(255,255,255,0.7)", fontFamily: "Inter_400Regular" }]}>
-              Stories & quizzes
-            </Text>
+            <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Prayer Journal</Text>
+            <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Your prayer life</Text>
           </LinearGradient>
         </Pressable>
       </View>
 
+      <Pressable
+        onPress={() => {
+          if (hasActivePlan) {
+            router.push("/devotional-day");
+          } else {
+            router.push("/devotionals");
+          }
+        }}
+        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+      >
+        <LinearGradient
+          colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
+          style={s.devotionalCard}
+        >
+          <View style={s.devotionalLeft}>
+            <View style={[s.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
+              <Ionicons name="flame" size={22} color={theme.accent} />
+            </View>
+            <View style={s.devotionalInfo}>
+              <Text style={[s.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {hasActivePlan ? "Continue Your Plan" : "Devotional Plans"}
+              </Text>
+              <Text style={[s.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {hasActivePlan
+                  ? `Day ${progress} of ${total}`
+                  : "Guided daily reading"}
+              </Text>
+            </View>
+          </View>
+          {hasActivePlan && (
+            <View style={s.devotionalProgress}>
+              <View style={[s.devotionalProgressTrack, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
+                <LinearGradient
+                  colors={["#C9933A", "#A87828"]}
+                  style={[s.devotionalProgressFill, { width: `${Math.min((progress / total) * 100, 100)}%` as any }]}
+                />
+              </View>
+            </View>
+          )}
+          {!hasActivePlan && (
+            <Ionicons name="chevron-forward" size={20} color={theme.accent} />
+          )}
+        </LinearGradient>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push("/(tabs)/read")}
+        style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
+      >
+        <View style={[s.studyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+          <Text style={[s.sectionLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            HOW IT WORKS
+          </Text>
+          <Text style={[s.studyTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            The 4-Layer Study Model
+          </Text>
+          <View style={s.layersRow}>
+            {STUDY_LAYERS.map((layer, idx) => (
+              <View key={layer.title} style={s.layerItem}>
+                <LinearGradient
+                  colors={[
+                    ["#C9933A", "#A87828"],
+                    ["#2E7D32", "#1B5E20"],
+                    ["#3B6CB5", "#2A4F8F"],
+                    ["#8B5CF6", "#6D3BD4"],
+                  ][idx] as [string, string]}
+                  style={s.layerCircle}
+                >
+                  <Text style={[s.layerNum, { fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
+                </LinearGradient>
+                <Text style={[s.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {layer.title}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <View style={s.studyFooter}>
+            <Text style={[s.studyFooterText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Read, understand context, hear historic voices, then apply
+            </Text>
+            <LinearGradient colors={["#C9933A", "#A87828"]} style={s.studyArrow}>
+              <Ionicons name="arrow-forward" size={14} color="#fff" />
+            </LinearGradient>
+          </View>
+        </View>
+      </Pressable>
+
       {plans && plans.length > 0 && (
-        <View style={styles.plansSection}>
-          <View style={styles.plansSectionHeader}>
-            <Text style={[styles.plansSectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+        <View style={s.plansSection}>
+          <View style={s.plansSectionHeader}>
+            <Text style={[s.plansSectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               Featured Plans
             </Text>
             {plans.length > 3 && (
               <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
-                <Text style={[styles.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[s.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                   View All
                 </Text>
               </Pressable>
             )}
           </View>
-          {plans.slice(0, 3).map((plan, i) => (
-            <Pressable
-              key={plan.id}
-              onPress={() => router.push("/devotionals")}
-              style={({ pressed }) => [
-                styles.planRow,
-                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.75 : 1 },
-              ]}
-            >
-              <LinearGradient
-                colors={PLAN_GRADIENTS[i % PLAN_GRADIENTS.length]}
-                style={styles.planIconGradient}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.plansScroll}>
+            {plans.slice(0, 5).map((plan, i) => (
+              <Pressable
+                key={plan.id}
+                onPress={() => router.push("/devotionals")}
+                style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
               >
-                <Ionicons
-                  name={i === 0 ? "heart" : i === 1 ? "leaf" : "star"}
-                  size={18}
-                  color="#fff"
-                />
-              </LinearGradient>
-              <View style={styles.planText}>
-                <Text style={[styles.planTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                  {plan.title}
-                </Text>
-                <Text style={[styles.planMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {plan.totalDays} days{plan.estimatedMinutesPerDay ? ` \u00B7 ~${plan.estimatedMinutesPerDay} min/day` : ""}
-                </Text>
-              </View>
-              <View style={[styles.planArrow, { backgroundColor: theme.accent + "15" }]}>
-                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
-              </View>
-            </Pressable>
-          ))}
+                <LinearGradient
+                  colors={PLAN_COLORS[i % PLAN_COLORS.length]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.planCard}
+                >
+                  <Ionicons
+                    name={PLAN_ICONS[i % PLAN_ICONS.length]}
+                    size={28}
+                    color="rgba(255,255,255,0.3)"
+                    style={s.planBgIcon}
+                  />
+                  <Text style={[s.planTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                    {plan.title}
+                  </Text>
+                  <Text style={[s.planMeta, { fontFamily: "Inter_400Regular" }]}>
+                    {plan.totalDays} days
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       )}
     </ScrollView>
@@ -756,220 +879,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 22 },
   header: { marginBottom: 28 },
   greeting: { fontSize: 14, letterSpacing: 0.5, marginBottom: 8 },
-  tagline: { fontSize: 32, letterSpacing: -0.3, lineHeight: 40 },
-  verseCard: {
-    borderRadius: 24,
-    marginBottom: 28,
-    overflow: "hidden",
-  },
-  verseCardAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 4,
-    height: "100%",
-    backgroundColor: "#C9933A",
-    borderTopLeftRadius: 24,
-    borderBottomLeftRadius: 24,
-  },
-  verseCardInner: {
-    padding: 28,
-    paddingVertical: 36,
-    paddingLeft: 32,
-  },
-  verseBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 20,
-  },
-  verseBadgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#C9933A",
-  },
-  verseBadgeText: {
-    color: "#C9933A",
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  verseText: {
-    color: "#EDE5D5",
-    fontSize: 22,
-    lineHeight: 36,
-    marginBottom: 24,
-  },
-  verseFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  verseRef: { color: "#C9933A", fontSize: 16 },
-  verseTransBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: "#C9933A20",
-  },
-  verseTrans: { color: "#C9933A", fontSize: 11, letterSpacing: 0.5 },
-  studyModelCard: {
-    borderRadius: 22,
-    padding: 24,
-    marginBottom: 28,
-  },
-  studyModelLabel: {
-    fontSize: 11,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  studyModelTitle: { fontSize: 22, marginBottom: 22 },
-  layersRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 22,
-  },
-  layerItem: {
-    alignItems: "center",
-    gap: 7,
-    flex: 1,
-  },
-  layerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  layerNum: { fontSize: 18 },
-  layerTitle: { fontSize: 12 },
-  layerDesc: { fontSize: 10, textAlign: "center" as const, marginTop: 1 },
-  studyModelFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(201,147,58,0.15)",
-    paddingTop: 18,
-  },
-  studyModelFooterText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  studyModelArrow: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 14,
-    marginBottom: 32,
-  },
-  actionCard: {
-    borderRadius: 20,
-    padding: 22,
-    gap: 8,
-  },
-  actionIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  kidsIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  actionCardTitle: { fontSize: 17, marginTop: 2 },
-  actionCardSub: { fontSize: 12, lineHeight: 17 },
-  actionProgress: {
-    height: 5,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginTop: 6,
-  },
-  actionProgressFill: {
-    height: 5,
-    borderRadius: 3,
-  },
-  plansSection: { marginBottom: 16 },
-  plansSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  plansSectionTitle: { fontSize: 24 },
-  viewAllText: { fontSize: 13 },
-  planRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    padding: 18,
-    borderRadius: 18,
-    marginBottom: 10,
-  },
-  planIconGradient: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  planIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  planText: { flex: 1 },
-  planTitle: { fontSize: 16 },
-  planMeta: { fontSize: 12, marginTop: 3 },
-  planArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  continueStreakRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-  continueReadCard: {
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    gap: 6,
-  },
-  continueReadLabel: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-  },
-  continueReadTitle: {
-    fontSize: 15,
-    marginTop: 2,
-  },
-  streakHomeCard: {
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    gap: 4,
-    minWidth: 90,
-  },
-  streakHomeNum: { fontSize: 26 },
-  streakHomeLabel: { fontSize: 11 },
+  appName: { fontSize: 28, letterSpacing: -0.3 },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -981,4 +891,280 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
   },
+});
+
+const s = StyleSheet.create({
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
+  headerTitle: { fontSize: 26, letterSpacing: -0.3 },
+  profileBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  verseCardWrap: {
+    borderRadius: 22,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  verseImageBg: {
+    width: "100%",
+    minHeight: 280,
+  },
+  verseImageStyle: {
+    borderRadius: 22,
+  },
+  verseOverlay: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 28,
+    justifyContent: "flex-end",
+    minHeight: 280,
+  },
+  verseBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  verseBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#C9933A",
+  },
+  verseBadgeText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  verseText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    lineHeight: 32,
+    marginBottom: 20,
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  verseFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  verseRef: { color: "#C9933A", fontSize: 16, marginBottom: 2 },
+  verseTrans: { color: "rgba(255,255,255,0.5)", fontSize: 11 },
+  verseActions: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  verseActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  streakCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  streakHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  streakLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  streakNum: { fontSize: 28, lineHeight: 30 },
+  streakLabel: { fontSize: 12 },
+  perfectBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  perfectText: { fontSize: 12 },
+  weekRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  weekDayCol: {
+    alignItems: "center",
+    gap: 8,
+  },
+  weekLabel: { fontSize: 12 },
+  weekDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(128,128,128,0.15)",
+  },
+  weekDotFilled: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  continueCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+  },
+  continueIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  continueInfo: { flex: 1 },
+  continueLabel: { fontSize: 12, marginBottom: 2 },
+  continueTitle: { fontSize: 17 },
+  guidedRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  guidedCard: {
+    borderRadius: 18,
+    padding: 20,
+    gap: 8,
+  },
+  guidedIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(201,147,58,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  guidedTitle: { color: "#fff", fontSize: 15 },
+  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
+  devotionalCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 20,
+  },
+  devotionalLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+  },
+  devotionalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  devotionalInfo: { flex: 1 },
+  devotionalTitle: { fontSize: 16, marginBottom: 2 },
+  devotionalSub: { fontSize: 13 },
+  devotionalProgress: { width: 56, marginLeft: 12 },
+  devotionalProgressTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  devotionalProgressFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  studyCard: {
+    borderRadius: 20,
+    padding: 22,
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  studyTitle: { fontSize: 20, marginBottom: 20 },
+  layersRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  layerItem: {
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  layerCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  layerNum: { fontSize: 16, color: "#fff" },
+  layerTitle: { fontSize: 11 },
+  studyFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(201,147,58,0.15)",
+    paddingTop: 16,
+  },
+  studyFooterText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  studyArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plansSection: { marginBottom: 16 },
+  plansSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  plansSectionTitle: { fontSize: 22 },
+  viewAllText: { fontSize: 13 },
+  plansScroll: { gap: 12, paddingRight: 4 },
+  planCard: {
+    width: 150,
+    height: 180,
+    borderRadius: 18,
+    padding: 18,
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  planBgIcon: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    opacity: 0.5,
+  },
+  planTitle: { color: "#fff", fontSize: 15, lineHeight: 20, marginBottom: 4 },
+  planMeta: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
 });

@@ -1634,6 +1634,60 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
     }
   });
 
+  app.get("/api/reading-streaks/weekly", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - dayOfWeek);
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const reads = await db
+        .select({ readAt: readingHistory.readAt })
+        .from(readingHistory)
+        .where(
+          and(
+            eq(readingHistory.userId, userId),
+            sql`${readingHistory.readAt} >= ${startOfWeek.toISOString()}::timestamp`
+          )
+        );
+
+      const daysRead: boolean[] = [false, false, false, false, false, false, false];
+      for (const r of reads) {
+        const d = new Date(r.readAt).getDay();
+        daysRead[d] = true;
+      }
+
+      const perfectWeekResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM (
+          SELECT date_trunc('week', ${readingHistory.readAt}) as week_start
+          FROM ${readingHistory}
+          WHERE ${readingHistory.userId} = ${userId}
+          GROUP BY week_start
+          HAVING COUNT(DISTINCT EXTRACT(DOW FROM ${readingHistory.readAt})) = 7
+        ) pw
+      `);
+      const perfectWeeks = Number(perfectWeekResult.rows?.[0]?.count ?? 0);
+
+      const [streak] = await db
+        .select()
+        .from(readingStreaks)
+        .where(eq(readingStreaks.userId, userId));
+
+      return res.json({
+        daysRead,
+        perfectWeeks,
+        currentStreak: streak?.currentStreak ?? 0,
+        longestStreak: streak?.longestStreak ?? 0,
+        lastReadDate: streak?.lastReadDate ?? null,
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
