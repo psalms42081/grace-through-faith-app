@@ -221,6 +221,7 @@ export default function ProfileScreen() {
         </Text>
         {[
           { title: "Prayer Journal", icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
+          { title: "28 Fundamental Beliefs", icon: "school" as const, color: "#7C3AED", route: "/sda-studies" },
           { title: "Christian Music", icon: "musical-notes" as const, color: "#C9933A", route: "/music" },
           { title: "Family & Faith", icon: "people" as const, color: "#3B6CB5", route: "/family" },
           { title: "Bible Maps", icon: "map" as const, color: "#2E7D32", route: "/maps-timeline?tab=maps" },
