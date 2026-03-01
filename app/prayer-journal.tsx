@@ -34,9 +34,8 @@ const CATEGORIES = [
   { id: "personal", label: "Personal", icon: "person" as const, color: "#5B86E5" },
   { id: "family", label: "Family", icon: "people" as const, color: "#E8456B" },
   { id: "health", label: "Health", icon: "fitness" as const, color: "#2E7D32" },
-  { id: "guidance", label: "Guidance", icon: "compass" as const, color: "#C9933A" },
-  { id: "gratitude", label: "Gratitude", icon: "heart" as const, color: "#8B5CF6" },
-  { id: "other", label: "Other", icon: "ellipsis-horizontal" as const, color: "#FF6B35" },
+  { id: "world", label: "World", icon: "globe" as const, color: "#C9933A" },
+  { id: "praise", label: "Praise", icon: "musical-notes" as const, color: "#8B5CF6" },
 ];
 
 function getCategoryInfo(id: string) {
@@ -81,14 +80,25 @@ export default function PrayerJournalScreen() {
       setNewContent("");
       setNewCategory("personal");
     },
+    onError: () => {
+      if (Platform.OS === "web") { window.alert("Failed to add prayer. Please try again."); }
+      else { Alert.alert("Error", "Failed to add prayer. Please try again."); }
+    },
   });
 
   const toggleAnswered = useMutation({
     mutationFn: async ({ id, answered }: { id: string; answered: boolean }) => {
-      await apiRequest("PATCH", `/api/prayers/${id}`, { answered });
+      await apiRequest("PATCH", `/api/prayers/${id}`, {
+        answered,
+        answeredAt: answered ? new Date().toISOString() : null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/prayers?userId=guest"] });
+    },
+    onError: () => {
+      if (Platform.OS === "web") { window.alert("Failed to update prayer."); }
+      else { Alert.alert("Error", "Failed to update prayer."); }
     },
   });
 
@@ -98,6 +108,10 @@ export default function PrayerJournalScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/prayers?userId=guest"] });
+    },
+    onError: () => {
+      if (Platform.OS === "web") { window.alert("Failed to delete prayer."); }
+      else { Alert.alert("Error", "Failed to delete prayer."); }
     },
   });
 
@@ -150,6 +164,7 @@ export default function PrayerJournalScreen() {
                 styles.filterBtn,
                 filter === f && { backgroundColor: theme.accent },
               ]}
+              testID={`filter-${f}`}
             >
               <Text
                 style={[
@@ -220,6 +235,7 @@ export default function PrayerJournalScreen() {
                   <Pressable
                     onPress={() => toggleAnswered.mutate({ id: prayer.id, answered: !prayer.answered })}
                     style={[styles.actionBtn, { backgroundColor: prayer.answered ? theme.textMuted + "15" : theme.success + "15" }]}
+                    testID={`toggle-answered-${prayer.id}`}
                   >
                     <Ionicons
                       name={prayer.answered ? "arrow-undo" : "checkmark-circle-outline"}
@@ -238,6 +254,7 @@ export default function PrayerJournalScreen() {
                   <Pressable
                     onPress={() => handleDelete(prayer.id)}
                     style={[styles.actionBtn, { backgroundColor: theme.error + "15" }]}
+                    testID={`delete-prayer-${prayer.id}`}
                   >
                     <Ionicons name="trash-outline" size={16} color={theme.error} />
                   </Pressable>

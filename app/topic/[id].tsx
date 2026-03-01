@@ -399,6 +399,7 @@ export default function TopicScreen() {
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
         showsVerticalScrollIndicator={false}
+        testID="topic-screen"
       >
         <LinearGradient
           colors={topic.gradient}
@@ -406,7 +407,7 @@ export default function TopicScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
-          <Ionicons name={topic.icon} size={40} color="rgba(255,255,255,0.9)" />
+          <Ionicons name={topic.icon} size={40} color="rgba(255,255,255,0.9)" testID="topic-hero-icon" />
           <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>{topic.title}</Text>
           <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]}>{topic.description}</Text>
           <View style={styles.heroBadgeRow}>
@@ -431,6 +432,7 @@ export default function TopicScreen() {
                 styles.verseCard,
                 { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
               ]}
+              testID={`verse-card-${i}`}
             >
               <View style={styles.verseCardHeader}>
                 <View style={[styles.verseRefBadge, { backgroundColor: topic.gradient[0] + "18" }]}>
@@ -464,6 +466,7 @@ export default function TopicScreen() {
                   styles.mediaCard,
                   { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
                 ]}
+                testID={`media-card-${idx}`}
               >
                 <View style={[styles.speakerAvatar, { backgroundColor: avatarColor }]}>
                   <Text style={[styles.speakerInitials, { fontFamily: "Inter_700Bold" }]}>{avatarInitials}</Text>

@@ -988,7 +988,11 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
       const todayDay = allDays.find((d) => !completedDayIds.has(d.id));
 
       if (!todayDay) {
-        return res.json({ today: null, message: "Plan completed!", planComplete: true });
+        await db
+          .update(userPlanEnrollments)
+          .set({ isActive: false })
+          .where(eq(userPlanEnrollments.id, activeEnrollment[0].id));
+        return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
       }
 
       return res.json({

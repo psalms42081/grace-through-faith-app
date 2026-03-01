@@ -24,7 +24,7 @@ The application is built with a mobile-first approach using **Expo (React Native
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience with a 30-day garbage collection time.
 - **Search:** Keyword search with highlighting and reference parsing (e.g., "John 3:16").
 - **Real Commentary API:** Uses HelloAO Bible API (bible.helloao.org) for real public domain commentary from Matthew Henry, Adam Clarke, Jamieson-Fausset-Brown, and John Gill — replaces previous AI-generated commentary. No API key required.
-- **User Features:** Notes, highlights, bookmarks, prayer journal (CRUD), and reading history with streak tracking.
+- **User Features:** Notes, highlights, bookmarks, prayer journal (full CRUD with category filtering and answered/active toggle), and reading history with streak tracking.
 - **Devotionals:** Browser for various devotional plans, enrollment, daily reading, and progress tracking.
 - **Maps & Timeline:** Interactive maps with locations linked to verses and a timeline of biblical events.
 - **Christian Music:** Dedicated music section with Worship & Praise, Classic Hymns, Gospel, Instrumental, Contemporary Christian, and Kids categories with external links. Content shuffles each session for freshness.

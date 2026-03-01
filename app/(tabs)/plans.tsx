@@ -85,7 +85,8 @@ export default function PlansScreen() {
 
   const filteredPlans = plans?.filter((p) => {
     if (activeCategory === "All") return true;
-    return p.theme?.toLowerCase().includes(activeCategory.toLowerCase());
+    const themes = (p.theme || "").toLowerCase().split(",").map(t => t.trim());
+    return themes.some(t => t.includes(activeCategory.toLowerCase()));
   });
 
   return (
