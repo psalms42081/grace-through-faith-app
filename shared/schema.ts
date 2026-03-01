@@ -666,3 +666,49 @@ export const readingStreaks = pgTable("reading_streak", {
 
 export type ReadingHistory = typeof readingHistory.$inferSelect;
 export type ReadingStreak = typeof readingStreaks.$inferSelect;
+
+// ─── SOCRATIC STUDY GUIDE ───────────────────────────────────────────────────
+
+export const studyGuideSessions = pgTable(
+  "study_guide_session",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    verseReference: text("verse_reference").notNull(),
+    verseText: text("verse_text").notNull(),
+    bookName: text("book_name").notNull(),
+    chapter: integer("chapter").notNull(),
+    verse: integer("verse").notNull(),
+    phase: varchar("phase", { length: 20 }).default("observe").notNull(),
+    messages: text("messages").default("[]").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("study_guide_user_idx").on(table.userId),
+  })
+);
+
+export type StudyGuideSession = typeof studyGuideSessions.$inferSelect;
+
+// ─── VERSE MAP CACHE ────────────────────────────────────────────────────────
+
+export const verseMapCache = pgTable(
+  "verse_map_cache",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    verseId: varchar("verse_id").notNull().unique(),
+    crossReferences: text("cross_references").default("[]").notNull(),
+    contextSnippet: text("context_snippet"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    verseIdx: index("verse_map_verse_idx").on(table.verseId),
+  })
+);
+
+export type VerseMapCache = typeof verseMapCache.$inferSelect;

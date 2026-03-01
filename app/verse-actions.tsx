@@ -61,6 +61,40 @@ export default function VerseActionsSheet() {
     }, 300);
   }, [bookId, chapter, bookName]);
 
+  const handleVerseMap = useCallback(() => {
+    router.back();
+    setTimeout(() => {
+      router.push({
+        pathname: "/verse-map" as any,
+        params: {
+          verseId: verseId || `${bookId}_${chapter}_${verse}`,
+          verseText: text,
+          verseReference: reference,
+          bookName: bookName || "",
+          bookId: bookId || "",
+          chapter: chapter || "",
+          verse: verse || "",
+        },
+      });
+    }, 300);
+  }, [verseId, text, reference, bookName, bookId, chapter, verse]);
+
+  const handleSocraticStudy = useCallback(() => {
+    router.back();
+    setTimeout(() => {
+      router.push({
+        pathname: "/study-guide" as any,
+        params: {
+          verseReference: reference,
+          verseText: text,
+          bookName: bookName || "",
+          chapter: chapter || "",
+          verse: verse || "",
+        },
+      });
+    }, 300);
+  }, [reference, text, bookName, chapter, verse]);
+
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   const handleHighlight = useCallback(async () => {
@@ -186,6 +220,20 @@ export default function VerseActionsSheet() {
             theme={theme}
             onPress={handleHistoricVoices}
             color="#3B6CB5"
+          />
+          <ActionButton
+            icon="map-outline"
+            label="Verse Map"
+            theme={theme}
+            onPress={handleVerseMap}
+            color="#8B5CF6"
+          />
+          <ActionButton
+            icon="school-outline"
+            label="Guided Study"
+            theme={theme}
+            onPress={handleSocraticStudy}
+            color="#C9933A"
           />
         </View>
       </ScrollView>

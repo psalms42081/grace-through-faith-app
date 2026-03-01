@@ -35,6 +35,8 @@ import {
   prayerRequests,
   readingHistory,
   readingStreaks,
+  studyGuideSessions,
+  verseMapCache,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc } from "drizzle-orm";
 
@@ -1715,6 +1717,290 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
         longestStreak: streak?.longestStreak ?? 0,
         lastReadDate: streak?.lastReadDate ?? null,
       });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── SOCRATIC AI STUDY GUIDE ──────────────────────────────────────────────
+
+  app.post("/api/study-guide/start", async (req, res) => {
+    try {
+      const { verseReference, verseText, bookName, chapter, verse, userId = "guest" } = req.body;
+      if (!verseReference || !verseText) {
+        return res.status(400).json({ error: "verseReference and verseText are required" });
+      }
+
+      const systemPrompt = `You are a wise, patient seminary tutor guiding a student through the Inductive Bible Study Method. You NEVER give the answer directly. Instead, you ask probing questions that lead the student to discover truth themselves.
+
+You guide through three phases:
+1. OBSERVE - Help them see what the text actually says. Ask about: Who is speaking? Who is the audience? What action words are used? What is repeated? What contrasts exist? What seems surprising?
+2. INTERPRET - Help them understand what it means. Ask about: Why did the author write this? What would the original audience understand? How does this connect to the broader biblical narrative? What theological truths emerge?
+3. APPLY - Help them connect it to their life. Ask about: What does this reveal about God's character? How does this challenge your current thinking? What specific action could you take this week?
+
+Rules:
+- Ask ONE focused question at a time
+- Affirm good observations warmly but briefly
+- If the student is off-track, gently redirect without being condescending
+- Use a warm, encouraging tone — like a mentor who believes in their student
+- Keep responses concise (2-4 sentences max)
+- You are starting in the OBSERVE phase now`;
+
+      const userPrompt = `The student wants to study this verse:\n\n"${verseText}" — ${verseReference}\n\nBegin the OBSERVE phase. Ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text.`;
+
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 300,
+      });
+
+      const aiMessage = completion.choices[0]?.message?.content || "Let's begin by reading the verse carefully. What is the first thing you notice about this text?";
+
+      const messages = [
+        { role: "assistant", content: aiMessage, phase: "observe", timestamp: new Date().toISOString() },
+      ];
+
+      const [session] = await db.insert(studyGuideSessions).values({
+        userId,
+        verseReference,
+        verseText,
+        bookName: bookName || "",
+        chapter: chapter || 0,
+        verse: verse || 0,
+        phase: "observe",
+        messages: JSON.stringify(messages),
+      }).returning();
+
+      return res.json({ session: { ...session, messages }, aiMessage });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/study-guide/respond", async (req, res) => {
+    try {
+      const { sessionId, userResponse, userId = "guest" } = req.body;
+      if (!sessionId || !userResponse) {
+        return res.status(400).json({ error: "sessionId and userResponse are required" });
+      }
+
+      const [session] = await db.select().from(studyGuideSessions).where(eq(studyGuideSessions.id, sessionId)).limit(1);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      const existingMessages = JSON.parse(session.messages);
+      existingMessages.push({ role: "user", content: userResponse, phase: session.phase, timestamp: new Date().toISOString() });
+
+      const userMsgCount = existingMessages.filter((m: any) => m.role === "user").length;
+      const currentPhase = session.phase;
+      let shouldAdvance = false;
+      let nextPhase = currentPhase;
+
+      if (currentPhase === "observe" && userMsgCount >= 3) shouldAdvance = true;
+      if (currentPhase === "interpret" && userMsgCount >= 5) shouldAdvance = true;
+      if (currentPhase === "apply" && userMsgCount >= 7) shouldAdvance = true;
+
+      if (shouldAdvance) {
+        if (currentPhase === "observe") nextPhase = "interpret";
+        else if (currentPhase === "interpret") nextPhase = "apply";
+        else if (currentPhase === "apply") nextPhase = "complete";
+      }
+
+      const phaseInstructions: Record<string, string> = {
+        observe: "Continue in the OBSERVE phase. Ask another observation question about what they can see in the text. Affirm their previous answer briefly first.",
+        interpret: nextPhase === "interpret" && currentPhase === "observe"
+          ? "The student has made good observations. Now TRANSITION to the INTERPRET phase. Briefly affirm their work, then say something like 'Now let\\'s dig deeper into what this means...' and ask your first interpretation question."
+          : "Continue in the INTERPRET phase. Ask about meaning, context, or theology. Affirm their answer briefly first.",
+        apply: nextPhase === "apply" && currentPhase === "interpret"
+          ? "The student has interpreted well. Now TRANSITION to the APPLY phase. Briefly affirm their insight, then say something like 'Now let\\'s bring this into your daily life...' and ask your first application question."
+          : "Continue in the APPLY phase. Ask about personal application, specific actions, or life changes. Affirm their answer briefly first.",
+        complete: "The student has completed all three phases. Give a warm, encouraging summary of what they discovered. Mention 1-2 key insights from their observations, interpretation, and application. End with a brief prayer prompt or blessing. Keep it to 3-4 sentences.",
+      };
+
+      const targetPhase = shouldAdvance ? nextPhase : currentPhase;
+
+      const systemPrompt = `You are a wise seminary tutor using the Inductive Bible Study Method. The student is studying: "${session.verseText}" — ${session.verseReference}
+
+${phaseInstructions[targetPhase] || phaseInstructions[currentPhase]}
+
+Rules: Ask ONE question at a time. Be concise (2-4 sentences). Be warm and encouraging. Never give the answer directly.`;
+
+      const chatMessages = existingMessages.map((m: any) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...chatMessages,
+        ],
+        max_tokens: 400,
+      });
+
+      const aiMessage = completion.choices[0]?.message?.content || "That's a thoughtful response. Let's continue exploring this passage.";
+
+      existingMessages.push({ role: "assistant", content: aiMessage, phase: targetPhase, timestamp: new Date().toISOString() });
+
+      await db.update(studyGuideSessions)
+        .set({
+          messages: JSON.stringify(existingMessages),
+          phase: targetPhase,
+          ...(targetPhase === "complete" ? { completedAt: new Date() } : {}),
+        })
+        .where(eq(studyGuideSessions.id, sessionId));
+
+      return res.json({
+        aiMessage,
+        phase: targetPhase,
+        isComplete: targetPhase === "complete",
+        messages: existingMessages,
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/study-guide/sessions", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const sessions = await db.select().from(studyGuideSessions)
+        .where(eq(studyGuideSessions.userId, userId))
+        .orderBy(desc(studyGuideSessions.createdAt))
+        .limit(20);
+      return res.json(sessions);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/study-guide/session/:id", async (req, res) => {
+    try {
+      const [session] = await db.select().from(studyGuideSessions)
+        .where(eq(studyGuideSessions.id, req.params.id))
+        .limit(1);
+      if (!session) return res.status(404).json({ error: "Session not found" });
+      return res.json({ ...session, messages: JSON.parse(session.messages) });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── VISUAL VERSE MAPPER ──────────────────────────────────────────────────
+
+  app.get("/api/verse-map/:verseId", async (req, res) => {
+    try {
+      const { verseId } = req.params;
+
+      const words = await db
+        .select({
+          map: verseStrongMaps,
+          entry: strongEntries,
+        })
+        .from(verseStrongMaps)
+        .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
+        .where(eq(verseStrongMaps.verseId, verseId));
+
+      const [cached] = await db.select().from(verseMapCache)
+        .where(eq(verseMapCache.verseId, verseId)).limit(1);
+
+      const crossReferences = cached ? JSON.parse(cached.crossReferences) : [];
+      const contextSnippet = cached?.contextSnippet || null;
+
+      return res.json({ words, crossReferences, contextSnippet, hasCachedData: !!cached });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/verse-map/generate", async (req, res) => {
+    try {
+      const { verseId, verseText, verseReference, bookName, chapter, verse } = req.body;
+      if (!verseId || !verseText || !verseReference) {
+        return res.status(400).json({ error: "verseId, verseText, and verseReference are required" });
+      }
+
+      const [existing] = await db.select().from(verseMapCache)
+        .where(eq(verseMapCache.verseId, verseId)).limit(1);
+      if (existing) {
+        return res.json({ crossReferences: JSON.parse(existing.crossReferences), contextSnippet: existing.contextSnippet });
+      }
+
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a Bible scholar providing cross-references and context for specific verses. Return valid JSON only, no markdown. Be scholarly and accurate.",
+          },
+          {
+            role: "user",
+            content: `For the verse "${verseText}" (${verseReference}), provide:
+1. Cross-references: 8-10 related verses from across the Bible that illuminate this verse's meaning
+2. A brief historical/cultural context snippet (2-3 sentences)
+
+Return JSON:
+{
+  "crossReferences": [
+    { "reference": "John 3:16", "text": "For God so loved...", "connection": "Both passages speak of God's redemptive love", "bookId": 43, "chapter": 3, "verse": 16 }
+  ],
+  "contextSnippet": "Brief historical and cultural context..."
+}
+
+Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66`,
+          },
+        ],
+        max_tokens: 1500,
+      });
+
+      let result = { crossReferences: [] as any[], contextSnippet: "" };
+      try {
+        const raw = completion.choices[0]?.message?.content || "{}";
+        const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        result = JSON.parse(cleaned);
+      } catch {
+        result = { crossReferences: [], contextSnippet: "Context information unavailable." };
+      }
+
+      await db.insert(verseMapCache).values({
+        verseId,
+        crossReferences: JSON.stringify(result.crossReferences),
+        contextSnippet: result.contextSnippet,
+      }).onConflictDoUpdate({
+        target: verseMapCache.verseId,
+        set: {
+          crossReferences: JSON.stringify(result.crossReferences),
+          contextSnippet: result.contextSnippet,
+        },
+      });
+
+      return res.json(result);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
