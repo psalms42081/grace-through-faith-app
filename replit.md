@@ -30,7 +30,7 @@ The application is built with a mobile-first approach using **Expo (React Native
 - **Family & Faith:** Family-focused Christian content from diverse voices (Joel Osteen, Joyce Meyer, Tony Evans, Charles Stanley, T.D. Jakes, Priscilla Shirer, Rick Warren, Lysa TerKeurst, Doug Batchelor, 3ABN, and more). Content shuffles each session.
 - **Enhanced Topics:** 12 topic pages with curated media from diverse Christian speakers/artists. Speaker avatars (colored initials) identify each source. Content order shuffles each session.
 - **Speaker Avatars:** Colored circular avatars with initials (constants/speakers.ts) used across Topic, Family, and Music screens for visual speaker identification.
-- **Navigation:** 4-tab layout (Home, Read, Search, Discover). Study tools accessible from within the chapter reader. Search tab topics link directly to full topic pages with media content.
+- **Navigation:** 4-tab layout (Home, Read, Search, Discover). Study tools prominently accessible from the chapter reader via a 4-card grid (Context, Historic Voices, Word Study, Application) at the bottom of each chapter. Verse tap actions include Copy, Highlight, Bookmark, Words, Context, and Voices buttons. Historic Voices also accessible from Discover tab. Study tab route preserved for deep-linking but hidden from tab bar. Search tab topics link directly to full topic pages with media content.
 - **Illustrations:** AI-generated watercolor illustrations enhance visual content.
 
 ## External Dependencies

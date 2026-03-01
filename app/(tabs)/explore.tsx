@@ -155,6 +155,30 @@ export default function DiscoverScreen() {
         </View>
 
         <Pressable
+          onPress={() => router.push("/(tabs)/study?tab=voices")}
+          style={({ pressed }) => [
+            styles.voicesCard,
+            { backgroundColor: isDark ? "#111828" : "#EDF3FF", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="historic-voices-card"
+        >
+          <View style={styles.voicesCardLeft}>
+            <View style={[styles.voicesIcon, { backgroundColor: "rgba(59,108,181,0.15)" }]}>
+              <Ionicons name="chatbubble-ellipses" size={24} color="#3B6CB5" />
+            </View>
+            <View style={styles.voicesInfo}>
+              <Text style={[styles.voicesTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Historic Voices
+              </Text>
+              <Text style={[styles.voicesSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Commentary from Matthew Henry, Adam Clarke, John Gill & more
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#3B6CB5" />
+        </Pressable>
+
+        <Pressable
           onPress={() => router.push("/prayer-journal")}
           style={({ pressed }) => [
             styles.prayerCard,
@@ -283,6 +307,30 @@ const styles = StyleSheet.create({
   },
   exploreCardTitle: { color: "#EDE5D5", fontSize: 16, marginTop: 4 },
   exploreCardSub: { color: "rgba(237,229,213,0.6)", fontSize: 12 },
+  voicesCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    marginBottom: 16,
+  },
+  voicesCardLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  voicesIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voicesInfo: { flex: 1 },
+  voicesTitle: { fontSize: 16, marginBottom: 2 },
+  voicesSub: { fontSize: 12, lineHeight: 17 },
   prayerCard: {
     flexDirection: "row",
     alignItems: "center",

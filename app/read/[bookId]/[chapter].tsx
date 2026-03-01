@@ -174,39 +174,88 @@ function RelatedContent({
 
       <View style={relatedStyles.header}>
         <Text style={[relatedStyles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Related
+          Study {bookName} {chapter}
         </Text>
         <Text style={[relatedStyles.headerSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {bookName} {chapter}
+          Dive deeper with the 4-Layer Study Model
         </Text>
       </View>
 
-      <Pressable
-        onPress={() =>
-          router.push(
-            `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
-          )
-        }
-        style={({ pressed }) => [
-          relatedStyles.studyCard,
-          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-        ]}
-        testID="related-study"
-      >
-        <LinearGradient colors={["#C9933A", "#A87828"]} style={relatedStyles.studyIcon}>
-          <Ionicons name="layers" size={20} color="#fff" />
-        </LinearGradient>
-        <View style={relatedStyles.studyInfo}>
-          <Text style={[relatedStyles.studyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Study {bookName} {chapter}
+      <View style={relatedStyles.studyGrid}>
+        <Pressable
+          onPress={() =>
+            router.push(
+              `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
+            )
+          }
+          style={({ pressed }) => [
+            relatedStyles.studyLayerCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="related-context"
+        >
+          <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={relatedStyles.studyLayerIcon}>
+            <Ionicons name="time-outline" size={18} color="#fff" />
+          </LinearGradient>
+          <Text style={[relatedStyles.studyLayerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Context</Text>
+          <Text style={[relatedStyles.studyLayerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {hasContext ? `${contextCards!.length} cards` : "Historical"}
           </Text>
-          <Text style={[relatedStyles.studyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {hasContext ? `${contextCards!.length} context cards` : "Context"}
-            {hasCommentary ? ` · ${commentary!.length} commentaries` : ""}
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
+          }
+          style={({ pressed }) => [
+            relatedStyles.studyLayerCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="related-voices"
+        >
+          <LinearGradient colors={["#3B6CB5", "#2A4F8F"]} style={relatedStyles.studyLayerIcon}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+          </LinearGradient>
+          <Text style={[relatedStyles.studyLayerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Historic Voices</Text>
+          <Text style={[relatedStyles.studyLayerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {hasCommentary ? `${commentary!.length} entries` : "Commentary"}
           </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-      </Pressable>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
+          }
+          style={({ pressed }) => [
+            relatedStyles.studyLayerCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="related-word"
+        >
+          <LinearGradient colors={["#C9933A", "#A87828"]} style={relatedStyles.studyLayerIcon}>
+            <Ionicons name="language-outline" size={18} color="#fff" />
+          </LinearGradient>
+          <Text style={[relatedStyles.studyLayerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Word Study</Text>
+          <Text style={[relatedStyles.studyLayerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Greek & Hebrew</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            router.push(`/(tabs)/study?tab=application&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
+          }
+          style={({ pressed }) => [
+            relatedStyles.studyLayerCard,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="related-application"
+        >
+          <LinearGradient colors={["#8B5CF6", "#6D3BD4"]} style={relatedStyles.studyLayerIcon}>
+            <Ionicons name="heart-outline" size={18} color="#fff" />
+          </LinearGradient>
+          <Text style={[relatedStyles.studyLayerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Application</Text>
+          <Text style={[relatedStyles.studyLayerDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Then & Now</Text>
+        </Pressable>
+      </View>
 
       {relatedTopics.length > 0 && (
         <>
@@ -311,24 +360,29 @@ const relatedStyles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, marginBottom: 4 },
   headerSub: { fontSize: 13 },
-  studyCard: {
+  studyGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
+    flexWrap: "wrap",
+    gap: 10,
     marginBottom: 20,
   },
-  studyIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  studyLayerCard: {
+    width: "48%",
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+    flexGrow: 1,
+    flexBasis: "45%",
+  },
+  studyLayerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  studyInfo: { flex: 1 },
-  studyTitle: { fontSize: 15, marginBottom: 3 },
-  studyDesc: { fontSize: 12 },
+  studyLayerTitle: { fontSize: 14, marginBottom: 1 },
+  studyLayerDesc: { fontSize: 11 },
   sectionLabel: {
     fontSize: 11,
     letterSpacing: 1.5,

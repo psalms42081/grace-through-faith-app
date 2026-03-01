@@ -43,7 +43,7 @@ export default function VerseActionsSheet() {
   const handleStudy = useCallback(() => {
     router.back();
     setTimeout(() => {
-      router.push(`/(tabs)/study?tab=context&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
+      router.push(`/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
     }, 300);
   }, [bookId, chapter, bookName]);
 
@@ -53,6 +53,13 @@ export default function VerseActionsSheet() {
       router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&verse=${verse}&verseId=${encodeURIComponent(verseId || "")}&verseText=${encodeURIComponent(text || "")}&bookName=${encodeURIComponent(bookName || "")}`);
     }, 300);
   }, [verseId, bookName, chapter, verse, text, bookId]);
+
+  const handleHistoricVoices = useCallback(() => {
+    router.back();
+    setTimeout(() => {
+      router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
+    }, 300);
+  }, [bookId, chapter, bookName]);
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
@@ -167,11 +174,18 @@ export default function VerseActionsSheet() {
             color="#3B5998"
           />
           <ActionButton
-            icon="library-outline"
-            label="Study"
+            icon="time-outline"
+            label="Context"
             theme={theme}
             onPress={handleStudy}
-            color={theme.accent}
+            color="#2E7D32"
+          />
+          <ActionButton
+            icon="chatbubble-ellipses-outline"
+            label="Voices"
+            theme={theme}
+            onPress={handleHistoricVoices}
+            color="#3B6CB5"
           />
         </View>
       </ScrollView>
