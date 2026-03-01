@@ -259,6 +259,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ─── STRONG'S WORD STUDY ─────────────────────────────────────────────────────
 
+  app.get("/api/strong/search", async (req, res) => {
+    try {
+      const { q, language } = req.query;
+      if (!q || String(q).trim().length < 2) {
+        return res.json([]);
+      }
+      const searchTerm = `%${String(q).trim().toLowerCase()}%`;
+      const conditions = [
+        sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`,
+      ];
+      if (language && (language === "he" || language === "gr")) {
+        conditions.push(eq(strongEntries.language, String(language)));
+      }
+      const results = await db
+        .select()
+        .from(strongEntries)
+        .where(and(...conditions))
+        .limit(50);
+      return res.json(results);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/strong/:id", async (req, res) => {
     try {
       const entry = await db

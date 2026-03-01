@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Linking,
+  TextInput,
   useColorScheme,
   Platform,
   ActivityIndicator,
@@ -50,6 +51,8 @@ interface StrongEntry {
   pronunciation: string | null;
   definition: string;
   kjvUsage: string | null;
+  derivation: string | null;
+  extendedDefinition: string | null;
 }
 
 interface ContextCard {
@@ -195,10 +198,14 @@ interface BibleBook {
 }
 
 function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, initialVerseId, initialVerseText, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialBookName?: string }) {
+  const [studyMode, setStudyMode] = useState<"verse" | "concordance">("verse");
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse ? parseInt(initialVerse) : null);
   const [didInit, setDidInit] = useState(false);
+  const [concordanceSearch, setConcordanceSearch] = useState("");
+  const [concordanceLang, setConcordanceLang] = useState<"all" | "he" | "gr">("all");
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -256,6 +263,11 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
     }
   }, [targetVerse?.id, wordQuery.isLoading, hasWords]);
 
+  const concordanceQuery = useQuery<StrongEntry[]>({
+    queryKey: [`/api/strong/search?q=${encodeURIComponent(concordanceSearch)}${concordanceLang !== "all" ? `&language=${concordanceLang}` : ""}`],
+    enabled: studyMode === "concordance" && concordanceSearch.trim().length >= 2,
+  });
+
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
 
@@ -267,7 +279,166 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
 
   return (
     <View style={styles.tabContent}>
-      {!selectedBook && (
+      <View style={styles.studyModeToggle}>
+        <Pressable
+          onPress={() => setStudyMode("verse")}
+          style={[styles.studyModeBtn, { backgroundColor: studyMode === "verse" ? theme.accent : theme.backgroundCard }]}
+          testID="mode-verse-study"
+        >
+          <Ionicons name="book-outline" size={14} color={studyMode === "verse" ? "#fff" : theme.textSecondary} />
+          <Text style={[styles.studyModeBtnText, { color: studyMode === "verse" ? "#fff" : theme.textSecondary, fontFamily: studyMode === "verse" ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+            Verse Study
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setStudyMode("concordance")}
+          style={[styles.studyModeBtn, { backgroundColor: studyMode === "concordance" ? theme.accent : theme.backgroundCard }]}
+          testID="mode-concordance"
+        >
+          <Ionicons name="search-outline" size={14} color={studyMode === "concordance" ? "#fff" : theme.textSecondary} />
+          <Text style={[styles.studyModeBtnText, { color: studyMode === "concordance" ? "#fff" : theme.textSecondary, fontFamily: studyMode === "concordance" ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+            Concordance
+          </Text>
+        </Pressable>
+      </View>
+
+      {studyMode === "concordance" && (
+        <>
+          <View style={[styles.concordanceSearchBox, { backgroundColor: theme.backgroundCard }]}>
+            <Ionicons name="search" size={18} color={theme.textMuted} />
+            <TextInput
+              style={[styles.concordanceInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
+              placeholder="Search Strong's (e.g. love, agape, H430)"
+              placeholderTextColor={theme.textMuted}
+              value={concordanceSearch}
+              onChangeText={setConcordanceSearch}
+              testID="concordance-search-input"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {concordanceSearch.length > 0 && (
+              <Pressable onPress={() => setConcordanceSearch("")}>
+                <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+              </Pressable>
+            )}
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.concordanceLangRow} contentContainerStyle={{ gap: 8 }}>
+            {([["all", "All"], ["he", "Hebrew (OT)"], ["gr", "Greek (NT)"]] as const).map(([val, label]) => (
+              <Pressable
+                key={val}
+                onPress={() => setConcordanceLang(val)}
+                style={[styles.commentatorChip, { backgroundColor: concordanceLang === val ? theme.accent : theme.backgroundCard }]}
+              >
+                <Text style={[styles.commentatorChipText, { color: concordanceLang === val ? "#fff" : theme.textSecondary, fontFamily: concordanceLang === val ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {concordanceQuery.isLoading && (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />
+          )}
+
+          {concordanceSearch.trim().length < 2 && (
+            <View style={styles.concordanceEmpty}>
+              <Ionicons name="library-outline" size={40} color={theme.textMuted} />
+              <Text style={[styles.concordanceEmptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                Strong's Concordance
+              </Text>
+              <Text style={[styles.concordanceEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Search 14,000+ Hebrew and Greek word definitions from Strong's Exhaustive Concordance
+              </Text>
+            </View>
+          )}
+
+          {concordanceQuery.data && concordanceQuery.data.length === 0 && concordanceSearch.trim().length >= 2 && (
+            <View style={styles.concordanceEmpty}>
+              <Ionicons name="search-outline" size={32} color={theme.textMuted} />
+              <Text style={[styles.concordanceEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                No entries found for "{concordanceSearch}"
+              </Text>
+            </View>
+          )}
+
+          {concordanceQuery.data?.map((entry) => {
+            const isExpanded = expandedEntry === entry.id;
+            const langColor = entry.language === "he" ? "#2E7D32" : "#1565C0";
+            const langLabel = entry.language === "he" ? "Hebrew" : "Greek";
+            return (
+              <Pressable
+                key={entry.id}
+                onPress={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                style={[styles.concordanceCard, { backgroundColor: theme.backgroundCard }]}
+                testID={`concordance-${entry.id}`}
+              >
+                <View style={styles.concordanceCardHeader}>
+                  <Text style={[styles.concordanceLemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                    {entry.lemma}
+                  </Text>
+                  <View style={[styles.concordanceLangBadge, { backgroundColor: langColor + "18" }]}>
+                    <Text style={[styles.concordanceLangText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
+                      {langLabel}
+                    </Text>
+                  </View>
+                  <View style={[styles.concordanceIdBadge, { backgroundColor: theme.accent + "18" }]}>
+                    <Text style={[styles.concordanceIdText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      {entry.id}
+                    </Text>
+                  </View>
+                </View>
+                {entry.transliteration && (
+                  <Text style={[styles.concordanceTranslit, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                    {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                  </Text>
+                )}
+                <Text style={[styles.concordanceDef, { color: theme.text, fontFamily: "Inter_400Regular" }]} numberOfLines={isExpanded ? undefined : 2}>
+                  {entry.definition}
+                </Text>
+                {isExpanded && (
+                  <>
+                    {entry.derivation && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          Derivation
+                        </Text>
+                        <Text style={[styles.concordanceSubText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                          {entry.derivation}
+                        </Text>
+                      </View>
+                    )}
+                    {entry.kjvUsage && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          KJV Usage
+                        </Text>
+                        <View style={styles.kjvUsagePills}>
+                          {entry.kjvUsage.split(",").map((u, i) => (
+                            <View key={i} style={[styles.kjvUsagePill, { backgroundColor: theme.accent + "10" }]}>
+                              <Text style={[styles.kjvUsagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                {u.trim()}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+                <Ionicons
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color={theme.textMuted}
+                  style={{ alignSelf: "center", marginTop: 6 }}
+                />
+              </Pressable>
+            );
+          })}
+        </>
+      )}
+
+      {studyMode === "verse" && !selectedBook && (
         <>
           <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Old Testament
@@ -1638,4 +1809,118 @@ const styles = StyleSheet.create({
   },
   questionNum: { fontSize: 14, width: 20, textAlign: "right" as const },
   questionText: { fontSize: 14, lineHeight: 22, flex: 1 },
+  studyModeToggle: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  studyModeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  studyModeBtnText: {
+    fontSize: 13,
+  },
+  concordanceSearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  concordanceInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 2,
+  },
+  concordanceLangRow: {
+    marginBottom: 12,
+    flexGrow: 0,
+  },
+  concordanceEmpty: {
+    alignItems: "center",
+    paddingVertical: 40,
+    gap: 10,
+  },
+  concordanceEmptyTitle: {
+    fontSize: 20,
+    marginTop: 4,
+  },
+  concordanceEmptyText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  concordanceCard: {
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  concordanceCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  concordanceLemma: {
+    fontSize: 20,
+  },
+  concordanceLangBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  concordanceLangText: {
+    fontSize: 10,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  concordanceIdBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  concordanceIdText: {
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  concordanceTranslit: {
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  concordanceDef: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  concordanceSubLabel: {
+    fontSize: 11,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  concordanceSubText: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  kjvUsagePills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  kjvUsagePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  kjvUsagePillText: {
+    fontSize: 12,
+  },
 });
