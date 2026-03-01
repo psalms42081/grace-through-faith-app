@@ -712,3 +712,27 @@ export const verseMapCache = pgTable(
 );
 
 export type VerseMapCache = typeof verseMapCache.$inferSelect;
+
+// ─── 4D SCRIPTURE — CHAPTER CONTEXT CACHE ───────────────────────────────────
+
+export const chapterContextCache = pgTable(
+  "chapter_context_cache",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    locations: text("locations").default("[]").notNull(),
+    timelineEvents: text("timeline_events").default("[]").notNull(),
+    keyFigures: text("key_figures").default("[]").notNull(),
+    culturalInsights: text("cultural_insights"),
+    geographicalNotes: text("geographical_notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    bookChapterIdx: index("chapter_context_book_chapter_idx").on(table.bookId, table.chapter),
+  })
+);
+
+export type ChapterContextCache = typeof chapterContextCache.$inferSelect;

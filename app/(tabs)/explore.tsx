@@ -244,6 +244,28 @@ export default function DiscoverScreen() {
           <Ionicons name="chevron-forward" size={18} color="#8B5CF6" />
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push("/sda-studies")}
+          style={({ pressed }) => [
+            styles.sdaCard,
+            { backgroundColor: isDark ? "#14111E" : "#F0EBF8", opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="sda-studies-card"
+        >
+          <View style={styles.prayerCardIcon}>
+            <Ionicons name="school" size={24} color="#7C3AED" />
+          </View>
+          <View style={styles.prayerCardInfo}>
+            <Text style={[styles.prayerCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              28 Fundamental Beliefs
+            </Text>
+            <Text style={[styles.prayerCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              SDA doctrinal studies with scripture
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#7C3AED" />
+        </Pressable>
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Study Tools
@@ -418,4 +440,12 @@ const styles = StyleSheet.create({
   prayerCardInfo: { flex: 1 },
   prayerCardTitle: { fontSize: 16, marginBottom: 2 },
   prayerCardSub: { fontSize: 13 },
+  sdaCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    marginBottom: 28,
+  },
 });

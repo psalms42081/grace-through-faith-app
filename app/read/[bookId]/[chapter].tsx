@@ -105,6 +105,14 @@ const TOPIC_INFO: Record<string, { title: string; icon: keyof typeof Ionicons.gl
   joy: { title: "Joy", icon: "sparkles", gradient: ["#F9A825", "#FDD835"] },
 };
 
+interface ChapterContext {
+  locations: { name: string; modernName: string; latitude: number; longitude: number; significance: string; type: string }[];
+  timelineEvents: { title: string; yearLabel: string; description: string; period: string }[];
+  keyFigures: { name: string; role: string; significance: string }[];
+  culturalInsights: string;
+  geographicalNotes: string;
+}
+
 interface ContextCard {
   id: string;
   category: string | null;
@@ -124,6 +132,349 @@ interface DevPlan {
   totalDays: number;
   theme: string | null;
 }
+
+function ContextPanel({
+  bookId,
+  chapter,
+  theme,
+  isDark,
+}: {
+  bookId: number;
+  chapter: number;
+  theme: typeof Colors.dark;
+  isDark: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [activeSection, setActiveSection] = useState<"locations" | "timeline" | "figures" | "insights">("locations");
+
+  const { data, isLoading } = useQuery<ChapterContext>({
+    queryKey: [`/api/chapter-context/${bookId}/${chapter}`],
+    enabled: expanded,
+  });
+
+  if (!expanded) {
+    return (
+      <Pressable
+        onPress={() => setExpanded(true)}
+        style={[contextStyles.fab, { backgroundColor: isDark ? "#1A1F3C" : "#EDE5D5" }]}
+        testID="context-panel-toggle"
+      >
+        <Ionicons name="compass" size={22} color={theme.accent} />
+      </Pressable>
+    );
+  }
+
+  const sections = [
+    { id: "locations" as const, icon: "location" as const, label: "Places" },
+    { id: "timeline" as const, icon: "time" as const, label: "Timeline" },
+    { id: "figures" as const, icon: "people" as const, label: "Figures" },
+    { id: "insights" as const, icon: "bulb" as const, label: "Culture" },
+  ];
+
+  return (
+    <View style={[contextStyles.panel, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+      <View style={contextStyles.panelHeader}>
+        <Ionicons name="compass" size={18} color={theme.accent} />
+        <Text style={[contextStyles.panelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          4D Scripture
+        </Text>
+        <Pressable
+          onPress={() => setExpanded(false)}
+          hitSlop={8}
+          testID="close-context-panel"
+        >
+          <Ionicons name="close" size={20} color={theme.textMuted} />
+        </Pressable>
+      </View>
+
+      <View style={contextStyles.sectionTabs}>
+        {sections.map((s) => (
+          <Pressable
+            key={s.id}
+            onPress={() => setActiveSection(s.id)}
+            style={[
+              contextStyles.sectionTab,
+              { backgroundColor: activeSection === s.id ? theme.accent + "20" : "transparent" },
+            ]}
+          >
+            <Ionicons
+              name={s.icon}
+              size={14}
+              color={activeSection === s.id ? theme.accent : theme.textMuted}
+            />
+            <Text
+              style={[
+                contextStyles.sectionTabText,
+                {
+                  color: activeSection === s.id ? theme.accent : theme.textMuted,
+                  fontFamily: activeSection === s.id ? "Inter_600SemiBold" : "Inter_400Regular",
+                },
+              ]}
+            >
+              {s.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {isLoading ? (
+        <View style={contextStyles.loadingArea}>
+          <ActivityIndicator size="small" color={theme.accent} />
+          <Text style={[contextStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Generating context...
+          </Text>
+        </View>
+      ) : !data ? (
+        <Text style={[contextStyles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          No context available
+        </Text>
+      ) : (
+        <View style={contextStyles.sectionContent}>
+          {activeSection === "locations" && (
+            <>
+              {(data.locations || []).length === 0 ? (
+                <Text style={[contextStyles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  No locations identified
+                </Text>
+              ) : (
+                (data.locations || []).map((loc, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => router.push("/maps-timeline?tab=maps")}
+                    style={[contextStyles.contextItem, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}
+                  >
+                    <View style={[contextStyles.contextIconCircle, { backgroundColor: "#1565C020" }]}>
+                      <Ionicons name="location" size={14} color="#1565C0" />
+                    </View>
+                    <View style={contextStyles.contextItemInfo}>
+                      <Text style={[contextStyles.contextItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                        {loc.name}
+                      </Text>
+                      {loc.modernName ? (
+                        <Text style={[contextStyles.contextItemMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                          Today: {loc.modernName}
+                        </Text>
+                      ) : null}
+                      <Text style={[contextStyles.contextItemDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+                        {loc.significance}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </>
+          )}
+
+          {activeSection === "timeline" && (
+            <>
+              {(data.timelineEvents || []).length === 0 ? (
+                <Text style={[contextStyles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  No timeline events
+                </Text>
+              ) : (
+                (data.timelineEvents || []).map((evt, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => router.push("/maps-timeline?tab=timeline")}
+                    style={[contextStyles.contextItem, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}
+                  >
+                    <View style={[contextStyles.contextIconCircle, { backgroundColor: "#2E7D3220" }]}>
+                      <Ionicons name="time" size={14} color="#2E7D32" />
+                    </View>
+                    <View style={contextStyles.contextItemInfo}>
+                      <View style={contextStyles.contextItemRow}>
+                        <Text style={[contextStyles.contextItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                          {evt.title}
+                        </Text>
+                        <Text style={[contextStyles.yearBadge, { color: "#2E7D32", backgroundColor: "#2E7D3215", fontFamily: "Inter_600SemiBold" }]}>
+                          {evt.yearLabel}
+                        </Text>
+                      </View>
+                      <Text style={[contextStyles.contextItemDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+                        {evt.description}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))
+              )}
+            </>
+          )}
+
+          {activeSection === "figures" && (
+            <>
+              {(data.keyFigures || []).length === 0 ? (
+                <Text style={[contextStyles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  No key figures
+                </Text>
+              ) : (
+                (data.keyFigures || []).map((fig, i) => (
+                  <View
+                    key={i}
+                    style={[contextStyles.contextItem, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}
+                  >
+                    <View style={[contextStyles.avatarCircle, { backgroundColor: theme.accent + "20" }]}>
+                      <Text style={[contextStyles.avatarText, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                        {fig.name.charAt(0)}
+                      </Text>
+                    </View>
+                    <View style={contextStyles.contextItemInfo}>
+                      <Text style={[contextStyles.contextItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                        {fig.name}
+                      </Text>
+                      <Text style={[contextStyles.contextItemMeta, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                        {fig.role}
+                      </Text>
+                      <Text style={[contextStyles.contextItemDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+                        {fig.significance}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {activeSection === "insights" && (
+            <View style={contextStyles.insightsArea}>
+              {data.geographicalNotes ? (
+                <View style={[contextStyles.insightBlock, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}>
+                  <View style={contextStyles.insightHeader}>
+                    <Ionicons name="earth" size={14} color="#1565C0" />
+                    <Text style={[contextStyles.insightLabel, { color: "#1565C0", fontFamily: "Inter_600SemiBold" }]}>
+                      Geography
+                    </Text>
+                  </View>
+                  <Text style={[contextStyles.insightText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {data.geographicalNotes}
+                  </Text>
+                </View>
+              ) : null}
+              {data.culturalInsights ? (
+                <View style={[contextStyles.insightBlock, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}>
+                  <View style={contextStyles.insightHeader}>
+                    <Ionicons name="bulb" size={14} color={theme.accent} />
+                    <Text style={[contextStyles.insightLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      Cultural Context
+                    </Text>
+                  </View>
+                  <Text style={[contextStyles.insightText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {data.culturalInsights}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const contextStyles = StyleSheet.create({
+  fab: {
+    position: "absolute" as const,
+    right: 20,
+    top: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 10,
+  },
+  panel: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
+  panelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  panelTitle: { flex: 1, fontSize: 18 },
+  sectionTabs: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 14,
+  },
+  sectionTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  sectionTabText: { fontSize: 12 },
+  loadingArea: {
+    alignItems: "center",
+    paddingVertical: 30,
+    gap: 8,
+  },
+  loadingText: { fontSize: 13 },
+  emptyText: { fontSize: 13, textAlign: "center" as const, paddingVertical: 16 },
+  sectionContent: { gap: 8 },
+  contextItem: {
+    flexDirection: "row",
+    padding: 12,
+    borderRadius: 12,
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  contextIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  contextItemInfo: { flex: 1, gap: 2 },
+  contextItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  contextItemTitle: { fontSize: 14 },
+  contextItemMeta: { fontSize: 11, marginTop: 1 },
+  contextItemDesc: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  yearBadge: {
+    fontSize: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  avatarText: { fontSize: 16 },
+  insightsArea: { gap: 10 },
+  insightBlock: {
+    padding: 12,
+    borderRadius: 12,
+  },
+  insightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  insightLabel: { fontSize: 12 },
+  insightText: { fontSize: 13, lineHeight: 20 },
+});
 
 function RelatedContent({
   bookId,
@@ -974,6 +1325,13 @@ export default function VerseReaderScreen() {
                   {chapter}
                 </Text>
               </View>
+
+              <ContextPanel
+                bookId={Number(bookId)}
+                chapter={chapterNum}
+                theme={theme}
+                isDark={isDark}
+              />
 
               <View style={styles.proseContainer}>
                 <Text style={[styles.proseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>

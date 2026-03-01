@@ -107,6 +107,17 @@ export default function KidsStoriesScreen() {
               Young Disciples
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => setAgeGroup("young_disciples_plus")}
+            style={[
+              styles.ageBtn,
+              { backgroundColor: ageGroup === "young_disciples_plus" ? "#1565C0" : theme.backgroundCard, borderColor: theme.border },
+            ]}
+          >
+            <Text style={[styles.ageBtnText, { color: ageGroup === "young_disciples_plus" ? "#fff" : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+              Young Adults
+            </Text>
+          </Pressable>
         </View>
       </View>
 

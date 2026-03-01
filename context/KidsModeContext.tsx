@@ -5,7 +5,7 @@ const KIDS_MODE_KEY = "@grace-through-faith/kids-mode";
 const KIDS_PIN_KEY = "@grace-through-faith/kids-pin";
 const KIDS_AGE_GROUP_KEY = "@grace-through-faith/kids-age-group";
 
-type AgeGroup = "little_lambs" | "young_disciples";
+type AgeGroup = "little_lambs" | "young_disciples" | "young_disciples_plus";
 
 interface KidsModeContextType {
   isKidsMode: boolean;
@@ -47,7 +47,7 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem(KIDS_MODE_KEY, "false");
         setIsKidsMode(false);
         setPinState(pinVal);
-        if (ageVal === "little_lambs" || ageVal === "young_disciples") {
+        if (ageVal === "little_lambs" || ageVal === "young_disciples" || ageVal === "young_disciples_plus") {
           setAgeGroupState(ageVal);
         }
       } catch {}

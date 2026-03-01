@@ -37,6 +37,7 @@ import {
   readingStreaks,
   studyGuideSessions,
   verseMapCache,
+  chapterContextCache,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc } from "drizzle-orm";
 
@@ -1998,6 +1999,99 @@ Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, N
           crossReferences: JSON.stringify(result.crossReferences),
           contextSnippet: result.contextSnippet,
         },
+      });
+
+      return res.json(result);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── 4D SCRIPTURE — CHAPTER CONTEXT ────────────────────────────────────────
+
+  app.get("/api/chapter-context/:bookId/:chapter", async (req, res) => {
+    try {
+      const bookId = parseInt(req.params.bookId);
+      const chapter = parseInt(req.params.chapter);
+
+      const [cached] = await db.select().from(chapterContextCache)
+        .where(and(
+          eq(chapterContextCache.bookId, bookId),
+          eq(chapterContextCache.chapter, chapter),
+        ))
+        .limit(1);
+
+      if (cached) {
+        return res.json({
+          locations: JSON.parse(cached.locations),
+          timelineEvents: JSON.parse(cached.timelineEvents),
+          keyFigures: JSON.parse(cached.keyFigures),
+          culturalInsights: cached.culturalInsights,
+          geographicalNotes: cached.geographicalNotes,
+        });
+      }
+
+      const [book] = await db.select().from(bibleBooks).where(eq(bibleBooks.id, bookId)).limit(1);
+      const bookName = book?.name || "Unknown";
+
+      const client = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a Bible scholar providing immersive contextual data for Bible chapters. Return valid JSON only, no markdown. Be historically accurate and engaging.",
+          },
+          {
+            role: "user",
+            content: `Provide immersive contextual data for ${bookName} chapter ${chapter}. Return JSON:
+{
+  "locations": [
+    { "name": "Jerusalem", "modernName": "Jerusalem, Israel", "latitude": 31.7683, "longitude": 35.2137, "significance": "Brief note on why this location matters in this chapter", "type": "city" }
+  ],
+  "timelineEvents": [
+    { "title": "Event name", "yearLabel": "c. 30 AD", "description": "Brief description", "period": "New Testament" }
+  ],
+  "keyFigures": [
+    { "name": "Person name", "role": "apostle/prophet/king/etc", "significance": "Why they matter in this chapter" }
+  ],
+  "culturalInsights": "1-2 paragraphs on cultural practices, customs, and social norms relevant to understanding this chapter",
+  "geographicalNotes": "1-2 sentences on the geography and terrain relevant to the events"
+}
+Include 2-5 locations, 1-3 timeline events, and 2-5 key figures. Be specific to this chapter.`,
+          },
+        ],
+        max_tokens: 1200,
+      });
+
+      let result = {
+        locations: [] as any[],
+        timelineEvents: [] as any[],
+        keyFigures: [] as any[],
+        culturalInsights: "",
+        geographicalNotes: "",
+      };
+      try {
+        const raw = completion.choices[0]?.message?.content || "{}";
+        const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        result = JSON.parse(cleaned);
+      } catch {
+        /* parse failed, use defaults */
+      }
+
+      await db.insert(chapterContextCache).values({
+        bookId,
+        chapter,
+        locations: JSON.stringify(result.locations || []),
+        timelineEvents: JSON.stringify(result.timelineEvents || []),
+        keyFigures: JSON.stringify(result.keyFigures || []),
+        culturalInsights: result.culturalInsights || null,
+        geographicalNotes: result.geographicalNotes || null,
       });
 
       return res.json(result);

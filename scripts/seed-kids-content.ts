@@ -69,6 +69,34 @@ async function seed() {
     })
     .returning();
 
+  const [faithIdentity] = await db
+    .insert(kidsCollections)
+    .values({
+      title: "Faith & Identity",
+      description:
+        "Explore what it means to find your identity in Christ. These stories tackle real issues teens face — peer pressure, self-doubt, and standing for your beliefs when the world pushes back.",
+      ageGroup: "young_disciples_plus",
+      icon: "compass",
+      storyCount: 4,
+      orderIndex: 0,
+      published: true,
+    })
+    .returning();
+
+  const [heroesConviction] = await db
+    .insert(kidsCollections)
+    .values({
+      title: "Heroes of Conviction",
+      description:
+        "Meet biblical heroes who refused to compromise — Daniel in a pagan empire, Esther risking her life, David facing impossible odds, and Joseph enduring betrayal. Their stories speak directly to the challenges you face today.",
+      ageGroup: "young_disciples_plus",
+      icon: "shield",
+      storyCount: 4,
+      orderIndex: 1,
+      published: true,
+    })
+    .returning();
+
   console.log("Collections created.");
 
   const storyData = [
@@ -532,6 +560,198 @@ async function seed() {
         "Read 1 Corinthians 15:3-8 to see Paul's list of resurrection witnesses. Write out Luke 24:6 — 'He is not here; He has risen!' — and place it somewhere you will see it every day as a reminder that the tomb is empty and your hope is secure.",
       estimatedMinutes: 10,
     },
+    {
+      title: "Who Am I? Identity in Christ",
+      scriptureRef: "Ephesians 2:10; Psalm 139:13-16",
+      bookId: 49,
+      chapter: 2,
+      ageGroup: "young_disciples_plus",
+      collectionId: faithIdentity.id,
+      orderInCollection: 0,
+      storyText:
+        "You live in a world that constantly tells you who you should be. Social media feeds are full of highlight reels that make you feel like you are never enough — not attractive enough, not popular enough, not talented enough. Classmates define status by followers, likes, and brand names. The pressure to conform is relentless, and it starts the moment you wake up and check your phone.\n\nBut here is a truth that cuts through all of that noise: you were made on purpose, by God, for a purpose.\n\nPsalm 139 says that God knit you together in your mother's womb. He saw your unformed body and wrote every day of your life in His book before a single one of them came to be. You are not an accident, a mistake, or a random collection of cells. You are a masterpiece designed by the Creator of the universe.\n\nEphesians 2:10 takes it further: 'For we are God's handiwork, created in Christ Jesus to do good works, which God prepared in advance for us to do.' The Greek word for 'handiwork' is poiema — it is where we get the word 'poem.' You are God's poem, His work of art. And He did not just create you to exist — He created you to do specific things that He planned before you were even born.\n\nSo when the world tells you that your worth depends on your appearance, your grades, your athletic ability, or how many people follow you online — it is lying. Your identity is not found in what you do or what others think of you. Your identity is found in who God says you are.\n\nAnd who does God say you are? You are chosen (1 Peter 2:9). You are loved with an everlasting love (Jeremiah 31:3). You are a child of God (John 1:12). You are forgiven and redeemed (Ephesians 1:7). You are never alone (Matthew 28:20).\n\nThis does not mean life will be easy. You will face moments when you doubt yourself, when you feel invisible, when the gap between who you are and who you want to be feels impossibly wide. In those moments, anchor yourself in what God says, not what the world shouts.\n\nThere was a young man in the Bible named Jeremiah. God called him to be a prophet, but Jeremiah pushed back: 'I am too young! I do not know how to speak!' God's response was firm and tender: 'Do not say you are too young. I knew you before I formed you in the womb. Before you were born, I set you apart.'\n\nGod is saying the same thing to you. Your age does not disqualify you. Your insecurities do not disqualify you. Your past mistakes do not disqualify you. God has already decided who you are — and His opinion is the only one that matters.\n\nThe next time you look in the mirror and the voice of doubt whispers that you are not enough, remember: the God who flung stars into space and carved out ocean floors looked at you and said, 'Very good.' That settles it.",
+      memoryVerse: "For we are God's handiwork, created in Christ Jesus to do good works, which God prepared in advance for us to do.",
+      memoryVerseRef: "Ephesians 2:10",
+      thinkQuestions: [
+        "Where do you most often look for your sense of identity — social media, friends, achievements, appearance? How does that compare to what God says about you?",
+        "What does it mean to you personally that God calls you His 'handiwork' or 'poem'? How does that change how you see yourself?",
+        "Jeremiah felt too young and unqualified. What insecurity or excuse do you use to hold yourself back from what God might be calling you to do?",
+        "How can you practically remind yourself of your identity in Christ when the world's messages feel overwhelming?",
+      ],
+      prayerPrompt:
+        "God, thank You that my identity is not based on what the world says about me but on what You say. When I feel like I am not enough, remind me that I am Your handiwork — created with purpose, loved without condition, and chosen before the foundation of the world. Help me to live out of that identity today. Amen.",
+      activitySuggestion:
+        "Write out five 'I am' statements based on Scripture (e.g., 'I am chosen — 1 Peter 2:9'). Put them on your mirror, in your locker, or as notes on your phone. Read them every morning for a week and notice how it shifts your perspective.",
+      estimatedMinutes: 10,
+    },
+    {
+      title: "Standing Alone: When Faith Costs You",
+      scriptureRef: "Romans 12:1-2; Matthew 5:10-12",
+      bookId: 45,
+      chapter: 12,
+      ageGroup: "young_disciples_plus",
+      collectionId: faithIdentity.id,
+      orderInCollection: 1,
+      storyText:
+        "Following Jesus has never been the popular choice. From the moment He walked the earth, His message divided people. Some were drawn to Him; others wanted Him gone. And He was honest about what following Him would cost: 'If anyone would come after me, let him deny himself, take up his cross, and follow me.'\n\nAs a teenager, you face a version of this every day. Maybe it is the party where everyone is drinking and you know you should not be there. Maybe it is the group chat where someone is being torn apart and everyone is joining in. Maybe it is the moment when a friend asks what you believe and you feel the weight of knowing your answer will make you different.\n\nPeer pressure is not just about drugs and alcohol — those are the obvious ones. The deeper pressure is the constant pull to blend in, to stay quiet, to not make waves. It is the voice that says, 'If you speak up, they will think you are weird. If you say no, you will be left out. If you stand for something, you will stand alone.'\n\nBut Romans 12:2 says, 'Do not conform to the pattern of this world, but be transformed by the renewing of your mind.' The word 'conform' means to be molded into a shape by external pressure — like Play-Doh being squeezed into a mold. God is saying: do not let the world squeeze you into its mold. Instead, let Me reshape you from the inside out.\n\nThis is not about being self-righteous or judgmental. It is about having the courage to live differently because you belong to a different kingdom. It is about choosing integrity when nobody is watching and grace when everyone is.\n\nJesus said, 'Blessed are those who are persecuted because of righteousness, for theirs is the kingdom of heaven.' He did not say 'if' you are persecuted — He said 'when.' Standing for your faith will cost you something. It might cost you a friendship, a social circle, or a reputation. But what you gain is infinitely greater: a clear conscience, a deeper relationship with God, and the respect of the people who matter most.\n\nThink about the early Christians. They met in secret, shared everything they had, and many were killed for their faith. They did not follow Jesus because it was convenient — they followed Him because He was worth it. They understood that the approval of God is worth more than the approval of the crowd.\n\nYou are part of that same story. Every time you choose honesty over popularity, kindness over cruelty, or faithfulness over conformity, you are carrying the torch that believers have carried for two thousand years.\n\nIt will not always feel heroic. Sometimes it will feel lonely, awkward, and painful. But you are never truly alone. God promises, 'I will never leave you nor forsake you.' And there are others walking this path — find them, link arms with them, and encourage each other.\n\nThe world needs people who are not for sale. Be one of them.",
+      memoryVerse: "Do not conform to the pattern of this world, but be transformed by the renewing of your mind.",
+      memoryVerseRef: "Romans 12:2",
+      thinkQuestions: [
+        "Can you think of a time when you felt pressure to go along with something you knew was wrong? What did you do, and what would you do differently?",
+        "What does it look like practically to 'not conform to the pattern of this world' in your school, your friendships, or your online life?",
+        "Jesus said those who are persecuted for righteousness are blessed. How can hardship for your faith actually be a blessing?",
+        "Who in your life can you 'link arms with' to encourage each other in standing firm? How can you be that person for someone else?",
+      ],
+      prayerPrompt:
+        "Lord, give me the courage to stand firm even when it costs me. Help me not to be squeezed into the world's mold but to be transformed from the inside by Your truth. When I feel alone in my convictions, remind me that You are with me and that Your approval is the only one I need. Amen.",
+      activitySuggestion:
+        "Identify one area in your life where you have been conforming to pressure instead of following your convictions. Write it down and create a practical plan for how you will respond differently next time. Share it with a trusted mentor or friend who can hold you accountable.",
+      estimatedMinutes: 10,
+    },
+    {
+      title: "Real Relationships: Friendship God's Way",
+      scriptureRef: "Proverbs 13:20; 1 Corinthians 15:33; John 15:12-15",
+      bookId: 20,
+      chapter: 13,
+      ageGroup: "young_disciples_plus",
+      collectionId: faithIdentity.id,
+      orderInCollection: 2,
+      storyText:
+        "Friendships are everything when you are a teenager. Your friends shape your language, your habits, your humor, your decisions, and even your future. The Bible knows this. Proverbs 13:20 says, 'Walk with the wise and become wise, for a companion of fools suffers harm.' And Paul writes bluntly in 1 Corinthians 15:33: 'Do not be misled: bad company corrupts good character.'\n\nThis is not about being snobbish or thinking you are better than anyone. It is about being honest about the reality that the people closest to you will pull you in a direction — either toward God or away from Him. And you will do the same for them.\n\nJesus modeled this perfectly. He was a friend of sinners — He ate with tax collectors, spoke with outcasts, and touched the untouchable. But His inner circle, the twelve disciples, were people He invested in deeply. And even among the twelve, He had three — Peter, James, and John — who were closest. Jesus was inclusive in His love but intentional about His inner circle.\n\nHere is something most people do not talk about: loneliness is one of the biggest struggles teenagers face. Even in a crowded school, you can feel invisible. Even with hundreds of online friends, you can feel disconnected. The ache for real, authentic friendship is not a weakness — it is how God designed you. He said in the beginning, 'It is not good for man to be alone.'\n\nBut here is the tension: the desire for connection can lead you to accept friendships that are toxic, manipulative, or destructive. You might tolerate being disrespected, pressured, or used because the alternative — being alone — feels worse. This is a trap.\n\nGod wants more for you than friendships built on convenience or compromise. He wants you to experience the kind of friendship He described in John 15: 'Greater love has no one than this: to lay down one's life for one's friends.' Jesus called His disciples friends — not servants — because He shared His heart with them.\n\nWhat does a godly friendship look like? It looks like honesty without cruelty. Loyalty without enabling sin. Encouragement without flattery. Accountability without judgment. It looks like two people spurring each other on toward love and good deeds, as Hebrews 10:24 says.\n\nIf you are in friendships that consistently pull you away from God, drain your joy, or pressure you to compromise, it may be time for an honest evaluation. This does not mean cutting everyone off overnight — but it does mean being intentional about who gets the closest seat at your table.\n\nAnd if you feel lonely right now — if the friends you want seem far away — know this: God sees you. He is the friend who sticks closer than a brother (Proverbs 18:24). Ask Him to bring people into your life who will sharpen you as iron sharpens iron. And be willing to be that person for someone else. Sometimes the best way to find a godly friend is to be one.",
+      memoryVerse: "Walk with the wise and become wise, for a companion of fools suffers harm.",
+      memoryVerseRef: "Proverbs 13:20",
+      thinkQuestions: [
+        "Think about your closest friendships. Are they pulling you closer to God or further away? Be honest with yourself.",
+        "Jesus was a friend of sinners but intentional about His inner circle. How can you love everyone while being wise about who influences you most?",
+        "What does real accountability in a friendship look like? Have you experienced it? What would it take to build that kind of trust with someone?",
+        "If you are experiencing loneliness, how does knowing that God designed you for community — and that He is with you — change how you approach the search for true friends?",
+      ],
+      prayerPrompt:
+        "Father, thank You for the gift of friendship. Help me to be wise about the people I allow closest to my heart. Give me the courage to set boundaries where I need to and the grace to be a true friend to others. If I am lonely, remind me that You are near and lead me to people who will sharpen me and love me well. Amen.",
+      activitySuggestion:
+        "Make a list of the five people who most influence your life. Next to each name, write whether they generally pull you toward God or away from Him. Pray over the list and ask God for wisdom about how to invest in or adjust each relationship.",
+      estimatedMinutes: 11,
+    },
+    {
+      title: "Purpose and Calling: You Are Here for a Reason",
+      scriptureRef: "Jeremiah 29:11; Romans 8:28; Esther 4:14",
+      bookId: 24,
+      chapter: 29,
+      ageGroup: "young_disciples_plus",
+      collectionId: faithIdentity.id,
+      orderInCollection: 3,
+      storyText:
+        "One of the most common questions teenagers ask is, 'What am I supposed to do with my life?' It is a big question, and it can feel overwhelming when everyone around you seems to have it figured out — the friend who has known since age eight that she wants to be a doctor, the classmate who is already getting recruited for college sports, the kid posting music online who already has thousands of followers.\n\nBut here is something most adults will not tell you: almost nobody has it figured out at your age. And that is okay. Because God's plan for your life is not a single career choice or a destination — it is a relationship.\n\nJeremiah 29:11 is one of the most quoted verses in the Bible: 'For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, plans to give you hope and a future.' But most people rip this verse out of its context. God spoke these words to the Israelites while they were in exile in Babylon — displaced, confused, and wondering if God had abandoned them. God was not promising them an easy life. He was promising them that He had not forgotten them and that their story was not over.\n\nThe same is true for you. You might feel displaced right now — unsure of where you fit, uncertain about what comes next. But God has not forgotten you. He is weaving your story with a purpose you cannot fully see yet.\n\nRomans 8:28 adds another layer: 'We know that in all things God works for the good of those who love Him, who have been called according to His purpose.' Notice it says 'all things' — not just the good things. God uses your failures, your detours, your pain, and your waiting seasons as raw material for His purposes.\n\nConsider Joseph. Sold into slavery at seventeen. Falsely accused. Imprisoned for years. But God used every setback to position him exactly where he needed to be to save his family and an entire nation. Joseph could not see it in the pit. He could not see it in prison. But God could.\n\nConsider Esther. An orphan girl who became queen of Persia. She did not choose her circumstances, but when the moment came, Mordecai challenged her: 'Who knows whether you have come to the kingdom for such a time as this?' Esther stepped into her purpose not when everything was safe but when everything was on the line.\n\nYour purpose is not something you have to manufacture or figure out on your own. It unfolds as you walk with God. It reveals itself in the things that break your heart, the talents He has given you, the needs you see around you, and the doors He opens.\n\nHere is practical guidance: instead of asking 'What should I do with my life?' start asking 'What can I do today?' Serve someone. Use your gifts. Show up faithfully. Be excellent in the small things. Purpose is not always a grand revelation — it is often found in faithful obedience, one day at a time.\n\nDo not compare your chapter one to someone else's chapter twenty. God's timing is perfect, even when it feels painfully slow. Trust the Author of your story. He writes better endings than you could ever imagine.",
+      memoryVerse: "'For I know the plans I have for you,' declares the Lord, 'plans to prosper you and not to harm you, plans to give you hope and a future.'",
+      memoryVerseRef: "Jeremiah 29:11",
+      thinkQuestions: [
+        "How does knowing the original context of Jeremiah 29:11 — spoken to exiles — change how you understand God's promise for your life?",
+        "Joseph and Esther both discovered their purpose through hardship, not comfort. How might your current struggles be part of God's preparation for something bigger?",
+        "What gifts, passions, or burdens has God placed in your heart? How might those point toward your calling?",
+        "Instead of worrying about the future, what is one thing you can do today to be faithful with what God has already given you?",
+      ],
+      prayerPrompt:
+        "Lord, I confess that I sometimes worry about the future and feel lost about my purpose. Remind me that my calling is not a destination but a daily walk with You. Help me to be faithful in the small things and to trust that You are working all things together for good. Open my eyes to the opportunities around me and give me the courage to step into them. Amen.",
+      activitySuggestion:
+        "Create a 'Purpose Map.' In the center, write your name. Around it, write four things: (1) What am I good at? (2) What do I care deeply about? (3) What needs do I see around me? (4) What doors has God opened? Look for where these overlap — that is often where purpose lives. Pray over it daily for a week.",
+      estimatedMinutes: 12,
+    },
+    {
+      title: "Daniel: Uncompromising in a Hostile World",
+      scriptureRef: "Daniel 1:1-21; Daniel 6:1-28",
+      bookId: 27,
+      chapter: 1,
+      ageGroup: "young_disciples_plus",
+      collectionId: heroesConviction.id,
+      orderInCollection: 0,
+      storyText:
+        "Daniel was probably around your age — fifteen or sixteen — when his world was ripped apart. The Babylonian Empire invaded Jerusalem, destroyed the temple, and carried away the brightest young men of Judah to be reprogrammed. Daniel was one of them.\n\nThink about what that means. Everything Daniel knew — his home, his community, his way of life, his freedom — was taken from him overnight. He was dragged to a foreign land, given a new name (Belteshazzar, after a Babylonian god), enrolled in a pagan education program, and pressured to abandon everything he believed.\n\nThe Babylonians were not stupid. They knew that if they could reshape these young men's identities, they would have loyal servants for life. It is the same strategy the world uses today — reshape how you think, what you consume, and who you admire, and eventually you will forget who you really are.\n\nBut Daniel drew a line. The first test came with food. The king's table was loaded with rich food and wine — delicacies that would have violated Jewish dietary laws and were likely offered to idols. It seems like a small thing. Who would notice? Who would care? Daniel could have justified it: 'I am in a foreign land. The rules are different here. I need to survive.'\n\nBut Daniel 'resolved in his heart' not to defile himself. That phrase is everything. He made the decision before the pressure came. He did not wait until the food was in front of him to decide — he had already settled it. He proposed an alternative: let them eat vegetables and water for ten days and compare the results. God honored his faithfulness, and Daniel and his friends looked healthier than everyone else.\n\nThis pattern continued throughout Daniel's life. When commanded to stop praying, he opened his window and prayed three times a day, just as he had always done — knowing it would mean the lions' den. When asked to interpret dreams that no one else could, he gave all credit to God. When offered power and position, he remained humble.\n\nThe result? Daniel served with distinction under multiple kings and empires for over sixty years. Babylonian kings rose and fell. The Persian Empire conquered Babylon. Through it all, Daniel remained steady because his identity was not built on his circumstances — it was built on his God.\n\nHere is what Daniel's story teaches you: you do not have to compromise to succeed. The world says you need to go along to get along, that standing out will hold you back. But God honors those who honor Him. Daniel rose to the highest levels of government — not by playing the game but by being faithful.\n\nYou will face your own Babylon. It might be a school culture that mocks your faith. It might be a social environment where everyone is making choices you know are wrong. It might be the constant pressure to water down what you believe so people will accept you.\n\nResolve in your heart — before the pressure comes — who you will be. Decide now what you will not compromise on. Not with arrogance or self-righteousness, but with quiet, unshakeable conviction. Like Daniel, you can be excellent and faithful at the same time. You can serve with integrity in a hostile world. And God will be with you in every lions' den.",
+      memoryVerse: "Daniel resolved not to defile himself.",
+      memoryVerseRef: "Daniel 1:8",
+      thinkQuestions: [
+        "Daniel 'resolved in his heart' before the pressure came. What convictions do you need to settle in your heart now, before you face the test?",
+        "How is the strategy of Babylon — renaming, re-educating, reshaping identity — similar to pressures you face today from culture, media, or peers?",
+        "Daniel was faithful in small things (food choices) before he faced big things (the lions' den). How does faithfulness in small decisions prepare you for larger ones?",
+        "Daniel served with excellence in a pagan empire without compromising his faith. How can you be excellent in your school, job, or community while staying true to your beliefs?",
+      ],
+      prayerPrompt:
+        "God of Daniel, give me the same resolve that he had. Help me to settle my convictions before the pressure comes. When I am surrounded by a culture that wants to reshape me, anchor my identity in You alone. Give me the courage to stand and the wisdom to serve with excellence and integrity. Amen.",
+      activitySuggestion:
+        "Write a personal 'Daniel Resolution' — a list of three to five convictions you will not compromise on, no matter the cost. Examples: 'I will not tear others down to build myself up.' 'I will honor God with my body.' 'I will speak truth even when it is unpopular.' Sign it, date it, and keep it somewhere visible.",
+      estimatedMinutes: 12,
+    },
+    {
+      title: "Esther: Courage When Everything Is on the Line",
+      scriptureRef: "Esther 4:1-17; Esther 7:1-10",
+      bookId: 17,
+      chapter: 4,
+      ageGroup: "young_disciples_plus",
+      collectionId: heroesConviction.id,
+      orderInCollection: 1,
+      storyText:
+        "Esther's story reads like a movie. An orphan girl, raised by her cousin Mordecai, is chosen as queen of the Persian Empire — the most powerful nation on earth. She has beauty, position, and comfort. But she also has a secret: she is Jewish, and she has hidden it on Mordecai's advice.\n\nThen comes the crisis. Haman, the king's highest official, is consumed by hatred for the Jewish people — specifically because Mordecai refuses to bow to him. Haman manipulates King Xerxes into signing a decree authorizing the annihilation of every Jewish man, woman, and child in the empire. A date is set. The execution order is sent to every province. Genocide is coming.\n\nMordecai sends word to Esther: 'You must go to the king and beg for the lives of your people.' But there is a terrifying obstacle. In Persia, anyone who approaches the king uninvited — even the queen — could be executed on the spot unless the king extends his golden scepter. Esther has not been summoned in thirty days. She could die for simply walking into the throne room.\n\nEsther hesitates. And honestly, who can blame her? She is being asked to risk her life — the comfortable, safe, privileged life she has built — for people who do not even know she is one of them. She could stay silent. She could protect herself. Nobody would know.\n\nBut Mordecai's response is one of the most piercing statements in all of Scripture: 'Do not think that because you are in the king's house you alone of all the Jews will escape. For if you remain silent at this time, relief and deliverance for the Jews will arise from another place, but you and your father's family will perish. And who knows but that you have come to your royal position for such a time as this?'\n\nRead that again slowly. Mordecai is saying three things: (1) Your privilege will not protect you forever. (2) God will accomplish His purposes with or without you. (3) Maybe your entire life has been preparation for this exact moment.\n\nEsther's response transforms her from a passive queen into a hero of faith. She calls for a three-day fast among all the Jews and declares: 'I will go to the king, even though it is against the law. And if I perish, I perish.'\n\nThat last phrase — 'if I perish, I perish' — is the sound of someone surrendering their life to something bigger than themselves. Esther decided that the purpose God had for her was worth more than her safety.\n\nShe approached the king. He extended the scepter. Over two carefully planned banquets, Esther exposed Haman's plot. The king was furious. Haman was executed on the very gallows he had built for Mordecai. And the Jewish people were saved.\n\nHere is what Esther's story means for you: God has placed you where you are for a reason. Your school, your family, your city, your generation — none of it is random. There will come moments when staying silent is easier, when speaking up could cost you, when doing the right thing feels terrifying.\n\nIn those moments, remember Esther. She was afraid. She hesitated. She was not some fearless superhero. She was a young woman who decided that obedience to God mattered more than her comfort. And God used her courage to save an entire nation.\n\nYou may never face a life-or-death situation like Esther. But you will face moments that define your character — moments when you can either stay silent or speak up, hide or step forward, protect yourself or serve others. What will you choose?",
+      memoryVerse: "And who knows but that you have come to your royal position for such a time as this?",
+      memoryVerseRef: "Esther 4:14",
+      thinkQuestions: [
+        "Esther had privilege and comfort that made it tempting to stay silent. What privileges or comforts in your life might tempt you to avoid doing the right thing?",
+        "Mordecai said God would accomplish His purposes with or without Esther. What does that tell you about God's sovereignty and your role in His plan?",
+        "Esther's courage was not the absence of fear — she was terrified. How does knowing that even biblical heroes were afraid change how you think about your own fears?",
+        "Is there a 'such a time as this' moment in your life right now — a situation where God might be calling you to speak up or take action?",
+      ],
+      prayerPrompt:
+        "God, like Esther, I sometimes prefer comfort over courage. Forgive me for the times I have stayed silent when I should have spoken, or hidden when I should have stepped forward. Help me to see that You have placed me where I am for a purpose. Give me Esther's resolve — 'if I perish, I perish' — and use my life for Your glory. Amen.",
+      activitySuggestion:
+        "Think of one situation in your life where you have been staying silent when you should speak up — standing up for someone being bullied, sharing your faith with a friend, addressing an injustice, or having a hard conversation. Write out what you would say and practice it. Then ask God for the courage to follow through this week.",
+      estimatedMinutes: 13,
+    },
+    {
+      title: "David: The Heart God Sees",
+      scriptureRef: "1 Samuel 16:1-13; 1 Samuel 17:32-50",
+      bookId: 9,
+      chapter: 16,
+      ageGroup: "young_disciples_plus",
+      collectionId: heroesConviction.id,
+      orderInCollection: 2,
+      storyText:
+        "When God sent the prophet Samuel to anoint the next king of Israel, Samuel went to the house of Jesse in Bethlehem. Jesse had eight sons, and when the eldest, Eliab, walked in — tall, impressive, commanding — Samuel thought, 'Surely this is the one.' He looked like a king.\n\nBut God stopped him cold: 'Do not consider his appearance or his height, for I have rejected him. The Lord does not look at the things people look at. People look at the outward appearance, but the Lord looks at the heart.'\n\nOne by one, seven sons passed before Samuel. Seven rejections. Jesse did not even bother to bring his youngest son in from the fields. David was the runt — the afterthought, the kid nobody expected anything from. He was out tending sheep while his brothers were being considered for the throne.\n\nBut God chose David. The one nobody was looking at. The one his own family overlooked. The kid with the sheep and the sling and the songs.\n\nIf you have ever felt overlooked, underestimated, or dismissed — if you have ever felt like the last one picked, the one nobody expects much from — David's story is for you.\n\nGod does not evaluate you the way the world does. He does not care about your follower count, your athletic ranking, your GPA, or your social status. He looks at your heart. And a heart that is fully devoted to Him is more valuable than all the outward impressions in the world.\n\nBut David's story does not end at his anointing. Before he wore the crown, he faced the giant. Goliath was over nine feet tall, armed to the teeth, and had been terrorizing Israel's army for forty days. Every trained soldier — including David's own brothers — was paralyzed with fear.\n\nDavid was not even a soldier. He was a teenager who had come to bring his brothers lunch. But when he heard Goliath mocking God, something burned inside him. 'Who is this uncircumcised Philistine that he should defy the armies of the living God?'\n\nEveryone tried to talk him out of it. King Saul said he was too young. His brothers accused him of being arrogant. Saul offered him armor that did not fit. But David knew something they had forgotten: the battle belonged to the Lord.\n\n'You come against me with sword and spear and javelin,' David told Goliath, 'but I come against you in the name of the Lord Almighty.' One stone. One sling. One God. The giant fell.\n\nHere is the thing about David that made him extraordinary: it was not his skill with a sling. It was his heart. He wrote songs to God in the wilderness. He trusted God in obscurity before he ever stood on a battlefield. He developed his faith in the small, unseen moments — protecting sheep from lions and bears — long before the spotlight found him.\n\nYour 'shepherd field' season is not wasted time. The moments when nobody is watching — when you are faithful in obscurity, when you worship God with no audience, when you develop your character without recognition — those are the moments that forge the kind of heart God is looking for.\n\nDavid was not perfect. He made devastating mistakes later in life. But God still called him 'a man after my own heart' because David's fundamental posture was always turned toward God. When he failed, he repented. When he was afraid, he worshipped. When he was overlooked, he trusted.\n\nGod is not looking for perfect people. He is looking for people with hearts that are fully His. Be that person.",
+      memoryVerse: "The Lord does not look at the things people look at. People look at the outward appearance, but the Lord looks at the heart.",
+      memoryVerseRef: "1 Samuel 16:7",
+      thinkQuestions: [
+        "How does it feel to know that God evaluates your heart, not your outward appearance or achievements? Is that comforting or challenging — and why?",
+        "David was overlooked by his own family. Have you ever felt dismissed or underestimated? How does David's story speak into that experience?",
+        "David's faith was developed in obscurity — tending sheep, fighting lions and bears with no audience. What 'shepherd field' season are you in right now, and how can you use it to grow?",
+        "What does it mean to be 'a person after God's own heart'? What specific changes would that require in your daily life?",
+      ],
+      prayerPrompt:
+        "Lord, You see my heart when the world only sees the outside. Help me to care more about Your evaluation than anyone else's. Use my season of obscurity to shape me. Give me David's courage to face my giants and David's heart to worship You in every circumstance. Make me a person after Your own heart. Amen.",
+      activitySuggestion:
+        "Spend fifteen minutes in silence this week — no phone, no music, no distractions. Talk to God honestly about what is in your heart. Write down what He reveals. This practice of intentional quiet is how David developed his relationship with God while tending sheep. Make it a weekly habit.",
+      estimatedMinutes: 13,
+    },
+    {
+      title: "Joseph: Integrity Through Injustice",
+      scriptureRef: "Genesis 37:1-36; Genesis 39:1-23; Genesis 50:15-21",
+      bookId: 1,
+      chapter: 37,
+      ageGroup: "young_disciples_plus",
+      collectionId: heroesConviction.id,
+      orderInCollection: 3,
+      storyText:
+        "Joseph's story is the ultimate test case for whether you can trust God when life is brutally unfair.\n\nAt seventeen — your age — Joseph had dreams from God showing that he would one day be in a position of great authority. His brothers would bow before him. It was a legitimate vision from God. But Joseph's family did not celebrate it. His brothers already resented him because he was their father's favorite, and the dreams pushed them over the edge.\n\nThey grabbed him, threw him into an empty cistern, and sat down to eat lunch while he screamed for help. Then they sold him to slave traders for twenty pieces of silver. They took his prized robe, soaked it in goat's blood, and told their father he was dead. Joseph was seventeen years old.\n\nImagine being Joseph. Betrayed by your own brothers. Ripped from everything you know. Carried to a foreign land in chains. You had a dream from God — and now you are a slave. Where is God in this?\n\nBut here is what sets Joseph apart: even as a slave, he maintained his integrity. Potiphar, his Egyptian master, noticed that 'the Lord was with Joseph' and that everything Joseph touched prospered. Potiphar put him in charge of his entire household. Joseph could have been bitter, lazy, or rebellious. Instead, he was excellent.\n\nThen came another blow. Potiphar's wife tried to seduce him repeatedly. Joseph refused, saying, 'How could I do such a wicked thing and sin against God?' Notice — he did not say 'sin against Potiphar' or 'risk my position.' His moral compass pointed to God, not to consequences. When she falsely accused him, Joseph was thrown into prison. Again. Punished for doing the right thing.\n\nIn prison, Joseph could have given up. The dream from God must have seemed like a cruel joke. Betrayed by his brothers. Falsely accused by his master's wife. Forgotten in a dungeon. Years passed. But the Bible repeats its refrain: 'The Lord was with Joseph.'\n\nGod gave Joseph the ability to interpret dreams in prison, which eventually brought him before Pharaoh. Joseph interpreted Pharaoh's dreams — seven years of plenty followed by seven years of famine — and was elevated to second-in-command of all Egypt. From prisoner to prime minister in a single day.\n\nWhen famine hit, Joseph's brothers came to Egypt for food. They stood before him — exactly as the dream had shown — but did not recognize him. Joseph had the power to destroy them. He could have taken revenge for every year of suffering.\n\nInstead, he wept. He revealed himself and said some of the most profound words in Scripture: 'You intended to harm me, but God intended it for good, to accomplish what is now being done, the saving of many lives.'\n\nJoseph saw the bigger picture. Every injustice, every setback, every betrayal was a thread in a tapestry God was weaving. Joseph did not excuse what his brothers did — it was evil. But he recognized that God's sovereignty was greater than their sin.\n\nThis is the hardest truth in the Christian life: God does not promise to protect you from pain. He promises to use it. Romans 8:28 echoes Joseph's insight: 'In all things God works for the good of those who love Him.'\n\nYou will face injustice. People will hurt you, betray you, and treat you unfairly. You will have seasons when doing the right thing seems to make everything worse. In those moments, you have a choice: bitterness or trust. Revenge or forgiveness. Giving up or pressing on.\n\nJoseph chose trust. He chose integrity even when it cost him everything. He chose forgiveness even when revenge was within his grasp. And God used his faithfulness to save nations.\n\nYour pain is not pointless. Your waiting is not wasted. Your integrity matters, even when nobody sees it. Keep going. God is writing a story bigger than you can see.",
+      memoryVerse: "You intended to harm me, but God intended it for good, to accomplish what is now being done, the saving of many lives.",
+      memoryVerseRef: "Genesis 50:20",
+      thinkQuestions: [
+        "Joseph maintained integrity as a slave and as a prisoner — when there was no reward for it. What motivates you to do the right thing when nobody is watching and there is no immediate benefit?",
+        "Joseph refused Potiphar's wife by framing it as sin against God, not just a bad decision. How does viewing temptation through the lens of your relationship with God change how you respond to it?",
+        "Joseph chose forgiveness over revenge when he had absolute power over his brothers. Is there someone in your life you need to forgive? What is holding you back?",
+        "Joseph's journey from pit to palace took over thirteen years. How does his story challenge your expectations about God's timing and the path to fulfilling His purposes for your life?",
+      ],
+      prayerPrompt:
+        "God of Joseph, I trust You even when life is unfair. When I face betrayal, give me integrity. When I face temptation, give me resolve. When I face bitterness, give me the grace to forgive. Help me to believe that You are working in the unseen places of my life and that my pain is not pointless. I surrender my timeline to Yours. Amen.",
+      activitySuggestion:
+        "Write a letter to someone who has hurt you — you do not have to send it. Pour out your honest feelings, then write what you believe God might be doing through the situation. End with a prayer of release, choosing to trust God's purposes over your pain. Keep the letter as a milestone in your journey of forgiveness.",
+      estimatedMinutes: 14,
+    },
   ];
 
   const insertedStories = [];
@@ -705,6 +925,70 @@ async function seed() {
         { question: "What did the women find when they arrived at the tomb?", options: ["Jesus inside", "Soldiers guarding it", "The stone rolled away and the tomb empty", "The tomb sealed shut"], correctIndex: 2, explanation: "The stone was already rolled away and the tomb was empty — Jesus had risen." },
       ],
     },
+    {
+      storyIndex: 20,
+      questions: [
+        { question: "What does the Greek word 'poiema' (used in Ephesians 2:10) mean?", options: ["Servant", "Soldier", "Handiwork or poem", "Student"], correctIndex: 2, explanation: "The word 'poiema' means handiwork or poem — you are God's creative masterpiece." },
+        { question: "What did God tell Jeremiah when he said he was too young?", options: ["Wait until you are older", "I knew you before I formed you in the womb", "Find someone else to help you", "Study more first"], correctIndex: 1, explanation: "God told Jeremiah not to say he was too young because God had known him and set him apart before birth." },
+        { question: "According to this study, where is your true identity found?", options: ["In your achievements", "In what others think of you", "In who God says you are", "In your social media presence"], correctIndex: 2, explanation: "Your identity is not found in what you do or what others think — it is found in who God says you are." },
+      ],
+    },
+    {
+      storyIndex: 21,
+      questions: [
+        { question: "What does the word 'conform' mean in Romans 12:2?", options: ["To stand out boldly", "To be molded by external pressure", "To rebel against everything", "To ignore everyone"], correctIndex: 1, explanation: "Conform means to be molded into a shape by external pressure — like Play-Doh squeezed into a mold." },
+        { question: "According to Jesus, what happens to those persecuted for righteousness?", options: ["They will suffer forever", "They lose everything", "Theirs is the kingdom of heaven", "They should give up"], correctIndex: 2, explanation: "Jesus said 'Blessed are those who are persecuted because of righteousness, for theirs is the kingdom of heaven.'" },
+        { question: "What does Romans 12:2 say should happen instead of conforming?", options: ["Fight back aggressively", "Be transformed by the renewing of your mind", "Isolate yourself completely", "Pretend to agree"], correctIndex: 1, explanation: "Instead of conforming, we should be transformed by the renewing of our minds — reshaped from the inside by God." },
+      ],
+    },
+    {
+      storyIndex: 22,
+      questions: [
+        { question: "What does Proverbs 13:20 say about walking with the wise?", options: ["It is boring", "You become wise", "It is unnecessary", "It slows you down"], correctIndex: 1, explanation: "Proverbs 13:20 says 'Walk with the wise and become wise, for a companion of fools suffers harm.'" },
+        { question: "How did Jesus model friendship?", options: ["He only had one friend", "He was inclusive in love but intentional about His inner circle", "He avoided everyone", "He treated all people identically"], correctIndex: 1, explanation: "Jesus loved everyone but was intentional about His inner circle — the twelve disciples, and especially Peter, James, and John." },
+        { question: "What does Hebrews 10:24 say friends should do for each other?", options: ["Compete with each other", "Spur one another on toward love and good deeds", "Avoid difficult conversations", "Always agree"], correctIndex: 1, explanation: "Hebrews 10:24 says to spur one another on toward love and good deeds — true friends push each other to grow." },
+      ],
+    },
+    {
+      storyIndex: 23,
+      questions: [
+        { question: "What was the original context of Jeremiah 29:11?", options: ["A graduation speech", "Spoken to Israelites in exile in Babylon", "A birthday blessing", "A prayer for wealth"], correctIndex: 1, explanation: "God spoke Jeremiah 29:11 to the Israelites while they were in exile — displaced and confused, not living comfortably." },
+        { question: "What does Romans 8:28 say God works for good?", options: ["Only the good things", "Only spiritual things", "All things", "Only things we pray about"], correctIndex: 2, explanation: "Romans 8:28 says God works ALL things for good — not just the good things, but failures, detours, and painful seasons too." },
+        { question: "What question does this study suggest instead of 'What should I do with my life?'", options: ["How can I get rich?", "What can I do today?", "When will things get easier?", "Who can help me succeed?"], correctIndex: 1, explanation: "Instead of asking about your whole life, start with 'What can I do today?' — purpose is found in daily faithful obedience." },
+      ],
+    },
+    {
+      storyIndex: 24,
+      questions: [
+        { question: "How old was Daniel approximately when he was taken to Babylon?", options: ["About 5 years old", "About 10 years old", "About 15-16 years old", "About 25 years old"], correctIndex: 2, explanation: "Daniel was probably around fifteen or sixteen when the Babylonians invaded Jerusalem and took him captive." },
+        { question: "What does it mean that Daniel 'resolved in his heart'?", options: ["He made the decision after the pressure came", "He decided before the test came", "He asked others what to do", "He followed the crowd"], correctIndex: 1, explanation: "Daniel settled his convictions before the pressure came — he did not wait until the food was in front of him to decide." },
+        { question: "How long did Daniel serve faithfully in foreign empires?", options: ["About 5 years", "About 20 years", "Over 60 years", "Only during his youth"], correctIndex: 2, explanation: "Daniel served with distinction under multiple kings and empires for over sixty years, remaining faithful throughout." },
+      ],
+    },
+    {
+      storyIndex: 25,
+      questions: [
+        { question: "What was the risk Esther faced by approaching the king uninvited?", options: ["She could be banished", "She could be executed", "She would lose her crown", "Nothing would happen"], correctIndex: 1, explanation: "In Persia, anyone who approached the king uninvited could be executed unless the king extended his golden scepter." },
+        { question: "What did Esther say before going to the king?", options: ["I will be fine", "God told me everything will work out", "If I perish, I perish", "Someone else should go"], correctIndex: 2, explanation: "Esther declared 'If I perish, I perish' — surrendering her life to God's purposes regardless of the outcome." },
+        { question: "What three things was Mordecai communicating to Esther?", options: ["Be patient, pray, and wait", "Privilege will not protect you, God will work with or without you, and this may be your moment", "Run away, hide, and hope", "Fight, resist, and rebel"], correctIndex: 1, explanation: "Mordecai told Esther that privilege would not save her, God's purposes would happen regardless, and she may have been placed as queen for this exact moment." },
+      ],
+    },
+    {
+      storyIndex: 26,
+      questions: [
+        { question: "What did God tell Samuel about choosing a king?", options: ["Choose the tallest one", "Choose the strongest one", "The Lord looks at the heart, not the outward appearance", "Choose the oldest son"], correctIndex: 2, explanation: "God told Samuel 'People look at the outward appearance, but the Lord looks at the heart.'" },
+        { question: "Where was David when Samuel came to anoint the next king?", options: ["At the temple", "In the throne room", "Tending sheep in the fields", "At school"], correctIndex: 2, explanation: "David was out tending sheep — his father did not even bother to bring him in. He was the overlooked afterthought." },
+        { question: "What did David develop during his time as a shepherd?", options: ["Political connections", "Military strategy", "His faith and relationship with God", "Wealth and influence"], correctIndex: 2, explanation: "David developed his faith in the small, unseen moments — writing songs to God, trusting Him while protecting sheep from lions and bears." },
+      ],
+    },
+    {
+      storyIndex: 27,
+      questions: [
+        { question: "How old was Joseph when his brothers betrayed him?", options: ["About 12", "About 17", "About 21", "About 30"], correctIndex: 1, explanation: "Joseph was seventeen years old when his brothers threw him into a pit and sold him into slavery." },
+        { question: "Why did Joseph refuse Potiphar's wife?", options: ["He was afraid of Potiphar", "He framed it as sin against God", "He did not find her attractive", "He was too busy"], correctIndex: 1, explanation: "Joseph said 'How could I do such a wicked thing and sin against God?' — his moral compass pointed to God, not consequences." },
+        { question: "What did Joseph say to his brothers about their betrayal?", options: ["I will never forgive you", "You intended harm but God intended it for good", "You owe me a debt", "I want revenge"], correctIndex: 1, explanation: "Joseph said 'You intended to harm me, but God intended it for good, to accomplish the saving of many lives.'" },
+      ],
+    },
   ];
 
   let quizCount = 0;
@@ -765,7 +1049,7 @@ async function seed() {
   console.log(`${badgeData.length} badges created.`);
 
   console.log("Kids Club seed complete!");
-  console.log(`  Collections: 4`);
+  console.log(`  Collections: 6`);
   console.log(`  Stories: ${insertedStories.length}`);
   console.log(`  Quiz Questions: ${quizCount}`);
   console.log(`  Badges: ${badgeData.length}`);
