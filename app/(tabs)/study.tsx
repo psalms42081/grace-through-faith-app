@@ -221,12 +221,40 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
 
   const targetVerse = passageQuery.data?.verses?.find(v => v.verse === selectedVerse);
 
+  const qc = useQueryClient();
+
   const wordQuery = useQuery<{ map: any; entry: StrongEntry | null }[]>({
     queryKey: [`/api/strong/verse/${targetVerse?.id}`],
     enabled: !!targetVerse?.id,
   });
 
+  const generateWordsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/strong/generate", {
+        verseId: targetVerse!.id,
+        bookName: selectedBook!.name,
+        chapter: selectedChapter,
+        verse: selectedVerse,
+        verseText: targetVerse!.text,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: [`/api/strong/verse/${targetVerse?.id}`],
+      });
+    },
+  });
+
   const hasWords = wordQuery.data && wordQuery.data.length > 0;
+  const [wordGenAttempted, setWordGenAttempted] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (targetVerse && !wordQuery.isLoading && !hasWords && !generateWordsMutation.isPending && wordGenAttempted !== targetVerse.id) {
+      setWordGenAttempted(targetVerse.id);
+      generateWordsMutation.mutate();
+    }
+  }, [targetVerse?.id, wordQuery.isLoading, hasWords]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -366,11 +394,11 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
             </View>
           )}
 
-          {wordQuery.isLoading && targetVerse && (
+          {(wordQuery.isLoading || generateWordsMutation.isPending) && targetVerse && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Loading word analysis...
+                {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
               </Text>
             </View>
           )}
@@ -437,15 +465,23 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
             </>
           )}
 
-          {targetVerse && !wordQuery.isLoading && !hasWords && (
+          {targetVerse && !wordQuery.isLoading && !hasWords && !generateWordsMutation.isPending && generateWordsMutation.isError && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Ionicons name="information-circle-outline" size={24} color={theme.textMuted} />
+              <Ionicons name="reload-outline" size={24} color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                No Word Data Yet
+                Generation Failed
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Strong's Concordance data for {selectedBook.name} {selectedChapter}:{selectedVerse} hasn't been mapped yet. Word study data is available for key verses across Genesis, Exodus, Deuteronomy, Psalms, Proverbs, Isaiah, Jeremiah, Daniel, Micah, Habakkuk, Matthew, John, Acts, Romans, 1 Corinthians, Galatians, Ephesians, Philippians, 2 Timothy, Hebrews, James, 1 Peter, 1 John, and Revelation.
+                Could not generate word analysis for {selectedBook.name} {selectedChapter}:{selectedVerse}. Tap below to try again.
               </Text>
+              <Pressable
+                onPress={() => generateWordsMutation.mutate()}
+                style={[styles.generateBtn, { backgroundColor: theme.accent }]}
+              >
+                <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Retry
+                </Text>
+              </Pressable>
             </View>
           )}
         </>
@@ -496,6 +532,15 @@ function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: {
   });
 
   const hasCards = contextCards && contextCards.length > 0;
+  const [ctxGenAttempted, setCtxGenAttempted] = useState<string | null>(null);
+  const ctxKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
+
+  useEffect(() => {
+    if (selectedBook && selectedChapter && !isLoading && !hasCards && !generateMutation.isPending && ctxGenAttempted !== ctxKey) {
+      setCtxGenAttempted(ctxKey);
+      generateMutation.mutate();
+    }
+  }, [selectedBook?.id, selectedChapter, isLoading, hasCards]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -776,6 +821,15 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
   });
 
   const hasCommentary = commentaryData && commentaryData.length > 0;
+  const [comGenAttempted, setComGenAttempted] = useState<string | null>(null);
+  const comKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
+
+  useEffect(() => {
+    if (selectedBook && selectedChapter && !isLoading && !hasCommentary && !generateCommentaryMutation.isPending && comGenAttempted !== comKey) {
+      setComGenAttempted(comKey);
+      generateCommentaryMutation.mutate();
+    }
+  }, [selectedBook?.id, selectedChapter, isLoading, hasCommentary]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -1038,6 +1092,15 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
 
   const hasData = templates && templates.length > 0;
   const template = hasData ? templates![0] : null;
+  const [appGenAttempted, setAppGenAttempted] = useState<string | null>(null);
+  const appKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
+
+  useEffect(() => {
+    if (selectedBook && selectedChapter && !isLoading && !hasData && !generateAppMutation.isPending && appGenAttempted !== appKey) {
+      setAppGenAttempted(appKey);
+      generateAppMutation.mutate();
+    }
+  }, [selectedBook?.id, selectedChapter, isLoading, hasData]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -1336,6 +1399,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 17, textAlign: "center" },
   emptyBody: { fontSize: 14, textAlign: "center", lineHeight: 22 },
+  generateBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  generateBtnText: { color: "#fff", fontSize: 14 },
   loadingBox: { alignItems: "center", paddingVertical: 30, gap: 10 },
   loadingText: { fontSize: 13 },
   verseCard: {

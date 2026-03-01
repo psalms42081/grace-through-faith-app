@@ -19,7 +19,7 @@ The application is built with a mobile-first approach using **Expo (React Native
 
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB), historical context, classic commentaries, and application-focused content (reflection questions, prayer prompts, journaling).
-- **AI Integration:** OpenAI's gpt-4o-mini generates on-demand context, commentary, and application data for any Bible chapter, which is then cached to the database.
+- **AI Integration:** OpenAI's gpt-4o-mini generates on-demand context, commentary, application, AND word study data for any Bible chapter/verse, all cached to the database. All study tools auto-generate when first viewed — no manual "Generate" button needed. Word study (`/api/strong/generate`) creates Strong's Concordance-style Greek/Hebrew analysis for any verse on-demand.
 - **Text-to-Speech (TTS):** Uses OpenAI's gpt-audio model via a server-side API (`/api/tts`) with multiple voice options (Nova, Shimmer, Alloy, Echo, Onyx). `expo-speech` serves as a device fallback. Playback is handled by `expo-av`.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience with a 30-day garbage collection time.
 - **Search:** Keyword search with highlighting and reference parsing (e.g., "John 3:16").

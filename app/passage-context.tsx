@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 import { useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 interface ContextCard {
@@ -75,10 +76,48 @@ export default function PassageContextScreen() {
     queryKey: [`/api/commentary?book=${bookId}&chapter=${chapter}`],
   });
 
-  const isLoading = ctxLoading || comLoading;
+  const generateCtxMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/context/generate", { bookId: Number(bookId), chapter: Number(chapter) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/context?book=${bookId}&chapter=${chapter}`] });
+    },
+  });
+
+  const generateComMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/commentary/generate", { bookId: Number(bookId), chapter: Number(chapter) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/commentary?book=${bookId}&chapter=${chapter}`] });
+    },
+  });
+
   const hasContext = (contextCards?.length ?? 0) > 0;
   const hasCommentary = (commentaryResults?.length ?? 0) > 0;
+  const isGenerating = generateCtxMutation.isPending || generateComMutation.isPending;
+  const isLoading = ctxLoading || comLoading || isGenerating;
   const hasContent = hasContext || hasCommentary;
+
+  const [ctxGenDone, setCtxGenDone] = React.useState(false);
+  const [comGenDone, setComGenDone] = React.useState(false);
+
+  useEffect(() => {
+    if (!ctxLoading && !hasContext && !generateCtxMutation.isPending && !ctxGenDone) {
+      setCtxGenDone(true);
+      generateCtxMutation.mutate();
+    }
+  }, [ctxLoading, hasContext]);
+
+  useEffect(() => {
+    if (!comLoading && !hasCommentary && !generateComMutation.isPending && !comGenDone) {
+      setComGenDone(true);
+      generateComMutation.mutate();
+    }
+  }, [comLoading, hasCommentary]);
 
   return (
     <>
@@ -111,7 +150,7 @@ export default function PassageContextScreen() {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Loading study materials...
+              {isGenerating ? "Generating study materials..." : "Loading study materials..."}
             </Text>
           </View>
         ) : !hasContent ? (

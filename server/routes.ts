@@ -297,6 +297,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/strong/generate", async (req, res) => {
+    try {
+      const { verseId, bookName, chapter, verse, verseText } = req.body;
+      if (!verseId || !verseText) {
+        return res.status(400).json({ error: "verseId and verseText are required" });
+      }
+
+      const existing = await db
+        .select({ map: verseStrongMaps, entry: strongEntries })
+        .from(verseStrongMaps)
+        .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
+        .where(eq(verseStrongMaps.verseId, verseId))
+        .orderBy(verseStrongMaps.wordPosition);
+
+      if (existing.length > 0) {
+        return res.json(existing);
+      }
+
+      const testament = (bookName && ["Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"].includes(bookName)) ? "NT" : "OT";
+      const lang = testament === "NT" ? "Greek" : "Hebrew";
+      const langCode = testament === "NT" ? "gr" : "he";
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a ${lang} Bible lexicographer. Analyze key words from Bible verses and provide Strong's Concordance-style data. Return valid JSON only, no markdown.`,
+          },
+          {
+            role: "user",
+            content: `Analyze ${bookName} ${chapter}:${verse} (KJV): "${verseText}"
+
+Pick the 4-6 most theologically significant words. For each, return Strong's-style data. Return a JSON array:
+[
+  {
+    "strongId": "${langCode === "he" ? "H" : "G"}XXXX",
+    "originalWord": "the ${lang} word",
+    "translatedWord": "the English word in KJV",
+    "lemma": "dictionary form in ${lang} script",
+    "transliteration": "romanized form",
+    "pronunciation": "how to pronounce it",
+    "definition": "concise definition (1-2 sentences)",
+    "kjvUsage": "common KJV translations separated by commas"
+  }
+]
+
+Use real Strong's numbers when you know them. If unsure, use a plausible number with the correct prefix (H for Hebrew, G for Greek).`,
+          },
+        ],
+        temperature: 0.5,
+        max_tokens: 1200,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      let parsed: any[];
+      try {
+        const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+        parsed = JSON.parse(cleaned);
+        if (!Array.isArray(parsed)) parsed = [parsed];
+      } catch {
+        console.error("Failed to parse word study AI response:", raw.substring(0, 500));
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      const results: any[] = [];
+
+      for (let i = 0; i < parsed.length; i++) {
+        const w = parsed[i];
+        const sid = w.strongId || `${langCode === "he" ? "H" : "G"}${9000 + i}`;
+
+        const existingEntry = await db.select().from(strongEntries).where(eq(strongEntries.id, sid)).limit(1);
+
+        if (existingEntry.length === 0) {
+          await db.insert(strongEntries).values({
+            id: sid,
+            language: langCode,
+            lemma: w.lemma || w.originalWord || "",
+            transliteration: w.transliteration || null,
+            pronunciation: w.pronunciation || null,
+            definition: w.definition || "",
+            kjvUsage: w.kjvUsage || null,
+          }).onConflictDoNothing();
+        }
+
+        const [mapEntry] = await db.insert(verseStrongMaps).values({
+          verseId,
+          strongId: sid,
+          wordPosition: i + 1,
+          originalWord: w.originalWord || w.lemma || "",
+          translatedWord: w.translatedWord || null,
+        }).returning();
+
+        const entry = existingEntry.length > 0 ? existingEntry[0] : (await db.select().from(strongEntries).where(eq(strongEntries.id, sid)).limit(1))[0];
+
+        results.push({ map: mapEntry, entry });
+      }
+
+      return res.json(results);
+    } catch (err) {
+      console.error("Word study generation error:", err);
+      return res.status(500).json({ error: "Failed to generate word study" });
+    }
+  });
+
   // ─── CONTEXT ─────────────────────────────────────────────────────────────────
 
   app.get("/api/context", async (req, res) => {
