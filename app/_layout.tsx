@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, asyncStoragePersister } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
+import { TranslationProvider } from "@/context/TranslationContext";
 import Colors from "@/constants/colors";
 import {
   useFonts,
@@ -110,13 +111,15 @@ export default function RootLayout() {
         client={queryClient}
         persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 * 30 }}
       >
-        <KidsModeProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </KidsModeProvider>
+        <TranslationProvider>
+          <KidsModeProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </KidsModeProvider>
+        </TranslationProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>
   );

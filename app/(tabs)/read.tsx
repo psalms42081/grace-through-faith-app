@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   ActivityIndicator,
   useColorScheme,
   Platform,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface BibleBook {
   id: number;
@@ -24,11 +26,19 @@ interface BibleBook {
   orderIndex: number;
 }
 
+const TRANSLATIONS = [
+  { id: "KJV", name: "King James Version", year: "1611" },
+  { id: "ASV", name: "American Standard Version", year: "1901" },
+  { id: "WEB", name: "World English Bible", year: "2000" },
+];
+
 export default function ReadScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { translation, setTranslation } = useTranslation();
+  const [showPicker, setShowPicker] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -57,13 +67,51 @@ export default function ReadScreen() {
             { backgroundColor: theme.accent + "18" },
           ]}
           hitSlop={8}
+          onPress={() => setShowPicker(true)}
+          testID="translation-picker-btn"
         >
           <Text style={[styles.translationPillText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            KJV
+            {translation}
           </Text>
           <Ionicons name="chevron-down" size={12} color={theme.accent} />
         </Pressable>
       </View>
+
+      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowPicker(false)}>
+          <View style={[styles.pickerModal, { backgroundColor: isDark ? theme.backgroundElevated : "#fff" }]}>
+            <Text style={[styles.pickerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Select Translation
+            </Text>
+            {TRANSLATIONS.map((t) => {
+              const isActive = translation === t.id;
+              return (
+                <Pressable
+                  key={t.id}
+                  onPress={() => { setTranslation(t.id); setShowPicker(false); }}
+                  style={[styles.pickerOption, isActive && { backgroundColor: theme.accent + "15" }]}
+                  testID={`translation-${t.id}`}
+                >
+                  <View style={styles.pickerOptionLeft}>
+                    <Text style={[styles.pickerOptionAbbr, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_700Bold" }]}>
+                      {t.id}
+                    </Text>
+                    <View>
+                      <Text style={[styles.pickerOptionName, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {t.name}
+                      </Text>
+                      <Text style={[styles.pickerOptionYear, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        Published {t.year}
+                      </Text>
+                    </View>
+                  </View>
+                  {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -213,5 +261,47 @@ const styles = StyleSheet.create({
   bookChapters: {
     fontSize: 11,
     opacity: 0.6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+  pickerModal: {
+    width: "100%",
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: 24,
+  },
+  pickerTitle: {
+    fontSize: 20,
+    marginBottom: 16,
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 6,
+  },
+  pickerOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  pickerOptionAbbr: {
+    fontSize: 16,
+    width: 36,
+  },
+  pickerOptionName: {
+    fontSize: 15,
+  },
+  pickerOptionYear: {
+    fontSize: 12,
+    marginTop: 1,
   },
 });

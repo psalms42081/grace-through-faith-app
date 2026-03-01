@@ -21,6 +21,7 @@ import * as Speech from "expo-speech";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { useTranslation } from "@/context/TranslationContext";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
@@ -434,8 +435,20 @@ export default function VerseReaderScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const initialTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : "KJV";
-  const [translation, setTranslation] = useState<Translation>(initialTx);
+  const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
+  const resolvedTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : (TRANSLATIONS.includes(globalTranslation as Translation) ? (globalTranslation as Translation) : "KJV");
+  const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
+
+  useEffect(() => {
+    if (!txParam && TRANSLATIONS.includes(globalTranslation as Translation) && globalTranslation !== translation) {
+      setTranslationLocal(globalTranslation as Translation);
+    }
+  }, [globalTranslation]);
+
+  const setTranslation = useCallback((t: Translation) => {
+    setTranslationLocal(t);
+    setGlobalTranslation(t);
+  }, [setGlobalTranslation]);
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);

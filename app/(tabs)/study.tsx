@@ -784,6 +784,7 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [didInit, setDidInit] = useState(false);
+  const [activeCommentator, setActiveCommentator] = useState<string | null>(null);
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -823,6 +824,10 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
   const hasCommentary = commentaryData && commentaryData.length > 0;
   const [comGenAttempted, setComGenAttempted] = useState<string | null>(null);
   const comKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
+
+  useEffect(() => {
+    setActiveCommentator(null);
+  }, [selectedBook?.id, selectedChapter]);
 
   useEffect(() => {
     if (selectedBook && selectedChapter && !isLoading && !hasCommentary && !generateCommentaryMutation.isPending && comGenAttempted !== comKey) {
@@ -967,14 +972,48 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
             </View>
           )}
 
-          {hasCommentary && commentaryData!.map((cr) => (
+          {hasCommentary && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.commentatorFilterScroll} contentContainerStyle={styles.commentatorFilterRow}>
+              <Pressable
+                onPress={() => setActiveCommentator(null)}
+                style={[
+                  styles.commentatorChip,
+                  { backgroundColor: !activeCommentator ? theme.accent : (theme.backgroundCard) },
+                ]}
+                testID="filter-all-commentators"
+              >
+                <Text style={[styles.commentatorChipText, { color: !activeCommentator ? "#fff" : theme.textSecondary, fontFamily: !activeCommentator ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+                  All
+                </Text>
+              </Pressable>
+              {Array.from(new Set(commentaryData!.map(cr => cr.commentator?.name))).filter(Boolean).map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => setActiveCommentator(activeCommentator === name ? null : name!)}
+                  style={[
+                    styles.commentatorChip,
+                    { backgroundColor: activeCommentator === name ? theme.accent : (theme.backgroundCard) },
+                  ]}
+                  testID={`filter-commentator-${name}`}
+                >
+                  <Text style={[styles.commentatorChipText, { color: activeCommentator === name ? "#fff" : theme.textSecondary, fontFamily: activeCommentator === name ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+                    {name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          {hasCommentary && commentaryData!
+            .filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator)
+            .map((cr) => (
             <View key={cr.entry.id} style={[styles.commentaryCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <View style={styles.commentaryHeader}>
                 <View style={[styles.avatarSmall, { backgroundColor: theme.primary }]}>
                   <Ionicons name="person" size={14} color={Colors.light.accent} />
                 </View>
                 <Text style={[styles.commentaryAuthor, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {cr.commentator.name}
+                  {cr.commentator?.name ?? "Unknown"}
                 </Text>
                 {cr.entry.verseStart && (
                   <View style={[styles.verseBadge, { backgroundColor: theme.accent + "18" }]}>
@@ -989,7 +1028,7 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
                   {cr.entry.title}
                 </Text>
               )}
-              <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={6}>
+              <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                 {cr.entry.content}
               </Text>
             </View>
@@ -1517,6 +1556,10 @@ const styles = StyleSheet.create({
   verseRange: { fontSize: 10 },
   commentaryTitle: { fontSize: 15 },
   commentaryText: { fontSize: 13, lineHeight: 21 },
+  commentatorFilterScroll: { marginBottom: 14, maxHeight: 44 },
+  commentatorFilterRow: { gap: 8, paddingVertical: 2 },
+  commentatorChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  commentatorChipText: { fontSize: 12 },
   appLayer: {
     borderRadius: 16,
     padding: 20,
