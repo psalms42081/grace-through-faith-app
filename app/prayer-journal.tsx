@@ -122,23 +122,24 @@ export default function PrayerJournalScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "",
+          title: "Prayer Journal",
           headerStyle: { backgroundColor: theme.background },
           headerShadowVisible: false,
           headerTintColor: theme.text,
+          headerTitleStyle: { fontFamily: "Lora_700Bold", fontSize: 20 },
+          headerRight: () => (
+            <Pressable
+              onPress={() => setShowAdd(true)}
+              style={[styles.addBtn, { backgroundColor: theme.accent }]}
+              testID="add-prayer"
+              hitSlop={12}
+            >
+              <Ionicons name="add" size={22} color="#fff" />
+            </Pressable>
+          ),
         }}
       />
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.headerSection}>
-          <Text style={[styles.pageTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>Prayer Journal</Text>
-          <Pressable
-            onPress={() => setShowAdd(true)}
-            style={[styles.addBtn, { backgroundColor: theme.accent }]}
-            testID="add-prayer"
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </Pressable>
-        </View>
 
         <View style={[styles.filterRow, { backgroundColor: isDark ? theme.backgroundSecondary : "#FFF8EC" }]}>
           {(["active", "answered"] as const).map((f) => (
@@ -337,9 +338,9 @@ const styles = StyleSheet.create({
   },
   pageTitle: { fontSize: 26 },
   addBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },

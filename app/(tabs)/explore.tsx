@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
 const TOPICS = [
@@ -46,6 +47,18 @@ export default function DiscoverScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
+    queryKey: ["/api/reading-history/recent?userId=guest"],
+  });
+
+  const { data: streakData } = useQuery<{ currentStreak: number; longestStreak: number }>({
+    queryKey: ["/api/reading-streaks?userId=guest"],
+  });
+
+  const lastRead = recentReads?.[0];
+  const streak = streakData?.currentStreak ?? 0;
+  const longestStreak = streakData?.longestStreak ?? 0;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
@@ -59,6 +72,37 @@ export default function DiscoverScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {(lastRead || streak > 0) && (
+          <View style={styles.statusRow}>
+            {lastRead && (
+              <Pressable
+                onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
+                style={({ pressed }) => [
+                  styles.continueCard,
+                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1, flex: streak > 0 ? 1 : undefined },
+                ]}
+                testID="discover-continue-reading"
+              >
+                <Ionicons name="book" size={20} color={theme.accent} />
+                <Text style={[styles.continueLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>CONTINUE</Text>
+                <Text style={[styles.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+                  {lastRead.bookName} {lastRead.chapter}
+                </Text>
+              </Pressable>
+            )}
+            {streak > 0 && (
+              <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                <Ionicons name="flame" size={22} color="#FF6B35" />
+                <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+                <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Day Streak</Text>
+                {longestStreak > streak && (
+                  <Text style={[styles.streakBest, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Best: {longestStreak}</Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Popular Passages
@@ -254,6 +298,30 @@ const styles = StyleSheet.create({
   title: { fontSize: 24 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
+  statusRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 24,
+  },
+  continueCard: {
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 6,
+    minWidth: 120,
+  },
+  continueLabel: { fontSize: 10, letterSpacing: 1.2 },
+  continueTitle: { fontSize: 15 },
+  streakCard: {
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 4,
+    minWidth: 100,
+  },
+  streakNum: { fontSize: 26 },
+  streakLabel: { fontSize: 11 },
+  streakBest: { fontSize: 10, marginTop: 2 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
