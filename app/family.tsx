@@ -56,10 +56,12 @@ const FAMILY_SECTIONS: FamilySection[] = [
     gradient: ["#E8456B", "#C2185B"],
     description: "Building strong, Christ-centered marriages",
     items: [
+      { title: "The Secret to a Great Marriage", source: "Joel Osteen", icon: "play-circle", description: "Keys to keeping your marriage strong and thriving", url: "https://www.youtube.com/results?search_query=Joel+Osteen+secret+great+marriage+sermon" },
+      { title: "Love and Respect", source: "Joyce Meyer", icon: "play-circle", description: "Building mutual love and respect in your relationship", url: "https://www.youtube.com/results?search_query=Joyce+Meyer+love+respect+marriage" },
+      { title: "Marriage God's Way", source: "Tony Evans", icon: "play-circle", description: "God's blueprint for a covenant marriage", url: "https://www.youtube.com/results?search_query=Tony+Evans+marriage+Gods+way" },
+      { title: "Communication in Marriage", source: "Charles Stanley", icon: "play-circle", description: "How to truly listen and connect with your spouse", url: "https://www.youtube.com/results?search_query=Charles+Stanley+communication+marriage" },
       { title: "Keys to a Happy Marriage", source: "3ABN Today", icon: "tv", description: "Biblical principles for a lasting marriage", url: "https://www.youtube.com/results?search_query=3ABN+Today+marriage+keys+happy" },
-      { title: "Love and Respect in Marriage", source: "Amazing Facts", icon: "play-circle", description: "What the Bible says about spousal roles", url: "https://www.youtube.com/results?search_query=Amazing+Facts+marriage+love+respect+Bible" },
-      { title: "Communication in Marriage", source: "3ABN", icon: "tv", description: "How to strengthen communication with your spouse", url: "https://www.youtube.com/results?search_query=3ABN+communication+marriage+christian" },
-      { title: "Forgiveness in Relationships", source: "Doug Batchelor", icon: "play-circle", description: "The healing power of forgiveness in families", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+forgiveness+relationships" },
+      { title: "Forgiveness in Relationships", source: "Lysa TerKeurst", icon: "play-circle", description: "Healing broken trust and restoring love", url: "https://www.youtube.com/results?search_query=Lysa+TerKeurst+forgiveness+relationships+marriage" },
     ],
   },
   {
@@ -68,11 +70,12 @@ const FAMILY_SECTIONS: FamilySection[] = [
     gradient: ["#5B86E5", "#36D1DC"],
     description: "Raising children in faith and wisdom",
     items: [
-      { title: "Raising Godly Children", source: "3ABN Today Family", icon: "tv", description: "Practical wisdom for Christian parents", url: "https://www.youtube.com/results?search_query=3ABN+raising+godly+children" },
-      { title: "Teaching Kids to Pray", source: "3ABN Kids", icon: "tv", description: "Helping children develop a prayer life", url: "https://www.youtube.com/results?search_query=3ABN+Kids+teaching+children+pray" },
-      { title: "Discipline with Love", source: "Amazing Facts", icon: "play-circle", description: "Biblical approach to loving discipline", url: "https://www.youtube.com/results?search_query=Amazing+Facts+discipline+children+Bible" },
-      { title: "Family Worship Ideas", source: "3ABN", icon: "tv", description: "Creative ways to make family worship engaging", url: "https://www.youtube.com/results?search_query=3ABN+family+worship+ideas" },
-      { title: "Teen Faith & Identity", source: "Amazing Facts", icon: "play-circle", description: "Guiding teens through questions of faith", url: "https://www.youtube.com/results?search_query=Amazing+Facts+teens+faith+identity+Bible" },
+      { title: "Raising Confident Kids", source: "Joel Osteen", icon: "play-circle", description: "Helping your children believe in who God made them to be", url: "https://www.youtube.com/results?search_query=Joel+Osteen+raising+confident+kids" },
+      { title: "Parenting Without Regrets", source: "Joyce Meyer", icon: "play-circle", description: "Being the parent God called you to be", url: "https://www.youtube.com/results?search_query=Joyce+Meyer+parenting+without+regrets" },
+      { title: "Raising Kingdom Kids", source: "Tony Evans", icon: "play-circle", description: "Raising children with a kingdom mindset", url: "https://www.youtube.com/results?search_query=Tony+Evans+raising+kingdom+kids" },
+      { title: "Teaching Kids to Pray", source: "Priscilla Shirer", icon: "play-circle", description: "Helping children develop a vibrant prayer life", url: "https://www.youtube.com/results?search_query=Priscilla+Shirer+teaching+kids+pray" },
+      { title: "Raising Godly Children", source: "Charles Stanley", icon: "play-circle", description: "Practical wisdom for Christian parents", url: "https://www.youtube.com/results?search_query=Charles+Stanley+raising+godly+children" },
+      { title: "Teen Faith & Identity", source: "3ABN Today Family", icon: "tv", description: "Guiding teens through questions of faith", url: "https://www.youtube.com/results?search_query=3ABN+Today+Family+teen+faith+identity" },
     ],
   },
   {
@@ -81,10 +84,12 @@ const FAMILY_SECTIONS: FamilySection[] = [
     gradient: ["#C9933A", "#A87828"],
     description: "Growing together in God's Word as a family",
     items: [
+      { title: "Family Bible Time", source: "Rick Warren", icon: "play-circle", description: "Making Bible study a family habit", url: "https://www.youtube.com/results?search_query=Rick+Warren+family+Bible+study+time" },
+      { title: "Bible Stories for Kids", source: "Saddleback Kids", icon: "play-circle", description: "Engaging animated Bible stories for children", url: "https://www.youtube.com/results?search_query=Saddleback+Kids+Bible+stories" },
+      { title: "The Bible Project", source: "The Bible Project", icon: "play-circle", description: "Beautiful visual overviews of every book of the Bible", url: "https://www.youtube.com/results?search_query=The+Bible+Project+overview" },
+      { title: "Family Worship Ideas", source: "Doug Batchelor - Amazing Facts", icon: "play-circle", description: "Creative ways to make family worship engaging", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+family+worship+ideas" },
+      { title: "Veggie Tales Bible Stories", source: "VeggieTales", icon: "play-circle", description: "Fun faith-based animation for young children", url: "https://www.youtube.com/results?search_query=VeggieTales+Bible+stories+kids" },
       { title: "Family Bible Study Hour", source: "3ABN", icon: "tv", description: "Weekly Bible study for the whole family", url: "https://www.youtube.com/results?search_query=3ABN+family+Bible+study+hour" },
-      { title: "Bible Stories for Kids", source: "Amazing Facts Kids", icon: "play-circle", description: "Engaging Bible stories told for young audiences", url: "https://www.youtube.com/results?search_query=Amazing+Facts+Bible+stories+kids" },
-      { title: "Sabbath School Study", source: "3ABN", icon: "tv", description: "In-depth Bible study for adults and families", url: "https://www.youtube.com/results?search_query=3ABN+Sabbath+School+study" },
-      { title: "Amazing Adventure", source: "Amazing Facts", icon: "play-circle", description: "Doug Batchelor's evangelistic series for kids", url: "https://www.youtube.com/results?search_query=Amazing+Adventure+Doug+Batchelor+kids" },
     ],
   },
   {
@@ -93,10 +98,11 @@ const FAMILY_SECTIONS: FamilySection[] = [
     gradient: ["#2E7D32", "#66BB6A"],
     description: "Caring for your family's physical and spiritual health",
     items: [
+      { title: "The Daniel Plan", source: "Rick Warren", icon: "play-circle", description: "God's prescription for your health — body, mind, and spirit", url: "https://www.youtube.com/results?search_query=Rick+Warren+Daniel+Plan+health" },
+      { title: "Taking Care of Your Temple", source: "Joyce Meyer", icon: "play-circle", description: "Honoring God with your body and health", url: "https://www.youtube.com/results?search_query=Joyce+Meyer+taking+care+your+temple+body" },
+      { title: "Mental Health & Faith", source: "T.D. Jakes", icon: "play-circle", description: "Faith-based approaches to mental wellness", url: "https://www.youtube.com/results?search_query=TD+Jakes+mental+health+faith+sermon" },
       { title: "God's Plan for Health", source: "3ABN", icon: "tv", description: "Biblical principles for healthy living", url: "https://www.youtube.com/results?search_query=3ABN+Gods+plan+health+living" },
-      { title: "Healthful Cooking", source: "3ABN Today Cooking", icon: "tv", description: "Nutritious recipes for the whole family", url: "https://www.youtube.com/results?search_query=3ABN+Today+healthy+cooking+recipes" },
-      { title: "Mental Health & Faith", source: "Amazing Facts", icon: "play-circle", description: "Finding peace through faith during difficult times", url: "https://www.youtube.com/results?search_query=Amazing+Facts+mental+health+faith+Bible" },
-      { title: "The Bible Diet", source: "Doug Batchelor", icon: "play-circle", description: "What does Scripture say about food and health?", url: "https://www.youtube.com/results?search_query=Doug+Batchelor+Bible+diet+health" },
+      { title: "Stress and the Believer", source: "Charles Stanley", icon: "play-circle", description: "Managing stress through faith and Scripture", url: "https://www.youtube.com/results?search_query=Charles+Stanley+stress+believer+sermon" },
     ],
   },
   {
@@ -105,10 +111,13 @@ const FAMILY_SECTIONS: FamilySection[] = [
     gradient: ["#1A1F3C", "#0D1025"],
     description: "Christian programming for the whole family",
     items: [
-      { title: "3ABN Live Stream", source: "3ABN", icon: "tv", description: "Watch 3ABN programming live online", url: "https://3abn.org/watch" },
-      { title: "Amazing Facts TV", source: "Amazing Facts", icon: "tv", description: "Bible teaching and evangelistic content", url: "https://www.amazingfacts.org/media-library" },
-      { title: "Bible Answers Live", source: "Amazing Facts", icon: "mic", description: "Live call-in Bible Q&A with Doug Batchelor", url: "https://www.youtube.com/results?search_query=Bible+Answers+Live+Doug+Batchelor" },
-      { title: "Sabbath School Panel", source: "3ABN", icon: "tv", description: "Weekly panel discussion of the Sabbath School lesson", url: "https://www.youtube.com/results?search_query=3ABN+Sabbath+School+Panel" },
+      { title: "Joel Osteen Ministries", source: "Joel Osteen", icon: "tv", description: "Uplifting messages from Lakewood Church", url: "https://www.youtube.com/results?search_query=Joel+Osteen+latest+sermon" },
+      { title: "Joyce Meyer Ministries", source: "Joyce Meyer", icon: "tv", description: "Practical teaching for everyday Christian living", url: "https://www.youtube.com/results?search_query=Joyce+Meyer+latest+teaching" },
+      { title: "The Potter's House", source: "T.D. Jakes", icon: "tv", description: "Powerful sermons from Bishop T.D. Jakes", url: "https://www.youtube.com/results?search_query=TD+Jakes+Potters+House+sermon" },
+      { title: "In Touch Ministries", source: "Charles Stanley", icon: "tv", description: "Bible teaching from Dr. Charles Stanley", url: "https://www.youtube.com/results?search_query=Charles+Stanley+In+Touch+sermon" },
+      { title: "The Alternative", source: "Tony Evans", icon: "tv", description: "Urban-focused Bible teaching ministry", url: "https://www.youtube.com/results?search_query=Tony+Evans+The+Alternative+sermon" },
+      { title: "3ABN Live", source: "3ABN", icon: "tv", description: "Three Angels Broadcasting Network programming", url: "https://3abn.org/watch" },
+      { title: "Amazing Facts TV", source: "Amazing Facts", icon: "tv", description: "Bible prophecy and evangelistic content", url: "https://www.amazingfacts.org/media-library" },
       { title: "It Is Written", source: "It Is Written", icon: "tv", description: "Classic Bible-based television ministry", url: "https://www.youtube.com/results?search_query=It+Is+Written+ministry+sermon" },
     ],
   },
@@ -153,10 +162,13 @@ export default function FamilyScreen() {
           </Text>
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroBadge}>
-              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>3ABN</Text>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Sermons</Text>
             </View>
             <View style={styles.heroBadge}>
-              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Amazing Facts</Text>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Teaching</Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Faith TV</Text>
             </View>
           </View>
         </LinearGradient>
