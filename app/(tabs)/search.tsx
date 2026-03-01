@@ -24,11 +24,15 @@ const TOPIC_CHIPS = [
   { label: "Love", icon: "heart-outline" as const, color: "#E8475F", bgLight: "rgba(232,71,95,0.12)", bgDark: "rgba(232,71,95,0.18)" },
   { label: "Faith", icon: "shield-outline" as const, color: "#5B8DEF", bgLight: "rgba(91,141,239,0.12)", bgDark: "rgba(91,141,239,0.18)" },
   { label: "Grace", icon: "sparkles-outline" as const, color: "#C9933A", bgLight: "rgba(201,147,58,0.12)", bgDark: "rgba(201,147,58,0.18)" },
-  { label: "Salvation", icon: "sunny-outline" as const, color: "#E8A838", bgLight: "rgba(232,168,56,0.12)", bgDark: "rgba(232,168,56,0.18)" },
+  { label: "Hope", icon: "sunny-outline" as const, color: "#E8A838", bgLight: "rgba(232,168,56,0.12)", bgDark: "rgba(232,168,56,0.18)" },
   { label: "Wisdom", icon: "bulb-outline" as const, color: "#9B6DD7", bgLight: "rgba(155,109,215,0.12)", bgDark: "rgba(155,109,215,0.18)" },
   { label: "Prayer", icon: "hand-left-outline" as const, color: "#4ECCA3", bgLight: "rgba(78,204,163,0.12)", bgDark: "rgba(78,204,163,0.18)" },
-  { label: "Hope", icon: "leaf-outline" as const, color: "#56C596", bgLight: "rgba(86,197,150,0.12)", bgDark: "rgba(86,197,150,0.18)" },
   { label: "Peace", icon: "water-outline" as const, color: "#6AABEF", bgLight: "rgba(106,171,239,0.12)", bgDark: "rgba(106,171,239,0.18)" },
+  { label: "Courage", icon: "flag-outline" as const, color: "#7C4DFF", bgLight: "rgba(124,77,255,0.12)", bgDark: "rgba(124,77,255,0.18)" },
+  { label: "Joy", icon: "sparkles-outline" as const, color: "#F9A825", bgLight: "rgba(249,168,37,0.12)", bgDark: "rgba(249,168,37,0.18)" },
+  { label: "Comfort", icon: "heart-half-outline" as const, color: "#FF6B35", bgLight: "rgba(255,107,53,0.12)", bgDark: "rgba(255,107,53,0.18)" },
+  { label: "Strength", icon: "fitness-outline" as const, color: "#E65100", bgLight: "rgba(230,81,0,0.12)", bgDark: "rgba(230,81,0,0.18)" },
+  { label: "Forgiveness", icon: "refresh-outline" as const, color: "#2E7D32", bgLight: "rgba(46,125,50,0.12)", bgDark: "rgba(46,125,50,0.18)" },
 ];
 
 const QUICK_REFS = [
@@ -93,6 +97,11 @@ export default function SearchScreen() {
     if (!trimmed) return;
     setActiveQuery(trimmed);
     Keyboard.dismiss();
+  }, []);
+
+  const handleTopicPress = useCallback((label: string) => {
+    const topicId = label.toLowerCase();
+    router.push(`/topic/${topicId}`);
   }, []);
 
   const handleSuggestion = useCallback((label: string) => {
@@ -265,7 +274,7 @@ export default function SearchScreen() {
                 {TOPIC_CHIPS.map((chip) => (
                   <Pressable
                     key={chip.label}
-                    onPress={() => handleSuggestion(chip.label.toLowerCase())}
+                    onPress={() => handleTopicPress(chip.label)}
                     style={({ pressed }) => [
                       styles.topicChip,
                       {

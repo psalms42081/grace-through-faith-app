@@ -26,9 +26,11 @@ The application is built with a mobile-first approach using **Expo (React Native
 - **User Features:** Notes, highlights, bookmarks, prayer journal (CRUD), and reading history with streak tracking.
 - **Devotionals:** Browser for various devotional plans, enrollment, daily reading, and progress tracking.
 - **Maps & Timeline:** Interactive maps with locations linked to verses and a timeline of biblical events.
-- **Christian Music:** Dedicated music section with Worship & Praise, Classic Hymns, Gospel, Instrumental, 3ABN Music, and Kids categories with external links.
-- **Family & Faith:** Family-focused Christian content section with marriage, parenting, devotionals, health, and faith TV content from 3ABN and Amazing Facts.
-- **Enhanced Topics:** Each topic page now includes curated media content (sermons, TV shows, teaching, music) from Amazing Facts (Doug Batchelor), 3ABN, and classic hymns alongside Scripture verses.
+- **Christian Music:** Dedicated music section with Worship & Praise, Classic Hymns, Gospel, Instrumental, Contemporary Christian, and Kids categories with external links. Content shuffles each session for freshness.
+- **Family & Faith:** Family-focused Christian content from diverse voices (Joel Osteen, Joyce Meyer, Tony Evans, Charles Stanley, T.D. Jakes, Priscilla Shirer, Rick Warren, Lysa TerKeurst, Doug Batchelor, 3ABN, and more). Content shuffles each session.
+- **Enhanced Topics:** 12 topic pages with curated media from diverse Christian speakers/artists. Speaker avatars (colored initials) identify each source. Content order shuffles each session.
+- **Speaker Avatars:** Colored circular avatars with initials (constants/speakers.ts) used across Topic, Family, and Music screens for visual speaker identification.
+- **Navigation:** 4-tab layout (Home, Read, Search, Discover). Study tools accessible from within the chapter reader. Search tab topics link directly to full topic pages with media content.
 - **Illustrations:** AI-generated watercolor illustrations enhance visual content.
 
 ## External Dependencies

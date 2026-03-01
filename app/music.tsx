@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { getSpeakerColor, getSpeakerInitials } from "@/constants/speakers";
 
 interface MusicItem {
   title: string;
@@ -122,6 +123,13 @@ export default function MusicScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const shuffledCategories = useMemo(() => {
+    return MUSIC_CATEGORIES.map(cat => ({
+      ...cat,
+      items: [...cat.items].sort(() => Math.random() - 0.5),
+    }));
+  }, []);
+
   const openLink = (url: string) => {
     Linking.openURL(url);
   };
@@ -154,7 +162,7 @@ export default function MusicScreen() {
           </Text>
         </LinearGradient>
 
-        {MUSIC_CATEGORIES.map((category, catIdx) => (
+        {shuffledCategories.map((category, catIdx) => (
           <View key={catIdx} style={styles.categorySection}>
             <View style={styles.categoryHeader}>
               <LinearGradient
@@ -173,35 +181,36 @@ export default function MusicScreen() {
               </View>
             </View>
 
-            {category.items.map((item, idx) => (
-              <Pressable
-                key={idx}
-                onPress={() => openLink(item.url)}
-                style={({ pressed }) => [
-                  styles.musicItem,
-                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <LinearGradient
-                  colors={category.gradient}
-                  style={styles.musicItemIcon}
+            {category.items.map((item, idx) => {
+              const avatarColor = getSpeakerColor(item.artist);
+              const avatarInitials = getSpeakerInitials(item.artist);
+              return (
+                <Pressable
+                  key={idx}
+                  onPress={() => openLink(item.url)}
+                  style={({ pressed }) => [
+                    styles.musicItem,
+                    { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
+                  ]}
                 >
-                  <Ionicons name="play" size={14} color="#fff" />
-                </LinearGradient>
-                <View style={styles.musicItemInfo}>
-                  <Text style={[styles.musicItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.musicItemArtist, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {item.artist}
-                  </Text>
-                  <Text style={[styles.musicItemDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {item.description}
-                  </Text>
-                </View>
-                <Ionicons name="open-outline" size={16} color={theme.textMuted} />
-              </Pressable>
-            ))}
+                  <View style={[styles.artistAvatar, { backgroundColor: avatarColor }]}>
+                    <Text style={[styles.artistInitials, { fontFamily: "Inter_700Bold" }]}>{avatarInitials}</Text>
+                  </View>
+                  <View style={styles.musicItemInfo}>
+                    <Text style={[styles.musicItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.musicItemArtist, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                      {item.artist}
+                    </Text>
+                    <Text style={[styles.musicItemDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                      {item.description}
+                    </Text>
+                  </View>
+                  <Ionicons name="open-outline" size={16} color={theme.textMuted} />
+                </Pressable>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
@@ -249,12 +258,17 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 8,
   },
-  musicItemIcon: {
+  artistAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  artistInitials: {
+    color: "#fff",
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   musicItemInfo: { flex: 1 },
   musicItemTitle: { fontSize: 15, marginBottom: 1 },

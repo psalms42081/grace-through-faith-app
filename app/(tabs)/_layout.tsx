@@ -53,10 +53,7 @@ function NativeTabLayout() {
         <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
         <Label>Search</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="study">
-        <Icon sf={{ default: "text.book.closed", selected: "text.book.closed.fill" }} />
-        <Label>Study</Label>
-      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="study" options={{ href: null }} />
       <NativeTabs.Trigger name="explore">
         <Icon sf={{ default: "safari", selected: "safari.fill" }} />
         <Label>Discover</Label>
@@ -151,7 +148,7 @@ function ClassicTabLayout() {
         name="study"
         options={{
           title: "Study",
-          href: isKidsMode ? null : undefined,
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={color} />
           ),

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { getSpeakerColor, getSpeakerInitials } from "@/constants/speakers";
 
 interface ContentItem {
   title: string;
@@ -130,6 +131,13 @@ export default function FamilyScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const shuffledSections = useMemo(() => {
+    return FAMILY_SECTIONS.map(section => ({
+      ...section,
+      items: [...section.items].sort(() => Math.random() - 0.5),
+    }));
+  }, []);
+
   const openLink = (url: string) => {
     Linking.openURL(url);
   };
@@ -199,7 +207,7 @@ export default function FamilyScreen() {
           ))}
         </View>
 
-        {FAMILY_SECTIONS.map((section, secIdx) => (
+        {shuffledSections.map((section, secIdx) => (
           <View key={secIdx} style={styles.contentSection}>
             <View style={styles.sectionHeader}>
               <LinearGradient
@@ -218,35 +226,36 @@ export default function FamilyScreen() {
               </View>
             </View>
 
-            {section.items.map((item, idx) => (
-              <Pressable
-                key={idx}
-                onPress={() => openLink(item.url)}
-                style={({ pressed }) => [
-                  styles.contentItem,
-                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <LinearGradient
-                  colors={section.gradient}
-                  style={styles.contentItemIcon}
+            {section.items.map((item, idx) => {
+              const avatarColor = getSpeakerColor(item.source);
+              const avatarInitials = getSpeakerInitials(item.source);
+              return (
+                <Pressable
+                  key={idx}
+                  onPress={() => openLink(item.url)}
+                  style={({ pressed }) => [
+                    styles.contentItem,
+                    { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
+                  ]}
                 >
-                  <Ionicons name={item.icon} size={14} color="#fff" />
-                </LinearGradient>
-                <View style={styles.contentItemInfo}>
-                  <Text style={[styles.contentItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.contentItemSource, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {item.source}
-                  </Text>
-                  <Text style={[styles.contentItemDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {item.description}
-                  </Text>
-                </View>
-                <Ionicons name="open-outline" size={16} color={theme.textMuted} />
-              </Pressable>
-            ))}
+                  <View style={[styles.speakerAvatar, { backgroundColor: avatarColor }]}>
+                    <Text style={[styles.speakerInitials, { fontFamily: "Inter_700Bold" }]}>{avatarInitials}</Text>
+                  </View>
+                  <View style={styles.contentItemInfo}>
+                    <Text style={[styles.contentItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.contentItemSource, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                      {item.source}
+                    </Text>
+                    <Text style={[styles.contentItemDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                      {item.description}
+                    </Text>
+                  </View>
+                  <Ionicons name="open-outline" size={16} color={theme.textMuted} />
+                </Pressable>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
@@ -324,12 +333,17 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 8,
   },
-  contentItemIcon: {
+  speakerAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  speakerInitials: {
+    color: "#fff",
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   contentItemInfo: { flex: 1 },
   contentItemTitle: { fontSize: 15, marginBottom: 1 },
