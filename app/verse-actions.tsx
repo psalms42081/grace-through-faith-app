@@ -11,6 +11,7 @@ import {
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
 import { apiRequest } from "@/lib/query-client";
@@ -41,6 +42,7 @@ export default function VerseActionsSheet() {
   }, [text, reference, txLabel]);
 
   const handleStudy = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
       router.push(`/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
@@ -48,6 +50,7 @@ export default function VerseActionsSheet() {
   }, [bookId, chapter, bookName]);
 
   const handleWordStudy = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
       router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&verse=${verse}&verseId=${encodeURIComponent(verseId || "")}&verseText=${encodeURIComponent(text || "")}&bookName=${encodeURIComponent(bookName || "")}`);
@@ -55,6 +58,7 @@ export default function VerseActionsSheet() {
   }, [verseId, bookName, chapter, verse, text, bookId]);
 
   const handleHistoricVoices = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
       router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
@@ -62,6 +66,7 @@ export default function VerseActionsSheet() {
   }, [bookId, chapter, bookName]);
 
   const handleVerseMap = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
       router.push({
@@ -80,6 +85,7 @@ export default function VerseActionsSheet() {
   }, [verseId, text, reference, bookName, bookId, chapter, verse]);
 
   const handleSocraticStudy = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
       router.push({

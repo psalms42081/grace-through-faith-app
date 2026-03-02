@@ -18,6 +18,15 @@ import type { AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
+import * as Haptics from "expo-haptics";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
@@ -133,6 +142,8 @@ interface DevPlan {
   theme: string | null;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 function ContextPanel({
   bookId,
   chapter,
@@ -146,21 +157,57 @@ function ContextPanel({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<"locations" | "timeline" | "figures" | "insights">("locations");
+  const fabScale = useSharedValue(1);
+  const fabGlow = useSharedValue(0);
+  const hadDataRef = useRef(false);
+  const wasCachedRef = useRef(false);
 
-  const { data, isLoading } = useQuery<ChapterContext>({
+  const cachedData = queryClient.getQueryData<ChapterContext>([`/api/chapter-context/${bookId}/${chapter}`]);
+  if (cachedData && !wasCachedRef.current) {
+    wasCachedRef.current = true;
+  }
+
+  const { data, isLoading, isFetching } = useQuery<ChapterContext>({
     queryKey: [`/api/chapter-context/${bookId}/${chapter}`],
-    enabled: expanded,
+    enabled: expanded || !wasCachedRef.current,
+    staleTime: 1000 * 60 * 30,
   });
+
+  useEffect(() => {
+    if (data && !hadDataRef.current && !expanded) {
+      hadDataRef.current = true;
+      fabScale.value = withSequence(
+        withTiming(1.18, { duration: 200, easing: Easing.out(Easing.quad) }),
+        withTiming(0.94, { duration: 150, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.06, { duration: 130, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) })
+      );
+      fabGlow.value = withSequence(
+        withTiming(1, { duration: 250 }),
+        withDelay(400, withTiming(0, { duration: 600 }))
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [data, expanded]);
+
+  const fabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+    shadowOpacity: 0.15 + fabGlow.value * 0.35,
+    shadowRadius: 6 + fabGlow.value * 10,
+  }));
 
   if (!expanded) {
     return (
-      <Pressable
-        onPress={() => setExpanded(true)}
-        style={[contextStyles.fab, { backgroundColor: isDark ? "#1A1F3C" : "#EDE5D5" }]}
+      <AnimatedPressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setExpanded(true);
+        }}
+        style={[contextStyles.fab, { backgroundColor: isDark ? "#1A1F3C" : "#EDE5D5" }, fabAnimStyle]}
         testID="context-panel-toggle"
       >
         <Ionicons name="compass" size={22} color={theme.accent} />
-      </Pressable>
+      </AnimatedPressable>
     );
   }
 
@@ -535,11 +582,12 @@ function RelatedContent({
 
       <View style={relatedStyles.studyGrid}>
         <Pressable
-          onPress={() =>
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push(
               `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
-            )
-          }
+            );
+          }}
           style={({ pressed }) => [
             relatedStyles.studyLayerCard,
             { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
@@ -556,9 +604,10 @@ function RelatedContent({
         </Pressable>
 
         <Pressable
-          onPress={() =>
-            router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
-          }
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`);
+          }}
           style={({ pressed }) => [
             relatedStyles.studyLayerCard,
             { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
@@ -575,9 +624,10 @@ function RelatedContent({
         </Pressable>
 
         <Pressable
-          onPress={() =>
-            router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
-          }
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`);
+          }}
           style={({ pressed }) => [
             relatedStyles.studyLayerCard,
             { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
@@ -592,9 +642,10 @@ function RelatedContent({
         </Pressable>
 
         <Pressable
-          onPress={() =>
-            router.push(`/(tabs)/study?tab=application&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`)
-          }
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push(`/(tabs)/study?tab=application&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`);
+          }}
           style={({ pressed }) => [
             relatedStyles.studyLayerCard,
             { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
@@ -1196,6 +1247,7 @@ export default function VerseReaderScreen() {
   const isActive = isSpeaking || isPaused;
 
   const handleVerseTap = useCallback((item: Verse) => {
+    Haptics.selectionAsync();
     router.push({
       pathname: "/verse-actions",
       params: {
