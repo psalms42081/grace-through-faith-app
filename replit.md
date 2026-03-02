@@ -34,7 +34,9 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Interactive AI Storyteller (Pause & Wonder):** Kids stories are "Choose Your Own Adventure" experiences with AI-generated "Pause & Wonder" cards for interactive learning.
 - **Kids Story Engine (Scene-Based Reader):** Immersive scene-based storybook reader with AI-generated scenes, narration, illustration prompts, and dynamic atmosphere audio.
 - **Dynamic Atmosphere Audio Engine:** Plays mood-appropriate cinematic orchestral loops with cross-fade transitions based on story scene mood.
-- **Home Screen Redesign:** Features a Verse of the Day card, streak calendar, "Continue Reading," and guided content cards.
+- **Home Screen (Action Dashboard):** Focused on today/now actions only — Verse of the Day, streak calendar, bigger Continue Reading card, guided tool cards (4-Layer Study, Prayer Journal), and devotional plan progress. No educational explainers or featured plan lists.
+- **Discover Tab (Curated Library):** Organized into labeled sections: Popular Passages, Topics to Explore, Study Resources (Historic Voices, 28 Fundamental Beliefs), Study Tools (Bible Maps, Timeline), and Christian Content (Music). No progress widgets or personal items.
+- **You Tab (Personal Dashboard):** Quick Links trimmed to personal items only (Prayer Journal, Prayer Groups). Subtle section dividers between all dashboard sections.
 - **Growth Analytics Dashboard:** Profile section with deep study minutes, words mastered, Socratic session count, and a "Bible Knowledge Map."
 - **Parent Bridge (Dinner Table Topics):** AI-powered "Dinner Table Topic" generation for parents based on children's completed quizzes.
 - **User Accounts & Authentication:** Full JWT-based auth system with `AuthContext.tsx` managing state, token persistence in AsyncStorage, and `bcryptjs` for password hashing.

@@ -257,22 +257,24 @@ export default function ProfileScreen() {
       </View>
 
       <View style={st.statsRow}>
-        <View style={[st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="flame" size={22} color="#FF6B35" />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
           <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Current{"\n"}Streak</Text>
-        </View>
-        <View style={[st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+        </Pressable>
+        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="trending-up" size={22} color={theme.accent} />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
           <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Longest{"\n"}Streak</Text>
-        </View>
-        <View style={[st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+        </Pressable>
+        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="trophy" size={22} color="#E8456B" />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
           <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Perfect{"\n"}Weeks</Text>
-        </View>
+        </Pressable>
       </View>
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
       {weeklyData && (
         <View style={[st.weeklyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
@@ -306,6 +308,8 @@ export default function ProfileScreen() {
           </Text>
         </View>
       )}
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
       <View style={[st.growthSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
         <Text style={[st.growthHeader, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -351,6 +355,8 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
       <View style={[st.heatmapSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
         <View style={st.heatmapHeaderRow}>
           <Text style={[st.heatmapTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -374,6 +380,8 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -409,6 +417,8 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
       {recentReads && recentReads.length > 0 && (
         <View style={st.sectionPad}>
           <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -440,6 +450,8 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Quick Links
@@ -447,11 +459,6 @@ export default function ProfileScreen() {
         {[
           { title: "Prayer Journal", icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
           { title: "Prayer Groups", icon: "people-circle" as const, color: "#10B981", route: "/groups" },
-          { title: "28 Fundamental Beliefs", icon: "school" as const, color: "#7C3AED", route: "/sda-studies" },
-          { title: "Christian Music", icon: "musical-notes" as const, color: "#C9933A", route: "/music" },
-          { title: "Family & Faith", icon: "people" as const, color: "#3B6CB5", route: "/family" },
-          { title: "Bible Maps", icon: "map" as const, color: "#2E7D32", route: "/maps-timeline?tab=maps" },
-          { title: "Timeline", icon: "time" as const, color: "#E65100", route: "/maps-timeline?tab=timeline" },
         ].map((link) => (
           <Pressable
             key={link.title}
@@ -526,6 +533,12 @@ const heatSt = StyleSheet.create({
 
 const st = StyleSheet.create({
   container: { flex: 1 },
+  sectionDivider: {
+    height: 1,
+    marginHorizontal: 32,
+    marginVertical: 8,
+    opacity: 0.5,
+  },
   headerSection: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -540,7 +553,7 @@ const st = StyleSheet.create({
     marginBottom: 12,
   },
   userName: { fontSize: 24, marginBottom: 4 },
-  userSub: { fontSize: 14 },
+  userSub: { fontSize: 14, lineHeight: 22 },
   patronBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -599,7 +612,7 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  weekSummary: { fontSize: 13, textAlign: "center" },
+  weekSummary: { fontSize: 13, textAlign: "center", lineHeight: 20 },
   growthSection: {
     marginHorizontal: 20,
     borderRadius: 20,
@@ -640,13 +653,13 @@ const st = StyleSheet.create({
   },
   heatmapTitle: { fontSize: 18 },
   heatmapSubtitle: { fontSize: 15 },
-  heatmapDesc: { fontSize: 12, marginBottom: 16 },
+  heatmapDesc: { fontSize: 12, marginBottom: 16, lineHeight: 18 },
   heatmapEmpty: {
     alignItems: "center",
     paddingVertical: 30,
     gap: 10,
   },
-  heatmapEmptyText: { fontSize: 13, textAlign: "center" },
+  heatmapEmptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
   sectionPad: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -673,7 +686,7 @@ const st = StyleSheet.create({
     justifyContent: "center",
   },
   badgeTitle: { fontSize: 12, textAlign: "center" },
-  badgeReq: { fontSize: 10, textAlign: "center", lineHeight: 14 },
+  badgeReq: { fontSize: 10, textAlign: "center", lineHeight: 16 },
   activityRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -691,7 +704,7 @@ const st = StyleSheet.create({
   },
   activityInfo: { flex: 1 },
   activityTitle: { fontSize: 15 },
-  activityTime: { fontSize: 12, marginTop: 2 },
+  activityTime: { fontSize: 12, marginTop: 2, lineHeight: 18 },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",

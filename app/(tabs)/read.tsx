@@ -149,14 +149,19 @@ export default function ReadScreen() {
                 style={({ pressed }) => [
                   styles.bookPill,
                   {
-                    backgroundColor: pressed ? (isDark ? theme.accent + "18" : theme.accent + "12") : (isDark ? theme.backgroundCard : theme.backgroundCard),
+                    backgroundColor: pressed
+                      ? (isDark ? theme.accent + "18" : theme.accent + "10")
+                      : (isDark ? theme.backgroundCard : theme.backgroundCard),
+                    borderColor: isDark ? theme.border : theme.borderLight,
+                    borderWidth: 1,
+                    opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
                 <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
                   {book.name}
                 </Text>
-                <Text style={[styles.bookChapters, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                   {book.chapterCount}
                 </Text>
               </Pressable>
@@ -179,14 +184,19 @@ export default function ReadScreen() {
                 style={({ pressed }) => [
                   styles.bookPill,
                   {
-                    backgroundColor: pressed ? (isDark ? theme.accent + "18" : theme.accent + "12") : (isDark ? theme.backgroundCard : theme.backgroundCard),
+                    backgroundColor: pressed
+                      ? (isDark ? theme.accent + "18" : theme.accent + "10")
+                      : (isDark ? theme.backgroundCard : theme.backgroundCard),
+                    borderColor: isDark ? theme.border : theme.borderLight,
+                    borderWidth: 1,
+                    opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
                 <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
                   {book.name}
                 </Text>
-                <Text style={[styles.bookChapters, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                   {book.chapterCount}
                 </Text>
               </Pressable>
@@ -260,7 +270,6 @@ const styles = StyleSheet.create({
   },
   bookChapters: {
     fontSize: 11,
-    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,

@@ -48,13 +48,6 @@ const DAILY_VERSES = [
   { text: "And we know that all things work together for good to them that love God, to them who are the called according to his purpose.", reference: "Romans 8:28" },
 ];
 
-const STUDY_LAYERS = [
-  { icon: "book-outline" as const, num: "1", title: "Text", desc: "Read the Scripture", detail: "Read the passage in multiple translations (KJV, ASV, WEB) to see how different scholars have rendered the original languages." },
-  { icon: "search-outline" as const, num: "2", title: "Context", desc: "Understand the setting", detail: "Explore the historical and cultural background \u2014 who wrote it, when, to whom, and why. See the passage in its full biblical context." },
-  { icon: "library-outline" as const, num: "3", title: "Historic Voices", desc: "Learn from the faithful", detail: "Hear from trusted commentators throughout church history, including Ellen White\u2019s writings, to deepen your understanding." },
-  { icon: "heart-outline" as const, num: "4", title: "Application", desc: "Live the Word", detail: "Bring it home \u2014 practical reflection questions and journaling prompts to apply what you\u2019ve learned to your daily walk with God." },
-];
-
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -67,16 +60,6 @@ function getTodaysVerse() {
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
   );
   return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
-}
-
-interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  totalDays: number;
-  theme: string | null;
-  difficultyLevel: string | null;
-  estimatedMinutesPerDay: number | null;
 }
 
 interface TodayResponse {
@@ -640,10 +623,6 @@ function AdultHomeScreen() {
     queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
-  const { data: plans } = useQuery<Plan[]>({
-    queryKey: ["/api/devotionals/plans"],
-  });
-
   const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
     queryKey: [`/api/reading-history/recent?userId=${userId}`],
   });
@@ -659,13 +638,6 @@ function AdultHomeScreen() {
   const hasActivePlan = todayData?.today != null;
   const progress = todayData?.completedCount ?? 0;
   const total = todayData?.totalDays ?? 1;
-
-  const PLAN_COLORS: [string, string][] = [
-    ["#C9933A", "#A87828"],
-    ["#2E7D32", "#1B5E20"],
-    ["#3B6CB5", "#2A4F8F"],
-  ];
-  const PLAN_ICONS: ("heart" | "leaf" | "star" | "book" | "sunny")[] = ["heart", "leaf", "star", "book", "sunny"];
 
   return (
     <ScrollView
@@ -683,6 +655,9 @@ function AdultHomeScreen() {
           </Text>
           <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Grace through Faith
+          </Text>
+          <Text style={[s.headerTagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            No distractions. Built for deeper study.
           </Text>
         </View>
         <Pressable
@@ -775,21 +750,28 @@ function AdultHomeScreen() {
           ]}
           testID="home-continue-reading"
         >
-          <LinearGradient
-            colors={["#C9933A", "#A87828"]}
-            style={s.continueIcon}
-          >
-            <Ionicons name="book" size={18} color="#fff" />
-          </LinearGradient>
-          <View style={s.continueInfo}>
-            <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Continue Reading
-            </Text>
-            <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-              {lastRead.bookName} {lastRead.chapter}
-            </Text>
+          <View style={s.continueTop}>
+            <LinearGradient
+              colors={["#C9933A", "#A87828"]}
+              style={s.continueIcon}
+            >
+              <Ionicons name="book" size={20} color="#fff" />
+            </LinearGradient>
+            <View style={s.continueInfo}>
+              <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Continue Reading
+              </Text>
+              <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+                {lastRead.bookName} {lastRead.chapter}
+              </Text>
+            </View>
           </View>
-          <Ionicons name="play-circle" size={32} color={theme.accent} />
+          <View style={s.continueBottom}>
+            <Text style={[s.continueHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Pick up where you left off
+            </Text>
+            <Ionicons name="play-circle" size={36} color={theme.accent} />
+          </View>
         </Pressable>
       )}
 
@@ -878,93 +860,6 @@ function AdultHomeScreen() {
         </LinearGradient>
       </Pressable>
 
-      <Pressable
-        onPress={() => router.push("/(tabs)/read")}
-        style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
-      >
-        <View style={[s.studyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-          <Text style={[s.sectionLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            HOW IT WORKS
-          </Text>
-          <Text style={[s.studyTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            The 4-Layer Study Model
-          </Text>
-          <View style={s.layersRow}>
-            {STUDY_LAYERS.map((layer, idx) => (
-              <View key={layer.title} style={s.layerItem}>
-                <LinearGradient
-                  colors={[
-                    ["#C9933A", "#A87828"],
-                    ["#2E7D32", "#1B5E20"],
-                    ["#3B6CB5", "#2A4F8F"],
-                    ["#8B5CF6", "#6D3BD4"],
-                  ][idx] as [string, string]}
-                  style={s.layerCircle}
-                >
-                  <Text style={[s.layerNum, { fontFamily: "Inter_700Bold" }]}>{layer.num}</Text>
-                </LinearGradient>
-                <Text style={[s.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {layer.title}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <View style={s.studyFooter}>
-            <Text style={[s.studyFooterText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Read, understand context, hear historic voices, then apply
-            </Text>
-            <LinearGradient colors={["#C9933A", "#A87828"]} style={s.studyArrow}>
-              <Ionicons name="arrow-forward" size={14} color="#fff" />
-            </LinearGradient>
-          </View>
-        </View>
-      </Pressable>
-
-      {plans && plans.length > 0 && (
-        <View style={s.plansSection}>
-          <View style={s.plansSectionHeader}>
-            <Text style={[s.plansSectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              Featured Plans
-            </Text>
-            {plans.length > 3 && (
-              <Pressable onPress={() => router.push("/devotionals")} hitSlop={8}>
-                <Text style={[s.viewAllText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  View All
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.plansScroll}>
-            {plans.slice(0, 5).map((plan, i) => (
-              <Pressable
-                key={plan.id}
-                onPress={() => router.push("/devotionals")}
-                style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-              >
-                <LinearGradient
-                  colors={PLAN_COLORS[i % PLAN_COLORS.length]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.planCard}
-                >
-                  <Ionicons
-                    name={PLAN_ICONS[i % PLAN_ICONS.length]}
-                    size={28}
-                    color="rgba(255,255,255,0.3)"
-                    style={s.planBgIcon}
-                  />
-                  <Text style={[s.planTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                    {plan.title}
-                  </Text>
-                  <Text style={[s.planMeta, { fontFamily: "Inter_400Regular" }]}>
-                    {plan.totalDays} days
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -998,7 +893,8 @@ const s = StyleSheet.create({
     marginBottom: 24,
   },
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  headerTitle: { fontSize: 26, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 26, letterSpacing: -0.3, marginBottom: 2 },
+  headerTagline: { fontSize: 12, letterSpacing: 0.2, marginTop: 4 },
   profileBtn: {
     width: 44,
     height: 44,
@@ -1119,23 +1015,35 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   continueCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 18,
+  },
+  continueTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   continueIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   continueInfo: { flex: 1 },
-  continueLabel: { fontSize: 12, marginBottom: 2 },
-  continueTitle: { fontSize: 17 },
+  continueLabel: { fontSize: 12, marginBottom: 3 },
+  continueTitle: { fontSize: 19 },
+  continueBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(201,147,58,0.15)",
+  },
+  continueHint: { fontSize: 13, lineHeight: 19 },
   guidedRow: {
     flexDirection: "row",
     gap: 12,
@@ -1156,7 +1064,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   guidedTitle: { color: "#fff", fontSize: 15 },
-  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
+  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 18 },
   devotionalCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1179,7 +1087,7 @@ const s = StyleSheet.create({
   },
   devotionalInfo: { flex: 1 },
   devotionalTitle: { fontSize: 16, marginBottom: 2 },
-  devotionalSub: { fontSize: 13 },
+  devotionalSub: { fontSize: 13, lineHeight: 19 },
   devotionalProgress: { width: 56, marginLeft: 12 },
   devotionalProgressTrack: {
     height: 6,
@@ -1190,76 +1098,4 @@ const s = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  studyCard: {
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  studyTitle: { fontSize: 20, marginBottom: 20 },
-  layersRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  layerItem: {
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  layerCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  layerNum: { fontSize: 16, color: "#fff" },
-  layerTitle: { fontSize: 11 },
-  studyFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(201,147,58,0.15)",
-    paddingTop: 16,
-  },
-  studyFooterText: { flex: 1, fontSize: 13, lineHeight: 18 },
-  studyArrow: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  plansSection: { marginBottom: 16 },
-  plansSectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  plansSectionTitle: { fontSize: 22 },
-  viewAllText: { fontSize: 13 },
-  plansScroll: { gap: 12, paddingRight: 4 },
-  planCard: {
-    width: 150,
-    height: 180,
-    borderRadius: 18,
-    padding: 18,
-    justifyContent: "flex-end",
-    overflow: "hidden",
-  },
-  planBgIcon: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    opacity: 0.5,
-  },
-  planTitle: { color: "#fff", fontSize: 15, lineHeight: 20, marginBottom: 4 },
-  planMeta: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
 });

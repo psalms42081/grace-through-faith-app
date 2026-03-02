@@ -497,42 +497,70 @@ export default function FamilyDashboard() {
         ) : null}
 
         {stats && stats.summary.totalChildren > 0 && (
-          <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: theme.accent }]}>
-                {stats.summary.totalWeeklyStories}
-              </Text>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
-                This Week
-              </Text>
+          <>
+            <View style={[styles.sectionHeaderRow, { borderBottomColor: theme.border }]}>
+              <Ionicons name="stats-chart-outline" size={16} color={theme.accent} />
+              <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Family Overview</Text>
             </View>
-            <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: theme.accent }]}>
-                {stats.summary.totalStoriesCompleted}
-              </Text>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
-                Stories Done
-              </Text>
+            <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: stats.summary.totalWeeklyStories > 0 ? theme.accent : theme.textMuted }]}>
+                  {stats.summary.totalWeeklyStories}
+                </Text>
+                <View style={[styles.miniProgressTrack, { backgroundColor: theme.border }]}>
+                  <View style={[styles.miniProgressFill, { backgroundColor: theme.accent, width: stats.summary.totalWeeklyStories > 0 ? `${Math.min(stats.summary.totalWeeklyStories * 14, 100)}%` as any : "0%" as any }]} />
+                </View>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                  This Week
+                </Text>
+              </View>
+              <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: stats.summary.totalStoriesCompleted > 0 ? theme.accent : theme.textMuted }]}>
+                  {stats.summary.totalStoriesCompleted}
+                </Text>
+                <View style={[styles.miniProgressTrack, { backgroundColor: theme.border }]}>
+                  <View style={[styles.miniProgressFill, { backgroundColor: "#4CAF50", width: stats.summary.totalStoriesCompleted > 0 ? `${Math.min(stats.summary.totalStoriesCompleted * 5, 100)}%` as any : "0%" as any }]} />
+                </View>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                  Stories Done
+                </Text>
+              </View>
+              <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: stats.summary.totalBadgesEarned > 0 ? theme.accent : theme.textMuted }]}>
+                  {stats.summary.totalBadgesEarned}
+                </Text>
+                <View style={[styles.miniProgressTrack, { backgroundColor: theme.border }]}>
+                  <View style={[styles.miniProgressFill, { backgroundColor: "#FF9800", width: stats.summary.totalBadgesEarned > 0 ? `${Math.min(stats.summary.totalBadgesEarned * 10, 100)}%` as any : "0%" as any }]} />
+                </View>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                  Badges
+                </Text>
+              </View>
             </View>
-            <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: theme.accent }]}>
-                {stats.summary.totalBadgesEarned}
-              </Text>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
-                Badges
-              </Text>
-            </View>
-          </View>
+          </>
         )}
 
+        <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
+
+        <View style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}>
+          <Ionicons name="flame-outline" size={16} color={theme.accent} />
+          <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Activity</Text>
+        </View>
         <FamilyHeatmap />
 
+        <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
+
+        <View style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}>
+          <Ionicons name="heart-outline" size={16} color={theme.accent} />
+          <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Prayer Wall</Text>
+        </View>
         <PrayerWall />
 
         {dinnerTopics && dinnerTopics.length > 0 && (
           <View style={styles.dinnerSection}>
+            <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
             <View style={styles.dinnerHeader}>
               <Ionicons name="restaurant-outline" size={18} color={theme.accent} />
               <Text style={[styles.dinnerTitle, { color: theme.text }]}>
@@ -659,6 +687,13 @@ export default function FamilyDashboard() {
           </View>
         )}
 
+        <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
+
+        <View style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}>
+          <Ionicons name="people-outline" size={16} color={theme.accent} />
+          <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Children</Text>
+        </View>
+
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
@@ -710,41 +745,71 @@ export default function FamilyDashboard() {
                 <View style={styles.statsGrid}>
                   <View style={[styles.statBox, { backgroundColor: theme.background }]}>
                     <Ionicons name="book-outline" size={18} color={theme.accent} />
-                    <Text style={[styles.statValue, { color: theme.text }]}>
+                    <Text style={[styles.statValue, { color: childStat.storiesThisWeek > 0 ? theme.text : theme.textMuted }]}>
                       {childStat.storiesThisWeek}
                     </Text>
+                    <View style={[styles.statProgressTrack, { backgroundColor: theme.border }]}>
+                      <View style={[styles.statProgressFill, { backgroundColor: theme.accent, width: `${Math.min(childStat.storiesThisWeek * 14, 100)}%` as any }]} />
+                    </View>
                     <Text style={[styles.statLabel, { color: theme.textMuted }]}>
                       Stories This Week
                     </Text>
                   </View>
                   <View style={[styles.statBox, { backgroundColor: theme.background }]}>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#4CAF50" />
-                    <Text style={[styles.statValue, { color: theme.text }]}>
+                    <Text style={[styles.statValue, { color: childStat.storiesCompleted > 0 ? theme.text : theme.textMuted }]}>
                       {childStat.storiesCompleted}
                     </Text>
+                    <View style={[styles.statProgressTrack, { backgroundColor: theme.border }]}>
+                      <View style={[styles.statProgressFill, { backgroundColor: "#4CAF50", width: `${Math.min(childStat.storiesCompleted * 5, 100)}%` as any }]} />
+                    </View>
                     <Text style={[styles.statLabel, { color: theme.textMuted }]}>
                       Total Completed
                     </Text>
                   </View>
                   <View style={[styles.statBox, { backgroundColor: theme.background }]}>
                     <Ionicons name="school-outline" size={18} color="#2196F3" />
-                    <Text style={[styles.statValue, { color: theme.text }]}>
+                    <Text style={[styles.statValue, { color: childStat.averageQuizScore > 0 ? theme.text : theme.textMuted }]}>
                       {childStat.averageQuizScore}%
                     </Text>
+                    <View style={[styles.statProgressTrack, { backgroundColor: theme.border }]}>
+                      <View style={[styles.statProgressFill, { backgroundColor: "#2196F3", width: `${childStat.averageQuizScore}%` as any }]} />
+                    </View>
                     <Text style={[styles.statLabel, { color: theme.textMuted }]}>
                       Quiz Average
                     </Text>
                   </View>
                   <View style={[styles.statBox, { backgroundColor: theme.background }]}>
                     <Ionicons name="ribbon-outline" size={18} color="#FF9800" />
-                    <Text style={[styles.statValue, { color: theme.text }]}>
+                    <Text style={[styles.statValue, { color: childStat.badgesEarned > 0 ? theme.text : theme.textMuted }]}>
                       {childStat.badgesEarned}
                     </Text>
+                    <View style={[styles.statProgressTrack, { backgroundColor: theme.border }]}>
+                      <View style={[styles.statProgressFill, { backgroundColor: "#FF9800", width: `${Math.min(childStat.badgesEarned * 10, 100)}%` as any }]} />
+                    </View>
                     <Text style={[styles.statLabel, { color: theme.textMuted }]}>
                       Badges Earned
                     </Text>
                   </View>
                 </View>
+
+                {childStat.recentBadges.length > 0 && (
+                  <View style={styles.recentSection}>
+                    <Text style={[styles.recentLabel, { color: theme.textSecondary }]}>
+                      Family Badges
+                    </Text>
+                    <View style={styles.familyBadgeRow}>
+                      {childStat.recentBadges.slice(0, 5).map((badge, i) => (
+                        <View key={i} style={[styles.familyBadge, { backgroundColor: "#FF9800" + "15", borderColor: "#FF9800" + "30" }]}>
+                          <Ionicons name="shield-checkmark" size={14} color="#FF9800" />
+                          <Text style={[styles.familyBadgeName, { color: theme.text }]} numberOfLines={1}>
+                            {badge.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
 
                 {childStat.recentStories.length > 0 && (
                   <View style={styles.recentSection}>
@@ -943,6 +1008,47 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 4,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.2,
+  },
+  sectionDivider: {
+    height: 1,
+    marginHorizontal: 20,
+    marginVertical: 16,
+  },
+  miniProgressTrack: {
+    width: "60%",
+    height: 3,
+    borderRadius: 2,
+    marginTop: 6,
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  miniProgressFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  statProgressTrack: {
+    width: "70%",
+    height: 3,
+    borderRadius: 2,
+    marginTop: 4,
+    marginBottom: 2,
+    overflow: "hidden",
+  },
+  statProgressFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
   summaryRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1082,6 +1188,24 @@ const styles = StyleSheet.create({
   storyRef: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
+  },
+  familyBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  familyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  familyBadgeName: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
   conversationButton: {
     flexDirection: "row",

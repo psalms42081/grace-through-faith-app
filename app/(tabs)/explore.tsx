@@ -12,7 +12,6 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 
 const TOPICS = [
@@ -38,6 +37,10 @@ const INSPIRATIONS = [
   { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13 },
 ];
 
+function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
+  return <View style={[styles.divider, { backgroundColor: theme.divider }]} />;
+}
+
 export default function DiscoverScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -46,18 +49,6 @@ export default function DiscoverScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-
-  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
-    queryKey: ["/api/reading-history/recent?userId=guest"],
-  });
-
-  const { data: streakData } = useQuery<{ currentStreak: number; longestStreak: number }>({
-    queryKey: ["/api/reading-streaks?userId=guest"],
-  });
-
-  const lastRead = recentReads?.[0];
-  const streak = streakData?.currentStreak ?? 0;
-  const longestStreak = streakData?.longestStreak ?? 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -72,37 +63,6 @@ export default function DiscoverScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {(lastRead || streak > 0) && (
-          <View style={styles.statusRow}>
-            {lastRead && (
-              <Pressable
-                onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
-                style={({ pressed }) => [
-                  styles.continueCard,
-                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1, flex: streak > 0 ? 1 : undefined },
-                ]}
-                testID="discover-continue-reading"
-              >
-                <Ionicons name="book" size={20} color={theme.accent} />
-                <Text style={[styles.continueLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>CONTINUE</Text>
-                <Text style={[styles.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-                  {lastRead.bookName} {lastRead.chapter}
-                </Text>
-              </Pressable>
-            )}
-            {streak > 0 && (
-              <View style={[styles.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-                <Ionicons name="flame" size={22} color="#FF6B35" />
-                <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-                <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Day Streak</Text>
-                {longestStreak > streak && (
-                  <Text style={[styles.streakBest, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Best: {longestStreak}</Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Popular Passages
@@ -129,6 +89,8 @@ export default function DiscoverScreen() {
             </Pressable>
           ))}
         </ScrollView>
+
+        <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -157,114 +119,59 @@ export default function DiscoverScreen() {
           ))}
         </View>
 
+        <SectionDivider theme={theme} />
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Christian Content
+            Study Resources
           </Text>
-        </View>
-
-        <View style={styles.exploreCards}>
-          <Pressable
-            onPress={() => router.push("/music")}
-            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
-            testID="music-card"
-          >
-            <LinearGradient
-              colors={["#C9933A", "#8B6914"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.exploreCard}
-            >
-              <Ionicons name="musical-notes" size={28} color="rgba(255,255,255,0.9)" />
-              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Christian Music</Text>
-              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Worship & hymns</Text>
-            </LinearGradient>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/family")}
-            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
-            testID="family-card"
-          >
-            <LinearGradient
-              colors={["#5B86E5", "#1A3A6B"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.exploreCard}
-            >
-              <Ionicons name="people" size={28} color="rgba(255,255,255,0.9)" />
-              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Family & Faith</Text>
-              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>For the whole family</Text>
-            </LinearGradient>
-          </Pressable>
         </View>
 
         <Pressable
           onPress={() => router.push("/(tabs)/study?tab=voices")}
           style={({ pressed }) => [
-            styles.voicesCard,
-            { backgroundColor: isDark ? "#111828" : "#EDF3FF", opacity: pressed ? 0.85 : 1 },
+            styles.resourceCard,
+            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
           ]}
           testID="historic-voices-card"
         >
-          <View style={styles.voicesCardLeft}>
-            <View style={[styles.voicesIcon, { backgroundColor: "rgba(59,108,181,0.15)" }]}>
-              <Ionicons name="chatbubble-ellipses" size={24} color="#3B6CB5" />
-            </View>
-            <View style={styles.voicesInfo}>
-              <Text style={[styles.voicesTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Historic Voices
-              </Text>
-              <Text style={[styles.voicesSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Commentary from Matthew Henry, Adam Clarke, John Gill & more
-              </Text>
-            </View>
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
+            <Ionicons name="chatbubble-ellipses" size={22} color="#3B6CB5" />
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#3B6CB5" />
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/prayer-journal")}
-          style={({ pressed }) => [
-            styles.prayerCard,
-            { backgroundColor: isDark ? "#1A142A" : "#F5F0FF", opacity: pressed ? 0.85 : 1 },
-          ]}
-          testID="prayer-journal-card"
-        >
-          <View style={styles.prayerCardIcon}>
-            <Ionicons name="journal" size={24} color="#8B5CF6" />
-          </View>
-          <View style={styles.prayerCardInfo}>
-            <Text style={[styles.prayerCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Prayer Journal
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Historic Voices
             </Text>
-            <Text style={[styles.prayerCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Record and track your prayers
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Commentary from Matthew Henry, Adam Clarke, John Gill & more
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#8B5CF6" />
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
 
         <Pressable
           onPress={() => router.push("/sda-studies")}
           style={({ pressed }) => [
-            styles.sdaCard,
-            { backgroundColor: isDark ? "#14111E" : "#F0EBF8", opacity: pressed ? 0.85 : 1 },
+            styles.resourceCard,
+            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
           ]}
           testID="sda-studies-card"
         >
-          <View style={styles.prayerCardIcon}>
-            <Ionicons name="school" size={24} color="#7C3AED" />
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
+            <Ionicons name="school" size={22} color="#7C3AED" />
           </View>
-          <View style={styles.prayerCardInfo}>
-            <Text style={[styles.prayerCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               28 Fundamental Beliefs
             </Text>
-            <Text style={[styles.prayerCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               SDA doctrinal studies with scripture
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#7C3AED" />
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
+
+        <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -272,40 +179,66 @@ export default function DiscoverScreen() {
           </Text>
         </View>
 
-        <View style={styles.exploreCards}>
+        <View style={styles.toolsRow}>
           <Pressable
             onPress={() => router.push("/maps-timeline?tab=maps")}
-            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              styles.toolCard,
+              { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+            ]}
             testID="maps-card"
           >
-            <LinearGradient
-              colors={["#1A1F3C", "#0D1025"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.exploreCard}
-            >
-              <Ionicons name="map" size={28} color="rgba(237,229,213,0.8)" />
-              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Bible Maps</Text>
-              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
-            </LinearGradient>
+            <View style={[styles.toolIcon, { backgroundColor: "rgba(26,31,60,0.10)" }]}>
+              <Ionicons name="map" size={24} color={isDark ? "#8B9FD4" : "#1A1F3C"} />
+            </View>
+            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Bible Maps</Text>
+            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/maps-timeline?tab=timeline")}
-            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              styles.toolCard,
+              { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+            ]}
             testID="timeline-card"
           >
-            <LinearGradient
-              colors={["#2E7D32", "#1B5E20"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.exploreCard}
-            >
-              <Ionicons name="time" size={28} color="rgba(255,255,255,0.8)" />
-              <Text style={[styles.exploreCardTitle, { fontFamily: "Lora_600SemiBold" }]}>Timeline</Text>
-              <Text style={[styles.exploreCardSub, { fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
-            </LinearGradient>
+            <View style={[styles.toolIcon, { backgroundColor: "rgba(46,125,50,0.10)" }]}>
+              <Ionicons name="time" size={24} color={isDark ? "#66BB6A" : "#2E7D32"} />
+            </View>
+            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Timeline</Text>
+            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
           </Pressable>
         </View>
+
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Christian Content
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/music")}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1, marginBottom: 8 },
+          ]}
+          testID="music-card"
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="musical-notes" size={22} color="#C9933A" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Christian Music
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Worship & hymns
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -320,30 +253,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 24 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
-  statusRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 24,
+    opacity: 0.6,
   },
-  continueCard: {
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-    gap: 6,
-    minWidth: 120,
-  },
-  continueLabel: { fontSize: 10, letterSpacing: 1.2 },
-  continueTitle: { fontSize: 15 },
-  streakCard: {
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-    gap: 4,
-    minWidth: 100,
-  },
-  streakNum: { fontSize: 26 },
-  streakLabel: { fontSize: 11 },
-  streakBest: { fontSize: 10, marginTop: 2 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -354,7 +268,6 @@ const styles = StyleSheet.create({
   inspirationScroll: {
     gap: 12,
     paddingBottom: 4,
-    marginBottom: 28,
   },
   inspirationCard: {
     width: 200,
@@ -368,7 +281,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 28,
   },
   topicCard: {
     width: "31%" as any,
@@ -384,68 +296,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topicTitle: { color: "#fff", fontSize: 13 },
-  exploreCards: {
+  resourceCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+    marginBottom: 10,
+  },
+  resourceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resourceInfo: { flex: 1 },
+  resourceTitle: { fontSize: 15, marginBottom: 2 },
+  resourceSub: { fontSize: 13, lineHeight: 19 },
+  toolsRow: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 16,
   },
-  exploreCard: {
-    borderRadius: 20,
-    padding: 22,
-    gap: 8,
-    minHeight: 130,
-  },
-  exploreCardTitle: { color: "#EDE5D5", fontSize: 16, marginTop: 4 },
-  exploreCardSub: { color: "rgba(237,229,213,0.6)", fontSize: 12 },
-  voicesCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    gap: 14,
-    marginBottom: 16,
-  },
-  voicesCardLeft: {
+  toolCard: {
     flex: 1,
-    flexDirection: "row",
+    borderRadius: 16,
+    padding: 18,
     alignItems: "center",
-    gap: 14,
+    gap: 8,
   },
-  voicesIcon: {
+  toolIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 4,
   },
-  voicesInfo: { flex: 1 },
-  voicesTitle: { fontSize: 16, marginBottom: 2 },
-  voicesSub: { fontSize: 12, lineHeight: 17 },
-  prayerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    gap: 14,
-    marginBottom: 28,
-  },
-  prayerCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(139,92,246,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  prayerCardInfo: { flex: 1 },
-  prayerCardTitle: { fontSize: 16, marginBottom: 2 },
-  prayerCardSub: { fontSize: 13 },
-  sdaCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    gap: 14,
-    marginBottom: 28,
-  },
+  toolTitle: { fontSize: 15 },
+  toolSub: { fontSize: 12, lineHeight: 18 },
 });
