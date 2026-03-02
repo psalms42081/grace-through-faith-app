@@ -39,7 +39,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Parent Bridge (Dinner Table Topics):** AI-powered "Dinner Table Topic" generation for parents based on children's completed quizzes.
 - **User Accounts & Authentication:** Full JWT-based auth system with `AuthContext.tsx` managing state, token persistence in AsyncStorage, and `bcryptjs` for password hashing.
 - **Prayer Groups:** Community prayer groups with join codes, shared Prayer Walls.
-- **Family Groups:** Family units with invite codes, sharing a Prayer Wall and Kingdom Map.
+- **Family Groups:** Family units with invite codes, sharing a Prayer Wall and Kingdom Map. Family tab shows state-dependent UI: guest sign-in prompt, create/join family form, or family info card with invite code (tap to copy) and member list.
 - **Navigation:** 6-tab layout in adult mode (Home, Read, Family, Discover, You/Profile) and a distinct Kids mode tab navigation (Home, Stories, Learn, My Stars).
 
 ## External Dependencies

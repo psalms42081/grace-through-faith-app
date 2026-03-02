@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useProStatus } from "@/contexts/ProContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
@@ -395,11 +396,12 @@ export default function FamilyHeatmap() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const { isPro, isPatron } = useProStatus();
+  const { userId } = useAuth();
   const [selectedBook, setSelectedBook] = useState<BookHeat | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
 
   const { data: heatmapData } = useQuery<HeatmapData>({
-    queryKey: ["/api/family/heatmap?userId=guest"],
+    queryKey: [`/api/family/heatmap?userId=${userId}`],
     enabled: isPro,
   });
 

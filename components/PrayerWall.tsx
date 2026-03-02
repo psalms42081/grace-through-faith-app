@@ -269,7 +269,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/prayers?userId=guest"] });
+      qc.invalidateQueries({ queryKey: [queryKeyStr] });
     },
   });
 

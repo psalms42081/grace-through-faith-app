@@ -17,9 +17,25 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import Colors from "@/constants/colors";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
+
+interface FamilyInfo {
+  id: string;
+  name: string;
+  inviteCode: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface FamilyMember {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+}
 
 interface ChildStat {
   child: {
@@ -83,8 +99,9 @@ export default function FamilyDashboard() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { isPro, showProGate } = useProStatus();
-  const { userId } = useAuth();
+  const { userId, user, isGuest, isAuthenticated, refreshUser } = useAuth();
   const qc = useQueryClient();
+  const router = useRouter();
 
   const [showAddChild, setShowAddChild] = useState(false);
   const [newChildName, setNewChildName] = useState("");
@@ -93,6 +110,57 @@ export default function FamilyDashboard() {
   const [conversationData, setConversationData] = useState<ConversationData | null>(null);
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
+
+  const [familySetupMode, setFamilySetupMode] = useState<"none" | "create" | "join">("none");
+  const [familyNameInput, setFamilyNameInput] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const hasFamilyGroup = isAuthenticated && !!user?.familyId;
+
+  const { data: familyInfo } = useQuery<{ family: FamilyInfo; members: FamilyMember[] }>({
+    queryKey: ["/api/family/info"],
+    enabled: hasFamilyGroup,
+  });
+
+  const createFamilyMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/family/create", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      setFamilySetupMode("none");
+      setFamilyNameInput("");
+      refreshUser();
+      qc.invalidateQueries({ queryKey: ["/api/family/info"] });
+    },
+  });
+
+  const joinFamilyMutation = useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const res = await apiRequest("POST", "/api/family/join", { inviteCode });
+      return res.json();
+    },
+    onSuccess: () => {
+      setFamilySetupMode("none");
+      setJoinCodeInput("");
+      refreshUser();
+      qc.invalidateQueries({ queryKey: ["/api/family/info"] });
+    },
+    onError: (err: any) => {
+      const msg = err.message || "";
+      const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
+      Alert.alert("Could not join", errorText || "Invalid invite code. Please check and try again.");
+    },
+  });
+
+  const handleCopyCode = useCallback(async (code: string) => {
+    try {
+      await Clipboard.setStringAsync(code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {}
+  }, []);
 
   const { data: stats, isLoading } = useQuery<FamilyStats>({
     queryKey: [`/api/family/stats?userId=${userId}&parentId=${userId}`],
@@ -243,9 +311,190 @@ export default function FamilyDashboard() {
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Family</Text>
           <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-            Your children's faith journey
+            Your family's faith journey
           </Text>
         </View>
+
+        {isGuest ? (
+          <View style={[styles.familySetupCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Ionicons name="people" size={36} color={theme.accent} />
+            <Text style={[styles.familySetupTitle, { color: theme.text }]}>
+              Sign in to manage your family
+            </Text>
+            <Text style={[styles.familySetupDesc, { color: theme.textSecondary }]}>
+              Create or join a family group to share prayer walls, track your children's progress, and grow together.
+            </Text>
+            <Pressable
+              style={[styles.familySetupPrimary, { backgroundColor: theme.accent }]}
+              onPress={() => router.push("/(auth)/login")}
+              testID="family-signin-btn"
+            >
+              <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.familySetupPrimaryText}>Sign In / Create Account</Text>
+            </Pressable>
+          </View>
+        ) : !hasFamilyGroup ? (
+          <View style={[styles.familySetupCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Ionicons name="home" size={36} color={theme.accent} />
+            <Text style={[styles.familySetupTitle, { color: theme.text }]}>
+              Set Up Your Family
+            </Text>
+            <Text style={[styles.familySetupDesc, { color: theme.textSecondary }]}>
+              Create a new family group or join an existing one with an invite code.
+            </Text>
+
+            {familySetupMode === "none" && (
+              <View style={styles.familySetupActions}>
+                <Pressable
+                  style={[styles.familySetupPrimary, { backgroundColor: theme.accent }]}
+                  onPress={() => setFamilySetupMode("create")}
+                  testID="create-family-btn"
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.familySetupPrimaryText}>Create Family</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.familySetupSecondary, { borderColor: theme.accent }]}
+                  onPress={() => setFamilySetupMode("join")}
+                  testID="join-family-btn"
+                >
+                  <Ionicons name="enter-outline" size={18} color={theme.accent} />
+                  <Text style={[styles.familySetupSecondaryText, { color: theme.accent }]}>
+                    Join Family
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {familySetupMode === "create" && (
+              <View style={styles.familySetupForm}>
+                <TextInput
+                  style={[styles.familyInput, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+                  placeholder="Family name (e.g. The Smith Family)"
+                  placeholderTextColor={theme.textMuted}
+                  value={familyNameInput}
+                  onChangeText={setFamilyNameInput}
+                  autoFocus
+                  testID="family-name-input"
+                />
+                <View style={styles.familyFormActions}>
+                  <Pressable
+                    style={[styles.familyFormCancel, { borderColor: theme.border }]}
+                    onPress={() => { setFamilySetupMode("none"); setFamilyNameInput(""); }}
+                  >
+                    <Text style={[styles.familyFormCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.familyFormSubmit, { backgroundColor: familyNameInput.trim() ? theme.accent : theme.border }]}
+                    onPress={() => familyNameInput.trim() && createFamilyMutation.mutate(familyNameInput.trim())}
+                    disabled={!familyNameInput.trim() || createFamilyMutation.isPending}
+                    testID="submit-create-family-btn"
+                  >
+                    {createFamilyMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.familyFormSubmitText}>Create</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {familySetupMode === "join" && (
+              <View style={styles.familySetupForm}>
+                <TextInput
+                  style={[styles.familyInput, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+                  placeholder="Invite code (e.g. ABCD-1234)"
+                  placeholderTextColor={theme.textMuted}
+                  value={joinCodeInput}
+                  onChangeText={setJoinCodeInput}
+                  autoCapitalize="characters"
+                  autoFocus
+                  testID="join-code-input"
+                />
+                <View style={styles.familyFormActions}>
+                  <Pressable
+                    style={[styles.familyFormCancel, { borderColor: theme.border }]}
+                    onPress={() => { setFamilySetupMode("none"); setJoinCodeInput(""); }}
+                  >
+                    <Text style={[styles.familyFormCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.familyFormSubmit, { backgroundColor: joinCodeInput.trim() ? theme.accent : theme.border }]}
+                    onPress={() => joinCodeInput.trim() && joinFamilyMutation.mutate(joinCodeInput.trim())}
+                    disabled={!joinCodeInput.trim() || joinFamilyMutation.isPending}
+                    testID="submit-join-family-btn"
+                  >
+                    {joinFamilyMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.familyFormSubmitText}>Join</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : familyInfo ? (
+          <View style={[styles.familyInfoCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={styles.familyInfoHeader}>
+              <View style={[styles.familyIcon, { backgroundColor: theme.accent + "15" }]}>
+                <Ionicons name="home" size={22} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.familyInfoName, { color: theme.text }]}>
+                  {familyInfo.family.name}
+                </Text>
+                <Text style={[styles.familyInfoMeta, { color: theme.textSecondary }]}>
+                  {familyInfo.members.length} {familyInfo.members.length === 1 ? "member" : "members"}
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              style={[styles.inviteCodeRow, { backgroundColor: theme.background, borderColor: theme.border }]}
+              onPress={() => handleCopyCode(familyInfo.family.inviteCode)}
+              testID="copy-invite-code"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.inviteCodeLabel, { color: theme.textSecondary }]}>
+                  Invite Code
+                </Text>
+                <Text style={[styles.inviteCodeValue, { color: theme.accent }]}>
+                  {familyInfo.family.inviteCode}
+                </Text>
+              </View>
+              <Ionicons
+                name={codeCopied ? "checkmark-circle" : "copy-outline"}
+                size={20}
+                color={codeCopied ? "#4CAF50" : theme.textMuted}
+              />
+            </Pressable>
+
+            {familyInfo.members.length > 0 && (
+              <View style={styles.memberList}>
+                <Text style={[styles.memberListLabel, { color: theme.textSecondary }]}>
+                  Members
+                </Text>
+                {familyInfo.members.map((member) => (
+                  <View key={member.id} style={styles.memberRow}>
+                    <View style={[styles.memberAvatar, { backgroundColor: theme.accent + "15" }]}>
+                      <Ionicons name="person" size={14} color={theme.accent} />
+                    </View>
+                    <Text style={[styles.memberName, { color: theme.text }]}>
+                      {member.displayName || member.email || "Member"}
+                    </Text>
+                    {member.id === familyInfo.family.createdBy && (
+                      <View style={[styles.ownerBadge, { backgroundColor: theme.accent + "20" }]}>
+                        <Text style={[styles.ownerBadgeText, { color: theme.accent }]}>Owner</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : null}
 
         {stats && stats.summary.totalChildren > 0 && (
           <View style={[styles.summaryRow, { borderBottomColor: theme.border }]}>
@@ -980,6 +1229,187 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
+  },
+  familySetupCard: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: "center",
+  },
+  familySetupTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  familySetupDesc: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  familySetupActions: {
+    width: "100%",
+    gap: 10,
+  },
+  familySetupPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 10,
+    width: "100%",
+  },
+  familySetupPrimaryText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+  },
+  familySetupSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    width: "100%",
+  },
+  familySetupSecondaryText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  familySetupForm: {
+    width: "100%",
+    gap: 10,
+  },
+  familyInput: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  familyFormActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  familyFormCancel: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  familyFormCancelText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  familyFormSubmit: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  familyFormSubmitText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+  },
+  familyInfoCard: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  familyInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  familyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  familyInfoName: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  familyInfoMeta: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  inviteCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  inviteCodeLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  inviteCodeValue: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
+    marginTop: 2,
+  },
+  memberList: {
+    gap: 6,
+  },
+  memberListLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 6,
+  },
+  memberAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberName: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+  },
+  ownerBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  ownerBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   proGateContainer: {
     flex: 1,
