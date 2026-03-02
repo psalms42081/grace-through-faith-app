@@ -1650,6 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sceneIndex: scene.sceneIndex,
             narration: scene.narration,
             illustrationPrompt: scene.illustrationPrompt,
+            mood: scene.mood || "PEACE",
             pauseAndWonder: scene.pauseAndWonder,
           })
           .returning();
@@ -1661,6 +1662,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Generate scenes error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
+  });
+
+  app.get("/api/kids/audio-assets", (_req, res) => {
+    res.json({
+      AWE: {
+        label: "Wonder & Awe",
+        url: "https://cdn.pixabay.com/audio/2024/11/26/audio_d27ac6bfaf.mp3",
+      },
+      PEACE: {
+        label: "Gentle Peace",
+        url: "https://cdn.pixabay.com/audio/2022/02/23/audio_ea70ad08e3.mp3",
+      },
+      TENSION: {
+        label: "Rising Tension",
+        url: "https://cdn.pixabay.com/audio/2024/09/10/audio_6e1e4e5552.mp3",
+      },
+      JOY: {
+        label: "Joyful Celebration",
+        url: "https://cdn.pixabay.com/audio/2022/10/30/audio_9a8d089bbc.mp3",
+      },
+    });
   });
 
   app.post("/api/kids/story/award-points", async (req, res) => {

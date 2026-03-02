@@ -597,6 +597,7 @@ export const kidsStoryScenes = pgTable(
     sceneIndex: integer("scene_index").notNull(),
     narration: text("narration").notNull(),
     illustrationPrompt: text("illustration_prompt").notNull(),
+    mood: varchar("mood", { length: 20 }).default("PEACE").notNull(),
     pauseAndWonder: jsonb("pause_and_wonder").$type<{
       question: string;
       options: { emoji: string; label: string }[];

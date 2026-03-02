@@ -31,11 +31,16 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
+import { createAudioPlayer, setIsAudioActiveAsync } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
 
 interface StoryScene {
   id: string;
@@ -43,11 +48,145 @@ interface StoryScene {
   sceneIndex: number;
   narration: string;
   illustrationPrompt: string;
+  mood: SceneMood;
   pauseAndWonder: {
     question: string;
     options: { emoji: string; label: string }[];
     correctIndex: number;
   } | null;
+}
+
+interface AudioAsset {
+  label: string;
+  url: string;
+}
+
+type AudioAssets = Record<SceneMood, AudioAsset>;
+
+const QUIET_MODE_KEY = "@grace_kids_quiet_mode";
+const CROSSFADE_DURATION = 2000;
+const CROSSFADE_STEPS = 20;
+
+function useAtmosphereAudio(currentMood: SceneMood | null, quietMode: boolean) {
+  const playerRefs = useRef<Partial<Record<SceneMood, AudioPlayer>>>({});
+  const activeMood = useRef<SceneMood | null>(null);
+  const crossfadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadingMoods = useRef<Set<SceneMood>>(new Set());
+  const mountedRef = useRef(true);
+  const [assets, setAssets] = useState<AudioAssets | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    setIsAudioActiveAsync(true).catch(() => {});
+
+    apiRequest("GET", "/api/kids/audio-assets")
+      .then((data) => {
+        if (mountedRef.current) setAssets(data as AudioAssets);
+      })
+      .catch(() => {});
+
+    return () => {
+      mountedRef.current = false;
+      if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+      Object.values(playerRefs.current).forEach((p) => {
+        try { p?.pause(); p?.remove(); } catch {}
+      });
+      playerRefs.current = {};
+      setIsAudioActiveAsync(false).catch(() => {});
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
+
+    if (quietMode) {
+      if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+      Object.values(playerRefs.current).forEach((p) => {
+        try { p!.volume = 0; p?.pause(); } catch {}
+      });
+      activeMood.current = null;
+      return;
+    }
+
+    if (!currentMood || !assets) return;
+    if (currentMood === activeMood.current) return;
+
+    crossfadeTo(currentMood);
+  }, [currentMood, quietMode, assets]);
+
+  const ensureLoaded = (mood: SceneMood): AudioPlayer | null => {
+    if (playerRefs.current[mood]) return playerRefs.current[mood]!;
+    if (!assets?.[mood]) return null;
+    if (loadingMoods.current.has(mood)) return null;
+
+    loadingMoods.current.add(mood);
+    try {
+      const player = createAudioPlayer(assets[mood].url);
+      player.loop = true;
+      player.volume = 0;
+      playerRefs.current[mood] = player;
+      loadingMoods.current.delete(mood);
+      return player;
+    } catch {
+      loadingMoods.current.delete(mood);
+      return null;
+    }
+  };
+
+  const crossfadeTo = (targetMood: SceneMood) => {
+    if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+
+    const outMood = activeMood.current;
+    activeMood.current = targetMood;
+
+    const inPlayer = ensureLoaded(targetMood);
+    if (!inPlayer) return;
+
+    const outPlayer = outMood ? playerRefs.current[outMood] : null;
+
+    inPlayer.volume = 0;
+    inPlayer.play();
+
+    let step = 0;
+    const interval = CROSSFADE_DURATION / CROSSFADE_STEPS;
+
+    crossfadeTimer.current = setInterval(() => {
+      if (!mountedRef.current) {
+        if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+        return;
+      }
+      step++;
+      const progress = step / CROSSFADE_STEPS;
+      const inVol = Math.min(0.4, progress * 0.4);
+      const outVol = Math.max(0, 0.4 * (1 - progress));
+
+      try {
+        inPlayer.volume = inVol;
+        if (outPlayer) outPlayer.volume = outVol;
+      } catch {}
+
+      if (step >= CROSSFADE_STEPS) {
+        if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+        if (outPlayer) {
+          try {
+            outPlayer.pause();
+            outPlayer.seekTo(0);
+          } catch {}
+        }
+      }
+    }, interval);
+  };
+
+  const cleanup = useCallback(() => {
+    if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+    Object.values(playerRefs.current).forEach((p) => {
+      try { p?.pause(); p?.remove(); } catch {}
+    });
+    playerRefs.current = {};
+    activeMood.current = null;
+  }, []);
+
+  return { cleanup };
 }
 
 const SCENE_GRADIENT_PALETTES = [
@@ -369,6 +508,51 @@ const wonderStyles = StyleSheet.create({
   },
 });
 
+const MOOD_CONFIG: Record<SceneMood, { icon: string; color: string; label: string }> = {
+  AWE: { icon: "sparkles", color: "#A78BFA", label: "Awe" },
+  PEACE: { icon: "leaf", color: "#7EDCB5", label: "Peace" },
+  TENSION: { icon: "flash", color: "#F97316", label: "Tension" },
+  JOY: { icon: "sunny", color: "#FBBF24", label: "Joy" },
+};
+
+function MoodBadge({ mood }: { mood: SceneMood }) {
+  const config = MOOD_CONFIG[mood];
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 150 });
+    opacity.value = withTiming(1, { duration: 400 });
+  }, [mood]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[moodBadgeStyles.container, { backgroundColor: config.color + "30" }, animStyle]}>
+      <Ionicons name={config.icon as any} size={14} color={config.color} />
+      <Text style={[moodBadgeStyles.label, { color: config.color }]}>{config.label}</Text>
+    </Animated.View>
+  );
+}
+
+const moodBadgeStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  label: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
 function SceneProgressDots({
   total,
   current,
@@ -536,15 +720,32 @@ export default function SceneStoryScreen() {
   const [showStreak, setShowStreak] = useState(false);
   const [streakDays, setStreakDays] = useState(0);
   const [storyTitle, setStoryTitle] = useState("");
+  const [quietMode, setQuietMode] = useState(false);
+  const [quietModeLoaded, setQuietModeLoaded] = useState(false);
+
+  const currentMood = useMemo<SceneMood | null>(() => {
+    if (scenes.length === 0 || !quietModeLoaded) return null;
+    return scenes[currentScene]?.mood || "PEACE";
+  }, [scenes, currentScene, quietModeLoaded]);
+
+  const { cleanup: cleanupAudio } = useAtmosphereAudio(currentMood, quietMode);
 
   const flatListRef = useRef<FlatList>(null);
   const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(QUIET_MODE_KEY).then((val) => {
+      if (val === "true") setQuietMode(true);
+      setQuietModeLoaded(true);
+    }).catch(() => setQuietModeLoaded(true));
+  }, []);
 
   useEffect(() => {
     loadScenes();
     return () => {
       Speech.stop();
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      cleanupAudio();
     };
   }, [id]);
 
@@ -683,6 +884,14 @@ export default function SceneStoryScreen() {
       }
     },
   });
+
+  const toggleQuietMode = useCallback(() => {
+    setQuietMode((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(QUIET_MODE_KEY, next ? "true" : "false");
+      return next;
+    });
+  }, []);
 
   const handleComplete = useCallback(() => {
     setStoryComplete(true);
@@ -874,6 +1083,26 @@ export default function SceneStoryScreen() {
           isDark={isDark}
         />
       )}
+
+      <View style={[styles.topHeader, { paddingTop: topPad + 8 }]}>
+        <Pressable
+          onPress={toggleQuietMode}
+          style={[
+            styles.quietModeBtn,
+            { backgroundColor: quietMode ? "rgba(255,100,100,0.25)" : "rgba(255,255,255,0.15)" },
+          ]}
+          testID="quiet-mode-toggle"
+        >
+          <Ionicons
+            name={quietMode ? "volume-mute" : "musical-notes"}
+            size={18}
+            color={quietMode ? "#FF6B6B" : "rgba(255,255,255,0.8)"}
+          />
+        </Pressable>
+        {currentMood && !quietMode && (
+          <MoodBadge mood={currentMood} />
+        )}
+      </View>
 
       <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
         <Pressable
@@ -1102,6 +1331,24 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topHeader: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 20,
+  },
+  quietModeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },

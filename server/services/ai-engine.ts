@@ -652,10 +652,13 @@ If no stories are completed, create a general faith conversation starter encoura
   }
 }
 
+export type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
+
 export interface StoryScene {
   sceneIndex: number;
   narration: string;
   illustrationPrompt: string;
+  mood: SceneMood;
   pauseAndWonder: {
     question: string;
     options: { emoji: string; label: string }[];
@@ -691,7 +694,8 @@ Target audience: ${ageLabel}.
 For each scene, create:
 1. "narration": Engaging, age-appropriate retelling of that part of the story (3-5 sentences). Use vivid sensory details, dialogue, and emotion. Make it feel alive and warm.
 2. "illustrationPrompt": A detailed art description for this scene in a consistent style: "Soft watercolor, 2D animation style, warm earth tones, biblically inspired. [Scene-specific description with characters, setting, lighting, mood]." Be specific about what is depicted.
-3. "pauseAndWonder": For 2-3 scenes (not all), include a Socratic question that makes children think about the story's meaning. Include 3 emoji-based answer options where one is the best answer. Set "correctIndex" to the best answer (0-based). For scenes without a question, set this to null.
+3. "mood": Assign exactly one emotional mood from these four: "AWE" (wonder, miracles, divine moments), "PEACE" (calm, gentle, reassuring scenes), "TENSION" (danger, storms, conflict, suspense), "JOY" (celebration, praise, happy resolution). Choose the mood that best matches the emotional tone of the narrative in that specific scene. Vary moods across scenes to create an emotional arc.
+4. "pauseAndWonder": For 2-3 scenes (not all), include a Socratic question that makes children think about the story's meaning. Include 3 emoji-based answer options where one is the best answer. Set "correctIndex" to the best answer (0-based). For scenes without a question, set this to null.
 
 Respond in JSON:
 {
@@ -700,12 +704,14 @@ Respond in JSON:
       "sceneIndex": 0,
       "narration": "...",
       "illustrationPrompt": "Soft watercolor, 2D animation style, warm earth tones, biblically inspired. ...",
+      "mood": "PEACE",
       "pauseAndWonder": null
     },
     {
       "sceneIndex": 1,
       "narration": "...",
       "illustrationPrompt": "...",
+      "mood": "TENSION",
       "pauseAndWonder": {
         "question": "How do you think [character] felt when...?",
         "options": [
@@ -734,11 +740,13 @@ ${storyText}`,
   const raw = completion.choices[0]?.message?.content || "{}";
   const cleaned = cleanJsonResponse(raw);
   const parsed = JSON.parse(cleaned);
+  const validMoods: SceneMood[] = ["AWE", "PEACE", "TENSION", "JOY"];
   const scenes: StoryScene[] = (parsed.scenes || []).map(
     (s: any, i: number) => ({
       sceneIndex: s.sceneIndex ?? i,
       narration: s.narration || "",
       illustrationPrompt: s.illustrationPrompt || "",
+      mood: (validMoods.includes(s.mood) ? s.mood : "PEACE") as SceneMood,
       pauseAndWonder: s.pauseAndWonder || null,
     })
   );
