@@ -1734,11 +1734,73 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
 
   // ─── SOCRATIC AI STUDY GUIDE ──────────────────────────────────────────────
 
+  app.get("/api/study-guide/active", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const verseReference = String(req.query.verseReference || "");
+      if (!verseReference) {
+        return res.status(400).json({ error: "verseReference is required" });
+      }
+
+      const [activeSession] = await db
+        .select()
+        .from(studyGuideSessions)
+        .where(
+          and(
+            eq(studyGuideSessions.userId, userId),
+            eq(studyGuideSessions.verseReference, verseReference),
+            sql`${studyGuideSessions.completedAt} IS NULL`
+          )
+        )
+        .orderBy(desc(studyGuideSessions.createdAt))
+        .limit(1);
+
+      if (!activeSession) {
+        return res.json({ found: false });
+      }
+
+      return res.json({
+        found: true,
+        session: {
+          ...activeSession,
+          messages: JSON.parse(activeSession.messages),
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.post("/api/study-guide/start", async (req, res) => {
     try {
-      const { verseReference, verseText, bookName, chapter, verse, userId = "guest" } = req.body;
+      const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false } = req.body;
       if (!verseReference || !verseText) {
         return res.status(400).json({ error: "verseReference and verseText are required" });
+      }
+
+      if (!forceNew) {
+        const [existingActive] = await db
+          .select()
+          .from(studyGuideSessions)
+          .where(
+            and(
+              eq(studyGuideSessions.userId, userId),
+              eq(studyGuideSessions.verseReference, verseReference),
+              sql`${studyGuideSessions.completedAt} IS NULL`
+            )
+          )
+          .orderBy(desc(studyGuideSessions.createdAt))
+          .limit(1);
+
+        if (existingActive) {
+          const messages = JSON.parse(existingActive.messages);
+          return res.json({
+            session: { ...existingActive, messages },
+            aiMessage: messages[messages.length - 1]?.content || "",
+            resumed: true,
+          });
+        }
       }
 
       const systemPrompt = `You are a wise, patient seminary tutor guiding a student through the Inductive Bible Study Method. You NEVER give the answer directly. Instead, you ask probing questions that lead the student to discover truth themselves.
@@ -1896,6 +1958,19 @@ Rules: Ask ONE question at a time. Be concise (2-4 sentences). Be warm and encou
         .orderBy(desc(studyGuideSessions.createdAt))
         .limit(20);
       return res.json(sessions);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/study-guide/complete/:id", async (req, res) => {
+    try {
+      await db
+        .update(studyGuideSessions)
+        .set({ completedAt: new Date(), phase: "complete" })
+        .where(eq(studyGuideSessions.id, req.params.id));
+      return res.json({ ok: true });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });

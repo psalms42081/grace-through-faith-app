@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ interface Message {
 const PHASES = [
   { id: "observe", label: "Observe", icon: "eye-outline" as const },
   { id: "interpret", label: "Interpret", icon: "bulb-outline" as const },
-  { id: "apply", label: "apply", icon: "heart-outline" as const },
+  { id: "apply", label: "Apply", icon: "heart-outline" as const },
 ];
 
 export default function StudyGuideScreen() {
@@ -50,6 +50,17 @@ export default function StudyGuideScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [isStarting, setIsStarting] = useState(true);
   const [startError, setStartError] = useState(false);
+  const [isResumed, setIsResumed] = useState(false);
+  const initRef = useRef(false);
+
+  const restoreSession = (data: { session: any; aiMessage?: string; resumed?: boolean }) => {
+    setSessionId(data.session.id);
+    setMessages(data.session.messages);
+    setCurrentPhase(data.session.phase);
+    setIsComplete(data.session.phase === "complete" || !!data.session.completedAt);
+    setIsResumed(!!data.resumed);
+    setIsStarting(false);
+  };
 
   const startMutation = useMutation({
     mutationFn: async () => {
@@ -63,10 +74,7 @@ export default function StudyGuideScreen() {
       return res.json();
     },
     onSuccess: (data) => {
-      setSessionId(data.session.id);
-      setMessages(data.session.messages);
-      setCurrentPhase(data.session.phase);
-      setIsStarting(false);
+      restoreSession(data);
     },
     onError: () => {
       setIsStarting(false);
@@ -86,19 +94,64 @@ export default function StudyGuideScreen() {
       setMessages(data.messages);
       setCurrentPhase(data.phase);
       setIsComplete(data.isComplete);
+      setIsResumed(false);
     },
   });
 
   useEffect(() => {
-    if (params.verseText && isStarting) {
+    if (initRef.current || !params.verseReference || !params.verseText) return;
+    initRef.current = true;
+
+    (async () => {
+      try {
+        const res = await apiRequest(
+          "GET",
+          `/api/study-guide/active?verseReference=${encodeURIComponent(params.verseReference)}&userId=guest`
+        );
+        const data = await res.json();
+        if (data.found && data.session) {
+          restoreSession({ session: data.session, resumed: true });
+          return;
+        }
+      } catch {}
       startMutation.mutate();
-    }
-  }, []);
+    })();
+  }, [params.verseReference, params.verseText]);
 
   const handleRetry = () => {
     setStartError(false);
     setIsStarting(true);
     startMutation.mutate();
+  };
+
+  const handleNewSession = () => {
+    const oldSessionId = sessionId;
+    setIsResumed(false);
+    setIsStarting(true);
+    setMessages([]);
+    setSessionId(null);
+    setCurrentPhase("observe");
+    setIsComplete(false);
+
+    (async () => {
+      if (oldSessionId) {
+        await apiRequest("POST", `/api/study-guide/complete/${oldSessionId}`, {}).catch(() => {});
+      }
+
+      const res = await apiRequest("POST", "/api/study-guide/start", {
+        verseReference: params.verseReference,
+        verseText: params.verseText,
+        bookName: params.bookName,
+        chapter: parseInt(params.chapter || "1"),
+        verse: parseInt(params.verse || "1"),
+        forceNew: true,
+      });
+      const data = await res.json();
+      restoreSession(data);
+    })().catch(() => {
+      setIsStarting(false);
+      setStartError(true);
+    });
   };
 
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
@@ -220,6 +273,22 @@ export default function StudyGuideScreen() {
           {params.verseReference}
         </Text>
       </View>
+
+      {isResumed && !isComplete && (
+        <View style={[styles.resumedBanner, { backgroundColor: theme.accent + "15" }]}>
+          <View style={styles.resumedBannerLeft}>
+            <Ionicons name="chatbubbles-outline" size={16} color={theme.accent} />
+            <Text style={[styles.resumedText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+              Session resumed
+            </Text>
+          </View>
+          <Pressable onPress={handleNewSession} hitSlop={8} testID="start-fresh-btn">
+            <Text style={[styles.startFreshText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+              Start Fresh
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <KeyboardAvoidingView
         style={styles.chatArea}
@@ -364,6 +433,23 @@ const styles = StyleSheet.create({
   },
   verseText: { fontSize: 14, lineHeight: 22, fontStyle: "italic" },
   verseRef: { fontSize: 12, marginTop: 6 },
+  resumedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  resumedBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  resumedText: { fontSize: 13 },
+  startFreshText: { fontSize: 13, textDecorationLine: "underline" as const },
   chatArea: { flex: 1 },
   messagesList: {
     padding: 16,
