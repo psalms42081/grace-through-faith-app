@@ -787,3 +787,71 @@ export async function generateScripturalEncouragement(
     note: parsed.note || "God hears every prayer and holds you close.",
   };
 }
+
+export async function generateReflectionResponse(params: {
+  question: string;
+  userAnswer: string;
+  passageLabel?: string;
+  dayTitle?: string;
+  previousExchanges?: { question: string; answer: string; response: string }[];
+}): Promise<{ response: string; followUp: string | null }> {
+  const { question, userAnswer, passageLabel, dayTitle, previousExchanges } = params;
+
+  const openai = createOpenAIClient();
+
+  let contextBlock = "";
+  if (passageLabel) contextBlock += `Scripture passage: ${passageLabel}\n`;
+  if (dayTitle) contextBlock += `Study topic: ${dayTitle}\n`;
+
+  let historyBlock = "";
+  if (previousExchanges && previousExchanges.length > 0) {
+    historyBlock = "\nPrevious discussion:\n" + previousExchanges.map((ex) =>
+      `Q: ${ex.question}\nTheir answer: ${ex.answer}\nYour response: ${ex.response}`
+    ).join("\n\n") + "\n";
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.8,
+    max_tokens: 400,
+    messages: [
+      {
+        role: "system",
+        content: `You are a warm, encouraging Bible study discussion partner. You engage thoughtfully with the student's reflection answers, affirming genuine insights while gently deepening understanding.
+
+Your response style:
+- Start by acknowledging what the student shared (1 sentence)
+- Add a brief theological insight or scripture connection that builds on their answer (2-3 sentences)
+- If their answer is shallow, lovingly guide them deeper without being preachy
+- Keep responses conversational and warm, not academic
+- Use KJV language when quoting scripture
+- Maximum 4 sentences total for your response
+
+Also provide ONE brief follow-up question that goes deeper into what they shared. The follow-up should feel natural, not like a quiz. If no natural follow-up exists, return null.`,
+      },
+      {
+        role: "user",
+        content: `${contextBlock}${historyBlock}
+Reflection question: "${question}"
+Student's answer: "${userAnswer}"
+
+Respond with JSON: {"response": "your thoughtful reply", "followUp": "optional follow-up question or null"}`,
+      },
+    ],
+  });
+
+  const raw = completion.choices[0]?.message?.content || "";
+  const cleaned = cleanJsonResponse(raw);
+  try {
+    const parsed = JSON.parse(cleaned);
+    return {
+      response: parsed.response || "That's a thoughtful reflection. Keep digging deeper into God's Word.",
+      followUp: parsed.followUp || null,
+    };
+  } catch {
+    return {
+      response: raw.length > 10 ? raw.slice(0, 300) : "Thank you for sharing your reflection. God's Word speaks to each of us in unique ways.",
+      followUp: null,
+    };
+  }
+}

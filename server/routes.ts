@@ -1648,6 +1648,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/devotionals/reflect", async (req, res) => {
+    try {
+      const { question, userAnswer, passageLabel, dayTitle, previousExchanges } = req.body;
+      if (!question || !userAnswer) {
+        return res.status(400).json({ error: "Question and answer are required" });
+      }
+      const cappedHistory = Array.isArray(previousExchanges)
+        ? previousExchanges.slice(-6)
+        : [];
+      const { generateReflectionResponse } = await import("./services/ai-engine");
+      const result = await generateReflectionResponse({
+        question,
+        userAnswer: userAnswer.trim().slice(0, 2000),
+        passageLabel,
+        dayTitle,
+        previousExchanges: cappedHistory,
+      });
+      return res.json(result);
+    } catch (err) {
+      console.error("Reflection response error:", err);
+      return res.json({
+        response: "Thank you for sharing your reflection. Your thoughtfulness in engaging with God's Word is encouraging. Keep seeking Him through scripture.",
+        followUp: null,
+      });
+    }
+  });
+
   app.post("/api/devotionals/complete", async (req, res) => {
     try {
       const { enrollmentId, dayId, journalEntry } = req.body;

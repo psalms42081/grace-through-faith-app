@@ -16,7 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import * as Haptics from "expo-haptics";
 
 interface TodayResponse {
   today: DayContent | null;
@@ -60,12 +62,232 @@ interface PassageResponse {
   verses: Verse[];
 }
 
+interface ReflectionExchange {
+  question: string;
+  answer: string;
+  response: string;
+  followUp: string | null;
+}
+
+function ReflectionQuestion({
+  question,
+  index,
+  theme,
+  isDark,
+  passageLabel,
+  dayTitle,
+  previousExchanges,
+}: {
+  question: string;
+  index: number;
+  theme: any;
+  isDark: boolean;
+  passageLabel?: string;
+  dayTitle?: string;
+  previousExchanges: ReflectionExchange[];
+}) {
+  const [answer, setAnswer] = useState("");
+  const [exchanges, setExchanges] = useState<ReflectionExchange[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [followUpAnswer, setFollowUpAnswer] = useState("");
+
+  const handleSubmitAnswer = useCallback(async (questionText: string, answerText: string) => {
+    if (!answerText.trim()) return;
+    setLoading(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const allPrev = [...previousExchanges, ...exchanges];
+      const res = await apiRequest("POST", "/api/devotionals/reflect", {
+        question: questionText,
+        userAnswer: answerText.trim(),
+        passageLabel,
+        dayTitle,
+        previousExchanges: allPrev.map((e) => ({
+          question: e.question,
+          answer: e.answer,
+          response: e.response,
+        })),
+      });
+      const data = await res.json();
+      setExchanges((prev) => [
+        ...prev,
+        {
+          question: questionText,
+          answer: answerText.trim(),
+          response: data.response,
+          followUp: data.followUp,
+        },
+      ]);
+      setAnswer("");
+      setFollowUpAnswer("");
+    } catch {
+      setExchanges((prev) => [
+        ...prev,
+        {
+          question: questionText,
+          answer: answerText.trim(),
+          response: "Thank you for your reflection. Keep seeking God's truth in His Word.",
+          followUp: null,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [exchanges, previousExchanges, passageLabel, dayTitle]);
+
+  const lastExchange = exchanges[exchanges.length - 1];
+  const hasAnswered = exchanges.length > 0;
+
+  return (
+    <View style={rStyles.questionContainer}>
+      <View style={rStyles.questionRow}>
+        <Text style={[rStyles.questionNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          {index + 1}.
+        </Text>
+        <Text style={[rStyles.questionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+          {question}
+        </Text>
+      </View>
+
+      {exchanges.map((ex, i) => (
+        <View key={i} style={rStyles.exchangeBlock}>
+          <View style={[rStyles.userBubble, { backgroundColor: theme.accent + "20" }]}>
+            <Text style={[rStyles.bubbleLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              Your Reflection
+            </Text>
+            <Text style={[rStyles.bubbleText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+              {ex.answer}
+            </Text>
+          </View>
+          <View style={[rStyles.aiBubble, { backgroundColor: isDark ? "#1A2030" : "#EEF0F5" }]}>
+            <View style={rStyles.aiHeader}>
+              <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+              <Text style={[rStyles.bubbleLabel, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                Discussion
+              </Text>
+            </View>
+            <Text style={[rStyles.bubbleText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+              {ex.response}
+            </Text>
+          </View>
+        </View>
+      ))}
+
+      {loading ? (
+        <View style={rStyles.loadingRow}>
+          <ActivityIndicator size="small" color="#8B5CF6" />
+          <Text style={[rStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Reflecting on your answer...
+          </Text>
+        </View>
+      ) : lastExchange?.followUp ? (
+        <View style={rStyles.followUpBlock}>
+          <View style={rStyles.questionRow}>
+            <Ionicons name="chatbubble-ellipses-outline" size={14} color="#8B5CF6" style={{ marginTop: 2 }} />
+            <Text style={[rStyles.followUpText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+              {lastExchange.followUp}
+            </Text>
+          </View>
+          <View style={rStyles.answerRow}>
+            <TextInput
+              value={followUpAnswer}
+              onChangeText={setFollowUpAnswer}
+              placeholder="Share your thoughts..."
+              placeholderTextColor={theme.textMuted}
+              multiline
+              style={[rStyles.answerInput, {
+                color: theme.text,
+                backgroundColor: theme.backgroundSecondary,
+                borderColor: theme.border,
+                fontFamily: "Inter_400Regular",
+              }]}
+            />
+            <Pressable
+              onPress={() => handleSubmitAnswer(lastExchange.followUp!, followUpAnswer)}
+              disabled={!followUpAnswer.trim()}
+              style={({ pressed }) => [
+                rStyles.sendBtn,
+                { backgroundColor: "#8B5CF6", opacity: !followUpAnswer.trim() ? 0.4 : pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Ionicons name="send" size={16} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+      ) : !hasAnswered ? (
+        <View style={rStyles.answerRow}>
+          <TextInput
+            value={answer}
+            onChangeText={setAnswer}
+            placeholder="Type your answer..."
+            placeholderTextColor={theme.textMuted}
+            multiline
+            style={[rStyles.answerInput, {
+              color: theme.text,
+              backgroundColor: theme.backgroundSecondary,
+              borderColor: theme.border,
+              fontFamily: "Inter_400Regular",
+            }]}
+          />
+          <Pressable
+            onPress={() => handleSubmitAnswer(question, answer)}
+            disabled={!answer.trim()}
+            style={({ pressed }) => [
+              rStyles.sendBtn,
+              { backgroundColor: theme.accent, opacity: !answer.trim() ? 0.4 : pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons name="send" size={16} color="#fff" />
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const rStyles = StyleSheet.create({
+  questionContainer: { gap: 8 },
+  questionRow: { flexDirection: "row", gap: 8, paddingVertical: 2 },
+  questionNum: { fontSize: 14, width: 20, textAlign: "right" },
+  questionText: { fontSize: 14, lineHeight: 22, flex: 1 },
+  exchangeBlock: { gap: 8, marginLeft: 28 },
+  userBubble: { borderRadius: 12, padding: 12, gap: 4 },
+  aiBubble: { borderRadius: 12, padding: 12, gap: 6 },
+  aiHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  bubbleLabel: { fontSize: 11, letterSpacing: 0.3, textTransform: "uppercase" as const },
+  bubbleText: { fontSize: 14, lineHeight: 22 },
+  loadingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 28, paddingVertical: 8 },
+  loadingText: { fontSize: 13 },
+  followUpBlock: { gap: 8, marginLeft: 20 },
+  followUpText: { fontSize: 14, lineHeight: 20, flex: 1, fontStyle: "italic" as const },
+  answerRow: { flexDirection: "row", gap: 8, alignItems: "flex-end", marginLeft: 28 },
+  answerInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 44,
+    maxHeight: 100,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlignVertical: "top" as const,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+});
+
 export default function DevotionalDayScreen() {
   const { planId } = useLocalSearchParams<{ planId?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -73,8 +295,8 @@ export default function DevotionalDayScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const todayQueryKey = planId
-    ? `/api/devotionals/today?userId=guest&planId=${planId}`
-    : "/api/devotionals/today?userId=guest";
+    ? `/api/devotionals/today?userId=${userId}&planId=${planId}`
+    : `/api/devotionals/today?userId=${userId}`;
 
   const { data: todayData, isLoading } = useQuery<TodayResponse>({
     queryKey: [todayQueryKey],
@@ -113,7 +335,7 @@ export default function DevotionalDayScreen() {
       });
       setCompleted(true);
       queryClient.invalidateQueries({ queryKey: [todayQueryKey] });
-      queryClient.invalidateQueries({ queryKey: ["/api/devotionals/today?userId=guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
     } catch {
       setCompleting(false);
     }
@@ -301,15 +523,20 @@ export default function DevotionalDayScreen() {
                 Reflection Questions
               </Text>
             </View>
+            <Text style={[{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 }]}>
+              Answer each question to start a discussion
+            </Text>
             {day.reflectionQuestions.map((q, i) => (
-              <View key={i} style={styles.questionRow}>
-                <Text style={[styles.questionNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {i + 1}.
-                </Text>
-                <Text style={[styles.questionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                  {q}
-                </Text>
-              </View>
+              <ReflectionQuestion
+                key={i}
+                question={q}
+                index={i}
+                theme={theme}
+                isDark={isDark}
+                passageLabel={day.passageLabel || undefined}
+                dayTitle={day.title}
+                previousExchanges={[]}
+              />
             ))}
           </View>
         )}

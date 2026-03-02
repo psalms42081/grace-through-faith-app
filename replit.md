@@ -28,7 +28,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Pro/Paywall System:** Guards premium features (Verse Map, Guided Study, Family Dashboard) with a 7-day trial.
 - **Family Dashboard:** Premium tab for parents to track children's spiritual progress, including an AI-generated "Family Kingdom Map" heatmap and "Family Altar" Prayer Wall.
 - **User Features:** Notes, highlights, bookmarks, prayer journal, and reading history with streak tracking.
-- **Devotionals:** Browsing, enrollment, and progress tracking.
+- **Devotionals:** Browsing, enrollment, progress tracking, and **interactive AI reflection discussions** — each reflection question has an answer field; submitting an answer triggers an AI-powered discussion with follow-up questions for deeper engagement.
 - **4D Scripture Context Panel:** Floating button in the chapter reader for AI-generated contextual data (locations, timeline, figures, cultural insights).
 - **SDA Doctrinal Studies:** Dedicated screen for the 28 Fundamental Beliefs with external EGW Writings links.
 - **Interactive AI Storyteller (Pause & Wonder):** Kids stories are "Choose Your Own Adventure" experiences with AI-generated "Pause & Wonder" cards for interactive learning.
