@@ -2561,6 +2561,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── FAMILY KINGDOM MAP (Heatmap) ────────────────────────────────────────
+
+  app.get("/api/family/heatmap", checkProStatus, async (req, res) => {
+    try {
+      const parentId = String(req.query.userId || req.query.parentId || "guest");
+
+      const allBooks = await db
+        .select()
+        .from(bibleBooks)
+        .orderBy(asc(bibleBooks.id));
+
+      const children = await db
+        .select()
+        .from(childProfiles)
+        .where(eq(childProfiles.parentId, parentId));
+
+      const parentReading = await db
+        .select({
+          bookId: readingHistory.bookId,
+          bookName: readingHistory.bookName,
+          chapter: readingHistory.chapter,
+        })
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, parentId));
+
+      const parentChaptersPerBook: Record<number, Set<number>> = {};
+      for (const r of parentReading) {
+        if (!parentChaptersPerBook[r.bookId]) parentChaptersPerBook[r.bookId] = new Set();
+        parentChaptersPerBook[r.bookId].add(r.chapter);
+      }
+
+      const childProgressMap: Record<string, { name: string; bookProgress: Record<number, number> }> = {};
+
+      for (const child of children) {
+        const progress = await db
+          .select({
+            storyId: kidsProgress.storyId,
+            completed: kidsProgress.completed,
+          })
+          .from(kidsProgress)
+          .where(and(eq(kidsProgress.userId, child.id), eq(kidsProgress.completed, true)));
+
+        const storyIds = progress.map((p) => p.storyId);
+        const bookHits: Record<number, number> = {};
+
+        if (storyIds.length > 0) {
+          const stories = await db
+            .select({ id: kidsStories.id, scriptureRef: kidsStories.scriptureRef })
+            .from(kidsStories)
+            .where(sql`${kidsStories.id} IN ${storyIds}`);
+
+          for (const story of stories) {
+            if (story.scriptureRef) {
+              const matchedBook = allBooks.find((b) =>
+                story.scriptureRef!.toLowerCase().startsWith(b.name.toLowerCase()) ||
+                story.scriptureRef!.toLowerCase().startsWith(b.abbreviation.toLowerCase())
+              );
+              if (matchedBook) {
+                bookHits[matchedBook.id] = (bookHits[matchedBook.id] || 0) + 1;
+              }
+            }
+          }
+        }
+
+        const bookProgress: Record<number, number> = {};
+        for (const book of allBooks) {
+          const hits = bookHits[book.id] || 0;
+          bookProgress[book.id] = hits > 0 ? Math.min(100, Math.round((hits / Math.max(1, book.chapterCount)) * 100)) : 0;
+        }
+
+        childProgressMap[child.id] = { name: child.name, bookProgress };
+      }
+
+      const books = allBooks.map((book) => {
+        const parentChapters = parentChaptersPerBook[book.id]?.size || 0;
+        const parentProgress = Math.min(100, Math.round((parentChapters / book.chapterCount) * 100));
+
+        const members: { name: string; role: string; progress: number }[] = [
+          { name: "You", role: "parent", progress: parentProgress },
+        ];
+
+        const progressValues = [parentProgress];
+
+        for (const child of children) {
+          const cp = childProgressMap[child.id]?.bookProgress[book.id] || 0;
+          members.push({ name: child.name, role: "child", progress: cp });
+          progressValues.push(cp);
+        }
+
+        const avgProgress = progressValues.length > 0
+          ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length)
+          : 0;
+
+        const conquered = progressValues.length > 0 && progressValues.every((p) => p >= 100);
+
+        return {
+          bookId: book.id,
+          bookName: book.name,
+          progress: avgProgress,
+          conquered,
+          members,
+        };
+      });
+
+      const booksWithProgress = books.filter((b) => b.progress > 0 && b.progress < 100);
+      let familyQuest = null;
+      if (booksWithProgress.length > 0) {
+        const questBook = booksWithProgress.reduce((best, b) =>
+          b.progress > best.progress ? b : best, booksWithProgress[0]);
+        familyQuest = {
+          bookName: questBook.bookName,
+          message: `This week, our family is exploring ${questBook.bookName} together!`,
+        };
+      }
+
+      return res.json({ books, familyQuest });
+    } catch (err) {
+      console.error("Family heatmap error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // ─── DINNER TABLE TOPICS (Parent Bridge) ─────────────────────────────────
 
   app.get("/api/family/dinner-topics", checkProStatus, async (req, res) => {

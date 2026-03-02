@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
 import Colors from "@/constants/colors";
+import FamilyHeatmap from "@/components/FamilyHeatmap";
 
 interface ChildStat {
   child: {
@@ -273,6 +274,8 @@ export default function FamilyDashboard() {
             </View>
           </View>
         )}
+
+        <FamilyHeatmap />
 
         {dinnerTopics && dinnerTopics.length > 0 && (
           <View style={styles.dinnerSection}>
