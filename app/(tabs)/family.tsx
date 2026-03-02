@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
@@ -82,6 +83,7 @@ export default function FamilyDashboard() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { isPro, showProGate } = useProStatus();
+  const { userId } = useAuth();
   const qc = useQueryClient();
 
   const [showAddChild, setShowAddChild] = useState(false);
@@ -93,39 +95,39 @@ export default function FamilyDashboard() {
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
   const { data: stats, isLoading } = useQuery<FamilyStats>({
-    queryKey: ["/api/family/stats?userId=guest&parentId=guest"],
+    queryKey: [`/api/family/stats?userId=${userId}&parentId=${userId}`],
     enabled: isPro,
   });
 
   const { data: dinnerTopics } = useQuery<DinnerTopic[]>({
-    queryKey: ["/api/family/dinner-topics?userId=guest"],
+    queryKey: [`/api/family/dinner-topics?userId=${userId}`],
     enabled: isPro,
   });
 
   const markDiscussedMutation = useMutation({
     mutationFn: async (topicId: string) => {
       const res = await apiRequest("POST", `/api/family/dinner-topics/${topicId}/discussed`, {
-        userId: "guest",
+        userId,
       });
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/dinner-topics?userId=guest"] });
-      qc.invalidateQueries({ queryKey: ["/api/family/stats?userId=guest&parentId=guest"] });
+      qc.invalidateQueries({ queryKey: [`/api/family/dinner-topics?userId=${userId}`] });
+      qc.invalidateQueries({ queryKey: [`/api/family/stats?userId=${userId}&parentId=${userId}`] });
     },
   });
 
   const addChildMutation = useMutation({
     mutationFn: async (data: { name: string; avatarUrl: string }) => {
       const res = await apiRequest("POST", "/api/family/children", {
-        parentId: "guest",
-        userId: "guest",
+        parentId: userId,
+        userId,
         ...data,
       });
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/stats?userId=guest&parentId=guest"] });
+      qc.invalidateQueries({ queryKey: [`/api/family/stats?userId=${userId}&parentId=${userId}`] });
       setShowAddChild(false);
       setNewChildName("");
       setSelectedAvatar(0);
@@ -134,10 +136,10 @@ export default function FamilyDashboard() {
 
   const deleteChildMutation = useMutation({
     mutationFn: async (childId: string) => {
-      await apiRequest("DELETE", `/api/family/children/${childId}?userId=guest`, undefined);
+      await apiRequest("DELETE", `/api/family/children/${childId}?userId=${userId}`, undefined);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/stats?userId=guest&parentId=guest"] });
+      qc.invalidateQueries({ queryKey: [`/api/family/stats?userId=${userId}&parentId=${userId}`] });
     },
   });
 
@@ -173,7 +175,7 @@ export default function FamilyDashboard() {
     setActiveConversation(childId);
     setLoadingConversation(true);
     try {
-      const res = await apiRequest("GET", `/api/family/conversation-starter/${childId}?userId=guest`);
+      const res = await apiRequest("GET", `/api/family/conversation-starter/${childId}?userId=${userId}`);
       const data = await res.json();
       setConversationData(data);
     } catch {

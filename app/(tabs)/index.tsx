@@ -32,6 +32,7 @@ import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -621,6 +622,7 @@ function AdultHomeScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { enterKidsMode } = useKidsMode();
+  const { userId } = useAuth();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -635,7 +637,7 @@ function AdultHomeScreen() {
   }, []);
 
   const { data: todayData } = useQuery<TodayResponse>({
-    queryKey: ["/api/devotionals/today?userId=guest"],
+    queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
   const { data: plans } = useQuery<Plan[]>({
@@ -643,11 +645,11 @@ function AdultHomeScreen() {
   });
 
   const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
-    queryKey: ["/api/reading-history/recent?userId=guest"],
+    queryKey: [`/api/reading-history/recent?userId=${userId}`],
   });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
-    queryKey: ["/api/reading-streaks/weekly?userId=guest"],
+    queryKey: [`/api/reading-streaks/weekly?userId=${userId}`],
   });
 
   const lastRead = recentReads?.[0];

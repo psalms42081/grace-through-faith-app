@@ -3,6 +3,18 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import type { Persister } from "@tanstack/react-query-persist-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+let _authTokenGetter: (() => string | null) | null = null;
+
+export function setAuthTokenGetter(getter: () => string | null) {
+  _authTokenGetter = getter;
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = _authTokenGetter?.();
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
+}
+
 export function getApiUrl(): string {
   let host = process.env.EXPO_PUBLIC_DOMAIN;
 
@@ -30,9 +42,14 @@ export async function apiRequest(
   const baseUrl = getApiUrl();
   const url = new URL(route, baseUrl);
 
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+  };
+  if (data) headers["Content-Type"] = "application/json";
+
   const res = await fetch(url.toString(), {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -52,6 +69,7 @@ export const getQueryFn: <T>(options: {
 
     const res = await fetch(url.toString(), {
       credentials: "include",
+      headers: getAuthHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

@@ -21,6 +21,9 @@ export const users = pgTable("users", {
     .default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  displayName: text("display_name"),
+  email: text("email").unique(),
+  familyId: varchar("family_id"),
   isPro: boolean("is_pro").default(false).notNull(),
   isPatron: boolean("is_patron").default(false),
   donationAmount: integer("donation_amount").default(0),
@@ -46,6 +49,55 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// ─── FAMILIES ─────────────────────────────────────────────────────────────────
+
+export const families = pgTable("families", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Family = typeof families.$inferSelect;
+
+// ─── PRAYER GROUPS ────────────────────────────────────────────────────────────
+
+export const prayerGroups = pgTable("prayer_groups", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  joinCode: varchar("join_code", { length: 10 }).notNull().unique(),
+  createdBy: varchar("created_by").notNull(),
+  memberCount: integer("member_count").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PrayerGroup = typeof prayerGroups.$inferSelect;
+
+export const prayerGroupMembers = pgTable(
+  "prayer_group_member",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id").notNull(),
+    userId: varchar("user_id").notNull(),
+    displayName: text("display_name"),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupUserUnique: uniqueIndex("group_member_unique").on(table.groupId, table.userId),
+    groupIdx: index("group_member_group_idx").on(table.groupId),
+  })
+);
+
+export type PrayerGroupMember = typeof prayerGroupMembers.$inferSelect;
 
 // ─── BIBLE ────────────────────────────────────────────────────────────────────
 
@@ -744,6 +796,7 @@ export const prayerRequests = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull(),
     familyId: varchar("family_id"),
+    groupId: varchar("group_id"),
     title: text("title").notNull(),
     content: text("content"),
     category: varchar("category", { length: 30 }).default("personal").notNull(),
@@ -760,6 +813,7 @@ export const prayerRequests = pgTable(
   (table) => ({
     userIdx: index("prayer_user_idx").on(table.userId),
     familyIdx: index("prayer_family_idx").on(table.familyId),
+    groupIdx: index("prayer_group_idx").on(table.groupId),
   })
 );
 

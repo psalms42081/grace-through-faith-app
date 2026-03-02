@@ -11,6 +11,7 @@ import { queryClient, asyncStoragePersister } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
 import {
   useFonts,
@@ -65,6 +66,12 @@ function RootLayoutNav() {
       <Stack.Screen name="kids-story/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="prayer-journal" options={{ headerShown: true, title: "Prayer Journal" }} />
       <Stack.Screen name="topic/[id]" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="(auth)"
+        options={{ presentation: "modal", headerShown: false }}
+      />
+      <Stack.Screen name="groups" options={{ headerShown: true, title: "Prayer Groups" }} />
+      <Stack.Screen name="group/[id]" options={{ headerShown: true, title: "Group" }} />
     </Stack>
   );
 }
@@ -112,17 +119,19 @@ export default function RootLayout() {
         client={queryClient}
         persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 * 30 }}
       >
-        <TranslationProvider>
-          <KidsModeProvider>
-            <ProProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </ProProvider>
-          </KidsModeProvider>
-        </TranslationProvider>
+        <AuthProvider>
+          <TranslationProvider>
+            <KidsModeProvider>
+              <ProProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </ProProvider>
+            </KidsModeProvider>
+          </TranslationProvider>
+        </AuthProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>
   );

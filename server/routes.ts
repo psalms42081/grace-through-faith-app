@@ -1,5 +1,7 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { textToSpeech, isValidVoice } from "./openai-tts";
 import {
   generateStrongWordStudy,
@@ -56,6 +58,9 @@ import {
   kidsStoryScenes,
   dinnerTableTopics,
   userActivityCounters,
+  families,
+  prayerGroups,
+  prayerGroupMembers,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -86,6 +91,461 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  const JWT_SECRET = process.env.JWT_SECRET || "grace-through-faith-secret-key-2026";
+
+  function generateCode(): string {
+    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const alphanum = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 4; i++) code += letters[Math.floor(Math.random() * letters.length)];
+    code += "-";
+    for (let i = 0; i < 4; i++) code += alphanum[Math.floor(Math.random() * alphanum.length)];
+    return code;
+  }
+
+  function extractUserId(req: Request): string {
+    try {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        return decoded.userId;
+      }
+    } catch {}
+    return String(req.query.userId || req.body?.userId || "guest");
+  }
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, displayName } = req.body;
+      if (!email || !password || !displayName) {
+        return res.status(400).json({ error: "Email, password, and display name are required" });
+      }
+
+      const existing = await db.select().from(users).where(eq(users.email, email));
+      if (existing.length > 0) {
+        return res.status(409).json({ error: "An account with this email already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const username = email.split("@")[0] + "-" + Date.now().toString(36);
+
+      const [newUser] = await db.insert(users).values({
+        username,
+        password: hashedPassword,
+        displayName,
+        email,
+        isPro: true,
+      }).returning();
+
+      const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: "90d" });
+
+      return res.json({
+        user: {
+          id: newUser.id,
+          displayName: newUser.displayName,
+          email: newUser.email,
+          familyId: newUser.familyId,
+          isPro: newUser.isPro,
+          isPatron: newUser.isPatron,
+        },
+        token,
+      });
+    } catch (err) {
+      console.error("Register error:", err);
+      return res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
+
+      return res.json({
+        user: {
+          id: user.id,
+          displayName: user.displayName,
+          email: user.email,
+          familyId: user.familyId,
+          isPro: user.isPro,
+          isPatron: user.isPatron,
+        },
+        token,
+      });
+    } catch (err) {
+      console.error("Login error:", err);
+      return res.status(500).json({ error: "Failed to sign in" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      if (userId === "guest") {
+        return res.json({ user: null, isGuest: true });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.json({ user: null, isGuest: true });
+      }
+
+      return res.json({
+        user: {
+          id: user.id,
+          displayName: user.displayName,
+          email: user.email,
+          familyId: user.familyId,
+          isPro: user.isPro,
+          isPatron: user.isPatron,
+        },
+        isGuest: false,
+      });
+    } catch (err) {
+      console.error("Auth me error:", err);
+      return res.json({ user: null, isGuest: true });
+    }
+  });
+
+  // ─── FAMILY GROUP MANAGEMENT ──────────────────────────────────────────────
+
+  app.post("/api/family/create", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { name } = req.body;
+      if (!name) return res.status(400).json({ error: "Family name is required" });
+
+      const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
+      if (existingUser?.familyId) {
+        return res.status(400).json({ error: "You are already in a family group" });
+      }
+
+      let inviteCode = generateCode();
+      let attempts = 0;
+      while (attempts < 5) {
+        const existing = await db.select().from(families).where(eq(families.inviteCode, inviteCode));
+        if (existing.length === 0) break;
+        inviteCode = generateCode();
+        attempts++;
+      }
+
+      const [family] = await db.insert(families).values({
+        name,
+        inviteCode,
+        createdBy: userId,
+      }).returning();
+
+      await db.update(users).set({ familyId: family.id }).where(eq(users.id, userId));
+
+      return res.json({ family });
+    } catch (err) {
+      console.error("Family create error:", err);
+      return res.status(500).json({ error: "Failed to create family" });
+    }
+  });
+
+  app.post("/api/family/join", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { inviteCode } = req.body;
+      if (!inviteCode) return res.status(400).json({ error: "Invite code is required" });
+
+      const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
+      if (existingUser?.familyId) {
+        return res.status(400).json({ error: "You are already in a family group" });
+      }
+
+      const [family] = await db.select().from(families).where(eq(families.inviteCode, inviteCode.toUpperCase()));
+      if (!family) {
+        return res.status(404).json({ error: "Invalid invite code" });
+      }
+
+      await db.update(users).set({ familyId: family.id }).where(eq(users.id, userId));
+
+      return res.json({ family });
+    } catch (err) {
+      console.error("Family join error:", err);
+      return res.status(500).json({ error: "Failed to join family" });
+    }
+  });
+
+  app.get("/api/family/info", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
+      if (!user?.familyId) {
+        return res.json({ family: null });
+      }
+
+      const [family] = await db.select().from(families).where(eq(families.id, user.familyId));
+      if (!family) return res.json({ family: null });
+
+      const members = await db.select({
+        id: users.id,
+        displayName: users.displayName,
+        username: users.username,
+      }).from(users).where(eq(users.familyId, family.id));
+
+      return res.json({ family, members });
+    } catch (err) {
+      console.error("Family info error:", err);
+      return res.status(500).json({ error: "Failed to get family info" });
+    }
+  });
+
+  app.get("/api/family/members", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
+      if (!user?.familyId) return res.json({ members: [] });
+
+      const members = await db.select({
+        id: users.id,
+        displayName: users.displayName,
+        username: users.username,
+      }).from(users).where(eq(users.familyId, user.familyId));
+
+      return res.json({ members });
+    } catch (err) {
+      console.error("Family members error:", err);
+      return res.status(500).json({ error: "Failed to get family members" });
+    }
+  });
+
+  // ─── PRAYER GROUP MANAGEMENT ──────────────────────────────────────────────
+
+  app.post("/api/groups/create", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { name, description } = req.body;
+      if (!name) return res.status(400).json({ error: "Group name is required" });
+
+      let joinCode = generateCode();
+      let attempts = 0;
+      while (attempts < 5) {
+        const existing = await db.select().from(prayerGroups).where(eq(prayerGroups.joinCode, joinCode));
+        if (existing.length === 0) break;
+        joinCode = generateCode();
+        attempts++;
+      }
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+      const [group] = await db.insert(prayerGroups).values({
+        name,
+        description: description || null,
+        joinCode,
+        createdBy: userId,
+      }).returning();
+
+      await db.insert(prayerGroupMembers).values({
+        groupId: group.id,
+        userId,
+        displayName: user?.displayName || user?.username || "Member",
+      });
+
+      return res.json({ group });
+    } catch (err) {
+      console.error("Group create error:", err);
+      return res.status(500).json({ error: "Failed to create group" });
+    }
+  });
+
+  app.post("/api/groups/join", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { joinCode } = req.body;
+      if (!joinCode) return res.status(400).json({ error: "Join code is required" });
+
+      const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.joinCode, joinCode.toUpperCase()));
+      if (!group) return res.status(404).json({ error: "Invalid join code" });
+
+      const existingMember = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, group.id), eq(prayerGroupMembers.userId, userId)));
+      if (existingMember.length > 0) {
+        return res.status(400).json({ error: "You are already a member of this group" });
+      }
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+      await db.insert(prayerGroupMembers).values({
+        groupId: group.id,
+        userId,
+        displayName: user?.displayName || user?.username || "Member",
+      });
+
+      await db.update(prayerGroups).set({
+        memberCount: sql`${prayerGroups.memberCount} + 1`,
+      }).where(eq(prayerGroups.id, group.id));
+
+      return res.json({ group: { ...group, memberCount: group.memberCount + 1 } });
+    } catch (err) {
+      console.error("Group join error:", err);
+      return res.status(500).json({ error: "Failed to join group" });
+    }
+  });
+
+  app.get("/api/groups", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const memberships = await db.select({ groupId: prayerGroupMembers.groupId })
+        .from(prayerGroupMembers).where(eq(prayerGroupMembers.userId, userId));
+
+      if (memberships.length === 0) return res.json({ groups: [] });
+
+      const groupIds = memberships.map((m) => m.groupId);
+      const groups = [];
+      for (const gid of groupIds) {
+        const [g] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, gid));
+        if (g) groups.push(g);
+      }
+
+      return res.json({ groups });
+    } catch (err) {
+      console.error("Groups list error:", err);
+      return res.status(500).json({ error: "Failed to list groups" });
+    }
+  });
+
+  app.get("/api/groups/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
+      if (!group) return res.status(404).json({ error: "Group not found" });
+
+      const members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+
+      return res.json({ group, members });
+    } catch (err) {
+      console.error("Group detail error:", err);
+      return res.status(500).json({ error: "Failed to get group details" });
+    }
+  });
+
+  app.post("/api/groups/:id/leave", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+
+      await db.delete(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+
+      await db.update(prayerGroups).set({
+        memberCount: sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`,
+      }).where(eq(prayerGroups.id, id));
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Group leave error:", err);
+      return res.status(500).json({ error: "Failed to leave group" });
+    }
+  });
+
+  app.get("/api/groups/:id/prayers", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const prayers = await db.select().from(prayerRequests)
+        .where(eq(prayerRequests.groupId, id))
+        .orderBy(desc(prayerRequests.createdAt));
+
+      return res.json(prayers);
+    } catch (err) {
+      console.error("Group prayers error:", err);
+      return res.status(500).json({ error: "Failed to get group prayers" });
+    }
+  });
+
+  app.post("/api/groups/:id/prayers", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const { title, content, authorName } = req.body;
+      if (!title) return res.status(400).json({ error: "Prayer title is required" });
+
+      let scripturalVerse = null;
+      let scripturalNote = null;
+      try {
+        const encouragement = await generateScripturalEncouragement(title, content || "");
+        scripturalVerse = encouragement.verse;
+        scripturalNote = encouragement.note;
+      } catch {}
+
+      const [prayer] = await db.insert(prayerRequests).values({
+        userId,
+        groupId: id,
+        title,
+        content: content || null,
+        authorName: authorName || "Group Member",
+        category: "group",
+        scripturalVerse,
+        scripturalNote,
+      }).returning();
+
+      return res.json(prayer);
+    } catch (err) {
+      console.error("Group prayer create error:", err);
+      return res.status(500).json({ error: "Failed to create prayer" });
+    }
+  });
+
+  app.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
+    try {
+      const { prayerId } = req.params;
+      const { memberName } = req.body;
+
+      const [prayer] = await db.select().from(prayerRequests).where(eq(prayerRequests.id, prayerId));
+      if (!prayer) return res.status(404).json({ error: "Prayer not found" });
+
+      const currentSupported = Array.isArray(prayer.supportedBy) ? prayer.supportedBy : [];
+      const name = memberName || "Someone";
+      if (!currentSupported.includes(name)) {
+        currentSupported.push(name);
+      }
+
+      await db.update(prayerRequests).set({
+        supportCount: sql`${prayerRequests.supportCount} + 1`,
+        supportedBy: currentSupported,
+      }).where(eq(prayerRequests.id, prayerId));
+
+      return res.json({ success: true, supportCount: (prayer.supportCount || 0) + 1 });
+    } catch (err) {
+      console.error("Group prayer support error:", err);
+      return res.status(500).json({ error: "Failed to support prayer" });
+    }
+  });
+
+  app.post("/api/groups/:id/prayers/:prayerId/answered", async (req, res) => {
+    try {
+      const { prayerId } = req.params;
+      await db.update(prayerRequests).set({
+        answered: true,
+        answeredAt: new Date(),
+      }).where(eq(prayerRequests.id, prayerId));
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Group prayer answered error:", err);
+      return res.status(500).json({ error: "Failed to mark prayer answered" });
+    }
+  });
+
+  // ─── EXISTING USER ENDPOINTS ──────────────────────────────────────────────
 
   app.post("/api/user/start-trial", async (req, res) => {
     try {

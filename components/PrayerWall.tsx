@@ -23,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
+import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 
@@ -196,12 +197,19 @@ function getTimeSince(dateStr: string): string {
   return `${Math.floor(days / 7)}w ago`;
 }
 
-export default function PrayerWall() {
+export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const { isPro } = useProStatus();
+  const { userId, user } = useAuth();
   const qc = useQueryClient();
+  const displayName = user?.displayName || "Family Member";
+
+  const isGroupMode = !!groupId;
+  const queryKeyStr = isGroupMode
+    ? `/api/groups/${groupId}/prayers`
+    : `/api/family/prayers?userId=${userId}`;
 
   const [showForm, setShowForm] = useState(false);
   const [prayerTitle, setPrayerTitle] = useState("");
@@ -209,21 +217,24 @@ export default function PrayerWall() {
   const [authorName, setAuthorName] = useState("");
 
   const { data: prayers } = useQuery<FamilyPrayer[]>({
-    queryKey: ["/api/family/prayers?userId=guest"],
+    queryKey: [queryKeyStr],
     enabled: isPro,
   });
 
   const postMutation = useMutation({
     mutationFn: async (data: { title: string; content: string; authorName: string }) => {
-      const res = await apiRequest("POST", "/api/family/prayers", {
-        userId: "guest",
-        familyId: "guest",
+      const endpoint = isGroupMode
+        ? `/api/groups/${groupId}/prayers`
+        : "/api/family/prayers";
+      const res = await apiRequest("POST", endpoint, {
+        userId,
+        familyId: userId,
         ...data,
       });
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/prayers?userId=guest"] });
+      qc.invalidateQueries({ queryKey: [queryKeyStr] });
       setPrayerTitle("");
       setPrayerContent("");
       setShowForm(false);
@@ -232,21 +243,27 @@ export default function PrayerWall() {
 
   const supportMutation = useMutation({
     mutationFn: async (prayerId: string) => {
-      const res = await apiRequest("POST", `/api/family/prayers/${prayerId}/support`, {
-        userId: "guest",
-        memberName: "You",
+      const endpoint = isGroupMode
+        ? `/api/groups/${groupId}/prayers/${prayerId}/support`
+        : `/api/family/prayers/${prayerId}/support`;
+      const res = await apiRequest("POST", endpoint, {
+        userId,
+        memberName: displayName,
       });
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/family/prayers?userId=guest"] });
+      qc.invalidateQueries({ queryKey: [queryKeyStr] });
     },
   });
 
   const answeredMutation = useMutation({
     mutationFn: async ({ id, answered }: { id: string; answered: boolean }) => {
-      const res = await apiRequest("POST", `/api/family/prayers/${id}/answered`, {
-        userId: "guest",
+      const endpoint = isGroupMode
+        ? `/api/groups/${groupId}/prayers/${id}/answered`
+        : `/api/family/prayers/${id}/answered`;
+      const res = await apiRequest("POST", endpoint, {
+        userId,
         answered,
       });
       return res.json();

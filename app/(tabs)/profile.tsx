@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import Svg, { Rect } from "react-native-svg";
 import Colors from "@/constants/colors";
 import { useProStatus } from "@/contexts/ProContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -166,27 +167,30 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
   const { isPatron } = useProStatus();
+  const { user, isGuest, isAuthenticated, logout } = useAuth();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const uid = user?.id || "guest";
+
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
-    queryKey: ["/api/reading-streaks/weekly?userId=guest"],
+    queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
   });
 
   const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string; readAt: string }[]>({
-    queryKey: ["/api/reading-history/recent?userId=guest"],
+    queryKey: [`/api/reading-history/recent?userId=${uid}`],
   });
 
   const { data: todayData } = useQuery<TodayResponse>({
-    queryKey: ["/api/devotionals/today?userId=guest"],
+    queryKey: [`/api/devotionals/today?userId=${uid}`],
   });
 
   const { data: prayerCount } = useQuery<{ id: string }[]>({
-    queryKey: ["/api/prayers?userId=guest"],
+    queryKey: [`/api/prayers?userId=${uid}`],
   });
 
   const { data: growthData } = useQuery<GrowthData>({
-    queryKey: ["/api/analytics/growth?userId=guest"],
+    queryKey: [`/api/analytics/growth?userId=${uid}`],
   });
 
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
@@ -220,16 +224,35 @@ export default function ProfileScreen() {
           <Ionicons name="person" size={36} color="#fff" />
         </View>
         <Text style={[st.userName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Guest
+          {isAuthenticated ? (user?.displayName || "User") : "Guest"}
         </Text>
         <Text style={[st.userSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Grace through Faith
+          {isAuthenticated ? (user?.email || "Grace through Faith") : "Grace through Faith"}
         </Text>
         {isPatron && (
           <View style={st.patronBadge}>
             <Ionicons name="shield-checkmark" size={14} color="#C9933A" />
             <Text style={st.patronBadgeText}>Mission Partner</Text>
           </View>
+        )}
+        {isGuest ? (
+          <Pressable
+            onPress={() => router.push("/(auth)/login")}
+            style={[st.authBtn, { backgroundColor: theme.accent }]}
+            testID="profile-sign-in"
+          >
+            <Ionicons name="log-in-outline" size={16} color="#fff" />
+            <Text style={[st.authBtnText, { fontFamily: "Inter_600SemiBold" }]}>Sign In / Create Account</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={logout}
+            style={[st.authBtn, { backgroundColor: isDark ? "#2A2A3E" : "#E8E4DD" }]}
+            testID="profile-sign-out"
+          >
+            <Ionicons name="log-out-outline" size={16} color={theme.textSecondary} />
+            <Text style={[st.authBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Sign Out</Text>
+          </Pressable>
         )}
       </View>
 
@@ -423,6 +446,7 @@ export default function ProfileScreen() {
         </Text>
         {[
           { title: "Prayer Journal", icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
+          { title: "Prayer Groups", icon: "people-circle" as const, color: "#10B981", route: "/groups" },
           { title: "28 Fundamental Beliefs", icon: "school" as const, color: "#7C3AED", route: "/sda-studies" },
           { title: "Christian Music", icon: "musical-notes" as const, color: "#C9933A", route: "/music" },
           { title: "Family & Faith", icon: "people" as const, color: "#3B6CB5", route: "/family" },
@@ -684,4 +708,17 @@ const st = StyleSheet.create({
     justifyContent: "center",
   },
   linkTitle: { flex: 1, fontSize: 15 },
+  authBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  authBtnText: {
+    fontSize: 14,
+    color: "#fff",
+  },
 });
