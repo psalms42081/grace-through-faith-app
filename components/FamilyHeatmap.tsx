@@ -394,7 +394,7 @@ export default function FamilyHeatmap() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
-  const { isPro } = useProStatus();
+  const { isPro, isPatron } = useProStatus();
   const [selectedBook, setSelectedBook] = useState<BookHeat | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
 
@@ -422,7 +422,7 @@ export default function FamilyHeatmap() {
   let globalIndex = 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+    <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: isPatron ? "#C9933A" : theme.border, borderWidth: isPatron ? 2 : 1 }]}>
       {heatmapData?.familyQuest && (
         <View style={[styles.questBanner, { backgroundColor: theme.accent + "12" }]}>
           <Ionicons name="compass" size={18} color={theme.accent} />

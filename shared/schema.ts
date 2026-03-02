@@ -22,8 +22,23 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   isPro: boolean("is_pro").default(false).notNull(),
+  isPatron: boolean("is_patron").default(false),
+  donationAmount: integer("donation_amount").default(0),
+  lastMissionInvite: timestamp("last_mission_invite"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const userActivityCounters = pgTable("user_activity_counter", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  featureType: varchar("feature_type", { length: 50 }).notNull(),
+  useCount: integer("use_count").default(0),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+}, (table) => ({
+  userFeatureUnique: uniqueIndex("activity_user_feature").on(table.userId, table.featureType),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

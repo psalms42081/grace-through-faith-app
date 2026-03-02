@@ -55,6 +55,7 @@ import {
   kidsWonderCache,
   kidsStoryScenes,
   dinnerTableTopics,
+  userActivityCounters,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -86,21 +87,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  app.get("/api/user/pro-status", async (req, res) => {
-    try {
-      const userId = String(req.query.userId || "guest");
-      const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
-      return res.json({ isPro: user?.isPro ?? false });
-    } catch (err) {
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
   app.post("/api/user/start-trial", async (req, res) => {
     try {
       const userId = String(req.body?.userId || "guest");
       await db.update(users).set({ isPro: true }).where(eq(users.id, userId));
       return res.json({ success: true, isPro: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/user/pro-status", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const [user] = await db
+        .select({ isPro: users.isPro, isPatron: users.isPatron, donationAmount: users.donationAmount })
+        .from(users)
+        .where(eq(users.id, userId));
+      return res.json({
+        isPro: user?.isPro ?? false,
+        isPatron: user?.isPatron ?? false,
+        donationAmount: user?.donationAmount ?? 0,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/donate", async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      const amount = Math.max(1, Math.round(Number(req.body?.amount) || 5));
+
+      const [user] = await db
+        .select({ donationAmount: users.donationAmount })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      const currentDonation = user?.donationAmount ?? 0;
+
+      await db
+        .update(users)
+        .set({
+          isPro: true,
+          isPatron: true,
+          donationAmount: currentDonation + amount,
+        })
+        .where(eq(users.id, userId));
+
+      console.log(`\n🌟 MISSION PARTNER: User ${userId} donated $${amount} (total: $${currentDonation + amount})`);
+
+      return res.json({
+        success: true,
+        isPatron: true,
+        isPro: true,
+        totalDonated: currentDonation + amount,
+      });
+    } catch (err) {
+      console.error("Donate error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/track-activity", async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      const featureType = String(req.body?.featureType || "unknown");
+
+      const [existing] = await db
+        .select()
+        .from(userActivityCounters)
+        .where(and(
+          eq(userActivityCounters.userId, userId),
+          eq(userActivityCounters.featureType, featureType)
+        ));
+
+      if (existing) {
+        await db
+          .update(userActivityCounters)
+          .set({
+            useCount: sql`${userActivityCounters.useCount} + 1`,
+            lastUsedAt: new Date(),
+          })
+          .where(eq(userActivityCounters.id, existing.id));
+      } else {
+        await db
+          .insert(userActivityCounters)
+          .values({ userId, featureType, useCount: 1 });
+      }
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Track activity error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/user/mission-status", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+
+      const [user] = await db
+        .select({
+          isPatron: users.isPatron,
+          isPro: users.isPro,
+          lastMissionInvite: users.lastMissionInvite,
+        })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!user) {
+        return res.json({ shouldInvite: false, isPatron: false, totalUses: 0 });
+      }
+
+      if (user.isPatron) {
+        return res.json({ shouldInvite: false, isPatron: true, totalUses: 0 });
+      }
+
+      if (user.lastMissionInvite) {
+        const daysSince = (Date.now() - new Date(user.lastMissionInvite).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSince < 30) {
+          return res.json({ shouldInvite: false, isPatron: false, totalUses: 0 });
+        }
+      }
+
+      const counters = await db
+        .select({ useCount: userActivityCounters.useCount })
+        .from(userActivityCounters)
+        .where(eq(userActivityCounters.userId, userId));
+
+      const totalUses = counters.reduce((sum, c) => sum + (c.useCount ?? 0), 0);
+
+      return res.json({
+        shouldInvite: totalUses >= 10,
+        isPatron: false,
+        totalUses,
+      });
+    } catch (err) {
+      console.error("Mission status error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/dismiss-mission-invite", async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      await db
+        .update(users)
+        .set({ lastMissionInvite: new Date() })
+        .where(eq(users.id, userId));
+      return res.json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: "Internal server error" });
     }

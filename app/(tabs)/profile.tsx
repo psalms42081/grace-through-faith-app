@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Svg, { Rect } from "react-native-svg";
 import Colors from "@/constants/colors";
+import { useProStatus } from "@/contexts/ProContext";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -164,6 +165,7 @@ export default function ProfileScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
+  const { isPatron } = useProStatus();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -223,6 +225,12 @@ export default function ProfileScreen() {
         <Text style={[st.userSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
           Grace through Faith
         </Text>
+        {isPatron && (
+          <View style={st.patronBadge}>
+            <Ionicons name="shield-checkmark" size={14} color="#C9933A" />
+            <Text style={st.patronBadgeText}>Mission Partner</Text>
+          </View>
+        )}
       </View>
 
       <View style={st.statsRow}>
@@ -509,6 +517,23 @@ const st = StyleSheet.create({
   },
   userName: { fontSize: 24, marginBottom: 4 },
   userSub: { fontSize: 14 },
+  patronBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#C9933A",
+    backgroundColor: "rgba(201,147,58,0.08)",
+  },
+  patronBadgeText: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: "#C9933A",
+  },
   statsRow: {
     flexDirection: "row",
     gap: 10,
