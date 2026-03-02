@@ -9,7 +9,7 @@ import {
   useColorScheme,
   Platform,
 } from "react-native";
-import { router, useLocalSearchParams, Stack } from "expo-router";
+import { router, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -847,6 +847,21 @@ export default function VerseReaderScreen() {
     setGlobalTranslation(t);
   }, [setGlobalTranslation]);
 
+  const [focusedVerse, setFocusedVerse] = useState<number | null>(null);
+  const focusedVerseRef = useRef<number | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedVerseRef.current !== null) {
+        const timer = setTimeout(() => {
+          setFocusedVerse(null);
+          focusedVerseRef.current = null;
+        }, 400);
+        return () => clearTimeout(timer);
+      }
+    }, [])
+  );
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
@@ -1279,6 +1294,8 @@ export default function VerseReaderScreen() {
 
   const handleVerseTap = useCallback((item: Verse) => {
     Haptics.selectionAsync();
+    setFocusedVerse(item.verse);
+    focusedVerseRef.current = item.verse;
     router.push({
       pathname: "/verse-actions",
       params: {
@@ -1418,27 +1435,32 @@ export default function VerseReaderScreen() {
 
               <View style={styles.proseContainer}>
                 <Text style={[styles.proseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                  {verses.map((v, i) => (
-                    <React.Fragment key={v.id}>
-                      <Text
-                        onPress={() => handleVerseTap(v)}
-                        style={[
-                          styles.proseText,
-                          {
-                            color: theme.text,
-                            fontFamily: "Lora_400Regular",
-                            backgroundColor: i === speakingVerseIndex ? theme.highlightYellow : "transparent",
-                          },
-                        ]}
-                      >
-                        <Text style={[styles.verseNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          {" "}{v.verse}{" "}
+                  {verses.map((v, i) => {
+                    const isFocused = focusedVerse === v.verse;
+                    const isDimmed = focusedVerse !== null && !isFocused;
+                    return (
+                      <React.Fragment key={v.id}>
+                        <Text
+                          onPress={() => handleVerseTap(v)}
+                          style={[
+                            styles.proseText,
+                            {
+                              color: theme.text,
+                              fontFamily: "Lora_400Regular",
+                              backgroundColor: i === speakingVerseIndex ? theme.highlightYellow : "transparent",
+                              opacity: isDimmed ? 0.3 : 1,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.verseNum, { color: isDimmed ? theme.textMuted : theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                            {" "}{v.verse}{" "}
+                          </Text>
+                          {v.text}
                         </Text>
-                        {v.text}
-                      </Text>
-                      {"  "}
-                    </React.Fragment>
-                  ))}
+                        {"  "}
+                      </React.Fragment>
+                    );
+                  })}
                 </Text>
               </View>
 
@@ -1732,11 +1754,11 @@ const styles = StyleSheet.create({
   },
   proseText: {
     fontSize: 21,
-    lineHeight: 36,
+    lineHeight: 34,
   },
   verseNum: {
     fontSize: 11,
-    lineHeight: 36,
+    lineHeight: 34,
   },
   bottomBar: {
     position: "absolute",

@@ -7,13 +7,13 @@ A mobile-first Bible study app for all Christian ministries, featuring a "4-Laye
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 
 ## System Architecture
-The application is built with a mobile-first approach using **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for the database. **TanStack Query** manages server state with offline persistence via AsyncStorage, and React context handles shared UI state.
+The application is built with a mobile-first approach using **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for the database. **TanStack Query** manages server state with offline persistence via AsyncStorage, and React context handles shared UI state. **Server structure:** All 7 AI generation functions (word study, context, commentary, application, study guide start/respond, verse map, chapter context) are extracted into `server/services/ai-engine.ts` (~420 lines). `server/routes.ts` (~1,950 lines) handles Express routing, DB operations, and caching, calling ai-engine functions on cache miss.
 
 **UI/UX Decisions:**
 - **Color Scheme:** Deep dark mode (`#050507` near-black) for an immersive experience, with a warm gold accent (`#C9933A`). Kids Mode uses a distinct palette.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI text.
 - **Icons:** Ionicons from `@expo/vector-icons`.
-- **Design Philosophy:** Borderless design, YouVersion-inspired immersive dark theme, with a focus on readability and clear information hierarchy. The Bible reader features a centered book name, large chapter number, and continuous prose with inline superscript verse numbers.
+- **Design Philosophy:** Borderless design, YouVersion-inspired immersive dark theme, with a focus on readability and clear information hierarchy. The Bible reader features a centered book name, large chapter number, and continuous prose with inline superscript verse numbers. **Premium typography:** Lora at fontSize 21 with lineHeight 34 (1.6 ratio) for optimal readability. **Smart Selection:** tapping a verse dims surrounding text to 0.3 opacity while the focused verse stays at full opacity; focus clears via `useFocusEffect` with 400ms delay on return from the verse actions sheet.
 - **Onboarding:** A 4-page swipeable welcome flow for first-time users.
 - **Kids Club:** A dedicated section with KidsModeContext for age-appropriate content and progress tracking, including quizzes and stories.
 
