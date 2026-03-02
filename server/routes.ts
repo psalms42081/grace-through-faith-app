@@ -10,6 +10,7 @@ import {
   generateVerseMap,
   generateChapterContext,
   generateConversationStarter,
+  generatePauseAndWonder,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -48,6 +49,7 @@ import {
   verseMapCache,
   chapterContextCache,
   childProfiles,
+  kidsWonderCache,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -1446,6 +1448,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(todayStory);
     } catch (err) {
       console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── KIDS INTERACTIVE STORYTELLER (Pause & Wonder) ─────────────────────────
+
+  app.get("/api/kids/stories/:id/wonder", async (req, res) => {
+    try {
+      const { id: storyId } = req.params;
+      const ageGroup = String(req.query.ageGroup || "little_lambs");
+
+      const cached = await db
+        .select()
+        .from(kidsWonderCache)
+        .where(and(eq(kidsWonderCache.storyId, storyId), eq(kidsWonderCache.ageGroup, ageGroup)))
+        .limit(1);
+
+      if (cached.length) {
+        return res.json({ moments: cached[0].moments });
+      }
+
+      const [story] = await db
+        .select({ title: kidsStories.title, storyText: kidsStories.storyText })
+        .from(kidsStories)
+        .where(eq(kidsStories.id, storyId));
+
+      if (!story) {
+        return res.status(404).json({ error: "Story not found" });
+      }
+
+      const moments = await generatePauseAndWonder(story.title, story.storyText, ageGroup);
+
+      await db.insert(kidsWonderCache).values({ storyId, ageGroup, moments }).onConflictDoNothing();
+
+      return res.json({ moments });
+    } catch (err) {
+      console.error("Wonder generation error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/wonder/answer", async (req, res) => {
+    try {
+      const { userId = "guest", storyId, momentIndex, childProfileId } = req.body;
+      if (!storyId || momentIndex === undefined) {
+        return res.status(400).json({ error: "storyId and momentIndex are required" });
+      }
+
+      const existing = await db
+        .select()
+        .from(kidsProgress)
+        .where(and(eq(kidsProgress.userId, userId), eq(kidsProgress.storyId, storyId)))
+        .limit(1);
+
+      let currentAnswers: number[] = [];
+      let isNewAnswer = false;
+
+      if (existing.length) {
+        currentAnswers = (existing[0].wonderAnswers as number[]) || [];
+        if (!currentAnswers.includes(momentIndex)) {
+          isNewAnswer = true;
+          currentAnswers.push(momentIndex);
+          await db
+            .update(kidsProgress)
+            .set({ wonderAnswers: currentAnswers })
+            .where(eq(kidsProgress.id, existing[0].id));
+        }
+      } else {
+        isNewAnswer = true;
+        currentAnswers = [momentIndex];
+        await db.insert(kidsProgress).values({
+          userId,
+          storyId,
+          wonderAnswers: currentAnswers,
+        });
+      }
+
+      if (isNewAnswer && childProfileId) {
+        await db
+          .update(childProfiles)
+          .set({
+            totalPoints: sql`${childProfiles.totalPoints} + 10`,
+            currentLevel: sql`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`,
+          })
+          .where(eq(childProfiles.id, childProfileId));
+      }
+
+      return res.json({ success: true, pointsAwarded: isNewAnswer ? 10 : 0, wonderAnswers: currentAnswers });
+    } catch (err) {
+      console.error("Wonder answer error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

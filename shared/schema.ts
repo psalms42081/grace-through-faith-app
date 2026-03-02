@@ -547,6 +547,7 @@ export const kidsProgress = pgTable(
     completed: boolean("completed").default(false),
     quizScore: integer("quiz_score"),
     memoryVerseMemorized: boolean("memory_verse_memorized").default(false),
+    wonderAnswers: jsonb("wonder_answers").$type<number[]>().default([]),
     completedAt: timestamp("completed_at"),
   },
   (table) => ({
@@ -554,6 +555,33 @@ export const kidsProgress = pgTable(
       table.userId,
       table.storyId
     ),
+  })
+);
+
+export const kidsWonderCache = pgTable(
+  "kids_wonder_cache",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    storyId: varchar("story_id")
+      .notNull()
+      .references(() => kidsStories.id),
+    ageGroup: varchar("age_group", { length: 20 }).notNull().default("little_lambs"),
+    moments: jsonb("moments")
+      .$type<
+        {
+          afterParagraph: number;
+          question: string;
+          options: { emoji: string; label: string }[];
+          correctIndex: number;
+        }[]
+      >()
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    storyAgeUnique: uniqueIndex("kids_wonder_story_age_unique").on(table.storyId, table.ageGroup),
   })
 );
 
@@ -629,6 +657,7 @@ export type KidsProgress = typeof kidsProgress.$inferSelect;
 export type KidsBadge = typeof kidsBadges.$inferSelect;
 export type KidsUserBadge = typeof kidsUserBadges.$inferSelect;
 export type KidsStreak = typeof kidsStreaks.$inferSelect;
+export type KidsWonderCache = typeof kidsWonderCache.$inferSelect;
 export type ChildProfile = typeof childProfiles.$inferSelect;
 
 // ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────

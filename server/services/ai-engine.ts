@@ -443,6 +443,99 @@ Include 2-5 locations, 1-3 timeline events, and 2-5 key figures. Be specific to 
   }
 }
 
+export interface WonderMoment {
+  afterParagraph: number;
+  question: string;
+  options: { emoji: string; label: string }[];
+  correctIndex: number;
+}
+
+export async function generatePauseAndWonder(
+  storyTitle: string,
+  storyText: string,
+  ageGroup: string
+): Promise<WonderMoment[]> {
+  const openai = createOpenAIClient();
+
+  const paragraphs = storyText.split(/\n\n+/).filter((p) => p.trim());
+  const momentCount = Math.max(1, Math.floor(paragraphs.length / 3));
+  const momentPositions = Array.from({ length: momentCount }, (_, i) => (i + 1) * 3 - 1);
+  const validPositions = momentPositions.filter((p) => p < paragraphs.length);
+
+  if (validPositions.length === 0 && paragraphs.length > 0) {
+    validPositions.push(Math.min(2, paragraphs.length - 1));
+  }
+
+  const excerpts = validPositions.map((pos) => {
+    const start = Math.max(0, pos - 2);
+    return {
+      position: pos,
+      text: paragraphs.slice(start, pos + 1).join("\n\n"),
+    };
+  });
+
+  const ageHint =
+    ageGroup === "little_lambs"
+      ? "ages 4-7, use very simple words and short sentences"
+      : ageGroup === "young_disciples"
+        ? "ages 8-12, moderately simple language"
+        : "ages 13-17, can handle deeper reflection";
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are creating interactive "Pause & Wonder" moments for a children's Bible story called "${storyTitle}". The audience is ${ageHint}.
+
+For each excerpt I provide, generate ONE imaginative question that invites the child to pause and think about the story. The question should spark curiosity and wonder (e.g., "How do you think Noah felt when the first raindrop hit?" or "What would YOU have done if you were David?").
+
+Each question gets exactly 3 emoji-based multiple-choice answers. One answer should be clearly the most thoughtful/correct, but all options should be kind and positive (no wrong answers that shame). Use a single relevant emoji for each option.
+
+Respond in JSON array format:
+[
+  {
+    "afterParagraph": <paragraph_index>,
+    "question": "The wonder question",
+    "options": [
+      { "emoji": "emoji1", "label": "Short answer text" },
+      { "emoji": "emoji2", "label": "Short answer text" },
+      { "emoji": "emoji3", "label": "Short answer text" }
+    ],
+    "correctIndex": <0|1|2>
+  }
+]
+
+Keep answer labels under 6 words. Make questions warm and inviting, never quizzy.`,
+      },
+      {
+        role: "user",
+        content: excerpts
+          .map((e) => `--- After paragraph ${e.position} ---\n${e.text}`)
+          .join("\n\n"),
+      },
+    ],
+    max_tokens: 600,
+  });
+
+  try {
+    const raw = completion.choices[0]?.message?.content || "[]";
+    const cleaned = cleanJsonResponse(raw);
+    return JSON.parse(cleaned);
+  } catch {
+    return validPositions.map((pos) => ({
+      afterParagraph: pos,
+      question: "What do you think happens next in this story?",
+      options: [
+        { emoji: "🤔", label: "Something surprising!" },
+        { emoji: "😊", label: "Something wonderful!" },
+        { emoji: "🙏", label: "God helps them!" },
+      ],
+      correctIndex: 2,
+    }));
+  }
+}
+
 export async function generateConversationStarter(
   childName: string,
   completedStories: { title: string; scriptureRef: string | null }[]

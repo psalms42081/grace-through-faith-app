@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
@@ -36,10 +37,158 @@ interface Story {
   estimatedMinutes: number;
 }
 
+interface WonderMoment {
+  afterParagraph: number;
+  question: string;
+  options: { emoji: string; label: string }[];
+  correctIndex: number;
+}
+
 function useImageBaseUrl() {
   return React.useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
   }, []);
+}
+
+function WonderCard({
+  moment,
+  momentIndex,
+  theme,
+  isLittleLambs,
+  answered,
+  onAnswer,
+}: {
+  moment: WonderMoment;
+  momentIndex: number;
+  theme: any;
+  isLittleLambs: boolean;
+  answered: boolean;
+  onAnswer: (momentIndex: number, choiceIndex: number) => void;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const starScale = useRef(new Animated.Value(0)).current;
+
+  const handleSelect = useCallback(
+    (choiceIndex: number) => {
+      if (selected !== null || answered) return;
+      setSelected(choiceIndex);
+
+      Animated.sequence([
+        Animated.spring(bounceAnim, {
+          toValue: 1,
+          friction: 3,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+        Animated.delay(200),
+      ]).start();
+
+      Animated.spring(starScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 100,
+        useNativeDriver: true,
+      }).start();
+
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      onAnswer(momentIndex, choiceIndex);
+    },
+    [selected, answered, momentIndex, onAnswer]
+  );
+
+  const hasAnswered = selected !== null || answered;
+
+  return (
+    <View style={[styles.wonderCard, { backgroundColor: theme.starGold + "12", borderColor: theme.starGold + "40" }]}>
+      <View style={styles.wonderHeader}>
+        <Ionicons name="sparkles" size={20} color={theme.starGold || "#F5A623"} />
+        <Text style={[styles.wonderLabel, { color: theme.starGold || "#F5A623", fontFamily: "Inter_700Bold" }]}>
+          Pause & Wonder
+        </Text>
+      </View>
+
+      <Text
+        style={[
+          styles.wonderQuestion,
+          {
+            color: theme.text,
+            fontFamily: "Lora_600SemiBold",
+            fontSize: isLittleLambs ? 19 : 17,
+            lineHeight: isLittleLambs ? 28 : 26,
+          },
+        ]}
+      >
+        {moment.question}
+      </Text>
+
+      <View style={styles.wonderOptions}>
+        {moment.options.map((opt, i) => {
+          const isSelected = selected === i;
+          const optBg = isSelected
+            ? theme.starGold + "25"
+            : theme.backgroundCard;
+          const optBorder = isSelected
+            ? theme.starGold
+            : theme.border;
+
+          return (
+            <Pressable
+              key={i}
+              onPress={() => handleSelect(i)}
+              disabled={hasAnswered}
+              style={[
+                styles.wonderOption,
+                {
+                  backgroundColor: optBg,
+                  borderColor: optBorder,
+                  opacity: hasAnswered && !isSelected ? 0.5 : 1,
+                },
+              ]}
+              testID={`wonder-option-${momentIndex}-${i}`}
+            >
+              <Text style={styles.wonderEmoji}>{opt.emoji}</Text>
+              <Text
+                style={[
+                  styles.wonderOptionLabel,
+                  {
+                    color: theme.text,
+                    fontFamily: isSelected ? "Inter_600SemiBold" : "Inter_500Medium",
+                    fontSize: isLittleLambs ? 15 : 14,
+                  },
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {isSelected && (
+                <Ionicons name="checkmark-circle" size={20} color={theme.starGold || "#F5A623"} />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {hasAnswered && (
+        <Animated.View
+          style={[
+            styles.wonderReward,
+            {
+              transform: [{ scale: starScale }],
+              backgroundColor: theme.starGold + "15",
+            },
+          ]}
+        >
+          <Ionicons name="star" size={22} color={theme.starGold || "#F5A623"} />
+          <Text style={[styles.wonderRewardText, { color: theme.starGold || "#F5A623", fontFamily: "Inter_700Bold" }]}>
+            +10 points!
+          </Text>
+        </Animated.View>
+      )}
+    </View>
+  );
 }
 
 export default function KidsStoryScreen() {
@@ -51,6 +200,8 @@ export default function KidsStoryScreen() {
   const { ageGroup } = useKidsMode();
   const queryClient = useQueryClient();
   const [completed, setCompleted] = useState(false);
+  const [answeredMoments, setAnsweredMoments] = useState<Set<number>>(new Set());
+  const initializedRef = useRef(false);
   const starScale = useRef(new Animated.Value(0)).current;
   const baseUrl = useImageBaseUrl();
 
@@ -61,6 +212,48 @@ export default function KidsStoryScreen() {
   const { data: story, isLoading } = useQuery<Story>({
     queryKey: [`/api/kids/stories/${id}`],
     enabled: !!id,
+  });
+
+  const { data: progressData } = useQuery<{ wonderAnswers: number[]; completed: boolean }[]>({
+    queryKey: [`/api/kids/progress/guest`],
+    enabled: !!id,
+  });
+
+  React.useEffect(() => {
+    if (!progressData || !id || initializedRef.current) return;
+    const storyProgress = progressData.find((p: any) => p.storyId === id);
+    if (storyProgress) {
+      const answers = (storyProgress.wonderAnswers || []) as number[];
+      if (answers.length > 0) {
+        setAnsweredMoments(new Set(answers));
+      }
+      if (storyProgress.completed) {
+        setCompleted(true);
+      }
+    }
+    initializedRef.current = true;
+  }, [progressData, id]);
+
+  const { data: wonderData } = useQuery<{ moments: WonderMoment[] }>({
+    queryKey: [`/api/kids/stories/${id}/wonder?ageGroup=${ageGroup}`],
+    enabled: !!id && !!story,
+  });
+
+  const paragraphs = useMemo(() => {
+    if (!story) return [];
+    return story.storyText.split(/\n\n+/).filter((p) => p.trim());
+  }, [story?.storyText]);
+
+  const wonderMoments = wonderData?.moments || [];
+
+  const answerMutation = useMutation({
+    mutationFn: async (data: { momentIndex: number; choiceIndex: number }) => {
+      await apiRequest("POST", "/api/kids/wonder/answer", {
+        userId: "guest",
+        storyId: id,
+        momentIndex: data.momentIndex,
+      });
+    },
   });
 
   const completeMutation = useMutation({
@@ -86,6 +279,14 @@ export default function KidsStoryScreen() {
     },
   });
 
+  const handleWonderAnswer = useCallback(
+    (momentIndex: number, choiceIndex: number) => {
+      setAnsweredMoments((prev) => new Set(prev).add(momentIndex));
+      answerMutation.mutate({ momentIndex, choiceIndex });
+    },
+    []
+  );
+
   if (isLoading || !story) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -95,6 +296,47 @@ export default function KidsStoryScreen() {
       </View>
     );
   }
+
+  const renderStoryContent = () => {
+    const elements: React.ReactNode[] = [];
+
+    paragraphs.forEach((para, idx) => {
+      elements.push(
+        <Text
+          key={`p-${idx}`}
+          style={[
+            styles.storyParagraph,
+            {
+              color: theme.text,
+              fontFamily: "Lora_400Regular",
+              fontSize: isLittleLambs ? 19 : 17,
+              lineHeight: isLittleLambs ? 32 : 28,
+            },
+          ]}
+        >
+          {para}
+        </Text>
+      );
+
+      const wonder = wonderMoments.find((m) => m.afterParagraph === idx);
+      if (wonder) {
+        const mIdx = wonderMoments.indexOf(wonder);
+        elements.push(
+          <WonderCard
+            key={`w-${idx}`}
+            moment={wonder}
+            momentIndex={mIdx}
+            theme={theme}
+            isLittleLambs={isLittleLambs}
+            answered={answeredMoments.has(mIdx)}
+            onAnswer={handleWonderAnswer}
+          />
+        );
+      }
+    });
+
+    return elements;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -134,15 +376,14 @@ export default function KidsStoryScreen() {
           <Image
             source={{ uri: `${baseUrl}${story.imageUrl}` }}
             style={styles.heroImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={300}
           />
         ) : null}
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-        <Text style={[styles.storyText, { color: theme.text, fontFamily: "Inter_400Regular", fontSize: isLittleLambs ? 18 : 16, lineHeight: isLittleLambs ? 30 : 26 }]}>
-          {story.storyText}
-        </Text>
+        {renderStoryContent()}
 
         {story.memoryVerse && (
           <>
@@ -298,7 +539,59 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   divider: { height: 1, marginVertical: 20 },
-  storyText: {},
+  storyParagraph: {
+    marginBottom: 16,
+  },
+  wonderCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 18,
+    marginVertical: 12,
+  },
+  wonderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  wonderLabel: {
+    fontSize: 13,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  wonderQuestion: {
+    marginBottom: 16,
+  },
+  wonderOptions: {
+    gap: 10,
+  },
+  wonderOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  wonderEmoji: {
+    fontSize: 26,
+  },
+  wonderOptionLabel: {
+    flex: 1,
+  },
+  wonderReward: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  wonderRewardText: {
+    fontSize: 15,
+  },
   memoryCard: {
     padding: 18,
     borderRadius: 14,
