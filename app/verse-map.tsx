@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
 interface StrongWord {
   map: { id: string; verseId: string; strongId: string; wordPosition: number; translatedWord: string };
@@ -69,6 +70,7 @@ export default function VerseMapScreen() {
     context: true,
   });
   const [expandedWord, setExpandedWord] = useState<string | null>(null);
+  const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
   const qc = useQueryClient();
 
@@ -134,7 +136,26 @@ export default function VerseMapScreen() {
               Verse Map
             </Text>
           </View>
-          <View style={{ width: 34 }} />
+          <ShareInsightButton
+            onPress={() => {
+              const firstWord = words[0];
+              triggerShare({
+                verseReference: params.verseReference || "",
+                verseText: params.verseText || "",
+                insightLabel: "Word Study",
+                insightText: firstWord?.entry?.definition
+                  ? firstWord.entry.definition.length > 180
+                    ? firstWord.entry.definition.slice(0, 177) + "..."
+                    : firstWord.entry.definition
+                  : undefined,
+                originalWord: firstWord?.entry?.lemma,
+                transliteration: firstWord?.entry?.transliteration || undefined,
+              });
+            }}
+            isSharing={isSharing}
+            compact
+            theme={theme}
+          />
         </View>
 
         <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard }]}>
@@ -367,6 +388,7 @@ export default function VerseMapScreen() {
           </>
         )}
       </ScrollView>
+      {ShareCardRenderer}
     </View>
   );
 }

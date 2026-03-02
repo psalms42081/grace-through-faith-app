@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
 interface Message {
   role: "user" | "assistant";
@@ -52,6 +53,7 @@ export default function StudyGuideScreen() {
   const [startError, setStartError] = useState(false);
   const [isResumed, setIsResumed] = useState(false);
   const initRef = useRef(false);
+  const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
   const restoreSession = (data: { session: any; aiMessage?: string; resumed?: boolean }) => {
     setSessionId(data.session.id);
@@ -343,17 +345,38 @@ export default function StudyGuideScreen() {
 
             {isComplete ? (
               <View style={[styles.completeBar, { backgroundColor: "#2E7D32" + "20", paddingBottom: bottomPadding + 10 }]}>
-                <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                <Text style={[styles.completeText, { color: "#2E7D32", fontFamily: "Inter_600SemiBold" }]}>
-                  Study Complete
-                </Text>
-                <Pressable
-                  onPress={() => router.back()}
-                  style={[styles.doneBtn, { backgroundColor: theme.accent }]}
-                  testID="study-done-btn"
-                >
-                  <Text style={[styles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
-                </Pressable>
+                <View style={styles.completeTopRow}>
+                  <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                  <Text style={[styles.completeText, { color: "#2E7D32", fontFamily: "Inter_600SemiBold" }]}>
+                    Study Complete
+                  </Text>
+                </View>
+                <View style={styles.completeActions}>
+                  <ShareInsightButton
+                    onPress={() => {
+                      const lastAi = [...messages].reverse().find((m) => m.role === "assistant");
+                      triggerShare({
+                        verseReference: params.verseReference || "",
+                        verseText: params.verseText || "",
+                        insightLabel: "Socratic Study Insight",
+                        insightText: lastAi
+                          ? lastAi.content.length > 180
+                            ? lastAi.content.slice(0, 177) + "..."
+                            : lastAi.content
+                          : undefined,
+                      });
+                    }}
+                    isSharing={isSharing}
+                    theme={theme}
+                  />
+                  <Pressable
+                    onPress={() => router.back()}
+                    style={[styles.doneBtn, { backgroundColor: theme.accent }]}
+                    testID="study-done-btn"
+                  >
+                    <Text style={[styles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
+                  </Pressable>
+                </View>
               </View>
             ) : (
               <View style={[styles.inputBar, { backgroundColor: theme.backgroundCard, paddingBottom: bottomPadding + 10 }]}>
@@ -385,6 +408,7 @@ export default function StudyGuideScreen() {
           </>
         )}
       </KeyboardAvoidingView>
+      {ShareCardRenderer}
     </View>
   );
 }
@@ -529,19 +553,26 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { color: "#fff", fontSize: 14 },
   completeBar: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
     paddingHorizontal: 16,
     paddingTop: 14,
+    gap: 10,
+  },
+  completeTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   completeText: { fontSize: 14 },
+  completeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   doneBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
-    marginLeft: 8,
   },
   doneBtnText: { color: "#fff", fontSize: 13 },
 });
