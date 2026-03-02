@@ -660,6 +660,37 @@ export type KidsStreak = typeof kidsStreaks.$inferSelect;
 export type KidsWonderCache = typeof kidsWonderCache.$inferSelect;
 export type ChildProfile = typeof childProfiles.$inferSelect;
 
+// ─── DINNER TABLE TOPICS (Parent Bridge) ────────────────────────────────────
+
+export const dinnerTableTopics = pgTable(
+  "dinner_table_topic",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    parentId: varchar("parent_id").notNull(),
+    childProfileId: varchar("child_profile_id").references(() => childProfiles.id),
+    childName: text("child_name").notNull(),
+    storyId: varchar("story_id").references(() => kidsStories.id),
+    storyTitle: text("story_title").notNull(),
+    scriptureRef: text("scripture_ref"),
+    quizScore: integer("quiz_score"),
+    notificationText: text("notification_text").notNull(),
+    dinnerQuestion: text("dinner_question").notNull(),
+    followUpQuestions: jsonb("follow_up_questions").$type<string[]>().default([]),
+    discussed: boolean("discussed").default(false),
+    discussedAt: timestamp("discussed_at"),
+    bonusPointsAwarded: boolean("bonus_points_awarded").default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    parentIdx: index("dinner_topic_parent_idx").on(table.parentId),
+    childIdx: index("dinner_topic_child_idx").on(table.childProfileId),
+  })
+);
+
+export type DinnerTableTopic = typeof dinnerTableTopics.$inferSelect;
+
 // ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
 
 export const prayerRequests = pgTable(

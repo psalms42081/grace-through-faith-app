@@ -536,6 +536,71 @@ Keep answer labels under 6 words. Make questions warm and inviting, never quizzy
   }
 }
 
+export interface DinnerTableTopicData {
+  notificationText: string;
+  dinnerQuestion: string;
+  followUpQuestions: string[];
+}
+
+export async function generateDinnerTableTopic(params: {
+  childName: string;
+  storyTitle: string;
+  scriptureRef: string | null;
+  quizScore: number;
+}): Promise<DinnerTableTopicData> {
+  const { childName, storyTitle, scriptureRef, quizScore } = params;
+  const openai = createOpenAIClient();
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a family faith coach helping parents connect with their children about Bible stories. A child just finished a quiz on a Bible story. Generate a push notification message and dinner-table conversation prompts.
+
+The notification should be warm, celebratory, and specific to the story. The dinner question should be open-ended, connecting the story's theme to the child's everyday life (school, friends, family). Follow-up questions should go deeper into application.
+
+Respond in JSON:
+{
+  "notificationText": "A short push notification (under 120 chars) celebrating the child and teasing a question. Example: '[Name] just learned about David & Goliath! Ask them: How can God help you be brave at school tomorrow?'",
+  "dinnerQuestion": "A warm, open-ended question a parent can ask at the dinner table that connects the Bible story to the child's real life. Make it specific to the story's theme.",
+  "followUpQuestions": [
+    "A follow-up that goes deeper into the story's lesson",
+    "A follow-up that connects to family values",
+    "A creative follow-up that sparks imagination"
+  ]
+}`,
+      },
+      {
+        role: "user",
+        content: `Child's name: ${childName}
+Story completed: "${storyTitle}" ${scriptureRef ? `(${scriptureRef})` : ""}
+Quiz score: ${quizScore}%
+
+Generate the notification and dinner table conversation prompts.`,
+      },
+    ],
+    temperature: 0.8,
+    max_tokens: 400,
+  });
+
+  try {
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const cleaned = cleanJsonResponse(raw);
+    return JSON.parse(cleaned);
+  } catch {
+    return {
+      notificationText: `${childName} just finished a Bible story quiz! Ask them what they learned tonight at dinner.`,
+      dinnerQuestion: `${childName}, tell me about the story of ${storyTitle} - what was the most surprising part?`,
+      followUpQuestions: [
+        "What character in the story would you most want to be like?",
+        "How does that story remind you of something in our family?",
+        "If you could ask God one question about that story, what would it be?",
+      ],
+    };
+  }
+}
+
 export async function generateConversationStarter(
   childName: string,
   completedStories: { title: string; scriptureRef: string | null }[]

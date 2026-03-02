@@ -50,6 +50,21 @@ interface ConversationData {
   discussion: string[];
 }
 
+interface DinnerTopic {
+  id: string;
+  childName: string;
+  storyTitle: string;
+  scriptureRef: string | null;
+  quizScore: number | null;
+  notificationText: string;
+  dinnerQuestion: string;
+  followUpQuestions: string[];
+  discussed: boolean;
+  discussedAt: string | null;
+  bonusPointsAwarded: boolean;
+  createdAt: string;
+}
+
 const CHILD_AVATARS = [
   { icon: "happy-outline" as const, color: "#4CAF50" },
   { icon: "heart-outline" as const, color: "#E91E63" },
@@ -73,10 +88,29 @@ export default function FamilyDashboard() {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [conversationData, setConversationData] = useState<ConversationData | null>(null);
   const [loadingConversation, setLoadingConversation] = useState(false);
+  const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
   const { data: stats, isLoading } = useQuery<FamilyStats>({
     queryKey: ["/api/family/stats?userId=guest&parentId=guest"],
     enabled: isPro,
+  });
+
+  const { data: dinnerTopics } = useQuery<DinnerTopic[]>({
+    queryKey: ["/api/family/dinner-topics?userId=guest"],
+    enabled: isPro,
+  });
+
+  const markDiscussedMutation = useMutation({
+    mutationFn: async (topicId: string) => {
+      const res = await apiRequest("POST", `/api/family/dinner-topics/${topicId}/discussed`, {
+        userId: "guest",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/family/dinner-topics?userId=guest"] });
+      qc.invalidateQueries({ queryKey: ["/api/family/stats?userId=guest&parentId=guest"] });
+    },
   });
 
   const addChildMutation = useMutation({
@@ -237,6 +271,134 @@ export default function FamilyDashboard() {
                 Badges
               </Text>
             </View>
+          </View>
+        )}
+
+        {dinnerTopics && dinnerTopics.length > 0 && (
+          <View style={styles.dinnerSection}>
+            <View style={styles.dinnerHeader}>
+              <Ionicons name="restaurant-outline" size={18} color={theme.accent} />
+              <Text style={[styles.dinnerTitle, { color: theme.text }]}>
+                Dinner Table Topics
+              </Text>
+            </View>
+            <Text style={[styles.dinnerSubtitle, { color: theme.textSecondary }]}>
+              Discuss these with your family to earn bonus points
+            </Text>
+            {dinnerTopics.filter((t) => !t.discussed).map((topic) => {
+              const isExpanded = expandedTopic === topic.id;
+              return (
+                <View
+                  key={topic.id}
+                  style={[
+                    styles.topicCard,
+                    {
+                      backgroundColor: theme.backgroundCard,
+                      borderColor: theme.accent + "40",
+                    },
+                  ]}
+                >
+                  <Pressable
+                    onPress={() => setExpandedTopic(isExpanded ? null : topic.id)}
+                    style={styles.topicCardHeader}
+                  >
+                    <View style={[styles.topicBadge, { backgroundColor: theme.accent + "15" }]}>
+                      <Ionicons name="chatbubble-ellipses" size={16} color={theme.accent} />
+                    </View>
+                    <View style={styles.topicCardInfo}>
+                      <Text style={[styles.topicChildName, { color: theme.accent }]}>
+                        {topic.childName}
+                      </Text>
+                      <Text style={[styles.topicStoryTitle, { color: theme.text }]} numberOfLines={1}>
+                        {topic.storyTitle}
+                        {topic.scriptureRef ? ` (${topic.scriptureRef})` : ""}
+                      </Text>
+                      {topic.quizScore !== null && (
+                        <Text style={[styles.topicScore, { color: theme.textMuted }]}>
+                          Quiz score: {topic.quizScore}%
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={theme.textMuted}
+                    />
+                  </Pressable>
+
+                  {isExpanded && (
+                    <View style={styles.topicExpanded}>
+                      <View style={[styles.topicQuestionBox, { backgroundColor: theme.background }]}>
+                        <Ionicons name="help-circle" size={18} color={theme.accent} />
+                        <Text style={[styles.topicQuestion, { color: theme.text }]}>
+                          {topic.dinnerQuestion}
+                        </Text>
+                      </View>
+
+                      {topic.followUpQuestions.length > 0 && (
+                        <View style={styles.topicFollowUps}>
+                          <Text style={[styles.topicFollowUpLabel, { color: theme.textSecondary }]}>
+                            Follow-up Questions
+                          </Text>
+                          {topic.followUpQuestions.map((q, i) => (
+                            <View key={i} style={styles.topicFollowUpRow}>
+                              <Text style={[styles.topicFollowUpNum, { color: theme.accent }]}>
+                                {i + 1}
+                              </Text>
+                              <Text style={[styles.topicFollowUpText, { color: theme.text }]}>
+                                {q}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      <Pressable
+                        style={[styles.discussedButton, { backgroundColor: theme.accent }]}
+                        onPress={() => markDiscussedMutation.mutate(topic.id)}
+                        disabled={markDiscussedMutation.isPending}
+                        testID={`mark-discussed-${topic.id}`}
+                      >
+                        {markDiscussedMutation.isPending ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                            <Text style={styles.discussedButtonText}>
+                              Mark as Discussed (+25 pts)
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+            {dinnerTopics.filter((t) => t.discussed).length > 0 && (
+              <View style={styles.discussedSection}>
+                <Text style={[styles.discussedLabel, { color: theme.textMuted }]}>
+                  Previously Discussed
+                </Text>
+                {dinnerTopics.filter((t) => t.discussed).slice(0, 3).map((topic) => (
+                  <View
+                    key={topic.id}
+                    style={[
+                      styles.discussedCard,
+                      { backgroundColor: theme.background, borderColor: theme.border },
+                    ]}
+                  >
+                    <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                    <View style={styles.discussedCardInfo}>
+                      <Text style={[styles.discussedCardName, { color: theme.textMuted }]}>
+                        {topic.childName} - {topic.storyTitle}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -842,5 +1004,143 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
+  },
+  dinnerSection: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  dinnerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  dinnerTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  dinnerSubtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 12,
+  },
+  topicCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  topicCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 12,
+  },
+  topicBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topicCardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  topicChildName: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  topicStoryTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  topicScore: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  topicExpanded: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 12,
+  },
+  topicQuestionBox: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "flex-start",
+  },
+  topicQuestion: {
+    fontSize: 15,
+    fontFamily: "Lora_500Medium",
+    lineHeight: 22,
+    flex: 1,
+  },
+  topicFollowUps: {
+    gap: 8,
+  },
+  topicFollowUpLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  topicFollowUpRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  topicFollowUpNum: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    width: 16,
+  },
+  topicFollowUpText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+    flex: 1,
+  },
+  discussedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  discussedButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+  },
+  discussedSection: {
+    marginTop: 4,
+    gap: 6,
+  },
+  discussedLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  discussedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  discussedCardInfo: {
+    flex: 1,
+  },
+  discussedCardName: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
 });

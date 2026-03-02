@@ -11,6 +11,7 @@ import {
   generateChapterContext,
   generateConversationStarter,
   generatePauseAndWonder,
+  generateDinnerTableTopic,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -50,6 +51,7 @@ import {
   chapterContextCache,
   childProfiles,
   kidsWonderCache,
+  dinnerTableTopics,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -1248,9 +1250,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  async function triggerParentBridge(storyId: string, quizScore: number, childProfileId?: string) {
+    if (!childProfileId) return;
+
+    const [child] = await db.select().from(childProfiles).where(eq(childProfiles.id, childProfileId)).limit(1);
+    if (!child) return;
+
+    const [story] = await db
+      .select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef })
+      .from(kidsStories)
+      .where(eq(kidsStories.id, storyId))
+      .limit(1);
+    if (!story) return;
+
+    const topicData = await generateDinnerTableTopic({
+      childName: child.name,
+      storyTitle: story.title,
+      scriptureRef: story.scriptureRef,
+      quizScore,
+    });
+
+    await db.insert(dinnerTableTopics).values({
+      parentId: child.parentId,
+      childProfileId: child.id,
+      childName: child.name,
+      storyId,
+      storyTitle: story.title,
+      scriptureRef: story.scriptureRef,
+      quizScore,
+      notificationText: topicData.notificationText,
+      dinnerQuestion: topicData.dinnerQuestion,
+      followUpQuestions: topicData.followUpQuestions,
+    });
+
+    console.log(`\n📱 PUSH NOTIFICATION → Parent (${child.parentId}):`);
+    console.log(`   ${topicData.notificationText}`);
+    console.log(`   🍽️ Dinner Question: ${topicData.dinnerQuestion}\n`);
+  }
+
   app.post("/api/kids/progress/quiz", async (req, res) => {
     try {
-      const { userId, storyId, score } = req.body;
+      const { userId, storyId, score, childProfileId } = req.body;
       if (!userId || !storyId || score === undefined) {
         return res.status(400).json({ error: "userId, storyId, and score are required" });
       }
@@ -1264,19 +1304,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         )
         .limit(1);
+      let result;
       if (existing.length) {
         const updated = await db
           .update(kidsProgress)
           .set({ quizScore: score })
           .where(eq(kidsProgress.id, existing[0].id))
           .returning();
-        return res.json(updated[0]);
+        result = updated[0];
+      } else {
+        const [progress] = await db
+          .insert(kidsProgress)
+          .values({ userId, storyId, quizScore: score })
+          .returning();
+        result = progress;
       }
-      const progress = await db
-        .insert(kidsProgress)
-        .values({ userId, storyId, quizScore: score })
-        .returning();
-      return res.json(progress[0]);
+
+      triggerParentBridge(storyId, score, childProfileId).catch((err) =>
+        console.error("Parent Bridge background error:", err)
+      );
+
+      return res.json(result);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });
@@ -2359,6 +2407,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ childName: child.name, ...result });
     } catch (err) {
       console.error("Conversation starter error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── DINNER TABLE TOPICS (Parent Bridge) ─────────────────────────────────
+
+  app.get("/api/family/dinner-topics", checkProStatus, async (req, res) => {
+    try {
+      const parentId = String(req.query.userId || req.query.parentId || "guest");
+      const topics = await db
+        .select()
+        .from(dinnerTableTopics)
+        .where(eq(dinnerTableTopics.parentId, parentId))
+        .orderBy(desc(dinnerTableTopics.createdAt))
+        .limit(20);
+      return res.json(topics);
+    } catch (err) {
+      console.error("Dinner topics fetch error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/family/dinner-topics/:id/discussed", checkProStatus, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = String(req.body.userId || "guest");
+
+      const [topic] = await db
+        .select()
+        .from(dinnerTableTopics)
+        .where(and(eq(dinnerTableTopics.id, id), eq(dinnerTableTopics.parentId, userId)))
+        .limit(1);
+
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+
+      if (topic.discussed) {
+        return res.json({ success: true, message: "Already discussed", bonusPoints: 0 });
+      }
+
+      await db
+        .update(dinnerTableTopics)
+        .set({ discussed: true, discussedAt: new Date(), bonusPointsAwarded: true })
+        .where(eq(dinnerTableTopics.id, id));
+
+      let bonusPoints = 25;
+
+      if (topic.childProfileId) {
+        await db
+          .update(childProfiles)
+          .set({
+            totalPoints: sql`${childProfiles.totalPoints} + ${bonusPoints}`,
+            currentLevel: sql`GREATEST(1, (${childProfiles.totalPoints} + ${bonusPoints}) / 100 + 1)`,
+          })
+          .where(eq(childProfiles.id, topic.childProfileId));
+      }
+
+      console.log(`\n✅ DINNER TOPIC DISCUSSED: "${topic.storyTitle}" for ${topic.childName}`);
+      console.log(`   +${bonusPoints} bonus points awarded to family account\n`);
+
+      return res.json({ success: true, bonusPoints });
+    } catch (err) {
+      console.error("Mark discussed error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });
