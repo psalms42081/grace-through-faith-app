@@ -47,7 +47,7 @@ import {
   verseMapCache,
   chapterContextCache,
 } from "../shared/schema";
-import { eq, and, ilike, sql, desc, asc } from "drizzle-orm";
+import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -1938,6 +1938,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(result);
     } catch (err) {
       console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/analytics/growth", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+
+      const sessions = await db
+        .select({
+          createdAt: studyGuideSessions.createdAt,
+          completedAt: studyGuideSessions.completedAt,
+        })
+        .from(studyGuideSessions)
+        .where(eq(studyGuideSessions.userId, userId));
+
+      let deepStudyMinutes = 0;
+      for (const s of sessions) {
+        if (s.completedAt && s.createdAt) {
+          const mins = (new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime()) / 60000;
+          if (mins > 0 && mins < 480) deepStudyMinutes += mins;
+        } else if (s.createdAt) {
+          deepStudyMinutes += 5;
+        }
+      }
+      deepStudyMinutes = Math.round(deepStudyMinutes);
+
+      const userChapters = await db
+        .select({
+          bookId: readingHistory.bookId,
+          chapter: readingHistory.chapter,
+        })
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, userId))
+        .groupBy(readingHistory.bookId, readingHistory.chapter);
+
+      let wordsLearned = 0;
+      if (userChapters.length > 0) {
+        const conditions = userChapters.map(
+          (ch) => sql`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
+        );
+        const [wordsResult] = await db
+          .select({ total: countDistinct(verseStrongMaps.strongId) })
+          .from(verseStrongMaps)
+          .innerJoin(bibleVerses, eq(verseStrongMaps.verseId, bibleVerses.id))
+          .where(sql`(${sql.join(conditions, sql` OR `)})`);
+        wordsLearned = wordsResult?.total ?? 0;
+      }
+
+      const booksRead = await db
+        .select({ bookId: readingHistory.bookId })
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, userId))
+        .groupBy(readingHistory.bookId);
+
+      const exploredBookIds = booksRead.map((r) => r.bookId);
+
+      const allBooks = await db
+        .select({
+          id: bibleBooks.id,
+          name: bibleBooks.name,
+          abbreviation: bibleBooks.abbreviation,
+          testament: bibleBooks.testament,
+          chapterCount: bibleBooks.chapterCount,
+          orderIndex: bibleBooks.orderIndex,
+        })
+        .from(bibleBooks)
+        .orderBy(asc(bibleBooks.orderIndex));
+
+      const chaptersPerBook = await db
+        .select({
+          bookId: readingHistory.bookId,
+          chaptersRead: countDistinct(readingHistory.chapter),
+        })
+        .from(readingHistory)
+        .where(eq(readingHistory.userId, userId))
+        .groupBy(readingHistory.bookId);
+
+      const chaptersMap = new Map(
+        chaptersPerBook.map((r) => [r.bookId, Number(r.chaptersRead)])
+      );
+
+      const bibleMap = allBooks.map((book) => ({
+        id: book.id,
+        name: book.name,
+        abbreviation: book.abbreviation,
+        testament: book.testament,
+        chapterCount: book.chapterCount,
+        chaptersRead: chaptersMap.get(book.id) ?? 0,
+        explored: exploredBookIds.includes(book.id),
+      }));
+
+      return res.json({
+        deepStudyMinutes,
+        totalSessions: sessions.length,
+        wordsLearned,
+        bibleMap,
+        booksExplored: exploredBookIds.length,
+        totalBooks: allBooks.length,
+      });
+    } catch (err) {
+      console.error("Growth analytics error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

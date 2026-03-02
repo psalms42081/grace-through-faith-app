@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,8 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
+import Svg, { Rect } from "react-native-svg";
 import Colors from "@/constants/colors";
 
 interface WeeklyStreakData {
@@ -31,6 +31,25 @@ interface TodayResponse {
   planComplete?: boolean;
 }
 
+interface BookMapEntry {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+  chaptersRead: number;
+  explored: boolean;
+}
+
+interface GrowthData {
+  deepStudyMinutes: number;
+  totalSessions: number;
+  wordsLearned: number;
+  bibleMap: BookMapEntry[];
+  booksExplored: number;
+  totalBooks: number;
+}
+
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 const BADGES = [
@@ -41,6 +60,103 @@ const BADGES = [
   { id: "deep-diver", title: "Deep Diver", icon: "layers" as const, color: "#2E7D32", requirement: "Use all 4 study layers" },
   { id: "perfect-week", title: "Perfect Week", icon: "trophy" as const, color: "#E8456B", requirement: "Read every day for a week" },
 ];
+
+const HEATMAP_COLS = 11;
+const CELL_SIZE = 28;
+const CELL_GAP = 3;
+const CELL_RADIUS = 5;
+
+function BibleHeatmap({
+  bibleMap,
+  theme,
+  isDark,
+}: {
+  bibleMap: BookMapEntry[];
+  theme: typeof Colors.dark;
+  isDark: boolean;
+}) {
+  const [selectedBook, setSelectedBook] = useState<BookMapEntry | null>(null);
+
+  const rows = Math.ceil(bibleMap.length / HEATMAP_COLS);
+  const svgWidth = HEATMAP_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP;
+  const svgHeight = rows * (CELL_SIZE + CELL_GAP) - CELL_GAP;
+
+  const getCellColor = (book: BookMapEntry) => {
+    if (!book.explored) return isDark ? "#1a1a1f" : "#e8e4df";
+    const ratio = Math.min(book.chaptersRead / Math.max(book.chapterCount, 1), 1);
+    if (ratio >= 0.8) return "#C9933A";
+    if (ratio >= 0.4) return "rgba(201,147,58,0.65)";
+    return "rgba(201,147,58,0.30)";
+  };
+
+  return (
+    <View>
+      <View style={{ alignItems: "center" }}>
+        <Svg width={svgWidth} height={svgHeight}>
+          {bibleMap.map((book, i) => {
+            const col = i % HEATMAP_COLS;
+            const row = Math.floor(i / HEATMAP_COLS);
+            const x = col * (CELL_SIZE + CELL_GAP);
+            const y = row * (CELL_SIZE + CELL_GAP);
+            return (
+              <Rect
+                key={book.id}
+                x={x}
+                y={y}
+                width={CELL_SIZE}
+                height={CELL_SIZE}
+                rx={CELL_RADIUS}
+                ry={CELL_RADIUS}
+                fill={getCellColor(book)}
+                onPress={() => setSelectedBook(selectedBook?.id === book.id ? null : book)}
+              />
+            );
+          })}
+        </Svg>
+      </View>
+
+      {selectedBook && (
+        <View style={[heatSt.tooltip, { backgroundColor: isDark ? "#1c1c22" : "#f0ede8" }]}>
+          <Text style={[heatSt.tooltipName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {selectedBook.name}
+          </Text>
+          <Text style={[heatSt.tooltipDetail, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {selectedBook.chaptersRead} of {selectedBook.chapterCount} chapters read
+          </Text>
+        </View>
+      )}
+
+      <View style={heatSt.legendRow}>
+        <View style={heatSt.legendGroup}>
+          <Text style={[heatSt.legendLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            OT
+          </Text>
+          <Text style={[heatSt.legendCount, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            {bibleMap.filter((b) => b.testament === "OT" && b.explored).length}/39
+          </Text>
+        </View>
+        <View style={heatSt.legendGroup}>
+          <Text style={[heatSt.legendLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            NT
+          </Text>
+          <Text style={[heatSt.legendCount, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            {bibleMap.filter((b) => b.testament === "NT" && b.explored).length}/27
+          </Text>
+        </View>
+        <View style={heatSt.legendSpacer} />
+        <View style={heatSt.legendScaleRow}>
+          <View style={[heatSt.legendDot, { backgroundColor: isDark ? "#1a1a1f" : "#e8e4df" }]} />
+          <View style={[heatSt.legendDot, { backgroundColor: "rgba(201,147,58,0.30)" }]} />
+          <View style={[heatSt.legendDot, { backgroundColor: "rgba(201,147,58,0.65)" }]} />
+          <View style={[heatSt.legendDot, { backgroundColor: "#C9933A" }]} />
+          <Text style={[heatSt.legendLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            depth
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -67,6 +183,10 @@ export default function ProfileScreen() {
     queryKey: ["/api/prayers?userId=guest"],
   });
 
+  const { data: growthData } = useQuery<GrowthData>({
+    queryKey: ["/api/analytics/growth?userId=guest"],
+  });
+
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
   const streak = weeklyData?.currentStreak ?? 0;
   const longestStreak = weeklyData?.longestStreak ?? 0;
@@ -80,6 +200,12 @@ export default function ProfileScreen() {
   if (todayData?.enrollment) earnedBadges.add("plan-starter");
   if (prayerCount && prayerCount.length >= 5) earnedBadges.add("prayer-warrior");
   if (perfectWeeks > 0) earnedBadges.add("perfect-week");
+
+  const studyMinutes = growthData?.deepStudyMinutes ?? 0;
+  const wordsLearned = growthData?.wordsLearned ?? 0;
+  const booksExplored = growthData?.booksExplored ?? 0;
+  const totalBooks = growthData?.totalBooks ?? 66;
+  const totalSessions = growthData?.totalSessions ?? 0;
 
   return (
     <ScrollView
@@ -149,6 +275,74 @@ export default function ProfileScreen() {
           </Text>
         </View>
       )}
+
+      <View style={[st.growthSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+        <Text style={[st.growthHeader, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Growth Analytics
+        </Text>
+
+        <View style={st.growthStatsRow}>
+          <View style={st.growthStatItem}>
+            <View style={[st.growthIconWrap, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
+              <Ionicons name="school" size={20} color="#8B5CF6" />
+            </View>
+            <Text style={[st.growthStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              {studyMinutes}
+            </Text>
+            <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Deep Study{"\n"}Minutes
+            </Text>
+          </View>
+
+          <View style={st.growthStatItem}>
+            <View style={[st.growthIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+              <Ionicons name="language" size={20} color="#C9933A" />
+            </View>
+            <Text style={[st.growthStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              {wordsLearned}
+            </Text>
+            <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Greek/Hebrew{"\n"}Words
+            </Text>
+          </View>
+
+          <View style={st.growthStatItem}>
+            <View style={[st.growthIconWrap, { backgroundColor: "rgba(46,125,50,0.12)" }]}>
+              <Ionicons name="book" size={20} color="#2E7D32" />
+            </View>
+            <Text style={[st.growthStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              {totalSessions}
+            </Text>
+            <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Socratic{"\n"}Sessions
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={[st.heatmapSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+        <View style={st.heatmapHeaderRow}>
+          <Text style={[st.heatmapTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Bible Knowledge Map
+          </Text>
+          <Text style={[st.heatmapSubtitle, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            {booksExplored}/{totalBooks}
+          </Text>
+        </View>
+        <Text style={[st.heatmapDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Tap a block to see reading depth per book
+        </Text>
+        {growthData?.bibleMap && growthData.bibleMap.length > 0 ? (
+          <BibleHeatmap bibleMap={growthData.bibleMap} theme={theme} isDark={isDark} />
+        ) : (
+          <View style={st.heatmapEmpty}>
+            <Ionicons name="map-outline" size={32} color={theme.textMuted} />
+            <Text style={[st.heatmapEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Start reading to fill your knowledge map
+            </Text>
+          </View>
+        )}
+      </View>
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -262,6 +456,42 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+const heatSt = StyleSheet.create({
+  tooltip: {
+    marginTop: 12,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: "center",
+  },
+  tooltipName: { fontSize: 15, marginBottom: 2 },
+  tooltipDetail: { fontSize: 12 },
+  legendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+    gap: 12,
+  },
+  legendGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendLabel: { fontSize: 11 },
+  legendCount: { fontSize: 12 },
+  legendSpacer: { flex: 1 },
+  legendScaleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
+});
+
 const st = StyleSheet.create({
   container: { flex: 1 },
   headerSection: {
@@ -321,6 +551,53 @@ const st = StyleSheet.create({
     justifyContent: "center",
   },
   weekSummary: { fontSize: 13, textAlign: "center" },
+  growthSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 10,
+  },
+  growthHeader: { fontSize: 22, marginBottom: 18 },
+  growthStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  growthStatItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+  },
+  growthIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  growthStatNum: { fontSize: 22 },
+  growthStatLabel: { fontSize: 11, textAlign: "center", lineHeight: 15 },
+  heatmapSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+  },
+  heatmapHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 4,
+  },
+  heatmapTitle: { fontSize: 18 },
+  heatmapSubtitle: { fontSize: 15 },
+  heatmapDesc: { fontSize: 12, marginBottom: 16 },
+  heatmapEmpty: {
+    alignItems: "center",
+    paddingVertical: 30,
+    gap: 10,
+  },
+  heatmapEmptyText: { fontSize: 13, textAlign: "center" },
   sectionPad: {
     paddingHorizontal: 20,
     marginBottom: 24,
