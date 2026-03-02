@@ -37,6 +37,7 @@ function NativeTabLayout() {
         <NativeTabs.Trigger name="study" options={{ href: null }} />
         <NativeTabs.Trigger name="explore" options={{ href: null }} />
         <NativeTabs.Trigger name="profile" options={{ href: null }} />
+        <NativeTabs.Trigger name="family" options={{ href: null }} />
       </NativeTabs>
     );
   }
@@ -51,9 +52,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "book", selected: "book.fill" }} />
         <Label>Read</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plans">
-        <Icon sf={{ default: "list.bullet.rectangle", selected: "list.bullet.rectangle.fill" }} />
-        <Label>Plans</Label>
+      <NativeTabs.Trigger name="family">
+        <Icon sf={{ default: "figure.2", selected: "figure.2" }} />
+        <Label>Family</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="explore">
         <Icon sf={{ default: "safari", selected: "safari.fill" }} />
@@ -63,6 +64,7 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>You</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="plans" options={{ href: null }} />
       <NativeTabs.Trigger name="search" options={{ href: null }} />
       <NativeTabs.Trigger name="study" options={{ href: null }} />
       <NativeTabs.Trigger name="kids-stories" options={{ href: null }} />
@@ -148,6 +150,16 @@ function ClassicTabLayout() {
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="family"
+        options={{
+          title: "Family",
+          href: isKidsMode ? null : undefined,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />

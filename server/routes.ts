@@ -9,6 +9,7 @@ import {
   generateStudyGuideResponse,
   generateVerseMap,
   generateChapterContext,
+  generateConversationStarter,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -46,6 +47,7 @@ import {
   studyGuideSessions,
   verseMapCache,
   chapterContextCache,
+  childProfiles,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -2082,6 +2084,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (err) {
       console.error("Growth analytics error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── FAMILY DASHBOARD ─────────────────────────────────────────────────────
+
+  app.get("/api/family/children", checkProStatus, async (req, res) => {
+    try {
+      const parentId = String(req.query.userId || req.query.parentId || "guest");
+      const children = await db
+        .select()
+        .from(childProfiles)
+        .where(eq(childProfiles.parentId, parentId))
+        .orderBy(asc(childProfiles.createdAt));
+      return res.json(children);
+    } catch (err) {
+      console.error("Family children error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/family/children", checkProStatus, async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      const { name, avatarUrl } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Child name is required" });
+      }
+      const [child] = await db
+        .insert(childProfiles)
+        .values({ parentId: userId, name, avatarUrl: avatarUrl || null })
+        .returning();
+      return res.json(child);
+    } catch (err) {
+      console.error("Add child error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/family/children/:id", checkProStatus, async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const [child] = await db
+        .select()
+        .from(childProfiles)
+        .where(and(eq(childProfiles.id, req.params.id), eq(childProfiles.parentId, userId)));
+      if (!child) {
+        return res.status(404).json({ error: "Child profile not found" });
+      }
+      await db.delete(childProfiles).where(eq(childProfiles.id, req.params.id));
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Delete child error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/family/stats", checkProStatus, async (req, res) => {
+    try {
+      const parentId = String(req.query.parentId || req.query.userId || "guest");
+
+      const children = await db
+        .select()
+        .from(childProfiles)
+        .where(eq(childProfiles.parentId, parentId));
+
+      const childStats = await Promise.all(
+        children.map(async (child) => {
+          const progress = await db
+            .select({
+              storyId: kidsProgress.storyId,
+              completed: kidsProgress.completed,
+              quizScore: kidsProgress.quizScore,
+              completedAt: kidsProgress.completedAt,
+            })
+            .from(kidsProgress)
+            .where(eq(kidsProgress.userId, child.id));
+
+          const completedStories = progress.filter((p) => p.completed);
+
+          const badges = await db
+            .select({
+              badgeId: kidsUserBadges.badgeId,
+              earnedAt: kidsUserBadges.earnedAt,
+              name: kidsBadges.name,
+              icon: kidsBadges.icon,
+            })
+            .from(kidsUserBadges)
+            .innerJoin(kidsBadges, eq(kidsUserBadges.badgeId, kidsBadges.id))
+            .where(eq(kidsUserBadges.userId, child.id));
+
+          const storyDetails = await Promise.all(
+            completedStories.slice(-5).map(async (p) => {
+              const [story] = await db
+                .select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef })
+                .from(kidsStories)
+                .where(eq(kidsStories.id, p.storyId));
+              return story || { title: "Unknown Story", scriptureRef: null };
+            })
+          );
+
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const weeklyCompleted = completedStories.filter(
+            (p) => p.completedAt && new Date(p.completedAt) >= weekAgo
+          );
+
+          return {
+            child: {
+              id: child.id,
+              name: child.name,
+              avatarUrl: child.avatarUrl,
+              totalPoints: child.totalPoints,
+              currentLevel: child.currentLevel,
+            },
+            storiesCompleted: completedStories.length,
+            storiesThisWeek: weeklyCompleted.length,
+            averageQuizScore:
+              completedStories.length > 0
+                ? Math.round(
+                    completedStories.reduce((sum, p) => sum + (p.quizScore || 0), 0) /
+                      completedStories.length
+                  )
+                : 0,
+            badgesEarned: badges.length,
+            recentBadges: badges.slice(-3),
+            recentStories: storyDetails,
+          };
+        })
+      );
+
+      const totalStoriesCompleted = childStats.reduce((s, c) => s + c.storiesCompleted, 0);
+      const totalBadgesEarned = childStats.reduce((s, c) => s + c.badgesEarned, 0);
+      const totalWeeklyStories = childStats.reduce((s, c) => s + c.storiesThisWeek, 0);
+
+      return res.json({
+        children: childStats,
+        summary: {
+          totalChildren: children.length,
+          totalStoriesCompleted,
+          totalBadgesEarned,
+          totalWeeklyStories,
+        },
+      });
+    } catch (err) {
+      console.error("Family stats error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/family/conversation-starter/:childId", checkProStatus, async (req, res) => {
+    try {
+      const { childId } = req.params;
+      const userId = String(req.query.userId || "guest");
+
+      const [child] = await db
+        .select()
+        .from(childProfiles)
+        .where(and(eq(childProfiles.id, childId), eq(childProfiles.parentId, userId)));
+
+      if (!child) {
+        return res.status(404).json({ error: "Child profile not found" });
+      }
+
+      const completedProgress = await db
+        .select({ storyId: kidsProgress.storyId })
+        .from(kidsProgress)
+        .where(and(eq(kidsProgress.userId, childId), eq(kidsProgress.completed, true)));
+
+      const storyDetails = await Promise.all(
+        completedProgress.slice(-5).map(async (p) => {
+          const [story] = await db
+            .select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef })
+            .from(kidsStories)
+            .where(eq(kidsStories.id, p.storyId));
+          return story || { title: "Unknown Story", scriptureRef: null };
+        })
+      );
+
+      const result = await generateConversationStarter(child.name, storyDetails);
+      return res.json({ childName: child.name, ...result });
+    } catch (err) {
+      console.error("Conversation starter error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

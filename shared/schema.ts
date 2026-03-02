@@ -602,6 +602,26 @@ export const kidsStreaks = pgTable("kids_streak", {
   lastActivityDate: text("last_activity_date"),
 });
 
+export const childProfiles = pgTable(
+  "child_profile",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    parentId: varchar("parent_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    avatarUrl: text("avatar_url"),
+    totalPoints: integer("total_points").default(0),
+    currentLevel: integer("current_level").default(1),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    parentIdx: index("child_profile_parent_idx").on(table.parentId),
+  })
+);
+
 export type KidsCollection = typeof kidsCollections.$inferSelect;
 export type KidsStory = typeof kidsStories.$inferSelect;
 export type KidsQuizQuestion = typeof kidsQuizQuestions.$inferSelect;
@@ -609,6 +629,7 @@ export type KidsProgress = typeof kidsProgress.$inferSelect;
 export type KidsBadge = typeof kidsBadges.$inferSelect;
 export type KidsUserBadge = typeof kidsUserBadges.$inferSelect;
 export type KidsStreak = typeof kidsStreaks.$inferSelect;
+export type ChildProfile = typeof childProfiles.$inferSelect;
 
 // ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
 

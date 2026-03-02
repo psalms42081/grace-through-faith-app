@@ -442,3 +442,54 @@ Include 2-5 locations, 1-3 timeline events, and 2-5 key figures. Be specific to 
     };
   }
 }
+
+export async function generateConversationStarter(
+  childName: string,
+  completedStories: { title: string; scriptureRef: string | null }[]
+): Promise<{ conversationStarter: string; discussion: string[] }> {
+  const openai = createOpenAIClient();
+
+  const storyList = completedStories
+    .slice(-5)
+    .map((s) => `"${s.title}" (${s.scriptureRef || "Bible story"})`)
+    .join(", ");
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a warm, encouraging family faith guide. A parent wants to talk with their child about Bible stories the child has been learning. Generate a natural conversation starter and follow-up discussion questions.
+
+The child's name is "${childName}". They recently completed these stories: ${storyList || "no stories yet"}.
+
+Respond in JSON:
+{
+  "conversationStarter": "A warm, natural sentence the parent can say to start a faith conversation at dinner or bedtime. Reference a specific story the child learned. Keep it age-appropriate and inviting, not quizzy.",
+  "discussion": [
+    "Follow-up question 1 — open-ended, connecting the story to the child's life",
+    "Follow-up question 2 — exploring the story's theme or moral",
+    "Follow-up question 3 — encouraging the child to share what they found interesting"
+  ]
+}
+If no stories are completed, create a general faith conversation starter encouraging the child to explore Bible stories together with the parent.`,
+      },
+    ],
+    max_tokens: 400,
+  });
+
+  try {
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const cleaned = cleanJsonResponse(raw);
+    return JSON.parse(cleaned);
+  } catch {
+    return {
+      conversationStarter: `Ask ${childName} what their favorite Bible story is and why it matters to them.`,
+      discussion: [
+        "What part of the story surprised you the most?",
+        "How do you think that story connects to our family?",
+        "Is there a character in the story you'd want to be like?",
+      ],
+    };
+  }
+}
