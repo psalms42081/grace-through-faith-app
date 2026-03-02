@@ -3081,17 +3081,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/family/children", checkProStatus, async (req, res) => {
     try {
       const userId = String(req.body?.userId || "guest");
-      const { name, avatarUrl } = req.body;
+      const { name, avatarUrl, ageGroup } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Child name is required" });
       }
+      const validAgeGroups = ["little_lambs", "young_disciples", "young_disciples_plus"];
       const [child] = await db
         .insert(childProfiles)
-        .values({ parentId: userId, name, avatarUrl: avatarUrl || null })
+        .values({
+          parentId: userId,
+          name,
+          avatarUrl: avatarUrl || null,
+          ageGroup: validAgeGroups.includes(ageGroup) ? ageGroup : "little_lambs",
+        })
         .returning();
       return res.json(child);
     } catch (err) {
       console.error("Add child error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/family/children/:id", checkProStatus, async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      const { name, ageGroup } = req.body;
+      const [existing] = await db
+        .select()
+        .from(childProfiles)
+        .where(and(eq(childProfiles.id, req.params.id), eq(childProfiles.parentId, userId)));
+      if (!existing) {
+        return res.status(404).json({ error: "Child profile not found" });
+      }
+      const updates: Record<string, any> = {};
+      if (name) updates.name = name;
+      const validAgeGroups = ["little_lambs", "young_disciples", "young_disciples_plus"];
+      if (ageGroup && validAgeGroups.includes(ageGroup)) updates.ageGroup = ageGroup;
+      if (Object.keys(updates).length === 0) {
+        return res.json(existing);
+      }
+      const [updated] = await db
+        .update(childProfiles)
+        .set(updates)
+        .where(eq(childProfiles.id, req.params.id))
+        .returning();
+      return res.json(updated);
+    } catch (err) {
+      console.error("Update child error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

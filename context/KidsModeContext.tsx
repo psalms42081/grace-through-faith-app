@@ -4,18 +4,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const KIDS_MODE_KEY = "@grace-through-faith/kids-mode";
 const KIDS_PIN_KEY = "@grace-through-faith/kids-pin";
 const KIDS_AGE_GROUP_KEY = "@grace-through-faith/kids-age-group";
+const KIDS_ACTIVE_CHILD_ID_KEY = "@grace-through-faith/kids-active-child-id";
+const KIDS_ACTIVE_CHILD_NAME_KEY = "@grace-through-faith/kids-active-child-name";
 
-type AgeGroup = "little_lambs" | "young_disciples" | "young_disciples_plus";
+export type AgeGroup = "little_lambs" | "young_disciples" | "young_disciples_plus";
 
 interface KidsModeContextType {
   isKidsMode: boolean;
   isLoading: boolean;
   ageGroup: AgeGroup;
   pin: string | null;
+  activeChildProfileId: string | null;
+  activeChildName: string | null;
+  lastActiveChildId: string | null;
   setPin: (pin: string) => Promise<void>;
+  removePin: () => Promise<void>;
   verifyPin: (pin: string) => boolean;
-  enterKidsMode: (ageGroup?: AgeGroup) => Promise<void>;
+  enterKidsMode: (childId: string, childName: string, ageGroup: AgeGroup) => Promise<void>;
   exitKidsMode: (pin: string) => Promise<boolean>;
+  switchChild: (childId: string, childName: string, ageGroup: AgeGroup) => Promise<void>;
   setAgeGroup: (group: AgeGroup) => Promise<void>;
 }
 
@@ -24,10 +31,15 @@ const KidsModeContext = createContext<KidsModeContextType>({
   isLoading: true,
   ageGroup: "little_lambs",
   pin: null,
+  activeChildProfileId: null,
+  activeChildName: null,
+  lastActiveChildId: null,
   setPin: async () => {},
+  removePin: async () => {},
   verifyPin: () => false,
   enterKidsMode: async () => {},
   exitKidsMode: async () => false,
+  switchChild: async () => {},
   setAgeGroup: async () => {},
 });
 
@@ -36,19 +48,27 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [pin, setPinState] = useState<string | null>(null);
   const [ageGroup, setAgeGroupState] = useState<AgeGroup>("little_lambs");
+  const [activeChildProfileId, setActiveChildProfileId] = useState<string | null>(null);
+  const [activeChildName, setActiveChildName] = useState<string | null>(null);
+  const [lastActiveChildId, setLastActiveChildId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [pinVal, ageVal] = await Promise.all([
+        const [pinVal, ageVal, childId, childName] = await Promise.all([
           AsyncStorage.getItem(KIDS_PIN_KEY),
           AsyncStorage.getItem(KIDS_AGE_GROUP_KEY),
+          AsyncStorage.getItem(KIDS_ACTIVE_CHILD_ID_KEY),
+          AsyncStorage.getItem(KIDS_ACTIVE_CHILD_NAME_KEY),
         ]);
         await AsyncStorage.setItem(KIDS_MODE_KEY, "false");
         setIsKidsMode(false);
         setPinState(pinVal);
         if (ageVal === "little_lambs" || ageVal === "young_disciples" || ageVal === "young_disciples_plus") {
           setAgeGroupState(ageVal);
+        }
+        if (childId) {
+          setLastActiveChildId(childId);
         }
       } catch {}
       setIsLoading(false);
@@ -60,6 +80,11 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
     setPinState(newPin);
   }, []);
 
+  const removePin = useCallback(async () => {
+    await AsyncStorage.removeItem(KIDS_PIN_KEY);
+    setPinState(null);
+  }, []);
+
   const verifyPin = useCallback(
     (attempt: string) => {
       if (!pin) return true;
@@ -69,13 +94,18 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const enterKidsMode = useCallback(
-    async (group?: AgeGroup) => {
+    async (childId: string, childName: string, childAgeGroup: AgeGroup) => {
       setIsKidsMode(true);
-      await AsyncStorage.setItem(KIDS_MODE_KEY, "true");
-      if (group) {
-        setAgeGroupState(group);
-        await AsyncStorage.setItem(KIDS_AGE_GROUP_KEY, group);
-      }
+      setActiveChildProfileId(childId);
+      setActiveChildName(childName);
+      setLastActiveChildId(childId);
+      setAgeGroupState(childAgeGroup);
+      await Promise.all([
+        AsyncStorage.setItem(KIDS_MODE_KEY, "true"),
+        AsyncStorage.setItem(KIDS_AGE_GROUP_KEY, childAgeGroup),
+        AsyncStorage.setItem(KIDS_ACTIVE_CHILD_ID_KEY, childId),
+        AsyncStorage.setItem(KIDS_ACTIVE_CHILD_NAME_KEY, childName),
+      ]);
     },
     []
   );
@@ -84,10 +114,27 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
     async (attempt: string) => {
       if (!verifyPin(attempt)) return false;
       setIsKidsMode(false);
+      setActiveChildProfileId(null);
+      setActiveChildName(null);
       await AsyncStorage.setItem(KIDS_MODE_KEY, "false");
       return true;
     },
     [verifyPin]
+  );
+
+  const switchChild = useCallback(
+    async (childId: string, childName: string, childAgeGroup: AgeGroup) => {
+      setActiveChildProfileId(childId);
+      setActiveChildName(childName);
+      setLastActiveChildId(childId);
+      setAgeGroupState(childAgeGroup);
+      await Promise.all([
+        AsyncStorage.setItem(KIDS_AGE_GROUP_KEY, childAgeGroup),
+        AsyncStorage.setItem(KIDS_ACTIVE_CHILD_ID_KEY, childId),
+        AsyncStorage.setItem(KIDS_ACTIVE_CHILD_NAME_KEY, childName),
+      ]);
+    },
+    []
   );
 
   const setAgeGroup = useCallback(async (group: AgeGroup) => {
@@ -102,10 +149,15 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         ageGroup,
         pin,
+        activeChildProfileId,
+        activeChildName,
+        lastActiveChildId,
         setPin,
+        removePin,
         verifyPin,
         enterKidsMode,
         exitKidsMode,
+        switchChild,
         setAgeGroup,
       }}
     >

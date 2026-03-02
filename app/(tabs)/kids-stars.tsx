@@ -199,7 +199,7 @@ export default function KidsStarsScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
-  const { exitKidsMode, pin } = useKidsMode();
+  const { exitKidsMode, pin, activeChildProfileId } = useKidsMode();
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinAttempt, setPinAttempt] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -207,8 +207,10 @@ export default function KidsStarsScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const progressUserId = activeChildProfileId || "guest";
+
   const { data: progress, isLoading: loadingProgress } = useQuery<ProgressItem[]>({
-    queryKey: ["/api/kids/progress/guest"],
+    queryKey: [`/api/kids/progress/${progressUserId}`],
   });
 
   const { data: allBadges } = useQuery<Badge[]>({
@@ -216,11 +218,11 @@ export default function KidsStarsScreen() {
   });
 
   const { data: earnedBadges } = useQuery<EarnedBadge[]>({
-    queryKey: ["/api/kids/badges/guest"],
+    queryKey: [`/api/kids/badges/${progressUserId}`],
   });
 
   const { data: streak } = useQuery<StreakInfo>({
-    queryKey: ["/api/kids/streak/guest"],
+    queryKey: [`/api/kids/streak/${progressUserId}`],
   });
 
   const completedCount = progress?.filter(p => p.completed).length ?? 0;

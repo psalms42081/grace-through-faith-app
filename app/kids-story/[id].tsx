@@ -294,7 +294,7 @@ export default function KidsStoryScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
-  const { ageGroup } = useKidsMode();
+  const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();
   const [completed, setCompleted] = useState(false);
   const [answeredMoments, setAnsweredMoments] = useState<Set<number>>(new Set());
@@ -304,6 +304,7 @@ export default function KidsStoryScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const isLittleLambs = ageGroup === "little_lambs";
+  const progressUserId = activeChildProfileId || "guest";
 
   const { data: story, isLoading } = useQuery<Story>({
     queryKey: [`/api/kids/stories/${id}`],
@@ -311,7 +312,7 @@ export default function KidsStoryScreen() {
   });
 
   const { data: progressData } = useQuery<{ wonderAnswers: number[]; completed: boolean }[]>({
-    queryKey: [`/api/kids/progress/guest`],
+    queryKey: [`/api/kids/progress/${progressUserId}`],
     enabled: !!id,
   });
 
@@ -345,9 +346,10 @@ export default function KidsStoryScreen() {
   const answerMutation = useMutation({
     mutationFn: async (data: { momentIndex: number; choiceIndex: number }) => {
       await apiRequest("POST", "/api/kids/wonder/answer", {
-        userId: "guest",
+        userId: progressUserId,
         storyId: id,
         momentIndex: data.momentIndex,
+        childProfileId: activeChildProfileId,
       });
     },
   });
@@ -355,11 +357,13 @@ export default function KidsStoryScreen() {
   const completeMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/kids/progress/complete", {
-        userId: "guest",
+        userId: progressUserId,
         storyId: id,
+        childProfileId: activeChildProfileId,
       });
       await apiRequest("POST", "/api/kids/streak/update", {
-        userId: "guest",
+        userId: progressUserId,
+        childProfileId: activeChildProfileId,
       });
     },
     onSuccess: () => {
@@ -367,8 +371,8 @@ export default function KidsStoryScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/streak/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/streak/${progressUserId}`] });
     },
   });
 

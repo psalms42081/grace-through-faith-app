@@ -701,7 +701,7 @@ export default function SceneStoryScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
-  const { ageGroup } = useKidsMode();
+  const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();
   const isLittleLambs = ageGroup === "little_lambs";
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -852,30 +852,35 @@ export default function SceneStoryScreen() {
     [scenes.length]
   );
 
+  const progressUserId = activeChildProfileId || "guest";
+
   const completeMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/kids/progress/complete", {
-        userId: "guest",
+        userId: progressUserId,
         storyId: id,
+        childProfileId: activeChildProfileId,
       });
 
       const streakRes = await apiRequest("POST", "/api/kids/streak/update", {
-        userId: "guest",
+        userId: progressUserId,
+        childProfileId: activeChildProfileId,
       });
       const streakData = await streakRes.json();
 
       const pointsRes = await apiRequest("POST", "/api/kids/story/award-points", {
-        userId: "guest",
+        userId: progressUserId,
         storyId: id,
         points: 25,
+        childProfileId: activeChildProfileId,
       });
       const pointsData = await pointsRes.json();
 
       return { streak: streakData, points: pointsData };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/streak/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/streak/${progressUserId}`] });
 
       if (data.points?.leveledUp) {
         setNewLevel(data.points.currentLevel);

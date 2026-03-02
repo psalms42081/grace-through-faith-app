@@ -459,6 +459,7 @@ export default function ProfileScreen() {
         {[
           { title: "Prayer Journal", icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
           { title: "Prayer Groups", icon: "people-circle" as const, color: "#10B981", route: "/groups" },
+          { title: "Parent Controls", icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },
         ].map((link) => (
           <Pressable
             key={link.title}

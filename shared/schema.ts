@@ -735,6 +735,7 @@ export const childProfiles = pgTable(
       .notNull()
       .references(() => users.id),
     name: text("name").notNull(),
+    ageGroup: varchar("age_group", { length: 20 }).default("little_lambs").notNull(),
     avatarUrl: text("avatar_url"),
     totalPoints: integer("total_points").default(0),
     currentLevel: integer("current_level").default(1),

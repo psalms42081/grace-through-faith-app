@@ -240,7 +240,7 @@ export default function KidsLearnScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? KidsColors.dark : KidsColors.light;
   const insets = useSafeAreaInsets();
-  const { ageGroup } = useKidsMode();
+  const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<LearnTab>("quiz");
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
@@ -268,28 +268,32 @@ export default function KidsLearnScreen() {
     enabled: !!selectedStory && activeTab === "quiz",
   });
 
+  const progressUserId = activeChildProfileId || "guest";
+
   const submitQuiz = useMutation({
     mutationFn: async (score: number) => {
       await apiRequest("POST", "/api/kids/progress/quiz", {
-        userId: "guest",
+        userId: progressUserId,
         storyId: selectedStory!.id,
         score,
+        childProfileId: activeChildProfileId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
     },
   });
 
   const memorizeMutation = useMutation({
     mutationFn: async (storyId: string) => {
       await apiRequest("POST", "/api/kids/progress/memorize", {
-        userId: "guest",
+        userId: progressUserId,
         storyId,
+        childProfileId: activeChildProfileId,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
     },
   });
 

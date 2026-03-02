@@ -42,6 +42,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **User Accounts & Authentication:** Full JWT-based auth system with `AuthContext.tsx` managing state, token persistence in AsyncStorage, and `bcryptjs` for password hashing.
 - **Prayer Groups:** Community prayer groups with join codes, shared Prayer Walls.
 - **Family Groups:** Family units with invite codes, sharing a Prayer Wall and Kingdom Map. Family tab shows state-dependent UI: guest sign-in prompt, create/join family form, or family info card with invite code (tap to copy) and member list.
+- **Parent-Controlled Kids Mode:** PIN protection for Kids Mode exit/switch. Child profiles with age tiers (Little Lambs 3-5, Young Disciples 6-9, Young Disciples+ 10-12). Child picker modal on entry ("Who's reading today?"). Per-child session tracking with `activeChildProfileId` scoped to all progress/streak/badge APIs. Parent Controls screen accessible from Profile tab for PIN set/change/remove. KidsModeContext tracks `activeChildProfileId`, `activeChildName`, `lastActiveChildId` with AsyncStorage persistence. Kids Mode header shows "KIDS MODE" badge, active child name, Switch Child + Exit buttons.
 - **Navigation:** 6-tab layout in adult mode (Home, Read, Family, Discover, You/Profile) and a distinct Kids mode tab navigation (Home, Stories, Learn, My Stars).
 
 ## External Dependencies
