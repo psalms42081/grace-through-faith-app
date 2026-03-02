@@ -757,3 +757,33 @@ ${storyText}`,
 
   return scenes;
 }
+
+export async function generateScripturalEncouragement(
+  prayerTitle: string,
+  prayerContent: string
+): Promise<{ verse: string; note: string }> {
+  const client = createOpenAIClient();
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a compassionate biblical counselor. Given a prayer request, respond with a single relevant Bible verse (KJV preferred) and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`,
+      },
+      {
+        role: "user",
+        content: `Prayer request: "${prayerTitle}"\n${prayerContent ? `Details: "${prayerContent}"` : ""}`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 300,
+  });
+
+  const raw = completion.choices[0]?.message?.content || "";
+  const cleaned = cleanJsonResponse(raw);
+  const parsed = JSON.parse(cleaned);
+  return {
+    verse: parsed.verse || "Philippians 4:6 - 'Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.'",
+    note: parsed.note || "God hears every prayer and holds you close.",
+  };
+}

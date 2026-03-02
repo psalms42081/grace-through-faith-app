@@ -13,6 +13,7 @@ import {
   generatePauseAndWonder,
   generateDinnerTableTopic,
   generateStoryScenes,
+  generateScripturalEncouragement,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -2679,6 +2680,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ books, familyQuest });
     } catch (err) {
       console.error("Family heatmap error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── FAMILY ALTAR (Prayer Wall) ──────────────────────────────────────────
+
+  app.get("/api/family/prayers", checkProStatus, async (req, res) => {
+    try {
+      const familyId = String(req.query.userId || req.query.familyId || "guest");
+      const prayers = await db
+        .select()
+        .from(prayerRequests)
+        .where(eq(prayerRequests.familyId, familyId))
+        .orderBy(desc(prayerRequests.createdAt));
+      return res.json(prayers);
+    } catch (err) {
+      console.error("Family prayers fetch error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/family/prayers", checkProStatus, async (req, res) => {
+    try {
+      const { userId, familyId, title, content, category, authorName } = req.body;
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: "Prayer title is required" });
+      }
+
+      const fId = familyId || userId || "guest";
+      const uId = userId || "guest";
+
+      let scripturalVerse: string | null = null;
+      let scripturalNote: string | null = null;
+      try {
+        const encouragement = await generateScripturalEncouragement(title, content || "");
+        scripturalVerse = encouragement.verse;
+        scripturalNote = encouragement.note;
+      } catch (aiErr) {
+        console.error("AI encouragement generation failed:", aiErr);
+      }
+
+      const [prayer] = await db
+        .insert(prayerRequests)
+        .values({
+          userId: uId,
+          familyId: fId,
+          title: title.trim(),
+          content: content?.trim() || null,
+          category: category || "family",
+          authorName: authorName || null,
+          scripturalVerse,
+          scripturalNote,
+        })
+        .returning();
+
+      console.log(`\n🙏 FAMILY PRAYER POSTED: "${title}" by ${authorName || uId}`);
+      if (scripturalVerse) {
+        console.log(`   Scripture: ${scripturalVerse.substring(0, 80)}...`);
+      }
+
+      return res.json(prayer);
+    } catch (err) {
+      console.error("Family prayer post error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/family/prayers/:id/support", checkProStatus, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const memberName = String(req.body.memberName || req.body.userId || "guest");
+
+      const [prayer] = await db
+        .select()
+        .from(prayerRequests)
+        .where(eq(prayerRequests.id, id));
+
+      if (!prayer) {
+        return res.status(404).json({ error: "Prayer not found" });
+      }
+
+      const currentSupported: string[] = Array.isArray(prayer.supportedBy) ? prayer.supportedBy : [];
+      if (currentSupported.includes(memberName)) {
+        return res.json({ success: true, message: "Already prayed for this", supportCount: prayer.supportCount });
+      }
+
+      const newSupported = [...currentSupported, memberName];
+      const [updated] = await db
+        .update(prayerRequests)
+        .set({
+          supportCount: sql`${prayerRequests.supportCount} + 1`,
+          supportedBy: newSupported,
+          updatedAt: new Date(),
+        })
+        .where(eq(prayerRequests.id, id))
+        .returning();
+
+      return res.json({ success: true, supportCount: updated.supportCount });
+    } catch (err) {
+      console.error("Prayer support error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/family/prayers/:id/answered", checkProStatus, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const answered = req.body.answered !== false;
+
+      const [updated] = await db
+        .update(prayerRequests)
+        .set({
+          answered,
+          answeredAt: answered ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(prayerRequests.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Prayer not found" });
+      }
+
+      return res.json(updated);
+    } catch (err) {
+      console.error("Prayer answered error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

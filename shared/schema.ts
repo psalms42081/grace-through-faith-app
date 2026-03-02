@@ -728,16 +728,23 @@ export const prayerRequests = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull(),
+    familyId: varchar("family_id"),
     title: text("title").notNull(),
     content: text("content"),
     category: varchar("category", { length: 30 }).default("personal").notNull(),
+    authorName: text("author_name"),
     answered: boolean("answered").default(false),
     answeredAt: timestamp("answered_at"),
+    supportCount: integer("support_count").default(0),
+    supportedBy: jsonb("supported_by").$type<string[]>().default([]),
+    scripturalVerse: text("scriptural_verse"),
+    scripturalNote: text("scriptural_note"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     userIdx: index("prayer_user_idx").on(table.userId),
+    familyIdx: index("prayer_family_idx").on(table.familyId),
   })
 );
 

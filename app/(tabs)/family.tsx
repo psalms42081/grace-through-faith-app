@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
 import Colors from "@/constants/colors";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
+import PrayerWall from "@/components/PrayerWall";
 
 interface ChildStat {
   child: {
@@ -276,6 +277,8 @@ export default function FamilyDashboard() {
         )}
 
         <FamilyHeatmap />
+
+        <PrayerWall />
 
         {dinnerTopics && dinnerTopics.length > 0 && (
           <View style={styles.dinnerSection}>
