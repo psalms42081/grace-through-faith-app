@@ -378,7 +378,7 @@ function KidsHomeScreen() {
       {dailyStory && (
         <AnimatedSection index={4}>
           <Pressable
-            onPress={() => router.push(`/kids-story/${dailyStory.id}`)}
+            onPress={() => router.push(`/kids/story/${dailyStory.id}`)}
             style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
             testID="daily-story"
           >

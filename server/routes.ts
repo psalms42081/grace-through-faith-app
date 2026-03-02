@@ -12,6 +12,7 @@ import {
   generateConversationStarter,
   generatePauseAndWonder,
   generateDinnerTableTopic,
+  generateStoryScenes,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -51,6 +52,7 @@ import {
   chapterContextCache,
   childProfiles,
   kidsWonderCache,
+  kidsStoryScenes,
   dinnerTableTopics,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
@@ -1586,6 +1588,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ success: true, pointsAwarded: isNewAnswer ? 10 : 0, wonderAnswers: currentAnswers });
     } catch (err) {
       console.error("Wonder answer error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── KIDS STORY ENGINE (Scene-based) ────────────────────────────────────────
+
+  app.get("/api/kids/story/:id/scenes", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scenes = await db
+        .select()
+        .from(kidsStoryScenes)
+        .where(eq(kidsStoryScenes.storyId, id))
+        .orderBy(asc(kidsStoryScenes.sceneIndex));
+      return res.json(scenes);
+    } catch (err) {
+      console.error("Get scenes error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/story/:id/generate", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const existing = await db
+        .select()
+        .from(kidsStoryScenes)
+        .where(eq(kidsStoryScenes.storyId, id))
+        .orderBy(asc(kidsStoryScenes.sceneIndex));
+
+      if (existing.length > 0) {
+        return res.json(existing);
+      }
+
+      const story = await db
+        .select()
+        .from(kidsStories)
+        .where(eq(kidsStories.id, id))
+        .limit(1);
+
+      if (!story.length) {
+        return res.status(404).json({ error: "Story not found" });
+      }
+
+      const s = story[0];
+      const scenes = await generateStoryScenes(
+        s.title,
+        s.storyText,
+        s.scriptureRef,
+        s.ageGroup
+      );
+
+      const inserted = [];
+      for (const scene of scenes) {
+        const [row] = await db
+          .insert(kidsStoryScenes)
+          .values({
+            storyId: id,
+            sceneIndex: scene.sceneIndex,
+            narration: scene.narration,
+            illustrationPrompt: scene.illustrationPrompt,
+            pauseAndWonder: scene.pauseAndWonder,
+          })
+          .returning();
+        inserted.push(row);
+      }
+
+      return res.json(inserted);
+    } catch (err) {
+      console.error("Generate scenes error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/story/award-points", async (req, res) => {
+    try {
+      const { userId = "guest", storyId, childProfileId: providedProfileId, points = 25 } = req.body;
+
+      let profileId = providedProfileId;
+      if (!profileId) {
+        const [firstChild] = await db
+          .select({ id: childProfiles.id })
+          .from(childProfiles)
+          .where(eq(childProfiles.parentId, userId))
+          .limit(1);
+        profileId = firstChild?.id;
+      }
+
+      if (!profileId) {
+        return res.json({ success: true, totalPoints: 0, currentLevel: 1, leveledUp: false });
+      }
+
+      const before = await db
+        .select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel })
+        .from(childProfiles)
+        .where(eq(childProfiles.id, profileId))
+        .limit(1);
+
+      const oldLevel = before[0]?.currentLevel ?? 1;
+
+      await db
+        .update(childProfiles)
+        .set({
+          totalPoints: sql`${childProfiles.totalPoints} + ${points}`,
+          currentLevel: sql`GREATEST(1, (${childProfiles.totalPoints} + ${points}) / 100 + 1)`,
+        })
+        .where(eq(childProfiles.id, profileId));
+
+      const after = await db
+        .select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel })
+        .from(childProfiles)
+        .where(eq(childProfiles.id, profileId))
+        .limit(1);
+
+      const newLevel = after[0]?.currentLevel ?? 1;
+      const totalPoints = after[0]?.totalPoints ?? 0;
+
+      return res.json({
+        success: true,
+        totalPoints,
+        currentLevel: newLevel,
+        leveledUp: newLevel > oldLevel,
+      });
+    } catch (err) {
+      console.error("Award points error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

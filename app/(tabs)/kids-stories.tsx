@@ -346,7 +346,7 @@ export default function KidsStoriesScreen() {
                   idx={idx}
                   theme={theme}
                   baseUrl={baseUrl}
-                  onPress={() => router.push(`/kids-story/${story.id}`)}
+                  onPress={() => router.push(`/kids/story/${story.id}`)}
                 />
               ))
             ) : (

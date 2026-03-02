@@ -585,6 +585,33 @@ export const kidsWonderCache = pgTable(
   })
 );
 
+export const kidsStoryScenes = pgTable(
+  "kids_story_scene",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    storyId: varchar("story_id")
+      .notNull()
+      .references(() => kidsStories.id),
+    sceneIndex: integer("scene_index").notNull(),
+    narration: text("narration").notNull(),
+    illustrationPrompt: text("illustration_prompt").notNull(),
+    pauseAndWonder: jsonb("pause_and_wonder").$type<{
+      question: string;
+      options: { emoji: string; label: string }[];
+      correctIndex: number;
+    } | null>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    storySceneUnique: uniqueIndex("kids_story_scene_story_idx_unique").on(
+      table.storyId,
+      table.sceneIndex
+    ),
+  })
+);
+
 export const kidsBadges = pgTable("kids_badge", {
   id: varchar("id")
     .primaryKey()

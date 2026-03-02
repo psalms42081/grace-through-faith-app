@@ -651,3 +651,101 @@ If no stories are completed, create a general faith conversation starter encoura
     };
   }
 }
+
+export interface StoryScene {
+  sceneIndex: number;
+  narration: string;
+  illustrationPrompt: string;
+  pauseAndWonder: {
+    question: string;
+    options: { emoji: string; label: string }[];
+    correctIndex: number;
+  } | null;
+}
+
+export async function generateStoryScenes(
+  storyTitle: string,
+  storyText: string,
+  scriptureRef: string | null,
+  ageGroup: string
+): Promise<StoryScene[]> {
+  const openai = createOpenAIClient();
+
+  const ageLabel =
+    ageGroup === "little_lambs"
+      ? "ages 4-7, use very simple words and short sentences"
+      : ageGroup === "young_disciples"
+      ? "ages 8-12, moderate vocabulary and engaging storytelling"
+      : "ages 13-17, deeper narrative with reflection";
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `You are a master children's Bible storyteller creating an interactive, scene-by-scene storybook. Your task is to break a Bible story into 5-7 vivid scenes that children can flip through like pages of a picture book.
+
+Target audience: ${ageLabel}.
+
+For each scene, create:
+1. "narration": Engaging, age-appropriate retelling of that part of the story (3-5 sentences). Use vivid sensory details, dialogue, and emotion. Make it feel alive and warm.
+2. "illustrationPrompt": A detailed art description for this scene in a consistent style: "Soft watercolor, 2D animation style, warm earth tones, biblically inspired. [Scene-specific description with characters, setting, lighting, mood]." Be specific about what is depicted.
+3. "pauseAndWonder": For 2-3 scenes (not all), include a Socratic question that makes children think about the story's meaning. Include 3 emoji-based answer options where one is the best answer. Set "correctIndex" to the best answer (0-based). For scenes without a question, set this to null.
+
+Respond in JSON:
+{
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "narration": "...",
+      "illustrationPrompt": "Soft watercolor, 2D animation style, warm earth tones, biblically inspired. ...",
+      "pauseAndWonder": null
+    },
+    {
+      "sceneIndex": 1,
+      "narration": "...",
+      "illustrationPrompt": "...",
+      "pauseAndWonder": {
+        "question": "How do you think [character] felt when...?",
+        "options": [
+          { "emoji": "...", "label": "..." },
+          { "emoji": "...", "label": "..." },
+          { "emoji": "...", "label": "..." }
+        ],
+        "correctIndex": 0
+      }
+    }
+  ]
+}`,
+      },
+      {
+        role: "user",
+        content: `Story: "${storyTitle}"
+Scripture: ${scriptureRef || "Unknown"}
+Original text to break into scenes:
+
+${storyText}`,
+      },
+    ],
+    max_tokens: 3000,
+  });
+
+  const raw = completion.choices[0]?.message?.content || "{}";
+  const cleaned = cleanJsonResponse(raw);
+  const parsed = JSON.parse(cleaned);
+  const scenes: StoryScene[] = (parsed.scenes || []).map(
+    (s: any, i: number) => ({
+      sceneIndex: s.sceneIndex ?? i,
+      narration: s.narration || "",
+      illustrationPrompt: s.illustrationPrompt || "",
+      pauseAndWonder: s.pauseAndWonder || null,
+    })
+  );
+
+  if (scenes.length === 0) {
+    throw new Error("AI returned no scenes");
+  }
+
+  return scenes;
+}
