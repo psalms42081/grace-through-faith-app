@@ -160,17 +160,12 @@ function ContextPanel({
   const fabScale = useSharedValue(1);
   const fabGlow = useSharedValue(0);
   const hadDataRef = useRef(false);
-  const wasCachedRef = useRef(false);
 
-  const cachedData = queryClient.getQueryData<ChapterContext>([`/api/chapter-context/${bookId}/${chapter}`]);
-  if (cachedData && !wasCachedRef.current) {
-    wasCachedRef.current = true;
-  }
+  const hasCachedContext = !!queryClient.getQueryData([`/api/chapter-context/${bookId}/${chapter}`]);
 
-  const { data, isLoading, isFetching } = useQuery<ChapterContext>({
+  const { data, isLoading } = useQuery<ChapterContext>({
     queryKey: [`/api/chapter-context/${bookId}/${chapter}`],
-    enabled: expanded || !wasCachedRef.current,
-    staleTime: 1000 * 60 * 30,
+    enabled: expanded || hasCachedContext,
   });
 
   useEffect(() => {
@@ -945,6 +940,42 @@ export default function VerseReaderScreen() {
         .catch(() => {});
     }
   }, [data?.book?.name, bookId, chapter, translation]);
+
+  const prefetchedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!data?.verses?.length || !bookId || !chapter) return;
+    const prefetchKey = `${bookId}-${chapter}`;
+    if (prefetchedRef.current === prefetchKey) return;
+    prefetchedRef.current = prefetchKey;
+
+    const bId = Number(bookId);
+    const ch = Number(chapter);
+    const verses = data.verses;
+
+    queryClient.prefetchQuery({
+      queryKey: [`/api/chapter-context/${bId}/${ch}`],
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: [`/api/context?book=${bId}&chapter=${ch}`],
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: [`/api/commentary?book=${bId}&chapter=${ch}`],
+    });
+
+    const prefetchCount = Math.min(5, verses.length);
+    for (let i = 0; i < prefetchCount; i++) {
+      const v = verses[i];
+      queryClient.prefetchQuery({
+        queryKey: [`/api/verse-map/${v.id}`],
+      });
+      queryClient.prefetchQuery({
+        queryKey: [`/api/strong/verse/${v.id}`],
+      });
+    }
+  }, [data?.verses, bookId, chapter]);
 
   const cleanupPlayer = useCallback(() => {
     if (playerRef.current) {
