@@ -683,6 +683,7 @@ export const studyGuideSessions = pgTable(
     chapter: integer("chapter").notNull(),
     verse: integer("verse").notNull(),
     phase: varchar("phase", { length: 20 }).default("observe").notNull(),
+    persona: varchar("persona", { length: 20 }).default("scholarly").notNull(),
     messages: text("messages").default("[]").notNull(),
     completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -26,6 +26,14 @@ interface Message {
   timestamp: string;
 }
 
+type Persona = "scholarly" | "pastoral" | "ancient";
+
+const PERSONAS: { id: Persona; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
+  { id: "scholarly", label: "Scholarly", icon: "school-outline", desc: "Academic depth with Greek & Hebrew focus" },
+  { id: "pastoral", label: "Pastoral", icon: "heart-circle-outline", desc: "Warm, life-focused spiritual guidance" },
+  { id: "ancient", label: "Ancient", icon: "library-outline", desc: "Patristic wisdom from the early church" },
+];
+
 const PHASES = [
   { id: "observe", label: "Observe", icon: "eye-outline" as const },
   { id: "interpret", label: "Interpret", icon: "bulb-outline" as const },
@@ -49,9 +57,12 @@ export default function StudyGuideScreen() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentPhase, setCurrentPhase] = useState("observe");
   const [isComplete, setIsComplete] = useState(false);
-  const [isStarting, setIsStarting] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState(false);
   const [isResumed, setIsResumed] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<Persona>("scholarly");
+  const [showPersonaPicker, setShowPersonaPicker] = useState(true);
+  const [checkingResume, setCheckingResume] = useState(true);
   const initRef = useRef(false);
   const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
@@ -61,17 +72,22 @@ export default function StudyGuideScreen() {
     setCurrentPhase(data.session.phase);
     setIsComplete(data.session.phase === "complete" || !!data.session.completedAt);
     setIsResumed(!!data.resumed);
+    setSelectedPersona(data.session.persona || "scholarly");
+    setShowPersonaPicker(false);
     setIsStarting(false);
+    setCheckingResume(false);
   };
 
   const startMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (persona: Persona) => {
       const res = await apiRequest("POST", "/api/study-guide/start", {
         verseReference: params.verseReference,
         verseText: params.verseText,
         bookName: params.bookName,
         chapter: parseInt(params.chapter || "1"),
         verse: parseInt(params.verse || "1"),
+        persona,
+        forceNew: true,
       });
       return res.json();
     },
@@ -116,44 +132,37 @@ export default function StudyGuideScreen() {
           return;
         }
       } catch {}
-      startMutation.mutate();
+      setCheckingResume(false);
+      setShowPersonaPicker(true);
     })();
   }, [params.verseReference, params.verseText]);
 
   const handleRetry = () => {
     setStartError(false);
     setIsStarting(true);
-    startMutation.mutate();
+    startMutation.mutate(selectedPersona);
+  };
+
+  const handleStartWithPersona = (persona: Persona) => {
+    setSelectedPersona(persona);
+    setShowPersonaPicker(false);
+    setIsStarting(true);
+    startMutation.mutate(persona);
   };
 
   const handleNewSession = () => {
     const oldSessionId = sessionId;
     setIsResumed(false);
-    setIsStarting(true);
     setMessages([]);
     setSessionId(null);
     setCurrentPhase("observe");
     setIsComplete(false);
+    setShowPersonaPicker(true);
+    setIsStarting(false);
 
-    (async () => {
-      if (oldSessionId) {
-        await apiRequest("POST", `/api/study-guide/complete/${oldSessionId}`, {}).catch(() => {});
-      }
-
-      const res = await apiRequest("POST", "/api/study-guide/start", {
-        verseReference: params.verseReference,
-        verseText: params.verseText,
-        bookName: params.bookName,
-        chapter: parseInt(params.chapter || "1"),
-        verse: parseInt(params.verse || "1"),
-        forceNew: true,
-      });
-      const data = await res.json();
-      restoreSession(data);
-    })().catch(() => {
-      setIsStarting(false);
-      setStartError(true);
-    });
+    if (oldSessionId) {
+      apiRequest("POST", `/api/study-guide/complete/${oldSessionId}`, {}).catch(() => {});
+    }
   };
 
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
@@ -193,13 +202,13 @@ export default function StudyGuideScreen() {
       >
         {isAI && (
           <View style={styles.aiAvatar}>
-            <Ionicons name="school-outline" size={16} color={theme.accent} />
+            <Ionicons name={PERSONAS.find((p) => p.id === selectedPersona)?.icon || "school-outline"} size={16} color={theme.accent} />
           </View>
         )}
         <View style={styles.messageContent}>
           {isAI && (
             <Text style={[styles.messageRole, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              Study Guide
+              {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Scholarly"} Tutor
             </Text>
           )}
           <Text style={[styles.messageText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
@@ -297,7 +306,67 @@ export default function StudyGuideScreen() {
         behavior="padding"
         keyboardVerticalOffset={0}
       >
-        {isStarting ? (
+        {checkingResume ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Checking for active session...
+            </Text>
+          </View>
+        ) : showPersonaPicker ? (
+          <View style={styles.personaContainer}>
+            <Text style={[styles.personaTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Choose Your Tutor
+            </Text>
+            <Text style={[styles.personaSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Each tutor brings a unique perspective to your study
+            </Text>
+            <View style={styles.personaList}>
+              {PERSONAS.map((p) => {
+                const isSelected = selectedPersona === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setSelectedPersona(p.id)}
+                    style={[
+                      styles.personaCard,
+                      {
+                        backgroundColor: theme.backgroundCard,
+                        borderColor: isSelected ? theme.accent : "transparent",
+                        borderWidth: 2,
+                      },
+                    ]}
+                    testID={`persona-${p.id}`}
+                  >
+                    <View style={[styles.personaIconWrap, { backgroundColor: isSelected ? theme.accent + "20" : theme.textMuted + "10" }]}>
+                      <Ionicons name={p.icon} size={24} color={isSelected ? theme.accent : theme.textMuted} />
+                    </View>
+                    <View style={styles.personaInfo}>
+                      <Text style={[styles.personaLabel, { color: isSelected ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                        {p.label}
+                      </Text>
+                      <Text style={[styles.personaDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        {p.desc}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              onPress={() => handleStartWithPersona(selectedPersona)}
+              style={[styles.beginBtn, { backgroundColor: theme.accent }]}
+              testID="begin-study-btn"
+            >
+              <Text style={[styles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                Begin Study
+              </Text>
+            </Pressable>
+          </View>
+        ) : isStarting ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -326,6 +395,7 @@ export default function StudyGuideScreen() {
               data={invertedMessages}
               renderItem={renderMessage}
               keyExtractor={(_, i) => i.toString()}
+              extraData={selectedPersona}
               contentContainerStyle={styles.messagesList}
               showsVerticalScrollIndicator={false}
               keyboardDismissMode="interactive"
@@ -542,6 +612,39 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: { fontSize: 14 },
+  personaContainer: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  personaTitle: { fontSize: 22, textAlign: "center" as const },
+  personaSubtitle: { fontSize: 13, textAlign: "center" as const, marginBottom: 16 },
+  personaList: { gap: 10 },
+  personaCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    padding: 14,
+    borderRadius: 14,
+    gap: 12,
+  },
+  personaIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  personaInfo: { flex: 1 },
+  personaLabel: { fontSize: 15 },
+  personaDesc: { fontSize: 12, marginTop: 2 },
+  beginBtn: {
+    alignItems: "center" as const,
+    paddingVertical: 15,
+    borderRadius: 14,
+    marginTop: 20,
+  },
+  beginBtnText: { color: "#fff", fontSize: 15 },
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",

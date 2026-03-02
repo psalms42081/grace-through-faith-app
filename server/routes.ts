@@ -1711,10 +1711,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/study-guide/start", checkProStatus, async (req, res) => {
     try {
-      const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false } = req.body;
+      const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false, persona = "scholarly" } = req.body;
       if (!verseReference || !verseText) {
         return res.status(400).json({ error: "verseReference and verseText are required" });
       }
+
+      const validPersonas = ["scholarly", "pastoral", "ancient"];
+      const resolvedPersona = validPersonas.includes(persona) ? persona : "scholarly";
 
       if (!forceNew) {
         const [existingActive] = await db
@@ -1740,7 +1743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const aiMessage = await generateStudyGuideStart({ verseReference, verseText });
+      const aiMessage = await generateStudyGuideStart({ verseReference, verseText, persona: resolvedPersona });
 
       const messages = [
         { role: "assistant", content: aiMessage, phase: "observe", timestamp: new Date().toISOString() },
@@ -1754,6 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chapter: chapter || 0,
         verse: verse || 0,
         phase: "observe",
+        persona: resolvedPersona,
         messages: JSON.stringify(messages),
       }).returning();
 
@@ -1807,6 +1811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chatMessages,
         targetPhase,
         currentPhase,
+        persona: session.persona,
       });
 
       existingMessages.push({ role: "assistant", content: aiMessage, phase: targetPhase, timestamp: new Date().toISOString() });

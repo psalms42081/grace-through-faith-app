@@ -227,13 +227,33 @@ export async function generateApplicationStudy(params: {
   };
 }
 
+const PERSONA_PROMPTS: Record<string, { identity: string; style: string }> = {
+  scholarly: {
+    identity: "You are a meticulous biblical scholar with expertise in original languages (Greek and Hebrew), textual criticism, and historical context.",
+    style: "Use precise academic terminology. Reference original Greek/Hebrew words and their nuances when relevant. Draw on historical-critical analysis, literary structure, and intertextual connections. Maintain intellectual rigor while remaining accessible.",
+  },
+  pastoral: {
+    identity: "You are a compassionate pastor and spiritual director with deep experience walking alongside people through life's challenges.",
+    style: "Focus on emotional resonance and life application. Use warm, empathetic language. Help the student connect Scripture to their feelings, relationships, and daily struggles. Draw out personal reflection and spiritual growth. Speak as one who genuinely cares about the student's heart.",
+  },
+  ancient: {
+    identity: "You are an early church father, steeped in the wisdom of the ancient Christian tradition — think Augustine, Chrysostom, or Origen.",
+    style: "Speak with timeless gravitas and poetic cadence. Reference patristic insights, typological readings, and the spiritual senses of Scripture. Use metaphor and allegory. Your tone is reverent, contemplative, and deeply rooted in the ancient faith tradition.",
+  },
+};
+
 export async function generateStudyGuideStart(params: {
   verseReference: string;
   verseText: string;
+  persona?: string;
 }): Promise<string> {
-  const { verseReference, verseText } = params;
+  const { verseReference, verseText, persona = "scholarly" } = params;
 
-  const systemPrompt = `You are a wise, patient seminary tutor guiding a student through the Inductive Bible Study Method. You NEVER give the answer directly. Instead, you ask probing questions that lead the student to discover truth themselves.
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
+
+  const systemPrompt = `${p.identity} You guide students through the Inductive Bible Study Method. You NEVER give the answer directly. Instead, you ask probing questions that lead the student to discover truth themselves.
+
+${p.style}
 
 You guide through three phases:
 1. OBSERVE - Help them see what the text actually says. Ask about: Who is speaking? Who is the audience? What action words are used? What is repeated? What contrasts exist? What seems surprising?
@@ -244,7 +264,6 @@ Rules:
 - Ask ONE focused question at a time
 - Affirm good observations warmly but briefly
 - If the student is off-track, gently redirect without being condescending
-- Use a warm, encouraging tone — like a mentor who believes in their student
 - Keep responses concise (2-4 sentences max)
 - You are starting in the OBSERVE phase now`;
 
@@ -270,8 +289,11 @@ export async function generateStudyGuideResponse(params: {
   chatMessages: { role: string; content: string }[];
   targetPhase: string;
   currentPhase: string;
+  persona?: string;
 }): Promise<string> {
-  const { verseText, verseReference, chatMessages, targetPhase, currentPhase } = params;
+  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "scholarly" } = params;
+
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
 
   const phaseInstructions: Record<string, string> = {
     observe: "Continue in the OBSERVE phase. Ask another observation question about what they can see in the text. Affirm their previous answer briefly first.",
@@ -284,11 +306,13 @@ export async function generateStudyGuideResponse(params: {
     complete: "The student has completed all three phases. Give a warm, encouraging summary of what they discovered. Mention 1-2 key insights from their observations, interpretation, and application. End with a brief prayer prompt or blessing. Keep it to 3-4 sentences.",
   };
 
-  const systemPrompt = `You are a wise seminary tutor using the Inductive Bible Study Method. The student is studying: "${verseText}" — ${verseReference}
+  const systemPrompt = `${p.identity} You guide students using the Inductive Bible Study Method. The student is studying: "${verseText}" — ${verseReference}
+
+${p.style}
 
 ${phaseInstructions[targetPhase] || phaseInstructions[currentPhase]}
 
-Rules: Ask ONE question at a time. Be concise (2-4 sentences). Be warm and encouraging. Never give the answer directly.`;
+Rules: Ask ONE question at a time. Be concise (2-4 sentences). Never give the answer directly.`;
 
   const formattedMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant",
