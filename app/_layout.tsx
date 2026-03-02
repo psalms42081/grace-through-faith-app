@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, asyncStoragePersister } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
+import { ProProvider } from "@/contexts/ProContext";
 import Colors from "@/constants/colors";
 import {
   useFonts,
@@ -113,11 +114,13 @@ export default function RootLayout() {
       >
         <TranslationProvider>
           <KidsModeProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <ProProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </ProProvider>
           </KidsModeProvider>
         </TranslationProvider>
       </PersistQueryClientProvider>

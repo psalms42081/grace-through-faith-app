@@ -59,6 +59,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  async function checkProStatus(
+    req: import("express").Request,
+    res: import("express").Response,
+    next: import("express").NextFunction
+  ) {
+    try {
+      const userId = String(req.query.userId || req.body?.userId || "guest");
+      const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
+      if (!user || !user.isPro) {
+        return res.status(403).json({ error: "Upgrade to Pro to unlock Deep Study layers." });
+      }
+      next();
+    } catch (err) {
+      console.error("Pro check error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  app.get("/api/user/pro-status", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
+      return res.json({ isPro: user?.isPro ?? false });
+    } catch (err) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/start-trial", async (req, res) => {
+    try {
+      const userId = String(req.body?.userId || "guest");
+      await db.update(users).set({ isPro: true }).where(eq(users.id, userId));
+      return res.json({ success: true, isPro: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   // ─── PASSAGE ────────────────────────────────────────────────────────────────
 
@@ -1672,7 +1709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/study-guide/start", async (req, res) => {
+  app.post("/api/study-guide/start", checkProStatus, async (req, res) => {
     try {
       const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false } = req.body;
       if (!verseReference || !verseText) {
@@ -1727,7 +1764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/study-guide/respond", async (req, res) => {
+  app.post("/api/study-guide/respond", checkProStatus, async (req, res) => {
     try {
       const { sessionId, userResponse, userId = "guest" } = req.body;
       if (!sessionId || !userResponse) {
@@ -1836,7 +1873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ─── VISUAL VERSE MAPPER ──────────────────────────────────────────────────
 
-  app.get("/api/verse-map/:verseId", async (req, res) => {
+  app.get("/api/verse-map/:verseId", checkProStatus, async (req, res) => {
     try {
       const { verseId } = req.params;
 
@@ -1862,7 +1899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/verse-map/generate", async (req, res) => {
+  app.post("/api/verse-map/generate", checkProStatus, async (req, res) => {
     try {
       const { verseId, verseText, verseReference, bookName, chapter, verse } = req.body;
       if (!verseId || !verseText || !verseReference) {
@@ -1898,7 +1935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ─── 4D SCRIPTURE — CHAPTER CONTEXT ────────────────────────────────────────
 
-  app.get("/api/chapter-context/:bookId/:chapter", async (req, res) => {
+  app.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, res) => {
     try {
       const bookId = parseInt(req.params.bookId);
       const chapter = parseInt(req.params.chapter);

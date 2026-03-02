@@ -28,6 +28,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
+import { useProStatus } from "@/contexts/ProContext";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { useTranslation } from "@/context/TranslationContext";
@@ -149,11 +150,15 @@ function ContextPanel({
   chapter,
   theme,
   isDark,
+  isPro,
+  showProGate,
 }: {
   bookId: number;
   chapter: number;
   theme: typeof Colors.dark;
   isDark: boolean;
+  isPro: boolean;
+  showProGate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<"locations" | "timeline" | "figures" | "insights">("locations");
@@ -195,6 +200,11 @@ function ContextPanel({
     return (
       <AnimatedPressable
         onPress={() => {
+          if (!isPro) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            showProGate();
+            return;
+          }
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setExpanded(true);
         }}
@@ -833,6 +843,7 @@ export default function VerseReaderScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
+  const { isPro, showProGate } = useProStatus();
   const resolvedTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : (TRANSLATIONS.includes(globalTranslation as Translation) ? (globalTranslation as Translation) : "KJV");
   const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
 
@@ -1431,6 +1442,8 @@ export default function VerseReaderScreen() {
                 chapter={chapterNum}
                 theme={theme}
                 isDark={isDark}
+                isPro={isPro}
+                showProGate={showProGate}
               />
 
               <View style={styles.proseContainer}>

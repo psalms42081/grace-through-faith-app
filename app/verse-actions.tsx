@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
 import { apiRequest } from "@/lib/query-client";
+import { useProStatus } from "@/contexts/ProContext";
 
 export default function VerseActionsSheet() {
   const { bookId, chapter, verse, text, bookName, verseId, translation } =
@@ -31,6 +32,8 @@ export default function VerseActionsSheet() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+
+  const { isPro, showProGate } = useProStatus();
 
   const reference = `${bookName} ${chapter}:${verse}`;
 
@@ -66,6 +69,11 @@ export default function VerseActionsSheet() {
   }, [bookId, chapter, bookName]);
 
   const handleVerseMap = useCallback(() => {
+    if (!isPro) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      showProGate();
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
@@ -82,9 +90,14 @@ export default function VerseActionsSheet() {
         },
       });
     }, 300);
-  }, [verseId, text, reference, bookName, bookId, chapter, verse]);
+  }, [verseId, text, reference, bookName, bookId, chapter, verse, isPro, showProGate]);
 
   const handleSocraticStudy = useCallback(() => {
+    if (!isPro) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      showProGate();
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
     setTimeout(() => {
@@ -99,7 +112,7 @@ export default function VerseActionsSheet() {
         },
       });
     }, 300);
-  }, [reference, text, bookName, chapter, verse]);
+  }, [reference, text, bookName, chapter, verse, isPro, showProGate]);
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
