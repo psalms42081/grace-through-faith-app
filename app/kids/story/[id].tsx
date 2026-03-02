@@ -80,6 +80,7 @@ function useAtmosphereAudio(currentMood: SceneMood | null, quietMode: boolean) {
     setIsAudioActiveAsync(true).catch(() => {});
 
     apiRequest("GET", "/api/kids/audio-assets")
+      .then((res) => res.json())
       .then((data) => {
         if (mountedRef.current) setAssets(data as AudioAssets);
       })
@@ -755,11 +756,13 @@ export default function SceneStoryScreen() {
       setError(null);
 
       try {
-        const storyData = await apiRequest("GET", `/api/kids/stories/${id}`) as any;
+        const storyRes = await apiRequest("GET", `/api/kids/stories/${id}`);
+        const storyData = await storyRes.json();
         setStoryTitle(storyData.title || "");
       } catch {}
 
-      const data = await apiRequest("POST", `/api/kids/story/${id}/generate`) as StoryScene[];
+      const genRes = await apiRequest("POST", `/api/kids/story/${id}/generate`);
+      const data: StoryScene[] = await genRes.json();
       setScenes(data);
     } catch (err: any) {
       setError(err.message || "Failed to load story");
@@ -859,15 +862,16 @@ export default function SceneStoryScreen() {
       const streakRes = await apiRequest("POST", "/api/kids/streak/update", {
         userId: "guest",
       });
-      const streakData = streakRes as any;
+      const streakData = await streakRes.json();
 
       const pointsRes = await apiRequest("POST", "/api/kids/story/award-points", {
         userId: "guest",
         storyId: id,
         points: 25,
       });
+      const pointsData = await pointsRes.json();
 
-      return { streak: streakData, points: pointsRes as any };
+      return { streak: streakData, points: pointsData };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
