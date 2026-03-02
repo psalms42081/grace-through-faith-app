@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
@@ -55,6 +61,158 @@ function useImageBaseUrl() {
   return React.useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
   }, []);
+}
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function AnimatedCollectionCard({
+  col,
+  idx,
+  theme,
+  baseUrl,
+  onPress,
+}: {
+  col: Collection;
+  idx: number;
+  theme: any;
+  baseUrl: string;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+  }, []);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }, []);
+
+  return (
+    <Animated.View entering={FadeInDown.delay(idx * 80).duration(400).springify()}>
+      <AnimatedPressable
+        testID={`collection-${idx}`}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.collectionCard,
+          { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+          animatedStyle,
+        ]}
+      >
+        {col.imageUrl && baseUrl ? (
+          <Image
+            source={{ uri: `${baseUrl}${col.imageUrl}` }}
+            style={styles.collectionImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.collectionIcon, { backgroundColor: theme.accent + "20" }]}>
+            <Ionicons
+              name={(COLLECTION_ICONS[col.icon || "book"] || "book") as any}
+              size={28}
+              color={theme.accent}
+            />
+          </View>
+        )}
+        <View style={styles.collectionInfo}>
+          <Text style={[styles.collectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+            {col.title}
+          </Text>
+          {col.description && (
+            <Text style={[styles.collectionDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+              {col.description}
+            </Text>
+          )}
+          <View style={styles.storyCountRow}>
+            <Text style={[styles.collectionMeta, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+              {col.storyCount} stories
+            </Text>
+            <Ionicons name="sparkles" size={12} color={theme.starGold} style={{ marginLeft: 4 }} />
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+      </AnimatedPressable>
+    </Animated.View>
+  );
+}
+
+function AnimatedStoryCard({
+  story,
+  idx,
+  theme,
+  baseUrl,
+  onPress,
+}: {
+  story: Story;
+  idx: number;
+  theme: any;
+  baseUrl: string;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+  }, []);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }, []);
+
+  return (
+    <Animated.View entering={FadeInDown.delay(idx * 70).duration(400).springify()}>
+      <AnimatedPressable
+        testID={`story-${idx}`}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.storyCard,
+          { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+          animatedStyle,
+        ]}
+      >
+        {story.imageUrl && baseUrl ? (
+          <Image
+            source={{ uri: `${baseUrl}${story.imageUrl}` }}
+            style={styles.storyThumb}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.storyNumber, { backgroundColor: theme.accent }]}>
+            <Text style={[styles.storyNumberText, { fontFamily: "Inter_700Bold" }]}>
+              {story.orderInCollection}
+            </Text>
+          </View>
+        )}
+        <View style={styles.storyInfo}>
+          <Text style={[styles.storyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {story.title}
+          </Text>
+          {story.scriptureRef && (
+            <Text style={[styles.storyRef, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {story.scriptureRef}
+            </Text>
+          )}
+          <View style={styles.storyMeta}>
+            <Ionicons name="time-outline" size={12} color={theme.textMuted} />
+            <Text style={[styles.storyMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              ~{story.estimatedMinutes} min
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+      </AnimatedPressable>
+    </Animated.View>
+  );
 }
 
 export default function KidsStoriesScreen() {
@@ -132,42 +290,14 @@ export default function KidsStoriesScreen() {
               <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
             ) : collections && collections.length > 0 ? (
               collections.map((col, idx) => (
-                <Pressable
+                <AnimatedCollectionCard
                   key={col.id}
-                  testID={`collection-${idx}`}
+                  col={col}
+                  idx={idx}
+                  theme={theme}
+                  baseUrl={baseUrl}
                   onPress={() => setSelectedCollection(col)}
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                >
-                  {col.imageUrl && baseUrl ? (
-                    <Image
-                      source={{ uri: `${baseUrl}${col.imageUrl}` }}
-                      style={styles.collectionImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.collectionIcon, { backgroundColor: theme.accent + "20" }]}>
-                      <Ionicons
-                        name={(COLLECTION_ICONS[col.icon || "book"] || "book") as any}
-                        size={28}
-                        color={theme.accent}
-                      />
-                    </View>
-                  )}
-                  <View style={styles.collectionInfo}>
-                    <Text style={[styles.collectionTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                      {col.title}
-                    </Text>
-                    {col.description && (
-                      <Text style={[styles.collectionDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-                        {col.description}
-                      </Text>
-                    )}
-                    <Text style={[styles.collectionMeta, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                      {col.storyCount} stories
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-                </Pressable>
+                />
               ))
             ) : (
               <View style={styles.emptyState}>
@@ -210,43 +340,14 @@ export default function KidsStoriesScreen() {
               <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 20 }} />
             ) : stories && stories.length > 0 ? (
               stories.map((story, idx) => (
-                <Pressable
+                <AnimatedStoryCard
                   key={story.id}
-                  testID={`story-${idx}`}
+                  story={story}
+                  idx={idx}
+                  theme={theme}
+                  baseUrl={baseUrl}
                   onPress={() => router.push(`/kids-story/${story.id}`)}
-                  style={[styles.storyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                >
-                  {story.imageUrl && baseUrl ? (
-                    <Image
-                      source={{ uri: `${baseUrl}${story.imageUrl}` }}
-                      style={styles.storyThumb}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.storyNumber, { backgroundColor: theme.accent }]}>
-                      <Text style={[styles.storyNumberText, { fontFamily: "Inter_700Bold" }]}>
-                        {story.orderInCollection}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.storyInfo}>
-                    <Text style={[styles.storyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                      {story.title}
-                    </Text>
-                    {story.scriptureRef && (
-                      <Text style={[styles.storyRef, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                        {story.scriptureRef}
-                      </Text>
-                    )}
-                    <View style={styles.storyMeta}>
-                      <Ionicons name="time-outline" size={12} color={theme.textMuted} />
-                      <Text style={[styles.storyMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        ~{story.estimatedMinutes} min
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-                </Pressable>
+                />
               ))
             ) : (
               <View style={styles.emptyState}>
@@ -267,27 +368,27 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 28, marginBottom: 12 },
   ageToggle: { flexDirection: "row", gap: 8 },
-  ageBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  ageBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 24, borderWidth: 1 },
   ageBtnText: { fontSize: 13 },
   scroll: { flex: 1, paddingHorizontal: 20 },
   collectionCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
     marginBottom: 12,
   },
   collectionImage: {
     width: 72,
     height: 72,
-    borderRadius: 14,
+    borderRadius: 36,
     marginRight: 14,
   },
   collectionIcon: {
     width: 72,
     height: 72,
-    borderRadius: 14,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -296,12 +397,13 @@ const styles = StyleSheet.create({
   collectionTitle: { fontSize: 17, marginBottom: 3 },
   collectionDesc: { fontSize: 13, lineHeight: 18, marginBottom: 4 },
   collectionMeta: { fontSize: 12 },
+  storyCountRow: { flexDirection: "row", alignItems: "center" },
   backRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8, marginTop: 4 },
   backText: { fontSize: 14 },
   collectionBanner: {
     width: "100%" as any,
     height: 160,
-    borderRadius: 14,
+    borderRadius: 20,
     marginBottom: 12,
   },
   collectionHeading: { fontSize: 24, marginBottom: 4 },
@@ -309,21 +411,21 @@ const styles = StyleSheet.create({
   storyCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 18,
     borderWidth: 1,
     marginBottom: 10,
   },
   storyThumb: {
     width: 48,
     height: 48,
-    borderRadius: 10,
+    borderRadius: 14,
     marginRight: 12,
   },
   storyNumber: {
     width: 48,
     height: 48,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,

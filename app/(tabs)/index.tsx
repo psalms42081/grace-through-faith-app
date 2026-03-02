@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,10 +19,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSpring,
+  Easing,
+} from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -103,6 +114,74 @@ function useImageBaseUrl() {
       return "";
     }
   }, []);
+}
+
+function AnimatedSection({ children, index }: { children: React.ReactNode; index: number }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(index * 80).duration(500).springify()}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function PulsingFlame({ size, color }: { size: number; color: string }) {
+  const pulseScale = useSharedValue(1);
+
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withTiming(1.25, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Ionicons name="flame" size={size} color={color} />
+    </Animated.View>
+  );
+}
+
+function BouncyActionCard({
+  onPress,
+  style,
+  children,
+  testID,
+}: {
+  onPress: () => void;
+  style: any;
+  children: React.ReactNode;
+  testID?: string;
+}) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+  }, []);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }, []);
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[style, animatedStyle]}
+      testID={testID}
+    >
+      {children}
+    </AnimatedPressable>
+  );
 }
 
 function KidsHomeScreen() {
@@ -238,110 +317,122 @@ function KidsHomeScreen() {
         </View>
       </Modal>
 
-      {baseUrl ? (
-        <Image
-          source={{ uri: `${baseUrl}/assets/images/app/kids-welcome.png` }}
-          style={kidsStyles.welcomeImage}
-          resizeMode="cover"
-        />
-      ) : null}
+      <AnimatedSection index={0}>
+        {baseUrl ? (
+          <Image
+            source={{ uri: `${baseUrl}/assets/images/app/kids-welcome.png` }}
+            style={kidsStyles.welcomeImage}
+            resizeMode="cover"
+          />
+        ) : null}
+      </AnimatedSection>
 
-      <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
-        <Ionicons name="sunny" size={20} color="rgba(255,255,255,0.7)" />
-        <Text style={[kidsStyles.verseLabel, { fontFamily: "Inter_600SemiBold" }]}>Today's Verse</Text>
-        <Text style={[kidsStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-          "{verse.text}"
-        </Text>
-        <Text style={[kidsStyles.verseRef, { fontFamily: "Inter_600SemiBold" }]}>
-          {verse.reference}
-        </Text>
-      </View>
+      <AnimatedSection index={1}>
+        <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
+          <Ionicons name="sunny" size={20} color="rgba(255,255,255,0.7)" />
+          <Text style={[kidsStyles.verseLabel, { fontFamily: "Inter_600SemiBold" }]}>Today's Verse</Text>
+          <Text style={[kidsStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+            "{verse.text}"
+          </Text>
+          <Text style={[kidsStyles.verseRef, { fontFamily: "Inter_600SemiBold" }]}>
+            {verse.reference}
+          </Text>
+        </View>
+      </AnimatedSection>
 
       {streak && streak.currentStreak > 0 && (
-        <View style={[kidsStyles.streakBanner, { backgroundColor: "#FF6B35" + "15", borderColor: "#FF6B35" + "30" }]}>
-          <Ionicons name="flame" size={22} color="#FF6B35" />
-          <Text style={[kidsStyles.streakText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {streak.currentStreak} day streak!
-          </Text>
-          <Ionicons name="flame" size={22} color="#FF6B35" />
-        </View>
+        <AnimatedSection index={2}>
+          <View style={[kidsStyles.streakBanner, { backgroundColor: "#FF6B35" + "15", borderColor: "#FF6B35" + "30" }]}>
+            <PulsingFlame size={22} color="#FF6B35" />
+            <Text style={[kidsStyles.streakText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {streak.currentStreak} day streak!
+            </Text>
+            <PulsingFlame size={22} color="#FF6B35" />
+          </View>
+        </AnimatedSection>
       )}
 
-      <View style={kidsStyles.statsRow}>
-        <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Ionicons name="star" size={24} color={(theme as any).starGold || theme.accent} />
-          <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-            {completedCount}
-          </Text>
-          <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Stories Read
-          </Text>
+      <AnimatedSection index={3}>
+        <View style={kidsStyles.statsRow}>
+          <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Ionicons name="star" size={24} color={(theme as any).starGold || theme.accent} />
+            <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              {completedCount}
+            </Text>
+            <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Stories Read
+            </Text>
+          </View>
+          <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Ionicons name="flame" size={24} color="#FF6B35" />
+            <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              {streak?.currentStreak ?? 0}
+            </Text>
+            <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Day Streak
+            </Text>
+          </View>
         </View>
-        <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Ionicons name="flame" size={24} color="#FF6B35" />
-          <Text style={[kidsStyles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-            {streak?.currentStreak ?? 0}
-          </Text>
-          <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Day Streak
-          </Text>
-        </View>
-      </View>
+      </AnimatedSection>
 
       {dailyStory && (
-        <Pressable
-          onPress={() => router.push(`/kids-story/${dailyStory.id}`)}
-          style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
-          testID="daily-story"
-        >
-          {dailyStory.imageUrl && baseUrl ? (
-            <Image
-              source={{ uri: `${baseUrl}${dailyStory.imageUrl}` }}
-              style={kidsStyles.dailyImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[kidsStyles.dailyIcon, { backgroundColor: theme.accent + "20" }]}>
-              <Ionicons name="book" size={28} color={theme.accent} />
-            </View>
-          )}
-          <View style={kidsStyles.dailyInfo}>
-            <Text style={[kidsStyles.dailyLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              Today's Story
-            </Text>
-            <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              {dailyStory.title}
-            </Text>
-            {dailyStory.scriptureRef && (
-              <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {dailyStory.scriptureRef}
-              </Text>
+        <AnimatedSection index={4}>
+          <Pressable
+            onPress={() => router.push(`/kids-story/${dailyStory.id}`)}
+            style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "40" }]}
+            testID="daily-story"
+          >
+            {dailyStory.imageUrl && baseUrl ? (
+              <Image
+                source={{ uri: `${baseUrl}${dailyStory.imageUrl}` }}
+                style={kidsStyles.dailyImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[kidsStyles.dailyIcon, { backgroundColor: theme.accent + "20" }]}>
+                <Ionicons name="book" size={28} color={theme.accent} />
+              </View>
             )}
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
-        </Pressable>
+            <View style={kidsStyles.dailyInfo}>
+              <Text style={[kidsStyles.dailyLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Today's Story
+              </Text>
+              <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                {dailyStory.title}
+              </Text>
+              {dailyStory.scriptureRef && (
+                <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {dailyStory.scriptureRef}
+                </Text>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.accent} />
+          </Pressable>
+        </AnimatedSection>
       )}
 
-      <View style={kidsStyles.quickActions}>
-        <Pressable
-          onPress={() => router.push("/(tabs)/kids-stories")}
-          style={[kidsStyles.actionCard, { backgroundColor: theme.accent }]}
-          testID="browse-stories"
-        >
-          <Ionicons name="book-outline" size={28} color="#fff" />
-          <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Browse Stories</Text>
-          <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Read Bible stories</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/(tabs)/kids-learn")}
-          style={[kidsStyles.actionCard, { backgroundColor: (theme as any).purple || theme.accent }]}
-          testID="take-quiz"
-        >
-          <Ionicons name="school-outline" size={28} color="#fff" />
-          <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Learn</Text>
-          <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Quizzes & verses</Text>
-        </Pressable>
-      </View>
+      <AnimatedSection index={5}>
+        <View style={kidsStyles.quickActions}>
+          <BouncyActionCard
+            onPress={() => router.push("/(tabs)/kids-stories")}
+            style={[kidsStyles.actionCard, { backgroundColor: theme.accent }]}
+            testID="browse-stories"
+          >
+            <Ionicons name="book-outline" size={28} color="#fff" />
+            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Browse Stories</Text>
+            <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Read Bible stories</Text>
+          </BouncyActionCard>
+          <BouncyActionCard
+            onPress={() => router.push("/(tabs)/kids-learn")}
+            style={[kidsStyles.actionCard, { backgroundColor: (theme as any).purple || theme.accent }]}
+            testID="take-quiz"
+          >
+            <Ionicons name="school-outline" size={28} color="#fff" />
+            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Learn</Text>
+            <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Quizzes & verses</Text>
+          </BouncyActionCard>
+        </View>
+      </AnimatedSection>
     </ScrollView>
   );
 }
@@ -411,10 +502,10 @@ const kidsStyles = StyleSheet.create({
     marginBottom: 16,
   },
   verseCard: {
-    padding: 20,
-    borderRadius: 18,
+    padding: 24,
+    borderRadius: 24,
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginBottom: 16,
   },
   verseLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12 },
@@ -435,8 +526,8 @@ const kidsStyles = StyleSheet.create({
   statBox: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: 20,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 4,
   },
@@ -446,7 +537,7 @@ const kidsStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1.5,
     marginBottom: 16,
   },
@@ -460,7 +551,7 @@ const kidsStyles = StyleSheet.create({
   actionCard: {
     flex: 1,
     padding: 18,
-    borderRadius: 14,
+    borderRadius: 20,
     gap: 6,
   },
   actionTitle: { color: "#fff", fontSize: 15, marginTop: 4 },

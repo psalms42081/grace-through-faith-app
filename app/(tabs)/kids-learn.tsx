@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,17 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withRepeat,
+  withSequence,
+  FadeInDown,
+  interpolate,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
@@ -36,6 +47,193 @@ interface Story {
 }
 
 type LearnTab = "quiz" | "memory";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function BouncyQuizOption({
+  opt,
+  idx,
+  theme,
+  onPress,
+}: {
+  opt: string;
+  idx: number;
+  theme: any;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      testID={`quiz-option-${idx}`}
+      onPressIn={() => {
+        scale.value = withSpring(0.95, { damping: 12, stiffness: 200 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      }}
+      onPress={onPress}
+      style={[
+        animStyle,
+        styles.quizOption,
+        { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+      ]}
+    >
+      <View style={[styles.optionLetter, { backgroundColor: theme.accent + "20" }]}>
+        <Text style={[styles.optionLetterText, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+          {String.fromCharCode(65 + idx)}
+        </Text>
+      </View>
+      <Text style={[styles.optionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+        {opt}
+      </Text>
+    </AnimatedPressable>
+  );
+}
+
+function BouncyStoryItem({
+  story,
+  idx,
+  theme,
+  onPress,
+}: {
+  story: Story;
+  idx: number;
+  theme: any;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      testID={`quiz-story-${idx}`}
+      onPressIn={() => {
+        scale.value = withSpring(0.96, { damping: 12, stiffness: 200 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      }}
+      onPress={onPress}
+      style={[
+        animStyle,
+        styles.storyItem,
+        { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+      ]}
+    >
+      <Ionicons name="help-circle" size={22} color={theme.accent} />
+      <View style={styles.storyItemInfo}>
+        <Text style={[styles.storyItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          {story.title}
+        </Text>
+        {story.scriptureRef && (
+          <Text style={[styles.storyItemRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {story.scriptureRef}
+          </Text>
+        )}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+    </AnimatedPressable>
+  );
+}
+
+function StarBurst({ theme }: { theme: any }) {
+  const starColor = (theme as any).starGold || theme.accent;
+
+  return (
+    <View style={styles.starBurstContainer}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <StarBurstItem key={i} index={i} color={starColor} />
+      ))}
+    </View>
+  );
+}
+
+function StarBurstItem({ index, color }: { index: number; color: string }) {
+  const scale = useSharedValue(0);
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = index * 80;
+    const timer = setTimeout(() => {
+      scale.value = withSequence(
+        withSpring(1.4, { damping: 6, stiffness: 150 }),
+        withSpring(1, { damping: 8, stiffness: 120 })
+      );
+      rotation.value = withSequence(
+        withTiming(30, { duration: 200 }),
+        withTiming(-15, { duration: 150 }),
+        withTiming(0, { duration: 100 })
+      );
+    }, delay);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => {
+    const angle = (index * 72) * (Math.PI / 180);
+    const radius = interpolate(scale.value, [0, 1], [0, 50]);
+    return {
+      transform: [
+        { translateX: Math.cos(angle) * radius },
+        { translateY: Math.sin(angle) * radius },
+        { scale: scale.value },
+        { rotate: `${rotation.value}deg` },
+      ],
+      opacity: scale.value,
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.burstStar, animStyle]}>
+      <Ionicons name="star" size={22} color={color} />
+    </Animated.View>
+  );
+}
+
+function BouncyMemorizeBtn({
+  storyId,
+  theme,
+  onPress,
+  idx,
+}: {
+  storyId: string;
+  theme: any;
+  onPress: () => void;
+  idx: number;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      testID={`memorize-${idx}`}
+      onPressIn={() => {
+        scale.value = withSpring(0.95, { damping: 12, stiffness: 200 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      }}
+      onPress={onPress}
+      style={[
+        animStyle,
+        styles.memorizeBtn,
+        { backgroundColor: theme.success + "20", borderColor: theme.success },
+      ]}
+    >
+      <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+      <Text style={[styles.memorizeBtnText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+        I Memorized This
+      </Text>
+    </AnimatedPressable>
+  );
+}
 
 export default function KidsLearnScreen() {
   const colorScheme = useColorScheme();
@@ -97,6 +295,9 @@ export default function KidsLearnScreen() {
 
   const handleAnswer = (optionIdx: number) => {
     if (!quizQuestions) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const newAnswers = [...quizState.answers, optionIdx];
     const nextQ = quizState.currentQ + 1;
     if (nextQ >= quizQuestions.length) {
@@ -118,6 +319,7 @@ export default function KidsLearnScreen() {
   const quizScore = quizState.done && quizQuestions
     ? quizState.answers.filter((a, i) => a === quizQuestions[i].correctIndex).length
     : 0;
+  const isPerfectScore = quizState.done && quizQuestions && quizScore === quizQuestions.length;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -134,7 +336,7 @@ export default function KidsLearnScreen() {
             >
               <Ionicons
                 name={tab === "quiz" ? "help-circle-outline" : "bookmark-outline"}
-                size={14}
+                size={16}
                 color={activeTab === tab ? "#fff" : theme.textSecondary}
               />
               <Text style={[styles.tabBtnText, { color: activeTab === tab ? "#fff" : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
@@ -156,25 +358,14 @@ export default function KidsLearnScreen() {
               Choose a Story to Quiz
             </Text>
             {stories?.map((s, idx) => (
-              <Pressable
-                key={s.id}
-                testID={`quiz-story-${idx}`}
-                onPress={() => { setSelectedStory(s); setQuizState({ currentQ: 0, answers: [], done: false }); }}
-                style={[styles.storyItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-              >
-                <Ionicons name="help-circle" size={22} color={theme.accent} />
-                <View style={styles.storyItemInfo}>
-                  <Text style={[styles.storyItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    {s.title}
-                  </Text>
-                  {s.scriptureRef && (
-                    <Text style={[styles.storyItemRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {s.scriptureRef}
-                    </Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-              </Pressable>
+              <Animated.View key={s.id} entering={FadeInDown.delay(idx * 60).springify()}>
+                <BouncyStoryItem
+                  story={s}
+                  idx={idx}
+                  theme={theme}
+                  onPress={() => { setSelectedStory(s); setQuizState({ currentQ: 0, answers: [], done: false }); }}
+                />
+              </Animated.View>
             ))}
           </>
         )}
@@ -192,27 +383,21 @@ export default function KidsLearnScreen() {
               {currentQuestion.question}
             </Text>
             {currentQuestion.options.map((opt, idx) => (
-              <Pressable
-                key={idx}
-                testID={`quiz-option-${idx}`}
-                onPress={() => handleAnswer(idx)}
-                style={[styles.quizOption, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-              >
-                <View style={[styles.optionLetter, { backgroundColor: theme.accent + "20" }]}>
-                  <Text style={[styles.optionLetterText, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
-                    {String.fromCharCode(65 + idx)}
-                  </Text>
-                </View>
-                <Text style={[styles.optionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                  {opt}
-                </Text>
-              </Pressable>
+              <Animated.View key={idx} entering={FadeInDown.delay(idx * 80).springify()}>
+                <BouncyQuizOption
+                  opt={opt}
+                  idx={idx}
+                  theme={theme}
+                  onPress={() => handleAnswer(idx)}
+                />
+              </Animated.View>
             ))}
           </View>
         )}
 
         {activeTab === "quiz" && quizState.done && quizQuestions && (
           <View style={styles.quizResult}>
+            {isPerfectScore && <StarBurst theme={theme} />}
             <Ionicons
               name={quizScore === quizQuestions.length ? "trophy" : quizScore > 0 ? "star" : "refresh"}
               size={56}
@@ -240,30 +425,30 @@ export default function KidsLearnScreen() {
               Memory Verses
             </Text>
             {stories?.filter(s => s.memoryVerse).map((s, idx) => (
-              <View
-                key={s.id}
-                style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-              >
-                <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                  "{s.memoryVerse}"
-                </Text>
-                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {s.memoryVerseRef}
-                </Text>
-                <Text style={[styles.verseStory, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  From: {s.title}
-                </Text>
-                <Pressable
-                  testID={`memorize-${idx}`}
-                  onPress={() => memorizeMutation.mutate(s.id)}
-                  style={[styles.memorizeBtn, { backgroundColor: theme.success + "20", borderColor: theme.success }]}
+              <Animated.View key={s.id} entering={FadeInDown.delay(idx * 60).springify()}>
+                <View
+                  style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                 >
-                  <Ionicons name="checkmark-circle" size={16} color={theme.success} />
-                  <Text style={[styles.memorizeBtnText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-                    I Memorized This
-                  </Text>
-                </Pressable>
-              </View>
+                  <View style={[styles.verseAccentBorder, { backgroundColor: theme.accent }]} />
+                  <View style={styles.verseContent}>
+                    <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                      "{s.memoryVerse}"
+                    </Text>
+                    <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      {s.memoryVerseRef}
+                    </Text>
+                    <Text style={[styles.verseStory, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      From: {s.title}
+                    </Text>
+                    <BouncyMemorizeBtn
+                      storyId={s.id}
+                      theme={theme}
+                      idx={idx}
+                      onPress={() => memorizeMutation.mutate(s.id)}
+                    />
+                  </View>
+                </View>
+              </Animated.View>
             ))}
           </>
         )}
@@ -277,16 +462,24 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 28, marginBottom: 12 },
   tabToggle: { flexDirection: "row", gap: 8 },
-  tabBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  tabBtnText: { fontSize: 13 },
+  tabBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+  },
+  tabBtnText: { fontSize: 14 },
   scroll: { flex: 1, paddingHorizontal: 20 },
   sectionTitle: { fontSize: 14, marginBottom: 12, marginTop: 4, textTransform: "uppercase", letterSpacing: 0.5 },
   storyItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 14,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 1,
     marginBottom: 10,
   },
@@ -297,29 +490,54 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 },
   backText: { fontSize: 14 },
   quizProgress: { fontSize: 13, marginBottom: 8 },
-  quizQuestion: { fontSize: 20, lineHeight: 28, marginBottom: 20 },
+  quizQuestion: { fontSize: 22, lineHeight: 30, marginBottom: 20 },
   quizOption: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 12,
+    gap: 14,
+    padding: 18,
+    borderRadius: 18,
     borderWidth: 1,
     marginBottom: 10,
   },
-  optionLetter: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  optionLetterText: { fontSize: 14 },
+  optionLetter: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  optionLetterText: { fontSize: 16 },
   optionText: { flex: 1, fontSize: 15, lineHeight: 21 },
   quizResult: { alignItems: "center", paddingTop: 40, gap: 12 },
   resultTitle: { fontSize: 24, marginTop: 8 },
   resultScore: { fontSize: 16 },
   resultBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, marginTop: 16 },
   resultBtnText: { color: "#fff", fontSize: 15 },
+  starBurstContainer: {
+    position: "absolute",
+    top: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    width: 120,
+    height: 120,
+  },
+  burstStar: {
+    position: "absolute",
+  },
   verseCard: {
-    padding: 18,
-    borderRadius: 14,
+    flexDirection: "row",
+    borderRadius: 20,
     borderWidth: 1,
     marginBottom: 14,
+    overflow: "hidden",
+  },
+  verseAccentBorder: {
+    width: 4,
+  },
+  verseContent: {
+    flex: 1,
+    padding: 18,
   },
   verseText: { fontSize: 16, lineHeight: 24, fontStyle: "italic", marginBottom: 8 },
   verseRef: { fontSize: 14, marginBottom: 4 },
@@ -327,12 +545,12 @@ const styles = StyleSheet.create({
   memorizeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
     borderWidth: 1,
     alignSelf: "flex-start",
   },
-  memorizeBtnText: { fontSize: 13 },
+  memorizeBtnText: { fontSize: 14 },
 });

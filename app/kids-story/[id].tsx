@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -68,6 +68,24 @@ function WonderCard({
   const [selected, setSelected] = useState<number | null>(null);
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const starScale = useRef(new Animated.Value(0)).current;
+  const entranceScale = useRef(new Animated.Value(0.85)).current;
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(entranceScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(entranceOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleSelect = useCallback(
     (choiceIndex: number) => {
@@ -103,7 +121,17 @@ function WonderCard({
   const hasAnswered = selected !== null || answered;
 
   return (
-    <View style={[styles.wonderCard, { backgroundColor: theme.starGold + "12", borderColor: theme.starGold + "40" }]}>
+    <Animated.View
+      style={[
+        styles.wonderCard,
+        {
+          backgroundColor: theme.starGold + "12",
+          borderColor: theme.starGold + "40",
+          transform: [{ scale: entranceScale }],
+          opacity: entranceOpacity,
+        },
+      ]}
+    >
       <View style={styles.wonderHeader}>
         <Ionicons name="sparkles" size={20} color={theme.starGold || "#F5A623"} />
         <Text style={[styles.wonderLabel, { color: theme.starGold || "#F5A623", fontFamily: "Inter_700Bold" }]}>
@@ -187,6 +215,75 @@ function WonderCard({
           </Text>
         </Animated.View>
       )}
+    </Animated.View>
+  );
+}
+
+function CompletionStarBurst({ theme }: { theme: any }) {
+  const mainScale = useRef(new Animated.Value(0)).current;
+  const mainRotate = useRef(new Animated.Value(0)).current;
+  const star1Scale = useRef(new Animated.Value(0)).current;
+  const star1TransX = useRef(new Animated.Value(0)).current;
+  const star1TransY = useRef(new Animated.Value(0)).current;
+  const star2Scale = useRef(new Animated.Value(0)).current;
+  const star2TransX = useRef(new Animated.Value(0)).current;
+  const star2TransY = useRef(new Animated.Value(0)).current;
+  const star3Scale = useRef(new Animated.Value(0)).current;
+  const star3TransX = useRef(new Animated.Value(0)).current;
+  const star3TransY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(mainScale, { toValue: 1, friction: 3, tension: 80, useNativeDriver: true }),
+      Animated.timing(mainRotate, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(200),
+        Animated.parallel([
+          Animated.spring(star1Scale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+          Animated.spring(star1TransX, { toValue: -40, friction: 5, tension: 80, useNativeDriver: true }),
+          Animated.spring(star1TransY, { toValue: -30, friction: 5, tension: 80, useNativeDriver: true }),
+        ]),
+      ]),
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.parallel([
+          Animated.spring(star2Scale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+          Animated.spring(star2TransX, { toValue: 40, friction: 5, tension: 80, useNativeDriver: true }),
+          Animated.spring(star2TransY, { toValue: -25, friction: 5, tension: 80, useNativeDriver: true }),
+        ]),
+      ]),
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.parallel([
+          Animated.spring(star3Scale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+          Animated.spring(star3TransX, { toValue: 0, friction: 5, tension: 80, useNativeDriver: true }),
+          Animated.spring(star3TransY, { toValue: -50, friction: 5, tension: 80, useNativeDriver: true }),
+        ]),
+      ]),
+    ]).start();
+  }, []);
+
+  const rotate = mainRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const starColor = (theme as any).starGold || theme.accent;
+
+  return (
+    <View style={styles.starBurstContainer}>
+      <Animated.View style={{ transform: [{ scale: star1Scale }, { translateX: star1TransX }, { translateY: star1TransY }] }}>
+        <Ionicons name="star" size={20} color={starColor} style={{ opacity: 0.7 }} />
+      </Animated.View>
+      <Animated.View style={{ transform: [{ scale: star2Scale }, { translateX: star2TransX }, { translateY: star2TransY }] }}>
+        <Ionicons name="star" size={16} color={starColor} style={{ opacity: 0.6 }} />
+      </Animated.View>
+      <Animated.View style={{ transform: [{ scale: star3Scale }, { translateX: star3TransX }, { translateY: star3TransY }] }}>
+        <Ionicons name="star" size={14} color={starColor} style={{ opacity: 0.5 }} />
+      </Animated.View>
+      <Animated.View style={{ transform: [{ scale: mainScale }, { rotate }] }}>
+        <Ionicons name="star" size={52} color={starColor} />
+      </Animated.View>
     </View>
   );
 }
@@ -202,7 +299,6 @@ export default function KidsStoryScreen() {
   const [completed, setCompleted] = useState(false);
   const [answeredMoments, setAnsweredMoments] = useState<Set<number>>(new Set());
   const initializedRef = useRef(false);
-  const starScale = useRef(new Animated.Value(0)).current;
   const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -268,12 +364,9 @@ export default function KidsStoryScreen() {
     },
     onSuccess: () => {
       setCompleted(true);
-      Animated.spring(starScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 100,
-        useNativeDriver: true,
-      }).start();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/kids/progress/guest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/kids/streak/guest"] });
     },
@@ -310,7 +403,7 @@ export default function KidsStoryScreen() {
               color: theme.text,
               fontFamily: "Lora_400Regular",
               fontSize: isLittleLambs ? 19 : 17,
-              lineHeight: isLittleLambs ? 32 : 28,
+              lineHeight: isLittleLambs ? 34 : 30,
             },
           ]}
         >
@@ -341,15 +434,19 @@ export default function KidsStoryScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.headerBar, { paddingTop: topPad + 8, backgroundColor: theme.background }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} testID="story-back">
-          <Ionicons name="chevron-back" size={22} color={theme.accent} />
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.backBtn, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+          testID="story-back"
+        >
+          <Ionicons name="chevron-back" size={24} color={theme.accent} />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
             {story.title}
           </Text>
         </View>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 48 }} />
       </View>
 
       <ScrollView
@@ -412,7 +509,7 @@ export default function KidsStoryScreen() {
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="bulb-outline" size={20} color={(theme as any).starGold || theme.accent} />
+                <Ionicons name="bulb-outline" size={22} color={(theme as any).starGold || theme.accent} />
                 <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                   Think About It
                 </Text>
@@ -436,7 +533,9 @@ export default function KidsStoryScreen() {
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
             <View style={[styles.prayerCard, { backgroundColor: (theme as any).purple ? (theme as any).purple + "12" : theme.accent + "12", borderColor: (theme as any).purple ? (theme as any).purple + "30" : theme.accent + "30" }]}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="hand-left-outline" size={18} color={(theme as any).purple || theme.accent} />
+                <View style={[styles.endCardIconBg, { backgroundColor: ((theme as any).purple || theme.accent) + "20" }]}>
+                  <Ionicons name="hand-left-outline" size={22} color={(theme as any).purple || theme.accent} />
+                </View>
                 <Text style={[styles.sectionTitle, { color: (theme as any).purple || theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                   Let's Pray
                 </Text>
@@ -453,7 +552,9 @@ export default function KidsStoryScreen() {
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
             <View style={[styles.activityCard, { backgroundColor: theme.success + "12", borderColor: theme.success + "30" }]}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="flash-outline" size={18} color={theme.success} />
+                <View style={[styles.endCardIconBg, { backgroundColor: theme.success + "20" }]}>
+                  <Ionicons name="flash-outline" size={22} color={theme.success} />
+                </View>
                 <Text style={[styles.sectionTitle, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
                   Activity
                 </Text>
@@ -485,8 +586,8 @@ export default function KidsStoryScreen() {
               )}
             </Pressable>
           ) : (
-            <Animated.View style={[styles.completedBox, { transform: [{ scale: starScale }] }]}>
-              <Ionicons name="star" size={44} color={(theme as any).starGold || theme.accent} />
+            <View style={styles.completedBox}>
+              <CompletionStarBurst theme={theme} />
               <Text style={[styles.completedText, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                 You earned a star!
               </Text>
@@ -499,7 +600,7 @@ export default function KidsStoryScreen() {
                   Back to Stories
                 </Text>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -515,7 +616,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 10,
   },
-  backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  backBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: { fontSize: 14 },
   scroll: { flex: 1 },
@@ -538,15 +646,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 12,
   },
-  divider: { height: 1, marginVertical: 20 },
+  divider: { height: 1, marginVertical: 24 },
   storyParagraph: {
-    marginBottom: 16,
+    marginBottom: 22,
   },
   wonderCard: {
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1.5,
-    padding: 18,
-    marginVertical: 12,
+    padding: 20,
+    marginVertical: 16,
   },
   wonderHeader: {
     flexDirection: "row",
@@ -569,13 +677,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 16,
     borderWidth: 1.5,
   },
   wonderEmoji: {
-    fontSize: 26,
+    fontSize: 24,
   },
   wonderOptionLabel: {
     flex: 1,
@@ -593,8 +701,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   memoryCard: {
-    padding: 18,
-    borderRadius: 14,
+    padding: 20,
+    borderRadius: 18,
     borderWidth: 1,
   },
   memoryHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
@@ -602,22 +710,29 @@ const styles = StyleSheet.create({
   memoryText: { lineHeight: 26 },
   memoryRef: { fontSize: 14, marginTop: 8, textAlign: "right" },
   section: {},
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 16 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  sectionTitle: { fontSize: 17 },
   questionItem: {
     flexDirection: "row",
     gap: 12,
-    padding: 14,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 10,
   },
   questionNum: { fontSize: 16, minWidth: 20 },
-  questionText: { flex: 1, lineHeight: 22 },
-  prayerCard: { padding: 18, borderRadius: 14, borderWidth: 1 },
-  prayerText: { lineHeight: 24 },
-  activityCard: { padding: 18, borderRadius: 14, borderWidth: 1 },
-  activityText: { lineHeight: 24 },
+  questionText: { flex: 1, lineHeight: 24 },
+  prayerCard: { padding: 22, borderRadius: 20, borderWidth: 1 },
+  prayerText: { lineHeight: 26 },
+  activityCard: { padding: 22, borderRadius: 20, borderWidth: 1 },
+  activityText: { lineHeight: 26 },
+  endCardIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   completeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -627,8 +742,14 @@ const styles = StyleSheet.create({
     borderRadius: 28,
   },
   completeBtnText: { color: "#fff", fontSize: 16 },
-  completedBox: { alignItems: "center", paddingVertical: 20, gap: 12 },
+  completedBox: { alignItems: "center", paddingVertical: 24, gap: 14 },
   completedText: { fontSize: 22 },
+  starBurstContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 80,
+    width: 120,
+  },
   doneBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, marginTop: 8 },
   doneBtnText: { color: "#fff", fontSize: 15 },
 });

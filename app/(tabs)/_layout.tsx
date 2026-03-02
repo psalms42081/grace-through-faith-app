@@ -83,6 +83,7 @@ function ClassicTabLayout() {
     : (isDark ? Colors.dark : Colors.light);
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
 
   return (
     <Tabs
@@ -95,33 +96,47 @@ function ClassicTabLayout() {
           backgroundColor: isIOS
             ? "transparent"
             : isWeb
-            ? theme.surface
-            : theme.background,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: theme.border,
+            ? (isKidsMode ? kidsTheme.tabBarBg : theme.surface)
+            : (isKidsMode ? kidsTheme.tabBarBg : theme.background),
+          borderTopWidth: isWeb ? 1 : (isKidsMode ? 1 : 0),
+          borderTopColor: isKidsMode ? kidsTheme.tabBarBorder : theme.border,
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          ...(isWeb ? { height: isKidsMode ? 90 : 84 } : {}),
+          ...(isKidsMode ? {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            overflow: "hidden" as const,
+          } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
               intensity={80}
               tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
+              style={[
+                StyleSheet.absoluteFill,
+                isKidsMode ? { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" } : {},
+              ]}
             />
           ) : isWeb ? (
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border },
+                {
+                  backgroundColor: isKidsMode ? kidsTheme.tabBarBg : theme.surface,
+                  borderTopWidth: 1,
+                  borderTopColor: isKidsMode ? kidsTheme.tabBarBorder : theme.border,
+                  ...(isKidsMode ? { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" } : {}),
+                },
               ]}
             />
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
-          fontSize: 10,
+          fontFamily: isKidsMode ? "Inter_600SemiBold" : "Inter_500Medium",
+          fontSize: isKidsMode ? 11 : 10,
           marginBottom: 2,
         },
+        tabBarIconStyle: isKidsMode ? { marginTop: 4 } : undefined,
       }}
     >
       <Tabs.Screen

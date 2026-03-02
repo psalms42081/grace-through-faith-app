@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,17 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  withSpring,
+  withDelay,
+  FadeInDown,
+  Easing,
+} from "react-native-reanimated";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 
@@ -44,6 +55,143 @@ interface StreakInfo {
   currentStreak: number;
   longestStreak: number;
   lastActivityDate: string | null;
+}
+
+function AnimatedSection({ children, index }: { children: React.ReactNode; index: number }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(index * 100).duration(500).springify()}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any }) {
+  const glowOpacity = useSharedValue(0.6);
+
+  useEffect(() => {
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.6, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
+  return (
+    <Animated.View style={[styles.starCard, { backgroundColor: theme.starGold || theme.accent }]}>
+      <Animated.View style={[styles.starGlowOverlay, glowStyle]} />
+      <Ionicons name="star" size={44} color="#fff" />
+      <Text style={[styles.starCount, { fontFamily: "Lora_700Bold" }]}>{totalStars}</Text>
+      <Text style={[styles.starLabel, { fontFamily: "Inter_500Medium" }]}>Total Stars</Text>
+    </Animated.View>
+  );
+}
+
+function AnimatedFlameIcon() {
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withSequence(
+        withTiming(-8, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+        withTiming(8, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const wobbleStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  return (
+    <Animated.View style={wobbleStyle}>
+      <Ionicons name="flame" size={24} color="#FF6B35" />
+    </Animated.View>
+  );
+}
+
+function AnimatedBadgeItem({
+  badge,
+  earned,
+  theme,
+  BADGE_ICONS,
+}: {
+  badge: Badge;
+  earned: boolean;
+  theme: any;
+  BADGE_ICONS: Record<string, string>;
+}) {
+  const scale = useSharedValue(earned ? 0.95 : 1);
+
+  useEffect(() => {
+    if (earned) {
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.04, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.98, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+    }
+  }, [earned]);
+
+  const scaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.badgeItem,
+        scaleStyle,
+        {
+          backgroundColor: earned ? theme.accent + "15" : theme.backgroundCard,
+          borderColor: earned ? theme.accent : theme.border,
+        },
+      ]}
+    >
+      <View style={[styles.badgeIconCircle, { backgroundColor: earned ? theme.accent + "20" : theme.border + "60" }]}>
+        <Ionicons
+          name={(BADGE_ICONS[badge.icon || "star"] || "star") as any}
+          size={28}
+          color={earned ? theme.accent : theme.textMuted}
+        />
+      </View>
+      <Text
+        style={[
+          styles.badgeName,
+          {
+            color: earned ? theme.text : theme.textMuted,
+            fontFamily: "Inter_600SemiBold",
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {badge.name}
+      </Text>
+      {badge.description && (
+        <Text
+          style={[styles.badgeDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+          numberOfLines={2}
+        >
+          {badge.description}
+        </Text>
+      )}
+      {earned && (
+        <Ionicons name="checkmark-circle" size={16} color={theme.success} style={{ marginTop: 4 }} />
+      )}
+    </Animated.View>
+  );
 }
 
 export default function KidsStarsScreen() {
@@ -125,120 +273,103 @@ export default function KidsStarsScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad + 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.starCard, { backgroundColor: (theme as any).starGold || theme.accent }]}>
-          <Ionicons name="star" size={40} color="#fff" />
-          <Text style={[styles.starCount, { fontFamily: "Lora_700Bold" }]}>{totalStars}</Text>
-          <Text style={[styles.starLabel, { fontFamily: "Inter_500Medium" }]}>Total Stars</Text>
-        </View>
+        <AnimatedSection index={0}>
+          <PulsingStarCard totalStars={totalStars} theme={theme} />
+        </AnimatedSection>
 
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Ionicons name="book" size={24} color={theme.accent} />
-            <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{completedCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Stories</Text>
+        <AnimatedSection index={1}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.accent + "18" }]}>
+                <Ionicons name="book" size={22} color={theme.accent} />
+              </View>
+              <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{completedCount}</Text>
+              <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Stories</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.accent + "18" }]}>
+                <Ionicons name="help-circle" size={22} color={theme.accent} />
+              </View>
+              <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{quizCount}</Text>
+              <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Quizzes</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={[styles.statIconCircle, { backgroundColor: theme.accent + "18" }]}>
+                <Ionicons name="bookmark" size={22} color={theme.accent} />
+              </View>
+              <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{memorizedCount}</Text>
+              <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Verses</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Ionicons name="help-circle" size={24} color={theme.accent} />
-            <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{quizCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Quizzes</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <Ionicons name="bookmark" size={24} color={theme.accent} />
-            <Text style={[styles.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{memorizedCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Verses</Text>
-          </View>
-        </View>
+        </AnimatedSection>
 
         {streak && (
-          <View style={[styles.streakCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.streakHeader}>
-              <Ionicons name="flame" size={22} color="#FF6B35" />
-              <Text style={[styles.streakTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Reading Streak
-              </Text>
-            </View>
-            <View style={styles.streakStats}>
-              <View style={styles.streakStatItem}>
-                <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  {streak.currentStreak}
-                </Text>
-                <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Current
+          <AnimatedSection index={2}>
+            <View style={[styles.streakCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.streakHeader}>
+                <AnimatedFlameIcon />
+                <Text style={[styles.streakTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  Reading Streak
                 </Text>
               </View>
-              <View style={[styles.streakDivider, { backgroundColor: theme.border }]} />
-              <View style={styles.streakStatItem}>
-                <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  {streak.longestStreak}
-                </Text>
-                <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Best
-                </Text>
+              <View style={styles.streakStats}>
+                <View style={styles.streakStatItem}>
+                  <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                    {streak.currentStreak}
+                  </Text>
+                  <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Current
+                  </Text>
+                </View>
+                <View style={[styles.streakDivider, { backgroundColor: theme.border }]} />
+                <View style={styles.streakStatItem}>
+                  <Text style={[styles.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                    {streak.longestStreak}
+                  </Text>
+                  <Text style={[styles.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Best
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+          </AnimatedSection>
         )}
 
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-          Badges
-        </Text>
-        <View style={styles.badgeGrid}>
-          {allBadges?.map((badge) => {
-            const earned = earnedIds.has(badge.id);
-            return (
-              <View
-                key={badge.id}
-                style={[
-                  styles.badgeItem,
-                  {
-                    backgroundColor: earned ? theme.accent + "15" : theme.backgroundCard,
-                    borderColor: earned ? theme.accent : theme.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={(BADGE_ICONS[badge.icon || "star"] || "star") as any}
-                  size={28}
-                  color={earned ? theme.accent : theme.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.badgeName,
-                    {
-                      color: earned ? theme.text : theme.textMuted,
-                      fontFamily: "Inter_600SemiBold",
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {badge.name}
-                </Text>
-                {badge.description && (
-                  <Text
-                    style={[styles.badgeDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
-                    numberOfLines={2}
-                  >
-                    {badge.description}
-                  </Text>
-                )}
-                {earned && (
-                  <Ionicons name="checkmark-circle" size={16} color={theme.success} style={{ marginTop: 4 }} />
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        <Pressable
-          onPress={handleExitKidsMode}
-          style={[styles.exitBtn, { borderColor: theme.border }]}
-          testID="exit-kids-mode"
-        >
-          <Ionicons name="log-out-outline" size={18} color={theme.textMuted} />
-          <Text style={[styles.exitBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-            Switch to Adult Mode
+        <AnimatedSection index={3}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Badges
           </Text>
-        </Pressable>
+        </AnimatedSection>
+
+        <AnimatedSection index={4}>
+          <View style={styles.badgeGrid}>
+            {allBadges?.map((badge) => {
+              const earned = earnedIds.has(badge.id);
+              return (
+                <AnimatedBadgeItem
+                  key={badge.id}
+                  badge={badge}
+                  earned={earned}
+                  theme={theme}
+                  BADGE_ICONS={BADGE_ICONS}
+                />
+              );
+            })}
+          </View>
+        </AnimatedSection>
+
+        <AnimatedSection index={5}>
+          <Pressable
+            onPress={handleExitKidsMode}
+            style={styles.exitBtn}
+            testID="exit-kids-mode"
+          >
+            <Ionicons name="log-out-outline" size={14} color={theme.textMuted} />
+            <Text style={[styles.exitBtnText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Switch to Adult Mode
+            </Text>
+          </Pressable>
+        </AnimatedSection>
       </ScrollView>
 
       <Modal
@@ -301,24 +432,38 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, paddingHorizontal: 20 },
   starCard: {
     alignItems: "center",
-    paddingVertical: 28,
-    borderRadius: 18,
+    paddingVertical: 32,
+    borderRadius: 22,
     marginTop: 8,
     marginBottom: 16,
+    overflow: "hidden",
   },
-  starCount: { fontSize: 48, color: "#fff", marginTop: 4 },
+  starGlowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 22,
+  },
+  starCount: { fontSize: 48, color: "#fff", marginTop: 6 },
   starLabel: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   statCard: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
   },
-  statNum: { fontSize: 22, marginTop: 6 },
+  statIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  statNum: { fontSize: 22, marginTop: 4 },
   statLabel: { fontSize: 11, marginTop: 2 },
-  streakCard: { padding: 18, borderRadius: 14, borderWidth: 1, marginBottom: 20 },
+  streakCard: { padding: 18, borderRadius: 18, borderWidth: 1, marginBottom: 20 },
   streakHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
   streakTitle: { fontSize: 16 },
   streakStats: { flexDirection: "row", alignItems: "center" },
@@ -331,9 +476,17 @@ const styles = StyleSheet.create({
   badgeItem: {
     width: "47%" as any,
     alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    borderRadius: 18,
     borderWidth: 1,
+  },
+  badgeIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
   },
   badgeName: { fontSize: 13, marginTop: 8, textAlign: "center" },
   badgeDesc: { fontSize: 11, marginTop: 4, textAlign: "center", lineHeight: 15 },
@@ -341,14 +494,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 8,
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 4,
     marginBottom: 20,
+    opacity: 0.6,
   },
-  exitBtnText: { fontSize: 14 },
+  exitBtnText: { fontSize: 12 },
   pinOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
