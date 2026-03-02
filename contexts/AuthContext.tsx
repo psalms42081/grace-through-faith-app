@@ -24,6 +24,7 @@ interface AuthContextType {
   userId: string;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   userId: "guest",
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
+  resetPassword: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
 });
@@ -152,6 +154,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string, newPassword: string) => {
+    try {
+      const res = await apiRequest("POST", "/api/auth/reset-password", { email, newPassword });
+      const data = (await (res as any).json()) as { user: AuthUser; token: string; error?: string };
+
+      if (data.error) return { success: false, error: data.error };
+
+      tokenRef.current = data.token;
+      setToken(data.token);
+      setUser(data.user);
+      setAuthTokenGetter(() => data.token);
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      queryClient.clear();
+      return { success: true };
+    } catch (err: any) {
+      const msg = err.message || "Password reset failed";
+      const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
+      try {
+        const parsed = JSON.parse(errorText);
+        return { success: false, error: parsed.error || "Password reset failed" };
+      } catch {
+        return { success: false, error: errorText || "Password reset failed" };
+      }
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     tokenRef.current = null;
     setToken(null);
@@ -191,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userId,
         login,
         register,
+        resetPassword,
         logout,
         refreshUser,
       }}
