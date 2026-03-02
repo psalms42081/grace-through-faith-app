@@ -34,8 +34,8 @@ export default function RegisterScreen() {
       setError("Please enter your email");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 4) {
+      setError("Password must be at least 4 characters");
       return;
     }
     setError("");

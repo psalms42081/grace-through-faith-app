@@ -52,3 +52,5 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **HelloAO Bible API:** Provides public domain commentaries.
 - **bcryptjs:** Password hashing.
 - **jsonwebtoken:** JWT token generation and verification.
+- **react-native-maps@1.18.0:** Interactive maps for Bible Maps screen (native only; web uses OpenStreetMap iframe via `BibleMap.web.tsx`).
+- **OpenStreetMap:** Embedded tile maps for web platform Bible Maps.
