@@ -32,7 +32,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **4D Scripture Context Panel:** Floating button in the chapter reader for AI-generated contextual data (locations, timeline, figures, cultural insights).
 - **SDA Doctrinal Studies:** Dedicated screen for the 28 Fundamental Beliefs with external EGW Writings links.
 - **Interactive AI Storyteller (Pause & Wonder):** Kids stories are "Choose Your Own Adventure" experiences with AI-generated "Pause & Wonder" cards for interactive learning.
-- **Kids Story Engine (Scene-Based Reader):** Immersive scene-based storybook reader with AI-generated scenes, narration, illustration prompts, and dynamic atmosphere audio.
+- **Kids Story Engine (Scene-Based Reader):** Immersive scene-based storybook reader with AI-generated scenes, narration, AI-generated watercolor illustrations (`assets/kids-scenes/`), and dynamic atmosphere audio. Scene images stored in `kids_story_scene.image_url` column, served via `/assets/kids-scenes/{sceneId}.png`.
 - **Dynamic Atmosphere Audio Engine:** Plays mood-appropriate cinematic orchestral loops with cross-fade transitions based on story scene mood.
 - **Home Screen (Action Dashboard):** Focused on today/now actions only — Verse of the Day, streak calendar, bigger Continue Reading card, guided tool cards (4-Layer Study, Prayer Journal), and devotional plan progress. No educational explainers or featured plan lists.
 - **Discover Tab (Curated Library):** Organized into labeled sections: Popular Passages, Topics to Explore, Study Resources (Historic Voices, 28 Fundamental Beliefs), Study Tools (Bible Maps, Timeline), and Christian Content (Music). No progress widgets or personal items.

@@ -758,6 +758,24 @@ ${storyText}`,
   return scenes;
 }
 
+export async function generateSceneImage(
+  illustrationPrompt: string,
+  sceneId: string
+): Promise<string | null> {
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+    const filePath = path.resolve(process.cwd(), "assets", "kids-scenes", `${sceneId}.png`);
+    if (fs.existsSync(filePath)) {
+      return `/assets/kids-scenes/${sceneId}.png`;
+    }
+    return null;
+  } catch (err) {
+    console.error("Scene image lookup error:", err);
+    return null;
+  }
+}
+
 export async function generateScripturalEncouragement(
   prayerTitle: string,
   prayerContent: string

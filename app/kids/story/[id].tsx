@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Image,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -36,7 +37,7 @@ import type { AudioPlayer } from "expo-audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -48,6 +49,7 @@ interface StoryScene {
   sceneIndex: number;
   narration: string;
   illustrationPrompt: string;
+  imageUrl: string | null;
   mood: SceneMood;
   pauseAndWonder: {
     question: string;
@@ -516,6 +518,95 @@ const MOOD_CONFIG: Record<SceneMood, { icon: string; color: string; label: strin
   JOY: { icon: "sunny", color: "#FBBF24", label: "Joy" },
 };
 
+function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoaded }: { sceneId: string; illustrationPrompt: string; isVisible: boolean; onImageLoaded?: (url: string) => void }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const baseUrl = useMemo(() => {
+    try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible || imageUrl || loading || failed || !sceneId) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await apiRequest("POST", `/api/kids/scene/${sceneId}/generate-image`);
+        const data = await res.json();
+        if (!cancelled && data.imageUrl) {
+          const fullUrl = `${baseUrl}${data.imageUrl}`;
+          setImageUrl(fullUrl);
+          onImageLoaded?.(fullUrl);
+        } else if (!cancelled) {
+          setFailed(true);
+        }
+      } catch {
+        if (!cancelled) setFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isVisible, sceneId]);
+
+  const cleanPrompt = illustrationPrompt.replace("Soft watercolor, 2D animation style, warm earth tones, biblically inspired. ", "");
+
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={illustrationStyles.image}
+        resizeMode="cover"
+      />
+    );
+  }
+
+  return (
+    <View style={illustrationStyles.placeholder}>
+      {loading ? (
+        <>
+          <ActivityIndicator size="small" color="rgba(255,255,255,0.6)" />
+          <Text style={illustrationStyles.label} numberOfLines={2}>
+            Creating illustration...
+          </Text>
+        </>
+      ) : (
+        <>
+          <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.4)" />
+          <Text style={illustrationStyles.label} numberOfLines={3}>
+            {cleanPrompt}
+          </Text>
+        </>
+      )}
+    </View>
+  );
+}
+
+const illustrationStyles = StyleSheet.create({
+  image: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
+  },
+  placeholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  label: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    textAlign: "center",
+    fontFamily: "Inter_400Regular",
+    lineHeight: 15,
+  },
+});
+
 function MoodBadge({ mood }: { mood: SceneMood }) {
   const config = MOOD_CONFIG[mood];
   const scale = useSharedValue(0.8);
@@ -705,6 +796,9 @@ export default function SceneStoryScreen() {
   const queryClient = useQueryClient();
   const isLittleLambs = ageGroup === "little_lambs";
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const baseUrl = useMemo(() => {
+    try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
+  }, []);
 
   const [scenes, setScenes] = useState<StoryScene[]>([]);
   const [loading, setLoading] = useState(true);
@@ -939,16 +1033,22 @@ export default function SceneStoryScreen() {
 
           <View style={[styles.sceneContent, { paddingTop: topPad + 16 }]}>
             <View style={styles.illustrationArea}>
-              <View style={styles.illustrationPlaceholder}>
-                <Ionicons
-                  name="image-outline"
-                  size={32}
-                  color="rgba(255,255,255,0.4)"
+              {item.imageUrl ? (
+                <Image
+                  source={{ uri: item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}` }}
+                  style={illustrationStyles.image}
+                  resizeMode="cover"
                 />
-                <Text style={styles.illustrationLabel} numberOfLines={3}>
-                  {item.illustrationPrompt.replace("Soft watercolor, 2D animation style, warm earth tones, biblically inspired. ", "")}
-                </Text>
-              </View>
+              ) : (
+                <SceneIllustration
+                  sceneId={item.id}
+                  illustrationPrompt={item.illustrationPrompt}
+                  isVisible={Math.abs(index - currentScene) <= 1}
+                  onImageLoaded={(url) => {
+                    setScenes(prev => prev.map(s => s.id === item.id ? { ...s, imageUrl: url } : s));
+                  }}
+                />
+              )}
             </View>
 
             <View style={styles.narrationArea}>

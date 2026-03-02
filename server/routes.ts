@@ -16,6 +16,7 @@ import {
   generateDinnerTableTopic,
   generateStoryScenes,
   generateScripturalEncouragement,
+  generateSceneImage,
 } from "./services/ai-engine";
 import { db } from "./db";
 import {
@@ -2343,6 +2344,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(inserted);
     } catch (err) {
       console.error("Generate scenes error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/kids/scene/:id/generate-image", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const scene = await db
+        .select()
+        .from(kidsStoryScenes)
+        .where(eq(kidsStoryScenes.id, id))
+        .limit(1);
+
+      if (!scene.length) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+
+      if (scene[0].imageUrl) {
+        return res.json({ imageUrl: scene[0].imageUrl });
+      }
+
+      const imageUrl = await generateSceneImage(
+        scene[0].illustrationPrompt,
+        id
+      );
+
+      if (!imageUrl) {
+        return res.status(500).json({ error: "Image generation failed" });
+      }
+
+      await db
+        .update(kidsStoryScenes)
+        .set({ imageUrl })
+        .where(eq(kidsStoryScenes.id, id));
+
+      return res.json({ imageUrl });
+    } catch (err) {
+      console.error("Scene image generation error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });
