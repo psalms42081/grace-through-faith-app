@@ -159,8 +159,8 @@ function HeatSquare({
   const bgColor = isDark ? "#1A1A2E" : "#F3F4F6";
 
   return (
-    <Pressable onPress={onPress} testID={`heatmap-book-${bookId}`}>
-      <Svg width={cellSize} height={cellSize}>
+    <View style={{ width: cellSize, height: cellSize }} testID={`heatmap-book-${bookId}`}>
+      <Svg width={cellSize} height={cellSize} style={{ pointerEvents: "none" as any }}>
         <Rect
           x={1}
           y={1}
@@ -180,14 +180,16 @@ function HeatSquare({
           fill={color}
           opacity={0.85}
         />
-        <Rect x={1} y={1} width={cellSize - 2} height={cellSize - 2} rx={4} fill="transparent" />
       </Svg>
-      <View style={[squareStyles.labelContainer, { width: cellSize, height: cellSize }]}>
+      <Pressable
+        onPress={onPress}
+        style={[squareStyles.labelContainer, { width: cellSize, height: cellSize }]}
+      >
         <Text style={[squareStyles.label, { color: progress > 25 ? "#fff" : isDark ? "#888" : "#666", fontSize: cellSize < 36 ? 7 : 8 }]}>
           {abbr}
         </Text>
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
