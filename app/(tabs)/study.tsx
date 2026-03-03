@@ -292,6 +292,9 @@ interface ChapterSummaryData {
   narrativeRole: string;
   focusThemes: string[];
   pastoralFrame: string;
+  thesisStatement: string | null;
+  doctrinalAnchor: string | null;
+  narrativePlacement: string | null;
 }
 
 function DeepStudyIntro({
@@ -346,18 +349,31 @@ function DeepStudyIntro({
 
       {summaryData ? (
         <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            BIG IDEA
-          </Text>
-          <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-            {summaryData.bigIdea}
-          </Text>
+          {summaryData.thesisStatement ? (
+            <>
+              <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                THESIS
+              </Text>
+              <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {summaryData.thesisStatement}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                BIG IDEA
+              </Text>
+              <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {summaryData.bigIdea}
+              </Text>
+            </>
+          )}
 
           <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold", marginTop: 14 }]}>
-            NARRATIVE ROLE
+            NARRATIVE PLACEMENT
           </Text>
           <Text style={[introStyles.focusLine, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {summaryData.narrativeRole}
+            {summaryData.narrativePlacement || summaryData.narrativeRole}
           </Text>
 
           {summaryData.focusThemes.length > 0 && (

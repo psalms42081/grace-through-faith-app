@@ -3034,6 +3034,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         narrativeRole: summary.narrativeRole,
         focusThemes: JSON.parse(summary.focusThemes),
         pastoralFrame: summary.pastoralFrame,
+        thesisStatement: summary.thesisStatement || null,
+        doctrinalAnchor: summary.doctrinalAnchor || null,
+        narrativePlacement: summary.narrativePlacement || null,
         version: summary.version,
       });
     } catch (err) {
