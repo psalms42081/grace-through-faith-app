@@ -81,6 +81,31 @@ All content is:
 Wave 1 establishes the doctrinal core of the platform. Future waves will extend the same structured theological model to the remaining beliefs.
 
 Seed files: `server/seed-beliefs-wave1.ts` (orchestrator), `server/seeds/wave1-beliefs-1-2.ts`, `server/seeds/wave1-beliefs-3-4.ts`, `server/seeds/wave1-beliefs-5-6.ts`, `server/seeds/wave1-belief-7.ts`.
+
+### Wave 2 — 28 Beliefs Deep Dive (Beliefs 8-11)
+
+**Status: Complete and Fully Seeded**
+
+Wave 2 covers the soteriological and experiential core of Adventist theology — the cosmic conflict, Christ's atoning work, the experience of salvation, and spiritual growth.
+
+**Scope Delivered**
+
+Beliefs Included:
+8. The Great Controversy
+9. The Life, Death, and Resurrection of Christ
+10. The Experience of Salvation
+11. Growing in Christ
+
+Each belief module contains:
+- 4 structured lessons: Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges
+- 6 section types per lesson: Anchor, Explain, Integrate, Practice, Reflection, Assessment
+- 5 assessment items per lesson (3 recall, 2 conceptual clarity)
+
+**Totals:** 16 lessons, 96 lesson sections, 16 assessments, 80 assessment items
+
+All Wave 2 records use the `w2` ID prefix scheme (`w2l-*`, `w2s-*`, `w2a-*`, `w2i-*`).
+
+Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave2.ts` (orchestrator), `server/seeds/wave2-belief-8.ts`, `server/seeds/wave2-belief-9.ts`, `server/seeds/wave2-belief-10.ts`, `server/seeds/wave2-belief-11.ts`.
 - **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
 - **Connect Tab (new):** Church Connect (map + list view), Small Groups (links to prayer groups), Live Streams (Jitsi Meet via WebView), Family Dashboard access.
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
