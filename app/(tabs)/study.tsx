@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -188,6 +189,298 @@ function NextLayerCTA({
         </View>
       )}
     </View>
+  );
+}
+
+const DEEP_SESSION_KEY = "@grace-through-faith/deep-session";
+
+interface DeepSessionState {
+  active: boolean;
+  layerIndex: number;
+  startedAt: number;
+  completedLayersDuringSession: string[];
+  bookId: number | null;
+  chapter: number | null;
+}
+
+function estimateSessionTime(completedLayers: Set<string>): string {
+  let remaining = 0;
+  for (const layer of LAYER_ORDER) {
+    if (!completedLayers.has(layer)) {
+      if (layer === "word" || layer === "context") remaining += 4;
+      else remaining += 8;
+    }
+  }
+  if (remaining <= 0) return "0 min";
+  const low = Math.max(remaining - 3, 1);
+  const high = remaining + 5;
+  return `${low}\u2013${high} min`;
+}
+
+function DeepStudyEntryButton({
+  completedLayers,
+  onStart,
+  theme,
+  isPaused,
+}: {
+  completedLayers: Set<string>;
+  onStart: () => void;
+  theme: typeof Colors.light;
+  isPaused?: boolean;
+}) {
+  const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
+  if (allDone) return null;
+
+  const timeEst = estimateSessionTime(completedLayers);
+
+  return (
+    <Pressable
+      onPress={onStart}
+      style={({ pressed }) => [
+        dsStyles.entryBtn,
+        { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 },
+      ]}
+      testID="start-deep-study"
+    >
+      <View style={dsStyles.entryBtnContent}>
+        <Ionicons name={isPaused ? "play-circle-outline" : "compass-outline"} size={20} color="#fff" />
+        <View style={dsStyles.entryBtnTextWrap}>
+          <Text style={[dsStyles.entryBtnTitle, { fontFamily: "Inter_600SemiBold" }]}>
+            {isPaused ? "Resume Deep Study" : "Start Deep Study"}
+          </Text>
+          <Text style={[dsStyles.entryBtnSub, { fontFamily: "Inter_400Regular" }]}>
+            {isPaused ? "Continue where you left off" : `Guided 4-layer session  ${timeEst}`}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+      </View>
+    </Pressable>
+  );
+}
+
+function DeepSessionBar({
+  layerIndex,
+  onExit,
+  theme,
+}: {
+  layerIndex: number;
+  onExit: () => void;
+  theme: typeof Colors.light;
+}) {
+  return (
+    <View style={[dsStyles.sessionBar, { backgroundColor: theme.backgroundSecondary, borderBottomColor: theme.border }]}>
+      <View style={dsStyles.sessionBarLeft}>
+        <View style={[dsStyles.sessionBadge, { backgroundColor: theme.accent + "18" }]}>
+          <Ionicons name="compass" size={12} color={theme.accent} />
+          <Text style={[dsStyles.sessionBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            DEEP STUDY
+          </Text>
+        </View>
+        <View style={dsStyles.sessionDots}>
+          {LAYER_ORDER.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                dsStyles.sessionDot,
+                i <= layerIndex
+                  ? { backgroundColor: theme.accent }
+                  : { backgroundColor: theme.border },
+                i === layerIndex && dsStyles.sessionDotActive,
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={[dsStyles.sessionStepText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Step {layerIndex + 1} of 4
+        </Text>
+      </View>
+      <Pressable
+        onPress={onExit}
+        hitSlop={8}
+        style={({ pressed }) => [dsStyles.exitSessionBtn, { opacity: pressed ? 0.7 : 1 }]}
+        testID="exit-deep-session"
+      >
+        <Text style={[dsStyles.exitSessionText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+          Pause Session
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function DeepSessionAdvanceButton({
+  layerIndex,
+  isLastLayer,
+  onAdvance,
+  onFinish,
+  onMarkComplete,
+  isCompleted,
+  theme,
+}: {
+  layerIndex: number;
+  isLastLayer: boolean;
+  onAdvance: () => void;
+  onFinish: () => void;
+  onMarkComplete: () => void;
+  isCompleted: boolean;
+  theme: typeof Colors.light;
+}) {
+  return (
+    <View style={dsStyles.advanceContainer}>
+      {!isCompleted && (
+        <Pressable
+          onPress={onMarkComplete}
+          style={({ pressed }) => [dsStyles.advanceSecondary, { borderColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Ionicons name="checkmark-circle-outline" size={16} color={theme.accent} />
+          <Text style={[dsStyles.advanceSecondaryText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            Mark Complete
+          </Text>
+        </Pressable>
+      )}
+      <Pressable
+        onPress={isLastLayer ? onFinish : onAdvance}
+        style={({ pressed }) => [dsStyles.advanceBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+        testID="deep-study-advance"
+      >
+        <Text style={[dsStyles.advanceBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+          {isLastLayer ? "Finish Session" : `Continue to ${LAYER_LABELS[LAYER_ORDER[layerIndex + 1]]}`}
+        </Text>
+        <Ionicons name={isLastLayer ? "checkmark-done" : "arrow-forward"} size={18} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
+
+function DeepSessionSummary({
+  completedDuring,
+  allCompletedLayers,
+  insightJournalMap,
+  transformJournalMap,
+  startedAt,
+  onDone,
+  onSavePrayer,
+  hasPrayerContent,
+  theme,
+}: {
+  completedDuring: string[];
+  allCompletedLayers: Set<string>;
+  insightJournalMap: Map<string, string>;
+  transformJournalMap: Map<string, string>;
+  startedAt: number;
+  onDone: () => void;
+  onSavePrayer: () => void;
+  hasPrayerContent: boolean;
+  theme: typeof Colors.light;
+}) {
+  const elapsed = Math.round((Date.now() - startedAt) / 60000);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
+  const transformFilled = TRANSFORMATION_SECTIONS.filter((s) => transformJournalMap.has(s.key));
+  const allEntries = [
+    ...insightFilled.map((s) => ({ ...s, content: insightJournalMap.get(s.key) ?? "", layerLabel: "Insight" })),
+    ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Transformation" })),
+  ];
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={dsStyles.summaryContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={dsStyles.summaryHeader}>
+        <Ionicons name="compass" size={28} color={theme.accent} />
+        <Text style={[dsStyles.summaryTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Session Complete
+        </Text>
+        <Text style={[dsStyles.summarySubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Deep study session finished"}
+        </Text>
+      </View>
+
+      <View style={[dsStyles.summaryCard, { backgroundColor: theme.backgroundCard }]}>
+        <Text style={[dsStyles.summaryCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          Layers Covered
+        </Text>
+        <View style={dsStyles.summaryLayers}>
+          {LAYER_ORDER.map((layer) => {
+            const done = allCompletedLayers.has(layer);
+            const visitedDuring = completedDuring.includes(layer);
+            return (
+              <View key={layer} style={dsStyles.summaryLayerRow}>
+                <Ionicons
+                  name={done ? "checkmark-circle" : visitedDuring ? "ellipse-outline" : "remove-outline"}
+                  size={18}
+                  color={done ? theme.accent : visitedDuring ? theme.textSecondary : theme.textMuted}
+                />
+                <Text style={[
+                  dsStyles.summaryLayerLabel,
+                  { color: done ? theme.text : theme.textMuted, fontFamily: done ? "Inter_600SemiBold" : "Inter_400Regular" },
+                ]}>
+                  {LAYER_LABELS[layer]}
+                </Text>
+                {done && <Text style={[dsStyles.summaryLayerCheck, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>Complete</Text>}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      {allEntries.length > 0 && (
+        <View style={[dsStyles.summaryCard, { backgroundColor: theme.backgroundCard }]}>
+          <Text style={[dsStyles.summaryCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Your Reflections ({allEntries.length})
+          </Text>
+          {allEntries.map((entry) => (
+            <Pressable
+              key={entry.key}
+              onPress={() => setExpandedSection(expandedSection === entry.key ? null : entry.key)}
+              style={[dsStyles.summaryEntryRow, { borderBottomColor: theme.border }]}
+            >
+              <View style={dsStyles.summaryEntryHeader}>
+                <Ionicons name={entry.icon as any} size={14} color={entry.color} />
+                <Text style={[dsStyles.summaryEntryTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                  {entry.title}
+                </Text>
+                <Text style={[dsStyles.summaryEntryBadge, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {entry.layerLabel}
+                </Text>
+                <Ionicons name={expandedSection === entry.key ? "chevron-up" : "chevron-down"} size={14} color={theme.textMuted} />
+              </View>
+              {expandedSection === entry.key && (
+                <Text style={[dsStyles.summaryEntryContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {entry.content}
+                </Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <View style={dsStyles.summaryCTAs}>
+        {hasPrayerContent && (
+          <Pressable
+            onPress={onSavePrayer}
+            style={({ pressed }) => [dsStyles.summaryCTASecondary, { borderColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <Ionicons name="bookmark-outline" size={16} color={theme.accent} />
+            <Text style={[dsStyles.summaryCTASecondaryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              Save Prayer Response
+            </Text>
+          </Pressable>
+        )}
+        <Pressable
+          onPress={onDone}
+          style={({ pressed }) => [dsStyles.summaryCTAPrimary, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+          testID="deep-study-done"
+        >
+          <Text style={[dsStyles.summaryCTAPrimaryText, { fontFamily: "Inter_600SemiBold" }]}>
+            Done
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -527,8 +820,190 @@ export default function StudyScreen() {
     }
   }, [activeTab]);
 
+  const [deepSession, setDeepSessionRaw] = useState<DeepSessionState>({
+    active: false,
+    layerIndex: 0,
+    startedAt: 0,
+    completedLayersDuringSession: [],
+    bookId: null,
+    chapter: null,
+  });
+  const deepSessionRef = useRef(deepSession);
+  const setDeepSession = useCallback((s: DeepSessionState) => {
+    deepSessionRef.current = s;
+    setDeepSessionRaw(s);
+  }, []);
+  const [showSummary, setShowSummary] = useState(false);
+
+  const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(DEEP_SESSION_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as DeepSessionState;
+          if (parsed.bookId === bookId && parsed.chapter === chapter) {
+            if (parsed.active) {
+              setDeepSession(parsed);
+              setActiveTab(LAYER_ORDER[parsed.layerIndex]);
+            } else {
+              setPausedLayerIndex(parsed.layerIndex);
+              setDeepSession(parsed);
+            }
+          } else {
+            await AsyncStorage.removeItem(DEEP_SESSION_KEY);
+          }
+        }
+      } catch {}
+    })();
+  }, [bookId, chapter]);
+
+  const persistSession = useCallback(async (state: DeepSessionState, remove?: boolean) => {
+    setDeepSession(state);
+    if (remove || (!state.active && !state.bookId)) {
+      await AsyncStorage.removeItem(DEEP_SESSION_KEY);
+    } else {
+      await AsyncStorage.setItem(DEEP_SESSION_KEY, JSON.stringify(state));
+    }
+  }, []);
+
+  const startDeepSession = useCallback(() => {
+    if (pausedLayerIndex !== null && pausedLayerIndex > 0) {
+      const ds = deepSessionRef.current;
+      const resumeIdx = Math.min(pausedLayerIndex, LAYER_ORDER.length - 1);
+      const resumed: DeepSessionState = {
+        ...ds,
+        active: true,
+        layerIndex: resumeIdx,
+        bookId: ds.bookId ?? bookId,
+        chapter: ds.chapter ?? chapter,
+        startedAt: ds.startedAt || Date.now(),
+      };
+      persistSession(resumed);
+      setActiveTab(LAYER_ORDER[resumeIdx]);
+      setPausedLayerIndex(null);
+      setShowSummary(false);
+      return;
+    }
+    const firstIncomplete = LAYER_ORDER.findIndex((l) => !completedLayers.has(l));
+    const startIdx = firstIncomplete >= 0 ? firstIncomplete : 0;
+    const state: DeepSessionState = {
+      active: true,
+      layerIndex: startIdx,
+      startedAt: Date.now(),
+      completedLayersDuringSession: [],
+      bookId,
+      chapter,
+    };
+    persistSession(state);
+    setActiveTab(LAYER_ORDER[startIdx]);
+    setPausedLayerIndex(null);
+    setShowSummary(false);
+  }, [bookId, chapter, completedLayers, persistSession, pausedLayerIndex]);
+
+  const exitDeepSession = useCallback((abandon?: boolean) => {
+    const current = deepSessionRef.current;
+    if (abandon) {
+      persistSession({ active: false, layerIndex: 0, startedAt: 0, completedLayersDuringSession: [], bookId: null, chapter: null }, true);
+      setShowSummary(false);
+      setPausedLayerIndex(null);
+    } else {
+      setPausedLayerIndex(current.layerIndex);
+      persistSession({ ...current, active: false });
+      setShowSummary(false);
+    }
+  }, [persistSession]);
+
+  const advanceDeepSession = useCallback(() => {
+    const ds = deepSessionRef.current;
+    if (ds.layerIndex >= LAYER_ORDER.length - 1) {
+      const visited = [...ds.completedLayersDuringSession];
+      const currentLayer = LAYER_ORDER[ds.layerIndex];
+      if (!visited.includes(currentLayer)) visited.push(currentLayer);
+      const final = { ...ds, active: false, completedLayersDuringSession: visited };
+      setDeepSession(final);
+      AsyncStorage.removeItem(DEEP_SESSION_KEY);
+      setShowSummary(true);
+      return;
+    }
+    const nextIdx = ds.layerIndex + 1;
+    const visited = [...ds.completedLayersDuringSession];
+    const currentLayer = LAYER_ORDER[ds.layerIndex];
+    if (!visited.includes(currentLayer)) visited.push(currentLayer);
+    const next: DeepSessionState = { ...ds, layerIndex: nextIdx, completedLayersDuringSession: visited };
+    persistSession(next);
+    setActiveTab(LAYER_ORDER[nextIdx]);
+  }, [persistSession, setDeepSession]);
+
+  const finishDeepSession = useCallback(() => {
+    const ds = deepSessionRef.current;
+    const visited = [...ds.completedLayersDuringSession];
+    const currentLayer = LAYER_ORDER[ds.layerIndex];
+    if (!visited.includes(currentLayer)) visited.push(currentLayer);
+    const final = { ...ds, active: false, completedLayersDuringSession: visited };
+    setDeepSession(final);
+    AsyncStorage.removeItem(DEEP_SESSION_KEY);
+    setShowSummary(true);
+  }, [setDeepSession]);
+
+  const insightJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=voices`;
+  const { data: insightEntries } = useQuery<JournalEntry[]>({
+    queryKey: [insightJournalKey],
+    enabled: canTrack,
+  });
+  const insightJournalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (insightEntries ?? []).forEach((e) => map.set(e.sectionKey, e.content));
+    return map;
+  }, [insightEntries]);
+
+  const transformJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=application`;
+  const { data: transformEntries } = useQuery<JournalEntry[]>({
+    queryKey: [transformJournalKey],
+    enabled: canTrack,
+  });
+  const transformJournalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (transformEntries ?? []).forEach((e) => map.set(e.sectionKey, e.content));
+    return map;
+  }, [transformEntries]);
+
+  const prayerContent = transformJournalMap.get("prayer_response") ?? "";
+
+  const handleSavePrayerFromSummary = useCallback(async () => {
+    if (!prayerContent) return;
+    try {
+      await apiRequest("POST", "/api/prayers", {
+        userId,
+        title: "Study Prayer Response",
+        content: prayerContent,
+        category: "study",
+      });
+    } catch {}
+    router.push("/prayer-journal");
+  }, [userId, prayerContent]);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  if (showSummary) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
+        <DeepSessionSummary
+          completedDuring={deepSession.completedLayersDuringSession}
+          allCompletedLayers={completedLayers}
+          insightJournalMap={insightJournalMap}
+          transformJournalMap={transformJournalMap}
+          startedAt={deepSession.startedAt}
+          onDone={() => exitDeepSession(true)}
+          onSavePrayer={handleSavePrayerFromSummary}
+          hasPrayerContent={prayerContent.length > 0}
+          theme={theme}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -541,7 +1016,15 @@ export default function StudyScreen() {
         </Text>
       </View>
 
-      {canTrack && (
+      {deepSession.active && (
+        <DeepSessionBar
+          layerIndex={deepSession.layerIndex}
+          onExit={exitDeepSession}
+          theme={theme}
+        />
+      )}
+
+      {canTrack && !deepSession.active && (
         <LayerProgressBar
           activeTab={activeTab}
           completedLayers={completedLayers}
@@ -550,46 +1033,59 @@ export default function StudyScreen() {
         />
       )}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.tabScroll, { backgroundColor: theme.background }]}
-        contentContainerStyle={styles.tabContainer}
-      >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <Pressable
-              key={tab.id}
-              onPress={() => setActiveTab(tab.id)}
-              style={[
-                styles.tabPill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
-                  borderColor: isActive ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <Ionicons
-                name={tab.icon}
-                size={14}
-                color={isActive ? "#fff" : theme.textSecondary}
-              />
-              <Text
+      {canTrack && !deepSession.active && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+          <DeepStudyEntryButton
+            completedLayers={completedLayers}
+            onStart={startDeepSession}
+            theme={theme}
+            isPaused={hasPausedSession}
+          />
+        </View>
+      )}
+
+      {!deepSession.active && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.tabScroll, { backgroundColor: theme.background }]}
+          contentContainerStyle={styles.tabContainer}
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <Pressable
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id)}
                 style={[
-                  styles.tabLabel,
+                  styles.tabPill,
                   {
-                    color: isActive ? "#fff" : theme.textSecondary,
-                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
+                    backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
+                    borderColor: isActive ? theme.accent : theme.border,
                   },
                 ]}
               >
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Ionicons
+                  name={tab.icon}
+                  size={14}
+                  color={isActive ? "#fff" : theme.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color: isActive ? "#fff" : theme.textSecondary,
+                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
+                    },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -601,15 +1097,27 @@ export default function StudyScreen() {
         {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
         {activeTab === "application" && <ApplicationTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
 
-        <NextLayerCTA
-          activeTab={activeTab}
-          completedLayers={completedLayers}
-          onMarkComplete={handleMarkComplete}
-          onNextLayer={handleNextLayer}
-          isCompleted={completedLayers.has(activeTab)}
-          canComplete={canTrack}
-          theme={theme}
-        />
+        {deepSession.active ? (
+          <DeepSessionAdvanceButton
+            layerIndex={deepSession.layerIndex}
+            isLastLayer={deepSession.layerIndex >= LAYER_ORDER.length - 1}
+            onAdvance={advanceDeepSession}
+            onFinish={finishDeepSession}
+            onMarkComplete={handleMarkComplete}
+            isCompleted={completedLayers.has(activeTab)}
+            theme={theme}
+          />
+        ) : (
+          <NextLayerCTA
+            activeTab={activeTab}
+            completedLayers={completedLayers}
+            onMarkComplete={handleMarkComplete}
+            onNextLayer={handleNextLayer}
+            isCompleted={completedLayers.has(activeTab)}
+            canComplete={canTrack}
+            theme={theme}
+          />
+        )}
       </ScrollView>
     </View>
   );
@@ -2435,6 +2943,17 @@ const lpStyles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.2,
   },
+  nextStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  nextStepText: {
+    fontSize: 12,
+    flex: 1,
+  },
 });
 
 const ctaStyles = StyleSheet.create({
@@ -2563,5 +3082,201 @@ const jpStyles = StyleSheet.create({
   },
   prayerLinkText: {
     fontSize: 12,
+  },
+});
+
+const dsStyles = StyleSheet.create({
+  entryBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  entryBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  entryBtnTextWrap: {
+    flex: 1,
+  },
+  entryBtnTitle: {
+    color: "#fff",
+    fontSize: 15,
+  },
+  entryBtnSub: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 1,
+  },
+  sessionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  sessionBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sessionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  sessionBadgeText: {
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  sessionDots: {
+    flexDirection: "row",
+    gap: 4,
+    alignItems: "center",
+  },
+  sessionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sessionDotActive: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  sessionStepText: {
+    fontSize: 11,
+  },
+  exitSessionBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  exitSessionText: {
+    fontSize: 12,
+  },
+  advanceContainer: {
+    paddingHorizontal: 4,
+    paddingTop: 20,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  advanceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  advanceBtnText: {
+    color: "#fff",
+    fontSize: 15,
+  },
+  advanceSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  advanceSecondaryText: {
+    fontSize: 13,
+  },
+  summaryContainer: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  summaryHeader: {
+    alignItems: "center",
+    marginBottom: 28,
+    gap: 8,
+  },
+  summaryTitle: {
+    fontSize: 24,
+    marginTop: 8,
+  },
+  summarySubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  summaryCard: {
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+  summaryCardTitle: {
+    fontSize: 15,
+    marginBottom: 12,
+  },
+  summaryLayers: {
+    gap: 10,
+  },
+  summaryLayerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  summaryLayerLabel: {
+    fontSize: 14,
+    flex: 1,
+  },
+  summaryLayerCheck: {
+    fontSize: 12,
+  },
+  summaryEntryRow: {
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  summaryEntryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  summaryEntryTitle: {
+    fontSize: 13,
+    flex: 1,
+  },
+  summaryEntryBadge: {
+    fontSize: 10,
+  },
+  summaryEntryContent: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+    paddingLeft: 22,
+  },
+  summaryCTAs: {
+    marginTop: 12,
+    gap: 10,
+  },
+  summaryCTAPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  summaryCTAPrimaryText: {
+    color: "#fff",
+    fontSize: 15,
+  },
+  summaryCTASecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  summaryCTASecondaryText: {
+    fontSize: 14,
   },
 });
