@@ -63,6 +63,7 @@ import {
   prayerGroups,
   prayerGroupMembers,
   layerCompletions,
+  studyJournalEntries,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -3187,6 +3188,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(summary);
     } catch (err) {
       console.error("Book layer summary error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── STUDY JOURNAL ENTRIES ──────────────────────────────────────────────────
+
+  app.get("/api/study-journal", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const bookId = Number(req.query.bookId);
+      const chapter = Number(req.query.chapter);
+      const layer = req.query.layer ? String(req.query.layer) : undefined;
+
+      if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
+
+      let conditions = [
+        eq(studyJournalEntries.userId, userId),
+        eq(studyJournalEntries.bookId, bookId),
+        eq(studyJournalEntries.chapter, chapter),
+      ];
+      if (layer) conditions.push(eq(studyJournalEntries.layer, layer));
+
+      const rows = await db
+        .select({
+          id: studyJournalEntries.id,
+          sectionKey: studyJournalEntries.sectionKey,
+          layer: studyJournalEntries.layer,
+          content: studyJournalEntries.content,
+          updatedAt: studyJournalEntries.updatedAt,
+        })
+        .from(studyJournalEntries)
+        .where(and(...conditions));
+
+      return res.json(rows);
+    } catch (err) {
+      console.error("Study journal fetch error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/study-journal", async (req, res) => {
+    try {
+      const { userId, bookId, chapter, layer, sectionKey, content } = req.body;
+      if (!userId || bookId == null || chapter == null || !layer || !sectionKey) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (!content || content.trim().length === 0) {
+        await db
+          .delete(studyJournalEntries)
+          .where(
+            and(
+              eq(studyJournalEntries.userId, String(userId)),
+              eq(studyJournalEntries.bookId, Number(bookId)),
+              eq(studyJournalEntries.chapter, Number(chapter)),
+              eq(studyJournalEntries.layer, String(layer)),
+              eq(studyJournalEntries.sectionKey, String(sectionKey))
+            )
+          );
+        return res.json({ success: true, deleted: true });
+      }
+
+      const existing = await db
+        .select({ id: studyJournalEntries.id })
+        .from(studyJournalEntries)
+        .where(
+          and(
+            eq(studyJournalEntries.userId, String(userId)),
+            eq(studyJournalEntries.bookId, Number(bookId)),
+            eq(studyJournalEntries.chapter, Number(chapter)),
+            eq(studyJournalEntries.layer, String(layer)),
+            eq(studyJournalEntries.sectionKey, String(sectionKey))
+          )
+        );
+
+      if (existing.length > 0) {
+        await db
+          .update(studyJournalEntries)
+          .set({ content: String(content).trim(), updatedAt: new Date() })
+          .where(eq(studyJournalEntries.id, existing[0].id));
+      } else {
+        await db
+          .insert(studyJournalEntries)
+          .values({
+            userId: String(userId),
+            bookId: Number(bookId),
+            chapter: Number(chapter),
+            layer: String(layer),
+            sectionKey: String(sectionKey),
+            content: String(content).trim(),
+          });
+      }
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Study journal save error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

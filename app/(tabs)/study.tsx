@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
@@ -141,6 +141,197 @@ function NextLayerCTA({
       )}
     </View>
   );
+}
+
+interface JournalEntry {
+  id: string;
+  sectionKey: string;
+  layer: string;
+  content: string;
+  updatedAt: string;
+}
+
+interface PromptSection {
+  key: string;
+  title: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
+  placeholder: string;
+}
+
+const INSIGHT_SECTIONS: PromptSection[] = [
+  { key: "theological_themes", title: "Theological Themes", icon: "prism-outline", color: "#C9933A", placeholder: "What theological themes emerge from this passage?" },
+  { key: "revelation_of_god", title: "Revelation of God", icon: "eye-outline", color: "#3B6CB5", placeholder: "What does this passage reveal about God's character or nature?" },
+  { key: "revelation_of_humanity", title: "Revelation of Humanity", icon: "people-outline", color: "#2E7D32", placeholder: "What does this teach about humanity's condition or calling?" },
+  { key: "narrative_connection", title: "Biblical Narrative Connection", icon: "git-merge-outline", color: "#8B5CF6", placeholder: "How does this connect to the larger biblical story?" },
+];
+
+const TRANSFORMATION_SECTIONS: PromptSection[] = [
+  { key: "belief_challenged", title: "Belief or Assumption Challenged", icon: "bulb-outline", color: "#C9933A", placeholder: "What belief or assumption does this text challenge in you?" },
+  { key: "habit_shaped", title: "Habit or Practice Shaped", icon: "footsteps-outline", color: "#2E7D32", placeholder: "What habit or daily practice could this shape?" },
+  { key: "conversation_impacted", title: "Conversation or Relationship Impacted", icon: "chatbubbles-outline", color: "#3B6CB5", placeholder: "How might this change a conversation or relationship?" },
+  { key: "prayer_response", title: "Prayer Response", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
+];
+
+function JournalPromptCard({
+  section,
+  journalMap,
+  onSave,
+  isSaving,
+  theme,
+  showPrayerLink,
+  userId,
+}: {
+  section: PromptSection;
+  journalMap: Map<string, string>;
+  onSave: (sectionKey: string, content: string) => void;
+  isSaving: boolean;
+  theme: typeof Colors.light;
+  showPrayerLink?: boolean;
+  userId?: string;
+}) {
+  const savedContent = journalMap.get(section.key) ?? "";
+  const [text, setText] = useState(savedContent);
+  const [editing, setEditing] = useState(false);
+  const hasContent = savedContent.length > 0;
+
+  useEffect(() => {
+    setText(journalMap.get(section.key) ?? "");
+  }, [journalMap, section.key]);
+
+  const handleSave = () => {
+    onSave(section.key, text);
+    setEditing(false);
+  };
+
+  return (
+    <View style={[jpStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+      <View style={jpStyles.header}>
+        <View style={[jpStyles.iconWrap, { backgroundColor: section.color + "18" }]}>
+          <Ionicons name={section.icon} size={16} color={section.color} />
+        </View>
+        <Text style={[jpStyles.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          {section.title}
+        </Text>
+        {hasContent && !editing && (
+          <Ionicons name="checkmark-circle" size={18} color={theme.accent} style={jpStyles.check} />
+        )}
+      </View>
+
+      {editing || !hasContent ? (
+        <View>
+          <TextInput
+            style={[
+              jpStyles.input,
+              {
+                color: theme.text,
+                backgroundColor: theme.background,
+                borderColor: theme.border,
+                fontFamily: "Inter_400Regular",
+              },
+            ]}
+            placeholder={section.placeholder}
+            placeholderTextColor={theme.textMuted}
+            multiline
+            value={text}
+            onChangeText={setText}
+            textAlignVertical="top"
+          />
+          <View style={jpStyles.actions}>
+            {hasContent && (
+              <Pressable onPress={() => { setText(savedContent); setEditing(false); }}>
+                <Text style={[jpStyles.actionText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={handleSave}
+              disabled={isSaving || text.trim().length === 0}
+              style={[jpStyles.saveBtn, { backgroundColor: theme.accent, opacity: isSaving || text.trim().length === 0 ? 0.5 : 1 }]}
+            >
+              <Text style={[jpStyles.saveBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                {isSaving ? "Saving..." : "Save"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable onPress={() => setEditing(true)}>
+          <Text style={[jpStyles.savedContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            {savedContent}
+          </Text>
+          <Text style={[jpStyles.editHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Tap to edit
+          </Text>
+        </Pressable>
+      )}
+
+      {showPrayerLink && section.key === "prayer_response" && hasContent && (
+        <Pressable
+          onPress={async () => {
+            try {
+              await apiRequest("POST", "/api/prayers", {
+                userId: userId || "guest",
+                title: "Study Prayer Response",
+                content: savedContent,
+                category: "study",
+              });
+            } catch {}
+            router.push("/prayer-journal");
+          }}
+          style={[jpStyles.prayerLink, { backgroundColor: section.color + "12" }]}
+        >
+          <Ionicons name="bookmark-outline" size={14} color={section.color} />
+          <Text style={[jpStyles.prayerLinkText, { color: section.color, fontFamily: "Inter_500Medium" }]}>
+            Save to Prayer Journal
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function useJournalEntries(userId: string, bookId: number | null, chapter: number | null, layer: string) {
+  const queryClient = useQueryClient();
+  const canFetch = bookId !== null && chapter !== null;
+  const queryKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=${layer}`;
+
+  const { data: entries } = useQuery<JournalEntry[]>({
+    queryKey: [queryKey],
+    enabled: canFetch,
+  });
+
+  const journalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (entries ?? []).forEach((e) => map.set(e.sectionKey, e.content));
+    return map;
+  }, [entries]);
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ sectionKey, content }: { sectionKey: string; content: string }) => {
+      const res = await apiRequest("POST", "/api/study-journal", {
+        userId,
+        bookId,
+        chapter,
+        layer,
+        sectionKey,
+        content,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+    },
+  });
+
+  const handleSave = useCallback((sectionKey: string, content: string) => {
+    if (canFetch) {
+      saveMutation.mutate({ sectionKey, content });
+    }
+  }, [canFetch, saveMutation]);
+
+  return { journalMap, handleSave, isSaving: saveMutation.isPending };
 }
 
 const TABS: { id: Tab; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -1143,6 +1334,11 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [didInit, setDidInit] = useState(false);
   const [activeCommentator, setActiveCommentator] = useState<string | null>(null);
+  const { userId } = useAuth();
+  const bookId = selectedBook?.id ?? null;
+  const { journalMap, handleSave: handleJournalSave, isSaving: isJournalSaving } = useJournalEntries(
+    userId, bookId, selectedChapter, "voices"
+  );
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -1441,6 +1637,25 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
               )}
             </View>
           )}
+
+          <View style={jpStyles.sectionDivider}>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+            <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+              Your Insights
+            </Text>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+          </View>
+
+          {INSIGHT_SECTIONS.map((section) => (
+            <JournalPromptCard
+              key={section.key}
+              section={section}
+              journalMap={journalMap}
+              onSave={handleJournalSave}
+              isSaving={isJournalSaving}
+              theme={theme}
+            />
+          ))}
         </>
       )}
     </View>
@@ -1451,6 +1666,11 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [didInit, setDidInit] = useState(false);
+  const { userId } = useAuth();
+  const appBookId = selectedBook?.id ?? null;
+  const { journalMap, handleSave: handleJournalSave, isSaving: isJournalSaving } = useJournalEntries(
+    userId, appBookId, selectedChapter, "application"
+  );
 
   const { data: books } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -1734,6 +1954,27 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
               )}
             </View>
           )}
+
+          <View style={jpStyles.sectionDivider}>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+            <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+              Your Response
+            </Text>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+          </View>
+
+          {TRANSFORMATION_SECTIONS.map((section) => (
+            <JournalPromptCard
+              key={section.key}
+              section={section}
+              journalMap={journalMap}
+              onSave={handleJournalSave}
+              isSaving={isJournalSaving}
+              theme={theme}
+              showPrayerLink={section.key === "prayer_response"}
+              userId={userId}
+            />
+          ))}
         </>
       )}
     </View>
@@ -2178,5 +2419,101 @@ const ctaStyles = StyleSheet.create({
   },
   completeText: {
     fontSize: 14,
+  },
+});
+
+const jpStyles = StyleSheet.create({
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 14,
+    flex: 1,
+  },
+  check: {
+    marginLeft: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 80,
+    maxHeight: 160,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 10,
+  },
+  actionText: {
+    fontSize: 13,
+  },
+  saveBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  saveBtnText: {
+    color: "#fff",
+    fontSize: 13,
+  },
+  savedContent: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  editHint: {
+    fontSize: 11,
+    marginTop: 6,
+    opacity: 0.6,
+  },
+  sectionDivider: {
+    marginTop: 20,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionDividerLine: {
+    flex: 1,
+    height: 1,
+    opacity: 0.3,
+  },
+  sectionDividerText: {
+    fontSize: 11,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+  },
+  prayerLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+  },
+  prayerLinkText: {
+    fontSize: 12,
   },
 });

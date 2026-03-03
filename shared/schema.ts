@@ -953,3 +953,34 @@ export const layerCompletions = pgTable(
 );
 
 export type LayerCompletion = typeof layerCompletions.$inferSelect;
+
+// ─── STUDY JOURNAL ENTRIES ─────────────────────────────────────────────────
+
+export const studyJournalEntries = pgTable(
+  "study_journal_entries",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    layer: varchar("layer", { length: 20 }).notNull(),
+    sectionKey: varchar("section_key", { length: 60 }).notNull(),
+    content: text("content").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userChapterSection: uniqueIndex("journal_user_chapter_section").on(
+      table.userId,
+      table.bookId,
+      table.chapter,
+      table.layer,
+      table.sectionKey
+    ),
+    userBookIdx: index("journal_user_book_idx").on(table.userId, table.bookId),
+  })
+);
+
+export type StudyJournalEntry = typeof studyJournalEntries.$inferSelect;
