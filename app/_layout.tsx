@@ -75,6 +75,7 @@ function RootLayoutNav() {
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
       <Stack.Screen name="christian-traditions" options={{ headerShown: false }} />
       <Stack.Screen name="tradition/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="parent-controls" options={{ headerShown: false }} />
     </Stack>
   );
 }

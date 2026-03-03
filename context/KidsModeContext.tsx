@@ -69,6 +69,10 @@ export function KidsModeProvider({ children }: { children: React.ReactNode }) {
         }
         if (childId) {
           setLastActiveChildId(childId);
+          setActiveChildProfileId(childId);
+        }
+        if (childName) {
+          setActiveChildName(childName);
         }
       } catch {}
       setIsLoading(false);

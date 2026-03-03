@@ -12,66 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-
-interface TraditionCollection {
-  id: string;
-  title: string;
-  subtitle: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  enabled: boolean;
-}
-
-const COLLECTIONS: TraditionCollection[] = [
-  {
-    id: "adventist",
-    title: "Adventist Studies",
-    subtitle: "28 Fundamental Beliefs & Sabbath-centered living",
-    icon: "school",
-    color: "#7C3AED",
-    enabled: true,
-  },
-  {
-    id: "baptist",
-    title: "Baptist Studies",
-    subtitle: "Believer\u2019s baptism, soul liberty & congregational governance",
-    icon: "water",
-    color: "#2563EB",
-    enabled: true,
-  },
-  {
-    id: "reformed",
-    title: "Reformed Studies",
-    subtitle: "Covenant theology & the five solas of the Reformation",
-    icon: "book",
-    color: "#0D9488",
-    enabled: true,
-  },
-  {
-    id: "catholic",
-    title: "Catholic Studies",
-    subtitle: "Sacramental theology, Tradition & Magisterium",
-    icon: "fitness",
-    color: "#DC2626",
-    enabled: false,
-  },
-  {
-    id: "methodist",
-    title: "Methodist Studies",
-    subtitle: "Wesleyan holiness, grace & social witness",
-    icon: "heart",
-    color: "#D97706",
-    enabled: false,
-  },
-  {
-    id: "orthodox",
-    title: "Orthodox Studies",
-    subtitle: "Theosis, liturgical worship & patristic tradition",
-    icon: "star",
-    color: "#9333EA",
-    enabled: false,
-  },
-];
+import { COLLECTIONS, getContentLabel } from "@/constants/traditions";
 
 export default function ChristianTraditionsScreen() {
   const colorScheme = useColorScheme();
@@ -122,7 +63,9 @@ export default function ChristianTraditionsScreen() {
 
         {COLLECTIONS.map((collection, i) => {
           const isLast = i === COLLECTIONS.length - 1;
-          if (collection.enabled) {
+          const label = getContentLabel(collection.traditionKey);
+
+          if (collection.isEnabled) {
             return (
               <Pressable
                 key={collection.id}
@@ -135,10 +78,15 @@ export default function ChristianTraditionsScreen() {
                 testID={`tradition-${collection.id}`}
               >
                 <View style={[st.collectionIcon, { backgroundColor: collection.color + "15" }]}>
-                  <Ionicons name={collection.icon} size={22} color={collection.color} />
+                  <Ionicons name={collection.icon as any} size={22} color={collection.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[st.collectionTitle, { color: theme.text }]}>{collection.title}</Text>
+                  <View style={st.titleRow}>
+                    <Text style={[st.collectionTitle, { color: theme.text }]}>{collection.title}</Text>
+                    <View style={[st.labelBadge, { backgroundColor: collection.color + "15" }]}>
+                      <Text style={[st.labelBadgeText, { color: collection.color }]}>{label}</Text>
+                    </View>
+                  </View>
                   <Text style={[st.collectionSub, { color: theme.textMuted }]}>{collection.subtitle}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -155,7 +103,7 @@ export default function ChristianTraditionsScreen() {
               ]}
             >
               <View style={[st.collectionIcon, { backgroundColor: collection.color + "10" }]}>
-                <Ionicons name={collection.icon} size={22} color={collection.color} />
+                <Ionicons name={collection.icon as any} size={22} color={collection.color} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[st.collectionTitle, { color: theme.text }]}>{collection.title}</Text>
@@ -265,10 +213,25 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+    marginBottom: 2,
+  },
   collectionTitle: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    marginBottom: 2,
+  },
+  labelBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  labelBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
   },
   collectionSub: {
     fontSize: 13,

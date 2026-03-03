@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,10 +27,12 @@ function showAlert(title: string, msg: string) {
 }
 
 export default function ParentControlsScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const theme = Colors.dark;
 
   const { pin, setPin, removePin, verifyPin } = useKidsMode();
 
@@ -67,6 +70,11 @@ export default function ParentControlsScreen() {
   };
 
   const handleChangePin = async () => {
+    if (!pin) {
+      showAlert("Error", "No PIN is currently set.");
+      resetFlow();
+      return;
+    }
     if (step === 0) {
       if (!verifyPin(currentInput)) {
         showAlert("Incorrect", "Current PIN is incorrect.");
@@ -95,6 +103,11 @@ export default function ParentControlsScreen() {
   };
 
   const handleRemovePin = async () => {
+    if (!pin) {
+      showAlert("Error", "No PIN is currently set.");
+      resetFlow();
+      return;
+    }
     if (!verifyPin(currentInput)) {
       showAlert("Incorrect", "Current PIN is incorrect.");
       setCurrentInput("");
@@ -108,18 +121,20 @@ export default function ParentControlsScreen() {
   const renderInput = (
     value: string,
     onChange: (v: string) => void,
-    placeholder: string
+    placeholder: string,
+    testID?: string
   ) => (
     <TextInput
-      style={st.input}
+      style={[st.input, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
       value={value}
       onChangeText={onChange}
       placeholder={placeholder}
-      placeholderTextColor="#5C5549"
+      placeholderTextColor={theme.textMuted}
       secureTextEntry
       keyboardType="number-pad"
       maxLength={4}
       autoFocus
+      testID={testID}
     />
   );
 
@@ -127,33 +142,32 @@ export default function ParentControlsScreen() {
     if (flow === "set") {
       return (
         <View style={st.flowCard}>
-          <Text style={st.flowTitle}>Set PIN</Text>
+          <Text style={[st.flowTitle, { color: theme.accent }]}>Set PIN</Text>
           {step === 0 ? (
             <>
-              {renderInput(newInput, setNewInput, "Enter 4-digit PIN")}
+              {renderInput(newInput, setNewInput, "Enter 4-digit PIN", "new-pin-input")}
               <Pressable
                 onPress={handleSetPin}
-                style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+                testID="submit-next"
               >
                 <Text style={st.btnText}>Next</Text>
               </Pressable>
             </>
           ) : (
             <>
-              {renderInput(confirmInput, setConfirmInput, "Confirm PIN")}
+              {renderInput(confirmInput, setConfirmInput, "Confirm PIN", "confirm-pin-input")}
               <Pressable
                 onPress={handleSetPin}
-                style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+                testID="submit-confirm"
               >
                 <Text style={st.btnText}>Confirm</Text>
               </Pressable>
             </>
           )}
-          <Pressable
-            onPress={resetFlow}
-            style={({ pressed }) => [st.btnSecondary, { opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={st.btnSecondaryText}>Cancel</Text>
+          <Pressable onPress={resetFlow} style={st.btnSecondary}>
+            <Text style={[st.btnSecondaryText, { color: theme.textMuted }]}>Cancel</Text>
           </Pressable>
         </View>
       );
@@ -162,43 +176,40 @@ export default function ParentControlsScreen() {
     if (flow === "change") {
       return (
         <View style={st.flowCard}>
-          <Text style={st.flowTitle}>Change PIN</Text>
+          <Text style={[st.flowTitle, { color: theme.accent }]}>Change PIN</Text>
           {step === 0 ? (
             <>
-              {renderInput(currentInput, setCurrentInput, "Current PIN")}
+              {renderInput(currentInput, setCurrentInput, "Current PIN", "current-pin-input")}
               <Pressable
                 onPress={handleChangePin}
-                style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
               >
                 <Text style={st.btnText}>Verify</Text>
               </Pressable>
             </>
           ) : step === 1 ? (
             <>
-              {renderInput(newInput, setNewInput, "New 4-digit PIN")}
+              {renderInput(newInput, setNewInput, "New 4-digit PIN", "new-pin-input")}
               <Pressable
                 onPress={handleChangePin}
-                style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
               >
                 <Text style={st.btnText}>Next</Text>
               </Pressable>
             </>
           ) : (
             <>
-              {renderInput(confirmInput, setConfirmInput, "Confirm new PIN")}
+              {renderInput(confirmInput, setConfirmInput, "Confirm new PIN", "confirm-pin-input")}
               <Pressable
                 onPress={handleChangePin}
-                style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
               >
                 <Text style={st.btnText}>Confirm</Text>
               </Pressable>
             </>
           )}
-          <Pressable
-            onPress={resetFlow}
-            style={({ pressed }) => [st.btnSecondary, { opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={st.btnSecondaryText}>Cancel</Text>
+          <Pressable onPress={resetFlow} style={st.btnSecondary}>
+            <Text style={[st.btnSecondaryText, { color: theme.textMuted }]}>Cancel</Text>
           </Pressable>
         </View>
       );
@@ -207,19 +218,17 @@ export default function ParentControlsScreen() {
     if (flow === "remove") {
       return (
         <View style={st.flowCard}>
-          <Text style={st.flowTitle}>Remove PIN</Text>
-          {renderInput(currentInput, setCurrentInput, "Enter current PIN")}
+          <Text style={[st.flowTitle, { color: "#EF4444" }]}>Remove PIN</Text>
+          {renderInput(currentInput, setCurrentInput, "Enter current PIN", "current-pin-input")}
           <Pressable
             onPress={handleRemovePin}
             style={({ pressed }) => [st.btn, st.btnDanger, { opacity: pressed ? 0.85 : 1 }]}
+            testID="submit-remove"
           >
             <Text style={st.btnText}>Remove</Text>
           </Pressable>
-          <Pressable
-            onPress={resetFlow}
-            style={({ pressed }) => [st.btnSecondary, { opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={st.btnSecondaryText}>Cancel</Text>
+          <Pressable onPress={resetFlow} style={st.btnSecondary}>
+            <Text style={[st.btnSecondaryText, { color: theme.textMuted }]}>Cancel</Text>
           </Pressable>
         </View>
       );
@@ -228,8 +237,10 @@ export default function ParentControlsScreen() {
     return null;
   };
 
+  const hasPin = !!pin;
+
   return (
-    <View style={[st.container, { paddingTop: topPad }]}>
+    <View style={[st.container, { backgroundColor: theme.background, paddingTop: topPad }]}>
       <View style={st.header}>
         <Pressable
           onPress={() => router.back()}
@@ -237,7 +248,7 @@ export default function ParentControlsScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
-        <Text style={st.headerTitle}>Parent Controls</Text>
+        <Text style={[st.headerTitle, { color: theme.text }]}>Parent Controls</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -246,25 +257,37 @@ export default function ParentControlsScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={st.section}>
+        <View style={[st.section, { backgroundColor: theme.backgroundCard }]}>
           <View style={st.sectionHeaderRow}>
-            <View style={st.sectionIconWrap}>
-              <Ionicons name="lock-closed" size={20} color="#C9933A" />
+            <View style={[st.sectionIconWrap, { backgroundColor: theme.accent + "15" }]}>
+              <Ionicons name="lock-closed" size={20} color={theme.accent} />
             </View>
-            <Text style={st.sectionTitle}>Kids Mode PIN</Text>
+            <Text style={[st.sectionTitle, { color: theme.text }]}>Kids Mode PIN</Text>
           </View>
-          <Text style={st.sectionDesc}>
-            {pin
-              ? "A PIN is currently set for Kids Mode."
-              : "No PIN set. Set a PIN to secure Kids Mode."}
+          <Text style={[st.sectionDesc, { color: theme.textSecondary }]}>
+            {hasPin
+              ? "A PIN is set. Children must enter it to exit Kids Mode or switch readers."
+              : "No PIN set. Children can freely exit Kids Mode. Set a PIN to require parent approval."}
           </Text>
+
+          <View style={[st.statusRow, { backgroundColor: hasPin ? "#10B981" + "15" : theme.textMuted + "10" }]}>
+            <Ionicons
+              name={hasPin ? "lock-closed" : "lock-open"}
+              size={16}
+              color={hasPin ? "#10B981" : theme.textMuted}
+            />
+            <Text style={[st.statusText, { color: hasPin ? "#10B981" : theme.textMuted }]}>
+              {hasPin ? "PIN Protected" : "No PIN Set"}
+            </Text>
+          </View>
 
           {flow === "idle" && (
             <View style={st.actionButtons}>
-              {!pin ? (
+              {!hasPin ? (
                 <Pressable
                   onPress={() => setFlow("set")}
-                  style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                  style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+                  testID="set-pin-btn"
                 >
                   <Ionicons name="key" size={18} color="#fff" style={{ marginRight: 8 }} />
                   <Text style={st.btnText}>Set PIN</Text>
@@ -273,7 +296,8 @@ export default function ParentControlsScreen() {
                 <>
                   <Pressable
                     onPress={() => setFlow("change")}
-                    style={({ pressed }) => [st.btn, { opacity: pressed ? 0.85 : 1 }]}
+                    style={({ pressed }) => [st.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
+                    testID="change-pin-btn"
                   >
                     <Ionicons name="swap-horizontal" size={18} color="#fff" style={{ marginRight: 8 }} />
                     <Text style={st.btnText}>Change PIN</Text>
@@ -281,9 +305,10 @@ export default function ParentControlsScreen() {
                   <Pressable
                     onPress={() => setFlow("remove")}
                     style={({ pressed }) => [st.btnOutline, { opacity: pressed ? 0.85 : 1 }]}
+                    testID="remove-pin-btn"
                   >
-                    <Ionicons name="trash-outline" size={18} color="#E57373" style={{ marginRight: 8 }} />
-                    <Text style={[st.btnText, { color: "#E57373" }]}>Remove PIN</Text>
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
+                    <Text style={[st.btnText, { color: "#EF4444" }]}>Remove PIN</Text>
                   </Pressable>
                 </>
               )}
@@ -292,16 +317,20 @@ export default function ParentControlsScreen() {
 
           {renderFlowContent()}
         </View>
+
+        <View style={[st.infoCard, { backgroundColor: theme.backgroundCard }]}>
+          <Ionicons name="information-circle-outline" size={18} color={theme.textMuted} />
+          <Text style={[st.infoText, { color: theme.textMuted }]}>
+            The PIN prevents children from exiting Kids Mode or switching readers without your permission. It is stored locally on this device.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
 const st = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#050507",
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -318,12 +347,10 @@ const st = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: "Lora_700Bold",
-    color: "#F0EBE0",
   },
   section: {
     marginHorizontal: 20,
     marginTop: 24,
-    backgroundColor: "#141518",
     borderRadius: 20,
     padding: 24,
   },
@@ -337,21 +364,32 @@ const st = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(201,147,58,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   sectionTitle: {
     fontSize: 18,
     fontFamily: "Inter_600SemiBold",
-    color: "#F0EBE0",
   },
   sectionDesc: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: "#5C5549",
-    marginBottom: 20,
+    lineHeight: 21,
+    marginBottom: 14,
     marginTop: 4,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   actionButtons: {
     gap: 12,
@@ -360,7 +398,6 @@ const st = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#C9933A",
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -381,7 +418,7 @@ const st = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderWidth: 1.5,
-    borderColor: "#E57373",
+    borderColor: "#EF4444",
   },
   btnSecondary: {
     alignItems: "center",
@@ -392,7 +429,6 @@ const st = StyleSheet.create({
   btnSecondaryText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: "#5C5549",
   },
   flowCard: {
     marginTop: 8,
@@ -401,20 +437,31 @@ const st = StyleSheet.create({
   flowTitle: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#C9933A",
     marginBottom: 4,
   },
   input: {
-    backgroundColor: "#0C0D11",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
     fontSize: 18,
     fontFamily: "Inter_500Medium",
-    color: "#F0EBE0",
     letterSpacing: 8,
     textAlign: "center",
     borderWidth: 1,
-    borderColor: "#1E1F24",
+  },
+  infoCard: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
   },
 });

@@ -12,76 +12,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-
-interface TraditionDetail {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  intro: string;
-  existingRoute?: string;
-  sampleTopics: { title: string; subtitle: string }[];
-}
-
-const TRADITION_DATA: Record<string, TraditionDetail> = {
-  adventist: {
-    title: "Adventist Studies",
-    icon: "school",
-    color: "#7C3AED",
-    intro: "Explore the 28 Fundamental Beliefs of the Seventh-day Adventist Church. These doctrinal studies cover core Christian teachings as understood within the Adventist tradition, including the Sabbath, the Second Coming, and holistic living.",
-    existingRoute: "/sda-studies",
-    sampleTopics: [
-      { title: "The Holy Scriptures", subtitle: "Belief #1 \u2014 The Bible as the written Word of God" },
-      { title: "The Godhead", subtitle: "Beliefs #2\u20134 \u2014 Father, Son, and Holy Spirit" },
-      { title: "The Sabbath", subtitle: "Belief #20 \u2014 The seventh-day rest" },
-      { title: "The Second Coming", subtitle: "Belief #25 \u2014 Christ\u2019s return in glory" },
-    ],
-  },
-  baptist: {
-    title: "Baptist Studies",
-    icon: "water",
-    color: "#2563EB",
-    intro: "Study the distinctive teachings and practices of the Baptist tradition. Baptist theology emphasizes believer\u2019s baptism by immersion, the authority of Scripture, the priesthood of all believers, and the autonomy of the local church.",
-    sampleTopics: [
-      { title: "Believer\u2019s Baptism", subtitle: "Baptism as a conscious profession of faith" },
-      { title: "Soul Liberty", subtitle: "Freedom of conscience in matters of faith" },
-      { title: "Congregational Governance", subtitle: "The autonomy of the local church" },
-      { title: "The Authority of Scripture", subtitle: "The Bible as the sole rule of faith and practice" },
-    ],
-  },
-  reformed: {
-    title: "Reformed Studies",
-    icon: "book",
-    color: "#0D9488",
-    intro: "Explore the Reformed tradition rooted in the 16th-century Protestant Reformation. Reformed theology centers on God\u2019s sovereignty, covenant theology, and the five solas: Scripture alone, faith alone, grace alone, Christ alone, and God\u2019s glory alone.",
-    sampleTopics: [
-      { title: "The Five Solas", subtitle: "Core principles of the Reformation" },
-      { title: "Covenant Theology", subtitle: "God\u2019s covenants as a framework for redemption" },
-      { title: "The Sovereignty of God", subtitle: "God\u2019s rule over all creation and salvation" },
-      { title: "The Westminster Standards", subtitle: "Historic confessional documents" },
-    ],
-  },
-  catholic: {
-    title: "Catholic Studies",
-    icon: "fitness",
-    color: "#DC2626",
-    intro: "Explore the teachings of the Catholic tradition, including sacramental theology, Sacred Tradition, and the Magisterium.",
-    sampleTopics: [],
-  },
-  methodist: {
-    title: "Methodist Studies",
-    icon: "heart",
-    color: "#D97706",
-    intro: "Explore the Wesleyan tradition of holiness, prevenient grace, and social witness.",
-    sampleTopics: [],
-  },
-  orthodox: {
-    title: "Orthodox Studies",
-    icon: "star",
-    color: "#9333EA",
-    intro: "Explore the Eastern Orthodox tradition of theosis, liturgical worship, and patristic theology.",
-    sampleTopics: [],
-  },
-};
+import { getCollectionById, getContentLabel } from "@/constants/traditions";
+import TraditionDisclaimer from "@/components/TraditionDisclaimer";
 
 export default function TraditionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -92,9 +24,9 @@ export default function TraditionDetailScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const tradition = id ? TRADITION_DATA[id] : null;
+  const collection = id ? getCollectionById(id) : undefined;
 
-  if (!tradition) {
+  if (!collection) {
     return (
       <View style={[st.container, { backgroundColor: theme.background, paddingTop: topPad + 12 }]}>
         <View style={st.header}>
@@ -112,6 +44,8 @@ export default function TraditionDetailScreen() {
     );
   }
 
+  const label = getContentLabel(collection.traditionKey);
+
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
       <View style={[st.header, { paddingTop: topPad + 12 }]}>
@@ -121,7 +55,7 @@ export default function TraditionDetailScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[st.headerTitle, { color: theme.text }]} numberOfLines={1}>{tradition.title}</Text>
+        <Text style={[st.headerTitle, { color: theme.text }]} numberOfLines={1}>{collection.title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -131,32 +65,34 @@ export default function TraditionDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={st.heroSection}>
-          <View style={[st.heroIcon, { backgroundColor: tradition.color + "15" }]}>
-            <Ionicons name={tradition.icon} size={28} color={tradition.color} />
+          <View style={[st.heroIcon, { backgroundColor: collection.color + "15" }]}>
+            <Ionicons name={collection.icon as any} size={28} color={collection.color} />
           </View>
-          <Text style={[st.heroTitle, { color: theme.text }]}>{tradition.title}</Text>
-          <View style={[st.traditionBadge, { backgroundColor: tradition.color + "18" }]}>
-            <Ionicons name="pricetag" size={12} color={tradition.color} />
-            <Text style={[st.traditionBadgeText, { color: tradition.color }]}>
-              {tradition.title.replace(" Studies", " tradition")}
+          <Text style={[st.heroTitle, { color: theme.text }]}>{collection.title}</Text>
+          <View style={[st.traditionBadge, { backgroundColor: collection.color + "18" }]}>
+            <Ionicons name="pricetag" size={12} color={collection.color} />
+            <Text style={[st.traditionBadgeText, { color: collection.color }]}>
+              {label}
             </Text>
           </View>
         </View>
 
+        <TraditionDisclaimer traditionKey={collection.traditionKey} color={collection.color} />
+
         <View style={[st.introCard, { backgroundColor: theme.backgroundCard }]}>
-          <Text style={[st.introText, { color: theme.textSecondary }]}>{tradition.intro}</Text>
+          <Text style={[st.introText, { color: theme.textSecondary }]}>{collection.description}</Text>
         </View>
 
-        {tradition.existingRoute && (
+        {collection.existingRoute && (
           <Pressable
-            onPress={() => router.push(tradition.existingRoute as any)}
+            onPress={() => router.push(collection.existingRoute as any)}
             style={({ pressed }) => [
               st.existingLink,
-              { backgroundColor: tradition.color + "12", opacity: pressed ? 0.85 : 1 },
+              { backgroundColor: collection.color + "12", opacity: pressed ? 0.85 : 1 },
             ]}
           >
-            <Ionicons name="arrow-forward-circle" size={20} color={tradition.color} />
-            <Text style={[st.existingLinkText, { color: tradition.color }]}>
+            <Ionicons name="arrow-forward-circle" size={20} color={collection.color} />
+            <Text style={[st.existingLinkText, { color: collection.color }]}>
               View full study collection
             </Text>
           </Pressable>
@@ -164,47 +100,49 @@ export default function TraditionDetailScreen() {
 
         <View style={[st.divider, { backgroundColor: theme.divider }]} />
 
-        <View style={st.topicsSection}>
-          <View style={st.topicsHeader}>
-            <Ionicons name="list" size={18} color={theme.accent} />
-            <Text style={[st.topicsTitle, { color: theme.text }]}>
-              {tradition.existingRoute ? "Featured Topics" : "Topics"}
-            </Text>
-          </View>
-
-          {tradition.sampleTopics.map((topic, i) => (
-            <View
-              key={i}
-              style={[
-                st.topicRow,
-                { backgroundColor: theme.backgroundCard },
-                i < tradition.sampleTopics.length - 1 && st.topicSpacing,
-              ]}
-            >
-              <View style={[st.topicNumber, { backgroundColor: tradition.color + "15" }]}>
-                <Text style={[st.topicNumberText, { color: tradition.color }]}>{i + 1}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[st.topicTitle, { color: theme.text }]}>{topic.title}</Text>
-                <Text style={[st.topicSub, { color: theme.textMuted }]}>{topic.subtitle}</Text>
-              </View>
-              {tradition.existingRoute ? (
-                <Ionicons name="checkmark-circle" size={18} color={tradition.color} />
-              ) : (
-                <View style={[st.pendingDot, { backgroundColor: theme.textMuted + "30" }]} />
-              )}
-            </View>
-          ))}
-
-          {!tradition.existingRoute && (
-            <View style={st.lessonsComingSoon}>
-              <Ionicons name="time-outline" size={16} color={theme.textMuted} />
-              <Text style={[st.lessonsComingSoonText, { color: theme.textMuted }]}>
-                Lessons & articles coming soon
+        {collection.sampleTopics.length > 0 && (
+          <View style={st.topicsSection}>
+            <View style={st.topicsHeader}>
+              <Ionicons name="list" size={18} color={theme.accent} />
+              <Text style={[st.topicsTitle, { color: theme.text }]}>
+                {collection.existingRoute ? "Featured Topics" : "Topics"}
               </Text>
             </View>
-          )}
-        </View>
+
+            {collection.sampleTopics.map((topic, i) => (
+              <View
+                key={i}
+                style={[
+                  st.topicRow,
+                  { backgroundColor: theme.backgroundCard },
+                  i < collection.sampleTopics.length - 1 && st.topicSpacing,
+                ]}
+              >
+                <View style={[st.topicNumber, { backgroundColor: collection.color + "15" }]}>
+                  <Text style={[st.topicNumberText, { color: collection.color }]}>{i + 1}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.topicTitle, { color: theme.text }]}>{topic.title}</Text>
+                  <Text style={[st.topicSub, { color: theme.textMuted }]}>{topic.subtitle}</Text>
+                </View>
+                {collection.existingRoute ? (
+                  <Ionicons name="checkmark-circle" size={18} color={collection.color} />
+                ) : (
+                  <View style={[st.pendingDot, { backgroundColor: theme.textMuted + "30" }]} />
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {!collection.existingRoute && (
+          <View style={st.lessonsComingSoon}>
+            <Ionicons name="time-outline" size={16} color={theme.textMuted} />
+            <Text style={[st.lessonsComingSoonText, { color: theme.textMuted }]}>
+              Lessons & articles coming soon
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -361,7 +299,7 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: 20,
+    marginTop: 4,
     paddingVertical: 12,
   },
   lessonsComingSoonText: {
