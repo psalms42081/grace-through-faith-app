@@ -187,7 +187,7 @@ export default function DiscoverScreen() {
               Christian Traditions
             </Text>
             <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Explore perspectives from different traditions
+              Study denominational perspectives
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />

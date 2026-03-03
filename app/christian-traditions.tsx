@@ -13,6 +13,66 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 
+interface TraditionCollection {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  enabled: boolean;
+}
+
+const COLLECTIONS: TraditionCollection[] = [
+  {
+    id: "adventist",
+    title: "Adventist Studies",
+    subtitle: "28 Fundamental Beliefs & Sabbath-centered living",
+    icon: "school",
+    color: "#7C3AED",
+    enabled: true,
+  },
+  {
+    id: "baptist",
+    title: "Baptist Studies",
+    subtitle: "Believer\u2019s baptism, soul liberty & congregational governance",
+    icon: "water",
+    color: "#2563EB",
+    enabled: true,
+  },
+  {
+    id: "reformed",
+    title: "Reformed Studies",
+    subtitle: "Covenant theology & the five solas of the Reformation",
+    icon: "book",
+    color: "#0D9488",
+    enabled: true,
+  },
+  {
+    id: "catholic",
+    title: "Catholic Studies",
+    subtitle: "Sacramental theology, Tradition & Magisterium",
+    icon: "fitness",
+    color: "#DC2626",
+    enabled: false,
+  },
+  {
+    id: "methodist",
+    title: "Methodist Studies",
+    subtitle: "Wesleyan holiness, grace & social witness",
+    icon: "heart",
+    color: "#D97706",
+    enabled: false,
+  },
+  {
+    id: "orthodox",
+    title: "Orthodox Studies",
+    subtitle: "Theosis, liturgical worship & patristic tradition",
+    icon: "star",
+    color: "#9333EA",
+    enabled: false,
+  },
+];
+
 export default function ChristianTraditionsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -51,59 +111,62 @@ export default function ChristianTraditionsScreen() {
           </Text>
         </View>
 
-        <View style={[st.divider, { backgroundColor: theme.divider }]} />
-
-        <View style={[st.traditionsCard, { backgroundColor: theme.backgroundCard }]}>
-          <View style={st.traditionsHeader}>
-            <Ionicons name="library" size={18} color={theme.accent} />
-            <Text style={[st.traditionsTitle, { color: theme.text }]}>Available Collections</Text>
-          </View>
-
-          <Pressable
-            onPress={() => router.push("/sda-studies" as any)}
-            style={({ pressed }) => [
-              st.traditionRow,
-              { borderBottomColor: theme.divider, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[st.traditionIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
-              <Ionicons name="school" size={18} color="#7C3AED" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.traditionName, { color: theme.text }]}>28 Fundamental Beliefs</Text>
-              <Text style={[st.traditionLabel, { color: theme.textMuted }]}>
-                Seventh-day Adventist tradition
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/(tabs)/study?tab=voices" as any)}
-            style={({ pressed }) => [
-              st.traditionRow,
-              { borderBottomWidth: 0, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[st.traditionIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
-              <Ionicons name="chatbubble-ellipses" size={18} color="#3B6CB5" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.traditionName, { color: theme.text }]}>Historic Voices</Text>
-              <Text style={[st.traditionLabel, { color: theme.textMuted }]}>
-                Commentary from Matthew Henry, Adam Clarke, John Gill & more
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-        </View>
-
-        <View style={st.comingSoon}>
-          <Ionicons name="hourglass-outline" size={16} color={theme.textMuted} />
-          <Text style={[st.comingSoonText, { color: theme.textMuted }]}>
+        <View style={st.comingSoonBanner}>
+          <Ionicons name="hourglass-outline" size={14} color={theme.textMuted} />
+          <Text style={[st.comingSoonBannerText, { color: theme.textMuted }]}>
             More traditions coming soon
           </Text>
         </View>
+
+        <View style={[st.divider, { backgroundColor: theme.divider }]} />
+
+        {COLLECTIONS.map((collection, i) => {
+          const isLast = i === COLLECTIONS.length - 1;
+          if (collection.enabled) {
+            return (
+              <Pressable
+                key={collection.id}
+                onPress={() => router.push(`/tradition/${collection.id}` as any)}
+                style={({ pressed }) => [
+                  st.collectionCard,
+                  { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+                  !isLast && st.collectionSpacing,
+                ]}
+                testID={`tradition-${collection.id}`}
+              >
+                <View style={[st.collectionIcon, { backgroundColor: collection.color + "15" }]}>
+                  <Ionicons name={collection.icon} size={22} color={collection.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.collectionTitle, { color: theme.text }]}>{collection.title}</Text>
+                  <Text style={[st.collectionSub, { color: theme.textMuted }]}>{collection.subtitle}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+              </Pressable>
+            );
+          }
+          return (
+            <View
+              key={collection.id}
+              style={[
+                st.collectionCard,
+                { backgroundColor: theme.backgroundCard, opacity: 0.5 },
+                !isLast && st.collectionSpacing,
+              ]}
+            >
+              <View style={[st.collectionIcon, { backgroundColor: collection.color + "10" }]}>
+                <Ionicons name={collection.icon} size={22} color={collection.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.collectionTitle, { color: theme.text }]}>{collection.title}</Text>
+                <Text style={[st.collectionSub, { color: theme.textMuted }]}>{collection.subtitle}</Text>
+              </View>
+              <View style={[st.comingSoonBadge, { backgroundColor: theme.textMuted + "18" }]}>
+                <Text style={[st.comingSoonBadgeText, { color: theme.textMuted }]}>Coming soon</Text>
+              </View>
+            </View>
+          );
+        })}
 
         <View style={[st.divider, { backgroundColor: theme.divider }]} />
 
@@ -166,65 +229,60 @@ const st = StyleSheet.create({
     lineHeight: 23,
     textAlign: "center",
   },
+  comingSoonBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 18,
+  },
+  comingSoonBannerText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    fontStyle: "italic",
+  },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 20,
     marginVertical: 24,
     opacity: 0.6,
   },
-  traditionsCard: {
+  collectionCard: {
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 20,
     borderRadius: 16,
-    padding: 4,
-  },
-  traditionsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  traditionsTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  traditionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    padding: 16,
     gap: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  traditionIcon: {
-    width: 40,
-    height: 40,
+  collectionSpacing: {
+    marginBottom: 10,
+  },
+  collectionIcon: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  traditionName: {
+  collectionTitle: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     marginBottom: 2,
   },
-  traditionLabel: {
+  collectionSub: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
   },
-  comingSoon: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 16,
+  comingSoonBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  comingSoonText: {
-    fontSize: 13,
+  comingSoonBadgeText: {
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
-    fontStyle: "italic",
   },
   labelingCard: {
     marginHorizontal: 20,

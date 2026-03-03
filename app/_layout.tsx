@@ -74,6 +74,7 @@ function RootLayoutNav() {
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: "Group" }} />
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
       <Stack.Screen name="christian-traditions" options={{ headerShown: false }} />
+      <Stack.Screen name="tradition/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }
