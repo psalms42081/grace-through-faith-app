@@ -1,0 +1,67 @@
+PHASE 3 (CONTENT) — 28 BELIEFS DEEP DIVE WAVE 1 (BELIEFS 1–7)
+
+Context:
+We already have the formation engine implemented:
+formation_track → formation_module → formation_lesson → lesson_section
+Assessments exist: formation_assessment + assessment_item
+Progress tracking exists: progress_track + progress_lesson
+Lesson sections use 6 types: anchor, explain, integrate, practice, reflection, assessment.
+
+Goal:
+Complete and polish the first 7 belief modules of the “28 Beliefs Deep Dive” track as a structured theological course for intelligent lay believers.
+
+Non-negotiables:
+- All content must be ORIGINAL.
+- Do NOT copy, paraphrase, or mirror General Conference quarterly text.
+- Align with Adventist theology by using:
+  - the official Fundamental Belief statement as a doctrinal boundary
+  - Scripture-first reasoning
+- Tone: clear, reverent, lay-friendly, not academic.
+- Every module must have explicit internal consistency and progression.
+
+Work Scope:
+For each of Beliefs 1–7, create 4 fully-seeded lessons (28 total lessons), each with all 6 sections plus assessments:
+
+Belief Module Lesson Pattern:
+Lesson 1 — Biblical Foundations
+Lesson 2 — Doctrinal Formulation (what Adventists affirm, key terms)
+Lesson 3 — Practical Implications (life, worship, identity)
+Lesson 4 — Misunderstandings & Challenges (common errors corrected)
+
+For EACH lesson:
+1) Anchor section:
+   - Provide key Bible passages (3–6 references)
+   - Include a short reading instruction (what to look for)
+
+2) Explain section:
+   - Original explanation of the belief, clear and structured
+
+3) Integrate section:
+   - Show how this belief connects to the Great Controversy theme and Adventist identity
+   - Use Scripture, not quotations from copyrighted curriculum
+   - You may link externally to public sources (e.g., Adventist.org belief page) but do not paste their text.
+
+4) Practice section:
+   - Provide 2–3 concrete actions (small, doable, not vague)
+   - Examples: “Write a 5 sentence summary”, “Pray through Psalm X”, “Discuss with family using prompt Y”
+
+5) Reflection section:
+   - 2–3 thoughtful journal prompts tied to the lesson content
+
+6) Assessment section:
+   - 5 multiple-choice questions per lesson
+   - Mix:
+     - 60% recall
+     - 40% conceptual clarity
+   - Include correct answer index and short explanation
+
+Implementation details:
+- Add missing lessons + sections + assessments into seed script(s) and ensure id relationships are correct.
+- Ensure module ordering is correct (belief order 1–7).
+- Ensure lessons unlock sequentially as the current system enforces.
+
+Acceptance Criteria:
+- Beliefs 1–7 show as fully complete modules with 4 lessons each.
+- All lessons render correctly with all 6 sections.
+- Assessments work and store scores/pass status.
+- Content reads as a cohesive theological course, not a devotional plan.
