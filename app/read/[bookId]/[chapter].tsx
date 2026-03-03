@@ -865,6 +865,8 @@ export default function VerseReaderScreen() {
   useFocusEffect(
     useCallback(() => {
       if (focusedVerseRef.current !== null) {
+        queryClient.invalidateQueries({ queryKey: ["/api/highlights/guest"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/bookmarks/guest"] });
         const timer = setTimeout(() => {
           setFocusedVerse(null);
           focusedVerseRef.current = null;
@@ -939,6 +941,30 @@ export default function VerseReaderScreen() {
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
+
+  const { data: highlightsData } = useQuery<{ id: string; verseId: string; color: string }[]>({
+    queryKey: ["/api/highlights/guest"],
+  });
+
+  const { data: bookmarksData } = useQuery<{ id: string; verseId: string; label: string }[]>({
+    queryKey: ["/api/bookmarks/guest"],
+  });
+
+  const highlightedVerseIds = useMemo(() => {
+    const set = new Set<string>();
+    if (highlightsData) {
+      for (const h of highlightsData) set.add(h.verseId);
+    }
+    return set;
+  }, [highlightsData]);
+
+  const bookmarkedVerseIds = useMemo(() => {
+    const set = new Set<string>();
+    if (bookmarksData) {
+      for (const b of bookmarksData) set.add(b.verseId);
+    }
+    return set;
+  }, [bookmarksData]);
 
   const bookName = data?.book?.name ?? "";
   const totalChapters = data?.book?.chapterCount ?? 0;
@@ -1328,6 +1354,11 @@ export default function VerseReaderScreen() {
 
   const verses = data?.verses ?? [];
 
+  const hasBookmarksInChapter = useMemo(() => {
+    if (!verses.length || !bookmarkedVerseIds.size) return false;
+    return verses.some((v) => bookmarkedVerseIds.has(v.id));
+  }, [verses, bookmarkedVerseIds]);
+
   return (
     <>
       <Stack.Screen
@@ -1366,8 +1397,21 @@ export default function VerseReaderScreen() {
               >
                 <Ionicons name="layers-outline" size={20} color={theme.textSecondary} />
               </Pressable>
-              <Pressable hitSlop={8} style={styles.headerBtn}>
-                <Ionicons name="bookmark-outline" size={20} color={theme.textSecondary} />
+              <Pressable
+                hitSlop={8}
+                style={styles.headerBtn}
+                onPress={() => {
+                  if (verses.length > 0) {
+                    const firstVerse = verses[0];
+                    handleVerseTap(firstVerse);
+                  }
+                }}
+              >
+                <Ionicons
+                  name={hasBookmarksInChapter ? "bookmark" : "bookmark-outline"}
+                  size={20}
+                  color={hasBookmarksInChapter ? theme.bookmarkBlue : theme.textSecondary}
+                />
               </Pressable>
             </View>
           ),
@@ -1452,6 +1496,13 @@ export default function VerseReaderScreen() {
                   {verses.map((v, i) => {
                     const isFocused = focusedVerse === v.verse;
                     const isDimmed = focusedVerse !== null && !isFocused;
+                    const isHighlighted = highlightedVerseIds.has(v.id);
+                    const isBookmarked = bookmarkedVerseIds.has(v.id);
+                    const bgColor = i === speakingVerseIndex
+                      ? theme.highlightYellow
+                      : isHighlighted
+                        ? (isDark ? "rgba(201, 147, 58, 0.2)" : "rgba(255, 215, 0, 0.25)")
+                        : "transparent";
                     return (
                       <React.Fragment key={v.id}>
                         <Text
@@ -1461,11 +1512,16 @@ export default function VerseReaderScreen() {
                             {
                               color: theme.text,
                               fontFamily: "Lora_400Regular",
-                              backgroundColor: i === speakingVerseIndex ? theme.highlightYellow : "transparent",
+                              backgroundColor: bgColor,
                               opacity: isDimmed ? 0.3 : 1,
                             },
                           ]}
                         >
+                          {isBookmarked && (
+                            <Text style={{ color: theme.bookmarkBlue, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                              {"\u2691 "}
+                            </Text>
+                          )}
                           <Text style={[styles.verseNum, { color: isDimmed ? theme.textMuted : theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                             {" "}{v.verse}{" "}
                           </Text>

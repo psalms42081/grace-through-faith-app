@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import * as Clipboard from "expo-clipboard";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
 
 export default function VerseActionsSheet() {
@@ -123,6 +123,7 @@ export default function VerseActionsSheet() {
         verseId: verseId || `${bookId}_${chapter}_${verse}`,
         color: "yellow",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/highlights/guest"] });
       setFeedbackMsg("Highlighted!");
       setTimeout(() => router.back(), 600);
     } catch {
@@ -141,6 +142,7 @@ export default function VerseActionsSheet() {
         verseId: verseId || `${bookId}_${chapter}_${verse}`,
         label: reference,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks/guest"] });
       setFeedbackMsg("Bookmarked!");
       setTimeout(() => router.back(), 600);
     } catch {
