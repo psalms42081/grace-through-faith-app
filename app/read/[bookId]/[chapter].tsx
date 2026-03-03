@@ -453,18 +453,19 @@ const contextStyles = StyleSheet.create({
   panelTitle: { flex: 1, fontSize: 18 },
   sectionTabs: {
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
     marginBottom: 14,
+    flexWrap: "wrap",
   },
   sectionTab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 10,
   },
-  sectionTabText: { fontSize: 12 },
+  sectionTabText: { fontSize: 11 },
   loadingArea: {
     alignItems: "center",
     paddingVertical: 30,
