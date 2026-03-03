@@ -43,7 +43,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
 - **Navigation:** 5-tab layout in adult mode (Home, Read, Connect, Study, You) and a distinct Kids mode tab navigation (Home, Stories, Learn, My Stars). Family and Plans tabs are hidden but accessible via routes.
 - **Kids Story Engine:** Immersive scene-based storybook reader with AI-generated scenes and watercolor illustrations.
-- **Prayer Groups:** Community prayer groups with join codes, shared Prayer Walls.
+- **Small Groups 2.0:** Upgraded from Prayer Groups to a full SDA Small Groups system. Supports Bible Study, Prayer, Prophecy, Youth, and Sabbath School group types. Added columns to `prayer_groups`: `group_type`, `is_public`, `church_id`, `assigned_track_id`. Added `role` column to `prayer_group_member` (leader/moderator/member). New tables: `group_discussion`, `group_discussion_reply`, `group_announcement`. New API routes: GET /api/groups/public (browse with type/search filters), POST /api/groups/:id/assign-track, POST /api/groups/:id/promote, POST/GET /api/groups/:id/discussion(s), POST/GET /api/groups/:id/discussions/:id/reply/replies, POST/GET /api/groups/:id/announcement(s). Frontend: `app/groups.tsx` has My Groups + Browse tabs with search/filter; `app/group/[id].tsx` has 3 content tabs (Discussion, Prayer, Study Plan) with group role badges, member promotion, formation track assignment, and group progress display.
 - **Family Groups:** Family units with invite codes, Prayer Wall and Kingdom Map.
 - **Parent-Controlled Kids Mode:** PIN protection, child profiles with age tiers, per-child session tracking.
 

@@ -62,6 +62,9 @@ import {
   families,
   prayerGroups,
   prayerGroupMembers,
+  groupDiscussions,
+  groupDiscussionReplies,
+  groupAnnouncements,
   layerCompletions,
   studyJournalEntries,
   chapterSummaries,
@@ -409,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/groups/create", async (req, res) => {
     try {
       const userId = extractUserId(req);
-      const { name, description } = req.body;
+      const { name, description, groupType, isPublic } = req.body;
       if (!name) return res.status(400).json({ error: "Group name is required" });
 
       let joinCode = generateCode();
@@ -428,12 +431,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         joinCode,
         createdBy: userId,
+        groupType: groupType || "prayer",
+        isPublic: isPublic === true,
       }).returning();
 
       await db.insert(prayerGroupMembers).values({
         groupId: group.id,
         userId,
         displayName: user?.displayName || user?.username || "Member",
+        role: "leader",
       });
 
       return res.json({ group });
@@ -499,6 +505,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/groups/public", async (req, res) => {
+    try {
+      const { type, search } = req.query as { type?: string; search?: string };
+      let groups = await db.select().from(prayerGroups).where(eq(prayerGroups.isPublic, true));
+      if (type && type !== "all") {
+        groups = groups.filter(g => g.groupType === type);
+      }
+      if (search) {
+        const q = (search as string).toLowerCase();
+        groups = groups.filter(g => g.name.toLowerCase().includes(q) || (g.description || "").toLowerCase().includes(q));
+      }
+      return res.json(groups);
+    } catch (err) {
+      console.error("Public groups error:", err);
+      return res.status(500).json({ error: "Failed to list public groups" });
+    }
+  });
+
   app.get("/api/groups/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -507,7 +531,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
 
-      return res.json({ group, members });
+      let trackProgress: any = null;
+      if (group.assignedTrackId) {
+        const [track] = await db.select().from(formationTracks).where(eq(formationTracks.id, group.assignedTrackId));
+        if (track) {
+          const memberIds = members.map(m => m.userId);
+          const progress = [];
+          for (const mid of memberIds) {
+            const [pt] = await db.select().from(progressTracks)
+              .where(and(eq(progressTracks.userId, mid), eq(progressTracks.trackId, group.assignedTrackId)));
+            if (pt) progress.push(pt);
+          }
+          const avgPercent = progress.length > 0
+            ? Math.round(progress.reduce((s, p) => s + (p.percentComplete || 0), 0) / members.length)
+            : 0;
+          trackProgress = {
+            track,
+            enrolledCount: progress.length,
+            totalMembers: members.length,
+            averagePercent: avgPercent,
+          };
+        }
+      }
+
+      return res.json({ group, members, trackProgress });
     } catch (err) {
       console.error("Group detail error:", err);
       return res.status(500).json({ error: "Failed to get group details" });
@@ -618,6 +665,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Group prayer answered error:", err);
       return res.status(500).json({ error: "Failed to mark prayer answered" });
+    }
+  });
+
+  // ─── SMALL GROUPS 2.0 — DISCUSSIONS, STUDY PLANS, ROLES ─────────────────
+
+  app.post("/api/groups/:id/assign-track", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const { trackId } = req.body;
+      if (!trackId) return res.status(400).json({ error: "Track ID is required" });
+
+      const [member] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!member || (member.role !== "leader" && member.role !== "moderator")) {
+        return res.status(403).json({ error: "Only leaders and moderators can assign study plans" });
+      }
+
+      const [track] = await db.select().from(formationTracks).where(eq(formationTracks.id, trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+
+      await db.update(prayerGroups).set({ assignedTrackId: trackId }).where(eq(prayerGroups.id, id));
+
+      return res.json({ success: true, track });
+    } catch (err) {
+      console.error("Assign track error:", err);
+      return res.status(500).json({ error: "Failed to assign track" });
+    }
+  });
+
+  app.post("/api/groups/:id/promote", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const { targetUserId, newRole } = req.body;
+      if (!targetUserId || !newRole) return res.status(400).json({ error: "Target user and role required" });
+      if (!["leader", "moderator", "member"].includes(newRole)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+
+      const [requester] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!requester || requester.role !== "leader") {
+        return res.status(403).json({ error: "Only leaders can change member roles" });
+      }
+
+      await db.update(prayerGroupMembers).set({ role: newRole })
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, targetUserId)));
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Promote member error:", err);
+      return res.status(500).json({ error: "Failed to update member role" });
+    }
+  });
+
+  app.get("/api/groups/:id/discussions", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const [membership] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!membership) return res.status(403).json({ error: "You must be a member to view discussions" });
+
+      const discussions = await db.select().from(groupDiscussions)
+        .where(eq(groupDiscussions.groupId, id))
+        .orderBy(desc(groupDiscussions.createdAt));
+      return res.json(discussions);
+    } catch (err) {
+      console.error("Group discussions error:", err);
+      return res.status(500).json({ error: "Failed to get discussions" });
+    }
+  });
+
+  app.post("/api/groups/:id/discussion", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const { content } = req.body;
+      if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
+
+      const [membership] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!membership) return res.status(403).json({ error: "You must be a member to post discussions" });
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+      const [discussion] = await db.insert(groupDiscussions).values({
+        groupId: id,
+        userId,
+        authorName: user?.displayName || user?.username || "Member",
+        content: content.trim(),
+      }).returning();
+
+      return res.json(discussion);
+    } catch (err) {
+      console.error("Create discussion error:", err);
+      return res.status(500).json({ error: "Failed to create discussion" });
+    }
+  });
+
+  app.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
+    try {
+      const { discussionId } = req.params;
+      const replies = await db.select().from(groupDiscussionReplies)
+        .where(eq(groupDiscussionReplies.discussionId, discussionId))
+        .orderBy(groupDiscussionReplies.createdAt);
+      return res.json(replies);
+    } catch (err) {
+      console.error("Discussion replies error:", err);
+      return res.status(500).json({ error: "Failed to get replies" });
+    }
+  });
+
+  app.post("/api/groups/:id/discussions/:discussionId/reply", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id, discussionId } = req.params;
+      const { content } = req.body;
+      if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
+
+      const [membership] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!membership) return res.status(403).json({ error: "You must be a member to reply" });
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+      const [reply] = await db.insert(groupDiscussionReplies).values({
+        discussionId,
+        userId,
+        authorName: user?.displayName || user?.username || "Member",
+        content: content.trim(),
+      }).returning();
+
+      await db.update(groupDiscussions).set({
+        replyCount: sql`${groupDiscussions.replyCount} + 1`,
+      }).where(eq(groupDiscussions.id, discussionId));
+
+      return res.json(reply);
+    } catch (err) {
+      console.error("Discussion reply error:", err);
+      return res.status(500).json({ error: "Failed to post reply" });
+    }
+  });
+
+  app.get("/api/groups/:id/announcements", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const announcements = await db.select().from(groupAnnouncements)
+        .where(eq(groupAnnouncements.groupId, id))
+        .orderBy(desc(groupAnnouncements.createdAt));
+      return res.json(announcements);
+    } catch (err) {
+      console.error("Group announcements error:", err);
+      return res.status(500).json({ error: "Failed to get announcements" });
+    }
+  });
+
+  app.post("/api/groups/:id/announcement", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const { title, content } = req.body;
+      if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
+
+      const [member] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!member || (member.role !== "leader" && member.role !== "moderator")) {
+        return res.status(403).json({ error: "Only leaders and moderators can post announcements" });
+      }
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+      const [announcement] = await db.insert(groupAnnouncements).values({
+        groupId: id,
+        userId,
+        authorName: user?.displayName || user?.username || "Leader",
+        title: title.trim(),
+        content: content.trim(),
+      }).returning();
+
+      return res.json(announcement);
+    } catch (err) {
+      console.error("Create announcement error:", err);
+      return res.status(500).json({ error: "Failed to create announcement" });
     }
   });
 

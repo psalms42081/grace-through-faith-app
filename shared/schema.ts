@@ -75,6 +75,10 @@ export const prayerGroups = pgTable("prayer_groups", {
   joinCode: varchar("join_code", { length: 10 }).notNull().unique(),
   createdBy: varchar("created_by").notNull(),
   memberCount: integer("member_count").default(1).notNull(),
+  groupType: varchar("group_type", { length: 30 }).default("prayer").notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  churchId: varchar("church_id"),
+  assignedTrackId: varchar("assigned_track_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -89,6 +93,7 @@ export const prayerGroupMembers = pgTable(
     groupId: varchar("group_id").notNull(),
     userId: varchar("user_id").notNull(),
     displayName: text("display_name"),
+    role: varchar("role", { length: 20 }).default("member").notNull(),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -98,6 +103,71 @@ export const prayerGroupMembers = pgTable(
 );
 
 export type PrayerGroupMember = typeof prayerGroupMembers.$inferSelect;
+
+// ─── GROUP DISCUSSIONS ───────────────────────────────────────────────────────
+
+export const groupDiscussions = pgTable(
+  "group_discussion",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id").notNull(),
+    userId: varchar("user_id").notNull(),
+    authorName: text("author_name"),
+    content: text("content").notNull(),
+    isPinned: boolean("is_pinned").default(false).notNull(),
+    replyCount: integer("reply_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdx: index("discussion_group_idx").on(table.groupId),
+    createdIdx: index("discussion_created_idx").on(table.createdAt),
+  })
+);
+
+export type GroupDiscussion = typeof groupDiscussions.$inferSelect;
+
+export const groupDiscussionReplies = pgTable(
+  "group_discussion_reply",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    discussionId: varchar("discussion_id").notNull(),
+    userId: varchar("user_id").notNull(),
+    authorName: text("author_name"),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    discussionIdx: index("reply_discussion_idx").on(table.discussionId),
+  })
+);
+
+export type GroupDiscussionReply = typeof groupDiscussionReplies.$inferSelect;
+
+// ─── GROUP ANNOUNCEMENTS ─────────────────────────────────────────────────────
+
+export const groupAnnouncements = pgTable(
+  "group_announcement",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id").notNull(),
+    userId: varchar("user_id").notNull(),
+    authorName: text("author_name"),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdx: index("announcement_group_idx").on(table.groupId),
+  })
+);
+
+export type GroupAnnouncement = typeof groupAnnouncements.$inferSelect;
 
 // ─── BIBLE ────────────────────────────────────────────────────────────────────
 
