@@ -139,6 +139,61 @@ All Wave 3 records use the `w3` ID prefix scheme (`w3l-*`, `w3s-*`, `w3a-*`, `w3
 - Gift of Prophecy (Belief 18): EGW subordinate to Scripture; external links only; emphasizes biblical tests
 
 Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave3.ts` (orchestrator), `server/seeds/wave3-beliefs-12-13.ts`, `server/seeds/wave3-beliefs-14-15.ts`, `server/seeds/wave3-belief-16.ts`, `server/seeds/wave3-belief-17.ts`, `server/seeds/wave3-belief-18.ts`.
+
+### Wave 4 — 28 Beliefs Deep Dive (Beliefs 19-28)
+
+**Status: Complete and Fully Seeded**
+
+Wave 4 completes the 28 Beliefs Deep Dive, covering the law and lifestyle cluster, the sanctuary, and the full eschatological arc from second coming through new earth.
+
+**Scope Delivered**
+
+Beliefs Included:
+19. The Law of God
+20. The Sabbath
+21. Stewardship
+22. Christian Behavior
+23. Marriage and the Family
+24. Christ's Ministry in the Heavenly Sanctuary
+25. The Second Coming of Christ
+26. Death and Resurrection
+27. The Millennium and the End of Sin
+28. The New Earth
+
+Each belief module contains:
+- 4 structured lessons: Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges
+- 6 section types per lesson: Anchor, Explain, Integrate, Practice, Reflection, Assessment
+- 5 assessment items per lesson (3 recall, 1 conceptual, 1 scenario-based)
+
+**Totals:** 40 lessons, 240 lesson sections, 40 assessments, 200 assessment items
+
+All Wave 4 records use the `w4` ID prefix scheme (`w4l-*`, `w4s-*`, `w4a-*`, `w4i-*`).
+
+**Special Guardrails Applied:**
+- Law of God (Belief 19): Anchored in covenant relationship; harmony of law and grace; no legalism tone
+- Sabbath (Belief 20): Creation/redemption/rest emphasis; calm sacred tone; no culture-war framing
+- Stewardship (Belief 21): Whole-life scope (time, health, influence, resources); no guilt-based tone
+- Christian Behavior (Belief 22): Fruit of salvation, not ladder to it; no moral checklist framing
+- Marriage & Family (Belief 23): Faithful to Adventist teaching; pastoral, not combative; no political framing
+- Heavenly Sanctuary (Belief 24): High precision; calm articulation of investigative judgment; no inflammatory language
+- Eschatology (Beliefs 25-28): Hope-centered, Christ-centered; no speculative timelines; no sensationalism; systematic and biblical; restorationist vision
+
+Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave4.ts` (orchestrator), `server/seeds/wave4-beliefs-19-20.ts`, `server/seeds/wave4-beliefs-21-22.ts`, `server/seeds/wave4-beliefs-23-24.ts`, `server/seeds/wave4-beliefs-25-26.ts`, `server/seeds/wave4-beliefs-27-28.ts`.
+
+### 28 Beliefs Deep Dive — Complete Track Summary
+
+**All 28 fundamental beliefs are now fully seeded across 4 waves.**
+
+| Wave | Beliefs | Lessons | Sections | Assessments | Items |
+|------|---------|---------|----------|-------------|-------|
+| 1    | 1-7     | 25*     | 150      | 25          | 125   |
+| 2    | 8-11    | 16      | 96       | 16          | 80    |
+| 3    | 12-18   | 28      | 168      | 28          | 140   |
+| 4    | 19-28   | 40      | 240      | 40          | 200   |
+| **Total** | **1-28** | **109** | **654** | **109** | **545** |
+
+*Wave 1 includes 3 lessons from initial seed (bl-001/002/003) plus 22 wave-1 lessons.
+
 - **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
 - **Connect Tab (new):** Church Connect (map + list view), Small Groups (links to prayer groups), Live Streams (Jitsi Meet via WebView), Family Dashboard access.
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.

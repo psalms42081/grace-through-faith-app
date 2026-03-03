@@ -85,6 +85,7 @@ import { seedFormationData } from "./seed-formation";
 import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
 import { seedBeliefsWave2 } from "./seed-beliefs-wave2";
 import { seedBeliefsWave3 } from "./seed-beliefs-wave3";
+import { seedBeliefsWave4 } from "./seed-beliefs-wave4";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -110,6 +111,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   seedBeliefsWave3(db).catch((err) => {
     console.error("Wave 3 beliefs seed error:", err);
+  });
+
+  seedBeliefsWave4(db).catch((err) => {
+    console.error("Wave 4 beliefs seed error:", err);
   });
 
   async function checkProStatus(
