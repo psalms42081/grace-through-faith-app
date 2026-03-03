@@ -28,6 +28,7 @@ import Animated, {
   withSpring,
   Easing,
 } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -1048,6 +1049,8 @@ function WeeklyCalendar({ data, theme, isDark }: { data: WeeklyStreakData; theme
   );
 }
 
+const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
+
 function AdultHomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -1056,6 +1059,18 @@ function AdultHomeScreen() {
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
   const [showChildPicker, setShowChildPicker] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem(KIDS_TOOLTIP_KEY);
+        if (!seen) {
+          setShowTooltip(true);
+        }
+      } catch {}
+    })();
+  }, []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -1110,13 +1125,28 @@ function AdultHomeScreen() {
             No distractions. Built for deeper study.
           </Text>
         </View>
-        <Pressable
-          onPress={() => setShowChildPicker(true)}
-          style={[s.profileBtn, { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" }]}
-          testID="enter-kids-mode"
-        >
-          <Ionicons name="people" size={20} color={theme.accent} />
-        </Pressable>
+        <View>
+          {showTooltip && (
+            <View style={[s.tooltip, { backgroundColor: theme.accent }]}>
+              <Text style={s.tooltipText}>Switch to Kids Mode</Text>
+              <View style={[s.tooltipArrow, { borderTopColor: theme.accent }]} />
+            </View>
+          )}
+          <Pressable
+            onPress={() => {
+              if (showTooltip) {
+                setShowTooltip(false);
+                AsyncStorage.setItem(KIDS_TOOLTIP_KEY, "true").catch(() => {});
+              }
+              setShowChildPicker(true);
+            }}
+            style={[s.kidsModeBtn, { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" }]}
+            testID="enter-kids-mode"
+          >
+            <Ionicons name="people" size={18} color={theme.accent} />
+            <Text style={[s.kidsModeBtnLabel, { color: theme.accent }]}>Kids</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ChildPickerModal
@@ -1356,12 +1386,48 @@ const s = StyleSheet.create({
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
   headerTitle: { fontSize: 26, letterSpacing: -0.3, marginBottom: 2 },
   headerTagline: { fontSize: 12, letterSpacing: 0.2, marginTop: 4 },
-  profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  kidsModeBtn: {
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 2,
+  },
+  kidsModeBtnLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.3,
+  },
+  tooltip: {
+    position: "absolute",
+    bottom: "100%" as any,
+    right: 0,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    zIndex: 10,
+    minWidth: 140,
+    alignItems: "center",
+  },
+  tooltipText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
+  },
+  tooltipArrow: {
+    position: "absolute",
+    bottom: -6,
+    right: 16,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
   },
   verseCardWrap: {
     borderRadius: 22,
