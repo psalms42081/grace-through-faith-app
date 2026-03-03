@@ -1114,6 +1114,7 @@ export const formationModules = pgTable("formation_module", {
     .references(() => formationTracks.id),
   title: text("title").notNull(),
   description: text("description"),
+  learningObjective: text("learning_objective"),
   moduleOrder: integer("module_order").notNull(),
   totalLessons: integer("total_lessons").default(0),
 });

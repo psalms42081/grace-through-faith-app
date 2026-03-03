@@ -70,34 +70,34 @@ export async function seedFormationData(db: any) {
   ]);
 
   const beliefsTitles = [
-    { title: "The Holy Scriptures", desc: "The authority, sufficiency, and transformative power of God's Word." },
-    { title: "The Trinity", desc: "One God revealed in three co-eternal Persons: Father, Son, and Holy Spirit." },
-    { title: "The Father", desc: "God the eternal Father — Creator, Source, Sustainer, and Sovereign of all creation." },
-    { title: "The Son", desc: "God the eternal Son became incarnate in Jesus Christ, through whom all things were created and salvation is accomplished." },
-    { title: "The Holy Spirit", desc: "God the eternal Spirit was active with the Father and Son in creation, incarnation, and redemption." },
-    { title: "Creation", desc: "God is the Creator of all things, as revealed in the Genesis account of a literal six-day creation." },
-    { title: "The Nature of Humanity", desc: "Humanity was made in the image of God, endowed with individuality, freedom, and the ability to think and act." },
-    { title: "The Great Controversy", desc: "All humanity is involved in a cosmic conflict between Christ and Satan regarding God's character and law." },
-    { title: "The Life, Death, and Resurrection of Christ", desc: "In Christ's life of perfect obedience, His suffering, death, and resurrection, God provided the only means of atonement." },
-    { title: "The Experience of Salvation", desc: "Through Christ we are justified, sanctified, and glorified by grace through faith." },
-    { title: "Growing in Christ", desc: "By His death on the cross Jesus triumphed over the forces of evil, and we grow in Him through spiritual disciplines." },
-    { title: "The Church", desc: "The church is the community of believers who confess Jesus Christ as Lord and Saviour." },
-    { title: "The Remnant and Its Mission", desc: "The universal church is composed of all who truly believe in Christ, with a remnant called to proclaim the three angels' messages." },
-    { title: "Unity in the Body of Christ", desc: "We are all equal in Christ and should serve one another with mutual respect and love." },
-    { title: "Baptism", desc: "Baptism by immersion symbolizes our death to sin, new birth, and union with Christ." },
-    { title: "The Lord's Supper", desc: "The Lord's Supper is a participation in the emblems of Christ's body and blood as an expression of faith." },
-    { title: "Spiritual Gifts and Ministries", desc: "God bestows upon all members spiritual gifts that equip them for service." },
-    { title: "The Gift of Prophecy", desc: "One of the gifts of the Holy Spirit is prophecy, a distinguishing mark of the remnant church." },
-    { title: "The Law of God", desc: "The Ten Commandments are an expression of God's character and will, binding upon all people in every age." },
-    { title: "The Sabbath", desc: "The seventh-day Sabbath is a day of rest, worship, and ministry in harmony with the teaching of Jesus." },
-    { title: "Stewardship", desc: "We are God's stewards, entrusted by Him with time, opportunities, abilities, and possessions." },
-    { title: "Christian Behavior", desc: "We are called to be a godly people who think, feel, and act in harmony with biblical principles." },
-    { title: "Marriage and the Family", desc: "Marriage was divinely established in Eden and affirmed by Jesus as a lifelong union between a man and a woman." },
-    { title: "Christ's Ministry in the Heavenly Sanctuary", desc: "Christ ministers in the heavenly sanctuary, making available the benefits of His atoning sacrifice." },
-    { title: "The Second Coming of Christ", desc: "The second coming of Christ is the blessed hope of the church, the climax of the gospel." },
-    { title: "Death and Resurrection", desc: "The wages of sin is death, but the gift of God is eternal life — the dead await the resurrection." },
-    { title: "The Millennium and the End of Sin", desc: "The millennium is the thousand-year reign of Christ between the first and second resurrections." },
-    { title: "The New Earth", desc: "On the new earth, God will provide an eternal home for the redeemed and a perfect environment for everlasting life." },
+    { title: "The Holy Scriptures", desc: "The authority, sufficiency, and transformative power of God's Word.", objective: "Articulate the Adventist understanding of biblical inspiration and explain why sola scriptura is foundational to SDA theology." },
+    { title: "The Trinity", desc: "One God revealed in three co-eternal Persons: Father, Son, and Holy Spirit.", objective: "Explain the biblical basis for the Trinity using Scripture, and distinguish the Adventist position from both modalism and tritheism." },
+    { title: "The Father", desc: "God the eternal Father — Creator, Source, Sustainer, and Sovereign of all creation.", objective: "Describe the character of God the Father as revealed in Scripture and explain how the Great Controversy theme centers on vindicating His character." },
+    { title: "The Son", desc: "God the eternal Son became incarnate in Jesus Christ, through whom all things were created and salvation is accomplished.", objective: "Present the biblical evidence for Christ's full divinity and humanity, and explain why the incarnation is essential to the plan of salvation." },
+    { title: "The Holy Spirit", desc: "God the eternal Spirit was active with the Father and Son in creation, incarnation, and redemption.", objective: "Identify the personhood and distinct ministry of the Holy Spirit and explain His role in conviction, sanctification, and spiritual gifting." },
+    { title: "Creation", desc: "God is the Creator of all things, as revealed in the Genesis account of a literal six-day creation.", objective: "Defend the biblical account of a literal six-day creation and explain its significance for Sabbath, marriage, and human dignity." },
+    { title: "The Nature of Humanity", desc: "Humanity was made in the image of God, endowed with individuality, freedom, and the ability to think and act.", objective: "Explain what it means to be created in God's image and how the fall affected every dimension of human nature." },
+    { title: "The Great Controversy", desc: "All humanity is involved in a cosmic conflict between Christ and Satan regarding God's character and law.", objective: "Understand and clearly explain the cosmic conflict theme central to Adventist theology — its origin, scope, and resolution." },
+    { title: "The Life, Death, and Resurrection of Christ", desc: "In Christ's life of perfect obedience, His suffering, death, and resurrection, God provided the only means of atonement.", objective: "Trace the significance of Christ's life, substitutionary death, and bodily resurrection as the sole basis for human salvation." },
+    { title: "The Experience of Salvation", desc: "Through Christ we are justified, sanctified, and glorified by grace through faith.", objective: "Distinguish clearly between justification and sanctification using Scripture, and explain how both operate by grace through faith." },
+    { title: "Growing in Christ", desc: "By His death on the cross Jesus triumphed over the forces of evil, and we grow in Him through spiritual disciplines.", objective: "Identify the spiritual disciplines that foster growth in Christ and explain how victory over sin is achieved through the indwelling Spirit." },
+    { title: "The Church", desc: "The church is the community of believers who confess Jesus Christ as Lord and Saviour.", objective: "Define the church as both organism and organization, and explain the Adventist understanding of visible and invisible church." },
+    { title: "The Remnant and Its Mission", desc: "The universal church is composed of all who truly believe in Christ, with a remnant called to proclaim the three angels' messages.", objective: "Explain the Adventist concept of the remnant and articulate the three angels' messages of Revelation 14 with clarity and conviction." },
+    { title: "Unity in the Body of Christ", desc: "We are all equal in Christ and should serve one another with mutual respect and love.", objective: "Demonstrate from Scripture why unity in the body of Christ transcends cultural, ethnic, and social barriers without erasing diversity." },
+    { title: "Baptism", desc: "Baptism by immersion symbolizes our death to sin, new birth, and union with Christ.", objective: "Explain the biblical meaning of baptism by immersion as death to sin and resurrection to new life in Christ." },
+    { title: "The Lord's Supper", desc: "The Lord's Supper is a participation in the emblems of Christ's body and blood as an expression of faith.", objective: "Describe the theological significance of foot washing and communion as acts of humility, remembrance, and covenant renewal." },
+    { title: "Spiritual Gifts and Ministries", desc: "God bestows upon all members spiritual gifts that equip them for service.", objective: "Identify the biblical spiritual gifts and explain how they function for the edification of the church and fulfillment of its mission." },
+    { title: "The Gift of Prophecy", desc: "One of the gifts of the Holy Spirit is prophecy, a distinguishing mark of the remnant church.", objective: "Explain the Adventist understanding of the prophetic gift, including the role of Ellen G. White and the biblical tests of a prophet." },
+    { title: "The Law of God", desc: "The Ten Commandments are an expression of God's character and will, binding upon all people in every age.", objective: "Articulate the perpetuity and relevance of the Ten Commandments as an expression of God's character, not a means of earning salvation." },
+    { title: "The Sabbath", desc: "The seventh-day Sabbath is a day of rest, worship, and ministry in harmony with the teaching of Jesus.", objective: "Articulate the theological meaning of the seventh-day Sabbath as creation memorial, covenant sign, and eschatological identity marker." },
+    { title: "Stewardship", desc: "We are God's stewards, entrusted by Him with time, opportunities, abilities, and possessions.", objective: "Explain the biblical principle of stewardship across time, body, talents, and finances — including the Adventist practice of tithe and offerings." },
+    { title: "Christian Behavior", desc: "We are called to be a godly people who think, feel, and act in harmony with biblical principles.", objective: "Describe the biblical standard for Christian lifestyle and explain how health, modesty, and media choices reflect sanctification." },
+    { title: "Marriage and the Family", desc: "Marriage was divinely established in Eden and affirmed by Jesus as a lifelong union between a man and a woman.", objective: "Present the biblical model for marriage and family as established at creation and affirmed by Jesus." },
+    { title: "Christ's Ministry in the Heavenly Sanctuary", desc: "Christ ministers in the heavenly sanctuary, making available the benefits of His atoning sacrifice.", objective: "Explain the Adventist sanctuary doctrine — Christ's two-phase ministry and the significance of the pre-advent investigative judgment." },
+    { title: "The Second Coming of Christ", desc: "The second coming of Christ is the blessed hope of the church, the climax of the gospel.", objective: "Articulate the biblical promise of Christ's visible, audible, literal second coming and its implications for daily living and mission urgency." },
+    { title: "Death and Resurrection", desc: "The wages of sin is death, but the gift of God is eternal life — the dead await the resurrection.", objective: "Explain the Adventist understanding of death as unconscious sleep and the resurrection as the Christian's true hope." },
+    { title: "The Millennium and the End of Sin", desc: "The millennium is the thousand-year reign of Christ between the first and second resurrections.", objective: "Describe the millennium — its purpose, events, and how it resolves the Great Controversy before the final eradication of sin." },
+    { title: "The New Earth", desc: "On the new earth, God will provide an eternal home for the redeemed and a perfect environment for everlasting life.", objective: "Envision the new earth as the fulfillment of God's original purpose and the eternal home of the redeemed." },
   ];
 
   const beliefsModules: any[] = [];
@@ -107,6 +107,7 @@ export async function seedFormationData(db: any) {
       trackId: trackBeliefs,
       title: beliefsTitles[i].title,
       description: beliefsTitles[i].desc,
+      learningObjective: beliefsTitles[i].objective,
       moduleOrder: i + 1,
       totalLessons: i < 3 ? 1 : 0,
     });
@@ -270,10 +271,10 @@ export async function seedFormationData(db: any) {
   // ── New Believer Path ──────────────────────────────────────────────────────
 
   const nbModules = [
-    { id: "nbmod-001", trackId: trackNewBeliever, title: "Understanding Salvation", description: "Discover what it means to be saved by grace through faith in Jesus Christ.", moduleOrder: 1, totalLessons: 2 },
-    { id: "nbmod-002", trackId: trackNewBeliever, title: "Baptism & New Life", description: "Explore the meaning of baptism and the new life it symbolizes.", moduleOrder: 2, totalLessons: 2 },
-    { id: "nbmod-003", trackId: trackNewBeliever, title: "The Sabbath Gift", description: "Discover the blessing of the seventh-day Sabbath as a gift from God.", moduleOrder: 3, totalLessons: 2 },
-    { id: "nbmod-004", trackId: trackNewBeliever, title: "Life in Community", description: "Learn what it means to be part of the body of Christ and the Adventist family.", moduleOrder: 4, totalLessons: 2 },
+    { id: "nbmod-001", trackId: trackNewBeliever, title: "Understanding Salvation", description: "Discover what it means to be saved by grace through faith in Jesus Christ.", learningObjective: "Explain in your own words what grace means and why salvation cannot be earned — using Romans 3:23-24 and Ephesians 2:8-9 as anchors.", moduleOrder: 1, totalLessons: 2 },
+    { id: "nbmod-002", trackId: trackNewBeliever, title: "Baptism & New Life", description: "Explore the meaning of baptism and the new life it symbolizes.", learningObjective: "Articulate the biblical meaning of baptism by immersion and describe what \"new life in Christ\" looks like practically.", moduleOrder: 2, totalLessons: 2 },
+    { id: "nbmod-003", trackId: trackNewBeliever, title: "The Sabbath Gift", description: "Discover the blessing of the seventh-day Sabbath as a gift from God.", learningObjective: "Articulate the theological meaning of Sabbath as covenant and identity, and begin implementing a personal Sabbath rhythm.", moduleOrder: 3, totalLessons: 2 },
+    { id: "nbmod-004", trackId: trackNewBeliever, title: "Life in Community", description: "Learn what it means to be part of the body of Christ and the Adventist family.", learningObjective: "Describe your role in the body of Christ and identify at least one way you will actively participate in your local church community.", moduleOrder: 4, totalLessons: 2 },
   ];
   await db.insert(formationModules).values(nbModules);
 
@@ -345,8 +346,8 @@ export async function seedFormationData(db: any) {
   // ── Prophecy Foundations ───────────────────────────────────────────────────
 
   const propModules = [
-    { id: "pmod-001", trackId: trackProphecy, title: "Daniel 2 — The Statue", description: "King Nebuchadnezzar's dream of a great metallic statue and its meaning for world history.", moduleOrder: 1, totalLessons: 2 },
-    { id: "pmod-002", trackId: trackProphecy, title: "Daniel 7 — The Beasts", description: "Daniel's vision of four beasts rising from the sea and the Ancient of Days' judgment.", moduleOrder: 2, totalLessons: 2 },
+    { id: "pmod-001", trackId: trackProphecy, title: "Daniel 2 — The Statue", description: "King Nebuchadnezzar's dream of a great metallic statue and its meaning for world history.", learningObjective: "Explain the historicist interpretation of Daniel 2, identify each metal with its empire, and articulate why the stone \"cut without hands\" points to Christ's second coming.", moduleOrder: 1, totalLessons: 2 },
+    { id: "pmod-002", trackId: trackProphecy, title: "Daniel 7 — The Beasts", description: "Daniel's vision of four beasts rising from the sea and the Ancient of Days' judgment.", learningObjective: "Explain the historicist interpretation of Daniel 7, identify each beast, describe the little horn criteria, and articulate the significance of the pre-advent judgment scene.", moduleOrder: 2, totalLessons: 2 },
   ];
   await db.insert(formationModules).values(propModules);
 

@@ -39,6 +39,7 @@ interface Module {
   id: string;
   title: string;
   description: string;
+  learningObjective: string | null;
   moduleOrder: number;
   totalLessons: number;
   lessons: Lesson[];
@@ -328,6 +329,16 @@ export default function TrackDetailScreen() {
 
               {isExpanded && (
                 <View style={[styles.lessonsList, { borderTopColor: theme.border }]}>
+                  {mod.learningObjective ? (
+                    <View style={[styles.objectiveBox, { backgroundColor: trackColor + "0A", borderColor: trackColor + "25" }]}>
+                      <Text style={[styles.objectiveLabel, { color: trackColor, fontFamily: "Inter_600SemiBold" }]}>
+                        After completing this module, you should be able to:
+                      </Text>
+                      <Text style={[styles.objectiveText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
+                        {mod.learningObjective}
+                      </Text>
+                    </View>
+                  ) : null}
                   {mod.lessons.map((lesson, lessonIndex) => {
                     const isCompleted = completedLessons.has(lesson.id);
                     const unlocked = isEnrolled ? isLessonUnlocked(mod, lessonIndex) || true : false;
@@ -510,4 +521,22 @@ const styles = StyleSheet.create({
   lessonTitle: { fontSize: 14, marginBottom: 2 },
   lessonAnchor: { fontSize: 12 },
   lessonTime: { fontSize: 12 },
+  objectiveBox: {
+    marginHorizontal: 4,
+    marginTop: 12,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 6,
+  },
+  objectiveLabel: {
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: "uppercase" as const,
+  },
+  objectiveText: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
 });
