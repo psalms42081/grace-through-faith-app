@@ -171,6 +171,28 @@ export default function DiscoverScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push("/christian-traditions" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="christian-traditions-card"
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
+            <Ionicons name="globe" size={22} color="#5B86E5" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Christian Traditions
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Explore perspectives from different traditions
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
         <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
