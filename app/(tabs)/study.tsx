@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,8 +17,131 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Tab = "word" | "context" | "voices" | "application";
+
+const LAYER_ORDER: Tab[] = ["word", "context", "voices", "application"];
+const LAYER_LABELS: Record<Tab, string> = {
+  word: "Text",
+  context: "Context",
+  voices: "Insight",
+  application: "Transformation",
+};
+
+interface LayerCompletionEntry {
+  bookId: number;
+  chapter: number;
+  layer: string;
+  completedAt: string;
+}
+
+function LayerProgressBar({
+  activeTab,
+  completedLayers,
+  onTabPress,
+  theme,
+}: {
+  activeTab: Tab;
+  completedLayers: Set<string>;
+  onTabPress: (tab: Tab) => void;
+  theme: typeof Colors.light;
+}) {
+  return (
+    <View style={lpStyles.container}>
+      <View style={lpStyles.bar}>
+        {LAYER_ORDER.map((layer, i) => {
+          const isActive = activeTab === layer;
+          const isCompleted = completedLayers.has(layer);
+          return (
+            <Pressable
+              key={layer}
+              onPress={() => onTabPress(layer)}
+              style={[
+                lpStyles.segment,
+                i === 0 && lpStyles.segmentFirst,
+                i === LAYER_ORDER.length - 1 && lpStyles.segmentLast,
+                isActive && { backgroundColor: theme.accent },
+                !isActive && { backgroundColor: theme.backgroundSecondary },
+              ]}
+            >
+              {isCompleted && !isActive && (
+                <Ionicons name="checkmark-circle" size={14} color={theme.accent} style={lpStyles.check} />
+              )}
+              {isCompleted && isActive && (
+                <Ionicons name="checkmark-circle" size={14} color="#fff" style={lpStyles.check} />
+              )}
+              <Text
+                style={[
+                  lpStyles.label,
+                  { color: isActive ? "#fff" : theme.textSecondary },
+                  isActive && { fontFamily: "Inter_600SemiBold" },
+                  !isActive && { fontFamily: "Inter_400Regular" },
+                ]}
+                numberOfLines={1}
+              >
+                {LAYER_LABELS[layer]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function NextLayerCTA({
+  activeTab,
+  completedLayers,
+  onMarkComplete,
+  onNextLayer,
+  isCompleted,
+  canComplete,
+  theme,
+}: {
+  activeTab: Tab;
+  completedLayers: Set<string>;
+  onMarkComplete: () => void;
+  onNextLayer: () => void;
+  isCompleted: boolean;
+  canComplete: boolean;
+  theme: typeof Colors.light;
+}) {
+  const currentIndex = LAYER_ORDER.indexOf(activeTab);
+  const hasNext = currentIndex < LAYER_ORDER.length - 1;
+  const nextLabel = hasNext ? LAYER_LABELS[LAYER_ORDER[currentIndex + 1]] : null;
+
+  if (!canComplete) return null;
+
+  return (
+    <View style={ctaStyles.container}>
+      {!isCompleted ? (
+        <Pressable
+          onPress={onMarkComplete}
+          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+        >
+          <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+          <Text style={ctaStyles.btnText}>Mark Layer Complete</Text>
+        </Pressable>
+      ) : hasNext ? (
+        <Pressable
+          onPress={onNextLayer}
+          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+        >
+          <Text style={ctaStyles.btnText}>Next Layer: {nextLabel}</Text>
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+        </Pressable>
+      ) : (
+        <View style={[ctaStyles.completeBanner, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+          <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
+          <Text style={[ctaStyles.completeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            All layers complete for this chapter
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 const TABS: { id: Tab; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
   { id: "word", label: "Word Study", icon: "language-outline" },
@@ -100,6 +223,8 @@ export default function StudyScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
+  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     tab?: string;
     bookId?: string;
@@ -120,6 +245,49 @@ export default function StudyScreen() {
     }
   }, [params.tab]);
 
+  const bookId = params.bookId ? parseInt(params.bookId) : null;
+  const chapter = params.chapter ? parseInt(params.chapter) : null;
+  const canTrack = bookId !== null && chapter !== null;
+
+  const completionKey = `/api/layer-completions?userId=${userId}&bookId=${bookId}&chapter=${chapter}`;
+  const { data: completions } = useQuery<LayerCompletionEntry[]>({
+    queryKey: [completionKey],
+    enabled: canTrack,
+  });
+
+  const completedLayers = useMemo(
+    () => new Set<string>((completions ?? []).map((c) => c.layer)),
+    [completions]
+  );
+
+  const markCompleteMutation = useMutation({
+    mutationFn: async (layer: string) => {
+      const res = await apiRequest("POST", "/api/layer-completions", {
+        userId,
+        bookId,
+        chapter,
+        layer,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [completionKey] });
+    },
+  });
+
+  const handleMarkComplete = useCallback(() => {
+    if (canTrack && !completedLayers.has(activeTab) && !markCompleteMutation.isPending) {
+      markCompleteMutation.mutate(activeTab);
+    }
+  }, [canTrack, activeTab, completedLayers, markCompleteMutation]);
+
+  const handleNextLayer = useCallback(() => {
+    const idx = LAYER_ORDER.indexOf(activeTab);
+    if (idx < LAYER_ORDER.length - 1) {
+      setActiveTab(LAYER_ORDER[idx + 1]);
+    }
+  }, [activeTab]);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -133,6 +301,15 @@ export default function StudyScreen() {
           Deep dive into Scripture
         </Text>
       </View>
+
+      {canTrack && (
+        <LayerProgressBar
+          activeTab={activeTab}
+          completedLayers={completedLayers}
+          onTabPress={setActiveTab}
+          theme={theme}
+        />
+      )}
 
       <ScrollView
         horizontal
@@ -184,6 +361,16 @@ export default function StudyScreen() {
         {activeTab === "context" && <ContextTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
         {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
         {activeTab === "application" && <ApplicationTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
+
+        <NextLayerCTA
+          activeTab={activeTab}
+          completedLayers={completedLayers}
+          onMarkComplete={handleMarkComplete}
+          onNextLayer={handleNextLayer}
+          isCompleted={completedLayers.has(activeTab)}
+          canComplete={canTrack}
+          theme={theme}
+        />
       </ScrollView>
     </View>
   );
@@ -1922,5 +2109,74 @@ const styles = StyleSheet.create({
   },
   kjvUsagePillText: {
     fontSize: 12,
+  },
+});
+
+const lpStyles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  bar: {
+    flexDirection: "row",
+    borderRadius: 12,
+    overflow: "hidden",
+    gap: 2,
+  },
+  segment: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    gap: 4,
+  },
+  segmentFirst: {
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+  },
+  segmentLast: {
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  check: {
+    marginRight: 0,
+  },
+  label: {
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+});
+
+const ctaStyles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 4,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  btn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  btnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
+  },
+  completeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  completeText: {
+    fontSize: 14,
   },
 });

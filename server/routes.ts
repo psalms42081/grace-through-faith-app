@@ -62,6 +62,7 @@ import {
   families,
   prayerGroups,
   prayerGroupMembers,
+  layerCompletions,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -3101,6 +3102,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (err) {
       console.error("Growth analytics error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── LAYER COMPLETION TRACKING ──────────────────────────────────────────────
+
+  app.get("/api/layer-completions", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
+      const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
+
+      let conditions = [eq(layerCompletions.userId, userId)];
+      if (bookId !== undefined) conditions.push(eq(layerCompletions.bookId, bookId));
+      if (chapter !== undefined) conditions.push(eq(layerCompletions.chapter, chapter));
+
+      const rows = await db
+        .select({
+          bookId: layerCompletions.bookId,
+          chapter: layerCompletions.chapter,
+          layer: layerCompletions.layer,
+          completedAt: layerCompletions.completedAt,
+        })
+        .from(layerCompletions)
+        .where(and(...conditions));
+
+      return res.json(rows);
+    } catch (err) {
+      console.error("Layer completions fetch error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/layer-completions", async (req, res) => {
+    try {
+      const { userId, bookId, chapter, layer } = req.body;
+      if (!userId || bookId == null || chapter == null || !layer) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const validLayers = ["word", "context", "voices", "application"];
+      if (!validLayers.includes(layer)) {
+        return res.status(400).json({ error: "Invalid layer" });
+      }
+
+      await db
+        .insert(layerCompletions)
+        .values({ userId: String(userId), bookId: Number(bookId), chapter: Number(chapter), layer: String(layer) })
+        .onConflictDoNothing();
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Layer completion save error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/layer-completions/book-summary", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const bookId = Number(req.query.bookId);
+      if (!bookId) return res.status(400).json({ error: "bookId required" });
+
+      const [bookInfo] = await db
+        .select({ chapterCount: bibleBooks.chapterCount })
+        .from(bibleBooks)
+        .where(eq(bibleBooks.id, bookId));
+
+      if (!bookInfo) return res.json({ word: 0, context: 0, voices: 0, application: 0 });
+
+      const totalChapters = bookInfo.chapterCount;
+      const completions = await db
+        .select({ layer: layerCompletions.layer, chapters: countDistinct(layerCompletions.chapter) })
+        .from(layerCompletions)
+        .where(and(eq(layerCompletions.userId, userId), eq(layerCompletions.bookId, bookId)))
+        .groupBy(layerCompletions.layer);
+
+      const summary: Record<string, number> = { word: 0, context: 0, voices: 0, application: 0 };
+      for (const row of completions) {
+        const pct = Math.round((Number(row.chapters) / totalChapters) * 100);
+        summary[row.layer] = Math.min(pct, 100);
+      }
+
+      return res.json(summary);
+    } catch (err) {
+      console.error("Book layer summary error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

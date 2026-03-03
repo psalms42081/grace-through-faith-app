@@ -68,16 +68,30 @@ const CELL_SIZE = 28;
 const CELL_GAP = 3;
 const CELL_RADIUS = 5;
 
+interface LayerSummary {
+  word: number;
+  context: number;
+  voices: number;
+  application: number;
+}
+
 function BibleHeatmap({
   bibleMap,
   theme,
   isDark,
+  userId,
 }: {
   bibleMap: BookMapEntry[];
   theme: typeof Colors.dark;
   isDark: boolean;
+  userId: string;
 }) {
   const [selectedBook, setSelectedBook] = useState<BookMapEntry | null>(null);
+
+  const { data: layerSummary } = useQuery<LayerSummary>({
+    queryKey: [`/api/layer-completions/book-summary?userId=${userId}&bookId=${selectedBook?.id}`],
+    enabled: !!selectedBook,
+  });
 
   const rows = Math.ceil(bibleMap.length / HEATMAP_COLS);
   const svgWidth = HEATMAP_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP;
@@ -125,6 +139,31 @@ function BibleHeatmap({
           <Text style={[heatSt.tooltipDetail, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {selectedBook.chaptersRead} of {selectedBook.chapterCount} chapters read
           </Text>
+          {layerSummary && (layerSummary.word > 0 || layerSummary.context > 0 || layerSummary.voices > 0 || layerSummary.application > 0) && (
+            <View style={heatSt.layerSummary}>
+              {[
+                { key: "word", label: "Text" },
+                { key: "context", label: "Context" },
+                { key: "voices", label: "Insight" },
+                { key: "application", label: "Transform" },
+              ].map((l) => {
+                const pct = layerSummary[l.key as keyof LayerSummary];
+                return (
+                  <View key={l.key} style={heatSt.layerRow}>
+                    <Text style={[heatSt.layerLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {l.label}
+                    </Text>
+                    <View style={[heatSt.layerBarBg, { backgroundColor: isDark ? "#2a2a2f" : "#ddd8d0" }]}>
+                      <View style={[heatSt.layerBarFill, { width: `${pct}%` as any, backgroundColor: theme.accent }]} />
+                    </View>
+                    <Text style={[heatSt.layerPct, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                      {pct}%
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       )}
 
@@ -370,7 +409,7 @@ export default function ProfileScreen() {
           Tap a block to see reading depth per book
         </Text>
         {growthData?.bibleMap && growthData.bibleMap.length > 0 ? (
-          <BibleHeatmap bibleMap={growthData.bibleMap} theme={theme} isDark={isDark} />
+          <BibleHeatmap bibleMap={growthData.bibleMap} theme={theme} isDark={isDark} userId={uid} />
         ) : (
           <View style={st.heatmapEmpty}>
             <Ionicons name="map-outline" size={32} color={theme.textMuted} />
@@ -507,6 +546,36 @@ const heatSt = StyleSheet.create({
   },
   tooltipName: { fontSize: 15, marginBottom: 2 },
   tooltipDetail: { fontSize: 12 },
+  layerSummary: {
+    marginTop: 10,
+    width: "100%",
+    gap: 6,
+  },
+  layerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  layerLabel: {
+    fontSize: 10,
+    width: 56,
+    letterSpacing: 0.2,
+  },
+  layerBarBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  layerBarFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  layerPct: {
+    fontSize: 10,
+    width: 28,
+    textAlign: "right",
+  },
   legendRow: {
     flexDirection: "row",
     alignItems: "center",

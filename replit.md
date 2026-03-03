@@ -16,7 +16,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Kids Club UI:** Playful, vibrant UI with custom tab bar, animated entrance effects, bouncy press effects, larger touch targets, and dynamic animations.
 
 **Technical Implementations & Feature Specifications:**
-- **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content.
+- **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content. Includes a segmented progress bar (Text / Context / Insight / Transformation), per-layer completion tracking stored in `layer_completions` table (per user, book, chapter, layer), "Mark Layer Complete" / "Next Layer" CTA buttons, and per-book layer completion summary (% bars) in the Bible Knowledge Map tooltip on the Profile tab.
 - **AI Integration:** OpenAI's `gpt-4o-mini` generates on-demand context, commentary, application, and word study data, with all content cached.
 - **Text-to-Speech (TTS):** Utilizes OpenAI's `gpt-audio model` via a server-side API, with `expo-speech` as a device fallback.
 - **Offline Support & Proactive Prefetch:** React Query persistence via AsyncStorage provides an offline-first experience, proactively prefetching study layers.

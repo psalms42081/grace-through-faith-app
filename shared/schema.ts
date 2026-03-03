@@ -926,3 +926,30 @@ export const chapterContextCache = pgTable(
 );
 
 export type ChapterContextCache = typeof chapterContextCache.$inferSelect;
+
+// ─── LAYER COMPLETION TRACKING ─────────────────────────────────────────────
+
+export const layerCompletions = pgTable(
+  "layer_completions",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    layer: varchar("layer", { length: 20 }).notNull(),
+    completedAt: timestamp("completed_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userBookChapterLayer: uniqueIndex("layer_user_book_chapter_layer").on(
+      table.userId,
+      table.bookId,
+      table.chapter,
+      table.layer
+    ),
+    userBookIdx: index("layer_user_book_idx").on(table.userId, table.bookId),
+  })
+);
+
+export type LayerCompletion = typeof layerCompletions.$inferSelect;
