@@ -37,7 +37,50 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Devotionals:** Browsing, enrollment, progress tracking, and interactive AI reflection discussions.
 - **SDA Doctrinal Studies:** Dedicated screen for the 28 Fundamental Beliefs with external EGW Writings links.
 - **Home Screen:** Verse of the Day, streak calendar, Continue Reading, guided tool cards (4-Layer Study, Prayer Journal), devotional plan progress, and SDA Hub cards (Church Connect, Small Groups, Study Paths).
-- **Formation System (Study Paths):** Curriculum-based formation engine separate from devotional plans. 8 new DB tables: `formation_track`, `formation_module`, `formation_lesson`, `lesson_section`, `formation_assessment`, `assessment_item`, `progress_track`, `progress_lesson`. Each lesson has 6 sections: Anchor Text, Explain, Integrate (SDA theology), Practice, Reflection, Assessment. API routes: GET /api/tracks, GET /api/tracks/:id, GET /api/tracks/progress, GET /api/lessons/:id, POST /api/tracks/enroll, POST /api/lessons/:id/complete, POST /api/assessments/:id/submit, POST /api/modules/:id/confidence. Frontend screens: `app/study-paths.tsx` (browser), `app/study-path/[id].tsx` (track detail with module accordion + learning objectives), `app/lesson/[id].tsx` (full lesson view with section completion, inline assessment, and module completion summary modal). Modules have `learningObjective` column. Module completion triggers a summary modal showing module title, learning objective, avg assessment score, and 1-5 confidence self-check. Confidence ratings stored in `progress_track.module_confidence` (jsonb). Seeded with 3 tracks: 28 Beliefs Deep Dive, New Believer Path, Prophecy Foundations. Seed data in `server/seed-formation.ts`. **Wave 1 Content (Beliefs 1-7):** Fully seeded in `server/seed-beliefs-wave1.ts` with data files in `server/seeds/wave1-beliefs-*.ts`. Each of Beliefs 1-7 has 4 lessons (Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges) with all 6 section types + 5 assessment items per lesson. Total: 28 lessons, 168 sections, 28 assessments, 140 assessment items. All content is original (no GC quarterly), Scripture-first, with egwwritings.org external links. ID scheme: w1l-/w1s-/w1a-/w1i- prefixes. Beliefs 1-3 Lesson 1 uses original IDs (bl-001/002/003) from seed-formation.ts.
+- **Formation System (Study Paths):** Curriculum-based formation engine separate from devotional plans. 8 new DB tables: `formation_track`, `formation_module`, `formation_lesson`, `lesson_section`, `formation_assessment`, `assessment_item`, `progress_track`, `progress_lesson`. Each lesson has 6 sections: Anchor Text, Explain, Integrate (SDA theology), Practice, Reflection, Assessment. API routes: GET /api/tracks, GET /api/tracks/:id, GET /api/tracks/progress, GET /api/lessons/:id, POST /api/tracks/enroll, POST /api/lessons/:id/complete, POST /api/assessments/:id/submit, POST /api/modules/:id/confidence. Frontend screens: `app/study-paths.tsx` (browser), `app/study-path/[id].tsx` (track detail with module accordion + learning objectives), `app/lesson/[id].tsx` (full lesson view with section completion, inline assessment, and module completion summary modal). Modules have `learningObjective` column. Module completion triggers a summary modal showing module title, learning objective, avg assessment score, and 1-5 confidence self-check. Confidence ratings stored in `progress_track.module_confidence` (jsonb). Seeded with 3 tracks: 28 Beliefs Deep Dive, New Believer Path, Prophecy Foundations. Seed data in `server/seed-formation.ts`.
+
+### Wave 1 — 28 Beliefs Deep Dive (Beliefs 1-7)
+
+**Status: Complete and Fully Seeded**
+
+Wave 1 delivers the foundational worldview core of the Adventist theological system. Beliefs 1-7 are now implemented as a structured theological course for lay members, using the existing formation engine.
+
+**Scope Delivered**
+
+Beliefs Included:
+1. The Holy Scriptures
+2. The Trinity
+3. The Father
+4. The Son
+5. The Holy Spirit
+6. Creation
+7. The Nature of Humanity
+
+Each belief module contains:
+- 4 structured lessons: Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges
+- 6 section types per lesson: Anchor, Explain, Integrate, Practice, Reflection, Assessment
+- 5 assessment items per lesson (3 recall, 2 conceptual clarity)
+
+**Totals:** 28 lessons, 168 lesson sections, 28 assessments, 140 assessment items
+
+Beliefs 1-3 Lesson 1 retain original IDs (bl-001/002/003 from seed-formation.ts). All new Wave 1 records use the following ID scheme:
+- Lessons: `w1l-*`
+- Sections: `w1s-*`
+- Assessments: `w1a-*`
+- Assessment items: `w1i-*`
+
+**Content Standards**
+
+All content is:
+- Original writing (no General Conference quarterly material used or paraphrased)
+- Scripture-first in reasoning and structure
+- Theologically aligned with the official 28 Fundamental Beliefs
+- Written for intelligent lay believers (clear, reverent, non-academic tone)
+- Linked externally to egwwritings.org where appropriate (no copyrighted embedding)
+
+Wave 1 establishes the doctrinal core of the platform. Future waves will extend the same structured theological model to the remaining beliefs.
+
+Seed files: `server/seed-beliefs-wave1.ts` (orchestrator), `server/seeds/wave1-beliefs-1-2.ts`, `server/seeds/wave1-beliefs-3-4.ts`, `server/seeds/wave1-beliefs-5-6.ts`, `server/seeds/wave1-belief-7.ts`.
 - **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
 - **Connect Tab (new):** Church Connect (map + list view), Small Groups (links to prayer groups), Live Streams (Jitsi Meet via WebView), Family Dashboard access.
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
