@@ -34,6 +34,7 @@ import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbath } from "@/lib/sabbath";
 import type { AgeGroup } from "@/context/KidsModeContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -1123,6 +1124,7 @@ function AdultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
+  const sabbath = useSabbath();
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -1224,6 +1226,58 @@ function AdultHomeScreen() {
         userId={userId}
         lastActiveChildId={lastActiveChildId}
       />
+
+      {sabbath.isSabbath && (
+        <Pressable
+          onPress={() => router.push("/sabbath-experience" as any)}
+          style={{
+            backgroundColor: theme.accent + "12",
+            borderWidth: 1,
+            borderColor: theme.accent + "30",
+            borderRadius: 16,
+            padding: 16,
+            marginBottom: 16,
+          }}
+          testID="sabbath-banner"
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: theme.accent + "20",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <Ionicons name="sunny" size={20} color={theme.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                color: theme.text,
+                fontFamily: "Lora_600SemiBold",
+                fontSize: 15,
+              }}>
+                Sabbath has begun. Enter sacred time.
+              </Text>
+            </View>
+          </View>
+          <View style={{
+            backgroundColor: theme.accent,
+            borderRadius: 10,
+            paddingVertical: 10,
+            alignItems: "center",
+            marginTop: 12,
+          }}>
+            <Text style={{
+              color: "#fff",
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 14,
+            }}>
+              Enter Sabbath
+            </Text>
+          </View>
+        </Pressable>
+      )}
 
       <View style={s.verseCardWrap}>
         <ImageBackground

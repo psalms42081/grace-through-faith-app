@@ -1290,3 +1290,28 @@ export const liveSessions = pgTable(
 );
 
 export type LiveSession = typeof liveSessions.$inferSelect;
+
+// ─── SABBATH REFLECTIONS ──────────────────────────────────────────────────────
+
+export const sabbathReflections = pgTable(
+  "sabbath_reflection",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    date: varchar("date", { length: 10 }).notNull(),
+    prompt: text("prompt").notNull(),
+    response: text("response").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    userDatePromptUnique: uniqueIndex("sabbath_reflection_user_date_prompt").on(
+      table.userId,
+      table.date,
+      table.prompt
+    ),
+  })
+);
+
+export type SabbathReflection = typeof sabbathReflections.$inferSelect;

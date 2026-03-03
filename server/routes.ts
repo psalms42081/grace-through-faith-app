@@ -78,6 +78,7 @@ import {
   progressLessons,
   sdaChurches,
   liveSessions,
+  sabbathReflections,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
@@ -4842,6 +4843,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Stream end error:", err);
       return res.status(500).json({ error: "Failed to end stream" });
+    }
+  });
+
+  // ─── SABBATH REFLECTIONS ──────────────────────────────────────────────────
+
+  app.get("/api/sabbath/reflections", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const date = String(req.query.date || "");
+      if (!date) return res.status(400).json({ error: "date is required" });
+
+      const rows = await db
+        .select()
+        .from(sabbathReflections)
+        .where(
+          and(
+            eq(sabbathReflections.userId, userId),
+            eq(sabbathReflections.date, date)
+          )
+        );
+
+      return res.json(rows);
+    } catch (err) {
+      console.error("Sabbath reflections GET error:", err);
+      return res.status(500).json({ error: "Failed to get reflections" });
+    }
+  });
+
+  app.post("/api/sabbath/reflections", async (req, res) => {
+    try {
+      const { userId, date, prompt, response } = req.body;
+      if (!userId || !date || !prompt || !response) {
+        return res.status(400).json({ error: "userId, date, prompt, and response are required" });
+      }
+
+      const existing = await db
+        .select()
+        .from(sabbathReflections)
+        .where(
+          and(
+            eq(sabbathReflections.userId, userId),
+            eq(sabbathReflections.date, date),
+            eq(sabbathReflections.prompt, prompt)
+          )
+        );
+
+      if (existing.length > 0) {
+        const [updated] = await db
+          .update(sabbathReflections)
+          .set({ response })
+          .where(eq(sabbathReflections.id, existing[0].id))
+          .returning();
+        return res.json(updated);
+      }
+
+      const [inserted] = await db
+        .insert(sabbathReflections)
+        .values({ userId, date, prompt, response })
+        .returning();
+
+      return res.json(inserted);
+    } catch (err) {
+      console.error("Sabbath reflections POST error:", err);
+      return res.status(500).json({ error: "Failed to save reflection" });
     }
   });
 
