@@ -1260,3 +1260,31 @@ export const sdaChurches = pgTable(
 );
 
 export type SdaChurch = typeof sdaChurches.$inferSelect;
+
+// ─── LIVE STREAMING ──────────────────────────────────────────────────────────
+
+export const liveSessions = pgTable(
+  "live_session",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    groupId: varchar("group_id"),
+    churchId: varchar("church_id"),
+    hostUserId: varchar("host_user_id").notNull(),
+    hostDisplayName: text("host_display_name"),
+    roomUrl: text("room_url").notNull(),
+    status: varchar("status", { length: 20 }).default("live").notNull(),
+    participantCount: integer("participant_count").default(1),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    endedAt: timestamp("ended_at"),
+  },
+  (table) => ({
+    statusIdx: index("live_session_status_idx").on(table.status),
+    groupIdx: index("live_session_group_idx").on(table.groupId),
+    hostIdx: index("live_session_host_idx").on(table.hostUserId),
+  })
+);
+
+export type LiveSession = typeof liveSessions.$inferSelect;

@@ -77,6 +77,7 @@ import {
   progressTracks,
   progressLessons,
   sdaChurches,
+  liveSessions,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
@@ -4633,6 +4634,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Church detail error:", err);
       return res.status(500).json({ error: "Failed to get church details" });
+    }
+  });
+
+  // ─── LIVE STREAMING ──────────────────────────────────────────────────────
+
+  function generateJitsiRoom(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let room = "gtf-";
+    for (let i = 0; i < 12; i++) room += chars[Math.floor(Math.random() * chars.length)];
+    return room;
+  }
+
+  app.post("/api/streams/create", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { title, groupId, churchId } = req.body;
+      if (!title) return res.status(400).json({ error: "Title is required" });
+
+      if (groupId) {
+        const membership = await db.select().from(prayerGroupMembers)
+          .where(and(eq(prayerGroupMembers.groupId, groupId), eq(prayerGroupMembers.userId, userId)));
+        if (membership.length === 0) {
+          return res.status(403).json({ error: "You are not a member of this group" });
+        }
+        const member = membership[0];
+        if (member.role !== "leader" && member.role !== "moderator") {
+          return res.status(403).json({ error: "Only leaders and moderators can start live sessions" });
+        }
+      }
+
+      const [user] = await db.select({ displayName: users.displayName, username: users.username })
+        .from(users).where(eq(users.id, userId));
+
+      const roomName = generateJitsiRoom();
+      const roomUrl = `https://meet.jit.si/${roomName}`;
+
+      const [session] = await db.insert(liveSessions).values({
+        title,
+        groupId: groupId || null,
+        churchId: churchId || null,
+        hostUserId: userId,
+        hostDisplayName: user?.displayName || user?.username || "Host",
+        roomUrl,
+        status: "live",
+      }).returning();
+
+      return res.json(session);
+    } catch (err) {
+      console.error("Stream create error:", err);
+      return res.status(500).json({ error: "Failed to create stream" });
+    }
+  });
+
+  app.get("/api/streams/active", async (_req, res) => {
+    try {
+      const sessions = await db.select().from(liveSessions)
+        .where(eq(liveSessions.status, "live"))
+        .orderBy(desc(liveSessions.startedAt));
+
+      const enriched = [];
+      for (const session of sessions) {
+        let groupName: string | null = null;
+        if (session.groupId) {
+          const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups)
+            .where(eq(prayerGroups.id, session.groupId));
+          groupName = g?.name || null;
+        }
+        enriched.push({ ...session, groupName });
+      }
+
+      return res.json(enriched);
+    } catch (err) {
+      console.error("Active streams error:", err);
+      return res.status(500).json({ error: "Failed to get active streams" });
+    }
+  });
+
+  app.get("/api/streams/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
+      if (!session) return res.status(404).json({ error: "Stream not found" });
+
+      let groupName: string | null = null;
+      if (session.groupId) {
+        const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups)
+          .where(eq(prayerGroups.id, session.groupId));
+        groupName = g?.name || null;
+      }
+
+      return res.json({ ...session, groupName });
+    } catch (err) {
+      console.error("Stream detail error:", err);
+      return res.status(500).json({ error: "Failed to get stream" });
+    }
+  });
+
+  app.post("/api/streams/:id/end", async (req, res) => {
+    try {
+      const userId = extractUserId(req);
+      const { id } = req.params;
+      const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
+      if (!session) return res.status(404).json({ error: "Stream not found" });
+      if (session.hostUserId !== userId) {
+        return res.status(403).json({ error: "Only the host can end this session" });
+      }
+      if (session.status === "ended") {
+        return res.json(session);
+      }
+      const [updated] = await db.update(liveSessions).set({
+        status: "ended",
+        endedAt: new Date(),
+      }).where(eq(liveSessions.id, id)).returning();
+
+      return res.json(updated);
+    } catch (err) {
+      console.error("Stream end error:", err);
+      return res.status(500).json({ error: "Failed to end stream" });
     }
   });
 
