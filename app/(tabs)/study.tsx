@@ -30,7 +30,7 @@ const LAYER_LABELS: Record<Tab, string> = {
   word: "Text",
   context: "Context",
   voices: "Insight",
-  application: "Transformation",
+  application: "Transform",
 };
 
 interface LayerCompletionEntry {
@@ -118,10 +118,10 @@ function LayerProgressBar({
               ]}
             >
               {isCompleted && !isActive && (
-                <Ionicons name="checkmark-circle" size={14} color={theme.accent} style={lpStyles.check} />
+                <Ionicons name="checkmark-circle" size={12} color={theme.accent} style={lpStyles.check} />
               )}
               {isCompleted && isActive && (
-                <Ionicons name="checkmark-circle" size={14} color="#fff" style={lpStyles.check} />
+                <Ionicons name="checkmark-circle" size={12} color="#fff" style={lpStyles.check} />
               )}
               <Text
                 style={[
@@ -381,6 +381,13 @@ function DeepSessionAdvanceButton({
   );
 }
 
+const LAYER_FULL_NAMES: Record<Tab, string> = {
+  word: "Text",
+  context: "Context",
+  voices: "Insight",
+  application: "Transformation",
+};
+
 function formatStudySummary(
   reference: string,
   allCompletedLayers: Set<string>,
@@ -396,7 +403,7 @@ function formatStudySummary(
   lines.push("LAYERS COMPLETED");
   for (const layer of LAYER_ORDER) {
     const status = allCompletedLayers.has(layer) ? "[x]" : "[ ]";
-    lines.push(`  ${status} ${LAYER_LABELS[layer]}`);
+    lines.push(`  ${status} ${LAYER_FULL_NAMES[layer]}`);
   }
   lines.push("");
 
@@ -543,7 +550,7 @@ function DeepSessionSummary({
                   dsStyles.summaryLayerLabel,
                   { color: done ? theme.text : theme.textMuted, fontFamily: done ? "Inter_600SemiBold" : "Inter_400Regular" },
                 ]}>
-                  {LAYER_LABELS[layer]}
+                  {LAYER_FULL_NAMES[layer]}
                 </Text>
                 {done && <Text style={[dsStyles.summaryLayerCheck, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>Complete</Text>}
               </View>
@@ -3152,7 +3159,8 @@ const lpStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
-    gap: 4,
+    paddingHorizontal: 2,
+    gap: 3,
   },
   segmentFirst: {
     borderTopLeftRadius: 10,
@@ -3166,8 +3174,8 @@ const lpStyles = StyleSheet.create({
     marginRight: 0,
   },
   label: {
-    fontSize: 11,
-    letterSpacing: 0.2,
+    fontSize: 10,
+    letterSpacing: 0.1,
   },
   nextStepRow: {
     flexDirection: "row",
@@ -3436,7 +3444,7 @@ const dsStyles = StyleSheet.create({
   },
   summaryContainer: {
     padding: 20,
-    paddingBottom: 60,
+    paddingBottom: 140,
   },
   summaryHeader: {
     alignItems: "center",
