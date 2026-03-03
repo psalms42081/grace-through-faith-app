@@ -52,19 +52,24 @@ export default function ConnectScreen() {
       >
         <SectionHeader title="Find a Church" theme={theme} />
 
-        <View style={[st.placeholderCard, { backgroundColor: theme.backgroundCard }]}>
-          <View style={[st.cardIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+        <Pressable
+          onPress={() => router.push("/church-connect" as any)}
+          style={({ pressed }) => [
+            st.actionCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.actionIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
             <Ionicons name="location" size={24} color="#C9933A" />
           </View>
-          <Text style={[st.cardTitle, { color: theme.text }]}>Church Connect</Text>
-          <Text style={[st.cardDesc, { color: theme.textSecondary }]}>
-            Find Seventh-day Adventist churches near you. View service times, get directions, and connect with your local congregation.
-          </Text>
-          <View style={[st.comingSoonBadge, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="time-outline" size={14} color={theme.accent} />
-            <Text style={[st.comingSoonText, { color: theme.accent }]}>Coming Soon</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.actionTitle, { color: theme.text }]}>Church Connect</Text>
+            <Text style={[st.actionSub, { color: theme.textMuted }]}>
+              Find SDA churches near you
+            </Text>
           </View>
-        </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
 
         <SectionDivider theme={theme} />
 

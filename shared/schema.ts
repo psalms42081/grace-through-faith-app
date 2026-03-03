@@ -1229,3 +1229,34 @@ export type FormationAssessment = typeof formationAssessments.$inferSelect;
 export type AssessmentItem = typeof assessmentItems.$inferSelect;
 export type ProgressTrack = typeof progressTracks.$inferSelect;
 export type ProgressLesson = typeof progressLessons.$inferSelect;
+
+// ─── SDA CHURCHES ────────────────────────────────────────────────────────────
+
+export const sdaChurches = pgTable(
+  "sda_church",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: text("name").notNull(),
+    address: text("address").notNull(),
+    city: text("city").notNull(),
+    state: text("state"),
+    country: text("country").notNull(),
+    lat: varchar("lat", { length: 20 }).notNull(),
+    lng: varchar("lng", { length: 20 }).notNull(),
+    serviceTimes: text("service_times"),
+    contactPhone: text("contact_phone"),
+    contactEmail: text("contact_email"),
+    website: text("website"),
+    pastorName: text("pastor_name"),
+    membershipSize: varchar("membership_size", { length: 20 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    cityIdx: index("church_city_idx").on(table.city),
+    countryIdx: index("church_country_idx").on(table.country),
+  })
+);
+
+export type SdaChurch = typeof sdaChurches.$inferSelect;

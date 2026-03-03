@@ -76,6 +76,7 @@ import {
   assessmentItems,
   progressTracks,
   progressLessons,
+  sdaChurches,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
@@ -4578,6 +4579,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Submit assessment error:", err);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── CHURCH CONNECT ────────────────────────────────────────────────────────
+
+  app.get("/api/churches", async (req, res) => {
+    try {
+      const { lat, lng, radius, city } = req.query as { lat?: string; lng?: string; radius?: string; city?: string };
+
+      let allChurches = await db.select().from(sdaChurches);
+
+      if (city) {
+        const q = city.toLowerCase();
+        allChurches = allChurches.filter(c => c.city.toLowerCase().includes(q) || (c.state || "").toLowerCase().includes(q) || c.country.toLowerCase().includes(q));
+      }
+
+      if (lat && lng) {
+        const userLat = parseFloat(lat);
+        const userLng = parseFloat(lng);
+        const radiusKm = parseFloat(radius || "100");
+
+        const toRad = (deg: number) => (deg * Math.PI) / 180;
+        const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+          const R = 6371;
+          const dLat = toRad(lat2 - lat1);
+          const dLon = toRad(lon2 - lon1);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+
+        const withDist = allChurches
+          .map(c => ({ ...c, distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)) }))
+          .filter(c => c.distance <= radiusKm)
+          .sort((a, b) => a.distance - b.distance);
+
+        return res.json(withDist);
+      }
+
+      return res.json(allChurches);
+    } catch (err) {
+      console.error("Churches list error:", err);
+      return res.status(500).json({ error: "Failed to list churches" });
+    }
+  });
+
+  app.get("/api/churches/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [church] = await db.select().from(sdaChurches).where(eq(sdaChurches.id, id));
+      if (!church) return res.status(404).json({ error: "Church not found" });
+      return res.json(church);
+    } catch (err) {
+      console.error("Church detail error:", err);
+      return res.status(500).json({ error: "Failed to get church details" });
     }
   });
 
