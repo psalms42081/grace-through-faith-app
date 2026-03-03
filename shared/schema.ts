@@ -984,3 +984,31 @@ export const studyJournalEntries = pgTable(
 );
 
 export type StudyJournalEntry = typeof studyJournalEntries.$inferSelect;
+
+// ─── CHAPTER SUMMARIES (Deep Study Orientation) ──────────────────────────────
+
+export const chapterSummaries = pgTable(
+  "chapter_summary",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    bigIdea: text("big_idea").notNull(),
+    narrativeRole: text("narrative_role").notNull(),
+    focusThemes: text("focus_themes").notNull().default("[]"),
+    pastoralFrame: text("pastoral_frame").notNull(),
+    version: integer("version").default(1).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    bookChapterUnique: uniqueIndex("chapter_summary_book_chapter_unique").on(
+      table.bookId,
+      table.chapter
+    ),
+  })
+);
+
+export type ChapterSummary = typeof chapterSummaries.$inferSelect;

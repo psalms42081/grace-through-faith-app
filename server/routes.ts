@@ -64,6 +64,7 @@ import {
   prayerGroupMembers,
   layerCompletions,
   studyJournalEntries,
+  chapterSummaries,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 
@@ -2999,6 +3000,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       return res.json(result);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/chapter-summary", async (req, res) => {
+    try {
+      const bookId = parseInt(String(req.query.bookId));
+      const chapter = parseInt(String(req.query.chapter));
+      if (!bookId || !chapter) {
+        return res.status(400).json({ error: "bookId and chapter are required" });
+      }
+      const [summary] = await db
+        .select()
+        .from(chapterSummaries)
+        .where(
+          and(
+            eq(chapterSummaries.bookId, bookId),
+            eq(chapterSummaries.chapter, chapter)
+          )
+        )
+        .limit(1);
+      if (!summary) {
+        return res.json(null);
+      }
+      return res.json({
+        id: summary.id,
+        bookId: summary.bookId,
+        chapter: summary.chapter,
+        bigIdea: summary.bigIdea,
+        narrativeRole: summary.narrativeRole,
+        focusThemes: JSON.parse(summary.focusThemes),
+        pastoralFrame: summary.pastoralFrame,
+        version: summary.version,
+      });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal server error" });

@@ -287,17 +287,34 @@ function DeepStudyEntryButton({
   );
 }
 
+interface ChapterSummaryData {
+  bigIdea: string;
+  narrativeRole: string;
+  focusThemes: string[];
+  pastoralFrame: string;
+}
+
 function DeepStudyIntro({
   reference,
+  bookId,
+  chapter,
   onBegin,
   onCancel,
   theme,
 }: {
   reference: string;
+  bookId: number | null;
+  chapter: number | null;
   onBegin: () => void;
   onCancel: () => void;
   theme: typeof Colors.light;
 }) {
+  const canFetch = bookId !== null && chapter !== null;
+  const { data: summaryData, isLoading: summaryLoading } = useQuery<ChapterSummaryData | null>({
+    queryKey: [`/api/chapter-summary?bookId=${bookId}&chapter=${chapter}`],
+    enabled: canFetch,
+  });
+
   const layers = [
     { icon: "book-outline" as const, title: "Text", desc: "Read the passage and explore original language word studies" },
     { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
@@ -323,17 +340,55 @@ function DeepStudyIntro({
         </Text>
       </View>
 
-      <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-          YOUR SESSION
-        </Text>
-        <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-          You will move through four layers of study, each building on the last, to take you from reading to transformation.
-        </Text>
-        <Text style={[introStyles.focusLine, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Begin by reading the full passage, then explore what the original words reveal.
-        </Text>
-      </View>
+      {summaryLoading && canFetch && (
+        <ActivityIndicator size="small" color={theme.accent} style={{ marginBottom: 16 }} />
+      )}
+
+      {summaryData ? (
+        <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            BIG IDEA
+          </Text>
+          <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+            {summaryData.bigIdea}
+          </Text>
+
+          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold", marginTop: 14 }]}>
+            NARRATIVE ROLE
+          </Text>
+          <Text style={[introStyles.focusLine, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            {summaryData.narrativeRole}
+          </Text>
+
+          {summaryData.focusThemes.length > 0 && (
+            <View style={introStyles.themesRow}>
+              {summaryData.focusThemes.map((t, i) => (
+                <View key={i} style={[introStyles.themeTag, { backgroundColor: theme.accent + "14" }]}>
+                  <Text style={[introStyles.themeTagText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                    {t}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Text style={[introStyles.pastoralText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+            {summaryData.pastoralFrame}
+          </Text>
+        </View>
+      ) : !summaryLoading ? (
+        <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            YOUR SESSION
+          </Text>
+          <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+            You will move through four layers of study, each building on the last, to take you from reading to transformation.
+          </Text>
+          <Text style={[introStyles.focusLine, { color: theme.textMuted, fontFamily: "Inter_400Regular", fontStyle: "italic" }]}>
+            Orientation summary coming soon.
+          </Text>
+        </View>
+      ) : null}
 
       <Text style={[introStyles.layersHeading, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
         The Four Layers
