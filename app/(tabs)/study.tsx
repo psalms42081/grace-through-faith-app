@@ -287,6 +287,222 @@ function DeepStudyEntryButton({
   );
 }
 
+function DeepStudyIntro({
+  reference,
+  onBegin,
+  onCancel,
+  theme,
+}: {
+  reference: string;
+  onBegin: () => void;
+  onCancel: () => void;
+  theme: typeof Colors.light;
+}) {
+  const layers = [
+    { icon: "book-outline" as const, title: "Text", desc: "Read the passage and explore original language word studies" },
+    { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
+    { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from theologians and historic voices" },
+    { icon: "heart-outline" as const, title: "Transformation", desc: "Apply the passage through reflection and prayer" },
+  ];
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={introStyles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={introStyles.header}>
+        <View style={[introStyles.iconCircle, { backgroundColor: theme.accent + "18" }]}>
+          <Ionicons name="compass" size={28} color={theme.accent} />
+        </View>
+        <Text style={[introStyles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Deep Study
+        </Text>
+        <Text style={[introStyles.reference, { color: theme.accent, fontFamily: "Lora_600SemiBold" }]}>
+          {reference}
+        </Text>
+      </View>
+
+      <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          YOUR SESSION
+        </Text>
+        <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+          You will move through four layers of study, each building on the last, to take you from reading to transformation.
+        </Text>
+        <Text style={[introStyles.focusLine, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          Begin by reading the full passage, then explore what the original words reveal.
+        </Text>
+      </View>
+
+      <Text style={[introStyles.layersHeading, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+        The Four Layers
+      </Text>
+
+      {layers.map((layer, i) => (
+        <View key={i} style={[introStyles.layerRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <View style={[introStyles.layerIcon, { backgroundColor: theme.accent + "12" }]}>
+            <Ionicons name={layer.icon} size={18} color={theme.accent} />
+          </View>
+          <View style={introStyles.layerInfo}>
+            <Text style={[introStyles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {i + 1}. {layer.title}
+            </Text>
+            <Text style={[introStyles.layerDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {layer.desc}
+            </Text>
+          </View>
+        </View>
+      ))}
+
+      <Pressable
+        onPress={onBegin}
+        style={({ pressed }) => [introStyles.beginBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+        testID="begin-deep-study"
+      >
+        <Ionicons name="book-outline" size={18} color="#fff" />
+        <Text style={[introStyles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+          Begin with Text
+        </Text>
+      </Pressable>
+
+      <Pressable onPress={onCancel} hitSlop={8} style={introStyles.cancelBtn}>
+        <Text style={[introStyles.cancelText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+          Cancel
+        </Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const introStyles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 60,
+    alignItems: "center" as const,
+  },
+  header: {
+    alignItems: "center" as const,
+    marginBottom: 24,
+    gap: 8,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 24,
+  },
+  reference: {
+    fontSize: 18,
+  },
+  bigIdeaCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 18,
+    marginBottom: 24,
+    width: "100%" as const,
+  },
+  bigIdeaLabel: {
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: "uppercase" as const,
+    marginBottom: 8,
+  },
+  bigIdeaText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  focusLine: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontStyle: "italic" as const,
+  },
+  layersHeading: {
+    fontSize: 13,
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+    alignSelf: "flex-start" as const,
+    marginBottom: 12,
+  },
+  layerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 8,
+    width: "100%" as const,
+    gap: 12,
+  },
+  layerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  layerInfo: {
+    flex: 1,
+  },
+  layerTitle: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  layerDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  beginBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginTop: 20,
+    width: "100%" as const,
+  },
+  beginBtnText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  cancelBtn: {
+    marginTop: 14,
+    padding: 8,
+  },
+  cancelText: {
+    fontSize: 14,
+  },
+});
+
+const lexicalStyles = StyleSheet.create({
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 8,
+  },
+  toggleLabel: {
+    fontSize: 13,
+  },
+  optionalTag: {
+    fontSize: 11,
+  },
+  expandedSection: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+});
+
 function DeepSessionBar({
   layerIndex,
   onExit,
@@ -1025,6 +1241,7 @@ export default function StudyScreen() {
     setDeepSessionRaw(s);
   }, []);
   const [showSummary, setShowSummary] = useState(false);
+  const [showDeepIntro, setShowDeepIntro] = useState(false);
 
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
 
@@ -1075,8 +1292,13 @@ export default function StudyScreen() {
       setActiveTab(LAYER_ORDER[resumeIdx]);
       setPausedLayerIndex(null);
       setShowSummary(false);
+      setShowDeepIntro(false);
       return;
     }
+    setShowDeepIntro(true);
+  }, [bookId, chapter, persistSession, pausedLayerIndex]);
+
+  const beginDeepSessionFromIntro = useCallback(() => {
     const firstIncomplete = LAYER_ORDER.findIndex((l) => !completedLayers.has(l));
     const startIdx = firstIncomplete >= 0 ? firstIncomplete : 0;
     const state: DeepSessionState = {
@@ -1091,7 +1313,8 @@ export default function StudyScreen() {
     setActiveTab(LAYER_ORDER[startIdx]);
     setPausedLayerIndex(null);
     setShowSummary(false);
-  }, [bookId, chapter, completedLayers, persistSession, pausedLayerIndex]);
+    setShowDeepIntro(false);
+  }, [bookId, chapter, completedLayers, persistSession]);
 
   const exitDeepSession = useCallback((abandon?: boolean) => {
     const current = deepSessionRef.current;
@@ -1215,6 +1438,19 @@ export default function StudyScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  if (showDeepIntro) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
+        <DeepStudyIntro
+          reference={params.bookName && chapter ? `${params.bookName} ${chapter}` : "Scripture"}
+          onBegin={beginDeepSessionFromIntro}
+          onCancel={() => setShowDeepIntro(false)}
+          theme={theme}
+        />
+      </View>
+    );
+  }
+
   if (showSummary) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
@@ -1324,7 +1560,7 @@ export default function StudyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "word" && <WordStudyTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} initialBookName={params.bookName} />}
+        {activeTab === "word" && <WordStudyTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} initialBookName={params.bookName} isDeepSession={deepSession.active} />}
         {activeTab === "context" && <ContextTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
         {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
         {activeTab === "application" && <ApplicationTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
@@ -1364,8 +1600,9 @@ interface BibleBook {
   chapterCount: number;
 }
 
-function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, initialVerseId, initialVerseText, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialBookName?: string }) {
+function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, initialVerseId, initialVerseText, initialBookName, isDeepSession }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialBookName?: string; isDeepSession?: boolean }) {
   const [studyMode, setStudyMode] = useState<"verse" | "concordance">("verse");
+  const [lexicalExpanded, setLexicalExpanded] = useState(false);
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse ? parseInt(initialVerse) : null);
@@ -1443,6 +1680,179 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
     : [];
 
   const verses = passageQuery.data?.verses ?? [];
+
+  if (isDeepSession && selectedBook && selectedChapter) {
+    const allVerses = passageQuery.data?.verses ?? [];
+    return (
+      <View style={styles.tabContent}>
+        <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
+          <View style={styles.verseRefRow}>
+            <Ionicons name="book-outline" size={14} color={theme.accent} />
+            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name} {selectedChapter}
+            </Text>
+          </View>
+          {passageQuery.isLoading ? (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
+          ) : (
+            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular", lineHeight: 26 }]}>
+              {allVerses.map((v) => (
+                <React.Fragment key={v.id}>
+                  <Text style={{ color: theme.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                    {v.verse}{" "}
+                  </Text>
+                  {v.text}{"  "}
+                </React.Fragment>
+              ))}
+            </Text>
+          )}
+        </View>
+
+        <Pressable
+          onPress={() => setLexicalExpanded(!lexicalExpanded)}
+          style={[lexicalStyles.toggleRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+        >
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, flex: 1 }}>
+            <Ionicons name="language-outline" size={16} color={theme.accent} />
+            <Text style={[lexicalStyles.toggleLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Original Language & Word Study
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4 }}>
+            <Text style={[lexicalStyles.optionalTag, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Optional
+            </Text>
+            <Ionicons
+              name={lexicalExpanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={theme.textMuted}
+            />
+          </View>
+        </Pressable>
+
+        {lexicalExpanded && (
+          <View style={lexicalStyles.expandedSection}>
+            {!selectedVerse && (
+              <>
+                <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 8 }]}>
+                  Select a verse to explore its original language words
+                </Text>
+                <View style={styles.chapterGrid}>
+                  {allVerses.map((v) => (
+                    <Pressable
+                      key={v.verse}
+                      onPress={() => setSelectedVerse(v.verse)}
+                      style={[styles.chapterCell, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {v.verse}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {selectedVerse && (
+              <>
+                <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
+                  <Ionicons name="chevron-back" size={16} color={theme.accent} />
+                  <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    All Verses
+                  </Text>
+                </Pressable>
+
+                {targetVerse && (
+                  <View style={[styles.verseCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+                    <View style={styles.verseRefRow}>
+                      <Ionicons name="book-outline" size={14} color={theme.accent} />
+                      <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {selectedBook.name} {selectedChapter}:{selectedVerse}
+                      </Text>
+                    </View>
+                    <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                      {targetVerse.text}
+                    </Text>
+                  </View>
+                )}
+
+                {(wordQuery.isLoading || generateWordsMutation.isPending) && targetVerse && (
+                  <View style={styles.loadingBox}>
+                    <ActivityIndicator size="small" color={theme.accent} />
+                    <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
+                    </Text>
+                  </View>
+                )}
+
+                {hasWords && (
+                  <>
+                    <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                      Original Language Words
+                    </Text>
+                    {wordQuery.data!.map((wm, i) => {
+                      const entry = wm.entry;
+                      if (!entry) return null;
+                      const langColor = entry.language === "he" ? "#4A6741" : "#3B5998";
+                      return (
+                        <View
+                          key={wm.map.id || i}
+                          style={[styles.wordCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                        >
+                          <View style={styles.wordHeader}>
+                            <Text style={[styles.lemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                              {entry.lemma}
+                            </Text>
+                            <View style={[styles.langBadge, { backgroundColor: langColor + "22" }]}>
+                              <Text style={[styles.langText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
+                                {entry.language === "he" ? "Hebrew" : "Greek"}
+                              </Text>
+                            </View>
+                            <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
+                              <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                                {entry.id}
+                              </Text>
+                            </View>
+                          </View>
+                          {wm.map.translatedWord && (
+                            <View style={styles.translationRow}>
+                              <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
+                              <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                                "{wm.map.translatedWord}"
+                              </Text>
+                            </View>
+                          )}
+                          {entry.transliteration && (
+                            <Text style={[styles.transliteration, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                              {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                            </Text>
+                          )}
+                          <Text style={[styles.definition, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                            {entry.definition}
+                          </Text>
+                          {entry.kjvUsage && (
+                            <View style={styles.usagePills}>
+                              {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
+                                <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
+                                  <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                    {u.trim()}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabContent}>
