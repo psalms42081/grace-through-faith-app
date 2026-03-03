@@ -219,6 +219,22 @@ export async function seedFormationData(db: any) {
       explanation: "Paul lists four functions: doctrine, reproof, correction, and instruction in righteousness. Entertainment is not among them.",
     },
     {
+      id: "bai-010",
+      assessmentId: "ba-001",
+      question: "If someone claims a personal vision contradicts a clear teaching of Scripture, how should an Adventist respond according to the principle of sola scriptura?",
+      options: ["Accept the vision as new light from God", "Test the vision against Scripture and reject what contradicts it", "Give equal weight to both sources", "Ignore the vision entirely without examination"],
+      correctIndex: 1,
+      explanation: "Sola scriptura means Scripture is the final authority. All claims of revelation must be tested against the Bible — if they contradict it, they are to be rejected (Isaiah 8:20).",
+    },
+    {
+      id: "bai-011",
+      assessmentId: "ba-001",
+      question: "Why does the Adventist understanding of 'thought inspiration' rather than 'verbal dictation' matter for how we read the Bible?",
+      options: ["It means we can dismiss passages we disagree with", "It explains why writers have different styles yet communicate the same divine truths", "It suggests the Bible contains errors", "It means only the original languages are inspired"],
+      correctIndex: 1,
+      explanation: "Thought inspiration explains why Matthew, Mark, Luke, and John describe the same events differently yet convey the same divine truth — God guided their thinking, not each word, preserving both divine authority and human individuality.",
+    },
+    {
       id: "bai-004",
       assessmentId: "ba-002",
       question: "What Hebrew word for 'one' is used in the Shema (Deuteronomy 6:4)?",
@@ -243,6 +259,22 @@ export async function seedFormationData(db: any) {
       explanation: "James White and several other pioneers held anti-trinitarian views, but the church later affirmed the Trinity through continued Bible study.",
     },
     {
+      id: "bai-012",
+      assessmentId: "ba-002",
+      question: "A friend says 'the Trinity means Christians worship three gods.' How would you best correct this misunderstanding using Scripture?",
+      options: ["Explain that we only worship the Father", "Show that 'echad' in the Shema allows for composite unity — one God existing in three co-eternal Persons", "Agree that it is three separate gods", "Explain that the Trinity is a mystery we should not try to understand"],
+      correctIndex: 1,
+      explanation: "The Hebrew 'echad' (composite unity) combined with the NT baptismal formula (one name, three Persons) shows one God in three Persons — not tritheism (three gods) or modalism (one Person in three modes).",
+    },
+    {
+      id: "bai-013",
+      assessmentId: "ba-002",
+      question: "What does the fact that early Adventist pioneers initially rejected the Trinity, yet the church later affirmed it, demonstrate about how Adventists approach doctrine?",
+      options: ["The church changes its beliefs based on popular opinion", "Adventists follow a principle of 'present truth' — allowing continued Bible study to deepen and correct understanding", "The pioneers were wrong about everything", "Church leadership imposed the doctrine without study"],
+      correctIndex: 1,
+      explanation: "The shift demonstrates the Adventist commitment to 'present truth' (2 Peter 1:12) — doctrine is not static tradition but is progressively refined through faithful, ongoing Bible study.",
+    },
+    {
       id: "bai-007",
       assessmentId: "ba-003",
       question: "According to 1 John 4:8, what is the essential nature of God?",
@@ -265,6 +297,22 @@ export async function seedFormationData(db: any) {
       options: ["The Father turned away", "The Father suffered with His Son", "The Father was indifferent", "The Father could not watch"],
       correctIndex: 1,
       explanation: "Ellen G. White wrote: 'The Father suffers with His Son' (The Desire of Ages, p. 693), showing the Father's deep involvement in the atonement.",
+    },
+    {
+      id: "bai-014",
+      assessmentId: "ba-003",
+      question: "If God is love (1 John 4:8), why does the Great Controversy framework say He allows suffering rather than ending evil immediately?",
+      options: ["Because God is not powerful enough to stop evil", "Because destroying evil by force without a full demonstration would leave doubts about His character throughout eternity", "Because suffering builds character and God desires it", "Because God is testing humanity's loyalty"],
+      correctIndex: 1,
+      explanation: "The Great Controversy teaches that God allows the full revelation of sin's consequences so that the entire universe — angels and humans — freely concludes that God's character is just and loving, ensuring sin never rises again (Nahum 1:9).",
+    },
+    {
+      id: "bai-015",
+      assessmentId: "ba-003",
+      question: "How does the Adventist understanding of God as a suffering Father (who suffers with His Son at the cross) differ from the view that God simply punishes sin from a distance?",
+      options: ["It doesn't differ — both views teach the same thing", "It reveals that redemption costs the Godhead personally, showing that divine justice and divine love are not in conflict", "It means the Father was physically present at the cross", "It suggests God the Father also died on the cross"],
+      correctIndex: 1,
+      explanation: "The Father's suffering with the Son reveals that atonement is not an angry God punishing an innocent victim, but a loving Godhead bearing the cost of sin together — justice and mercy meet at the cross.",
     },
   ]);
 
@@ -340,7 +388,11 @@ export async function seedFormationData(db: any) {
   await db.insert(assessmentItems).values([
     { id: "nbai-001", assessmentId: "nba-001", question: "What does the word 'justified' mean in Romans 3:24?", options: ["Made sinless", "Declared righteous", "Given a second chance", "Forgiven temporarily"], correctIndex: 1, explanation: "Justification is a legal term meaning 'declared righteous' — God applies Christ's perfect righteousness to our account." },
     { id: "nbai-002", assessmentId: "nba-001", question: "What does the Greek word 'dorean' (freely) mean?", options: ["After payment", "As a gift", "In exchange for faith", "Conditionally"], correctIndex: 1, explanation: "Dorean means 'as a gift, without cost to the recipient.'" },
-    { id: "nbai-003", assessmentId: "nba-002", question: "According to Ephesians 2:8-9, what is the relationship between works and salvation?", options: ["Works earn salvation", "Works maintain salvation", "Works are not the basis of salvation", "Works are irrelevant"], correctIndex: 2, explanation: "Paul states salvation is 'not of works, lest anyone should boast.' Good works are the result of salvation (v.10), not its cause." },
+    { id: "nbai-003", assessmentId: "nba-001", question: "Romans 3:23 says 'all have sinned.' What does this universal statement imply about who needs grace?", options: ["Only people who commit serious sins need grace", "Grace is only for those who ask for it", "Every person without exception is equally in need of God's grace", "Those who live good lives do not need grace"], correctIndex: 2, explanation: "'All have sinned' is absolute — no one earns salvation by being good enough. This levels the ground at the cross: every human being, regardless of background, is equally dependent on grace." },
+    { id: "nbai-004", assessmentId: "nba-001", question: "If justification is a free gift (Romans 3:24), why do Adventists still emphasize obedience and keeping the commandments?", options: ["Obedience earns additional salvation", "Obedience is the grateful response to a salvation already received, not its cause", "The commandments replace grace after baptism", "Obedience is optional for those who are justified"], correctIndex: 1, explanation: "Adventists teach that obedience flows from a saved relationship, not toward it. We keep the commandments because we are saved, not in order to be saved — love is the motive, not merit." },
+    { id: "nbai-007", assessmentId: "nba-001", question: "In Romans 3:24, what is the stated basis for our justification?", options: ["Our good works", "God's grace through the redemption in Christ Jesus", "Our faith alone", "The law of Moses"], correctIndex: 1, explanation: "Romans 3:24 states we are 'justified freely by His grace through the redemption that is in Christ Jesus.' Grace and Christ's redemptive work are the basis — not human merit." },
+    { id: "nbai-005", assessmentId: "nba-002", question: "According to Ephesians 2:8-9, what is the relationship between works and salvation?", options: ["Works earn salvation", "Works maintain salvation", "Works are not the basis of salvation", "Works are irrelevant"], correctIndex: 2, explanation: "Paul states salvation is 'not of works, lest anyone should boast.' Good works are the result of salvation (v.10), not its cause." },
+    { id: "nbai-006", assessmentId: "nba-002", question: "Ephesians 2:10 says we are 'created in Christ Jesus for good works.' How does this verse change the conversation about faith and works?", options: ["It proves works are needed for salvation", "It shows good works are the fruit of salvation, not the root — we are saved for works, not by them", "It means only certain works count", "It contradicts verses 8-9"], correctIndex: 1, explanation: "Verse 10 completes Paul's thought: grace saves us (vv.8-9), and that same grace transforms us into people who do good works. Works are the evidence of a living faith, not the purchase price of salvation." },
   ]);
 
   // ── Prophecy Foundations ───────────────────────────────────────────────────
@@ -401,16 +453,28 @@ export async function seedFormationData(db: any) {
   await db.insert(assessmentItems).values([
     { id: "pai-001", assessmentId: "pa-001", question: "Why couldn't the wise men of Babylon interpret the king's dream?", options: ["They were not educated enough", "The king couldn't remember it", "The king demanded they tell him both the dream AND its interpretation", "They refused to try"], correctIndex: 2, explanation: "Nebuchadnezzar demanded his wise men tell him the dream itself, not just interpret it — an impossible task without divine help." },
     { id: "pai-002", assessmentId: "pa-001", question: "What did Daniel do when he heard about the death decree?", options: ["He fled the city", "He confronted the king", "He gathered friends to pray", "He consulted wise men"], correctIndex: 2, explanation: "Daniel gathered Hananiah, Mishael, and Azariah to pray, and God revealed the dream in a night vision." },
+    { id: "pai-010", assessmentId: "pa-001", question: "Who does Daniel credit for the dream's revelation when he stands before the king?", options: ["His own wisdom", "His prayer group", "God in heaven who reveals secrets", "The chief of the wise men"], correctIndex: 2, explanation: "Daniel 2:28 — 'There is a God in heaven who reveals secrets.' Daniel pointedly deflected all credit to God, establishing a principle: prophetic understanding is God's gift, not human achievement." },
+    { id: "pai-011", assessmentId: "pa-001", question: "What principle about the source of prophetic understanding does Daniel 2:1-30 establish?", options: ["Human scholarship can unlock prophecy with enough study", "Prophetic insight comes only through divine revelation, not human cleverness", "Dreams are unreliable and should be ignored", "Only kings receive prophetic dreams"], correctIndex: 1, explanation: "The entire narrative contrasts human inability (the wise men failed) with divine initiative (God revealed the mystery). This establishes that prophecy is God's communication to humanity, requiring dependence on Him." },
+    { id: "pai-012", assessmentId: "pa-001", question: "How does Daniel's response to crisis in chapter 2 model an approach to facing overwhelming challenges?", options: ["Confront authority immediately", "Flee and protect yourself first", "Gather a community of faith and bring the problem to God in prayer", "Work harder using your own abilities"], correctIndex: 2, explanation: "Daniel's first response was not panic or self-reliance but community prayer. He gathered trusted friends and sought God — a model of faith-based crisis response that Adventists emphasize in daily discipleship." },
 
     { id: "pai-003", assessmentId: "pa-002", question: "What does the head of gold in Nebuchadnezzar's statue represent?", options: ["Egypt", "Babylon", "Assyria", "Persia"], correctIndex: 1, explanation: "Daniel told Nebuchadnezzar directly: 'You are this head of gold' (Daniel 2:38), identifying Babylon." },
     { id: "pai-004", assessmentId: "pa-002", question: "What does the stone 'cut out without hands' represent?", options: ["A human revolution", "God's eternal kingdom", "A natural disaster", "A new empire"], correctIndex: 1, explanation: "The stone represents God's kingdom — 'cut out without hands' means it is of divine, not human, origin." },
     { id: "pai-005", assessmentId: "pa-002", question: "What does the mixture of iron and clay in the feet signify?", options: ["A strong united empire", "Divided nations that will not permanently unite", "A wealthy empire", "A religious empire"], correctIndex: 1, explanation: "Iron mixed with clay represents division — 'they will not adhere to one another' (Daniel 2:43). Europe has remained divided despite many attempts at reunification." },
+    { id: "pai-013", assessmentId: "pa-002", question: "What principle about God's sovereignty does the progression from gold to clay in Daniel 2 demonstrate?", options: ["Human empires grow stronger over time", "God is absent from human history", "God controls the rise and fall of nations, and human history moves toward divine intervention, not utopia", "Each empire surpasses the previous one"], correctIndex: 2, explanation: "The degradation from gold to iron-and-clay shows that human history does not progress toward perfection — it deteriorates. This contradicts human optimism and points to the necessity of divine intervention (the stone) to establish a lasting kingdom." },
+    { id: "pai-014", assessmentId: "pa-002", question: "Europe has experienced attempts at reunification by Charlemagne, Napoleon, and others — all failed. How does this historical pattern relate to Daniel 2:43?", options: ["It is a coincidence with no prophetic significance", "It confirms the prophecy that 'they will not adhere to one another' — a testable prediction fulfilled across centuries", "It proves Daniel 2 was written after these events", "It means Europe will eventually unite"], correctIndex: 1, explanation: "Daniel 2:43's prediction that the divided kingdoms 'will not adhere to one another' has been tested by history repeatedly — and confirmed every time. This is one of the most powerful evidences for the reliability of biblical prophecy." },
 
     { id: "pai-006", assessmentId: "pa-003", question: "In Daniel 7, what does the leopard with four heads represent?", options: ["Babylon", "Medo-Persia", "Greece (divided into four kingdoms)", "Rome"], correctIndex: 2, explanation: "The leopard = Greece. Four heads = the four divisions of Alexander's empire after his death." },
     { id: "pai-007", assessmentId: "pa-003", question: "The 'little horn' of Daniel 7 has characteristics that Adventists identify with which power?", options: ["Babylon", "Greece", "The papal system", "Modern Israel"], correctIndex: 2, explanation: "Based on the text's criteria (rises among the ten, uproots three, speaks against God, persecutes saints, changes times and laws, 1,260-year period), Adventists identify the little horn as the papal system." },
+    { id: "pai-015", assessmentId: "pa-003", question: "How many identifying criteria does Daniel 7 give for the 'little horn'?", options: ["Two", "Three", "At least six", "The text gives no specific criteria"], correctIndex: 2, explanation: "Daniel 7 provides at least six criteria: rises among the ten, uproots three, speaks against God, persecutes saints, attempts to change times and laws, and rules for 1,260 years. This specificity prevents arbitrary identification." },
+    { id: "pai-016", assessmentId: "pa-003", question: "Daniel 2 portrays empires as glorious metals, but Daniel 7 portrays the same empires as ravenous beasts. What does this contrast reveal?", options: ["Daniel was confused about the empires", "Human kingdoms may appear glorious, but from God's perspective they are predatory and destructive", "The beasts represent different empires than the metals", "God appreciates both perspectives equally"], correctIndex: 1, explanation: "The dual portrayal reveals a difference in perspective: humans see power and glory (metals), but God sees the true nature of earthly dominion — violent, predatory, and temporary. This challenges Christians to evaluate worldly power through God's eyes." },
+    { id: "pai-017", assessmentId: "pa-003", question: "Why does the Adventist identification of the little horn focus on a system rather than individual people within that system?", options: ["Because individuals are too hard to identify", "Because prophecy addresses institutional powers and their actions, not the personal salvation of individuals — many sincere believers exist within any system", "Because Adventists are not concerned with individuals", "Because Daniel explicitly says to ignore individuals"], correctIndex: 1, explanation: "Adventist prophetic interpretation carefully distinguishes between identifying a prophetic system and judging individuals within it. Many sincere Christians belong to the papal tradition. The prophetic identification addresses institutional claims and actions, not personal faith." },
 
     { id: "pai-008", assessmentId: "pa-004", question: "In Daniel 7, when does the judgment occur relative to Christ receiving the kingdom?", options: ["After Christ receives the kingdom", "At the same time", "Before Christ receives the kingdom", "The text doesn't specify"], correctIndex: 2, explanation: "In Daniel 7:26-27, the court sits in judgment BEFORE the kingdom is given to the Son of Man and the saints. This supports the Adventist teaching of a pre-advent judgment." },
     { id: "pai-009", assessmentId: "pa-004", question: "What is the ultimate outcome of the judgment scene in Daniel 7?", options: ["The beasts gain more power", "The saints receive an everlasting kingdom", "The earth is destroyed", "History repeats"], correctIndex: 1, explanation: "Daniel 7:27 promises: 'The kingdom and dominion... shall be given to the people, the saints of the Most High. His kingdom is an everlasting kingdom.'" },
+    { id: "pai-018", assessmentId: "pa-004", question: "What does 'books were opened' (Daniel 7:10) signify about the nature of this judgment?", options: ["God is writing new laws", "The angels are recording new prophecies", "The judgment involves a transparent review of records — God's justice is open and verifiable, not arbitrary", "The books contain plans for a new earth"], correctIndex: 2, explanation: "The opened books signify that God's judgment is based on evidence, conducted transparently before the watching universe. This is central to the Great Controversy theme: God does not exercise arbitrary authority — He demonstrates His justice openly." },
+    { id: "pai-019", assessmentId: "pa-004", question: "Why is the pre-advent judgment good news for believers rather than something to fear?", options: ["Because it only applies to unbelievers", "Because its purpose is to vindicate God's people and confirm who has accepted Christ — it is a judgment for the saints, not against them", "Because believers are exempt from all judgment", "Because the outcome is uncertain and that creates excitement"], correctIndex: 1, explanation: "The pre-advent judgment is an act of vindication. For those who have accepted Christ, it confirms their standing before the universe. God's people are not on trial — they are being defended. The judgment answers the question 'Who belongs to Christ?' and publicly affirms the answer." },
+    { id: "pai-020", assessmentId: "pa-004", question: "How does the sequence in Daniel 7 (beasts, then judgment, then kingdom) shape the Adventist understanding of where we are in history?", options: ["We are in the time of the first beast", "We are living between the judgment and the kingdom — the beasts have come, the judgment is underway, and the kingdom is next", "The kingdom has already been fully established", "The sequence has no relevance to our time"], correctIndex: 1, explanation: "Adventists believe the four beasts are past, the judgment phase began in 1844 (connected to Daniel 8:14), and the next great event is Christ receiving the kingdom and returning. This places us in the most solemn and hopeful period of earth's history." },
+    { id: "pai-021", assessmentId: "pa-004", question: "What does 'a time, times, and half a time' in Daniel 7:25 equal in prophetic years?", options: ["1 year", "2.5 years", "3.5 years (1,260 prophetic days/years)", "7 years"], correctIndex: 2, explanation: "A 'time' = 1 year, 'times' = 2 years, 'half a time' = 0.5 years. Total = 3.5 prophetic years = 1,260 days. Using the day-year principle, this equals 1,260 literal years (AD 538-1798)." },
   ]);
 
   console.log("Formation tracks seeded successfully.");
