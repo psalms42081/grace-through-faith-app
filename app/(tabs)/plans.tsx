@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { filterCoreOnly } from "@/lib/content-filter";
 
 interface Plan {
   id: string;
@@ -23,6 +24,7 @@ interface Plan {
   theme: string | null;
   difficultyLevel: string | null;
   estimatedMinutesPerDay: number | null;
+  traditionKey?: string | null;
 }
 
 interface TodayResponse {
@@ -70,7 +72,7 @@ export default function PlansScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: plans } = useQuery<Plan[]>({
-    queryKey: ["/api/devotionals/plans"],
+    queryKey: ["/api/devotionals/plans?traditionKey=core"],
   });
 
   const { data: todayData } = useQuery<TodayResponse>({
@@ -83,7 +85,9 @@ export default function PlansScreen() {
   const total = todayData?.totalDays ?? 1;
   const progressPct = total > 0 ? Math.min((progress / total) * 100, 100) : 0;
 
-  const filteredPlans = plans?.filter((p) => {
+  const corePlans = plans ? filterCoreOnly(plans, "PlansTab") : undefined;
+
+  const filteredPlans = corePlans?.filter((p) => {
     if (activeCategory === "All") return true;
     const themes = (p.theme || "").toLowerCase().split(",").map(t => t.trim());
     return themes.some(t => t.includes(activeCategory.toLowerCase()));

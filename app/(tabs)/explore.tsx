@@ -150,28 +150,6 @@ export default function DiscoverScreen() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push("/sda-studies")}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-          testID="sda-studies-card"
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
-            <Ionicons name="school" size={22} color="#7C3AED" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              28 Fundamental Beliefs
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              SDA doctrinal studies with scripture
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
-
-        <Pressable
           onPress={() => router.push("/christian-traditions" as any)}
           style={({ pressed }) => [
             styles.resourceCard,

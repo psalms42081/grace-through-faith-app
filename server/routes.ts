@@ -1527,12 +1527,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ─── DEVOTIONALS ─────────────────────────────────────────────────────────────
 
-  app.get("/api/devotionals/plans", async (_req, res) => {
+  app.get("/api/devotionals/plans", async (req, res) => {
     try {
+      const traditionKey = String(req.query.traditionKey || "core");
+      const conditions = [eq(devotionalPlans.isPublished, true)];
+      if (traditionKey !== "all") {
+        conditions.push(eq(devotionalPlans.traditionKey, traditionKey));
+      }
       const plans = await db
         .select()
         .from(devotionalPlans)
-        .where(eq(devotionalPlans.isPublished, true));
+        .where(and(...conditions));
       return res.json(plans);
     } catch (err) {
       console.error(err);

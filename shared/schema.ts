@@ -376,6 +376,7 @@ export const devotionalPlans = pgTable("devotional_plan", {
   targetGoals: jsonb("target_goals").$type<string[]>(),
   difficultyLevel: varchar("difficulty_level", { length: 20 }),
   estimatedMinutesPerDay: integer("estimated_minutes_per_day"),
+  traditionKey: varchar("tradition_key", { length: 30 }).default("core").notNull(),
   isPublished: boolean("is_published").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

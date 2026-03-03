@@ -554,7 +554,7 @@ function RelatedContent({
   });
 
   const { data: plans } = useQuery<DevPlan[]>({
-    queryKey: ["/api/devotionals/plans"],
+    queryKey: ["/api/devotionals/plans?traditionKey=core"],
   });
 
   const relatedTopics = useMemo(() => {
