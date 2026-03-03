@@ -583,14 +583,18 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
   );
 }
 
+const ILLUSTRATION_WIDTH = SCREEN_WIDTH - 48;
+const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.65;
+
 const illustrationStyles = StyleSheet.create({
   image: {
-    width: "100%",
-    height: "100%",
+    width: ILLUSTRATION_WIDTH,
+    height: ILLUSTRATION_HEIGHT,
     borderRadius: 16,
   },
   placeholder: {
-    flex: 1,
+    width: ILLUSTRATION_WIDTH,
+    height: ILLUSTRATION_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.12)",
@@ -1316,9 +1320,11 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   illustrationArea: {
-    height: "30%",
+    height: ILLUSTRATION_HEIGHT + 8,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+    borderRadius: 16,
   },
   illustrationPlaceholder: {
     width: "90%",
