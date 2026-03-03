@@ -992,6 +992,71 @@ const cpStyles = StyleSheet.create({
   addSubmitText: { color: "#fff", fontSize: 15 },
 });
 
+function LiveNowSection({ theme, isDark }: { theme: typeof Colors.dark; isDark: boolean }) {
+  const { data: activeStreams } = useQuery<any[]>({
+    queryKey: ["/api/streams/active"],
+    refetchInterval: 30000,
+  });
+
+  if (!activeStreams || activeStreams.length === 0) return null;
+
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" }} />
+        <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>
+          LIVE NOW
+        </Text>
+      </View>
+      {activeStreams.map((stream: any) => (
+        <Pressable
+          key={stream.id}
+          onPress={() => router.push(`/stream/${stream.id}` as any)}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE",
+            borderRadius: 16,
+            padding: 14,
+            gap: 12,
+            marginBottom: 8,
+            opacity: pressed ? 0.85 : 1,
+            borderWidth: 1,
+            borderColor: "#FF3B3030",
+          })}
+        >
+          <View style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: "#FF3B3015",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <Ionicons name="videocam" size={22} color="#FF3B30" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.text, fontSize: 14, fontFamily: "Inter_600SemiBold" }} numberOfLines={1}>
+              {stream.title}
+            </Text>
+            <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+              {stream.hostDisplayName || "Host"}{stream.groupName ? ` \u00B7 ${stream.groupName}` : ""}
+            </Text>
+          </View>
+          <View style={{
+            backgroundColor: "#FF3B30",
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 10,
+          }}>
+            <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>JOIN</Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const { isKidsMode } = useKidsMode();
 
@@ -1353,6 +1418,8 @@ function AdultHomeScreen() {
 
       <GoldDivider theme={theme} />
 
+      <LiveNowSection theme={theme} isDark={isDark} />
+
       <View style={s.hubSection}>
         <Text style={[s.hubTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           SDA Hub
@@ -1360,7 +1427,10 @@ function AdultHomeScreen() {
       </View>
 
       <View style={s.hubGrid}>
-        <View style={[s.hubCard, { backgroundColor: theme.backgroundCard }]}>
+        <Pressable
+          onPress={() => router.push("/church-connect" as any)}
+          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+        >
           <View style={[s.hubIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
             <Ionicons name="location" size={22} color="#C9933A" />
           </View>
@@ -1370,10 +1440,8 @@ function AdultHomeScreen() {
           <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             Find SDA churches near you
           </Text>
-          <View style={[s.hubBadge, { backgroundColor: theme.accent + "18" }]}>
-            <Text style={[s.hubBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Coming Soon</Text>
-          </View>
-        </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
+        </Pressable>
 
         <Pressable
           onPress={() => router.push("/groups" as any)}

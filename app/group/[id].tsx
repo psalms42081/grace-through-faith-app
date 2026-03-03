@@ -107,6 +107,8 @@ export default function GroupDetailScreen() {
   const [showTrackPicker, setShowTrackPicker] = useState(false);
   const [newPostText, setNewPostText] = useState("");
   const [expandedDiscussion, setExpandedDiscussion] = useState<string | null>(null);
+  const [goLiveTitle, setGoLiveTitle] = useState("");
+  const [showGoLive, setShowGoLive] = useState(false);
 
   const { data, isLoading } = useQuery<GroupDetail>({
     queryKey: [`/api/groups/${id}`],
@@ -160,6 +162,38 @@ export default function GroupDetailScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
       setShowTrackPicker(false);
+    },
+  });
+
+  const { data: activeStreams } = useQuery<any[]>({
+    queryKey: [`/api/streams/active`],
+    enabled: !!id,
+    refetchInterval: 30000,
+  });
+
+  const groupStream = activeStreams?.find((s: any) => s.groupId === id);
+
+  const goLiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/streams/create", {
+        title: goLiveTitle.trim() || `${data?.group?.name || "Group"} Live Session`,
+        groupId: id,
+      });
+      return await res.json();
+    },
+    onSuccess: (session: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams/active"] });
+      setShowGoLive(false);
+      setGoLiveTitle("");
+      router.push(`/stream/${session.id}` as any);
+    },
+    onError: (err: any) => {
+      const msg = err?.message || "Failed to start live session";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Error", msg);
+      }
     },
   });
 
@@ -392,7 +426,69 @@ export default function GroupDetailScreen() {
               />
             </View>
           </Pressable>
+
+          {groupStream ? (
+            <Pressable
+              onPress={() => router.push(`/stream/${groupStream.id}` as any)}
+              style={[s.liveBanner, { backgroundColor: "#FF3B3018" }]}
+            >
+              <View style={s.liveBannerDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.liveBannerTitle, { color: "#FF3B30", fontFamily: "Inter_700Bold" }]}>
+                  LIVE NOW
+                </Text>
+                <Text style={[s.liveBannerSub, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                  {groupStream.title}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#FF3B30" />
+            </Pressable>
+          ) : isModerator ? (
+            <Pressable
+              onPress={() => setShowGoLive(true)}
+              style={[s.goLiveBtn, { borderColor: theme.accent }]}
+            >
+              <Ionicons name="videocam" size={18} color={theme.accent} />
+              <Text style={[s.goLiveText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Go Live
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
+
+        {showGoLive ? (
+          <View style={[s.goLiveCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <Text style={[s.goLiveCardTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Start Live Session
+            </Text>
+            <TextInput
+              style={[s.goLiveInput, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", fontFamily: "Inter_400Regular" }]}
+              placeholder="Session title (optional)"
+              placeholderTextColor={theme.textMuted}
+              value={goLiveTitle}
+              onChangeText={setGoLiveTitle}
+            />
+            <View style={s.goLiveActions}>
+              <Pressable onPress={() => setShowGoLive(false)} style={[s.goLiveCancelBtn, { borderColor: theme.border }]}>
+                <Text style={[s.goLiveCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => goLiveMutation.mutate()}
+                disabled={goLiveMutation.isPending}
+                style={[s.goLiveStartBtn, { backgroundColor: "#FF3B30", opacity: goLiveMutation.isPending ? 0.6 : 1 }]}
+              >
+                {goLiveMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="videocam" size={16} color="#fff" />
+                    <Text style={[s.goLiveStartText, { fontFamily: "Inter_600SemiBold" }]}>Start</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         {showMembers ? (
           <View style={[s.membersSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -766,4 +862,68 @@ const s = StyleSheet.create({
   pickerItemText: { fontSize: 15, flex: 1 },
   pickerCancel: { marginTop: 12, paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1 },
   pickerCancelText: { fontSize: 14 },
+  liveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+  },
+  liveBannerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#FF3B30",
+  },
+  liveBannerTitle: { fontSize: 11, letterSpacing: 1 },
+  liveBannerSub: { fontSize: 14 },
+  goLiveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  goLiveText: { fontSize: 14 },
+  goLiveCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  goLiveCardTitle: { fontSize: 17, textAlign: "center" },
+  goLiveInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  goLiveActions: { flexDirection: "row", gap: 10 },
+  goLiveCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  goLiveCancelText: { fontSize: 14 },
+  goLiveStartBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  goLiveStartText: { color: "#fff", fontSize: 14 },
 });
