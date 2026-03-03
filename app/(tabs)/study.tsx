@@ -36,17 +36,49 @@ interface LayerCompletionEntry {
   completedAt: string;
 }
 
+interface LayerProgress {
+  layer: Tab;
+  filledSections: number;
+  totalSections: number;
+}
+
+function computeNextStep(
+  completedLayers: Set<string>,
+  layerProgress: Map<Tab, LayerProgress>,
+  activeTab: Tab,
+): string | null {
+  for (const layer of LAYER_ORDER) {
+    if (completedLayers.has(layer)) continue;
+    const progress = layerProgress.get(layer);
+    if (layer === "voices" || layer === "application") {
+      if (progress && progress.filledSections < progress.totalSections) {
+        const remaining = progress.totalSections - progress.filledSections;
+        return `Continue ${LAYER_LABELS[layer]}: ${remaining} prompt${remaining > 1 ? "s" : ""} remaining`;
+      }
+      if (progress && progress.filledSections >= progress.totalSections) {
+        return `Finish ${LAYER_LABELS[layer]}: Mark layer complete`;
+      }
+    }
+    return `Next: Complete ${LAYER_LABELS[layer]}`;
+  }
+  return null;
+}
+
 function LayerProgressBar({
   activeTab,
   completedLayers,
   onTabPress,
   theme,
+  nextStepText,
 }: {
   activeTab: Tab;
   completedLayers: Set<string>;
   onTabPress: (tab: Tab) => void;
   theme: typeof Colors.light;
+  nextStepText: string | null;
 }) {
+  const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
+
   return (
     <View style={lpStyles.container}>
       <View style={lpStyles.bar}>
@@ -86,6 +118,22 @@ function LayerProgressBar({
           );
         })}
       </View>
+      {nextStepText && !allDone && (
+        <View style={lpStyles.nextStepRow}>
+          <Ionicons name="arrow-forward-circle-outline" size={14} color={theme.accent} />
+          <Text style={[lpStyles.nextStepText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {nextStepText}
+          </Text>
+        </View>
+      )}
+      {allDone && (
+        <View style={lpStyles.nextStepRow}>
+          <Ionicons name="checkmark-done-circle" size={14} color={theme.accent} />
+          <Text style={[lpStyles.nextStepText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            All 4 layers complete
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
