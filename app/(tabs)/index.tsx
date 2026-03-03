@@ -1392,7 +1392,10 @@ function AdultHomeScreen() {
         </Pressable>
       </View>
 
-      <View style={[s.hubCardWide, { backgroundColor: theme.backgroundCard }]}>
+      <Pressable
+        onPress={() => router.push("/study-paths" as any)}
+        style={({ pressed }) => [s.hubCardWide, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+      >
         <View style={[s.hubIconWrap, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
           <Ionicons name="school" size={22} color="#7C3AED" />
         </View>
@@ -1401,13 +1404,11 @@ function AdultHomeScreen() {
             Study Paths
           </Text>
           <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Structured SDA formation pathways
+            Explore formation pathways
           </Text>
         </View>
-        <View style={[s.hubBadge, { backgroundColor: theme.accent + "18" }]}>
-          <Text style={[s.hubBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Coming Soon</Text>
-        </View>
-      </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+      </Pressable>
 
     </ScrollView>
   );

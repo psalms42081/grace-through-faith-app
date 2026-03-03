@@ -7,11 +7,14 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
+import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 
 const TOPICS = [
@@ -39,6 +42,51 @@ const INSPIRATIONS = [
 
 function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
   return <View style={[styles.divider, { backgroundColor: theme.divider }]} />;
+}
+
+function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
+  const { data: progressData } = useQuery<any[]>({
+    queryKey: [`/api/tracks/progress?userId=guest`],
+  });
+
+  const enrolled = progressData?.filter((p: any) => p.track) || [];
+  if (enrolled.length === 0) return null;
+
+  return (
+    <View style={{ marginTop: 4 }}>
+      <Text style={[styles.enrolledLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+        Your Active Paths
+      </Text>
+      {enrolled.map((p: any) => (
+        <Pressable
+          key={p.id}
+          onPress={() => router.push(`/study-path/${p.trackId}` as any)}
+          style={({ pressed }) => [
+            styles.enrolledCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.enrolledIcon, { backgroundColor: (p.track?.color || "#C9933A") + "18" }]}>
+            <Ionicons name={(p.track?.icon as any) || "school"} size={18} color={p.track?.color || "#C9933A"} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.enrolledTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+              {p.track?.title}
+            </Text>
+            <View style={styles.enrolledProgress}>
+              <View style={[styles.enrolledBar, { backgroundColor: theme.divider }]}>
+                <View style={[styles.enrolledBarFill, { width: `${p.percentComplete || 0}%`, backgroundColor: "#C9933A" }]} />
+              </View>
+              <Text style={[styles.enrolledPercent, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {p.percentComplete || 0}%
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        </Pressable>
+      ))}
+    </View>
+  );
 }
 
 export default function StudyScreen() {
@@ -132,7 +180,13 @@ export default function StudyScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
 
-        <View style={[styles.resourceCard, { backgroundColor: theme.backgroundCard }]}>
+        <Pressable
+          onPress={() => router.push("/study-paths" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
           <View style={[styles.resourceIcon, { backgroundColor: "rgba(46,125,50,0.12)" }]}>
             <Ionicons name="trail-sign" size={22} color="#2E7D32" />
           </View>
@@ -144,10 +198,10 @@ export default function StudyScreen() {
               Structured SDA formation pathways
             </Text>
           </View>
-          <View style={[styles.soonBadge, { backgroundColor: theme.accent + "18" }]}>
-            <Text style={[styles.soonBadgeText, { color: theme.accent }]}>Soon</Text>
-          </View>
-        </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <EnrolledTracksPreview theme={theme} />
 
         <SectionDivider theme={theme} />
 
@@ -406,4 +460,42 @@ const styles = StyleSheet.create({
   },
   toolTitle: { fontSize: 15 },
   toolSub: { fontSize: 12, lineHeight: 18 },
+  enrolledLabel: {
+    fontSize: 13,
+    marginBottom: 8,
+    marginTop: 4,
+    paddingLeft: 2,
+  },
+  enrolledCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+    marginBottom: 6,
+  },
+  enrolledIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  enrolledTitle: { fontSize: 14, marginBottom: 4 },
+  enrolledProgress: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  enrolledBar: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden" as const,
+  },
+  enrolledBarFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  enrolledPercent: { fontSize: 11 },
 });

@@ -1015,3 +1015,147 @@ export const chapterSummaries = pgTable(
 );
 
 export type ChapterSummary = typeof chapterSummaries.$inferSelect;
+
+// ─── FORMATION SYSTEM ─────────────────────────────────────────────────────────
+
+export const formationTracks = pgTable("formation_track", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }).default("school"),
+  color: varchar("color", { length: 20 }).default("#C9933A"),
+  category: varchar("category", { length: 30 }).notNull(),
+  totalModules: integer("total_modules").default(0),
+  totalWeeks: integer("total_weeks").default(0),
+  difficulty: varchar("difficulty", { length: 20 }).default("beginner"),
+  isPublished: boolean("is_published").default(false),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const formationModules = pgTable("formation_module", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  trackId: varchar("track_id")
+    .notNull()
+    .references(() => formationTracks.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  moduleOrder: integer("module_order").notNull(),
+  totalLessons: integer("total_lessons").default(0),
+});
+
+export const formationLessons = pgTable("formation_lesson", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  moduleId: varchar("module_id")
+    .notNull()
+    .references(() => formationModules.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  lessonOrder: integer("lesson_order").notNull(),
+  anchorText: text("anchor_text"),
+  anchorBookId: integer("anchor_book_id"),
+  anchorChapter: integer("anchor_chapter"),
+  anchorVerseStart: integer("anchor_verse_start"),
+  anchorVerseEnd: integer("anchor_verse_end"),
+  estimatedMinutes: integer("estimated_minutes").default(30),
+});
+
+export const lessonSections = pgTable("lesson_section", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id")
+    .notNull()
+    .references(() => formationLessons.id),
+  sectionType: varchar("section_type", { length: 20 }).notNull(),
+  title: text("title").notNull(),
+  content: text("content"),
+  sortOrder: integer("sort_order").notNull(),
+});
+
+export const formationAssessments = pgTable("formation_assessment", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id")
+    .notNull()
+    .references(() => formationLessons.id),
+  title: text("title").notNull(),
+  passingScore: integer("passing_score").default(70),
+});
+
+export const assessmentItems = pgTable("assessment_item", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id")
+    .notNull()
+    .references(() => formationAssessments.id),
+  question: text("question").notNull(),
+  options: jsonb("options").$type<string[]>().notNull(),
+  correctIndex: integer("correct_index").notNull(),
+  explanation: text("explanation"),
+});
+
+export const progressTracks = pgTable(
+  "progress_track",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    trackId: varchar("track_id")
+      .notNull()
+      .references(() => formationTracks.id),
+    enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+    currentModuleId: varchar("current_module_id"),
+    currentLessonId: varchar("current_lesson_id"),
+    percentComplete: integer("percent_complete").default(0),
+  },
+  (table) => ({
+    userTrackUnique: uniqueIndex("progress_user_track_unique").on(
+      table.userId,
+      table.trackId
+    ),
+  })
+);
+
+export const progressLessons = pgTable(
+  "progress_lesson",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    lessonId: varchar("lesson_id")
+      .notNull()
+      .references(() => formationLessons.id),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+    sectionsCompleted: jsonb("sections_completed").$type<string[]>().default([]),
+    assessmentScore: integer("assessment_score"),
+    assessmentPassed: boolean("assessment_passed"),
+  },
+  (table) => ({
+    userLessonUnique: uniqueIndex("progress_user_lesson_unique").on(
+      table.userId,
+      table.lessonId
+    ),
+  })
+);
+
+export type FormationTrack = typeof formationTracks.$inferSelect;
+export type FormationModule = typeof formationModules.$inferSelect;
+export type FormationLesson = typeof formationLessons.$inferSelect;
+export type LessonSection = typeof lessonSections.$inferSelect;
+export type FormationAssessment = typeof formationAssessments.$inferSelect;
+export type AssessmentItem = typeof assessmentItems.$inferSelect;
+export type ProgressTrack = typeof progressTracks.$inferSelect;
+export type ProgressLesson = typeof progressLessons.$inferSelect;

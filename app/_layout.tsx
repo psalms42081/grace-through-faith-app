@@ -74,6 +74,9 @@ function RootLayoutNav() {
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: "Group" }} />
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
       <Stack.Screen name="parent-controls" options={{ headerShown: false }} />
+      <Stack.Screen name="study-path/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="study-paths" options={{ headerShown: false }} />
+      <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }

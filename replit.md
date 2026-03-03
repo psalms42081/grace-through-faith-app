@@ -37,7 +37,8 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - **Devotionals:** Browsing, enrollment, progress tracking, and interactive AI reflection discussions.
 - **SDA Doctrinal Studies:** Dedicated screen for the 28 Fundamental Beliefs with external EGW Writings links.
 - **Home Screen:** Verse of the Day, streak calendar, Continue Reading, guided tool cards (4-Layer Study, Prayer Journal), devotional plan progress, and SDA Hub cards (Church Connect, Small Groups, Study Paths).
-- **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths placeholder), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
+- **Formation System (Study Paths):** Curriculum-based formation engine separate from devotional plans. 8 new DB tables: `formation_track`, `formation_module`, `formation_lesson`, `lesson_section`, `formation_assessment`, `assessment_item`, `progress_track`, `progress_lesson`. Each lesson has 6 sections: Anchor Text, Explain, Integrate (SDA theology), Practice, Reflection, Assessment. API routes: GET /api/tracks, GET /api/tracks/:id, GET /api/tracks/progress, GET /api/lessons/:id, POST /api/tracks/enroll, POST /api/lessons/:id/complete, POST /api/assessments/:id/submit. Frontend screens: `app/study-paths.tsx` (browser), `app/study-path/[id].tsx` (track detail with module accordion), `app/lesson/[id].tsx` (full lesson view with section completion and inline assessment). Seeded with 3 tracks: 28 Beliefs Deep Dive, New Believer Path, Prophecy Foundations. Seed data in `server/seed-formation.ts`.
+- **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
 - **Connect Tab (new):** Church Connect (coming soon placeholder), Small Groups (links to prayer groups), Live Streams (coming soon placeholder), Family Dashboard access.
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
 - **Navigation:** 5-tab layout in adult mode (Home, Read, Connect, Study, You) and a distinct Kids mode tab navigation (Home, Stories, Learn, My Stars). Family and Plans tabs are hidden but accessible via routes.
@@ -62,4 +63,4 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 ## Upcoming Features (Placeholders in UI)
 - **Church Connect:** Find SDA churches by location with map and list view.
 - **Live Streams:** Video streaming for small groups and church services.
-- **Study Paths:** Structured SDA formation pathways (Sabbath School, Prophecy Academy, Doctrine Paths, Sabbath Formation, Character & Disciplines).
+- **Additional Study Paths:** More formation tracks planned (Sabbath School, Prophecy Academy extended, Sabbath Formation, Character & Disciplines).
