@@ -30,7 +30,7 @@ import Animated, {
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "@/constants/colors";
-import { KidsColors } from "@/constants/colors";
+import { KidsColors, getSabbathTheme } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1120,11 +1120,12 @@ const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
 function AdultHomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const baseTheme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
   const sabbath = useSabbath();
+  const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -1170,6 +1171,329 @@ function AdultHomeScreen() {
   const hasActivePlan = todayData?.today != null;
   const progress = todayData?.completedCount ?? 0;
   const total = todayData?.totalDays ?? 1;
+
+  const isSabbathMode = sabbath.isSabbath;
+
+  const sabbathBanner = isSabbathMode ? (
+    <Pressable
+      onPress={() => router.push("/sabbath-experience" as any)}
+      style={{
+        backgroundColor: theme.accent + "12",
+        borderWidth: 1,
+        borderColor: theme.accent + "30",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+      }}
+      testID="sabbath-banner"
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: theme.accent + "20",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <Ionicons name="sunny" size={20} color={theme.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            color: theme.text,
+            fontFamily: "Lora_600SemiBold",
+            fontSize: 15,
+          }}>
+            Sabbath has begun. Enter sacred time.
+          </Text>
+        </View>
+      </View>
+      <View style={{
+        backgroundColor: theme.accent,
+        borderRadius: 10,
+        paddingVertical: 10,
+        alignItems: "center",
+        marginTop: 12,
+      }}>
+        <Text style={{
+          color: "#fff",
+          fontFamily: "Inter_600SemiBold",
+          fontSize: 14,
+        }}>
+          Enter Sabbath
+        </Text>
+      </View>
+    </Pressable>
+  ) : null;
+
+  const verseSection = (
+    <View style={s.verseCardWrap}>
+      <ImageBackground
+        source={{ uri: bgImage }}
+        style={s.verseImageBg}
+        imageStyle={s.verseImageStyle}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
+          style={s.verseOverlay}
+        >
+          <View style={s.verseBadge}>
+            <View style={s.verseBadgeDot} />
+            <Text style={[s.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+              Verse of the Day
+            </Text>
+          </View>
+
+          <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+            {"\u201C"}{verse.text}{"\u201D"}
+          </Text>
+
+          <View style={s.verseFooter}>
+            <View>
+              <Text style={[s.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
+                {verse.reference}
+              </Text>
+              <Text style={[s.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
+            </View>
+            <View style={s.verseActions}>
+              <Pressable style={s.verseActionBtn} hitSlop={8}>
+                <Ionicons name="heart-outline" size={20} color="rgba(255,255,255,0.8)" />
+              </Pressable>
+              <Pressable style={s.verseActionBtn} hitSlop={8}>
+                <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
+              </Pressable>
+              <Pressable style={s.verseActionBtn} hitSlop={8}>
+                <Ionicons name="bookmark-outline" size={20} color="rgba(255,255,255,0.8)" />
+              </Pressable>
+            </View>
+          </View>
+        </LinearGradient>
+      </ImageBackground>
+    </View>
+  );
+
+  const streakSection = weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) ? (
+    <View style={[
+      s.streakCard,
+      { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" },
+      isSabbathMode && { opacity: 0.7 },
+    ]}>
+      <View style={s.streakHeader}>
+        <View style={s.streakLeft}>
+          <Ionicons name="flame" size={isSabbathMode ? 22 : 28} color={isSabbathMode ? theme.textMuted : "#FF6B35"} />
+          <View>
+            <Text style={[
+              s.streakNum,
+              { color: isSabbathMode ? theme.textSecondary : theme.text, fontFamily: "Inter_700Bold" },
+              isSabbathMode && { fontSize: 18 },
+            ]}>
+              {streak}
+            </Text>
+            <Text style={[s.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Day Streak
+            </Text>
+          </View>
+        </View>
+        {perfectWeeks > 0 && (
+          <View style={[s.perfectBadge, { backgroundColor: theme.accent + "15" }]}>
+            <Ionicons name="trophy" size={14} color={theme.accent} />
+            <Text style={[s.perfectText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {perfectWeeks} Perfect {perfectWeeks === 1 ? "Week" : "Weeks"}
+            </Text>
+          </View>
+        )}
+      </View>
+      <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
+    </View>
+  ) : null;
+
+  const continueReadingSection = lastRead ? (
+    <Pressable
+      onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
+      style={({ pressed }) => [
+        s.continueCard,
+        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+      ]}
+      testID="home-continue-reading"
+    >
+      <View style={s.continueTop}>
+        <LinearGradient
+          colors={[theme.accent, theme.accentDark]}
+          style={s.continueIcon}
+        >
+          <Ionicons name="book" size={20} color="#fff" />
+        </LinearGradient>
+        <View style={s.continueInfo}>
+          <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Continue Reading
+          </Text>
+          <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+            {lastRead.bookName} {lastRead.chapter}
+          </Text>
+        </View>
+      </View>
+      <View style={s.continueBottom}>
+        <Text style={[s.continueHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Pick up where you left off
+        </Text>
+        <Ionicons name="play-circle" size={36} color={theme.accent} />
+      </View>
+    </Pressable>
+  ) : null;
+
+  const guidedToolsSection = (
+    <View style={s.guidedRow}>
+      <Pressable
+        onPress={() => router.push("/(tabs)/read")}
+        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+      >
+        <LinearGradient
+          colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.guidedCard}
+        >
+          <View style={s.guidedIconWrap}>
+            <Ionicons name="layers" size={20} color={theme.accent} />
+          </View>
+          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
+          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Deep Bible analysis</Text>
+        </LinearGradient>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push("/prayer-journal")}
+        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+      >
+        <LinearGradient
+          colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.guidedCard}
+        >
+          <View style={[s.guidedIconWrap, { backgroundColor: "rgba(102,187,106,0.15)" }]}>
+            <Ionicons name="journal" size={20} color="#66BB6A" />
+          </View>
+          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Prayer Journal</Text>
+          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Your prayer life</Text>
+        </LinearGradient>
+      </Pressable>
+    </View>
+  );
+
+  const devotionalSection = (
+    <Pressable
+      onPress={() => {
+        if (hasActivePlan && todayData?.enrollment?.planId) {
+          router.push(`/devotional-day?planId=${todayData.enrollment.planId}`);
+        } else if (hasActivePlan) {
+          router.push("/devotional-day");
+        } else {
+          router.push("/devotionals");
+        }
+      }}
+      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+    >
+      <LinearGradient
+        colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
+        style={s.devotionalCard}
+      >
+        <View style={s.devotionalLeft}>
+          <View style={[s.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
+            <Ionicons name="flame" size={22} color={theme.accent} />
+          </View>
+          <View style={s.devotionalInfo}>
+            <Text style={[s.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {hasActivePlan ? "Continue Your Plan" : "Devotional Plans"}
+            </Text>
+            <Text style={[s.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {hasActivePlan
+                ? `Day ${progress} of ${total}`
+                : "Guided daily reading"}
+            </Text>
+          </View>
+        </View>
+        {hasActivePlan && (
+          <View style={s.devotionalProgress}>
+            <View style={[s.devotionalProgressTrack, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
+              <LinearGradient
+                colors={[theme.accent, theme.accentDark]}
+                style={[s.devotionalProgressFill, { width: `${Math.min((progress / total) * 100, 100)}%` as any }]}
+              />
+            </View>
+          </View>
+        )}
+        {!hasActivePlan && (
+          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
+        )}
+      </LinearGradient>
+    </Pressable>
+  );
+
+  const worshipPathwaysSection = (
+    <>
+      <LiveNowSection theme={theme} isDark={isDark} />
+
+      <View style={s.hubSection}>
+        <Text style={[s.hubTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          {isSabbathMode ? "Worship Pathways" : "SDA Hub"}
+        </Text>
+      </View>
+
+      <View style={s.hubGrid}>
+        <Pressable
+          onPress={() => router.push("/church-connect" as any)}
+          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <View style={[s.hubIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="location" size={22} color={theme.accent} />
+          </View>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Church Connect
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Find SDA churches near you
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/groups" as any)}
+          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <View style={[s.hubIconWrap, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+            <Ionicons name="people-circle" size={22} color="#10B981" />
+          </View>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Small Groups
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Join study groups worldwide
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={() => router.push("/study-paths" as any)}
+        style={({ pressed }) => [s.hubCardWide, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+      >
+        <View style={[s.hubIconWrap, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
+          <Ionicons name="school" size={22} color="#7C3AED" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Study Paths
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Explore formation pathways
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+      </Pressable>
+    </>
+  );
 
   return (
     <ScrollView
@@ -1227,310 +1551,28 @@ function AdultHomeScreen() {
         lastActiveChildId={lastActiveChildId}
       />
 
-      {sabbath.isSabbath && (
-        <Pressable
-          onPress={() => router.push("/sabbath-experience" as any)}
-          style={{
-            backgroundColor: theme.accent + "12",
-            borderWidth: 1,
-            borderColor: theme.accent + "30",
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: 16,
-          }}
-          testID="sabbath-banner"
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: theme.accent + "20",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Ionicons name="sunny" size={20} color={theme.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{
-                color: theme.text,
-                fontFamily: "Lora_600SemiBold",
-                fontSize: 15,
-              }}>
-                Sabbath has begun. Enter sacred time.
-              </Text>
-            </View>
-          </View>
-          <View style={{
-            backgroundColor: theme.accent,
-            borderRadius: 10,
-            paddingVertical: 10,
-            alignItems: "center",
-            marginTop: 12,
-          }}>
-            <Text style={{
-              color: "#fff",
-              fontFamily: "Inter_600SemiBold",
-              fontSize: 14,
-            }}>
-              Enter Sabbath
-            </Text>
-          </View>
-        </Pressable>
+      {isSabbathMode ? (
+        <>
+          {sabbathBanner}
+          {worshipPathwaysSection}
+          <GoldDivider theme={theme} />
+          {continueReadingSection}
+          {guidedToolsSection}
+          {devotionalSection}
+          {verseSection}
+          {streakSection}
+        </>
+      ) : (
+        <>
+          {verseSection}
+          {streakSection}
+          {continueReadingSection}
+          {guidedToolsSection}
+          {devotionalSection}
+          <GoldDivider theme={theme} />
+          {worshipPathwaysSection}
+        </>
       )}
-
-      <View style={s.verseCardWrap}>
-        <ImageBackground
-          source={{ uri: bgImage }}
-          style={s.verseImageBg}
-          imageStyle={s.verseImageStyle}
-          resizeMode="cover"
-        >
-          <LinearGradient
-            colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
-            style={s.verseOverlay}
-          >
-            <View style={s.verseBadge}>
-              <View style={s.verseBadgeDot} />
-              <Text style={[s.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
-                Verse of the Day
-              </Text>
-            </View>
-
-            <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-              {"\u201C"}{verse.text}{"\u201D"}
-            </Text>
-
-            <View style={s.verseFooter}>
-              <View>
-                <Text style={[s.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
-                  {verse.reference}
-                </Text>
-                <Text style={[s.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
-              </View>
-              <View style={s.verseActions}>
-                <Pressable style={s.verseActionBtn} hitSlop={8}>
-                  <Ionicons name="heart-outline" size={20} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-                <Pressable style={s.verseActionBtn} hitSlop={8}>
-                  <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-                <Pressable style={s.verseActionBtn} hitSlop={8}>
-                  <Ionicons name="bookmark-outline" size={20} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-              </View>
-            </View>
-          </LinearGradient>
-        </ImageBackground>
-      </View>
-
-      {weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) && (
-        <View style={[s.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-          <View style={s.streakHeader}>
-            <View style={s.streakLeft}>
-              <Ionicons name="flame" size={28} color="#FF6B35" />
-              <View>
-                <Text style={[s.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  {streak}
-                </Text>
-                <Text style={[s.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Day Streak
-                </Text>
-              </View>
-            </View>
-            {perfectWeeks > 0 && (
-              <View style={[s.perfectBadge, { backgroundColor: theme.accent + "15" }]}>
-                <Ionicons name="trophy" size={14} color={theme.accent} />
-                <Text style={[s.perfectText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {perfectWeeks} Perfect {perfectWeeks === 1 ? "Week" : "Weeks"}
-                </Text>
-              </View>
-            )}
-          </View>
-          <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
-        </View>
-      )}
-
-      {lastRead && (
-        <Pressable
-          onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
-          style={({ pressed }) => [
-            s.continueCard,
-            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-          ]}
-          testID="home-continue-reading"
-        >
-          <View style={s.continueTop}>
-            <LinearGradient
-              colors={["#C9933A", "#A87828"]}
-              style={s.continueIcon}
-            >
-              <Ionicons name="book" size={20} color="#fff" />
-            </LinearGradient>
-            <View style={s.continueInfo}>
-              <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Continue Reading
-              </Text>
-              <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-                {lastRead.bookName} {lastRead.chapter}
-              </Text>
-            </View>
-          </View>
-          <View style={s.continueBottom}>
-            <Text style={[s.continueHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Pick up where you left off
-            </Text>
-            <Ionicons name="play-circle" size={36} color={theme.accent} />
-          </View>
-        </Pressable>
-      )}
-
-      <View style={s.guidedRow}>
-        <Pressable
-          onPress={() => router.push("/(tabs)/read")}
-          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
-        >
-          <LinearGradient
-            colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.guidedCard}
-          >
-            <View style={s.guidedIconWrap}>
-              <Ionicons name="layers" size={20} color="#C9933A" />
-            </View>
-            <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
-            <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Deep Bible analysis</Text>
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/prayer-journal")}
-          style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
-        >
-          <LinearGradient
-            colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.guidedCard}
-          >
-            <View style={[s.guidedIconWrap, { backgroundColor: "rgba(102,187,106,0.15)" }]}>
-              <Ionicons name="journal" size={20} color="#66BB6A" />
-            </View>
-            <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Prayer Journal</Text>
-            <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Your prayer life</Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      <Pressable
-        onPress={() => {
-          if (hasActivePlan && todayData?.enrollment?.planId) {
-            router.push(`/devotional-day?planId=${todayData.enrollment.planId}`);
-          } else if (hasActivePlan) {
-            router.push("/devotional-day");
-          } else {
-            router.push("/devotionals");
-          }
-        }}
-        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-      >
-        <LinearGradient
-          colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
-          style={s.devotionalCard}
-        >
-          <View style={s.devotionalLeft}>
-            <View style={[s.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
-              <Ionicons name="flame" size={22} color={theme.accent} />
-            </View>
-            <View style={s.devotionalInfo}>
-              <Text style={[s.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {hasActivePlan ? "Continue Your Plan" : "Devotional Plans"}
-              </Text>
-              <Text style={[s.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {hasActivePlan
-                  ? `Day ${progress} of ${total}`
-                  : "Guided daily reading"}
-              </Text>
-            </View>
-          </View>
-          {hasActivePlan && (
-            <View style={s.devotionalProgress}>
-              <View style={[s.devotionalProgressTrack, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
-                <LinearGradient
-                  colors={["#C9933A", "#A87828"]}
-                  style={[s.devotionalProgressFill, { width: `${Math.min((progress / total) * 100, 100)}%` as any }]}
-                />
-              </View>
-            </View>
-          )}
-          {!hasActivePlan && (
-            <Ionicons name="chevron-forward" size={20} color={theme.accent} />
-          )}
-        </LinearGradient>
-      </Pressable>
-
-      <GoldDivider theme={theme} />
-
-      <LiveNowSection theme={theme} isDark={isDark} />
-
-      <View style={s.hubSection}>
-        <Text style={[s.hubTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          SDA Hub
-        </Text>
-      </View>
-
-      <View style={s.hubGrid}>
-        <Pressable
-          onPress={() => router.push("/church-connect" as any)}
-          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <View style={[s.hubIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="location" size={22} color="#C9933A" />
-          </View>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Church Connect
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Find SDA churches near you
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/groups" as any)}
-          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <View style={[s.hubIconWrap, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
-            <Ionicons name="people-circle" size={22} color="#10B981" />
-          </View>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Small Groups
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Join study groups worldwide
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
-        </Pressable>
-      </View>
-
-      <Pressable
-        onPress={() => router.push("/study-paths" as any)}
-        style={({ pressed }) => [s.hubCardWide, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-      >
-        <View style={[s.hubIconWrap, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
-          <Ionicons name="school" size={22} color="#7C3AED" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Study Paths
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Explore formation pathways
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-      </Pressable>
 
     </ScrollView>
   );

@@ -142,5 +142,34 @@ const KidsColors = {
   },
 };
 
-export { KidsColors };
+function getSabbathTheme(base: typeof Colors.dark | typeof Colors.light, isDark: boolean) {
+  if (isDark) {
+    return {
+      ...base,
+      background: "#080806",
+      backgroundSecondary: "#0E0D09",
+      backgroundCard: "#16150F",
+      backgroundElevated: "#1E1D16",
+      surface: "#16150F",
+      accent: "#D4A245",
+      accentDark: "#B8892E",
+      tint: "#D4A245",
+      tabIconSelected: "#D4A245",
+      border: "#1F1E17",
+      borderLight: "#181710",
+    };
+  }
+  return {
+    ...base,
+    background: "#F7F0E0",
+    backgroundSecondary: "#FFF6E4",
+    backgroundCard: "#FFFBF0",
+    accent: "#D4A245",
+    accentDark: "#B8892E",
+    tint: "#D4A245",
+    tabIconSelected: "#D4A245",
+  };
+}
+
+export { KidsColors, getSabbathTheme };
 export default Colors;

@@ -17,7 +17,7 @@ The application adopts a mobile-first architecture utilizing **Expo (React Nativ
 - `constants/traditions.ts` was simplified to SDA-only exports.
 
 **UI/UX Decisions:**
-- **Color Scheme:** Deep dark mode (`#050507`) with a warm gold accent (`#C9933A`). Kids Mode uses a distinct color palette.
+- **Color Scheme:** Deep dark mode (`#050507`) with a warm gold accent (`#C9933A`). Kids Mode uses a distinct color palette. During Sabbath hours, `getSabbathTheme()` from `constants/colors.ts` shifts to warmer tones (dark: `#080806` bg, light: `#F7F0E0` bg, brighter gold `#D4A245` accent). Home screen reorders sections during Sabbath: Banner → Worship Pathways → Continue Formation → Verse → Analytics last (streak reduced prominence with lower opacity, smaller icon, muted color). SDA Hub heading becomes "Worship Pathways" during Sabbath.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Borderless design, immersive dark theme, focusing on readability and clear information hierarchy.
 - **Kids Club UI:** Playful, vibrant UI with custom tab bar, animated entrance effects, bouncy press effects, larger touch targets, and dynamic animations.
