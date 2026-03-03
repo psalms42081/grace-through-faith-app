@@ -4449,6 +4449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(formationLessons)
         .where(eq(formationLessons.id, lessonId));
 
+      let moduleCompleted: {
+        moduleId: string;
+        moduleTitle: string;
+        learningObjective: string | null;
+        avgAssessmentScore: number | null;
+      } | null = null;
+
       if (lesson) {
         const [mod] = await db
           .select()
@@ -4456,6 +4463,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(formationModules.id, lesson.moduleId));
 
         if (mod) {
+          const moduleLessons = await db
+            .select()
+            .from(formationLessons)
+            .where(eq(formationLessons.moduleId, mod.id));
+
+          const moduleLessonIds = new Set(moduleLessons.map((l) => l.id));
+          const moduleLessonProgress = await db
+            .select()
+            .from(progressLessons)
+            .where(
+              and(
+                eq(progressLessons.userId, userId),
+                sql`${progressLessons.completedAt} IS NOT NULL`
+              )
+            );
+
+          const completedModuleLessons = moduleLessonProgress.filter(
+            (p) => moduleLessonIds.has(p.lessonId)
+          );
+          const distinctCompletedIds = new Set(completedModuleLessons.map((p) => p.lessonId));
+
+          if (distinctCompletedIds.size >= moduleLessons.length) {
+            const scores = completedModuleLessons
+              .filter((p) => p.assessmentScore != null)
+              .map((p) => p.assessmentScore!);
+            const avgScore = scores.length > 0
+              ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+              : null;
+
+            moduleCompleted = {
+              moduleId: mod.id,
+              moduleTitle: mod.title,
+              learningObjective: mod.learningObjective,
+              avgAssessmentScore: avgScore,
+            };
+          }
+
           const allModules = await db
             .select()
             .from(formationModules)
@@ -4506,9 +4550,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      return res.json(lessonProgress);
+      return res.json({ ...lessonProgress, moduleCompleted });
     } catch (err) {
       console.error("Complete lesson error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/modules/:id/confidence", async (req: Request, res: Response) => {
+    try {
+      const moduleId = req.params.id;
+      const { userId, rating } = req.body;
+      if (!userId || !rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "userId and rating (1-5) required" });
+      }
+
+      const [mod] = await db
+        .select()
+        .from(formationModules)
+        .where(eq(formationModules.id, moduleId));
+
+      if (!mod) {
+        return res.status(404).json({ error: "Module not found" });
+      }
+
+      const [trackProgress] = await db
+        .select()
+        .from(progressTracks)
+        .where(
+          and(
+            eq(progressTracks.userId, userId),
+            eq(progressTracks.trackId, mod.trackId)
+          )
+        );
+
+      if (!trackProgress) {
+        return res.status(404).json({ error: "Not enrolled in this track" });
+      }
+
+      const existing = (trackProgress.moduleConfidence as Record<string, number>) || {};
+      const updated = { ...existing, [moduleId]: rating };
+
+      await db
+        .update(progressTracks)
+        .set({ moduleConfidence: updated })
+        .where(eq(progressTracks.id, trackProgress.id));
+
+      return res.json({ moduleId, rating, stored: true });
+    } catch (err) {
+      console.error("Module confidence error:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
   });

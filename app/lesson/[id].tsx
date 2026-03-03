@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   useColorScheme,
   Platform,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -107,6 +108,15 @@ export default function LessonScreen() {
     results: { question: string; correct: boolean; userAnswer: number; correctAnswer: number; explanation: string }[];
   } | null>(null);
   const [assessmentSubmitted, setAssessmentSubmitted] = useState(false);
+  const [moduleCompletionData, setModuleCompletionData] = useState<{
+    moduleId: string;
+    moduleTitle: string;
+    learningObjective: string | null;
+    avgAssessmentScore: number | null;
+  } | null>(null);
+  const [showModuleCompletion, setShowModuleCompletion] = useState(false);
+  const [confidenceRating, setConfidenceRating] = useState(0);
+  const [confidenceSaved, setConfidenceSaved] = useState(false);
 
   const lessonQuery = useQuery<LessonData>({
     queryKey: [`/api/lessons/${id}?userId=${userId}`],
@@ -133,11 +143,32 @@ export default function LessonScreen() {
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tracks"] });
       queryClient.invalidateQueries({ queryKey: [`/api/lessons/${id}?userId=${userId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/tracks/progress?userId=${userId}`] });
-      router.back();
+      if (data.moduleCompleted) {
+        setModuleCompletionData(data.moduleCompleted);
+        setConfidenceRating(0);
+        setConfidenceSaved(false);
+        setShowModuleCompletion(true);
+      } else {
+        router.back();
+      }
+    },
+  });
+
+  const confidenceMutation = useMutation({
+    mutationFn: async () => {
+      if (!moduleCompletionData) return;
+      const res = await apiRequest("POST", `/api/modules/${moduleCompletionData.moduleId}/confidence`, {
+        userId,
+        rating: confidenceRating,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setConfidenceSaved(true);
     },
   });
 
@@ -475,9 +506,248 @@ export default function LessonScreen() {
           </Pressable>
         </View>
       )}
+
+      <Modal
+        visible={showModuleCompletion}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={mcStyles.overlay}>
+          <View style={[mcStyles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={mcStyles.iconRow}>
+              <View style={[mcStyles.iconCircle, { backgroundColor: theme.accent + "20" }]}>
+                <Ionicons name="ribbon" size={32} color={theme.accent} />
+              </View>
+            </View>
+
+            <Text style={[mcStyles.heading, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+              Module Completed
+            </Text>
+
+            {moduleCompletionData && (
+              <>
+                <Text style={[mcStyles.moduleTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {moduleCompletionData.moduleTitle}
+                </Text>
+
+                {moduleCompletionData.learningObjective ? (
+                  <View style={[mcStyles.objectiveBox, { borderColor: theme.accent + "25", backgroundColor: theme.accent + "08" }]}>
+                    <Text style={[mcStyles.objectiveLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      LEARNING OBJECTIVE
+                    </Text>
+                    <Text style={[mcStyles.objectiveText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
+                      {moduleCompletionData.learningObjective}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {moduleCompletionData.avgAssessmentScore != null ? (
+                  <View style={mcStyles.scoreRow}>
+                    <Ionicons name="analytics" size={18} color={theme.textMuted} />
+                    <Text style={[mcStyles.scoreText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                      Average Assessment Score: {moduleCompletionData.avgAssessmentScore}%
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={[mcStyles.divider, { backgroundColor: theme.border }]} />
+
+                <Text style={[mcStyles.confidencePrompt, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  How confident do you feel explaining this topic?
+                </Text>
+
+                <View style={mcStyles.ratingRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable
+                      key={n}
+                      onPress={() => { if (!confidenceSaved) setConfidenceRating(n); }}
+                      style={[
+                        mcStyles.ratingBtn,
+                        {
+                          backgroundColor: confidenceRating >= n ? theme.accent : theme.accent + "12",
+                          borderColor: confidenceRating >= n ? theme.accent : theme.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[
+                        mcStyles.ratingNum,
+                        { color: confidenceRating >= n ? "#fff" : theme.textMuted, fontFamily: "Inter_600SemiBold" },
+                      ]}>
+                        {n}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={mcStyles.ratingLabels}>
+                  <Text style={[mcStyles.ratingLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Not confident
+                  </Text>
+                  <Text style={[mcStyles.ratingLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Very confident
+                  </Text>
+                </View>
+
+                {confidenceSaved ? (
+                  <View style={mcStyles.savedRow}>
+                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                    <Text style={[mcStyles.savedText, { color: "#2E7D32", fontFamily: "Inter_400Regular" }]}>
+                      Confidence saved
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            )}
+
+            <Pressable
+              onPress={async () => {
+                if (confidenceRating > 0 && !confidenceSaved) {
+                  try {
+                    await confidenceMutation.mutateAsync();
+                  } catch {}
+                }
+                setShowModuleCompletion(false);
+                router.back();
+              }}
+              style={({ pressed }) => [
+                mcStyles.doneBtn,
+                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              {confidenceMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={[mcStyles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  {confidenceRating > 0 && !confidenceSaved ? "Save & Continue" : "Continue"}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const mcStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 28,
+  },
+  iconRow: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heading: {
+    fontSize: 22,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  moduleTitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  objectiveBox: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    gap: 6,
+    marginBottom: 16,
+  },
+  objectiveLabel: {
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  objectiveText: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+    justifyContent: "center",
+  },
+  scoreText: {
+    fontSize: 14,
+  },
+  divider: {
+    height: 1,
+    marginBottom: 20,
+  },
+  confidencePrompt: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    marginBottom: 6,
+  },
+  ratingBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ratingNum: {
+    fontSize: 16,
+  },
+  ratingLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+    marginBottom: 16,
+  },
+  ratingLabel: {
+    fontSize: 11,
+  },
+  savedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  savedText: {
+    fontSize: 13,
+  },
+  doneBtn: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  doneBtnText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+});
 
 const sectionStyles = StyleSheet.create({
   header: {

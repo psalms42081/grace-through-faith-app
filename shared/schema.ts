@@ -1189,6 +1189,7 @@ export const progressTracks = pgTable(
     currentModuleId: varchar("current_module_id"),
     currentLessonId: varchar("current_lesson_id"),
     percentComplete: integer("percent_complete").default(0),
+    moduleConfidence: jsonb("module_confidence").$type<Record<string, number>>().default({}),
   },
   (table) => ({
     userTrackUnique: uniqueIndex("progress_user_track_unique").on(
