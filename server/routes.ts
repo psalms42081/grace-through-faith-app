@@ -84,6 +84,7 @@ import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-or
 import { seedFormationData } from "./seed-formation";
 import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
 import { seedBeliefsWave2 } from "./seed-beliefs-wave2";
+import { seedBeliefsWave3 } from "./seed-beliefs-wave3";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -105,6 +106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   seedBeliefsWave2(db).catch((err) => {
     console.error("Wave 2 beliefs seed error:", err);
+  });
+
+  seedBeliefsWave3(db).catch((err) => {
+    console.error("Wave 3 beliefs seed error:", err);
   });
 
   async function checkProStatus(

@@ -106,6 +106,39 @@ Each belief module contains:
 All Wave 2 records use the `w2` ID prefix scheme (`w2l-*`, `w2s-*`, `w2a-*`, `w2i-*`).
 
 Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave2.ts` (orchestrator), `server/seeds/wave2-belief-8.ts`, `server/seeds/wave2-belief-9.ts`, `server/seeds/wave2-belief-10.ts`, `server/seeds/wave2-belief-11.ts`.
+
+### Wave 3 — 28 Beliefs Deep Dive (Beliefs 12-18)
+
+**Status: Complete and Fully Seeded**
+
+Wave 3 covers the ecclesiological and missional core — the church, its remnant identity, unity, ordinances, spiritual gifts, and the prophetic gift.
+
+**Scope Delivered**
+
+Beliefs Included:
+12. The Church
+13. The Remnant and Its Mission
+14. Unity in the Body of Christ
+15. Baptism
+16. The Lord's Supper
+17. Spiritual Gifts and Ministries
+18. The Gift of Prophecy
+
+Each belief module contains:
+- 4 structured lessons: Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges
+- 6 section types per lesson: Anchor, Explain, Integrate, Practice, Reflection, Assessment
+- 5 assessment items per lesson (3 recall, 1 conceptual, 1 scenario-based)
+
+**Totals:** 28 lessons, 168 lesson sections, 28 assessments, 140 assessment items
+
+All Wave 3 records use the `w3` ID prefix scheme (`w3l-*`, `w3s-*`, `w3a-*`, `w3i-*`).
+
+**Special Guardrails Applied:**
+- Remnant (Belief 13): Presented with humility and mission focus; avoids triumphalism
+- Ordinances (Beliefs 15-16): Affirm physical church practice; app is supportive, not a replacement
+- Gift of Prophecy (Belief 18): EGW subordinate to Scripture; external links only; emphasizes biblical tests
+
+Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave3.ts` (orchestrator), `server/seeds/wave3-beliefs-12-13.ts`, `server/seeds/wave3-beliefs-14-15.ts`, `server/seeds/wave3-belief-16.ts`, `server/seeds/wave3-belief-17.ts`, `server/seeds/wave3-belief-18.ts`.
 - **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
 - **Connect Tab (new):** Church Connect (map + list view), Small Groups (links to prayer groups), Live Streams (Jitsi Meet via WebView), Family Dashboard access.
 - **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
