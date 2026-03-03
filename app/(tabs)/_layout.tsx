@@ -36,6 +36,7 @@ function NativeTabLayout() {
         <NativeTabs.Trigger name="search" options={{ href: null }} />
         <NativeTabs.Trigger name="study" options={{ href: null }} />
         <NativeTabs.Trigger name="explore" options={{ href: null }} />
+        <NativeTabs.Trigger name="connect" options={{ href: null }} />
         <NativeTabs.Trigger name="profile" options={{ href: null }} />
         <NativeTabs.Trigger name="family" options={{ href: null }} />
       </NativeTabs>
@@ -52,13 +53,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: "book", selected: "book.fill" }} />
         <Label>Read</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="family">
-        <Icon sf={{ default: "figure.2", selected: "figure.2" }} />
-        <Label>Family</Label>
+      <NativeTabs.Trigger name="connect">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Connect</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="explore">
-        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
-        <Label>Discover</Label>
+        <Icon sf={{ default: "text.book.closed", selected: "text.book.closed.fill" }} />
+        <Label>Study</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
@@ -67,6 +68,7 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="plans" options={{ href: null }} />
       <NativeTabs.Trigger name="search" options={{ href: null }} />
       <NativeTabs.Trigger name="study" options={{ href: null }} />
+      <NativeTabs.Trigger name="family" options={{ href: null }} />
       <NativeTabs.Trigger name="kids-stories" options={{ href: null }} />
       <NativeTabs.Trigger name="kids-learn" options={{ href: null }} />
       <NativeTabs.Trigger name="kids-stars" options={{ href: null }} />
@@ -159,19 +161,9 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="plans"
+        name="connect"
         options={{
-          title: "Plans",
-          href: isKidsMode ? null : undefined,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: "Family",
+          title: "Connect",
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
@@ -181,10 +173,10 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Discover",
+          title: "Study",
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass" size={size} color={color} />
+            <Ionicons name="library" size={size} color={color} />
           ),
         }}
       />
@@ -195,6 +187,26 @@ function ClassicTabLayout() {
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="plans"
+        options={{
+          title: "Plans",
+          href: null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="family"
+        options={{
+          title: "Family",
+          href: null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />

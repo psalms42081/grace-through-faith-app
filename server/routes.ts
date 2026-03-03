@@ -1532,7 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/devotionals/plans", async (req, res) => {
     try {
-      const traditionKey = String(req.query.traditionKey || "core");
+      const traditionKey = String(req.query.traditionKey || "all");
       const conditions = [eq(devotionalPlans.isPublished, true)];
       if (traditionKey !== "all") {
         conditions.push(eq(devotionalPlans.traditionKey, traditionKey));

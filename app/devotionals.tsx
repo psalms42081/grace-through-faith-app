@@ -52,7 +52,7 @@ export default function DevotionalsScreen() {
   const [enrolling, setEnrolling] = useState(false);
 
   const { data: plans, isLoading } = useQuery<Plan[]>({
-    queryKey: ["/api/devotionals/plans?traditionKey=core"],
+    queryKey: ["/api/devotionals/plans?traditionKey=all"],
   });
 
   const { data: planDays } = useQuery<PlanDay[]>({

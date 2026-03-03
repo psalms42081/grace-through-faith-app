@@ -1122,7 +1122,7 @@ function AdultHomeScreen() {
             Grace through Faith
           </Text>
           <Text style={[s.headerTagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            No distractions. Built for deeper study.
+            Adventist Spiritual Formation
           </Text>
         </View>
         <View>
@@ -1350,6 +1350,64 @@ function AdultHomeScreen() {
           )}
         </LinearGradient>
       </Pressable>
+
+      <GoldDivider theme={theme} />
+
+      <View style={s.hubSection}>
+        <Text style={[s.hubTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          SDA Hub
+        </Text>
+      </View>
+
+      <View style={s.hubGrid}>
+        <View style={[s.hubCard, { backgroundColor: theme.backgroundCard }]}>
+          <View style={[s.hubIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="location" size={22} color="#C9933A" />
+          </View>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Church Connect
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Find SDA churches near you
+          </Text>
+          <View style={[s.hubBadge, { backgroundColor: theme.accent + "18" }]}>
+            <Text style={[s.hubBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Coming Soon</Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/groups" as any)}
+          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <View style={[s.hubIconWrap, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+            <Ionicons name="people-circle" size={22} color="#10B981" />
+          </View>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Small Groups
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Join study groups worldwide
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
+        </Pressable>
+      </View>
+
+      <View style={[s.hubCardWide, { backgroundColor: theme.backgroundCard }]}>
+        <View style={[s.hubIconWrap, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
+          <Ionicons name="school" size={22} color="#7C3AED" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Study Paths
+          </Text>
+          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Structured SDA formation pathways
+          </Text>
+        </View>
+        <View style={[s.hubBadge, { backgroundColor: theme.accent + "18" }]}>
+          <Text style={[s.hubBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Coming Soon</Text>
+        </View>
+      </View>
 
     </ScrollView>
   );
@@ -1624,5 +1682,58 @@ const s = StyleSheet.create({
   devotionalProgressFill: {
     height: 6,
     borderRadius: 3,
+  },
+  hubSection: {
+    marginBottom: 16,
+  },
+  hubTitle: {
+    fontSize: 20,
+    letterSpacing: -0.3,
+  },
+  hubGrid: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  hubCard: {
+    flex: 1,
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    gap: 6,
+  },
+  hubIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  hubCardTitle: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  hubCardSub: {
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  hubBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  hubBadgeText: {
+    fontSize: 10,
+  },
+  hubCardWide: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    padding: 16,
+    gap: 14,
+    marginBottom: 20,
   },
 });

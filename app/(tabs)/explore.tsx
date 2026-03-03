@@ -41,7 +41,7 @@ function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
   return <View style={[styles.divider, { backgroundColor: theme.divider }]} />;
 }
 
-export default function DiscoverScreen() {
+export default function StudyScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
@@ -54,7 +54,7 @@ export default function DiscoverScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Discover
+          Study
         </Text>
       </View>
 
@@ -63,6 +63,160 @@ export default function DiscoverScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Adventist Studies
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/sda-studies" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
+            <Ionicons name="school" size={22} color="#7C3AED" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              28 Fundamental Beliefs
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Core doctrines of the Adventist faith
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/devotionals" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="flame" size={22} color="#C9933A" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Devotional Plans
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Guided daily reading & SDA study plans
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/study-guide" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
+            <Ionicons name="chatbubbles" size={22} color="#8B5CF6" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Guided Study
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Socratic AI-guided inductive Bible study
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <View style={[styles.resourceCard, { backgroundColor: theme.backgroundCard }]}>
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(46,125,50,0.12)" }]}>
+            <Ionicons name="trail-sign" size={22} color="#2E7D32" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Study Paths
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Structured SDA formation pathways
+            </Text>
+          </View>
+          <View style={[styles.soonBadge, { backgroundColor: theme.accent + "18" }]}>
+            <Text style={[styles.soonBadgeText, { color: theme.accent }]}>Soon</Text>
+          </View>
+        </View>
+
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Study Resources
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/study?tab=voices")}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
+            <Ionicons name="chatbubble-ellipses" size={22} color="#3B6CB5" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Historic Voices
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Commentary from Matthew Henry, Adam Clarke, John Gill & more
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Study Tools
+          </Text>
+        </View>
+
+        <View style={styles.toolsRow}>
+          <Pressable
+            onPress={() => router.push("/maps-timeline?tab=maps")}
+            style={({ pressed }) => [
+              styles.toolCard,
+              { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: "rgba(26,31,60,0.10)" }]}>
+              <Ionicons name="map" size={24} color={isDark ? "#8B9FD4" : "#1A1F3C"} />
+            </View>
+            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Bible Maps</Text>
+            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/maps-timeline?tab=timeline")}
+            style={({ pressed }) => [
+              styles.toolCard,
+              { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: "rgba(46,125,50,0.10)" }]}>
+              <Ionicons name="time" size={24} color={isDark ? "#66BB6A" : "#2E7D32"} />
+            </View>
+            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Timeline</Text>
+            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
+          </Pressable>
+        </View>
+
+        <SectionDivider theme={theme} />
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Popular Passages
@@ -123,98 +277,7 @@ export default function DiscoverScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Study Resources
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={() => router.push("/(tabs)/study?tab=voices")}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-          testID="historic-voices-card"
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
-            <Ionicons name="chatbubble-ellipses" size={22} color="#3B6CB5" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Historic Voices
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Commentary from Matthew Henry, Adam Clarke, John Gill & more
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/christian-traditions" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-          testID="christian-traditions-card"
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
-            <Ionicons name="globe" size={22} color="#5B86E5" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Christian Traditions
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Study denominational perspectives
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Study Tools
-          </Text>
-        </View>
-
-        <View style={styles.toolsRow}>
-          <Pressable
-            onPress={() => router.push("/maps-timeline?tab=maps")}
-            style={({ pressed }) => [
-              styles.toolCard,
-              { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-            ]}
-            testID="maps-card"
-          >
-            <View style={[styles.toolIcon, { backgroundColor: "rgba(26,31,60,0.10)" }]}>
-              <Ionicons name="map" size={24} color={isDark ? "#8B9FD4" : "#1A1F3C"} />
-            </View>
-            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Bible Maps</Text>
-            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/maps-timeline?tab=timeline")}
-            style={({ pressed }) => [
-              styles.toolCard,
-              { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-            ]}
-            testID="timeline-card"
-          >
-            <View style={[styles.toolIcon, { backgroundColor: "rgba(46,125,50,0.10)" }]}>
-              <Ionicons name="time" size={24} color={isDark ? "#66BB6A" : "#2E7D32"} />
-            </View>
-            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Timeline</Text>
-            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
-          </Pressable>
-        </View>
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Christian Content
+            Adventist Resources
           </Text>
         </View>
 
@@ -222,19 +285,18 @@ export default function DiscoverScreen() {
           onPress={() => router.push("/music")}
           style={({ pressed }) => [
             styles.resourceCard,
-            { backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard, opacity: pressed ? 0.85 : 1, marginBottom: 8 },
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1, marginBottom: 8 },
           ]}
-          testID="music-card"
         >
           <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
             <Ionicons name="musical-notes" size={22} color="#C9933A" />
           </View>
           <View style={styles.resourceInfo}>
             <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Christian Music
+              Worship Music
             </Text>
             <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Worship & hymns
+              Hymns & worship songs
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -314,6 +376,15 @@ const styles = StyleSheet.create({
   resourceInfo: { flex: 1 },
   resourceTitle: { fontSize: 15, marginBottom: 2 },
   resourceSub: { fontSize: 13, lineHeight: 19 },
+  soonBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  soonBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
   toolsRow: {
     flexDirection: "row",
     gap: 12,

@@ -73,8 +73,6 @@ function RootLayoutNav() {
       <Stack.Screen name="groups" options={{ headerShown: true, title: "Prayer Groups" }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: true, title: "Group" }} />
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
-      <Stack.Screen name="christian-traditions" options={{ headerShown: false }} />
-      <Stack.Screen name="tradition/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="parent-controls" options={{ headerShown: false }} />
     </Stack>
   );

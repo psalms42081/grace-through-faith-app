@@ -27,6 +27,12 @@ const SECTIONS = [
     body: "Each passage can be explored through four lenses: Observation, Interpretation, Application, and Reflection\u2014a proven method for thorough, personal Bible study.",
   },
   {
+    icon: "school" as const,
+    color: "#7C3AED",
+    title: "Adventist Formation",
+    body: "Structured around Seventh-day Adventist teaching, including the 28 Fundamental Beliefs, prophecy studies, Sabbath-centered living, and Spirit of Prophecy references.",
+  },
+  {
     icon: "chatbubbles" as const,
     color: "#8B5CF6",
     title: "Socratic AI Guide",
@@ -63,7 +69,7 @@ export default function HowItWorksScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[st.headerTitle, { color: theme.text }]}>How This App Works</Text>
+        <Text style={[st.headerTitle, { color: theme.text }]}>About This App</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -86,30 +92,30 @@ export default function HowItWorksScreen() {
 
         <View style={st.approachSection}>
           <View style={[st.approachIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="compass" size={24} color="#C9933A" />
+            <Ionicons name="shield-checkmark" size={24} color="#C9933A" />
           </View>
-          <Text style={[st.approachTitle, { color: theme.text }]}>Our Approach</Text>
+          <Text style={[st.approachTitle, { color: theme.text }]}>Our Mission</Text>
           <Text style={[st.approachBody, { color: theme.textSecondary }]}>
-            This app is Bible-centered and designed for structured spiritual growth. It includes resources from multiple Christian traditions, presented respectfully and transparently. Our goal is formation and deeper study{"\u2014"}not promoting one denomination over another.
+            Grounded in Seventh-day Adventist teaching, this app is designed for spiritual formation{"\u2014"}helping you grow through structured Bible study, Adventist doctrine, prophecy, and daily spiritual disciplines. Everything is Scripture-first and faithful to the historic positions of the Adventist Church.
           </Text>
         </View>
 
         <View style={[st.divider, { backgroundColor: theme.divider }]} />
 
         <Pressable
-          onPress={() => router.push("/christian-traditions" as any)}
+          onPress={() => router.push("/sda-studies" as any)}
           style={({ pressed }) => [
             st.linkCard,
             { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          <View style={[st.linkIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
-            <Ionicons name="globe" size={20} color="#5B86E5" />
+          <View style={[st.linkIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
+            <Ionicons name="school" size={20} color="#7C3AED" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.linkTitle, { color: theme.text }]}>Christian Traditions</Text>
+            <Text style={[st.linkTitle, { color: theme.text }]}>28 Fundamental Beliefs</Text>
             <Text style={[st.linkSub, { color: theme.textMuted }]}>
-              Explore perspectives from different traditions
+              Explore the core doctrines of the Adventist faith
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
