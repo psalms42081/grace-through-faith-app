@@ -71,17 +71,33 @@ function LayerProgressBar({
   onTabPress,
   theme,
   nextStepText,
+  depthLabel,
 }: {
   activeTab: Tab;
   completedLayers: Set<string>;
   onTabPress: (tab: Tab) => void;
   theme: typeof Colors.light;
   nextStepText: string | null;
+  depthLabel: string | null;
 }) {
   const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
+  const depthColor = depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted;
+
   return (
     <View style={lpStyles.container}>
+      {depthLabel && (
+        <View style={lpStyles.depthRow}>
+          <Ionicons
+            name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+            size={13}
+            color={depthColor}
+          />
+          <Text style={[lpStyles.depthLabel, { color: depthColor, fontFamily: "Inter_500Medium" }]}>
+            Study Depth: {depthLabel}
+          </Text>
+        </View>
+      )}
       <View style={lpStyles.bar}>
         {LAYER_ORDER.map((layer, i) => {
           const isActive = activeTab === layer;
@@ -146,6 +162,7 @@ function NextLayerCTA({
   onNextLayer,
   isCompleted,
   canComplete,
+  hasEntries,
   theme,
 }: {
   activeTab: Tab;
@@ -154,24 +171,33 @@ function NextLayerCTA({
   onNextLayer: () => void;
   isCompleted: boolean;
   canComplete: boolean;
+  hasEntries: boolean;
   theme: typeof Colors.light;
 }) {
   const currentIndex = LAYER_ORDER.indexOf(activeTab);
   const hasNext = currentIndex < LAYER_ORDER.length - 1;
   const nextLabel = hasNext ? LAYER_LABELS[LAYER_ORDER[currentIndex + 1]] : null;
+  const isReflectiveLayer = activeTab === "voices" || activeTab === "application";
 
   if (!canComplete) return null;
 
   return (
     <View style={ctaStyles.container}>
       {!isCompleted ? (
-        <Pressable
-          onPress={onMarkComplete}
-          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
-        >
-          <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-          <Text style={ctaStyles.btnText}>Mark Layer Complete</Text>
-        </Pressable>
+        <>
+          {isReflectiveLayer && !hasEntries && (
+            <Text style={[ctaStyles.gentleNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Depth increases when you write a response.
+            </Text>
+          )}
+          <Pressable
+            onPress={onMarkComplete}
+            style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+          >
+            <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+            <Text style={ctaStyles.btnText}>Mark Layer Complete</Text>
+          </Pressable>
+        </>
       ) : hasNext ? (
         <Pressable
           onPress={onNextLayer}
@@ -971,6 +997,43 @@ export default function StudyScreen() {
 
   const prayerContent = transformJournalMap.get("prayer_response") ?? "";
 
+  const layerProgress = useMemo(() => {
+    const map = new Map<Tab, LayerProgress>();
+    map.set("voices", {
+      layer: "voices",
+      filledSections: insightJournalMap.size,
+      totalSections: INSIGHT_SECTIONS.length,
+    });
+    map.set("application", {
+      layer: "application",
+      filledSections: transformJournalMap.size,
+      totalSections: TRANSFORMATION_SECTIONS.length,
+    });
+    return map;
+  }, [insightJournalMap, transformJournalMap]);
+
+  const nextStepText = useMemo(
+    () => computeNextStep(completedLayers, layerProgress, activeTab),
+    [completedLayers, layerProgress, activeTab]
+  );
+
+  const studyDepthLabel = useMemo(() => {
+    const l1l2Done = completedLayers.has("word") && completedLayers.has("context");
+    const l3l4Done = completedLayers.has("voices") && completedLayers.has("application");
+    const insightCount = insightJournalMap.size;
+    const allPromptsCount = insightJournalMap.size + transformJournalMap.size;
+    if (l1l2Done && l3l4Done && allPromptsCount >= 8) return "Established";
+    if (l1l2Done && insightCount >= 2) return "Developing";
+    if (completedLayers.size > 0 || allPromptsCount > 0) return "Emerging";
+    return null;
+  }, [completedLayers, insightJournalMap, transformJournalMap]);
+
+  const activeLayerHasEntries = useMemo(() => {
+    if (activeTab === "voices") return insightJournalMap.size > 0;
+    if (activeTab === "application") return transformJournalMap.size > 0;
+    return true;
+  }, [activeTab, insightJournalMap, transformJournalMap]);
+
   const handleSavePrayerFromSummary = useCallback(async () => {
     if (!prayerContent) return;
     try {
@@ -1030,6 +1093,8 @@ export default function StudyScreen() {
           completedLayers={completedLayers}
           onTabPress={setActiveTab}
           theme={theme}
+          nextStepText={nextStepText}
+          depthLabel={studyDepthLabel}
         />
       )}
 
@@ -1039,7 +1104,7 @@ export default function StudyScreen() {
             completedLayers={completedLayers}
             onStart={startDeepSession}
             theme={theme}
-            isPaused={hasPausedSession}
+            isPaused={pausedLayerIndex !== null}
           />
         </View>
       )}
@@ -1115,6 +1180,7 @@ export default function StudyScreen() {
             onNextLayer={handleNextLayer}
             isCompleted={completedLayers.has(activeTab)}
             canComplete={canTrack}
+            hasEntries={activeLayerHasEntries}
             theme={theme}
           />
         )}
@@ -2954,6 +3020,18 @@ const lpStyles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
   },
+  depthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  depthLabel: {
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: "uppercase" as const,
+  },
 });
 
 const ctaStyles = StyleSheet.create({
@@ -2986,6 +3064,13 @@ const ctaStyles = StyleSheet.create({
   },
   completeText: {
     fontSize: 14,
+  },
+  gentleNote: {
+    fontSize: 12,
+    fontStyle: "italic" as const,
+    textAlign: "center" as const,
+    marginBottom: 8,
+    lineHeight: 18,
   },
 });
 

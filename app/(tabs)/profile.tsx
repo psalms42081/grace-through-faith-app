@@ -232,6 +232,20 @@ export default function ProfileScreen() {
     queryKey: [`/api/analytics/growth?userId=${uid}`],
   });
 
+  interface RevisitEntry {
+    bookId: number;
+    chapter: number;
+    bookName: string;
+    lastEdited: string;
+    excerpt: string;
+    layer: string;
+    sectionKey: string;
+  }
+
+  const { data: revisitEntries } = useQuery<RevisitEntry[]>({
+    queryKey: [`/api/study-journal/revisit?userId=${uid}`],
+  });
+
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
   const streak = weeklyData?.currentStreak ?? 0;
   const longestStreak = weeklyData?.longestStreak ?? 0;
@@ -487,6 +501,56 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
+      )}
+
+      {revisitEntries && revisitEntries.length > 0 && (
+        <>
+          <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+          <View style={st.sectionPad}>
+            <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Revisit Your Reflections
+            </Text>
+            <Text style={[st.revisitSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Return to chapters where you saved insights
+            </Text>
+            {revisitEntries.slice(0, 5).map((entry, i) => {
+              const LAYER_DISPLAY: Record<string, string> = { word: "Text", context: "Context", voices: "Insight", application: "Transformation" };
+              return (
+                <Pressable
+                  key={`${entry.bookId}-${entry.chapter}-${i}`}
+                  onPress={() => router.push(`/study?bookId=${entry.bookId}&chapter=${entry.chapter}&tab=${entry.layer}&bookName=${encodeURIComponent(entry.bookName)}` as any)}
+                  style={({ pressed }) => [
+                    st.revisitRow,
+                    { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <View style={[st.revisitIcon, { backgroundColor: theme.accent + "15" }]}>
+                    <Ionicons name="document-text-outline" size={16} color={theme.accent} />
+                  </View>
+                  <View style={st.revisitInfo}>
+                    <View style={st.revisitHeader}>
+                      <Text style={[st.revisitTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                        {entry.bookName} {entry.chapter}
+                      </Text>
+                      <Text style={[st.revisitLayer, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                        {LAYER_DISPLAY[entry.layer] || entry.layer}
+                      </Text>
+                    </View>
+                    {entry.excerpt ? (
+                      <Text style={[st.revisitExcerpt, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+                        {entry.excerpt}{entry.excerpt.length >= 120 ? "..." : ""}
+                      </Text>
+                    ) : null}
+                    <Text style={[st.revisitDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {entry.lastEdited ? formatTimeAgo(entry.lastEdited) : ""}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
       )}
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
@@ -805,4 +869,35 @@ const st = StyleSheet.create({
     fontSize: 14,
     color: "#fff",
   },
+  revisitSubtitle: {
+    fontSize: 13,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  revisitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 6,
+  },
+  revisitIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  revisitInfo: { flex: 1 },
+  revisitHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  revisitTitle: { fontSize: 15 },
+  revisitLayer: { fontSize: 11, textTransform: "uppercase" as const, letterSpacing: 0.3 },
+  revisitExcerpt: { fontSize: 12, lineHeight: 18, marginBottom: 2 },
+  revisitDate: { fontSize: 11, marginTop: 2 },
 });

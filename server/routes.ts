@@ -3288,6 +3288,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/study-journal/revisit", async (req, res) => {
+    try {
+      const userId = String(req.query.userId || "guest");
+      const limit = Math.min(Number(req.query.limit) || 10, 20);
+
+      const entries = await db
+        .select({
+          bookId: studyJournalEntries.bookId,
+          chapter: studyJournalEntries.chapter,
+          layer: studyJournalEntries.layer,
+          sectionKey: studyJournalEntries.sectionKey,
+          content: studyJournalEntries.content,
+          updatedAt: studyJournalEntries.updatedAt,
+        })
+        .from(studyJournalEntries)
+        .where(eq(studyJournalEntries.userId, userId))
+        .orderBy(desc(studyJournalEntries.updatedAt))
+        .limit(limit * 2);
+
+      const bookIds = [...new Set(entries.map(e => e.bookId))];
+      const bookNames = new Map<number, string>();
+      if (bookIds.length > 0) {
+        const books = await db
+          .select({ id: bibleBooks.id, name: bibleBooks.name })
+          .from(bibleBooks)
+          .where(sql`${bibleBooks.id} IN ${bookIds}`);
+        books.forEach(b => bookNames.set(b.id, b.name));
+      }
+
+      const seen = new Set<string>();
+      const grouped: {
+        bookId: number;
+        chapter: number;
+        bookName: string;
+        lastEdited: string;
+        excerpt: string;
+        layer: string;
+        sectionKey: string;
+      }[] = [];
+
+      for (const entry of entries) {
+        const key = `${entry.bookId}-${entry.chapter}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        grouped.push({
+          bookId: entry.bookId,
+          chapter: entry.chapter,
+          bookName: bookNames.get(entry.bookId) || `Book ${entry.bookId}`,
+          lastEdited: entry.updatedAt?.toISOString() || new Date().toISOString(),
+          excerpt: (entry.content || "").substring(0, 120),
+          layer: entry.layer,
+          sectionKey: entry.sectionKey,
+        });
+
+        if (grouped.length >= limit) break;
+      }
+
+      return res.json(grouped);
+    } catch (err) {
+      console.error("Revisit entries error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // ─── FAMILY DASHBOARD ─────────────────────────────────────────────────────
 
   app.get("/api/family/children", checkProStatus, async (req, res) => {
