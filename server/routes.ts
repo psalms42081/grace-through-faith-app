@@ -1952,6 +1952,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/verses/explain", async (req, res) => {
+    try {
+      const { reference, lessonContext } = req.body;
+      if (!reference || typeof reference !== "string" || reference.trim().length < 3) {
+        return res.status(400).json({ error: "A valid Scripture reference is required" });
+      }
+      const { generateVerseExplanation } = await import("./services/ai-engine");
+      const explanation = await generateVerseExplanation({
+        reference: reference.trim(),
+        lessonContext: lessonContext?.trim(),
+      });
+      return res.json({ explanation });
+    } catch (err) {
+      console.error("Verse explanation error:", err);
+      return res.json({
+        explanation: "Unable to generate an explanation at this time. Please try again later.",
+      });
+    }
+  });
+
   app.post("/api/devotionals/complete", async (req, res) => {
     try {
       const { enrollmentId, dayId, journalEntry } = req.body;

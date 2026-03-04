@@ -15,9 +15,191 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/query-client";
+import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+
+function extractReferences(content: string): string[] {
+  const refs: string[] = [];
+  const boldPattern = /\*\*([^*]+)\*\*/g;
+  let match;
+  while ((match = boldPattern.exec(content)) !== null) {
+    const text = match[1].trim();
+    if (/^[1-3]?\s?[A-Z][a-z]+\s+\d/.test(text)) {
+      refs.push(text);
+    }
+  }
+  if (refs.length === 0) {
+    const linePattern = /^\d+\.\s+\*\*([^*]+)\*\*/gm;
+    while ((match = linePattern.exec(content)) !== null) {
+      const text = match[1].trim();
+      if (/^[1-3]?\s?[A-Z][a-z]+\s+\d/.test(text)) {
+        refs.push(text);
+      }
+    }
+  }
+  if (refs.length === 0) {
+    const loosePattern = /(?:^|[\n;,])\s*([1-3]?\s?[A-Z][a-z]+(?: [A-Z][a-z]+)?\s+\d+:\d+(?:[–-]\d+)?(?:,\d+)?)/g;
+    while ((match = loosePattern.exec(content)) !== null) {
+      refs.push(match[1].trim());
+    }
+  }
+  return refs.slice(0, 8);
+}
+
+function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; lessonTitle: string; theme: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const handleExplain = async () => {
+    if (explanation) {
+      setExpanded(!expanded);
+      return;
+    }
+    setExpanded(true);
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiRequest("POST", "/api/verses/explain", {
+        reference,
+        lessonContext: lessonTitle,
+      });
+      const data = await res.json();
+      setExplanation(data.explanation);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={evStyles.container}>
+      <Pressable
+        onPress={handleExplain}
+        style={({ pressed }) => [
+          evStyles.refBtn,
+          {
+            backgroundColor: expanded ? theme.accent + "15" : theme.accent + "08",
+            borderColor: expanded ? theme.accent + "40" : theme.accent + "20",
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <View style={evStyles.refRow}>
+          <Ionicons name="book" size={14} color={theme.accent} />
+          <Text style={[evStyles.refText, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+            {reference}
+          </Text>
+        </View>
+        <View style={evStyles.explainTag}>
+          <Ionicons name="search" size={12} color={theme.accent} />
+          <Text style={[evStyles.explainLabel, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            {expanded && explanation ? "Hide" : "Explain"}
+          </Text>
+        </View>
+      </Pressable>
+
+      {expanded && (
+        <View style={[evStyles.explanationBox, { backgroundColor: theme.accent + "06", borderColor: theme.accent + "18" }]}>
+          {loading && (
+            <View style={evStyles.loadingRow}>
+              <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[evStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Generating explanation...
+              </Text>
+            </View>
+          )}
+          {error && (
+            <Text style={[evStyles.errorText, { color: theme.error, fontFamily: "Inter_400Regular" }]}>
+              Could not load explanation. Please try again.
+            </Text>
+          )}
+          {explanation && !loading && (
+            <Text style={[evStyles.explanationText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+              {explanation}
+            </Text>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const evStyles = StyleSheet.create({
+  container: {
+    marginBottom: 8,
+  },
+  refBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  refRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  refText: {
+    fontSize: 13,
+    flex: 1,
+  },
+  explainTag: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  explainLabel: {
+    fontSize: 12,
+  },
+  explanationBox: {
+    marginTop: 6,
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  loadingRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 13,
+  },
+  errorText: {
+    fontSize: 13,
+  },
+  explanationText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  sectionWrapper: {
+    marginTop: 16,
+  },
+  dividerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    marginBottom: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 11,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+  },
+});
 
 interface Section {
   id: string;
@@ -315,6 +497,41 @@ export default function LessonScreen() {
               <SectionHeader type={section.sectionType} title={section.title} isCompleted={isCompleted} />
 
               <Text style={[styles.sectionContent, { color: theme.text }]}>{section.content}</Text>
+
+              {section.sectionType === "anchor" && (() => {
+                const refs = extractReferences(section.content);
+                if (refs.length === 0 && lesson.anchorText) {
+                  const fallbackRefs = lesson.anchorText.split(";").map((r: string) => r.trim()).filter(Boolean);
+                  return fallbackRefs.length > 0 ? (
+                    <View style={evStyles.sectionWrapper}>
+                      <View style={evStyles.dividerRow}>
+                        <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                        <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          Explain a Passage
+                        </Text>
+                        <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                      </View>
+                      {fallbackRefs.map((ref: string) => (
+                        <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
+                      ))}
+                    </View>
+                  ) : null;
+                }
+                return refs.length > 0 ? (
+                  <View style={evStyles.sectionWrapper}>
+                    <View style={evStyles.dividerRow}>
+                      <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                      <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        Explain a Passage
+                      </Text>
+                      <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                    </View>
+                    {refs.map((ref) => (
+                      <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
+                    ))}
+                  </View>
+                ) : null;
+              })()}
 
               {section.sectionType === "reflection" && (
                 <TextInput

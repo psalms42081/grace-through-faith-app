@@ -873,3 +873,40 @@ Respond with JSON: {"response": "your thoughtful reply", "followUp": "optional f
     };
   }
 }
+
+export async function generateVerseExplanation(params: {
+  reference: string;
+  lessonContext?: string;
+}): Promise<string> {
+  const { reference, lessonContext } = params;
+  const openai = createOpenAIClient();
+
+  const systemPrompt = `You are a Seventh-day Adventist biblical scholar providing clear, faithful explanations of Scripture passages. Your explanations must:
+
+1. Be SHORT (3-5 sentences maximum). Do not write essays.
+2. Be grounded in the biblical text itself — explain what the passage says and means in context.
+3. Reflect Adventist theological understanding where relevant (sanctuary, Sabbath, state of the dead, Great Controversy, second coming, health message, etc.) but only when the passage naturally touches those themes. Do not force Adventist distinctives into every answer.
+4. Use clear, lay-friendly language. No academic jargon.
+5. Be reverent and measured in tone — not sensational, not polemical, not devotional fluff.
+6. Reference other Scripture passages briefly when they illuminate the text, but keep cross-references to 1-2 at most.
+7. Never quote or embed Ellen G. White text. You may mention that Adventist thought on a topic can be explored further, but never present EGW as equal to Scripture.
+8. Never speculate beyond what the text says. If a passage is debated, present the Adventist reading calmly without attacking other positions.
+9. Do not use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.`;
+
+  const userPrompt = lessonContext
+    ? `Explain this passage: ${reference}\n\nThis explanation is being requested within a lesson about: ${lessonContext}`
+    : `Explain this passage: ${reference}`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: 300,
+    temperature: 0.4,
+  });
+
+  const raw = completion.choices[0]?.message?.content?.trim() || "";
+  return raw || "Unable to generate an explanation at this time. Please try again.";
+}
