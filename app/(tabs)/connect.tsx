@@ -94,8 +94,27 @@ export default function ConnectScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
 
-        <View style={[st.placeholderRow, { backgroundColor: theme.backgroundCard }]}>
+        <Pressable
+          onPress={() => router.push("/broadcasts" as any)}
+          style={({ pressed }) => [
+            st.actionCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
           <View style={[st.actionIcon, { backgroundColor: "rgba(232,69,107,0.12)" }]}>
+            <Ionicons name="tv" size={24} color="#E8456B" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.actionTitle, { color: theme.text }]}>Broadcasts</Text>
+            <Text style={[st.actionSub, { color: theme.textMuted }]}>
+              Watch 3ABN & Amazing Facts
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
+        <View style={[st.placeholderRow, { backgroundColor: theme.backgroundCard }]}>
+          <View style={[st.actionIcon, { backgroundColor: "rgba(232,69,107,0.08)" }]}>
             <Ionicons name="videocam" size={24} color="#E8456B" />
           </View>
           <View style={{ flex: 1 }}>
