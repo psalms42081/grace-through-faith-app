@@ -75,8 +75,8 @@
     "useDeviceLanguage": "使用设备语言",
     "languageChanged": "语言已更新",
     "contentLanguage": "内容语言",
-    "sameAsApp": "与应用语言相同",
-    "contentLangNote": "部分内容目前仅提供英文版本。"
+    "contentLangSub": "选择课程和灵修的语言。\n如果不可用，将使用英语。",
+    "sameAsApp": "与应用语言相同"
   },
   "study": {
     "studyPaths": "学习路径",

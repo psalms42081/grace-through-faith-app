@@ -75,8 +75,8 @@
     "useDeviceLanguage": "Use device language",
     "languageChanged": "Language updated",
     "contentLanguage": "Content Language",
-    "sameAsApp": "Same as App Language",
-    "contentLangNote": "Some content is currently available in English only."
+    "contentLangSub": "Choose the language used for lessons and devotionals.\nIf unavailable, English will be used.",
+    "sameAsApp": "Same as App Language"
   },
   "study": {
     "studyPaths": "Study Paths",

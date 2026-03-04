@@ -75,8 +75,8 @@
     "useDeviceLanguage": "Gamitin ang wika ng device",
     "languageChanged": "Na-update ang wika",
     "contentLanguage": "Wika ng nilalaman",
-    "sameAsApp": "Kapareho ng wika ng app",
-    "contentLangNote": "Ang ilang nilalaman ay available lamang sa Ingles."
+    "contentLangSub": "Piliin ang wika para sa mga aralin at debosyon.\nKung hindi available, gagamitin ang Ingles.",
+    "sameAsApp": "Kapareho ng wika ng app"
   },
   "study": {
     "studyPaths": "Mga landas ng pag-aaral",

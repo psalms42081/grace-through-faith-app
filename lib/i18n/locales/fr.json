@@ -75,8 +75,8 @@
     "useDeviceLanguage": "Utiliser la langue de l'appareil",
     "languageChanged": "Langue mise a jour",
     "contentLanguage": "Langue du contenu",
-    "sameAsApp": "Identique a la langue de l'app",
-    "contentLangNote": "Certains contenus sont disponibles en anglais uniquement."
+    "contentLangSub": "Choisissez la langue pour les lecons et les devotions.\nSi indisponible, l'anglais sera utilise.",
+    "sameAsApp": "Identique a la langue de l'app"
   },
   "study": {
     "studyPaths": "Parcours d'etude",

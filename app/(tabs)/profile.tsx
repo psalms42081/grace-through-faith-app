@@ -659,6 +659,10 @@ export default function ProfileScreen() {
           <Ionicons name={contentLangPickerOpen ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
         </Pressable>
 
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, paddingHorizontal: 16, paddingBottom: 8, lineHeight: 17 }}>
+          {t("profile.contentLangSub")}
+        </Text>
+
         {contentLangPickerOpen && (
           <View style={[st.langPicker, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border }]}>
             {CONTENT_LANGUAGE_OPTIONS.map((opt) => {

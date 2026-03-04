@@ -75,8 +75,8 @@
     "useDeviceLanguage": "Usar idioma do dispositivo",
     "languageChanged": "Idioma atualizado",
     "contentLanguage": "Idioma do conteudo",
-    "sameAsApp": "Igual ao idioma do app",
-    "contentLangNote": "Parte do conteudo esta disponivel apenas em ingles."
+    "contentLangSub": "Escolha o idioma para licoes e devocionais.\nSe indisponivel, o ingles sera usado.",
+    "sameAsApp": "Igual ao idioma do app"
   },
   "study": {
     "studyPaths": "Trilhas de estudo",
