@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   useColorScheme,
   Platform,
   Modal,
+  Animated,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +19,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from "expo-clipboard";
+
+const SABBATH_MODE_KEY = "@lesson_sabbath_mode";
 
 function extractReferences(content: string): string[] {
   const refs: string[] = [];
@@ -201,6 +206,261 @@ const evStyles = StyleSheet.create({
   },
 });
 
+function SabbathPillToggle({ isSabbath, onToggle, theme }: { isSabbath: boolean; onToggle: () => void; theme: any }) {
+  return (
+    <Pressable onPress={onToggle} style={[sabbathStyles.pillOuter, { backgroundColor: theme.backgroundElevated, borderColor: theme.border }]}>
+      <View style={[sabbathStyles.pillOption, !isSabbath && { backgroundColor: theme.accent + "20" }]}>
+        <Text style={[sabbathStyles.pillText, { color: !isSabbath ? theme.accent : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+          Study
+        </Text>
+      </View>
+      <View style={[sabbathStyles.pillOption, isSabbath && { backgroundColor: theme.accent + "20" }]}>
+        <Text style={[sabbathStyles.pillText, { color: isSabbath ? theme.accent : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+          Sabbath
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function SabbathReadingBanner({ theme }: { theme: any }) {
+  return (
+    <View style={[sabbathStyles.banner, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
+      <Text style={[sabbathStyles.bannerTitle, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+        Sabbath Reading
+      </Text>
+      <Text style={[sabbathStyles.bannerSub, { color: theme.textSecondary, fontFamily: "Lora_400Regular_Italic" }]}>
+        Slow down. Read prayerfully.
+      </Text>
+    </View>
+  );
+}
+
+function SabbathActionsSheet({
+  visible,
+  onClose,
+  theme,
+  sections,
+  completedSections,
+  onMarkComplete,
+  onToggleSection,
+  onJumpToSection,
+  anchorText,
+  onExplain,
+  isCompletePending,
+  allSectionsCompleted,
+  bottomPad,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  theme: any;
+  sections: Section[];
+  completedSections: string[];
+  onMarkComplete: () => void;
+  onToggleSection: (id: string) => void;
+  onJumpToSection: (index: number) => void;
+  anchorText: string;
+  onExplain: () => void;
+  isCompletePending: boolean;
+  allSectionsCompleted: boolean;
+  bottomPad: number;
+}) {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(slideAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    } else {
+      slideAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const handleCopyVerse = async () => {
+    if (anchorText) {
+      await Clipboard.setStringAsync(anchorText);
+    }
+    onClose();
+  };
+
+  const incompleteSections = sections.filter((s) => !completedSections.includes(s.id));
+
+  type ActionItem = { icon: string; label: string; onPress: () => void; accent?: boolean; isHeader?: boolean; color?: string; muted?: boolean };
+  const actionItems: ActionItem[] = [
+    ...(allSectionsCompleted
+      ? [{ icon: "checkmark-done", label: "Complete Lesson", onPress: () => { onMarkComplete(); onClose(); }, accent: true }]
+      : []),
+    ...(incompleteSections.length > 0
+      ? [
+          { icon: "checkmark-circle-outline", label: "Mark Section Complete", onPress: () => {}, isHeader: true },
+          ...incompleteSections.map((s) => ({
+            icon: "checkmark-circle-outline",
+            label: SECTION_ICONS[s.sectionType]?.label || s.title,
+            onPress: () => { onToggleSection(s.id); },
+            color: SECTION_ICONS[s.sectionType]?.color,
+          })),
+        ]
+      : []),
+    { icon: "list", label: "Jump to Section", onPress: () => {}, isHeader: true },
+    ...sections.map((s, i) => ({
+      icon: (SECTION_ICONS[s.sectionType]?.icon || "document-text"),
+      label: SECTION_ICONS[s.sectionType]?.label || s.title,
+      onPress: () => { onJumpToSection(i); onClose(); },
+      color: SECTION_ICONS[s.sectionType]?.color,
+    })),
+    { icon: "copy-outline", label: "Copy Anchor Verse", onPress: handleCopyVerse },
+    { icon: "search", label: "Explain Passage", onPress: () => { onExplain(); onClose(); } },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={sabbathStyles.sheetOverlay} onPress={onClose}>
+        <Animated.View
+          style={[
+            sabbathStyles.sheetContainer,
+            {
+              backgroundColor: theme.backgroundCard,
+              borderColor: theme.border,
+              paddingBottom: bottomPad + 16,
+              transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }],
+            },
+          ]}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View style={sabbathStyles.sheetHandle}>
+              <View style={[sabbathStyles.handleBar, { backgroundColor: theme.textMuted + "40" }]} />
+            </View>
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {actionItems.map((item, i) => {
+                if (item.isHeader) {
+                  return (
+                    <View key={i} style={sabbathStyles.sheetSectionHeader}>
+                      <Text style={[sabbathStyles.sheetSectionTitle, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  );
+                }
+                return (
+                  <Pressable
+                    key={i}
+                    onPress={item.onPress}
+                    style={({ pressed }) => [sabbathStyles.sheetRow, { opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={20}
+                      color={item.accent ? theme.accent : (item as any).color || theme.text}
+                    />
+                    <Text
+                      style={[
+                        sabbathStyles.sheetRowText,
+                        { color: item.accent ? theme.accent : theme.text, fontFamily: "Inter_500Medium" },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const sabbathStyles = StyleSheet.create({
+  pillOuter: {
+    flexDirection: "row" as const,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: "hidden" as const,
+  },
+  pillOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  pillText: {
+    fontSize: 11,
+    letterSpacing: 0.3,
+  },
+  banner: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  bannerSub: {
+    fontSize: 13,
+  },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end" as const,
+  },
+  sheetContainer: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingTop: 8,
+  },
+  sheetHandle: {
+    alignItems: "center" as const,
+    paddingVertical: 8,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+  },
+  sheetSectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  sheetSectionTitle: {
+    fontSize: 11,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.8,
+  },
+  sheetRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+  },
+  sheetRowText: {
+    fontSize: 15,
+  },
+  fab: {
+    position: "absolute" as const,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+});
+
 interface Section {
   id: string;
   sectionType: string;
@@ -248,7 +508,7 @@ const SECTION_ICONS: Record<string, { icon: string; color: string; label: string
   assessment: { icon: "checkmark-circle", color: "#1565C0", label: "Assessment" },
 };
 
-function SectionHeader({ type, title, isCompleted }: { type: string; title: string; isCompleted: boolean }) {
+function SectionHeader({ type, title, isCompleted, isSabbath }: { type: string; title: string; isCompleted: boolean; isSabbath: boolean }) {
   const config = SECTION_ICONS[type] || { icon: "document-text", color: "#888", label: type };
   return (
     <View style={sectionStyles.header}>
@@ -259,7 +519,7 @@ function SectionHeader({ type, title, isCompleted }: { type: string; title: stri
         <Text style={[sectionStyles.typeLabel, { color: config.color }]}>{config.label}</Text>
         <Text style={sectionStyles.sectionTitle}>{title}</Text>
       </View>
-      {isCompleted && (
+      {isCompleted && !isSabbath && (
         <View style={sectionStyles.checkCircle}>
           <Ionicons name="checkmark" size={14} color="#fff" />
         </View>
@@ -297,6 +557,34 @@ export default function LessonScreen() {
     avgAssessmentScore: number | null;
   } | null>(null);
   const [showModuleCompletion, setShowModuleCompletion] = useState(false);
+  const [sabbathMode, setSabbathMode] = useState(false);
+  const [sabbathModeLoaded, setSabbathModeLoaded] = useState(false);
+  const [showActionsSheet, setShowActionsSheet] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionRefs = useRef<Record<number, number>>({});
+
+  useEffect(() => {
+    AsyncStorage.getItem(SABBATH_MODE_KEY).then((val) => {
+      if (val === "true") setSabbathMode(true);
+      setSabbathModeLoaded(true);
+    }).catch(() => setSabbathModeLoaded(true));
+  }, []);
+
+  const toggleSabbathMode = useCallback(() => {
+    setSabbathMode((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(SABBATH_MODE_KEY, next ? "true" : "false").catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const handleJumpToSection = useCallback((index: number) => {
+    const yOffset = sectionRefs.current[index];
+    if (yOffset != null && scrollRef.current) {
+      scrollRef.current.scrollTo({ y: yOffset - 80, animated: true });
+    }
+  }, []);
+
   const [confidenceRating, setConfidenceRating] = useState(0);
   const [confidenceSaved, setConfidenceSaved] = useState(false);
   const [trackCompletionData, setTrackCompletionData] = useState<{
@@ -396,7 +684,7 @@ export default function LessonScreen() {
   const assessment = lesson?.assessment;
   const allSectionsCompleted = sections.length > 0 && sections.every((s) => completedSections.includes(s.id));
 
-  if (lessonQuery.isLoading) {
+  if (lessonQuery.isLoading || !sabbathModeLoaded) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.loadingContainer, { paddingTop: topPad + 60 }]}>
@@ -444,28 +732,33 @@ export default function LessonScreen() {
             </Text>
           )}
         </View>
-        <View style={{ width: 24 }} />
+        <SabbathPillToggle isSabbath={sabbathMode} onToggle={toggleSabbathMode} theme={theme} />
       </View>
 
-      <View style={styles.progressDotsRow}>
-        {sections.map((s) => (
-          <View
-            key={s.id}
-            style={[
-              styles.progressDot,
-              completedSections.includes(s.id)
-                ? { backgroundColor: theme.accent }
-                : { backgroundColor: theme.border, borderWidth: 1, borderColor: theme.textMuted + "40" },
-            ]}
-          />
-        ))}
-      </View>
+      {!sabbathMode && (
+        <View style={styles.progressDotsRow}>
+          {sections.map((s) => (
+            <View
+              key={s.id}
+              style={[
+                styles.progressDot,
+                completedSections.includes(s.id)
+                  ? { backgroundColor: theme.accent }
+                  : { backgroundColor: theme.border, borderWidth: 1, borderColor: theme.textMuted + "40" },
+              ]}
+            />
+          ))}
+        </View>
+      )}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {sabbathMode && <SabbathReadingBanner theme={theme} />}
+
         {lesson.anchorText && (
           <View style={[styles.anchorBanner, { backgroundColor: theme.accent + "10", borderColor: theme.accent + "30" }]}>
             <Ionicons name="book-outline" size={18} color={theme.accent} />
@@ -481,22 +774,28 @@ export default function LessonScreen() {
           </View>
         )}
 
-        {sections.map((section) => {
+        {sections.map((section, sectionIndex) => {
           const isCompleted = completedSections.includes(section.id);
           return (
             <View
               key={section.id}
+              onLayout={(e) => { sectionRefs.current[sectionIndex] = e.nativeEvent.layout.y; }}
               style={[
                 styles.sectionCard,
                 {
                   backgroundColor: theme.backgroundCard,
-                  borderColor: isCompleted ? theme.accent + "40" : theme.border,
+                  borderColor: (isCompleted && !sabbathMode) ? theme.accent + "40" : theme.border,
                 },
+                sabbathMode && { paddingHorizontal: 24, paddingVertical: 24 },
               ]}
             >
-              <SectionHeader type={section.sectionType} title={section.title} isCompleted={isCompleted} />
+              <SectionHeader type={section.sectionType} title={section.title} isCompleted={isCompleted} isSabbath={sabbathMode} />
 
-              <Text style={[styles.sectionContent, { color: theme.text }]}>{section.content}</Text>
+              <Text style={[
+                styles.sectionContent,
+                { color: theme.text },
+                sabbathMode && { fontSize: 17, lineHeight: 28 },
+              ]}>{section.content}</Text>
 
               {section.sectionType === "anchor" && (() => {
                 const refs = extractReferences(section.content);
@@ -552,7 +851,7 @@ export default function LessonScreen() {
                 />
               )}
 
-              {!isCompleted && (
+              {!isCompleted && !sabbathMode && (
                 <Pressable
                   onPress={() => toggleSection(section.id)}
                   style={({ pressed }) => [
@@ -574,6 +873,7 @@ export default function LessonScreen() {
               type="assessment"
               title={assessment.title || "Knowledge Check"}
               isCompleted={assessmentSubmitted}
+              isSabbath={sabbathMode}
             />
 
             {assessment.items.map((item, qi) => (
@@ -705,7 +1005,7 @@ export default function LessonScreen() {
         )}
       </ScrollView>
 
-      {allSectionsCompleted && (
+      {!sabbathMode && allSectionsCompleted && (
         <View
           style={[
             styles.bottomBar,
@@ -735,6 +1035,42 @@ export default function LessonScreen() {
           </Pressable>
         </View>
       )}
+
+      {sabbathMode && (
+        <Pressable
+          onPress={() => setShowActionsSheet(true)}
+          style={({ pressed }) => [
+            sabbathStyles.fab,
+            {
+              backgroundColor: theme.backgroundCard,
+              borderColor: theme.border,
+              bottom: bottomPad + 24,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="ellipsis-horizontal" size={22} color={theme.accent} />
+        </Pressable>
+      )}
+
+      <SabbathActionsSheet
+        visible={showActionsSheet}
+        onClose={() => setShowActionsSheet(false)}
+        theme={theme}
+        sections={sections}
+        completedSections={completedSections}
+        onMarkComplete={() => completeMutation.mutate()}
+        onToggleSection={toggleSection}
+        onJumpToSection={handleJumpToSection}
+        anchorText={lesson.anchorText || ""}
+        onExplain={() => {
+          const anchorIdx = sections.findIndex((s) => s.sectionType === "anchor");
+          if (anchorIdx >= 0) handleJumpToSection(anchorIdx);
+        }}
+        isCompletePending={completeMutation.isPending}
+        allSectionsCompleted={allSectionsCompleted}
+        bottomPad={bottomPad}
+      />
 
       <Modal
         visible={showModuleCompletion}
