@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 
 function SectionHeader({ title, theme }: { title: string; theme: typeof Colors.dark }) {
@@ -33,6 +34,7 @@ export default function ConnectScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -41,7 +43,7 @@ export default function ConnectScreen() {
     <View style={[st.container, { backgroundColor: theme.background }]}>
       <View style={[st.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
         <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Connect
+          {t("connect.title")}
         </Text>
       </View>
 
@@ -50,7 +52,7 @@ export default function ConnectScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <SectionHeader title="Find a Church" theme={theme} />
+        <SectionHeader title={t("connect.findAChurch")} theme={theme} />
 
         <Pressable
           onPress={() => router.push("/church-connect" as any)}
@@ -63,9 +65,9 @@ export default function ConnectScreen() {
             <Ionicons name="location" size={24} color="#C9933A" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Church Connect</Text>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.churchConnect")}</Text>
             <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Find SDA churches near you
+              {t("connect.churchConnectSub")}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -73,7 +75,7 @@ export default function ConnectScreen() {
 
         <SectionDivider theme={theme} />
 
-        <SectionHeader title="Community" theme={theme} />
+        <SectionHeader title={t("connect.community")} theme={theme} />
 
         <Pressable
           onPress={() => router.push("/groups" as any)}
@@ -86,9 +88,9 @@ export default function ConnectScreen() {
             <Ionicons name="people-circle" size={24} color="#10B981" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Small Groups</Text>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.smallGroups")}</Text>
             <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Join or create Bible study and prayer groups
+              {t("connect.smallGroupsSub")}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -105,9 +107,9 @@ export default function ConnectScreen() {
             <Ionicons name="tv" size={24} color="#E8456B" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Broadcasts</Text>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.broadcasts")}</Text>
             <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Watch 3ABN & Amazing Facts
+              {t("connect.broadcastsSub")}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -118,19 +120,19 @@ export default function ConnectScreen() {
             <Ionicons name="videocam" size={24} color="#E8456B" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Live Streams</Text>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.liveStreams")}</Text>
             <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Watch and host live Bible studies and worship
+              {t("connect.liveStreamsSub")}
             </Text>
           </View>
           <View style={[st.smallBadge, { backgroundColor: theme.accent + "18" }]}>
-            <Text style={[st.smallBadgeText, { color: theme.accent }]}>Soon</Text>
+            <Text style={[st.smallBadgeText, { color: theme.accent }]}>{t("connect.soon")}</Text>
           </View>
         </View>
 
         <SectionDivider theme={theme} />
 
-        <SectionHeader title="Family" theme={theme} />
+        <SectionHeader title={t("connect.family")} theme={theme} />
 
         <Pressable
           onPress={() => router.push("/(tabs)/family" as any)}
@@ -143,9 +145,9 @@ export default function ConnectScreen() {
             <Ionicons name="home" size={24} color="#5B86E5" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Family Dashboard</Text>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.familyDashboard")}</Text>
             <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Manage family groups, track children's progress
+              {t("connect.familyDashboardSub")}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />

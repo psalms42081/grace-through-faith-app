@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,9 +13,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Svg, { Rect } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { SUPPORTED_LANGUAGES, setLanguage, useDeviceLanguage } from "@/lib/i18n";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -204,6 +206,7 @@ export default function ProfileScreen() {
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated, logout } = useAuth();
@@ -211,6 +214,19 @@ export default function ProfileScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const uid = user?.id || "guest";
+
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const currentLang = i18n.language?.split("-")[0] || "en";
+
+  const handleLanguageChange = useCallback(async (code: string) => {
+    await setLanguage(code);
+    setLangPickerOpen(false);
+  }, []);
+
+  const handleUseDeviceLang = useCallback(async () => {
+    await useDeviceLanguage();
+    setLangPickerOpen(false);
+  }, []);
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
     queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
@@ -285,7 +301,7 @@ export default function ProfileScreen() {
         {isPatron && (
           <View style={st.patronBadge}>
             <Ionicons name="shield-checkmark" size={14} color="#C9933A" />
-            <Text style={st.patronBadgeText}>Mission Partner</Text>
+            <Text style={st.patronBadgeText}>{t("profile.missionPartner")}</Text>
           </View>
         )}
         {isGuest ? (
@@ -295,7 +311,7 @@ export default function ProfileScreen() {
             testID="profile-sign-in"
           >
             <Ionicons name="log-in-outline" size={16} color="#fff" />
-            <Text style={[st.authBtnText, { fontFamily: "Inter_600SemiBold" }]}>Sign In / Create Account</Text>
+            <Text style={[st.authBtnText, { fontFamily: "Inter_600SemiBold" }]}>{t("profile.signIn")}</Text>
           </Pressable>
         ) : (
           <Pressable
@@ -304,7 +320,7 @@ export default function ProfileScreen() {
             testID="profile-sign-out"
           >
             <Ionicons name="log-out-outline" size={16} color={theme.textSecondary} />
-            <Text style={[st.authBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Sign Out</Text>
+            <Text style={[st.authBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>{t("profile.signOut")}</Text>
           </Pressable>
         )}
       </View>
@@ -313,17 +329,17 @@ export default function ProfileScreen() {
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="flame" size={22} color="#FF6B35" />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Current{"\n"}Streak</Text>
+          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.currentStreak")}</Text>
         </Pressable>
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="trending-up" size={22} color={theme.accent} />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Longest{"\n"}Streak</Text>
+          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.longestStreak")}</Text>
         </Pressable>
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="trophy" size={22} color="#E8456B" />
           <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Perfect{"\n"}Weeks</Text>
+          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.perfectWeeks")}</Text>
         </Pressable>
       </View>
 
@@ -332,7 +348,7 @@ export default function ProfileScreen() {
       {weeklyData && (
         <View style={[st.weeklyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
           <Text style={[st.weeklyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            This Week
+            {t("profile.thisWeek")}
           </Text>
           <View style={st.weekRow}>
             {DAY_LABELS.map((label, i) => {
@@ -366,7 +382,7 @@ export default function ProfileScreen() {
 
       <View style={[st.growthSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
         <Text style={[st.growthHeader, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Growth Analytics
+          {t("profile.growthAnalytics")}
         </Text>
 
         <View style={st.growthStatsRow}>
@@ -378,7 +394,7 @@ export default function ProfileScreen() {
               {studyMinutes}
             </Text>
             <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Deep Study{"\n"}Minutes
+              {t("profile.deepStudyMinutes")}
             </Text>
           </View>
 
@@ -390,7 +406,7 @@ export default function ProfileScreen() {
               {wordsLearned}
             </Text>
             <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Greek/Hebrew{"\n"}Words
+              {t("profile.greekHebrewWords")}
             </Text>
           </View>
 
@@ -402,7 +418,7 @@ export default function ProfileScreen() {
               {totalSessions}
             </Text>
             <Text style={[st.growthStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Socratic{"\n"}Sessions
+              {t("profile.socraticSessions")}
             </Text>
           </View>
         </View>
@@ -413,14 +429,14 @@ export default function ProfileScreen() {
       <View style={[st.heatmapSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
         <View style={st.heatmapHeaderRow}>
           <Text style={[st.heatmapTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Bible Knowledge Map
+            {t("profile.bibleKnowledgeMap")}
           </Text>
           <Text style={[st.heatmapSubtitle, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
             {booksExplored}/{totalBooks}
           </Text>
         </View>
         <Text style={[st.heatmapDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Tap a block to see reading depth per book
+          {t("profile.tapBlockToSee")}
         </Text>
         {growthData?.bibleMap && growthData.bibleMap.length > 0 ? (
           <BibleHeatmap bibleMap={growthData.bibleMap} theme={theme} isDark={isDark} userId={uid} />
@@ -428,7 +444,7 @@ export default function ProfileScreen() {
           <View style={st.heatmapEmpty}>
             <Ionicons name="map-outline" size={32} color={theme.textMuted} />
             <Text style={[st.heatmapEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Start reading to fill your knowledge map
+              {t("profile.startReadingMap")}
             </Text>
           </View>
         )}
@@ -438,7 +454,7 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Badges
+          {t("profile.badges")}
         </Text>
         <View style={st.badgeGrid}>
           {BADGES.map((badge) => {
@@ -475,7 +491,7 @@ export default function ProfileScreen() {
       {recentReads && recentReads.length > 0 && (
         <View style={st.sectionPad}>
           <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Recent Activity
+            {t("profile.recentActivity")}
           </Text>
           {recentReads.slice(0, 5).map((read, i) => (
             <Pressable
@@ -508,10 +524,10 @@ export default function ProfileScreen() {
           <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
           <View style={st.sectionPad}>
             <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              Revisit Your Reflections
+              {t("profile.revisitReflections")}
             </Text>
             <Text style={[st.revisitSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Return to chapters where you saved insights
+              {t("profile.revisitSubtitle")}
             </Text>
             {revisitEntries.slice(0, 5).map((entry, i) => {
               const LAYER_DISPLAY: Record<string, string> = { word: "Text", context: "Context", voices: "Insight", application: "Transformation" };
@@ -557,16 +573,72 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Quick Links
+          {t("profile.quickLinks")}
         </Text>
+
+        <Pressable
+          onPress={() => setLangPickerOpen(!langPickerOpen)}
+          style={({ pressed }) => [
+            st.linkRow,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.linkIcon, { backgroundColor: "#3B82F615" }]}>
+            <Ionicons name="language" size={18} color="#3B82F6" />
+          </View>
+          <Text style={[st.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            {t("profile.language")}
+          </Text>
+          <Text style={[st.langCurrentLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.label || "English"}
+          </Text>
+          <Ionicons name={langPickerOpen ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
+        </Pressable>
+
+        {langPickerOpen && (
+          <View style={[st.langPicker, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border }]}>
+            <Pressable
+              onPress={handleUseDeviceLang}
+              style={({ pressed }) => [
+                st.langOption,
+                { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
+              ]}
+            >
+              <Ionicons name="phone-portrait-outline" size={16} color={theme.accent} />
+              <Text style={[st.langOptionText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                {t("profile.useDeviceLanguage")}
+              </Text>
+            </Pressable>
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const isActive = currentLang === lang.code;
+              return (
+                <Pressable
+                  key={lang.code}
+                  onPress={() => handleLanguageChange(lang.code)}
+                  style={({ pressed }) => [
+                    st.langOption,
+                    { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
+                    isActive && { backgroundColor: theme.accent + "10" },
+                  ]}
+                >
+                  <Text style={[st.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                    {lang.label}
+                  </Text>
+                  {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
         {[
-          { title: "Prayer Journal", icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
-          { title: "Prayer Groups", icon: "people-circle" as const, color: "#10B981", route: "/groups" },
-          { title: "Parent Controls", icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },
-          { title: "How This App Works", icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
+          { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
+          { title: t("profile.prayerGroups"), icon: "people-circle" as const, color: "#10B981", route: "/groups" },
+          { title: t("profile.parentControls"), icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },
+          { title: t("profile.howItWorks"), icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
         ].map((link) => (
           <Pressable
-            key={link.title}
+            key={link.route}
             onPress={() => router.push(link.route as any)}
             style={({ pressed }) => [
               st.linkRow,
@@ -900,4 +972,27 @@ const st = StyleSheet.create({
   revisitLayer: { fontSize: 11, textTransform: "uppercase" as const, letterSpacing: 0.3 },
   revisitExcerpt: { fontSize: 12, lineHeight: 18, marginBottom: 2 },
   revisitDate: { fontSize: 11, marginTop: 2 },
+  langCurrentLabel: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  langPicker: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    overflow: "hidden" as const,
+  },
+  langOption: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  langOptionText: {
+    fontSize: 15,
+    flex: 1,
+  },
 });

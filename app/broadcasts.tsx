@@ -15,99 +15,16 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
+import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
-
-interface BroadcastSource {
-  id: string;
-  name: string;
-  description: string;
-  watchUrl: string;
-  websiteUrl: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-}
-
-const broadcastSources: BroadcastSource[] = [
-  {
-    id: "3abn",
-    name: "3ABN (Live)",
-    description:
-      "Three Angels Broadcasting Network delivers 24/7 Adventist programming including worship, health, Bible study, and family content.",
-    watchUrl: "https://3abn.org/3abn-tv-live.html",
-    websiteUrl: "https://3abn.org",
-    icon: "tv",
-    color: "#5B86E5",
-  },
-  {
-    id: "amazing-facts",
-    name: "Amazing Facts TV (Live)",
-    description:
-      "Watch Amazing Facts live programming featuring Bible prophecy seminars, evangelistic series, and faith-building content.",
-    watchUrl: "https://www.amazingfacts.org/media-library/watch/aftv",
-    websiteUrl: "https://www.amazingfacts.org",
-    icon: "play-circle",
-    color: "#C9933A",
-  },
-];
-
-function BroadcastCard({
-  source,
-  theme,
-  onWatch,
-}: {
-  source: BroadcastSource;
-  theme: typeof Colors.dark;
-  onWatch: (source: BroadcastSource) => void;
-}) {
-  return (
-    <View style={[st.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-      <View style={st.cardHeader}>
-        <View style={[st.cardIcon, { backgroundColor: source.color + "15" }]}>
-          <Ionicons name={source.icon} size={28} color={source.color} />
-        </View>
-        <Text style={[st.cardName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          {source.name}
-        </Text>
-      </View>
-
-      <Text style={[st.cardDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-        {source.description}
-      </Text>
-
-      <View style={st.cardActions}>
-        <Pressable
-          onPress={() => onWatch(source)}
-          style={({ pressed }) => [
-            st.watchBtn,
-            { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Ionicons name="play" size={18} color="#fff" />
-          <Text style={[st.watchBtnText, { fontFamily: "Inter_600SemiBold" }]}>Watch Live</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => Linking.openURL(source.websiteUrl)}
-          style={({ pressed }) => [
-            st.websiteBtn,
-            { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Ionicons name="open-outline" size={16} color={theme.accent} />
-          <Text style={[st.websiteBtnText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-            Open Website
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
+import BroadcastCard, { broadcastSources, type BroadcastSource } from "@/components/BroadcastCard";
 
 export default function BroadcastsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -151,7 +68,7 @@ export default function BroadcastsScreen() {
         </Pressable>
         <View style={st.headerCenter}>
           <Text style={[st.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Broadcasts
+            {t("broadcasts.title")}
           </Text>
         </View>
         <View style={{ width: 24 }} />
@@ -165,7 +82,7 @@ export default function BroadcastsScreen() {
         <View style={[st.infoBanner, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
           <Ionicons name="information-circle-outline" size={18} color={theme.accent} />
           <Text style={[st.infoText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Streams are provided by their respective ministries. Grace through Faith does not host or control any broadcast content.
+            {t("broadcasts.disclaimer")}
           </Text>
         </View>
 
@@ -200,7 +117,7 @@ export default function BroadcastsScreen() {
             <View style={st.errorContainer}>
               <Ionicons name="cloud-offline-outline" size={48} color={theme.textMuted} />
               <Text style={[st.errorText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                Unable to load stream
+                {t("broadcasts.unableToLoad")}
               </Text>
               <Pressable
                 onPress={handleOpenInBrowser}
@@ -211,7 +128,7 @@ export default function BroadcastsScreen() {
               >
                 <Ionicons name="open-outline" size={18} color="#fff" />
                 <Text style={[st.openBrowserBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Open in Browser
+                  {t("broadcasts.openInBrowser")}
                 </Text>
               </Pressable>
             </View>
@@ -221,7 +138,7 @@ export default function BroadcastsScreen() {
                 <View style={st.loadingOverlay}>
                   <ActivityIndicator size="large" color={theme.accent} />
                   <Text style={[st.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Loading stream...
+                    {t("broadcasts.loadingStream")}
                   </Text>
                 </View>
               )}
@@ -280,60 +197,6 @@ const st = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
-  },
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 22,
-    gap: 14,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  cardIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardName: {
-    fontSize: 19,
-    flex: 1,
-  },
-  cardDesc: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  cardActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-  watchBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  watchBtnText: {
-    color: "#fff",
-    fontSize: 15,
-  },
-  websiteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  websiteBtnText: {
-    fontSize: 14,
   },
   webViewContainer: { flex: 1 },
   webViewHeader: {

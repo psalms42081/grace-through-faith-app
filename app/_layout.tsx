@@ -13,6 +13,7 @@ import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import { initI18n } from "@/lib/i18n";
 import {
   useFonts,
   Lora_400Regular,
@@ -99,6 +100,11 @@ export default function RootLayout() {
   });
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [i18nReady, setI18nReady] = useState(false);
+
+  useEffect(() => {
+    initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -112,15 +118,15 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && onboardingChecked) {
+    if (fontsLoaded && onboardingChecked && i18nReady) {
       SplashScreen.hideAsync().catch(() => {});
       if (needsOnboarding) {
         setTimeout(() => router.replace("/onboarding"), 50);
       }
     }
-  }, [fontsLoaded, onboardingChecked, needsOnboarding]);
+  }, [fontsLoaded, onboardingChecked, needsOnboarding, i18nReady]);
 
-  if (!fontsLoaded || !onboardingChecked) return null;
+  if (!fontsLoaded || !onboardingChecked || !i18nReady) return null;
 
   return (
     <ErrorBoundary>

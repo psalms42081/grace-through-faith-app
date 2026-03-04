@@ -5,6 +5,7 @@ import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -80,6 +81,7 @@ function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const { isKidsMode } = useKidsMode();
+  const { t } = useTranslation();
   const theme = isKidsMode
     ? (isDark ? KidsColors.dark : KidsColors.light)
     : (isDark ? Colors.dark : Colors.light);
@@ -144,7 +146,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -153,7 +155,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="read"
         options={{
-          title: "Read",
+          title: t("tabs.read"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
@@ -163,7 +165,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="connect"
         options={{
-          title: "Connect",
+          title: t("tabs.connect"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
@@ -173,7 +175,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Study",
+          title: t("tabs.study"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={color} />
@@ -183,7 +185,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "You",
+          title: t("tabs.you"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />

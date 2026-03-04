@@ -227,5 +227,33 @@ Content standards identical to Wave 1. Seed files: `server/seed-beliefs-wave4.ts
 
 - **Sabbath Experience Mode:** Astronomical sunset-based Sabbath detection with NOAA solar calculator (no external API). `lib/sabbath.ts` provides `getSunsetTime()`, `getSabbathWindow()`, and `useSabbath()` hook (location via expo-location with fallback). DB table: `sabbath_reflection` (id, userId, date, prompt, response, createdAt; unique on userId+date+prompt). API routes: GET /api/sabbath/reflections?userId&date, POST /api/sabbath/reflections (upsert). Home screen shows gold Sabbath banner during Sabbath hours ("Enter sacred time" CTA). `app/sabbath-experience.tsx` has 4 sections: Theological Framing (rotating Creation/Redemption/Identity/Mission themes), Reflection Prompts (3 journal questions with save), Worship Pathways (links to Sabbath School, Study Paths, Live Streams, Church Connect, Family Altar), and Closing Reflection (visible only within 2 hours of Saturday sunset).
 
+### Internationalization (i18n)
+
+**Status: Implemented**
+
+Full i18n system using `i18next` + `react-i18next` + `expo-localization`.
+
+**Supported Locales:** English (en), Spanish (es), French (fr), Portuguese (pt), Filipino (fil), Chinese (zh).
+
+**Architecture:**
+- `lib/i18n/index.ts` — i18n initialization, language change helpers, device locale detection
+- `lib/i18n/locales/{en,es,fr,pt,fil,zh}.json` — locale string files with namespaced keys (tabs, home, connect, broadcasts, profile, study, common)
+- `components/BroadcastCard.tsx` — extracted broadcast card component (uses i18n internally)
+- AsyncStorage key: `@grace-through-faith/preferredLanguage` — persists user's language choice
+- `initI18n()` called in root layout before splash screen hides
+- `SUPPORTED_LANGUAGES` exported from `lib/i18n` for language picker UI
+
+**Scope:**
+- UI strings only — Scripture text and theological lesson content are NOT translated
+- Tab labels (ClassicTabLayout), Connect tab, Broadcasts screen, Profile/You tab (stats, growth, badges, Quick Links)
+- Language Selector in Profile > Quick Links — expandable picker with all 6 languages + "Use device language" option
+- Device locale auto-detection via `expo-localization` `getLocales()` with fallback to English
+- NativeTabs labels use SF Symbols (not translatable); only ClassicTabLayout titles are translated
+
+**Key Functions:**
+- `setLanguage(code)` — sets language + persists to AsyncStorage
+- `useDeviceLanguage()` — clears stored preference, reverts to device locale
+- `getSavedLanguage()` — returns stored preference or null
+
 ## Upcoming Features (Placeholders in UI)
 - **Additional Study Paths:** More formation tracks planned (Sabbath School, Prophecy Academy extended, Sabbath Formation, Character & Disciplines).
