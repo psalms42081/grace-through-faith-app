@@ -73,7 +73,10 @@
     "howItWorks": "Como funciona esta app",
     "language": "Idioma",
     "useDeviceLanguage": "Usar idioma del dispositivo",
-    "languageChanged": "Idioma actualizado"
+    "languageChanged": "Idioma actualizado",
+    "contentLanguage": "Idioma del contenido",
+    "sameAsApp": "Igual que el idioma de la app",
+    "contentLangNote": "Parte del contenido esta disponible solo en ingles."
   },
   "study": {
     "studyPaths": "Rutas de estudio",

@@ -18,6 +18,8 @@ import Colors from "@/constants/colors";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { SUPPORTED_LANGUAGES, setLanguage, useDeviceLanguage } from "@/lib/i18n";
+import { useContentLanguage } from "@/contexts/ContentLanguageContext";
+import { CONTENT_LANGUAGE_OPTIONS, type ContentLanguageOption } from "@/lib/content-language";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -216,7 +218,9 @@ export default function ProfileScreen() {
   const uid = user?.id || "guest";
 
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [contentLangPickerOpen, setContentLangPickerOpen] = useState(false);
   const currentLang = i18n.language?.split("-")[0] || "en";
+  const { contentLangOption, setContentLang } = useContentLanguage();
 
   const handleLanguageChange = useCallback(async (code: string) => {
     await setLanguage(code);
@@ -227,6 +231,11 @@ export default function ProfileScreen() {
     await useDeviceLanguage();
     setLangPickerOpen(false);
   }, []);
+
+  const handleContentLangChange = useCallback(async (code: ContentLanguageOption) => {
+    await setContentLang(code);
+    setContentLangPickerOpen(false);
+  }, [setContentLang]);
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
     queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
@@ -623,6 +632,49 @@ export default function ProfileScreen() {
                 >
                   <Text style={[st.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                     {lang.label}
+                  </Text>
+                  {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <Pressable
+          onPress={() => setContentLangPickerOpen(!contentLangPickerOpen)}
+          style={({ pressed }) => [
+            st.linkRow,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.linkIcon, { backgroundColor: "#10B98115" }]}>
+            <Ionicons name="document-text" size={18} color="#10B981" />
+          </View>
+          <Text style={[st.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            {t("profile.contentLanguage")}
+          </Text>
+          <Text style={[st.langCurrentLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {CONTENT_LANGUAGE_OPTIONS.find((o) => o.code === contentLangOption)?.label || "Same as App"}
+          </Text>
+          <Ionicons name={contentLangPickerOpen ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
+        </Pressable>
+
+        {contentLangPickerOpen && (
+          <View style={[st.langPicker, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border }]}>
+            {CONTENT_LANGUAGE_OPTIONS.map((opt) => {
+              const isActive = contentLangOption === opt.code;
+              return (
+                <Pressable
+                  key={opt.code}
+                  onPress={() => handleContentLangChange(opt.code)}
+                  style={({ pressed }) => [
+                    st.langOption,
+                    { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
+                    isActive && { backgroundColor: theme.accent + "10" },
+                  ]}
+                >
+                  <Text style={[st.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                    {opt.code === "same" ? t("profile.sameAsApp") : opt.label}
                   </Text>
                   {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
                 </Pressable>

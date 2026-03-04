@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useContentLanguage } from "@/contexts/ContentLanguageContext";
 import Colors from "@/constants/colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -535,6 +536,7 @@ export default function LessonScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { resolvedLang } = useContentLanguage();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -595,8 +597,10 @@ export default function LessonScreen() {
   } | null>(null);
   const [showTrackCompletion, setShowTrackCompletion] = useState(false);
 
+  const lessonLangParam = resolvedLang !== "en" ? `&lang=${resolvedLang}` : "";
+
   const lessonQuery = useQuery<LessonData>({
-    queryKey: [`/api/lessons/${id}?userId=${userId}`],
+    queryKey: [`/api/lessons/${id}?userId=${userId}${lessonLangParam}`],
   });
 
   React.useEffect(() => {

@@ -73,7 +73,10 @@
     "howItWorks": "Paano gumagana ang app na ito",
     "language": "Wika",
     "useDeviceLanguage": "Gamitin ang wika ng device",
-    "languageChanged": "Na-update ang wika"
+    "languageChanged": "Na-update ang wika",
+    "contentLanguage": "Wika ng nilalaman",
+    "sameAsApp": "Kapareho ng wika ng app",
+    "contentLangNote": "Ang ilang nilalaman ay available lamang sa Ingles."
   },
   "study": {
     "studyPaths": "Mga landas ng pag-aaral",

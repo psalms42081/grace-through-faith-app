@@ -1232,6 +1232,101 @@ export type AssessmentItem = typeof assessmentItems.$inferSelect;
 export type ProgressTrack = typeof progressTracks.$inferSelect;
 export type ProgressLesson = typeof progressLessons.$inferSelect;
 
+// ─── CONTENT i18n OVERLAY TABLES ─────────────────────────────────────────────
+
+export const CONTENT_LANGUAGES = ["en", "es", "fr", "pt", "fil", "zh"] as const;
+export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
+
+export const formationModuleI18n = pgTable(
+  "formation_module_i18n",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    moduleId: varchar("module_id")
+      .notNull()
+      .references(() => formationModules.id),
+    language: varchar("language", { length: 10 }).notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+  },
+  (table) => ({
+    moduleLangUnique: uniqueIndex("module_i18n_module_lang").on(
+      table.moduleId,
+      table.language
+    ),
+  })
+);
+
+export const formationLessonI18n = pgTable(
+  "formation_lesson_i18n",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    lessonId: varchar("lesson_id")
+      .notNull()
+      .references(() => formationLessons.id),
+    language: varchar("language", { length: 10 }).notNull(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+  },
+  (table) => ({
+    lessonLangUnique: uniqueIndex("lesson_i18n_lesson_lang").on(
+      table.lessonId,
+      table.language
+    ),
+  })
+);
+
+export const lessonSectionI18n = pgTable(
+  "lesson_section_i18n",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    sectionId: varchar("section_id")
+      .notNull()
+      .references(() => lessonSections.id),
+    language: varchar("language", { length: 10 }).notNull(),
+    heading: text("heading"),
+    content: text("content").notNull(),
+  },
+  (table) => ({
+    sectionLangUnique: uniqueIndex("section_i18n_section_lang").on(
+      table.sectionId,
+      table.language
+    ),
+  })
+);
+
+export const assessmentItemI18n = pgTable(
+  "assessment_item_i18n",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    itemId: varchar("item_id")
+      .notNull()
+      .references(() => assessmentItems.id),
+    language: varchar("language", { length: 10 }).notNull(),
+    question: text("question").notNull(),
+    options: jsonb("options").$type<string[]>().notNull(),
+    explanation: text("explanation"),
+  },
+  (table) => ({
+    itemLangUnique: uniqueIndex("item_i18n_item_lang").on(
+      table.itemId,
+      table.language
+    ),
+  })
+);
+
+export type FormationModuleI18n = typeof formationModuleI18n.$inferSelect;
+export type FormationLessonI18n = typeof formationLessonI18n.$inferSelect;
+export type LessonSectionI18n = typeof lessonSectionI18n.$inferSelect;
+export type AssessmentItemI18n = typeof assessmentItemI18n.$inferSelect;
+
 // ─── SDA CHURCHES ────────────────────────────────────────────────────────────
 
 export const sdaChurches = pgTable(

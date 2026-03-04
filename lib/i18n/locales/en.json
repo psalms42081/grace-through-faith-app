@@ -73,7 +73,10 @@
     "howItWorks": "How This App Works",
     "language": "Language",
     "useDeviceLanguage": "Use device language",
-    "languageChanged": "Language updated"
+    "languageChanged": "Language updated",
+    "contentLanguage": "Content Language",
+    "sameAsApp": "Same as App Language",
+    "contentLangNote": "Some content is currently available in English only."
   },
   "study": {
     "studyPaths": "Study Paths",

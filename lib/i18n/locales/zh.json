@@ -73,7 +73,10 @@
     "howItWorks": "应用使用说明",
     "language": "语言",
     "useDeviceLanguage": "使用设备语言",
-    "languageChanged": "语言已更新"
+    "languageChanged": "语言已更新",
+    "contentLanguage": "内容语言",
+    "sameAsApp": "与应用语言相同",
+    "contentLangNote": "部分内容目前仅提供英文版本。"
   },
   "study": {
     "studyPaths": "学习路径",

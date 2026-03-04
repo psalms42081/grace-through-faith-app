@@ -255,5 +255,50 @@ Full i18n system using `i18next` + `react-i18next` + `expo-localization`.
 - `useDeviceLanguage()` — clears stored preference, reverts to device locale
 - `getSavedLanguage()` — returns stored preference or null
 
+### Content Translation Architecture (Phase 3A-3E)
+
+**Status: Implemented (infrastructure ready, no translations loaded yet)**
+
+Scalable multi-language overlay system for lesson/module/section/assessment content. English remains canonical in base tables; localized content stored in overlay tables keyed by (entityId, language).
+
+**Database Tables (Phase 3A):**
+- `formation_module_i18n` — (id, module_id FK, language, title, description) UNIQUE(module_id, language)
+- `formation_lesson_i18n` — (id, lesson_id FK, language, title, summary) UNIQUE(lesson_id, language)
+- `lesson_section_i18n` — (id, section_id FK, language, heading, content) UNIQUE(section_id, language)
+- `assessment_item_i18n` — (id, item_id FK, language, question, options jsonb, explanation) UNIQUE(item_id, language)
+- Schema definitions in `shared/schema.ts` (CONTENT_LANGUAGES const, all 4 i18n table exports + types)
+
+**Backend Resolution (Phase 3B):**
+- `resolveContentLang(req)` helper in routes.ts — extracts `?lang=` param, normalizes, validates against CONTENT_LANGUAGES
+- GET /api/tracks/:id — resolves module titles, lesson titles, section content via left-join pattern
+- GET /api/lessons/:id — resolves lesson title, section content, assessment items
+- Fallback: if no i18n row found for requested language, returns canonical English content
+- No i18n applied to GET /api/tracks (list view uses track titles, not module content)
+
+**Frontend Integration (Phase 3C):**
+- `lib/content-language.ts` — content language persistence (AsyncStorage key: `@grace-through-faith/contentLanguage`)
+- `contexts/ContentLanguageContext.tsx` — React context providing `resolvedLang`, `contentLangOption`, `setContentLang`
+- ContentLanguageProvider wraps app in `_layout.tsx`
+- Content Language picker in Profile > Quick Links (below UI Language picker)
+- Options: "Same as App Language" (default), English, Espanol, Francais, Portugues, Filipino, Chinese
+- `app/lesson/[id].tsx` and `app/study-path/[id].tsx` append `&lang={resolvedLang}` to queryKeys when not English
+- i18n keys added to all 6 locale files: `profile.contentLanguage`, `profile.sameAsApp`, `profile.contentLangNote`
+
+**Content Pipeline (Phase 3D):**
+- `scripts/generate-i18n-stubs.ts` — generates JSON stub files per language for translation review
+  - Usage: `npx tsx scripts/generate-i18n-stubs.ts --beliefs 19-28` or `npx tsx scripts/generate-i18n-stubs.ts bmod-019`
+  - Output: `i18n-content/{lang}/{moduleId}.json` with all lessons, sections, assessment items
+  - Each file has `_meta.reviewed: false` flag
+- `scripts/import-content-translations.ts` — upserts reviewed translations into i18n tables
+  - Usage: `npx tsx scripts/import-content-translations.ts i18n-content/es/bmod-019.json`
+  - Skips files not marked `_meta.reviewed: true`
+  - Uses `onConflictDoNothing()` for safe re-runs
+
+**Design Decisions:**
+- Scripture text is NOT translated via this system — it stays tied to the Bible translation selector
+- Progress tracking unaffected — still keyed to canonical lesson/section IDs
+- No duplication of formation tracks/modules per language — localization is overlays only
+- Gradual rollout: start English-only, add languages module-by-module as translations are reviewed
+
 ## Upcoming Features (Placeholders in UI)
 - **Additional Study Paths:** More formation tracks planned (Sabbath School, Prophecy Academy extended, Sabbath Formation, Character & Disciplines).

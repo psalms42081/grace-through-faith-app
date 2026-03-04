@@ -79,6 +79,11 @@ import {
   sdaChurches,
   liveSessions,
   sabbathReflections,
+  formationModuleI18n,
+  formationLessonI18n,
+  lessonSectionI18n,
+  assessmentItemI18n,
+  CONTENT_LANGUAGES,
 } from "../shared/schema";
 import { eq, and, ilike, sql, desc, asc, countDistinct, count } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
@@ -4212,10 +4217,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ─── CONTENT LANGUAGE RESOLVER ────────────────────────────────────────────
+
+  function resolveContentLang(req: Request): string | null {
+    const lang = String(req.query.lang || "").split("-")[0].toLowerCase();
+    if (lang && (CONTENT_LANGUAGES as readonly string[]).includes(lang) && lang !== "en") {
+      return lang;
+    }
+    return null;
+  }
+
   // ─── FORMATION TRACKS API ──────────────────────────────────────────────────
 
-  app.get("/api/tracks", async (_req: Request, res: Response) => {
+  app.get("/api/tracks", async (req: Request, res: Response) => {
     try {
+      const lang = resolveContentLang(req);
+
       const tracks = await db
         .select()
         .from(formationTracks)
@@ -4270,6 +4287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = String(req.query.userId || "guest");
+      const lang = resolveContentLang(req);
 
       const [track] = await db
         .select()
@@ -4289,6 +4307,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allLessonIds: string[] = [];
       const modulesWithLessons = await Promise.all(
         modules.map(async (mod) => {
+          let localizedMod = { ...mod };
+          if (lang) {
+            const [modI18n] = await db
+              .select()
+              .from(formationModuleI18n)
+              .where(and(eq(formationModuleI18n.moduleId, mod.id), eq(formationModuleI18n.language, lang)));
+            if (modI18n) {
+              localizedMod = { ...mod, title: modI18n.title, description: modI18n.description ?? mod.description };
+            }
+          }
+
           const lessons = await db
             .select()
             .from(formationLessons)
@@ -4298,16 +4327,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const lessonsWithSections = await Promise.all(
             lessons.map(async (lesson) => {
               allLessonIds.push(lesson.id);
+              let localizedLesson = { ...lesson };
+              if (lang) {
+                const [lessonI18n] = await db
+                  .select()
+                  .from(formationLessonI18n)
+                  .where(and(eq(formationLessonI18n.lessonId, lesson.id), eq(formationLessonI18n.language, lang)));
+                if (lessonI18n) {
+                  localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
+                }
+              }
+
               const sections = await db
                 .select()
                 .from(lessonSections)
                 .where(eq(lessonSections.lessonId, lesson.id))
                 .orderBy(asc(lessonSections.sortOrder));
-              return { ...lesson, sections };
+
+              let localizedSections = sections;
+              if (lang) {
+                localizedSections = await Promise.all(
+                  sections.map(async (sec) => {
+                    const [secI18n] = await db
+                      .select()
+                      .from(lessonSectionI18n)
+                      .where(and(eq(lessonSectionI18n.sectionId, sec.id), eq(lessonSectionI18n.language, lang)));
+                    if (secI18n) {
+                      return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
+                    }
+                    return sec;
+                  })
+                );
+              }
+
+              return { ...localizedLesson, sections: localizedSections };
             })
           );
 
-          return { ...mod, lessons: lessonsWithSections };
+          return { ...localizedMod, lessons: lessonsWithSections };
         })
       );
 
@@ -4335,6 +4392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/lessons/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const lang = resolveContentLang(req);
+
       const [lesson] = await db
         .select()
         .from(formationLessons)
@@ -4344,11 +4403,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Lesson not found" });
       }
 
+      let localizedLesson = { ...lesson };
+      if (lang) {
+        const [lessonI18n] = await db
+          .select()
+          .from(formationLessonI18n)
+          .where(and(eq(formationLessonI18n.lessonId, id), eq(formationLessonI18n.language, lang)));
+        if (lessonI18n) {
+          localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
+        }
+      }
+
       const sections = await db
         .select()
         .from(lessonSections)
         .where(eq(lessonSections.lessonId, id))
         .orderBy(asc(lessonSections.sortOrder));
+
+      let localizedSections = sections;
+      if (lang) {
+        localizedSections = await Promise.all(
+          sections.map(async (sec) => {
+            const [secI18n] = await db
+              .select()
+              .from(lessonSectionI18n)
+              .where(and(eq(lessonSectionI18n.sectionId, sec.id), eq(lessonSectionI18n.language, lang)));
+            if (secI18n) {
+              return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
+            }
+            return sec;
+          })
+        );
+      }
 
       const assessments = await db
         .select()
@@ -4361,7 +4447,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select()
           .from(assessmentItems)
           .where(eq(assessmentItems.assessmentId, assessments[0].id));
-        assessment = { ...assessments[0], items };
+
+        let localizedItems = items;
+        if (lang) {
+          localizedItems = await Promise.all(
+            items.map(async (item) => {
+              const [itemI18n] = await db
+                .select()
+                .from(assessmentItemI18n)
+                .where(and(eq(assessmentItemI18n.itemId, item.id), eq(assessmentItemI18n.language, lang)));
+              if (itemI18n) {
+                return { ...item, question: itemI18n.question, options: itemI18n.options, explanation: itemI18n.explanation ?? item.explanation };
+              }
+              return item;
+            })
+          );
+        }
+
+        assessment = { ...assessments[0], items: localizedItems };
       }
 
       const userId = String(req.query.userId || "guest");
@@ -4375,7 +4478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-      return res.json({ lesson, sections, assessment, progress: progressRow || null });
+      return res.json({ lesson: localizedLesson, sections: localizedSections, assessment, progress: progressRow || null });
     } catch (err) {
       console.error("Get lesson error:", err);
       return res.status(500).json({ error: "Internal server error" });

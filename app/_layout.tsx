@@ -14,6 +14,7 @@ import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
 import { initI18n } from "@/lib/i18n";
+import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import {
   useFonts,
   Lora_400Regular,
@@ -136,15 +137,17 @@ export default function RootLayout() {
       >
         <AuthProvider>
           <TranslationProvider>
-            <KidsModeProvider>
-              <ProProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <KeyboardProvider>
-                    <RootLayoutNav />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </ProProvider>
-            </KidsModeProvider>
+            <ContentLanguageProvider>
+              <KidsModeProvider>
+                <ProProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <KeyboardProvider>
+                      <RootLayoutNav />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </ProProvider>
+              </KidsModeProvider>
+            </ContentLanguageProvider>
           </TranslationProvider>
         </AuthProvider>
       </PersistQueryClientProvider>

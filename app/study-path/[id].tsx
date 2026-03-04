@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useContentLanguage } from "@/contexts/ContentLanguageContext";
 import Colors from "@/constants/colors";
 
 interface Section {
@@ -99,13 +100,16 @@ export default function TrackDetailScreen() {
   const theme = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { resolvedLang } = useContentLanguage();
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const langParam = resolvedLang !== "en" ? `&lang=${resolvedLang}` : "";
+
   const { data: trackDetail, isLoading } = useQuery<TrackDetail>({
-    queryKey: [`/api/tracks/${id}?userId=${userId}`],
+    queryKey: [`/api/tracks/${id}?userId=${userId}${langParam}`],
   });
 
   const { data: progressData } = useQuery<ProgressTrack[]>({
