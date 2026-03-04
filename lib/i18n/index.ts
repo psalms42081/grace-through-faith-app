@@ -11,12 +11,13 @@ import fil from "./locales/fil.json";
 import zh from "./locales/zh.json";
 
 const LANGUAGE_KEY = "@grace-through-faith/preferredLanguage";
+const FIRST_LAUNCH_KEY = "@grace-through-faith/firstLaunchDone";
 
 export const SUPPORTED_LANGUAGES = [
   { code: "en", label: "English" },
-  { code: "es", label: "Espanol" },
-  { code: "fr", label: "Francais" },
-  { code: "pt", label: "Portugues" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "pt", label: "Português" },
   { code: "fil", label: "Filipino" },
   { code: "zh", label: "中文" },
 ] as const;
@@ -49,11 +50,16 @@ export async function initI18n(): Promise<void> {
   if (initialized) return;
 
   let lng = "en";
+  let isFirstLaunch = false;
   try {
     const stored = await AsyncStorage.getItem(LANGUAGE_KEY);
     if (stored && stored in resources) {
       lng = stored;
     } else {
+      const launchDone = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+      if (!launchDone) {
+        isFirstLaunch = true;
+      }
       lng = getDeviceLanguage();
     }
   } catch {
@@ -67,6 +73,18 @@ export async function initI18n(): Promise<void> {
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
   });
+
+  if (isFirstLaunch) {
+    try {
+      await AsyncStorage.setItem(LANGUAGE_KEY, lng);
+      const { setContentLanguage } = await import("@/lib/content-language");
+      const validContentLangs = ["en", "es", "fr", "pt", "fil", "zh"];
+      if (validContentLangs.includes(lng)) {
+        await setContentLanguage(lng as any);
+      }
+      await AsyncStorage.setItem(FIRST_LAUNCH_KEY, "true");
+    } catch {}
+  }
 
   initialized = true;
 }

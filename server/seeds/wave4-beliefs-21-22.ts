@@ -288,8 +288,8 @@ export const belief21Items = [
     id: "w4i-21-1-1",
     assessmentId: "w4a-21-1",
     question: "In Genesis 1:26-28, what does God grant to humanity over creation?",
-    options: ["Absolute ownership", "Dominion as entrusted managers", "Equal partnership with God", "Permission to exploit freely"],
-    correctIndex: 1,
+    options: ["Absolute ownership", "Equal partnership with God", "Permission to exploit freely", "Dominion as entrusted managers"],
+    correctIndex: 3,
     explanation: "God grants dominion — a delegated authority to manage creation on His behalf — not outright ownership. The earth remains the Lord's (Psalm 24:1).",
   },
   {
@@ -312,8 +312,8 @@ export const belief21Items = [
     id: "w4i-21-1-4",
     assessmentId: "w4a-21-1",
     question: "Why is stewardship more accurately described as management rather than ownership?",
-    options: ["Because humans lack the intelligence to truly own anything", "Because legal title always belongs to the government", "Because God created and sustains all things, retaining ultimate ownership", "Because ownership requires divine permission that was never granted"],
-    correctIndex: 2,
+    options: ["Because God created and sustains all things, retaining ultimate ownership", "Because legal title always belongs to the government", "Because humans lack the intelligence to truly own anything", "Because ownership requires divine permission that was never granted"],
+    correctIndex: 0,
     explanation: "Stewardship is management because God is the Creator and Sustainer of all things. Human beings are entrusted with responsibility, but the title remains with God.",
   },
   {
@@ -330,8 +330,8 @@ export const belief21Items = [
     id: "w4i-21-2-1",
     assessmentId: "w4a-21-2",
     question: "In Matthew 23:23, what did Jesus say the Pharisees had neglected while faithfully tithing?",
-    options: ["Prayer and fasting", "Temple attendance", "Justice, mercy, and faith", "Sabbath observance"],
-    correctIndex: 2,
+    options: ["Prayer and fasting", "Temple attendance", "Sabbath observance", "Justice, mercy, and faith"],
+    correctIndex: 3,
     explanation: "Jesus rebuked the Pharisees for tithing meticulously while neglecting the weightier matters of the law: justice, mercy, and faith.",
   },
   {
@@ -346,8 +346,8 @@ export const belief21Items = [
     id: "w4i-21-2-3",
     assessmentId: "w4a-21-2",
     question: "According to Adventist stewardship theology, what is the purpose of returning tithe to the 'storehouse'?",
-    options: ["To enrich church leaders personally", "To fund political campaigns", "To support gospel ministry through the organized church", "To accumulate wealth for future investment"],
-    correctIndex: 2,
+    options: ["To support gospel ministry through the organized church", "To fund political campaigns", "To enrich church leaders personally", "To accumulate wealth for future investment"],
+    correctIndex: 0,
     explanation: "Tithe is returned to the storehouse — the organized church — to sustain gospel ministry, following the biblical principle that those who serve in ministry deserve support (1 Corinthians 9:13-14).",
   },
   {

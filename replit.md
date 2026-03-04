@@ -248,6 +248,7 @@ Full i18n system using `i18next` + `react-i18next` + `expo-localization`.
 - Tab labels (ClassicTabLayout), Connect tab, Broadcasts screen, Profile/You tab (stats, growth, badges, Quick Links)
 - Language Selector in Profile > Quick Links — expandable picker with all 6 languages + "Use device language" option
 - Device locale auto-detection via `expo-localization` `getLocales()` with fallback to English
+- **First-launch auto-detection:** On first app launch, detects device language. If supported, automatically sets BOTH UI language AND content language to match. Uses `FIRST_LAUNCH_KEY` (`@grace-through-faith/firstLaunchDone`) to avoid overriding user choices on subsequent launches. Flow: install → detect device locale → if supported, set app + content language → mark first launch done.
 - NativeTabs labels use SF Symbols (not translatable); only ClassicTabLayout titles are translated
 
 **Key Functions:**

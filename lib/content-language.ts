@@ -8,9 +8,9 @@ export type ContentLanguageOption = "same" | "en" | "es" | "fr" | "pt" | "fil" |
 export const CONTENT_LANGUAGE_OPTIONS: { code: ContentLanguageOption; label: string }[] = [
   { code: "same", label: "Same as App Language" },
   { code: "en", label: "English" },
-  { code: "es", label: "Espanol" },
-  { code: "fr", label: "Francais" },
-  { code: "pt", label: "Portugues" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "pt", label: "Português" },
   { code: "fil", label: "Filipino" },
   { code: "zh", label: "中文" },
 ];
