@@ -4477,6 +4477,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         avgAssessmentScore: number | null;
       } | null = null;
 
+      let trackCompleted: {
+        trackId: string;
+        trackTitle: string;
+        totalModules: number;
+        totalLessons: number;
+      } | null = null;
+
       if (lesson) {
         const [mod] = await db
           .select()
@@ -4567,11 +4574,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   eq(progressTracks.trackId, mod.trackId)
                 )
               );
+
+            if (allDone) {
+              const [track] = await db
+                .select()
+                .from(formationTracks)
+                .where(eq(formationTracks.id, mod.trackId));
+              if (track) {
+                trackCompleted = {
+                  trackId: track.id,
+                  trackTitle: track.title,
+                  totalModules: allModules.length,
+                  totalLessons,
+                };
+              }
+            }
           }
         }
       }
 
-      return res.json({ ...lessonProgress, moduleCompleted });
+      return res.json({ ...lessonProgress, moduleCompleted, trackCompleted });
     } catch (err) {
       console.error("Complete lesson error:", err);
       return res.status(500).json({ error: "Internal server error" });

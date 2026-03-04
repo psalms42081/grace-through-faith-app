@@ -117,6 +117,13 @@ export default function LessonScreen() {
   const [showModuleCompletion, setShowModuleCompletion] = useState(false);
   const [confidenceRating, setConfidenceRating] = useState(0);
   const [confidenceSaved, setConfidenceSaved] = useState(false);
+  const [trackCompletionData, setTrackCompletionData] = useState<{
+    trackId: string;
+    trackTitle: string;
+    totalModules: number;
+    totalLessons: number;
+  } | null>(null);
+  const [showTrackCompletion, setShowTrackCompletion] = useState(false);
 
   const lessonQuery = useQuery<LessonData>({
     queryKey: [`/api/lessons/${id}?userId=${userId}`],
@@ -147,11 +154,16 @@ export default function LessonScreen() {
       queryClient.invalidateQueries({ queryKey: ["/api/tracks"] });
       queryClient.invalidateQueries({ queryKey: [`/api/lessons/${id}?userId=${userId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/tracks/progress?userId=${userId}`] });
+      if (data.trackCompleted) {
+        setTrackCompletionData(data.trackCompleted);
+      }
       if (data.moduleCompleted) {
         setModuleCompletionData(data.moduleCompleted);
         setConfidenceRating(0);
         setConfidenceSaved(false);
         setShowModuleCompletion(true);
+      } else if (data.trackCompleted) {
+        setShowTrackCompletion(true);
       } else {
         router.back();
       }
@@ -608,7 +620,11 @@ export default function LessonScreen() {
                   } catch {}
                 }
                 setShowModuleCompletion(false);
-                router.back();
+                if (trackCompletionData) {
+                  setShowTrackCompletion(true);
+                } else {
+                  router.back();
+                }
               }}
               style={({ pressed }) => [
                 mcStyles.doneBtn,
@@ -626,9 +642,177 @@ export default function LessonScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showTrackCompletion}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={mcStyles.overlay}>
+          <View style={[tcStyles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={tcStyles.accentLine} />
+
+            <View style={tcStyles.iconRow}>
+              <View style={[tcStyles.iconCircle, { backgroundColor: theme.accent + "15" }]}>
+                <Ionicons name="sparkles" size={36} color={theme.accent} />
+              </View>
+            </View>
+
+            <Text style={[tcStyles.heading, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+              Journey Complete
+            </Text>
+
+            {trackCompletionData && (
+              <Text style={[tcStyles.trackTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {trackCompletionData.trackTitle}
+              </Text>
+            )}
+
+            <View style={[tcStyles.statsRow, { borderColor: theme.border }]}>
+              <View style={tcStyles.stat}>
+                <Text style={[tcStyles.statNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                  {trackCompletionData?.totalModules || 0}
+                </Text>
+                <Text style={[tcStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Modules
+                </Text>
+              </View>
+              <View style={[tcStyles.statDivider, { backgroundColor: theme.border }]} />
+              <View style={tcStyles.stat}>
+                <Text style={[tcStyles.statNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                  {trackCompletionData?.totalLessons || 0}
+                </Text>
+                <Text style={[tcStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Lessons
+                </Text>
+              </View>
+            </View>
+
+            <View style={[tcStyles.quoteBox, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
+              <Text style={[tcStyles.quoteText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
+                The goal of doctrine is not merely understanding{"\u2014"}but transformation.
+              </Text>
+            </View>
+
+            <Text style={[tcStyles.closing, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Continue your journey through prayer, Scripture, and community.
+            </Text>
+
+            <Pressable
+              onPress={() => {
+                setShowTrackCompletion(false);
+                router.back();
+              }}
+              style={({ pressed }) => [
+                tcStyles.doneBtn,
+                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[tcStyles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                Return to Study Paths
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const tcStyles = StyleSheet.create({
+  card: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 32,
+    overflow: "hidden" as const,
+  },
+  accentLine: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: "#C9933A",
+  },
+  iconRow: {
+    alignItems: "center" as const,
+    marginBottom: 20,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  heading: {
+    fontSize: 24,
+    textAlign: "center" as const,
+    marginBottom: 6,
+  },
+  trackTitle: {
+    fontSize: 14,
+    textAlign: "center" as const,
+    marginBottom: 20,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+  },
+  statsRow: {
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    paddingVertical: 16,
+    marginBottom: 24,
+  },
+  stat: {
+    alignItems: "center" as const,
+    flex: 1,
+  },
+  statNum: {
+    fontSize: 28,
+  },
+  statLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+  },
+  quoteBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 20,
+    marginBottom: 16,
+  },
+  quoteText: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: "center" as const,
+  },
+  closing: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center" as const,
+    marginBottom: 24,
+  },
+  doneBtn: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center" as const,
+  },
+  doneBtnText: {
+    color: "#fff",
+    fontSize: 15,
+  },
+});
 
 const mcStyles = StyleSheet.create({
   overlay: {
