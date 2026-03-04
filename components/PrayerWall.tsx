@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   TextInput,
   ActivityIndicator,
@@ -25,7 +24,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface FamilyPrayer {
   id: string;
@@ -198,9 +197,7 @@ function getTimeSince(dateStr: string): string {
 }
 
 export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const { isPro } = useProStatus();
   const { userId, user } = useAuth();
   const qc = useQueryClient();

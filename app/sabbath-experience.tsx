@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  useColorScheme,
   Platform,
   Alert,
 } from "react-native";
@@ -18,7 +17,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 const THEOLOGICAL_FRAMES = [
   {
@@ -67,9 +66,7 @@ interface ReflectionData {
 }
 
 export default function SabbathExperienceScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { closingReflectionActive } = useSabbath();

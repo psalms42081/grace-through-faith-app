@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   Modal,
 } from "react-native";
@@ -18,7 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -394,9 +393,7 @@ const LEGEND_ITEMS = [
 ];
 
 export default function FamilyHeatmap() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const { isPro, isPatron } = useProStatus();
   const { userId } = useAuth();
   const [selectedBook, setSelectedBook] = useState<BookHeat | null>(null);

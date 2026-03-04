@@ -7,7 +7,28 @@ A mobile-first Seventh-day Adventist spiritual formation app, offering an immers
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 
 ## System Architecture
-The application adopts a mobile-first architecture utilizing **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for data persistence. **TanStack Query** handles server state management with offline persistence, while React context manages shared UI state. AI generation functions are centralized in `server/services/ai-engine.ts`, and `server/routes.ts` manages API routing, database operations, and caching.
+The application adopts a mobile-first architecture utilizing **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for data persistence. **TanStack Query** handles server state management with offline persistence, while React context manages shared UI state. AI generation functions are centralized in `server/services/ai-engine.ts`.
+
+**Backend Route Architecture (Modular):**
+Routes are split into domain-specific Express Router modules under `server/routes/`:
+- `server/routes/auth.ts` — registration, login, password reset, account deletion (with Zod validation + rate limiting)
+- `server/routes/user.ts` — profile, pro status, donations, activity tracking, notes, highlights, bookmarks, prayers, reading history/streaks
+- `server/routes/bible.ts` — passage, books, verse, search, reference parsing
+- `server/routes/study.ts` — Strong's, context, commentary, application, locations, timeline, study guide, verse map, chapter context/summary, analytics, layer completions, study journal (AI endpoints rate-limited)
+- `server/routes/devotionals.ts` — plans, enrollment, daily entries, AI reflection
+- `server/routes/kids.ts` — collections, stories, quizzes, progress, badges, streaks, wonder, scenes
+- `server/routes/community.ts` — family groups, prayer groups, discussions, announcements, churches, live streams, sabbath reflections
+- `server/routes/family-dashboard.ts` — child profiles, stats, conversation starters, heatmap, family prayers, dinner topics
+- `server/routes/formation.ts` — tracks, lessons, modules, assessments, progress, i18n content resolution
+- `server/routes/tts.ts` — text-to-speech (rate-limited)
+
+Shared middleware in `server/middleware/`:
+- `auth.ts` — JWT secret, extractUserId, checkProStatus, generateCode
+- `validate.ts` — Zod validation middleware with schemas for auth, notes, highlights, bookmarks, prayers
+- `rate-limit.ts` — rate limiters for AI generation (10/min), TTS (15/min), auth (20/15min)
+- `content-lang.ts` — content language resolution from query params
+
+The orchestrator `server/routes.ts` (66 lines) imports all routers, runs seed functions, and creates the HTTP server.
 
 **SDA-First Architecture:**
 - The app is fully SDA-dedicated. There is no multi-denomination framework, no tradition filtering, and no interdenominational positioning.
@@ -102,6 +123,24 @@ Jitsi Meet integration via WebView (native) and iframe (web). DB table: `live_se
 ### Church Connect
 
 SDA church finder with geo-radius search, map + list view. `app/church-connect.tsx` + `app/church/[id].tsx`. Uses `sda_church` table with geolocation data.
+
+### Frontend Architecture (Refactored)
+
+**Shared Hook:** `hooks/useTheme.ts` — centralized theme hook with TypeScript overloads, replaces 40+ inline `useColorScheme()` + `Colors.dark/light` patterns. Supports `useTheme()` for regular theme, `useTheme(true)` for KidsColors.
+
+**Data Layer:** Hardcoded data arrays extracted to `data/` folder:
+- `data/topics.ts` — TOPICS_LIST and TOPICS record
+- `data/beliefs.ts` — BELIEFS, CATEGORIES, CATEGORY_COLORS
+- `data/music.ts` — MUSIC_CATEGORIES
+- `data/book-topics.ts` — BOOK_TOPICS, TOPIC_INFO
+
+**Chapter Reader Components:** The 1,936-line chapter reader (`app/read/[bookId]/[chapter].tsx`) is split into:
+- `components/reader/ContextPanel.tsx` — 4D Scripture panel (Places/Timeline/Figures/Culture tabs)
+- `components/reader/RelatedContent.tsx` — study layers, nearby chapters, related devotionals
+- `components/reader/TTSPlayerBar.tsx` — TTS/audio controls UI
+- `hooks/useBibleAudio.ts` — custom hook with all TTS playback logic
+
+**Device UUID:** Guest users get a persistent device UUID (stored in AsyncStorage as `@grace-through-faith/deviceUUID`) instead of hardcoded "guest", enabling per-device rate limiting.
 
 ### Additional Features
 

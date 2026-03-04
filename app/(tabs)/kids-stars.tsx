@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Modal,
@@ -26,7 +25,7 @@ import Animated, {
   FadeInDown,
   Easing,
 } from "react-native-reanimated";
-import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 
 interface ProgressItem {
@@ -195,9 +194,7 @@ function AnimatedBadgeItem({
 }
 
 export default function KidsStarsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { exitKidsMode, pin, activeChildProfileId } = useKidsMode();
   const [showPinModal, setShowPinModal] = useState(false);

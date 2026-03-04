@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
@@ -16,7 +15,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface Section {
   id: string;
@@ -95,9 +94,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 
 export default function TrackDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { resolvedLang } = useContentLanguage();

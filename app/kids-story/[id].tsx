@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Animated,
@@ -16,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
@@ -290,9 +289,7 @@ function CompletionStarBurst({ theme }: { theme: any }) {
 
 export default function KidsStoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();

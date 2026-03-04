@@ -7,7 +7,6 @@ import {
   Pressable,
   Linking,
   TextInput,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -21,6 +20,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Tab = "word" | "context" | "voices" | "application";
@@ -549,6 +549,26 @@ const introStyles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 14,
+  },
+  themesRow: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  themeTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  themeTagText: {
+    fontSize: 12,
+  },
+  pastoralText: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
   },
 });
 
@@ -1229,9 +1249,7 @@ interface CommentaryResult {
 
 
 export default function StudyScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();
@@ -1514,6 +1532,8 @@ export default function StudyScreen() {
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
         <DeepStudyIntro
           reference={params.bookName && chapter ? `${params.bookName} ${chapter}` : "Scripture"}
+          bookId={params.bookId ? Number(params.bookId) : null}
+          chapter={chapter ? Number(chapter) : null}
           onBegin={beginDeepSessionFromIntro}
           onCancel={() => setShowDeepIntro(false)}
           theme={theme}

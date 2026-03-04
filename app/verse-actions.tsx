@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  useColorScheme,
   Platform,
   ScrollView,
 } from "react-native";
@@ -13,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
@@ -28,9 +28,7 @@ export default function VerseActionsSheet() {
       verseId: string;
       translation: string;
     }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const { isPro, showProGate } = useProStatus();

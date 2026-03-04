@@ -8,7 +8,6 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  useColorScheme,
   Platform,
   ScrollView,
 } from "react-native";
@@ -18,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface SmallGroup {
   id: string;
@@ -43,9 +42,7 @@ const GROUP_TYPES = [
 type TabMode = "my" | "browse";
 
 export default function GroupsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { isGuest, userId } = useAuth();
   const queryClient = useQueryClient();

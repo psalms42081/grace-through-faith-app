@@ -6,14 +6,13 @@ import {
   Pressable,
   FlatList,
   ActivityIndicator,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface BibleBook {
   id: number;
@@ -24,9 +23,7 @@ interface BibleBook {
 
 export default function ChapterPickerScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const { data: books, isLoading, error } = useQuery<BibleBook[]>({

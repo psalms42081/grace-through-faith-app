@@ -2,12 +2,12 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import Colors from "@/constants/colors";
 import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 
 function NativeTabLayout() {
@@ -32,14 +32,14 @@ function NativeTabLayout() {
           <Icon sf={{ default: "star", selected: "star.fill" }} />
           <Label>My Stars</Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="read" options={{ href: null }} />
-        <NativeTabs.Trigger name="plans" options={{ href: null }} />
-        <NativeTabs.Trigger name="search" options={{ href: null }} />
-        <NativeTabs.Trigger name="study" options={{ href: null }} />
-        <NativeTabs.Trigger name="explore" options={{ href: null }} />
-        <NativeTabs.Trigger name="connect" options={{ href: null }} />
-        <NativeTabs.Trigger name="profile" options={{ href: null }} />
-        <NativeTabs.Trigger name="family" options={{ href: null }} />
+        <NativeTabs.Trigger name="read" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="plans" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="search" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="study" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="explore" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="connect" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="profile" options={{ href: null } as any} />
+        <NativeTabs.Trigger name="family" options={{ href: null } as any} />
       </NativeTabs>
     );
   }
@@ -66,25 +66,21 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>You</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plans" options={{ href: null }} />
-      <NativeTabs.Trigger name="search" options={{ href: null }} />
-      <NativeTabs.Trigger name="study" options={{ href: null }} />
-      <NativeTabs.Trigger name="family" options={{ href: null }} />
-      <NativeTabs.Trigger name="kids-stories" options={{ href: null }} />
-      <NativeTabs.Trigger name="kids-learn" options={{ href: null }} />
-      <NativeTabs.Trigger name="kids-stars" options={{ href: null }} />
+      <NativeTabs.Trigger name="plans" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="search" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="study" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="family" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="kids-stories" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="kids-learn" options={{ href: null } as any} />
+      <NativeTabs.Trigger name="kids-stars" options={{ href: null } as any} />
     </NativeTabs>
   );
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const { isKidsMode } = useKidsMode();
+  const { theme, isDark } = useTheme(isKidsMode);
   const { t } = useTranslation();
-  const theme = isKidsMode
-    ? (isDark ? KidsColors.dark : KidsColors.light)
-    : (isDark ? Colors.dark : Colors.light);
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;

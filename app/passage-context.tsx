@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
@@ -14,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ContextCard {
   id: string;
@@ -61,9 +61,7 @@ export default function PassageContextScreen() {
     chapter: string;
     bookName: string;
   }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;

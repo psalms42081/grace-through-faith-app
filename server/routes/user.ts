@@ -1,0 +1,511 @@
+import { Router } from "express";
+  import { db } from "../db";
+  import {
+    users,
+    userActivityCounters,
+    userNotes,
+    userHighlights,
+    userBookmarks,
+    prayerRequests,
+    readingHistory,
+    readingStreaks,
+    bibleBooks,
+  } from "../../shared/schema";
+  import { eq, and, sql, desc, asc } from "drizzle-orm";
+  import { extractUserId } from "../middleware/auth";
+
+  const router = Router();
+
+  router.post("/api/user/start-trial", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "guest");
+    await db.update(users).set({ isPro: true }).where(eq(users.id, userId));
+    return res.json({ success: true, isPro: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/user/pro-status", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const [user] = await db
+      .select({ isPro: users.isPro, isPatron: users.isPatron, donationAmount: users.donationAmount })
+      .from(users)
+      .where(eq(users.id, userId));
+    return res.json({
+      isPro: user?.isPro ?? false,
+      isPatron: user?.isPatron ?? false,
+      donationAmount: user?.donationAmount ?? 0,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/user/donate", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "guest");
+    const amount = Math.max(1, Math.round(Number(req.body?.amount) || 5));
+
+    const [user] = await db
+      .select({ donationAmount: users.donationAmount })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    const currentDonation = user?.donationAmount ?? 0;
+
+    await db
+      .update(users)
+      .set({
+        isPro: true,
+        isPatron: true,
+        donationAmount: currentDonation + amount,
+      })
+      .where(eq(users.id, userId));
+
+    console.log(`\n🌟 MISSION PARTNER: User ${userId} donated $${amount} (total: $${currentDonation + amount})`);
+
+    return res.json({
+      success: true,
+      isPatron: true,
+      isPro: true,
+      totalDonated: currentDonation + amount,
+    });
+  } catch (err) {
+    console.error("Donate error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/user/track-activity", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "guest");
+    const featureType = String(req.body?.featureType || "unknown");
+
+    const [existing] = await db
+      .select()
+      .from(userActivityCounters)
+      .where(and(
+        eq(userActivityCounters.userId, userId),
+        eq(userActivityCounters.featureType, featureType)
+      ));
+
+    if (existing) {
+      await db
+        .update(userActivityCounters)
+        .set({
+          useCount: sql`${userActivityCounters.useCount} + 1`,
+          lastUsedAt: new Date(),
+        })
+        .where(eq(userActivityCounters.id, existing.id));
+    } else {
+      await db
+        .insert(userActivityCounters)
+        .values({ userId, featureType, useCount: 1 });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Track activity error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/user/mission-status", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+
+    const [user] = await db
+      .select({
+        isPatron: users.isPatron,
+        isPro: users.isPro,
+        lastMissionInvite: users.lastMissionInvite,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      return res.json({ shouldInvite: false, isPatron: false, totalUses: 0 });
+    }
+
+    if (user.isPatron) {
+      return res.json({ shouldInvite: false, isPatron: true, totalUses: 0 });
+    }
+
+    if (user.lastMissionInvite) {
+      const daysSince = (Date.now() - new Date(user.lastMissionInvite).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < 30) {
+        return res.json({ shouldInvite: false, isPatron: false, totalUses: 0 });
+      }
+    }
+
+    const counters = await db
+      .select({ useCount: userActivityCounters.useCount })
+      .from(userActivityCounters)
+      .where(eq(userActivityCounters.userId, userId));
+
+    const totalUses = counters.reduce((sum, c) => sum + (c.useCount ?? 0), 0);
+
+    return res.json({
+      shouldInvite: totalUses >= 10,
+      isPatron: false,
+      totalUses,
+    });
+  } catch (err) {
+    console.error("Mission status error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/user/dismiss-mission-invite", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "guest");
+    await db
+      .update(users)
+      .set({ lastMissionInvite: new Date() })
+      .where(eq(users.id, userId));
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+  router.get("/api/notes/:userId", async (req, res) => {
+  try {
+    const notes = await db
+      .select()
+      .from(userNotes)
+      .where(eq(userNotes.userId, String(req.params.userId)))
+      .orderBy(userNotes.updatedAt);
+    return res.json(notes);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/notes", async (req, res) => {
+  try {
+    const { userId, verseId, content } = req.body;
+    if (!userId || !verseId || !content) {
+      return res.status(400).json({ error: "userId, verseId, and content are required" });
+    }
+    const note = await db
+      .insert(userNotes)
+      .values({ userId, verseId, content })
+      .returning();
+    return res.json(note[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── USER HIGHLIGHTS ──────────────────────────────────────────────────────────
+
+router.get("/api/highlights/:userId", async (req, res) => {
+  try {
+    const highlights = await db
+      .select()
+      .from(userHighlights)
+      .where(eq(userHighlights.userId, String(req.params.userId)));
+    return res.json(highlights);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/highlights", async (req, res) => {
+  try {
+    const { userId, verseId, color = "yellow" } = req.body;
+    if (!userId || !verseId) {
+      return res.status(400).json({ error: "userId and verseId are required" });
+    }
+    const highlight = await db
+      .insert(userHighlights)
+      .values({ userId, verseId, color })
+      .onConflictDoNothing()
+      .returning();
+    return res.json(highlight[0] ?? null);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── USER BOOKMARKS ───────────────────────────────────────────────────────────
+
+router.get("/api/bookmarks/:userId", async (req, res) => {
+  try {
+    const bookmarks = await db
+      .select()
+      .from(userBookmarks)
+      .where(eq(userBookmarks.userId, String(req.params.userId)))
+      .orderBy(userBookmarks.createdAt);
+    return res.json(bookmarks);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/bookmarks", async (req, res) => {
+  try {
+    const { userId, verseId, label } = req.body;
+    if (!userId || !verseId) {
+      return res.status(400).json({ error: "userId and verseId are required" });
+    }
+    const bookmark = await db
+      .insert(userBookmarks)
+      .values({ userId, verseId, label })
+      .onConflictDoNothing()
+      .returning();
+    return res.json(bookmark[0] ?? null);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/api/bookmarks/:id", async (req, res) => {
+  try {
+    await db
+      .delete(userBookmarks)
+      .where(eq(userBookmarks.id, String(req.params.id)));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── TEXT-TO-SPEECH ──────────────────────────────────────────────────────────
+
+
+  router.get("/api/prayers", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const prayers = await db
+      .select()
+      .from(prayerRequests)
+      .where(eq(prayerRequests.userId, userId))
+      .orderBy(desc(prayerRequests.createdAt));
+    return res.json(prayers);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/prayers", async (req, res) => {
+  try {
+    const { userId = "guest", title, content, category = "personal" } = req.body;
+    if (!title) return res.status(400).json({ error: "Title is required" });
+    const [prayer] = await db
+      .insert(prayerRequests)
+      .values({ userId, title, content, category })
+      .returning();
+    return res.json(prayer);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/api/prayers/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates: Record<string, any> = {};
+    if (req.body.title !== undefined) updates.title = req.body.title;
+    if (req.body.content !== undefined) updates.content = req.body.content;
+    if (req.body.category !== undefined) updates.category = req.body.category;
+    if (req.body.answered !== undefined) {
+      updates.answered = req.body.answered;
+      updates.answeredAt = req.body.answered ? new Date() : null;
+    }
+    updates.updatedAt = new Date();
+    const [updated] = await db
+      .update(prayerRequests)
+      .set(updates)
+      .where(eq(prayerRequests.id, id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    return res.json(updated);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/api/prayers/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(prayerRequests).where(eq(prayerRequests.id, id));
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── READING HISTORY & STREAKS ─────────────────────────────────────────────
+
+router.post("/api/reading-history", async (req, res) => {
+  try {
+    const { userId = "guest", bookId, bookName, chapter, translation = "KJV" } = req.body;
+    if (!bookId || !chapter || !bookName) {
+      return res.status(400).json({ error: "bookId, bookName, and chapter are required" });
+    }
+
+    const [entry] = await db
+      .insert(readingHistory)
+      .values({ userId, bookId: Number(bookId), bookName, chapter: Number(chapter), translation })
+      .returning();
+
+    const today = new Date().toISOString().split("T")[0];
+    const existing = await db
+      .select()
+      .from(readingStreaks)
+      .where(eq(readingStreaks.userId, userId));
+
+    if (existing.length === 0) {
+      await db.insert(readingStreaks).values({
+        userId,
+        currentStreak: 1,
+        longestStreak: 1,
+        lastReadDate: today,
+      });
+    } else {
+      const streak = existing[0];
+      const lastDate = streak.lastReadDate;
+      if (lastDate === today) {
+        // already read today
+      } else {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
+        let newStreak = 1;
+        if (lastDate === yesterdayStr) {
+          newStreak = (streak.currentStreak ?? 0) + 1;
+        }
+        const newLongest = Math.max(newStreak, streak.longestStreak ?? 0);
+        await db
+          .update(readingStreaks)
+          .set({ currentStreak: newStreak, longestStreak: newLongest, lastReadDate: today })
+          .where(eq(readingStreaks.userId, userId));
+      }
+    }
+
+    return res.json(entry);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/reading-history/recent", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const recent = await db
+      .select()
+      .from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .orderBy(desc(readingHistory.readAt))
+      .limit(5);
+    return res.json(recent);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/reading-streaks", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const [streak] = await db
+      .select()
+      .from(readingStreaks)
+      .where(eq(readingStreaks.userId, userId));
+    if (!streak) {
+      return res.json({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
+    }
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    if (streak.lastReadDate !== today && streak.lastReadDate !== yesterdayStr) {
+      await db
+        .update(readingStreaks)
+        .set({ currentStreak: 0 })
+        .where(eq(readingStreaks.userId, userId));
+      return res.json({ currentStreak: 0, longestStreak: streak.longestStreak ?? 0, lastReadDate: streak.lastReadDate });
+    }
+    return res.json(streak);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/reading-streaks/weekly", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const reads = await db
+      .select({ readAt: readingHistory.readAt })
+      .from(readingHistory)
+      .where(
+        and(
+          eq(readingHistory.userId, userId),
+          sql`${readingHistory.readAt} >= ${startOfWeek.toISOString()}::timestamp`
+        )
+      );
+
+    const daysRead: boolean[] = [false, false, false, false, false, false, false];
+    for (const r of reads) {
+      const d = new Date(r.readAt).getDay();
+      daysRead[d] = true;
+    }
+
+    const perfectWeekResult = await db.execute(sql`
+      SELECT COUNT(*) as count FROM (
+        SELECT date_trunc('week', ${readingHistory.readAt}) as week_start
+        FROM ${readingHistory}
+        WHERE ${readingHistory.userId} = ${userId}
+        GROUP BY week_start
+        HAVING COUNT(DISTINCT EXTRACT(DOW FROM ${readingHistory.readAt})) = 7
+      ) pw
+    `);
+    const perfectWeeks = Number(perfectWeekResult.rows?.[0]?.count ?? 0);
+
+    const [streak] = await db
+      .select()
+      .from(readingStreaks)
+      .where(eq(readingStreaks.userId, userId));
+
+    return res.json({
+      daysRead,
+      perfectWeeks,
+      currentStreak: streak?.currentStreak ?? 0,
+      longestStreak: streak?.longestStreak ?? 0,
+      lastReadDate: streak?.lastReadDate ?? null,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── SOCRATIC AI STUDY GUIDE ──────────────────────────────────────────────
+
+
+  export default router;
+  

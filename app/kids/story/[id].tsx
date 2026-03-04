@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Dimensions,
@@ -35,7 +34,7 @@ import * as Haptics from "expo-haptics";
 import { createAudioPlayer, setIsAudioActiveAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
@@ -792,9 +791,7 @@ function StreakCelebration({
 
 export default function SceneStoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();

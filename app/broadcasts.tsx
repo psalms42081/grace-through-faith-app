@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   Linking,
   ActivityIndicator,
@@ -16,13 +15,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useTranslation } from "react-i18next";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import BroadcastCard, { broadcastSources, type BroadcastSource } from "@/components/BroadcastCard";
 
 export default function BroadcastsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const topPad = Platform.OS === "web" ? 67 : insets.top;

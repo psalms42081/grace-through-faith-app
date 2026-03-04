@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { router } from "expo-router";
@@ -15,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import Svg, { Rect } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { SUPPORTED_LANGUAGES, setLanguage, useDeviceLanguage } from "@/lib/i18n";
@@ -204,9 +204,7 @@ function BibleHeatmap({
 }
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
 

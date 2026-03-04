@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
-  useColorScheme,
   Platform,
   Modal,
   Animated,
@@ -19,7 +18,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 
@@ -350,7 +349,7 @@ function SabbathActionsSheet({
                     style={({ pressed }) => [sabbathStyles.sheetRow, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <Ionicons
-                      name={item.icon}
+                      name={item.icon as any}
                       size={20}
                       color={item.accent ? theme.accent : (item as any).color || theme.text}
                     />
@@ -498,6 +497,10 @@ interface LessonData {
   estimatedMinutes: number;
   sections: Section[];
   assessment: Assessment | null;
+  progress?: {
+    sectionsCompleted: string[];
+    assessmentScore?: number | null;
+  };
 }
 
 const SECTION_ICONS: Record<string, { icon: string; color: string; label: string }> = {
@@ -531,9 +534,7 @@ function SectionHeader({ type, title, isCompleted, isSabbath }: { type: string; 
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { resolvedLang } = useContentLanguage();
@@ -1083,7 +1084,7 @@ export default function LessonScreen() {
         onRequestClose={() => {}}
       >
         <View style={mcStyles.overlay}>
-          <View style={[mcStyles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View style={[mcStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={mcStyles.iconRow}>
               <View style={[mcStyles.iconCircle, { backgroundColor: theme.accent + "20" }]}>
                 <Ionicons name="ribbon" size={32} color={theme.accent} />
@@ -1207,7 +1208,7 @@ export default function LessonScreen() {
         onRequestClose={() => {}}
       >
         <View style={mcStyles.overlay}>
-          <View style={[tcStyles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View style={[tcStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={tcStyles.accentLine} />
 
             <View style={tcStyles.iconRow}>

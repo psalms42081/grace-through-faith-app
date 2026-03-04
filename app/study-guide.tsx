@@ -6,7 +6,6 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -16,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
 interface Message {
@@ -41,8 +40,7 @@ const PHASES = [
 ];
 
 export default function StudyGuideScreen() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? Colors.dark : Colors.light;
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     verseReference: string;

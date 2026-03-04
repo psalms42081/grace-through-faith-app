@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   TextInput,
@@ -18,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import * as Haptics from "expo-haptics";
 
 interface TodayResponse {
@@ -283,9 +283,7 @@ const rStyles = StyleSheet.create({
 
 export default function DevotionalDayScreen() {
   const { planId } = useLocalSearchParams<{ planId?: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const [journalText, setJournalText] = useState("");

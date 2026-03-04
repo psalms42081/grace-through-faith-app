@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -16,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
 interface StrongWord {
@@ -51,8 +51,7 @@ const SECTION_ICONS = {
 };
 
 export default function VerseMapScreen() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? Colors.dark : Colors.light;
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     verseId: string;

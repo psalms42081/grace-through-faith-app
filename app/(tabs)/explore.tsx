@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -16,21 +15,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
-
-const TOPICS = [
-  { id: "love", title: "Love", icon: "heart" as const, gradient: ["#E8456B", "#C2185B"] as [string, string] },
-  { id: "faith", title: "Faith", icon: "shield" as const, gradient: ["#5B86E5", "#36D1DC"] as [string, string] },
-  { id: "prayer", title: "Prayer", icon: "hand-left" as const, gradient: ["#8B5CF6", "#6D3BD4"] as [string, string] },
-  { id: "forgiveness", title: "Forgiveness", icon: "refresh" as const, gradient: ["#2E7D32", "#66BB6A"] as [string, string] },
-  { id: "comfort", title: "Comfort", icon: "heart-half" as const, gradient: ["#FF6B35", "#F5A623"] as [string, string] },
-  { id: "wisdom", title: "Wisdom", icon: "bulb" as const, gradient: ["#C9933A", "#A87828"] as [string, string] },
-  { id: "strength", title: "Strength", icon: "fitness" as const, gradient: ["#E65100", "#FF8F00"] as [string, string] },
-  { id: "peace", title: "Peace", icon: "leaf" as const, gradient: ["#00796B", "#4DB6AC"] as [string, string] },
-  { id: "hope", title: "Hope", icon: "sunny" as const, gradient: ["#1565C0", "#42A5F5"] as [string, string] },
-  { id: "grace", title: "Grace", icon: "gift" as const, gradient: ["#AD1457", "#EC407A"] as [string, string] },
-  { id: "courage", title: "Courage", icon: "flag" as const, gradient: ["#4527A0", "#7C4DFF"] as [string, string] },
-  { id: "joy", title: "Joy", icon: "sparkles" as const, gradient: ["#F9A825", "#FDD835"] as [string, string] },
-];
+import { useTheme } from "@/hooks/useTheme";
+import { TOPICS_LIST as TOPICS } from "@/data/topics";
 
 const INSPIRATIONS = [
   { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5 },
@@ -90,9 +76,7 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
 }
 
 export default function StudyScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;

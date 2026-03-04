@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface Plan {
   id: string;
@@ -44,9 +44,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 };
 
 export default function DevotionalsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [enrolling, setEnrolling] = useState(false);

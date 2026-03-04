@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   TextInput,
@@ -24,7 +23,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 const DONATION_PRESETS = [5, 10, 25, 50];
 
@@ -79,9 +78,7 @@ export default function MissionInviteModal({
   onDonate,
   isDonating,
 }: MissionInviteModalProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
 
   const [selectedAmount, setSelectedAmount] = useState(10);
   const [customAmount, setCustomAmount] = useState("");

@@ -8,12 +8,11 @@ import {
   Alert,
   Platform,
   ScrollView,
-  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 
 type Flow = "idle" | "set" | "change" | "remove";
@@ -27,9 +26,7 @@ function showAlert(title: string, msg: string) {
 }
 
 export default function ParentControlsScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   TextInput,
   ActivityIndicator,
@@ -19,7 +18,7 @@ import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
 
@@ -94,9 +93,7 @@ const CHILD_AVATARS = [
 ];
 
 export default function FamilyDashboard() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { isPro, showProGate } = useProStatus();
   const { userId, user, isGuest, isAuthenticated, refreshUser } = useAuth();

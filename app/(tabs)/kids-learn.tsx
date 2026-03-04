@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -23,7 +22,7 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 
@@ -236,9 +235,7 @@ function BouncyMemorizeBtn({
 }
 
 export default function KidsLearnScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();

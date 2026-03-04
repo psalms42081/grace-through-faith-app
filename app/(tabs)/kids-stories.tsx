@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Image,
@@ -20,7 +19,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
-import { KidsColors } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
 
@@ -216,9 +215,7 @@ function AnimatedStoryCard({
 }
 
 export default function KidsStoriesScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { ageGroup, setAgeGroup } = useKidsMode();
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);

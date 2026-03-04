@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   Pressable,
-  useColorScheme,
   Platform,
   FlatList,
   ActivityIndicator,
@@ -15,7 +14,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
@@ -69,9 +68,7 @@ interface ReferenceResponse {
 }
 
 export default function SearchScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");

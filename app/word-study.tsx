@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -13,7 +12,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface StrongEntry {
   id: string;
@@ -47,9 +46,7 @@ export default function WordStudyScreen() {
     verse: string;
     verseText: string;
   }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const { data: wordMappings, isLoading, error } = useQuery<WordMapping[]>({

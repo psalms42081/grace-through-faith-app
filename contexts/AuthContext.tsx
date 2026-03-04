@@ -5,6 +5,7 @@ import { queryClient } from "@/lib/query-client";
 import { fetch } from "expo/fetch";
 
 const AUTH_TOKEN_KEY = "@grace_auth_token";
+const DEVICE_UUID_KEY = "@grace-through-faith/deviceUUID";
 
 interface AuthUser {
   id: string;
@@ -47,10 +48,15 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function generateDeviceUUID(): string {
+  return "device-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 9);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deviceId, setDeviceId] = useState<string>("guest");
   const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -67,6 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const restoreSession = async () => {
     try {
+      let storedDeviceId = await AsyncStorage.getItem(DEVICE_UUID_KEY);
+      if (!storedDeviceId) {
+        storedDeviceId = generateDeviceUUID();
+        await AsyncStorage.setItem(DEVICE_UUID_KEY, storedDeviceId);
+      }
+      setDeviceId(storedDeviceId);
+
       const savedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
       if (savedToken) {
         tokenRef.current = savedToken;
@@ -206,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user && !!token;
   const isGuest = !isAuthenticated;
-  const userId = user?.id || "guest";
+  const userId = user?.id || deviceId;
 
   return (
     <AuthContext.Provider

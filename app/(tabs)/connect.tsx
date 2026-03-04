@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { router } from "expo-router";
@@ -14,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 function SectionHeader({ title, theme }: { title: string; theme: typeof Colors.dark }) {
   return (
@@ -30,9 +30,7 @@ function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
 }
 
 export default function ConnectScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 

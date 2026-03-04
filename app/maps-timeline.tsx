@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Dimensions,
@@ -16,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 type Tab = "maps" | "timeline";
 
@@ -84,9 +84,7 @@ const HOLY_LAND_REGION = {
 
 export default function MapsTimelineScreen() {
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");

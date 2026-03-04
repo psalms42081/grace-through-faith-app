@@ -6,7 +6,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Alert,
@@ -21,6 +20,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import PrayerWall from "@/components/PrayerWall";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface GroupMember {
   id: string;
@@ -92,9 +92,7 @@ type GroupTab = "discussion" | "prayer" | "study";
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();

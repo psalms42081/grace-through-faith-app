@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   Modal,
-  useColorScheme,
   Platform,
   Alert,
   ActivityIndicator,
@@ -17,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface Prayer {
   id: string;
@@ -48,9 +47,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function PrayerJournalScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 

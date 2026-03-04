@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   Alert,
@@ -16,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 interface StreamSession {
   id: string;
@@ -35,9 +34,7 @@ interface StreamSession {
 
 export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();

@@ -5,13 +5,12 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  useColorScheme,
   Platform,
   ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 const PRO_BENEFITS = [
   { icon: "school-outline" as const, title: "Socratic Study Guide", desc: "AI-guided inductive Bible study" },
@@ -30,9 +29,7 @@ interface ProGateModalProps {
 }
 
 export default function ProGateModal({ visible, onClose, onStartTrial, isLoading }: ProGateModalProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
 
   return (
     <Modal

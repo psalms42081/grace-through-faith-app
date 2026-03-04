@@ -12,7 +12,7 @@ import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import {
@@ -35,9 +35,7 @@ const ONBOARDING_KEY = "@grace-through-faith/onboarded";
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
 
   return (
     <Stack

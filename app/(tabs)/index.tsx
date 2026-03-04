@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   Dimensions,
   Image,
@@ -29,8 +28,8 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Colors from "@/constants/colors";
-import { KidsColors, getSabbathTheme } from "@/constants/colors";
+import Colors, { getSabbathTheme } from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -172,9 +171,7 @@ function BouncyActionCard({
 }
 
 function KidsHomeScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? KidsColors.dark : KidsColors.light;
+  const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
   const { ageGroup, exitKidsMode, pin, activeChildName, activeChildProfileId, lastActiveChildId, switchChild, verifyPin } = useKidsMode();
   const { userId } = useAuth();
@@ -688,9 +685,7 @@ function ChildPickerModal({
   userId: string;
   lastActiveChildId: string | null;
 }) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
   const qc = useQueryClient();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -1118,9 +1113,7 @@ function WeeklyCalendar({ data, theme, isDark }: { data: WeeklyStreakData; theme
 const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
 
 function AdultHomeScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const baseTheme = isDark ? Colors.dark : Colors.light;
+  const { theme: baseTheme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
