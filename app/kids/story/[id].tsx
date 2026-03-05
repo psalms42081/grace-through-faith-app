@@ -560,6 +560,293 @@ const wonderStyles = StyleSheet.create({
   },
 });
 
+const MOOD_PARTICLES: Record<SceneMood, { icons: string[]; colors: string[]; count: number; speed: number }> = {
+  AWE: {
+    icons: ["star", "sparkles", "diamond"],
+    colors: ["#A78BFA", "#C4B5FD", "#DDD6FE", "#8B5CF6"],
+    count: 8,
+    speed: 6000,
+  },
+  PEACE: {
+    icons: ["leaf", "water", "flower"],
+    colors: ["#7EDCB5", "#6EE7B7", "#A7F3D0", "#34D399"],
+    count: 6,
+    speed: 9000,
+  },
+  TENSION: {
+    icons: ["flash", "flame", "thunderstorm"],
+    colors: ["#F97316", "#FB923C", "#FDBA74", "#EF4444"],
+    count: 5,
+    speed: 3000,
+  },
+  JOY: {
+    icons: ["sunny", "heart", "musical-notes"],
+    colors: ["#FBBF24", "#FDE68A", "#FCA5A5", "#F472B6"],
+    count: 8,
+    speed: 5000,
+  },
+};
+
+function MoodParticle({
+  icon,
+  color,
+  delay,
+  startX,
+  speed,
+}: {
+  icon: string;
+  color: string;
+  delay: number;
+  startX: number;
+  speed: number;
+}) {
+  const translateY = useSharedValue(SCREEN_HEIGHT + 20);
+  const translateX = useSharedValue(startX);
+  const opacity = useSharedValue(0);
+  const rotate = useSharedValue(0);
+  const scale = useSharedValue(0.6 + Math.random() * 0.5);
+
+  useEffect(() => {
+    const drift = (Math.random() - 0.5) * 60;
+    opacity.value = withDelay(delay, withTiming(0.5, { duration: 800 }));
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(-40, { duration: speed, easing: Easing.linear }),
+        -1,
+        false
+      )
+    );
+    translateX.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(startX + drift, { duration: speed / 2, easing: Easing.inOut(Easing.ease) }),
+          withTiming(startX - drift * 0.5, { duration: speed / 2, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
+    );
+    rotate.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(360, { duration: speed * 1.5, easing: Easing.linear }),
+        -1,
+        false
+      )
+    );
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { rotate: `${rotate.value}deg` },
+      { scale: scale.value },
+    ],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[particleStyles.particle, animStyle]}>
+      <Ionicons name={icon as any} size={14 + Math.random() * 10} color={color} />
+    </Animated.View>
+  );
+}
+
+function MoodParticleOverlay({ mood, isActive }: { mood: SceneMood; isActive: boolean }) {
+  const config = MOOD_PARTICLES[mood];
+  const particles = useMemo(() => {
+    return Array.from({ length: config.count }).map((_, i) => ({
+      id: i,
+      icon: config.icons[i % config.icons.length],
+      color: config.colors[i % config.colors.length],
+      delay: i * (config.speed / config.count),
+      startX: 20 + Math.random() * (SCREEN_WIDTH - 40),
+      speed: config.speed + (Math.random() - 0.5) * 2000,
+    }));
+  }, [mood]);
+
+  if (!isActive) return null;
+
+  return (
+    <View style={particleStyles.overlay} pointerEvents="none">
+      {particles.map((p) => (
+        <MoodParticle key={`${mood}-${p.id}`} {...p} />
+      ))}
+    </View>
+  );
+}
+
+interface TapRipple {
+  id: number;
+  x: number;
+  y: number;
+}
+
+function TapReactionOverlay({
+  mood,
+  onTapZone,
+}: {
+  mood: SceneMood;
+  onTapZone: (x: number, y: number) => void;
+}) {
+  const [ripples, setRipples] = useState<TapRipple[]>([]);
+  const nextId = useRef(0);
+
+  const handlePress = (e: any) => {
+    const { locationX, locationY } = e.nativeEvent;
+    const id = nextId.current++;
+    setRipples((prev) => [...prev.slice(-5), { id, x: locationX, y: locationY }]);
+    onTapZone(locationX, locationY);
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => r.id !== id));
+    }, 1200);
+  };
+
+  const config = MOOD_PARTICLES[mood];
+  const tapIcon = config.icons[0];
+  const tapColor = config.colors[0];
+
+  return (
+    <Pressable
+      style={particleStyles.tapZone}
+      onPress={handlePress}
+    >
+      {ripples.map((r) => (
+        <TapRippleEffect key={r.id} x={r.x} y={r.y} icon={tapIcon} color={tapColor} mood={mood} />
+      ))}
+    </Pressable>
+  );
+}
+
+function TapRippleEffect({
+  x,
+  y,
+  icon,
+  color,
+  mood,
+}: {
+  x: number;
+  y: number;
+  icon: string;
+  color: string;
+  mood: SceneMood;
+}) {
+  const ringScale = useSharedValue(0.2);
+  const ringOpacity = useSharedValue(0.8);
+  const burstItems = useMemo(() => {
+    const count = mood === "JOY" ? 6 : mood === "AWE" ? 5 : 4;
+    const config = MOOD_PARTICLES[mood];
+    return Array.from({ length: count }).map((_, i) => {
+      const angle = (i / count) * Math.PI * 2;
+      return {
+        id: i,
+        icon: config.icons[i % config.icons.length],
+        color: config.colors[i % config.colors.length],
+        angle,
+        distance: 30 + Math.random() * 25,
+      };
+    });
+  }, [mood]);
+
+  useEffect(() => {
+    ringScale.value = withSpring(1.5, { damping: 8, stiffness: 100 });
+    ringOpacity.value = withDelay(400, withTiming(0, { duration: 600 }));
+  }, []);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
+  }));
+
+  return (
+    <View style={[particleStyles.rippleContainer, { left: x - 40, top: y - 40 }]} pointerEvents="none">
+      <Animated.View style={[particleStyles.ring, { borderColor: color }, ringStyle]} />
+      {burstItems.map((item) => (
+        <BurstParticle key={item.id} {...item} originX={40} originY={40} />
+      ))}
+    </View>
+  );
+}
+
+function BurstParticle({
+  icon,
+  color,
+  angle,
+  distance,
+  originX,
+  originY,
+}: {
+  icon: string;
+  color: string;
+  angle: number;
+  distance: number;
+  originX: number;
+  originY: number;
+}) {
+  const progress = useSharedValue(0);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    progress.value = withSpring(1, { damping: 10, stiffness: 120 });
+    opacity.value = withDelay(500, withTiming(0, { duration: 500 }));
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => {
+    const dx = Math.cos(angle) * distance * progress.value;
+    const dy = Math.sin(angle) * distance * progress.value;
+    return {
+      transform: [
+        { translateX: originX + dx - 10 },
+        { translateY: originY + dy - 10 },
+        { scale: 1 - progress.value * 0.3 },
+      ],
+      opacity: opacity.value,
+    };
+  });
+
+  return (
+    <Animated.View style={[particleStyles.burstParticle, animStyle]}>
+      <Ionicons name={icon as any} size={16} color={color} />
+    </Animated.View>
+  );
+}
+
+const particleStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+  },
+  particle: {
+    position: "absolute",
+  },
+  tapZone: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+  rippleContainer: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+  },
+  ring: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    position: "absolute",
+  },
+  burstParticle: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
 const MOOD_CONFIG: Record<SceneMood, { icon: string; color: string; label: string }> = {
   AWE: { icon: "sparkles", color: "#A78BFA", label: "Awe" },
   PEACE: { icon: "leaf", color: "#7EDCB5", label: "Peace" },
@@ -1214,6 +1501,11 @@ export default function SceneStoryScreen() {
             end={{ x: 1, y: 1 }}
           />
 
+          <MoodParticleOverlay
+            mood={item.mood || "PEACE"}
+            isActive={index === currentScene && !quietMode}
+          />
+
           <View style={[styles.sceneContent, { paddingTop: topPad + 16 }]}>
             <View style={styles.illustrationArea}>
               {item.imageUrl ? (
@@ -1229,6 +1521,16 @@ export default function SceneStoryScreen() {
                   isVisible={Math.abs(index - currentScene) <= 1}
                   onImageLoaded={(url) => {
                     setScenes(prev => prev.map(s => s.id === item.id ? { ...s, imageUrl: url } : s));
+                  }}
+                />
+              )}
+              {index === currentScene && (
+                <TapReactionOverlay
+                  mood={item.mood || "PEACE"}
+                  onTapZone={(x, y) => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
                   }}
                 />
               )}
