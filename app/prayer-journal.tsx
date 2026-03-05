@@ -18,6 +18,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { PRAYER_JOURNAL_STEPS } from "@/lib/tutorial-steps";
 
 interface Prayer {
   id: string;
@@ -133,6 +135,7 @@ export default function PrayerJournalScreen() {
 
   return (
     <>
+      <FeatureTutorial tutorialId="prayer-journal" steps={PRAYER_JOURNAL_STEPS} />
       <Stack.Screen
         options={{
           title: "Prayer Journal",

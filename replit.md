@@ -42,6 +42,7 @@ The application is built with a mobile-first architecture. The frontend uses **E
 - **Data Layer Extraction:** Hardcoded data arrays are extracted to `data/` folder: `beliefs.ts`, `topics.ts`, `music.ts`, `book-topics.ts`.
 - **useTheme Hook:** All screens use the centralized `hooks/useTheme.ts` hook instead of inline `useColorScheme()` + `Colors.dark/light` patterns.
 - **Internationalization (i18n):** A comprehensive UI language system using `i18next` and `react-i18next` for multiple locales. A content translation architecture is also in place, using overlay tables for localized lesson content, with English as the canonical base.
+- **Contextual Tutorial System:** Premium full-screen walkthrough tutorials for each major feature (Home, 4-Layer Study, Bible Reader, Connect, Explore, Profile, Prayer Journal). Uses `components/FeatureTutorial.tsx` with pulsing animated rings, floating gold particles, and paginated steps. Persistence via `contexts/TutorialContext.tsx` with AsyncStorage. Tutorial step definitions in `lib/tutorial-steps.tsx`. A "Replay Tutorials" button is available in Profile settings.
 
 ## External Dependencies
 

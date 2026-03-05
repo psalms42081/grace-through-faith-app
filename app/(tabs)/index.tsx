@@ -34,6 +34,8 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { HOME_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import type { AgeGroup } from "@/context/KidsModeContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -1420,6 +1422,8 @@ function AdultHomeScreen() {
   );
 
   return (
+    <>
+    <FeatureTutorial tutorialId="home" steps={HOME_TUTORIAL_STEPS} />
     <ScrollView
       style={[s.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
@@ -1499,6 +1503,7 @@ function AdultHomeScreen() {
       )}
 
     </ScrollView>
+    </>
   );
 }
 

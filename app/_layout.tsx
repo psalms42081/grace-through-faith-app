@@ -11,6 +11,7 @@ import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TutorialProvider } from "@/contexts/TutorialContext";
 import { useTheme } from "@/hooks/useTheme";
 import { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
@@ -137,11 +138,13 @@ export default function RootLayout() {
             <ContentLanguageProvider>
               <KidsModeProvider>
                 <ProProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <KeyboardProvider>
-                      <RootLayoutNav />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
+                  <TutorialProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <RootLayoutNav />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </TutorialProvider>
                 </ProProvider>
               </KidsModeProvider>
             </ContentLanguageProvider>

@@ -17,6 +17,8 @@ import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { EXPLORE_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import { TOPICS_LIST as TOPICS } from "@/data/topics";
 
 const INSPIRATIONS = [
@@ -86,6 +88,7 @@ export default function StudyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <FeatureTutorial tutorialId="explore" steps={EXPLORE_TUTORIAL_STEPS} />
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Study

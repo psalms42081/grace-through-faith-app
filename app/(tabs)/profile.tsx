@@ -16,7 +16,10 @@ import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { PROFILE_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTutorial } from "@/contexts/TutorialContext";
 import { SUPPORTED_LANGUAGES, setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
 import { CONTENT_LANGUAGE_OPTIONS, type ContentLanguageOption } from "@/lib/content-language";
@@ -210,6 +213,7 @@ export default function ProfileScreen() {
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated, logout } = useAuth();
+  const { resetAllTutorials } = useTutorial();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -290,6 +294,8 @@ export default function ProfileScreen() {
   const totalSessions = growthData?.totalSessions ?? 0;
 
   return (
+    <>
+    <FeatureTutorial tutorialId="profile" steps={PROFILE_TUTORIAL_STEPS} />
     <ScrollView
       style={[st.container, { backgroundColor: theme.background }]}
       contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: bottomPad + 120 }}
@@ -708,8 +714,25 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
           </Pressable>
         ))}
+
+        <Pressable
+          onPress={resetAllTutorials}
+          style={({ pressed }) => [
+            st.linkRow,
+            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.linkIcon, { backgroundColor: "#C9933A15" }]}>
+            <Ionicons name="refresh" size={18} color="#C9933A" />
+          </View>
+          <Text style={[st.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            Replay Tutorials
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        </Pressable>
       </View>
     </ScrollView>
+    </>
   );
 }
 
