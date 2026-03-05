@@ -42,6 +42,10 @@ args = "Start App"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "Start Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "Start Frontend"
 
 [[workflows.workflow]]
@@ -60,7 +64,6 @@ args = "Start Frontend"
 [[workflows.workflow]]
 name = "Start Backend"
 author = "agent"
-mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
