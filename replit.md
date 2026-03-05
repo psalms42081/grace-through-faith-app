@@ -36,7 +36,11 @@ The application is built with a mobile-first architecture. The frontend uses **E
 - **Sabbath Experience Mode:** Detects Sabbath hours using astronomical sunset calculations and provides a specialized home screen banner, reflection prompts, and worship pathways.
 - **Small Groups 2.0:** An enhanced system for SDA small groups with various types, member roles, discussions, and announcements.
 - **Live Streaming:** Integrates Jitsi Meet via WebView for live streaming sessions, supporting group and church streams.
-- **Church Connect:** A global SDA church finder with 68 churches across 40 countries, geo-radius search (Haversine), text search by city/state/country, and map/list views. Seeded via `scripts/seed-global-churches.ts` on server startup with case-insensitive dedup. DB has a unique index on `LOWER(name), LOWER(country)` to prevent duplicates.
+- **Church Connect:** A global SDA church finder with 92 churches across 40 countries, geo-radius search (Haversine), text search by city/state/country, and map/list views. Seeded via `scripts/seed-global-churches.ts` on server startup with case-insensitive dedup. DB has a unique index on `LOWER(name), LOWER(country)` to prevent duplicates.
+- **Guest User Identity:** Each device gets a unique UUID (stored in AsyncStorage via `contexts/AuthContext.tsx`) — no hardcoded "guest" userId. All API calls use the device-specific ID for per-user data isolation.
+- **Donation/Mission Partner Modal:** Donations are disabled (no payment processor). The modal shows "Donations Coming Soon" with a clear "Continue Studying" dismiss button. The Thank You screen code is preserved for future payment integration.
+- **Data Layer Extraction:** Hardcoded data arrays are extracted to `data/` folder: `beliefs.ts`, `topics.ts`, `music.ts`, `book-topics.ts`.
+- **useTheme Hook:** All screens use the centralized `hooks/useTheme.ts` hook instead of inline `useColorScheme()` + `Colors.dark/light` patterns.
 - **Internationalization (i18n):** A comprehensive UI language system using `i18next` and `react-i18next` for multiple locales. A content translation architecture is also in place, using overlay tables for localized lesson content, with English as the canonical base.
 
 ## External Dependencies

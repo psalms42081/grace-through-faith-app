@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
@@ -16,7 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import ContextPanel from "@/components/reader/ContextPanel";
 import RelatedContent from "@/components/reader/RelatedContent";
@@ -40,9 +40,8 @@ interface PassageResponse {
 
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? Colors.dark : Colors.light;
+  const { theme, isDark } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
   const { isPro, showProGate } = useProStatus();
@@ -68,8 +67,8 @@ export default function VerseReaderScreen() {
   useFocusEffect(
     useCallback(() => {
       if (focusedVerseRef.current !== null) {
-        queryClient.invalidateQueries({ queryKey: ["/api/highlights/guest"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/bookmarks/guest"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
         const timer = setTimeout(() => {
           setFocusedVerse(null);
           focusedVerseRef.current = null;
@@ -84,11 +83,11 @@ export default function VerseReaderScreen() {
   });
 
   const { data: highlightsData } = useQuery<{ id: string; verseId: string; color: string }[]>({
-    queryKey: ["/api/highlights/guest"],
+    queryKey: [`/api/highlights/${userId}`],
   });
 
   const { data: bookmarksData } = useQuery<{ id: string; verseId: string; label: string }[]>({
-    queryKey: ["/api/bookmarks/guest"],
+    queryKey: [`/api/bookmarks/${userId}`],
   });
 
   const highlightedVerseIds = useMemo(() => {
@@ -121,15 +120,15 @@ export default function VerseReaderScreen() {
   useEffect(() => {
     if (data?.book?.name && bookId && chapter) {
       apiRequest("POST", "/api/reading-history", {
-        userId: "guest",
+        userId,
         bookId: Number(bookId),
         bookName: data.book.name,
         chapter: Number(chapter),
         translation,
       })
         .then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/reading-history/recent?userId=guest"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/reading-streaks?userId=guest"] });
+          queryClient.invalidateQueries({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
         })
         .catch(() => {});
     }

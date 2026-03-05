@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 interface Plan {
   id: string;
   title: string;
@@ -58,6 +59,7 @@ const PLAN_ICONS: ("book" | "heart" | "leaf" | "star" | "sunny" | "flame" | "spa
 
 export default function PlansScreen() {
   const { theme, isDark } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Find Plans");
   const [activeCategory, setActiveCategory] = useState("All");
@@ -70,7 +72,7 @@ export default function PlansScreen() {
   });
 
   const { data: todayData } = useQuery<TodayResponse>({
-    queryKey: ["/api/devotionals/today?userId=guest"],
+    queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
   const hasActivePlan = todayData?.today != null;

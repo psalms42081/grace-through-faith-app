@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Plan {
   id: string;
@@ -45,6 +46,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 
 export default function DevotionalsScreen() {
   const { theme, isDark } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -64,11 +66,11 @@ export default function DevotionalsScreen() {
     setEnrolling(true);
     try {
       await apiRequest("POST", "/api/devotionals/enroll", {
-        userId: "guest",
+        userId,
         planId,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/devotionals/today?userId=guest"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=guest&planId=${planId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}&planId=${planId}`] });
       router.back();
       setTimeout(() => {
         router.push(`/devotional-day?planId=${planId}`);

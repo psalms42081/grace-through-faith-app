@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Prayer {
   id: string;
@@ -48,6 +49,7 @@ function formatDate(dateStr: string) {
 
 export default function PrayerJournalScreen() {
   const { theme, isDark } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -58,20 +60,20 @@ export default function PrayerJournalScreen() {
   const [filter, setFilter] = useState<"active" | "answered">("active");
 
   const { data: prayers, isLoading } = useQuery<Prayer[]>({
-    queryKey: ["/api/prayers?userId=guest"],
+    queryKey: [`/api/prayers?userId=${userId}`],
   });
 
   const addMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/prayers", {
-        userId: "guest",
+        userId,
         title: newTitle.trim(),
         content: newContent.trim() || null,
         category: newCategory,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/prayers?userId=guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
       setShowAdd(false);
       setNewTitle("");
       setNewContent("");
@@ -91,7 +93,7 @@ export default function PrayerJournalScreen() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/prayers?userId=guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
       if (Platform.OS === "web") { window.alert("Failed to update prayer."); }
@@ -104,7 +106,7 @@ export default function PrayerJournalScreen() {
       await apiRequest("DELETE", `/api/prayers/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/prayers?userId=guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
       if (Platform.OS === "web") { window.alert("Failed to delete prayer."); }

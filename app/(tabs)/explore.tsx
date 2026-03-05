@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { TOPICS_LIST as TOPICS } from "@/data/topics";
 
 const INSPIRATIONS = [
@@ -31,8 +32,9 @@ function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
 }
 
 function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
+  const { userId } = useAuth();
   const { data: progressData } = useQuery<any[]>({
-    queryKey: [`/api/tracks/progress?userId=guest`],
+    queryKey: [`/api/tracks/progress?userId=${userId}`],
   });
 
   const enrolled = progressData?.filter((p: any) => p.track) || [];

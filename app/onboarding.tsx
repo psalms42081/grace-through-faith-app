@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   Dimensions,
-  useColorScheme,
   Platform,
   FlatList,
   ViewToken,

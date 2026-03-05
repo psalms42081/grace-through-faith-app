@@ -2,7 +2,6 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";

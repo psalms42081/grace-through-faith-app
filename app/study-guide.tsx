@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
 interface Message {
@@ -41,6 +42,7 @@ const PHASES = [
 
 export default function StudyGuideScreen() {
   const { theme } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     verseReference: string;
@@ -122,7 +124,7 @@ export default function StudyGuideScreen() {
       try {
         const res = await apiRequest(
           "GET",
-          `/api/study-guide/active?verseReference=${encodeURIComponent(params.verseReference)}&userId=guest`
+          `/api/study-guide/active?verseReference=${encodeURIComponent(params.verseReference)}&userId=${userId}`
         );
         const data = await res.json();
         if (data.found && data.session) {

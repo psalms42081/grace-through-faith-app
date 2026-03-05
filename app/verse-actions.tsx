@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useProStatus } from "@/contexts/ProContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function VerseActionsSheet() {
   const { bookId, chapter, verse, text, bookName, verseId, translation } =
@@ -29,6 +30,7 @@ export default function VerseActionsSheet() {
       translation: string;
     }>();
   const { theme, isDark } = useTheme();
+  const { userId } = useAuth();
   const insets = useSafeAreaInsets();
 
   const { isPro, showProGate } = useProStatus();
@@ -117,11 +119,11 @@ export default function VerseActionsSheet() {
   const handleHighlight = useCallback(async () => {
     try {
       await apiRequest("POST", "/api/highlights", {
-        userId: "guest",
+        userId,
         verseId: verseId || `${bookId}_${chapter}_${verse}`,
         color: "yellow",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/highlights/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       setFeedbackMsg("Highlighted!");
       setTimeout(() => router.back(), 600);
     } catch {
@@ -136,11 +138,11 @@ export default function VerseActionsSheet() {
   const handleBookmark = useCallback(async () => {
     try {
       await apiRequest("POST", "/api/bookmarks", {
-        userId: "guest",
+        userId,
         verseId: verseId || `${bookId}_${chapter}_${verse}`,
         label: reference,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks/guest"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       setFeedbackMsg("Bookmarked!");
       setTimeout(() => router.back(), 600);
     } catch {
