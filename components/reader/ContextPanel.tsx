@@ -99,7 +99,7 @@ export default function ContextPanel({
         style={[contextStyles.fab, { backgroundColor: isDark ? "#1A1F3C" : "#EDE5D5" }, fabAnimStyle]}
         testID="context-panel-toggle"
       >
-        <Ionicons name="compass" size={22} color={theme.accent} />
+        <Ionicons name="layers" size={22} color={theme.accent} />
       </AnimatedPressable>
     );
   }
@@ -114,9 +114,9 @@ export default function ContextPanel({
   return (
     <View style={[contextStyles.panel, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
       <View style={contextStyles.panelHeader}>
-        <Ionicons name="compass" size={18} color={theme.accent} />
+        <Ionicons name="layers" size={18} color={theme.accent} />
         <Text style={[contextStyles.panelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          4D Scripture
+          Chapter Insights
         </Text>
         <Pressable
           onPress={() => setExpanded(false)}

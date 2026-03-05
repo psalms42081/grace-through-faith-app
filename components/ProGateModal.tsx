@@ -14,7 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 const PRO_BENEFITS = [
   { icon: "school-outline" as const, title: "Socratic Study Guide", desc: "AI-guided inductive Bible study" },
-  { icon: "compass-outline" as const, title: "4D Scripture Context", desc: "Locations, timeline, figures & culture" },
+  { icon: "layers-outline" as const, title: "Chapter Insights", desc: "Locations, timeline, figures & culture" },
   { icon: "map-outline" as const, title: "Visual Verse Mapper", desc: "Cross-references & original language" },
   { icon: "language-outline" as const, title: "Greek & Hebrew Deep Dive", desc: "Full Strong's word analysis" },
   { icon: "share-social-outline" as const, title: "Share Insight Cards", desc: "Premium shareable study cards" },
