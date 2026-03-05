@@ -585,6 +585,10 @@ router.post("/api/groups/:id/announcement", async (req, res) => {
       const userLng = parseFloat(lng);
       const radiusKm = parseFloat(radius || "100");
 
+      if (isNaN(userLat) || isNaN(userLng) || isNaN(radiusKm)) {
+        return res.status(400).json({ error: "Invalid lat, lng, or radius values" });
+      }
+
       const toRad = (deg: number) => (deg * Math.PI) / 180;
       const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371;

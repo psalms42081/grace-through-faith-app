@@ -855,13 +855,21 @@ const GLOBAL_CHURCHES: ChurchSeed[] = [
 
 export async function seedGlobalChurches() {
   try {
-    const existing = await db.select({ id: sdaChurches.id }).from(sdaChurches).limit(1);
-    if (existing.length > 0) {
-      console.log(`Churches already seeded (${existing.length}+ rows). Skipping.`);
+    const existing = await db.select({ name: sdaChurches.name, country: sdaChurches.country }).from(sdaChurches);
+    const existingKeys = new Set(
+      existing.map((c) => `${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
+    );
+
+    const newChurches = GLOBAL_CHURCHES.filter(
+      (c) => !existingKeys.has(`${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
+    );
+
+    if (newChurches.length === 0) {
+      console.log(`All ${GLOBAL_CHURCHES.length} global churches already present.`);
       return;
     }
 
-    const values = GLOBAL_CHURCHES.map((c) => ({
+    const values = newChurches.map((c) => ({
       name: c.name,
       address: c.address,
       city: c.city,
@@ -878,7 +886,7 @@ export async function seedGlobalChurches() {
     }));
 
     await db.insert(sdaChurches).values(values);
-    console.log(`Seeded ${values.length} global SDA churches across ${new Set(GLOBAL_CHURCHES.map(c => c.country)).size} countries.`);
+    console.log(`Seeded ${newChurches.length} new churches (${existing.length + newChurches.length} total).`);
   } catch (err) {
     console.error("Error seeding churches:", err);
   }

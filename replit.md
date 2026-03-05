@@ -36,7 +36,7 @@ The application is built with a mobile-first architecture. The frontend uses **E
 - **Sabbath Experience Mode:** Detects Sabbath hours using astronomical sunset calculations and provides a specialized home screen banner, reflection prompts, and worship pathways.
 - **Small Groups 2.0:** An enhanced system for SDA small groups with various types, member roles, discussions, and announcements.
 - **Live Streaming:** Integrates Jitsi Meet via WebView for live streaming sessions, supporting group and church streams.
-- **Church Connect:** An SDA church finder with geo-radius search and map/list views.
+- **Church Connect:** A global SDA church finder with 68 churches across 40 countries, geo-radius search (Haversine), text search by city/state/country, and map/list views. Seeded via `scripts/seed-global-churches.ts` on server startup with case-insensitive dedup. DB has a unique index on `LOWER(name), LOWER(country)` to prevent duplicates.
 - **Internationalization (i18n):** A comprehensive UI language system using `i18next` and `react-i18next` for multiple locales. A content translation architecture is also in place, using overlay tables for localized lesson content, with English as the canonical base.
 
 ## External Dependencies

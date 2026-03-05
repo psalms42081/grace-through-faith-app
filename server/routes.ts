@@ -8,6 +8,7 @@ import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
 import { seedBeliefsWave2 } from "./seed-beliefs-wave2";
 import { seedBeliefsWave3 } from "./seed-beliefs-wave3";
 import { seedBeliefsWave4 } from "./seed-beliefs-wave4";
+import { seedGlobalChurches } from "../scripts/seed-global-churches";
 
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -48,6 +49,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   seedBeliefsWave4(db).catch((err) => {
     console.error("Wave 4 beliefs seed error:", err);
+  });
+
+  seedGlobalChurches().catch((err) => {
+    console.error("Global churches seed error:", err);
   });
 
   app.use(authRoutes);
