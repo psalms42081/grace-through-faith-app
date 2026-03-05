@@ -56,7 +56,7 @@ export async function generateStrongWordStudy(params: {
         role: "user",
         content: `Analyze ${bookName} ${chapter}:${verse} (KJV): "${verseText}"
 
-Pick the 4-6 most theologically significant words. For each, return Strong's-style data. Return a JSON array:
+Analyze EVERY significant word in this verse (skip only articles like "the", "a", "an" and basic prepositions like "of", "to", "in", "for"). For each word, return Strong's-style data. Return a JSON array:
 [
   {
     "strongId": "${langCode === "he" ? "H" : "G"}XXXX",
@@ -74,7 +74,7 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
       },
     ],
     temperature: 0.5,
-    max_tokens: 1200,
+    max_tokens: 3000,
   });
 
   const raw = completion.choices[0]?.message?.content ?? "[]";

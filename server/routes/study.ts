@@ -94,7 +94,15 @@ router.get("/api/strong/verse/:verseId", async (req, res) => {
       .where(eq(verseStrongMaps.verseId, String(req.params.verseId)))
       .orderBy(verseStrongMaps.wordPosition);
 
-    return res.json(maps);
+    const seen = new Set<string>();
+    const deduped = maps.filter((row) => {
+      const key = `${row.map.strongId}-${row.map.wordPosition}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return res.json(deduped);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -116,7 +124,14 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
       .orderBy(verseStrongMaps.wordPosition);
 
     if (existing.length > 0) {
-      return res.json(existing);
+      const seen = new Set<string>();
+      const deduped = existing.filter((row) => {
+        const key = `${row.map.strongId}-${row.map.wordPosition}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return res.json(deduped);
     }
 
     let parsed: any[];
@@ -129,24 +144,25 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
     const langCode = (bookName && ["Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter","1 John","2 John","3 John","Jude","Revelation"].includes(bookName)) ? "gr" : "he";
 
     const results: any[] = [];
+    const insertedKeys = new Set<string>();
 
     for (let i = 0; i < parsed.length; i++) {
       const w = parsed[i];
       const sid = w.strongId || `${langCode === "he" ? "H" : "G"}${9000 + i}`;
+      const mapKey = `${verseId}-${sid}-${i + 1}`;
 
-      const existingEntry = await db.select().from(strongEntries).where(eq(strongEntries.id, sid)).limit(1);
+      if (insertedKeys.has(mapKey)) continue;
+      insertedKeys.add(mapKey);
 
-      if (existingEntry.length === 0) {
-        await db.insert(strongEntries).values({
-          id: sid,
-          language: langCode,
-          lemma: w.lemma || w.originalWord || "",
-          transliteration: w.transliteration || null,
-          pronunciation: w.pronunciation || null,
-          definition: w.definition || "",
-          kjvUsage: w.kjvUsage || null,
-        }).onConflictDoNothing();
-      }
+      await db.insert(strongEntries).values({
+        id: sid,
+        language: langCode,
+        lemma: w.lemma || w.originalWord || "",
+        transliteration: w.transliteration || null,
+        pronunciation: w.pronunciation || null,
+        definition: w.definition || "",
+        kjvUsage: w.kjvUsage || null,
+      }).onConflictDoNothing();
 
       const [mapEntry] = await db.insert(verseStrongMaps).values({
         verseId,
@@ -156,7 +172,7 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
         translatedWord: w.translatedWord || null,
       }).returning();
 
-      const entry = existingEntry.length > 0 ? existingEntry[0] : (await db.select().from(strongEntries).where(eq(strongEntries.id, sid)).limit(1))[0];
+      const entry = (await db.select().from(strongEntries).where(eq(strongEntries.id, sid)).limit(1))[0];
 
       results.push({ map: mapEntry, entry });
     }
@@ -845,14 +861,23 @@ router.get("/api/verse-map/:verseId", checkProStatus, async (req, res) => {
   try {
     const verseId = String(req.params.verseId);
 
-    const words = await db
+    const rawWords = await db
       .select({
         map: verseStrongMaps,
         entry: strongEntries,
       })
       .from(verseStrongMaps)
       .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
-      .where(eq(verseStrongMaps.verseId, verseId));
+      .where(eq(verseStrongMaps.verseId, verseId))
+      .orderBy(verseStrongMaps.wordPosition);
+
+    const seen = new Set<string>();
+    const words = rawWords.filter((row) => {
+      const key = `${row.map.strongId}-${row.map.wordPosition}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     const [cached] = await db.select().from(verseMapCache)
       .where(eq(verseMapCache.verseId, String(verseId))).limit(1);
