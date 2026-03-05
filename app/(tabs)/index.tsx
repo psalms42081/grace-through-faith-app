@@ -1416,30 +1416,6 @@ function AdultHomeScreen() {
   const worshipPathwaysSection = (
     <>
       <LiveNowSection theme={theme} isDark={isDark} />
-
-      <View style={s.hubSection}>
-        <Text style={[s.hubTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          {isSabbathMode ? "Worship Pathways" : "SDA Hub"}
-        </Text>
-      </View>
-
-      <Pressable
-        onPress={() => router.push("/study-paths" as any)}
-        style={({ pressed }) => [s.hubCardWide, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-      >
-        <View style={[s.hubIconWrap, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
-          <Ionicons name="school" size={22} color="#7C3AED" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Study Paths
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Explore formation pathways
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-      </Pressable>
     </>
   );
 
@@ -1783,46 +1759,5 @@ const s = StyleSheet.create({
   devotionalProgressFill: {
     height: 6,
     borderRadius: 3,
-  },
-  hubSection: {
-    marginBottom: 16,
-  },
-  hubTitle: {
-    fontSize: 20,
-    letterSpacing: -0.3,
-  },
-  hubIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  hubCardTitle: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  hubCardSub: {
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  hubBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginTop: 4,
-  },
-  hubBadgeText: {
-    fontSize: 10,
-  },
-  hubCardWide: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 16,
-    gap: 14,
-    marginBottom: 20,
   },
 });
