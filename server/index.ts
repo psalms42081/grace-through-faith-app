@@ -13,6 +13,17 @@ declare module "http" {
   }
 }
 
+function setupCacheControl(app: express.Application) {
+  app.use((_req, res, next) => {
+    if (process.env.NODE_ENV === "development") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+    next();
+  });
+}
+
 function setupCors(app: express.Application) {
   app.use((req, res, next) => {
     const origins = new Set<string>();
@@ -247,6 +258,7 @@ function setupErrorHandler(app: express.Application) {
 }
 
 (async () => {
+  setupCacheControl(app);
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
