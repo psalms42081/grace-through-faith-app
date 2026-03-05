@@ -285,7 +285,7 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
   useEffect(() => {
     if (isLoaded && !hasSeenTutorial(tutorialId)) {
       setCurrentStep(0);
-      flatListRef.current?.scrollToIndex({ index: 0, animated: false }).catch(() => {});
+      try { flatListRef.current?.scrollToIndex({ index: 0, animated: false }); } catch {}
       const timer = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(timer);
     }
