@@ -578,14 +578,17 @@ router.post("/api/groups/:id/announcement", async (req, res) => {
     const hasTextSearch = !!city;
 
     if (hasTextSearch) {
-      const q = city!.toLowerCase();
-      allChurches = allChurches.filter(c =>
-        c.city.toLowerCase().includes(q) ||
-        (c.state || "").toLowerCase().includes(q) ||
-        c.country.toLowerCase().includes(q) ||
-        c.name.toLowerCase().includes(q) ||
-        c.address.toLowerCase().includes(q)
-      );
+      const words = city!.toLowerCase().split(/\s+/).filter(Boolean);
+      allChurches = allChurches.filter(c => {
+        const fields = [
+          c.city.toLowerCase(),
+          (c.state || "").toLowerCase(),
+          c.country.toLowerCase(),
+          c.name.toLowerCase(),
+          c.address.toLowerCase(),
+        ].join(" ");
+        return words.every(w => fields.includes(w));
+      });
     }
 
     if (lat && lng) {
