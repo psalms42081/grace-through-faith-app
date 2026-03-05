@@ -285,12 +285,17 @@ export default function useBibleAudio(
       }
 
       const { audioId } = await prepareRes.json();
+      console.log("[TTS speakVerseAI] Prepare succeeded, audioId:", audioId);
 
-      if (session !== sessionRef.current) return;
+      if (session !== sessionRef.current) {
+        console.log("[TTS speakVerseAI] Session invalidated after prepare, aborting. session:", session, "current:", sessionRef.current);
+        return;
+      }
 
       cleanupPlayer();
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
+      console.log("[TTS speakVerseAI] Creating player with URI:", audioUri);
 
       const player = createAudioPlayer({ uri: audioUri });
       player.playbackRate = speechRateRef.current;
@@ -299,15 +304,35 @@ export default function useBibleAudio(
       setIsLoadingAudio(false);
       setSpeakingVerseIndex(batchEnd - 1);
 
-      await new Promise<void>((resolve) => {
+      const playFinished = await new Promise<boolean>((resolve) => {
+        let resolved = false;
         const subscription = player.addListener("playbackStatusUpdate", (status: any) => {
+          if (!resolved && status.playing) {
+            console.log("[TTS speakVerseAI] Audio is playing");
+          }
           if (status.didJustFinish) {
+            resolved = true;
             subscription.remove();
-            resolve();
+            resolve(true);
           }
         });
+
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            console.log("[TTS speakVerseAI] Audio playback timed out after 30s, falling back");
+            resolved = true;
+            subscription.remove();
+            resolve(false);
+          }
+        }, 30000);
+
         player.play();
+        console.log("[TTS speakVerseAI] player.play() called");
       });
+
+      if (!playFinished) {
+        throw new Error("Audio playback timed out");
+      }
 
       if (session === sessionRef.current) {
         cleanupPlayer();
