@@ -9,17 +9,16 @@ import { getApiUrl } from "@/lib/query-client";
 import { useAudioContext } from "@/contexts/AudioContext";
 
 const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
-const VOICE_ID_STORAGE_KEY = "@grace-through-faith/tts-voice-id";
-
 const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
 const AI_VOICE_OPTIONS = [
-  { id: "nova", label: "Nova", description: "Warm, expressive", gender: "female" },
-  { id: "shimmer", label: "Shimmer", description: "Gentle, clear", gender: "female" },
-  { id: "alloy", label: "Alloy", description: "Balanced, neutral", gender: "neutral" },
-  { id: "echo", label: "Echo", description: "Smooth, measured", gender: "male" },
-  { id: "fable", label: "Fable", description: "Rich, storytelling", gender: "male" },
-  { id: "onyx", label: "Onyx", description: "Deep, authoritative", gender: "male" },
+  { id: "george", label: "George", description: "Warm, captivating British storyteller", gender: "male" },
+  { id: "daniel", label: "Daniel", description: "Steady, authoritative British broadcaster", gender: "male" },
+  { id: "brian", label: "Brian", description: "Deep, resonant, comforting", gender: "male" },
+  { id: "callum", label: "Callum", description: "Husky, American", gender: "male" },
+  { id: "sarah", label: "Sarah", description: "Mature, reassuring, confident", gender: "female" },
+  { id: "lily", label: "Lily", description: "Velvety, British actress", gender: "female" },
+  { id: "alice", label: "Alice", description: "Clear, engaging British educator", gender: "female" },
 ] as const;
 
 export type AIVoiceId = (typeof AI_VOICE_OPTIONS)[number]["id"];
@@ -80,7 +79,7 @@ export default function useBibleAudio(
   const [speechRate, setSpeechRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState("nova");
+  const [selectedVoice, setSelectedVoice] = useState("george");
   const [selectedDeviceVoiceId, setSelectedDeviceVoiceId] = useState<string | null>(null);
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoice[]>([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -91,7 +90,7 @@ export default function useBibleAudio(
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
   const playerRef = useRef<AudioPlayer | null>(null);
-  const selectedVoiceRef = useRef("nova");
+  const selectedVoiceRef = useRef("george");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
 
@@ -105,36 +104,12 @@ export default function useBibleAudio(
   }, [verses]);
 
   useEffect(() => {
-    if (isMobile) {
-      Speech.getAvailableVoicesAsync().then((voices) => {
-        const englishVoices = voices
-          .filter((v) => v.language.startsWith("en"))
-          .map((v) => ({
-            identifier: v.identifier,
-            name: v.name,
-            language: v.language,
-            quality: (v as any).quality || "Default",
-          }));
-        setDeviceVoices(englishVoices);
-      }).catch(() => {});
-
-      AsyncStorage.getItem(VOICE_ID_STORAGE_KEY).then((saved) => {
-        if (saved) {
-          setSelectedDeviceVoiceId(saved);
-          selectedDeviceVoiceIdRef.current = saved;
-          const shortName = saved.split(".").pop()?.split("-")[0] || saved;
-          setSelectedVoice(shortName);
-          selectedVoiceRef.current = shortName;
-        }
-      }).catch(() => {});
-    } else {
-      AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
-        if (saved && AI_VOICE_OPTIONS.some((v) => v.id === saved)) {
-          setSelectedVoice(saved);
-          selectedVoiceRef.current = saved;
-        }
-      }).catch(() => {});
-    }
+    AsyncStorage.getItem(VOICE_STORAGE_KEY).then((saved) => {
+      if (saved && AI_VOICE_OPTIONS.some((v) => v.id === saved)) {
+        setSelectedVoice(saved);
+        selectedVoiceRef.current = saved;
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -372,7 +347,7 @@ export default function useBibleAudio(
     if (isPaused && currentIndexRef.current >= 0) {
       setIsPaused(false);
       setIsSpeaking(true);
-      if (isMobile || usingFallback) {
+      if (usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
         speakVerseAI(currentIndexRef.current, sessionRef.current);
@@ -383,13 +358,8 @@ export default function useBibleAudio(
     const session = ++sessionRef.current;
     setIsSpeaking(true);
     setIsPaused(false);
-    if (isMobile) {
-      setUsingFallback(true);
-      speakVerseFallback(0, session);
-    } else {
-      setUsingFallback(false);
-      speakVerseAI(0, session);
-    }
+    setUsingFallback(false);
+    speakVerseAI(0, session);
   }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation, audioCtx]);
 
   const handlePause = useCallback(() => {
@@ -423,7 +393,7 @@ export default function useBibleAudio(
     if (isSpeaking && currentIndexRef.current >= 0) {
       Speech.stop();
       cleanupPlayer();
-      if (isMobile || usingFallback) {
+      if (usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
         speakVerseAI(currentIndexRef.current, sessionRef.current);
@@ -433,34 +403,23 @@ export default function useBibleAudio(
 
   const handleVoiceChange = useCallback((voiceId: string, deviceVoiceIdentifier?: string) => {
     setShowVoicePicker(false);
-    if (isMobile && deviceVoiceIdentifier) {
-      selectedDeviceVoiceIdRef.current = deviceVoiceIdentifier;
-      setSelectedDeviceVoiceId(deviceVoiceIdentifier);
-      setSelectedVoice(voiceId);
-      selectedVoiceRef.current = voiceId;
-      AsyncStorage.setItem(VOICE_ID_STORAGE_KEY, deviceVoiceIdentifier).catch(() => {});
-      AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
-    } else {
-      selectedVoiceRef.current = voiceId;
-      setSelectedVoice(voiceId);
-      AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
-    }
+    selectedVoiceRef.current = voiceId;
+    setSelectedVoice(voiceId);
+    AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
     if (isSpeaking && currentIndexRef.current >= 0) {
       Speech.stop();
       cleanupPlayer();
-      if (isMobile) {
+      if (usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else {
         speakVerseAI(currentIndexRef.current, sessionRef.current);
       }
     }
-  }, [isSpeaking, speakVerseAI, speakVerseFallback, cleanupPlayer]);
+  }, [isSpeaking, usingFallback, speakVerseAI, speakVerseFallback, cleanupPlayer]);
 
   const isActive = isSpeaking || isPaused;
 
-  const currentVoiceLabel = isMobile
-    ? (selectedVoice || "Default")
-    : (AI_VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Nova");
+  const currentVoiceLabel = AI_VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "George";
 
   return {
     isSpeaking,

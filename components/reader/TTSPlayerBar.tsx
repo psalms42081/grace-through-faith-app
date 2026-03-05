@@ -6,14 +6,11 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { AI_VOICE_OPTIONS, SPEED_OPTIONS } from "@/hooks/useBibleAudio";
-import type { DeviceVoice, UseBibleAudioReturn } from "@/hooks/useBibleAudio";
-
-const isMobile = Platform.OS === "ios" || Platform.OS === "android";
+import type { UseBibleAudioReturn } from "@/hooks/useBibleAudio";
 
 interface Verse {
   id: string;
@@ -60,98 +57,50 @@ export default function TTSPlayerBar({
       {audio.showVoicePicker && (
         <View style={[styles.voicePopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
           <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-            {isMobile ? (
-              <>
-                {audio.deviceVoices.length === 0 ? (
-                  <View style={{ padding: 16, alignItems: "center" as const }}>
-                    <ActivityIndicator size="small" color={theme.accent} />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 8 }}>
-                      Loading device voices...
-                    </Text>
-                  </View>
-                ) : (
-                  audio.deviceVoices.map((dv: DeviceVoice) => {
-                    const isSelected = audio.selectedDeviceVoiceId === dv.identifier;
-                    return (
-                      <Pressable
-                        key={dv.identifier}
-                        onPress={() => audio.handleVoiceChange(dv.name, dv.identifier)}
-                        style={[
-                          styles.voiceOption,
-                          isSelected && { backgroundColor: theme.accent + "15" },
-                        ]}
-                      >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                          <Ionicons
-                            name={isSelected ? "radio-button-on" : "radio-button-off"}
-                            size={18}
-                            color={isSelected ? theme.accent : theme.textMuted}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={[
-                              styles.voiceOptionLabel,
-                              {
-                                color: isSelected ? theme.accent : theme.text,
-                                fontFamily: isSelected ? "Inter_700Bold" : "Inter_500Medium",
-                              },
-                            ]} numberOfLines={1}>
-                              {dv.name}
-                            </Text>
-                            <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 }} numberOfLines={1}>
-                              {dv.language}
-                            </Text>
-                          </View>
+            {(["female", "male"] as const).map((gender) => {
+              const voices = AI_VOICE_OPTIONS.filter((v) => v.gender === gender);
+              if (voices.length === 0) return null;
+              const sectionLabel = gender === "female" ? "Female Voices" : "Male Voices";
+              return (
+                <View key={gender}>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 4, textTransform: "uppercase" }}>
+                    {sectionLabel}
+                  </Text>
+                  {voices.map((v) => (
+                    <Pressable
+                      key={v.id}
+                      onPress={() => audio.handleVoiceChange(v.id)}
+                      style={[
+                        styles.voiceOption,
+                        audio.selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
+                      ]}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                        <Ionicons
+                          name={audio.selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                          size={18}
+                          color={audio.selectedVoice === v.id ? theme.accent : theme.textMuted}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[
+                            styles.voiceOptionLabel,
+                            {
+                              color: audio.selectedVoice === v.id ? theme.accent : theme.text,
+                              fontFamily: audio.selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                            },
+                          ]}>
+                            {v.label}
+                          </Text>
+                          <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                            {v.description}
+                          </Text>
                         </View>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </>
-            ) : (
-              (["female", "neutral", "male"] as const).map((gender) => {
-                const voices = AI_VOICE_OPTIONS.filter((v) => v.gender === gender);
-                const sectionLabel = gender === "female" ? "Female Voices" : gender === "male" ? "Male Voices" : "Neutral";
-                return (
-                  <View key={gender}>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: gender === "female" ? 8 : 14, paddingBottom: 4, textTransform: "uppercase" }}>
-                      {sectionLabel}
-                    </Text>
-                    {voices.map((v) => (
-                      <Pressable
-                        key={v.id}
-                        onPress={() => audio.handleVoiceChange(v.id)}
-                        style={[
-                          styles.voiceOption,
-                          audio.selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
-                        ]}
-                      >
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                          <Ionicons
-                            name={audio.selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
-                            size={18}
-                            color={audio.selectedVoice === v.id ? theme.accent : theme.textMuted}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={[
-                              styles.voiceOptionLabel,
-                              {
-                                color: audio.selectedVoice === v.id ? theme.accent : theme.text,
-                                fontFamily: audio.selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                              },
-                            ]}>
-                              {v.label}
-                            </Text>
-                            <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-                              {v.description}
-                            </Text>
-                          </View>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </View>
-                );
-              })
-            )}
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })}
           </ScrollView>
         </View>
       )}

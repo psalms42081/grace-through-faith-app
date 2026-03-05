@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { textToSpeech, isValidVoice } from "../openai-tts";
+import { textToSpeech, isValidVoice } from "../elevenlabs-tts";
 import { ttsLimiter } from "../middleware/rate-limit";
 
 const router = Router();
 
 router.post("/api/tts", ttsLimiter, async (req, res) => {
   try {
-    const { text, voice = "nova" } = req.body;
+    const { text, voice = "george" } = req.body;
     if (!text || typeof text !== "string") {
       return res.status(400).json({ error: "text is required" });
     }
-    const selectedVoice = isValidVoice(voice) ? voice : "nova";
+    const selectedVoice = isValidVoice(voice) ? voice : "george";
     console.log(`[TTS Route] voice param="${voice}" → selected="${selectedVoice}"`);
     const audioBuffer = await textToSpeech(text, selectedVoice, "mp3");
     res.set({
