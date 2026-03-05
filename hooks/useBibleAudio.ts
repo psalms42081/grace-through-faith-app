@@ -388,6 +388,13 @@ export default function useBibleAudio(
       setIsSpeaking(true);
       if (usingFallback) {
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
+      } else if (playerRef.current) {
+        try {
+          playerRef.current.play();
+          console.log("[TTS handlePlay] Resumed existing player");
+        } catch {
+          speakVerseAI(currentIndexRef.current, sessionRef.current);
+        }
       } else {
         speakVerseAI(currentIndexRef.current, sessionRef.current);
       }
