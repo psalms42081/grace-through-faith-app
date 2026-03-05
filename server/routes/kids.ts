@@ -577,6 +577,52 @@ router.post("/api/kids/scene/:id/generate-image", async (req, res) => {
   }
 });
 
+router.post("/api/kids/scene/:id/attach-video", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { videoUrl, timecodes } = req.body;
+    if (!videoUrl) return res.status(400).json({ error: "videoUrl is required" });
+
+    const scene = await db
+      .select()
+      .from(kidsStoryScenes)
+      .where(eq(kidsStoryScenes.id, id))
+      .limit(1);
+
+    if (!scene.length) return res.status(404).json({ error: "Scene not found" });
+
+    let videoTimecodes = timecodes || null;
+    if (!videoTimecodes && scene[0].narration) {
+      const sentences = scene[0].narration.match(/[^.!?]+[.!?]+/g) || [scene[0].narration];
+      const totalWords = scene[0].narration.split(/\s+/).length;
+      const estimatedDurationMs = totalWords * 350;
+      let currentMs = 0;
+      const segments = sentences.map((sentence) => {
+        const sentenceWords = sentence.trim().split(/\s+/).length;
+        const segmentDuration = (sentenceWords / totalWords) * estimatedDurationMs;
+        const segment = {
+          startMs: Math.round(currentMs),
+          endMs: Math.round(currentMs + segmentDuration),
+          text: sentence.trim(),
+        };
+        currentMs += segmentDuration;
+        return segment;
+      });
+      videoTimecodes = { segments };
+    }
+
+    await db
+      .update(kidsStoryScenes)
+      .set({ videoUrl, videoTimecodes: videoTimecodes })
+      .where(eq(kidsStoryScenes.id, id));
+
+    return res.json({ success: true, videoUrl, videoTimecodes });
+  } catch (err) {
+    console.error("Attach video error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/kids/audio-assets", (_req, res) => {
   res.json({
     AWE: {

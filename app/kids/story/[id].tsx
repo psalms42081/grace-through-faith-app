@@ -35,6 +35,7 @@ import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, setIsAudioActiveAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -44,6 +45,12 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
 
+interface VideoTimecodeSegment {
+  startMs: number;
+  endMs: number;
+  text: string;
+}
+
 interface StoryScene {
   id: string;
   storyId: string;
@@ -51,6 +58,8 @@ interface StoryScene {
   narration: string;
   illustrationPrompt: string;
   imageUrl: string | null;
+  videoUrl: string | null;
+  videoTimecodes: { segments: VideoTimecodeSegment[] } | null;
   mood: SceneMood;
   pauseAndWonder: {
     question: string;
@@ -994,6 +1003,336 @@ const kenBurnsStyles = StyleSheet.create({
   },
 });
 
+const VIDEO_HEIGHT = SCREEN_HEIGHT * 0.45;
+
+function VideoStoryPlayer({
+  videoUrl,
+  timecodes,
+  narration,
+  isActive,
+  mood,
+  theme,
+  isLittleLambs,
+  onVideoEnd,
+}: {
+  videoUrl: string;
+  timecodes: { segments: VideoTimecodeSegment[] } | null;
+  narration: string;
+  isActive: boolean;
+  mood: SceneMood;
+  theme: any;
+  isLittleLambs: boolean;
+  onVideoEnd?: () => void;
+}) {
+  const videoRef = useRef<Video>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const rawSegments = useMemo(() => {
+    if (timecodes?.segments?.length) return timecodes.segments;
+    const sentences = narration.match(/[^.!?]+[.!?]+/g) || [narration];
+    const totalWords = narration.split(/\s+/).length;
+    const estimatedDurationMs = totalWords * 350;
+    let currentMs = 0;
+    return sentences.map((sentence) => {
+      const sentenceWords = sentence.trim().split(/\s+/).length;
+      const segmentDuration = (sentenceWords / totalWords) * estimatedDurationMs;
+      const segment = {
+        startMs: Math.round(currentMs),
+        endMs: Math.round(currentMs + segmentDuration),
+        text: sentence.trim(),
+      };
+      currentMs += segmentDuration;
+      return segment;
+    });
+  }, [timecodes, narration]);
+
+  const segments = useMemo(() => {
+    if (!duration || !rawSegments.length) return rawSegments;
+    const lastEnd = rawSegments[rawSegments.length - 1].endMs;
+    if (lastEnd <= 0) return rawSegments;
+    const scale = duration / lastEnd;
+    if (Math.abs(scale - 1) < 0.05) return rawSegments;
+    return rawSegments.map((s) => ({
+      ...s,
+      startMs: Math.round(s.startMs * scale),
+      endMs: Math.round(s.endMs * scale),
+    }));
+  }, [rawSegments, duration]);
+
+  const currentSegmentIndex = useMemo(() => {
+    if (!isPlaying) return -1;
+    return segments.findIndex(
+      (s) => currentTimeMs >= s.startMs && currentTimeMs < s.endMs
+    );
+  }, [currentTimeMs, segments, isPlaying]);
+
+  const progressPercent = useMemo(() => {
+    if (!duration) return 0;
+    return Math.min(100, (currentTimeMs / duration) * 100);
+  }, [currentTimeMs, duration]);
+
+  useEffect(() => {
+    if (isActive && videoRef.current && isLoaded && !hasError) {
+      videoRef.current.playAsync();
+      setIsPlaying(true);
+    } else if (!isActive && videoRef.current) {
+      videoRef.current.pauseAsync();
+      setIsPlaying(false);
+    }
+  }, [isActive, isLoaded, hasError]);
+
+  const handlePlaybackStatus = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) {
+      if ((status as any).error) {
+        setHasError(true);
+      }
+      return;
+    }
+    setCurrentTimeMs(status.positionMillis || 0);
+    setDuration(status.durationMillis || 0);
+    setIsPlaying(status.isPlaying);
+    if (!isLoaded) setIsLoaded(true);
+    if (status.didJustFinish) {
+      setIsPlaying(false);
+      onVideoEnd?.();
+    }
+  };
+
+  const togglePlayPause = async () => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      await videoRef.current.pauseAsync();
+    } else {
+      await videoRef.current.playAsync();
+    }
+  };
+
+  const replayVideo = async () => {
+    if (!videoRef.current) return;
+    setHasError(false);
+    await videoRef.current.setPositionAsync(0);
+    await videoRef.current.playAsync();
+  };
+
+  const moodColors = MOOD_PARTICLES[mood]?.colors || ["#A78BFA"];
+  const fontSize = isLittleLambs ? 20 : 18;
+
+  return (
+    <View style={videoStyles.container}>
+      <View style={videoStyles.videoArea}>
+        <Video
+          ref={videoRef}
+          source={{ uri: videoUrl }}
+          style={videoStyles.video}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay={false}
+          isLooping={false}
+          onPlaybackStatusUpdate={handlePlaybackStatus}
+          isMuted={false}
+        />
+
+        {hasError && (
+          <View style={videoStyles.loadingOverlay}>
+            <Ionicons name="alert-circle" size={40} color="#FF6B6B" />
+            <Text style={videoStyles.loadingText}>Video unavailable</Text>
+            <Pressable onPress={replayVideo} style={[videoStyles.playPauseBtn, { marginTop: 8 }]}>
+              <Ionicons name="refresh" size={22} color="#fff" />
+            </Pressable>
+          </View>
+        )}
+
+        {!isLoaded && !hasError && (
+          <View style={videoStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={moodColors[0]} />
+            <Text style={videoStyles.loadingText}>Loading video...</Text>
+          </View>
+        )}
+
+        <View style={videoStyles.controlsOverlay}>
+          <Pressable onPress={togglePlayPause} style={videoStyles.playPauseBtn}>
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={28}
+              color="#fff"
+            />
+          </Pressable>
+        </View>
+
+        <View style={videoStyles.progressBarContainer}>
+          <View
+            style={[
+              videoStyles.progressBar,
+              { width: `${progressPercent}%`, backgroundColor: moodColors[0] },
+            ]}
+          />
+        </View>
+
+        <View style={videoStyles.cinemaBadge}>
+          <Ionicons name="videocam" size={12} color={moodColors[0]} />
+          <Text style={[videoStyles.cinemaBadgeText, { color: moodColors[0] }]}>
+            Cinema
+          </Text>
+        </View>
+      </View>
+
+      <View style={videoStyles.textArea}>
+        <View style={videoStyles.syncedTextContainer}>
+          {segments.map((segment, i) => {
+            const isCurrentSegment = i === currentSegmentIndex;
+            const isPastSegment = i < currentSegmentIndex;
+
+            return (
+              <Animated.Text
+                key={i}
+                style={[
+                  videoStyles.segmentText,
+                  {
+                    fontSize,
+                    lineHeight: fontSize * 1.7,
+                    color: isCurrentSegment
+                      ? "#FFD700"
+                      : isPastSegment
+                      ? "rgba(255,255,255,0.55)"
+                      : isPlaying
+                      ? "rgba(255,255,255,0.35)"
+                      : "rgba(255,255,255,0.85)",
+                    fontWeight: isCurrentSegment
+                      ? ("700" as const)
+                      : ("400" as const),
+                    backgroundColor: isCurrentSegment
+                      ? "rgba(255,215,0,0.1)"
+                      : "transparent",
+                  },
+                ]}
+              >
+                {segment.text}{" "}
+              </Animated.Text>
+            );
+          })}
+        </View>
+
+        {!isPlaying && isLoaded && currentTimeMs > 0 && duration > 0 && currentTimeMs >= duration - 500 && (
+          <Pressable onPress={replayVideo} style={[videoStyles.replayBtn, { backgroundColor: moodColors[0] }]}>
+            <Ionicons name="refresh" size={16} color="#fff" />
+            <Text style={videoStyles.replayBtnText}>Watch Again</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const videoStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  videoArea: {
+    height: VIDEO_HEIGHT,
+    backgroundColor: "#000",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: "hidden",
+    position: "relative",
+  },
+  video: {
+    width: "100%",
+    height: "100%",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  controlsOverlay: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  playPauseBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  progressBarContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  cinemaBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  cinemaBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  textArea: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    justifyContent: "center",
+  },
+  syncedTextContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  segmentText: {
+    fontFamily: "Lora_400Regular",
+    textAlign: "center",
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    borderRadius: 4,
+  },
+  replayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    alignSelf: "center",
+    marginTop: 16,
+  },
+  replayBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
 const illustrationStyles = StyleSheet.create({
   image: {
     width: ILLUSTRATION_WIDTH,
@@ -1305,6 +1644,7 @@ export default function SceneStoryScreen() {
   const startNarration = useCallback((sceneIdx: number) => {
     const scene = scenes[sceneIdx];
     if (!scene) return;
+    if (scene.videoUrl) return;
 
     const words = scene.narration.split(/\s+/);
     setIsSpeaking(true);
@@ -1492,6 +1832,8 @@ export default function SceneStoryScreen() {
       const palette = SCENE_GRADIENT_PALETTES[index % SCENE_GRADIENT_PALETTES.length];
       const isLastScene = index === scenes.length - 1;
 
+      const hasVideo = !!item.videoUrl;
+
       return (
         <View style={[styles.scenePage, { width: SCREEN_WIDTH }]}>
           <LinearGradient
@@ -1506,6 +1848,26 @@ export default function SceneStoryScreen() {
             isActive={index === currentScene && !quietMode}
           />
 
+          {hasVideo ? (
+            <View style={[styles.sceneContent, { paddingTop: topPad }]}>
+              <VideoStoryPlayer
+                videoUrl={item.videoUrl!.startsWith("http") ? item.videoUrl! : `${baseUrl}${item.videoUrl!}`}
+                timecodes={item.videoTimecodes}
+                narration={item.narration}
+                isActive={index === currentScene}
+                mood={item.mood || "PEACE"}
+                theme={theme}
+                isLittleLambs={isLittleLambs}
+                onVideoEnd={() => {
+                  if (isLastScene) {
+                    handleComplete();
+                  } else {
+                    autoAdvanceToNext(index);
+                  }
+                }}
+              />
+            </View>
+          ) : (
           <View style={[styles.sceneContent, { paddingTop: topPad + 16 }]}>
             <View style={styles.illustrationArea}>
               {item.imageUrl ? (
@@ -1605,6 +1967,7 @@ export default function SceneStoryScreen() {
               </Animated.View>
             )}
           </View>
+          )}
         </View>
       );
     },
@@ -1618,6 +1981,8 @@ export default function SceneStoryScreen() {
       storyComplete,
       scenes.length,
       topPad,
+      autoAdvanceToNext,
+      handleComplete,
     ]
   );
 

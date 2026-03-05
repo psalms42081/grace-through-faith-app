@@ -739,6 +739,10 @@ export const kidsStoryScenes = pgTable(
     narration: text("narration").notNull(),
     illustrationPrompt: text("illustration_prompt").notNull(),
     imageUrl: text("image_url"),
+    videoUrl: text("video_url"),
+    videoTimecodes: jsonb("video_timecodes").$type<{
+      segments: { startMs: number; endMs: number; text: string }[];
+    } | null>(),
     mood: varchar("mood", { length: 20 }).default("PEACE").notNull(),
     pauseAndWonder: jsonb("pause_and_wonder").$type<{
       question: string;
