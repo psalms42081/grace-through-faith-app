@@ -36,6 +36,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { HOME_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
+import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -1484,6 +1485,7 @@ function AdultHomeScreen() {
           {sabbathBanner}
           {worshipPathwaysSection}
           <GoldDivider theme={theme} />
+          <SpiritualRings theme={theme} isDark={isDark} />
           {continueReadingSection}
           {guidedToolsSection}
           {devotionalSection}
@@ -1493,6 +1495,7 @@ function AdultHomeScreen() {
       ) : (
         <>
           {verseSection}
+          <SpiritualRings theme={theme} isDark={isDark} />
           {streakSection}
           {continueReadingSection}
           {guidedToolsSection}

@@ -504,8 +504,50 @@ router.get("/api/reading-streaks/weekly", async (req, res) => {
   }
 });
 
-// ─── SOCRATIC AI STUDY GUIDE ──────────────────────────────────────────────
+router.get("/api/spiritual-rings", async (req, res) => {
+  try {
+    const userId = String(req.query.userId || "guest");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
 
+    const [studyResult] = await db.execute(sql`
+      SELECT COUNT(DISTINCT (book_id::text || ':' || chapter::text)) as chapters_read
+      FROM reading_history
+      WHERE user_id = ${userId} AND read_at >= ${todayISO}
+    `);
+    const chaptersRead = Number((studyResult as any)?.chapters_read ?? 0);
+
+    const [prayerResult] = await db.execute(sql`
+      SELECT COUNT(*) as prayer_count
+      FROM prayer_request
+      WHERE user_id = ${userId} AND created_at >= ${todayISO}
+    `);
+    const prayerCount = Number((prayerResult as any)?.prayer_count ?? 0);
+
+    const [shareResult] = await db.execute(sql`
+      SELECT COUNT(*) as share_count FROM (
+        SELECT id FROM study_journal_entries WHERE user_id = ${userId} AND created_at >= ${todayISO}
+        UNION ALL
+        SELECT id FROM study_guide_session WHERE user_id = ${userId} AND created_at >= ${todayISO}
+      ) combined
+    `);
+    const shareCount = Number((shareResult as any)?.share_count ?? 0);
+
+    return res.json({
+      study: { current: chaptersRead, goal: 3, label: "Study" },
+      prayer: { current: prayerCount, goal: 2, label: "Prayer" },
+      engage: { current: shareCount, goal: 2, label: "Engage" },
+    });
+  } catch (err) {
+    console.error("Spiritual rings error:", err);
+    return res.json({
+      study: { current: 0, goal: 3, label: "Study" },
+      prayer: { current: 0, goal: 2, label: "Prayer" },
+      engage: { current: 0, goal: 2, label: "Engage" },
+    });
+  }
+});
 
   export default router;
   
