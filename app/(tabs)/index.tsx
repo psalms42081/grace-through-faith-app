@@ -1338,7 +1338,7 @@ function AdultHomeScreen() {
   const guidedToolsSection = (
     <View style={s.guidedRow}>
       <Pressable
-        onPress={() => router.push("/(tabs)/read")}
+        onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } })}
         style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
       >
         <LinearGradient

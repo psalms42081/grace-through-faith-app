@@ -1,383 +1,66 @@
 # Grace through Faith — SDA Spiritual Formation App
 
 ## Overview
-A mobile-first Seventh-day Adventist spiritual formation app, offering an immersive and comprehensive study experience. It features a unique "4-Layer Study Model" (Text, Context, Historic Voices, Application) powered by AI, along with offline capabilities. The app includes a Kids Club, devotional plans, prayer journaling, and a premium dark mode. Its vision is to be the definitive SDA hub — building mature disciples through structured Adventist identity formation, Bible study, prophecy, and daily spiritual disciplines.
+Grace through Faith is a mobile-first Seventh-day Adventist spiritual formation app. Its core purpose is to provide an immersive and comprehensive study experience, becoming the definitive SDA hub for structured identity formation, Bible study, prophecy, and daily spiritual disciplines. Key capabilities include a unique "4-Layer Study Model" (Text, Context, Historic Voices, Application) powered by AI, offline functionality, a Kids Club, devotional plans, and prayer journaling. The project aims to foster mature discipleship within the SDA framework.
 
 ## User Preferences
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 
 ## System Architecture
-The application adopts a mobile-first architecture utilizing **Expo (React Native)** for the frontend, **Express.js** for the backend, and **PostgreSQL** with **Drizzle ORM** for data persistence. **TanStack Query** handles server state management with offline persistence, while React context manages shared UI state. AI generation functions are centralized in `server/services/ai-engine.ts`.
+The application is built with a mobile-first architecture. The frontend uses **Expo (React Native)**, the backend uses **Express.js**, and **PostgreSQL** with **Drizzle ORM** handles data persistence. **TanStack Query** manages server state with offline persistence, and React context manages shared UI state. AI generation functions are centralized in `server/services/ai-engine.ts`.
 
-**Backend Route Architecture (Modular):**
-Routes are split into domain-specific Express Router modules under `server/routes/`:
-- `server/routes/auth.ts` — registration, login, password reset, account deletion (with Zod validation + rate limiting)
-- `server/routes/user.ts` — profile, pro status, donations, activity tracking, notes, highlights, bookmarks, prayers, reading history/streaks
-- `server/routes/bible.ts` — passage, books, verse, search, reference parsing
-- `server/routes/study.ts` — Strong's, context, commentary, application, locations, timeline, study guide, verse map, chapter context/summary, analytics, layer completions, study journal (AI endpoints rate-limited)
-- `server/routes/devotionals.ts` — plans, enrollment, daily entries, AI reflection
-- `server/routes/kids.ts` — collections, stories, quizzes, progress, badges, streaks, wonder, scenes
-- `server/routes/community.ts` — family groups, prayer groups, discussions, announcements, churches, live streams, sabbath reflections
-- `server/routes/family-dashboard.ts` — child profiles, stats, conversation starters, heatmap, family prayers, dinner topics
-- `server/routes/formation.ts` — tracks, lessons, modules, assessments, progress, i18n content resolution
-- `server/routes/tts.ts` — text-to-speech (rate-limited)
+**SDA-First Architecture:** The app is exclusively designed for Seventh-day Adventists, with no multi-denomination framework or tradition filtering. All devotional content is presented without tradition-based filtering, reflecting a dedicated SDA experience.
 
-Shared middleware in `server/middleware/`:
-- `auth.ts` — JWT secret, extractUserId, checkProStatus, generateCode
-- `validate.ts` — Zod validation middleware with schemas for auth, notes, highlights, bookmarks, prayers
-- `rate-limit.ts` — rate limiters for AI generation (10/min), TTS (15/min), auth (20/15min)
-- `content-lang.ts` — content language resolution from query params
-
-The orchestrator `server/routes.ts` (66 lines) imports all routers, runs seed functions, and creates the HTTP server.
-
-**SDA-First Architecture:**
-- The app is fully SDA-dedicated. There is no multi-denomination framework, no tradition filtering, and no interdenominational positioning.
-- All devotional plans (core + SDA-specific) are shown everywhere without tradition-based filtering.
-- The `devotional_plan.tradition_key` column still exists in the schema for data categorization but the API defaults to `traditionKey=all`.
-- The following files were removed during the SDA rebranding: `components/TraditionDisclaimer.tsx`, `app/christian-traditions.tsx`, `app/tradition/[id].tsx`, `lib/content-filter.ts`.
-- `constants/traditions.ts` was simplified to SDA-only exports.
+**Backend Route Architecture (Modular):** Routes are organized into domain-specific Express Router modules located under `server/routes/`. This includes modules for authentication (`auth.ts`), user management (`user.ts`), Bible study (`bible.ts`), general study features (`study.ts`), devotionals (`devotionals.ts`), Kids Club (`kids.ts`), community features (`community.ts`), family dashboard (`family-dashboard.ts`), spiritual formation tracks (`formation.ts`), and text-to-speech (`tts.ts`). Shared middleware for authentication, validation (using Zod), rate limiting, and content language resolution are located in `server/middleware/`.
 
 **UI/UX Decisions:**
-- **Color Scheme:** Deep dark mode (`#050507`) with a warm gold accent (`#C9933A`). Kids Mode uses a distinct color palette. During Sabbath hours, `getSabbathTheme()` from `constants/colors.ts` shifts to warmer tones (dark: `#080806` bg, light: `#F7F0E0` bg, brighter gold `#D4A245` accent). Home screen reorders sections during Sabbath: Banner, Worship Pathways, Continue Formation, Verse, Analytics last (streak reduced prominence with lower opacity, smaller icon, muted color). SDA Hub heading becomes "Worship Pathways" during Sabbath.
+- **Color Scheme:** A deep dark mode (`#050507`) with a warm gold accent (`#C9933A`). A distinct palette is used for Kids Mode. During Sabbath hours, a specific theme with warmer tones is applied.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
-- **Design Philosophy:** Borderless design, immersive dark theme, focusing on readability and clear information hierarchy.
-- **Kids Club UI:** Playful, vibrant UI with custom tab bar, animated entrance effects, bouncy press effects, larger touch targets, and dynamic animations.
+- **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
+- **Kids Club UI:** Features a playful and vibrant design with custom elements, animations, and larger touch targets.
 
 **Technical Implementations & Feature Specifications:**
-- **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content. Includes segmented progress bar, per-layer completion tracking, journal prompts, study depth indicators, and deep study session mode.
-- **AI Integration:** OpenAI's `gpt-4o-mini` generates on-demand context, commentary, application, and word study data, with all content cached in PostgreSQL (`verse_map_cache`, `chapter_context_cache`, `application_template`).
-- **Text-to-Speech (TTS):** Utilizes OpenAI's `gpt-audio model` via a server-side API, with `expo-speech` as a device fallback.
-- **Offline Support & Proactive Prefetch:** React Query persistence via AsyncStorage provides an offline-first experience with 30-day garbage collection.
-- **Search:** Keyword search with highlighting and reference parsing.
-- **Socratic AI Study Guide:** Interactive guided study using the Inductive Method with AI tutor personas.
-- **Visual Verse Mapper:** Interactive breakdown of verses into original language words (Strong's Concordance).
-- **Strong's Concordance:** Comprehensive Greek/Hebrew entries accessible via the Word Study tab.
-- **Pro/Paywall System:** Guards premium features with a 7-day trial.
-- **Family Dashboard:** Premium feature for parents to track children's spiritual progress.
-- **User Features:** Notes, highlights, bookmarks, prayer journal, and reading history with streak tracking.
-- **Devotionals:** Browsing, enrollment, progress tracking, and interactive AI reflection discussions.
-- **SDA Doctrinal Studies:** Dedicated screen for the 28 Fundamental Beliefs with external EGW Writings links.
-- **Home Screen:** Verse of the Day, streak calendar, Continue Reading, guided tool cards (4-Layer Study, Prayer Journal), devotional plan progress, and SDA Hub cards (Church Connect, Small Groups, Study Paths).
-
-### Formation System (Study Paths)
-
-Curriculum-based formation engine separate from devotional plans. 8 DB tables: `formation_track`, `formation_module`, `formation_lesson`, `lesson_section`, `formation_assessment`, `assessment_item`, `progress_track`, `progress_lesson`. Each lesson has 6 sections: Anchor Text, Explain, Integrate (SDA theology), Practice, Reflection, Assessment.
-
-**API Routes:**
-- GET /api/tracks — list all published tracks
-- GET /api/tracks/:id — track detail with modules, lessons, and i18n overlays
-- GET /api/tracks/progress — user's enrolled track progress
-- GET /api/lessons/:id — full lesson with sections, assessment, and i18n overlays
-- POST /api/tracks/enroll — enroll user in a track
-- POST /api/lessons/:id/complete — mark lesson complete
-- POST /api/assessments/:id/submit — submit assessment answers
-- POST /api/modules/:id/confidence — save confidence self-check rating
-
-**Frontend Screens:**
-- `app/study-paths.tsx` — track browser
-- `app/study-path/[id].tsx` — track detail with module accordion + learning objectives
-- `app/lesson/[id].tsx` — full lesson view with section completion, inline assessment, and module completion summary modal
-
-Modules have `learningObjective` column. Module completion triggers a summary modal showing module title, learning objective, avg assessment score, and 1-5 confidence self-check. Confidence ratings stored in `progress_track.module_confidence` (jsonb).
-
-Seeded with 3 tracks: 28 Beliefs Deep Dive (28 modules, 112 lessons), New Believer Path (4 modules, 8 lessons), Prophecy Foundations (2 modules, 4 lessons). Seed data in `server/seed-formation.ts`.
-
-### Broadcasts
-
-Non-hosted streaming hub for SDA ministry broadcasts (`app/broadcasts.tsx`). Accessible from Connect tab > Community section. Shows two large cards for 3ABN (Live) and Amazing Facts TV (Live), each with "Watch Live" (opens in-app WebView) and "Open Website" buttons. WebView error state falls back to external browser. Config array `broadcastSources` in the screen file. No re-hosting, no social/share mechanics. Disclaimer banner clarifies Grace through Faith does not host broadcast content.
-
-### Sabbath Mode (Lesson Screen)
-
-UI-only mode toggle on the lesson screen (`app/lesson/[id].tsx`). A pill toggle ("Study" / "Sabbath") in the header right corner. Persisted via AsyncStorage (`@lesson_sabbath_mode`). When active: hides progress dots, hides per-section "Mark Complete" buttons and checkmarks, hides bottom "Complete Lesson" bar, adds "Sabbath Reading" banner with subtext "Slow down. Read prayerfully.", increases body font to 17px/28 line-height with extra padding, shows a floating action button (ellipsis icon) that opens a bottom sheet with: Complete Lesson (if all sections done), Mark Section Complete (for incomplete sections), Jump to Section, Copy Anchor Verse, Explain Passage. Does not affect backend progress tracking. Loading state gates on AsyncStorage read to prevent UI flash.
-
-### Sabbath Experience Mode
-
-Astronomical sunset-based Sabbath detection with NOAA solar calculator (no external API). `lib/sabbath.ts` provides `getSunsetTime()`, `getSabbathWindow()`, and `useSabbath()` hook (location via expo-location with fallback). DB table: `sabbath_reflection` (id, userId, date, prompt, response, createdAt; unique on userId+date+prompt). API routes: GET /api/sabbath/reflections?userId&date, POST /api/sabbath/reflections (upsert). Home screen shows gold Sabbath banner during Sabbath hours ("Enter sacred time" CTA). `app/sabbath-experience.tsx` has 4 sections: Theological Framing (rotating Creation/Redemption/Identity/Mission themes), Reflection Prompts (3 journal questions with save), Worship Pathways (links to Sabbath School, Study Paths, Live Streams, Church Connect, Family Altar), and Closing Reflection (visible only within 2 hours of Saturday sunset).
-
-### Small Groups 2.0
-
-Upgraded from Prayer Groups to a full SDA Small Groups system. Supports Bible Study, Prayer, Prophecy, Youth, and Sabbath School group types. Added columns to `prayer_groups`: `group_type`, `is_public`, `church_id`, `assigned_track_id`. Added `role` column to `prayer_group_member` (leader/moderator/member). New tables: `group_discussion`, `group_discussion_reply`, `group_announcement`.
-
-**API Routes:**
-- GET /api/groups/public — browse with type/search filters
-- POST /api/groups/:id/assign-track — assign formation track to group
-- POST /api/groups/:id/promote — promote member role
-- POST/GET /api/groups/:id/discussion(s) — group discussions
-- POST/GET /api/groups/:id/discussions/:id/reply/replies — discussion replies
-- POST/GET /api/groups/:id/announcement(s) — group announcements
-
-**Frontend:** `app/groups.tsx` has My Groups + Browse tabs with search/filter; `app/group/[id].tsx` has 3 content tabs (Discussion, Prayer, Study Plan) with group role badges, member promotion, formation track assignment, and group progress display.
-
-### Live Streaming (Phase 5)
-
-Jitsi Meet integration via WebView (native) and iframe (web). DB table: `live_session` with id, title, groupId, churchId, hostUserId, hostDisplayName, roomUrl, status (live/ended), participantCount, startedAt, endedAt.
-
-**API Routes:**
-- POST /api/streams/create — leader-only for group streams
-- GET /api/streams/active — list active streams
-- GET /api/streams/:id — stream details
-- POST /api/streams/:id/end — host-only end stream
-
-**Frontend:** `app/stream/[id].tsx` renders Jitsi room. Group detail (`app/group/[id].tsx`) has "Go Live" button for leaders/moderators and "LIVE NOW" join banner. Home screen (`app/(tabs)/index.tsx`) has LiveNowSection showing active streams above the SDA Hub. Room names auto-generated as `gtf-{random12chars}` on `meet.jit.si`.
-
-### Church Connect
-
-SDA church finder with geo-radius search, map + list view. `app/church-connect.tsx` + `app/church/[id].tsx`. Uses `sda_church` table with geolocation data.
-
-### Frontend Architecture (Refactored)
-
-**Shared Hook:** `hooks/useTheme.ts` — centralized theme hook with TypeScript overloads, replaces 40+ inline `useColorScheme()` + `Colors.dark/light` patterns. Supports `useTheme()` for regular theme, `useTheme(true)` for KidsColors.
-
-**Data Layer:** Hardcoded data arrays extracted to `data/` folder:
-- `data/topics.ts` — TOPICS_LIST and TOPICS record
-- `data/beliefs.ts` — BELIEFS, CATEGORIES, CATEGORY_COLORS
-- `data/music.ts` — MUSIC_CATEGORIES
-- `data/book-topics.ts` — BOOK_TOPICS, TOPIC_INFO
-
-**Chapter Reader Components:** The 1,936-line chapter reader (`app/read/[bookId]/[chapter].tsx`) is split into:
-- `components/reader/ContextPanel.tsx` — 4D Scripture panel (Places/Timeline/Figures/Culture tabs)
-- `components/reader/RelatedContent.tsx` — study layers, nearby chapters, related devotionals
-- `components/reader/TTSPlayerBar.tsx` — TTS/audio controls UI
-- `hooks/useBibleAudio.ts` — custom hook with all TTS playback logic
-
-**Device UUID:** Guest users get a persistent device UUID (stored in AsyncStorage as `@grace-through-faith/deviceUUID`) instead of hardcoded "guest", enabling per-device rate limiting.
-
-### Additional Features
-
-- **Family Groups:** Family units with invite codes, Prayer Wall and Kingdom Map.
-- **Parent-Controlled Kids Mode:** PIN protection, child profiles with age tiers, per-child session tracking.
-- **Kids Story Engine:** Immersive scene-based storybook reader with AI-generated scenes and watercolor illustrations.
-- **Navigation:** 5-tab layout in adult mode (Home, Read, Connect, Study, You) and a distinct Kids mode tab navigation (Home, Stories, Learn, My Stars). Family and Plans tabs are hidden but accessible via routes.
-- **Study Tab (formerly Discover):** Adventist Studies (28 Beliefs, Devotional Plans, Guided Study, Study Paths with enrolled track previews), Study Resources (Historic Voices), Study Tools (Bible Maps, Timeline), Popular Passages, Topics, and Adventist Resources (Worship Music).
-- **Connect Tab:** Church Connect (map + list view), Small Groups (links to prayer groups), Live Streams (Jitsi Meet via WebView), Family Dashboard access.
-- **About Page (`app/how-it-works.tsx`):** Feature overview + SDA mission statement + link to 28 Fundamental Beliefs.
-
----
-
-## 28 Beliefs Deep Dive — Complete Track
-
-**All 28 fundamental beliefs are now fully seeded across 4 waves.**
-
-| Wave | Beliefs | Lessons | Sections | Assessments | Items |
-|------|---------|---------|----------|-------------|-------|
-| 1    | 1-7     | 25*     | 150      | 25          | 125   |
-| 2    | 8-11    | 16      | 96       | 16          | 80    |
-| 3    | 12-18   | 28      | 168      | 28          | 140   |
-| 4    | 19-28   | 40      | 240      | 40          | 200   |
-| **Total** | **1-28** | **109** | **654** | **109** | **545** |
-
-*Wave 1 includes 3 lessons from initial seed (bl-001/002/003) plus 22 wave-1 lessons.
-
-### Wave 1 (Beliefs 1-7) — Foundational Worldview Core
-
-Beliefs: The Holy Scriptures, The Trinity, The Father, The Son, The Holy Spirit, Creation, The Nature of Humanity.
-
-Each module: 4 lessons (Biblical Foundations, Doctrinal Formulation, Practical Implications, Misunderstandings & Challenges), 6 section types, 5 assessment items per lesson (3 recall, 2 conceptual).
-
-ID scheme: `w1l-*`, `w1s-*`, `w1a-*`, `w1i-*` (Beliefs 1-3 L1 retain original IDs bl-001/002/003).
-
-Seed files: `server/seed-beliefs-wave1.ts` (orchestrator), `server/seeds/wave1-beliefs-1-2.ts`, `server/seeds/wave1-beliefs-3-4.ts`, `server/seeds/wave1-beliefs-5-6.ts`, `server/seeds/wave1-belief-7.ts`.
-
-### Wave 2 (Beliefs 8-11) — Soteriological Core
-
-Beliefs: The Great Controversy, The Life/Death/Resurrection of Christ, The Experience of Salvation, Growing in Christ.
-
-ID scheme: `w2l-*`, `w2s-*`, `w2a-*`, `w2i-*`.
-
-Seed files: `server/seed-beliefs-wave2.ts` (orchestrator), `server/seeds/wave2-belief-8.ts`, `server/seeds/wave2-belief-9.ts`, `server/seeds/wave2-belief-10.ts`, `server/seeds/wave2-belief-11.ts`.
-
-### Wave 3 (Beliefs 12-18) — Ecclesiological & Missional Core
-
-Beliefs: The Church, The Remnant and Its Mission, Unity in the Body of Christ, Baptism, The Lord's Supper, Spiritual Gifts and Ministries, The Gift of Prophecy.
-
-ID scheme: `w3l-*`, `w3s-*`, `w3a-*`, `w3i-*`.
-
-Special guardrails: Remnant (humility/mission focus, no triumphalism), Ordinances (affirm physical practice, app is supportive), Gift of Prophecy (EGW subordinate to Scripture, external links only).
-
-Seed files: `server/seed-beliefs-wave3.ts` (orchestrator), `server/seeds/wave3-beliefs-12-13.ts`, `server/seeds/wave3-beliefs-14-15.ts`, `server/seeds/wave3-belief-16.ts`, `server/seeds/wave3-belief-17.ts`, `server/seeds/wave3-belief-18.ts`.
-
-### Wave 4 (Beliefs 19-28) — Law, Lifestyle, Sanctuary & Eschatology
-
-Beliefs: The Law of God, The Sabbath, Stewardship, Christian Behavior, Marriage and the Family, Christ's Ministry in the Heavenly Sanctuary, The Second Coming of Christ, Death and Resurrection, The Millennium and the End of Sin, The New Earth.
-
-ID scheme: `w4l-*`, `w4s-*`, `w4a-*`, `w4i-*`.
-
-Special guardrails:
-- Law of God: Covenant relationship framing; harmony of law and grace; no legalism tone
-- Sabbath: Creation/redemption/rest emphasis; calm sacred tone; no culture-war framing
-- Stewardship: Whole-life scope (time, health, influence, resources); no guilt-based tone
-- Christian Behavior: Fruit of salvation, not ladder to it; no moral checklist framing
-- Marriage & Family: Faithful to Adventist teaching; pastoral, not combative; no political framing
-- Heavenly Sanctuary: High precision; calm articulation of investigative judgment; no inflammatory language
-- Eschatology (25-28): Hope-centered, Christ-centered; no speculative timelines; no sensationalism; systematic and biblical; restorationist vision
-
-Seed files: `server/seed-beliefs-wave4.ts` (orchestrator), `server/seeds/wave4-beliefs-19-20.ts`, `server/seeds/wave4-beliefs-21-22.ts`, `server/seeds/wave4-beliefs-23-24.ts`, `server/seeds/wave4-beliefs-25-26.ts`, `server/seeds/wave4-beliefs-27-28.ts`.
-
-### Content Standards (All Waves)
-
-- All content is original writing (no General Conference quarterly material used or paraphrased)
-- Scripture-first in reasoning and structure
-- Theologically aligned with the official 28 Fundamental Beliefs
-- Written for intelligent lay believers (clear, reverent, non-academic tone)
-- Linked externally to egwwritings.org where appropriate (no copyrighted embedding)
-- Great Controversy integration where appropriate but not forced
-
----
-
-## Internationalization (i18n)
-
-### UI Language System
-
-**Status: Implemented**
-
-Full i18n system using `i18next` + `react-i18next` + `expo-localization`.
-
-**Supported Locales:** English (en), Espa\u00f1ol (es), Fran\u00e7ais (fr), Portugu\u00eas (pt), Filipino (fil), \u4e2d\u6587 (zh).
-
-**Architecture:**
-- `lib/i18n/index.ts` — i18n initialization, language change helpers, device locale detection, first-launch auto-detection
-- `lib/i18n/locales/{en,es,fr,pt,fil,zh}.json` — locale string files with namespaced keys (tabs, home, connect, broadcasts, profile, study, common)
-- `components/BroadcastCard.tsx` — extracted broadcast card component (uses i18n internally)
-- AsyncStorage keys:
-  - `@grace-through-faith/preferredLanguage` — persists user's UI language choice
-  - `@grace-through-faith/firstLaunchDone` — tracks whether first-launch auto-detection has run
-- `initI18n()` called in root layout before splash screen hides
-- `SUPPORTED_LANGUAGES` exported from `lib/i18n` for language picker UI
-
-**Scope:**
-- UI strings only — Scripture text and theological lesson content are NOT translated via this system
-- Tab labels (ClassicTabLayout), Connect tab, Broadcasts screen, Profile/You tab (stats, growth, badges, Quick Links)
-- Language Selector in Profile > Quick Links — expandable picker with all 6 languages + "Use device language" option
-- NativeTabs labels use SF Symbols (not translatable); only ClassicTabLayout titles are translated
-
-**First-Launch Auto-Detection:**
-On first app install, the system automatically detects the device's language via `expo-localization` `getLocales()`. If the detected language is one of the 6 supported locales, it sets BOTH the UI language AND the content language to match. This is gated by `FIRST_LAUNCH_KEY` so it only runs once and never overrides explicit user choices on subsequent launches. If the device language is unsupported, English is used as default.
-
-Flow: Install app -> detect device locale -> if supported, persist as app language AND content language -> mark first launch done.
-
-**Key Functions:**
-- `setLanguage(code)` — sets language + persists to AsyncStorage
-- `useDeviceLanguage()` — clears stored preference, reverts to device locale
-- `getSavedLanguage()` — returns stored preference or null
-
-### Content Translation Architecture (Phase 3A-3E)
-
-**Status: Implemented (infrastructure ready, no translations loaded yet)**
-
-Scalable multi-language overlay system for lesson/module/section/assessment content. English remains canonical in base tables; localized content stored in overlay tables keyed by (entityId, language).
-
-**Database Tables (Phase 3A):**
-- `formation_module_i18n` — (id, module_id FK, language, title, description) UNIQUE(module_id, language)
-- `formation_lesson_i18n` — (id, lesson_id FK, language, title, summary) UNIQUE(lesson_id, language)
-- `lesson_section_i18n` — (id, section_id FK, language, heading, content) UNIQUE(section_id, language)
-- `assessment_item_i18n` — (id, item_id FK, language, question, options jsonb, explanation) UNIQUE(item_id, language)
-- Schema definitions in `shared/schema.ts` (CONTENT_LANGUAGES const, all 4 i18n table exports + types)
-
-**Backend Resolution (Phase 3B):**
-- `resolveContentLang(req)` helper in routes.ts — extracts `?lang=` param, normalizes, validates against CONTENT_LANGUAGES
-- GET /api/tracks/:id — resolves module titles, lesson titles, section content via left-join pattern
-- GET /api/lessons/:id — resolves lesson title, section content, assessment items
-- Fallback: if no i18n row found for requested language, returns canonical English content
-- No i18n applied to GET /api/tracks (list view uses track titles, not module content)
-
-**Frontend Integration (Phase 3C):**
-- `lib/content-language.ts` — content language persistence (AsyncStorage key: `@grace-through-faith/contentLanguage`)
-- `contexts/ContentLanguageContext.tsx` — React context providing `resolvedLang`, `contentLangOption`, `setContentLang`
-- ContentLanguageProvider wraps app in `_layout.tsx`
-- Content Language picker in Profile > Quick Links (below UI Language picker) with subtitle: "Choose the language used for lessons and devotionals. If unavailable, English will be used."
-- Options: "Same as App Language" (default), English, Espa\u00f1ol, Fran\u00e7ais, Portugu\u00eas, Filipino, \u4e2d\u6587
-- `app/lesson/[id].tsx` and `app/study-path/[id].tsx` append `&lang={resolvedLang}` to queryKeys when not English
-- i18n keys added to all 6 locale files: `profile.contentLanguage`, `profile.contentLangSub`, `profile.sameAsApp`
-
-**Content Pipeline (Phase 3D):**
-- `scripts/generate-i18n-stubs.ts` — generates JSON stub files per language for translation review
-  - Usage: `npx tsx scripts/generate-i18n-stubs.ts --beliefs 19-28` or `npx tsx scripts/generate-i18n-stubs.ts bmod-019`
-  - Output: `i18n-content/{lang}/{moduleId}.json` with all lessons, sections, assessment items
-  - Each file has `_meta.reviewed: false` flag
-- `scripts/import-content-translations.ts` — imports reviewed translations into i18n tables
-  - Usage: `npx tsx scripts/import-content-translations.ts i18n-content/es/bmod-019.json`
-  - Skips files not marked `_meta.reviewed: true`
-  - Uses `onConflictDoNothing()` for safe re-runs
-
-**Design Decisions:**
-- Scripture text is NOT translated via this system — it stays tied to the Bible translation selector
-- Progress tracking unaffected — still keyed to canonical lesson/section IDs
-- No duplication of formation tracks/modules per language — localization is overlays only
-- Gradual rollout: start English-only, add languages module-by-module as translations are reviewed
-
----
+- **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content, including progress tracking and deep study modes.
+- **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation (context, commentary, application, word study), with all generated content cached in PostgreSQL.
+- **Text-to-Speech (TTS):** Employs OpenAI's `gpt-audio model` via a server-side API, with `expo-speech` as a device fallback.
+- **Offline Support & Proactive Prefetch:** React Query persistence via AsyncStorage ensures an offline-first experience.
+- **Socratic AI Study Guide:** An interactive, AI-driven study guide based on the Inductive Method.
+- **Visual Verse Mapper & Strong's Concordance:** Tools for in-depth word studies of biblical texts.
+- **Pro/Paywall System:** Guards premium features with a trial period.
+- **Family Dashboard:** A premium feature allowing parents to monitor children's spiritual progress.
+- **User Features:** Includes notes, highlights, bookmarks, a prayer journal, and reading history with streak tracking.
+- **Devotionals:** Browsing, enrollment, progress tracking, and interactive AI reflection.
+- **SDA Doctrinal Studies:** A dedicated section for the 28 Fundamental Beliefs, linking externally to EGW Writings.
+- **Formation System (Study Paths):** A curriculum-based engine for spiritual formation, managed through eight database tables for tracks, modules, lessons, assessments, and progress tracking. Lessons are structured with Anchor Text, Explain, Integrate, Practice, Reflection, and Assessment sections.
+- **Sabbath Mode (Lesson Screen):** A UI-only toggle within the lesson viewer that adjusts presentation for Sabbath reading, including hiding progress elements and increasing font size, without affecting backend progress.
+- **Sabbath Experience Mode:** Detects Sabbath hours using astronomical sunset calculations and provides a specialized home screen banner, reflection prompts, and worship pathways.
+- **Small Groups 2.0:** An enhanced system for SDA small groups with various types, member roles, discussions, and announcements.
+- **Live Streaming:** Integrates Jitsi Meet via WebView for live streaming sessions, supporting group and church streams.
+- **Church Connect:** An SDA church finder with geo-radius search and map/list views.
+- **Internationalization (i18n):** A comprehensive UI language system using `i18next` and `react-i18next` for multiple locales. A content translation architecture is also in place, using overlay tables for localized lesson content, with English as the canonical base.
 
 ## External Dependencies
 
 **Core:**
-- **OpenAI API:** `gpt-4o-mini` (AI content generation), `gpt-audio model` (Text-to-Speech)
-- **PostgreSQL:** Main database, managed with Drizzle ORM
-- **Expo & React Native Ecosystem:** Core framework and UI components (`expo-router`, `@expo/vector-icons`, `expo-speech`, `expo-av`, `expo-localization`)
-- **AsyncStorage:** Client-side data persistence for offline caching
-- **i18next + react-i18next:** UI internationalization framework
+- **OpenAI API:** For AI content generation (`gpt-4o-mini`) and Text-to-Speech (`gpt-audio model`).
+- **PostgreSQL:** The primary database, managed with Drizzle ORM.
+- **Expo & React Native Ecosystem:** Core framework, navigation (`expo-router`), icons (`@expo/vector-icons`), speech (`expo-speech`), audio/video (`expo-av`), and localization (`expo-localization`).
+- **AsyncStorage:** For client-side data persistence and offline caching.
+- **i18next + react-i18next:** For UI internationalization.
 
 **External Content Sources:**
-- **egwwritings.org:** External source for Ellen G. White's writings links (never embedded)
-- **Wikimedia Commons:** Source for historical images
-- **HelloAO Bible API:** Provides public domain commentaries
+- **egwwritings.org:** External source for Ellen G. White's writings.
+- **Wikimedia Commons:** Source for historical images.
+- **HelloAO Bible API:** Provides public domain commentaries.
 
 **Authentication & Security:**
-- **bcryptjs:** Password hashing
-- **jsonwebtoken:** JWT token generation and verification
+- **bcryptjs:** For password hashing.
+- **jsonwebtoken:** For JWT token generation and verification.
 
 **Maps & Location:**
-- **react-native-maps@1.18.0:** Interactive maps for Bible Maps screen (native only; web uses OpenStreetMap iframe via `BibleMap.web.tsx`)
-- **OpenStreetMap:** Embedded tile maps for web platform Bible Maps
+- **react-native-maps@1.18.0:** For interactive maps on native platforms.
+- **OpenStreetMap:** For embedded tile maps on the web platform.
 
 **Streaming:**
-- **Jitsi Meet (meet.jit.si):** Free video conferencing for live streaming sessions
-- **react-native-webview:** WebView for embedding Jitsi Meet on native platforms
-
----
-
-## Key File Structure
-
-**Backend:**
-- `server/index.ts` — Express server entry point
-- `server/routes.ts` — API routing, database operations, seed orchestration
-- `server/services/ai-engine.ts` — Centralized AI generation functions and prompts
-- `server/seed-formation.ts` — Base formation track/module seeding
-- `server/seed-beliefs-wave{1,2,3,4}.ts` — Wave orchestrators
-- `server/seeds/` — Individual belief seed data files
-- `shared/schema.ts` — Drizzle ORM schema (all tables, i18n overlays, types)
-
-**Frontend:**
-- `app/_layout.tsx` — Root layout with providers (QueryClient, ContentLanguageProvider, etc.)
-- `app/(tabs)/` — Tab screens (index, read, connect, study, profile)
-- `app/lesson/[id].tsx` — Lesson viewer with Sabbath mode
-- `app/study-path/[id].tsx` — Track detail with module accordion
-- `lib/i18n/` — i18n system (index.ts + 6 locale files)
-- `lib/content-language.ts` — Content language persistence
-- `lib/sabbath.ts` — Sabbath detection (NOAA solar calculator)
-- `contexts/ContentLanguageContext.tsx` — Content language React context
-- `constants/colors.ts` — Theme colors including Sabbath theme
-- `scripts/generate-i18n-stubs.ts` — Translation stub generator
-- `scripts/import-content-translations.ts` — Translation importer
-
----
-
-## Known Technical Debt & Improvement Areas
-
-**Architecture:**
-- `server/routes.ts` is a large monolith; should be split into Express Router modules (`routes/bible.ts`, `routes/study.ts`, `routes/kids.ts`, etc.)
-- Hardcoded data arrays in some component files (`app/family.tsx`, `app/music.tsx`, `app/topic/[id].tsx`) should move to `constants/` or database
-- Audio/TTS logic in chapter reader should be extracted into a custom hook
-
-**Security:**
-- All user actions currently tied to `"guest"` user ID — needs real auth (device UUID or Clerk/Supabase) before launch
-- AI generation endpoints (`/api/*/generate`) need rate limiting (`express-rate-limit`)
-- API input validation should use Zod schemas consistently (schemas defined in `schema.ts` but not wired as middleware)
-
-**Performance:**
-- Large chapters (e.g., Psalm 119) may benefit from text chunking or memoization
-- Consider switching to `expo-image` for better disk caching and blurhash placeholders
-
----
-
-## Upcoming Features (Placeholders in UI)
-- **Additional Study Paths:** More formation tracks planned (Sabbath School, Prophecy Academy extended, Sabbath Formation, Character & Disciplines).
+- **Jitsi Meet (meet.jit.si):** For live video conferencing sessions.
+- **react-native-webview:** For embedding Jitsi Meet on native platforms.

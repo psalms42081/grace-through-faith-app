@@ -297,6 +297,202 @@ interface ChapterSummaryData {
   narrativePlacement: string | null;
 }
 
+const FOUR_LAYERS = [
+  {
+    icon: "language-outline" as const,
+    title: "Text",
+    desc: "Study the original Greek and Hebrew words behind the English translation.",
+    color: "#C9933A",
+  },
+  {
+    icon: "time-outline" as const,
+    title: "Context",
+    desc: "Understand the historical and cultural setting of the passage.",
+    color: "#3B6CB5",
+  },
+  {
+    icon: "chatbubble-ellipses-outline" as const,
+    title: "Insight",
+    desc: "Read commentary from historic voices like Matthew Henry and Ellen White.",
+    color: "#7C3AED",
+  },
+  {
+    icon: "heart-outline" as const,
+    title: "Transform",
+    desc: "Apply Scripture to your life through guided reflection and prayer.",
+    color: "#E8456B",
+  },
+];
+
+function FourLayerIntro({
+  theme,
+  hasPassage,
+  onPickPassage,
+  onContinue,
+}: {
+  theme: typeof Colors.light;
+  hasPassage: boolean;
+  onPickPassage: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={{ alignItems: "center", marginBottom: 28 }}>
+        <View
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 20,
+            backgroundColor: theme.accent + "18",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <Ionicons name="layers" size={32} color={theme.accent} />
+        </View>
+        <Text
+          style={{
+            fontSize: 22,
+            color: theme.text,
+            fontFamily: "Lora_700Bold",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
+          4-Layer Bible Study
+        </Text>
+        <Text
+          style={{
+            fontSize: 14,
+            color: theme.textSecondary,
+            fontFamily: "Inter_400Regular",
+            textAlign: "center",
+            lineHeight: 21,
+            maxWidth: 320,
+          }}
+        >
+          Go beyond surface reading. Each passage is studied through four
+          progressive layers for deeper understanding and personal growth.
+        </Text>
+      </View>
+
+      <View style={{ gap: 12, marginBottom: 28 }}>
+        {FOUR_LAYERS.map((layer, i) => (
+          <View
+            key={layer.title}
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              gap: 14,
+              backgroundColor: theme.backgroundCard,
+              borderRadius: 14,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: layer.color + "18",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: "Inter_700Bold",
+                  color: layer.color,
+                }}
+              >
+                {i + 1}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <Ionicons name={layer.icon} size={15} color={layer.color} />
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontFamily: "Inter_600SemiBold",
+                    color: theme.text,
+                  }}
+                >
+                  {layer.title}
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: "Inter_400Regular",
+                  color: theme.textSecondary,
+                  lineHeight: 19,
+                }}
+              >
+                {layer.desc}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <Pressable
+        testID="layer-intro-action"
+        onPress={hasPassage ? onContinue : onPickPassage}
+        style={({ pressed }) => ({
+          backgroundColor: theme.accent,
+          borderRadius: 14,
+          paddingVertical: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "row",
+          gap: 8,
+          opacity: pressed ? 0.85 : 1,
+          marginBottom: 10,
+        })}
+      >
+        <Ionicons
+          name={hasPassage ? "arrow-forward" : "book-outline"}
+          size={18}
+          color="#fff"
+        />
+        <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+          {hasPassage ? "Start Studying" : "Pick a Passage"}
+        </Text>
+      </Pressable>
+
+      {hasPassage && (
+        <Pressable
+          onPress={onPickPassage}
+          style={({ pressed }) => ({
+            backgroundColor: theme.accent + "12",
+            borderRadius: 14,
+            paddingVertical: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "row",
+            gap: 8,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Ionicons name="book-outline" size={16} color={theme.accent} />
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accent }}>
+            Choose a Different Passage
+          </Text>
+        </Pressable>
+      )}
+    </ScrollView>
+  );
+}
+
 function DeepStudyIntro({
   reference,
   bookId,
@@ -1174,10 +1370,10 @@ function useJournalEntries(userId: string, bookId: number | null, chapter: numbe
 }
 
 const TABS: { id: Tab; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
-  { id: "word", label: "Word Study", icon: "language-outline" },
+  { id: "word", label: "Text", icon: "language-outline" },
   { id: "context", label: "Context", icon: "time-outline" },
-  { id: "voices", label: "Historic Voices", icon: "chatbubble-ellipses-outline" },
-  { id: "application", label: "Application", icon: "heart-outline" },
+  { id: "voices", label: "Insight", icon: "chatbubble-ellipses-outline" },
+  { id: "application", label: "Transform", icon: "heart-outline" },
 ];
 
 interface Commentator {
@@ -1261,6 +1457,7 @@ export default function StudyScreen() {
     verseId?: string;
     verseText?: string;
     bookName?: string;
+    showIntro?: string;
   }>();
   const validTabs: Tab[] = ["word", "context", "voices", "application"];
   const [activeTab, setActiveTab] = useState<Tab>(
@@ -1331,6 +1528,7 @@ export default function StudyScreen() {
   }, []);
   const [showSummary, setShowSummary] = useState(false);
   const [showDeepIntro, setShowDeepIntro] = useState(false);
+  const [showLayerIntro, setShowLayerIntro] = useState(params.showIntro === "true");
 
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
 
@@ -1527,6 +1725,22 @@ export default function StudyScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  if (showLayerIntro) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
+        <FourLayerIntro
+          theme={theme}
+          hasPassage={canTrack}
+          onPickPassage={() => {
+            setShowLayerIntro(false);
+            router.push("/(tabs)/read");
+          }}
+          onContinue={() => setShowLayerIntro(false)}
+        />
+      </View>
+    );
+  }
+
   if (showDeepIntro) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
@@ -1604,11 +1818,8 @@ export default function StudyScreen() {
       )}
 
       {!deepSession.active && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={[styles.tabScroll, { backgroundColor: theme.background }]}
-          contentContainerStyle={styles.tabContainer}
+        <View
+          style={[styles.tabRow, { backgroundColor: theme.background }]}
         >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -1617,7 +1828,7 @@ export default function StudyScreen() {
                 key={tab.id}
                 onPress={() => setActiveTab(tab.id)}
                 style={[
-                  styles.tabPill,
+                  styles.tabPillFixed,
                   {
                     backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
                     borderColor: isActive ? theme.accent : theme.border,
@@ -1643,7 +1854,7 @@ export default function StudyScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       )}
 
       <ScrollView
@@ -3282,6 +3493,23 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14 },
   tabScroll: { flexGrow: 0 },
   tabContainer: { paddingHorizontal: 20, paddingVertical: 12, gap: 8 },
+  tabRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  tabPillFixed: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+  },
   tabPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -3291,7 +3519,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  tabLabel: { fontSize: 13 },
+  tabLabel: { fontSize: 12 },
   scrollView: { flex: 1 },
   content: { padding: 20 },
   tabContent: { gap: 12 },
