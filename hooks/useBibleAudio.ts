@@ -146,6 +146,9 @@ export default function useBibleAudio(
   const cleanupPlayer = useCallback(() => {
     if (playerRef.current) {
       try {
+        playerRef.current.pause();
+      } catch {}
+      try {
         playerRef.current.remove();
       } catch {}
       playerRef.current = null;
@@ -326,8 +329,17 @@ export default function useBibleAudio(
 
       const playFinished = await new Promise<boolean>((resolve) => {
         let resolved = false;
+        let loggedPlaying = false;
         const subscription = player.addListener("playbackStatusUpdate", (status: any) => {
-          if (!resolved && status.playing) {
+          if (resolved) return;
+          if (session !== sessionRef.current) {
+            resolved = true;
+            subscription.remove();
+            resolve(false);
+            return;
+          }
+          if (!loggedPlaying && status.playing) {
+            loggedPlaying = true;
             console.log("[TTS speakVerseAI] Audio is playing");
           }
           if (status.didJustFinish) {
