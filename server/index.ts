@@ -108,30 +108,7 @@ function getAppName(): string {
   }
 }
 
-async function serveExpoManifest(platform: string, req: Request, res: Response) {
-  const isDev = process.env.NODE_ENV === "development";
-
-  if (isDev) {
-    try {
-      const metroUrl = `http://localhost:8081${req.originalUrl}`;
-      const headers: Record<string, string> = {};
-      for (const [key, value] of Object.entries(req.headers)) {
-        if (typeof value === "string") {
-          headers[key] = value;
-        }
-      }
-      const metroRes = await fetch(metroUrl, { headers });
-      const body = await metroRes.text();
-      metroRes.headers.forEach((value, key) => {
-        res.setHeader(key, value);
-      });
-      res.status(metroRes.status).send(body);
-    } catch {
-      res.status(502).json({ error: "Metro bundler not reachable" });
-    }
-    return;
-  }
-
+function serveExpoManifest(platform: string, res: Response) {
   const manifestPath = path.resolve(
     process.cwd(),
     "static-build",
@@ -192,6 +169,7 @@ function configureExpoAndLanding(app: express.Application) {
   );
   const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   const appName = getAppName();
+
   log("Serving static Expo files with dynamic manifest routing");
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -205,7 +183,7 @@ function configureExpoAndLanding(app: express.Application) {
 
     const platform = req.header("expo-platform");
     if (platform && (platform === "ios" || platform === "android")) {
-      return serveExpoManifest(platform, req, res);
+      return serveExpoManifest(platform, res);
     }
 
     if (req.path === "/") {
