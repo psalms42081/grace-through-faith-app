@@ -18,10 +18,12 @@ import Animated, {
   withTiming,
   withSequence,
   withDelay,
+  withRepeat,
   FadeIn,
   FadeInDown,
   FadeInUp,
   Easing,
+  interpolate,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -302,6 +304,34 @@ const confettiStyles = StyleSheet.create({
   },
 });
 
+interface SentenceInfo {
+  text: string;
+  startWordIndex: number;
+  endWordIndex: number;
+}
+
+function splitIntoSentences(text: string): SentenceInfo[] {
+  const words = text.split(/\s+/);
+  const sentences: SentenceInfo[] = [];
+  let currentSentence = "";
+  let startIdx = 0;
+
+  words.forEach((word, i) => {
+    currentSentence += (currentSentence ? " " : "") + word;
+    if (/[.!?]$/.test(word) || i === words.length - 1) {
+      sentences.push({
+        text: currentSentence,
+        startWordIndex: startIdx,
+        endWordIndex: i,
+      });
+      currentSentence = "";
+      startIdx = i + 1;
+    }
+  });
+
+  return sentences;
+}
+
 function WordHighlightText({
   text,
   currentWordIndex,
@@ -316,13 +346,27 @@ function WordHighlightText({
   isLittleLambs: boolean;
 }) {
   const words = useMemo(() => text.split(/\s+/), [text]);
+  const sentences = useMemo(() => splitIntoSentences(text), [text]);
   const fontSize = isLittleLambs ? 22 : 20;
+
+  const currentSentenceIdx = useMemo(() => {
+    if (!isSpeaking) return -1;
+    return sentences.findIndex(
+      (s) => currentWordIndex >= s.startWordIndex && currentWordIndex <= s.endWordIndex
+    );
+  }, [sentences, currentWordIndex, isSpeaking]);
 
   return (
     <Text style={{ textAlign: "center", lineHeight: fontSize * 1.8 }}>
       {words.map((word, i) => {
         const isActive = isSpeaking && i === currentWordIndex;
         const isPast = isSpeaking && i < currentWordIndex;
+        const sentenceIdx = sentences.findIndex(
+          (s) => i >= s.startWordIndex && i <= s.endWordIndex
+        );
+        const isInCurrentSentence = isSpeaking && sentenceIdx === currentSentenceIdx;
+        const isInPastSentence = isSpeaking && sentenceIdx < currentSentenceIdx;
+
         return (
           <Text
             key={i}
@@ -330,13 +374,19 @@ function WordHighlightText({
               fontFamily: "Lora_400Regular",
               fontSize: isActive ? fontSize + 2 : fontSize,
               color: isActive
-                ? theme.accent
-                : isPast
-                ? "rgba(255,255,255,0.9)"
+                ? "#FFD700"
+                : isInCurrentSentence
+                ? "rgba(255,255,255,0.95)"
+                : isInPastSentence
+                ? "rgba(255,255,255,0.6)"
                 : isSpeaking
-                ? "rgba(255,255,255,0.45)"
+                ? "rgba(255,255,255,0.35)"
                 : "rgba(255,255,255,0.9)",
               fontWeight: isActive ? ("700" as const) : ("400" as const),
+              backgroundColor: isActive
+                ? "rgba(255,215,0,0.15)"
+                : "transparent",
+              borderRadius: isActive ? 4 : 0,
             }}
           >
             {word}{" "}
@@ -585,6 +635,78 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
 const ILLUSTRATION_WIDTH = SCREEN_WIDTH - 48;
 const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.65;
 
+const KEN_BURNS_PATTERNS = [
+  { fromScale: 1.0, toScale: 1.18, fromX: 0, toX: -15, fromY: 0, toY: -10 },
+  { fromScale: 1.05, toScale: 1.2, fromX: -10, toX: 10, fromY: -5, toY: 5 },
+  { fromScale: 1.0, toScale: 1.15, fromX: 10, toX: -10, fromY: 5, toY: -8 },
+  { fromScale: 1.08, toScale: 1.22, fromX: 5, toX: -12, fromY: -8, toY: 6 },
+  { fromScale: 1.0, toScale: 1.12, fromX: -8, toX: 8, fromY: 8, toY: -5 },
+  { fromScale: 1.05, toScale: 1.18, fromX: 12, toX: -5, fromY: -3, toY: 10 },
+  { fromScale: 1.02, toScale: 1.2, fromX: -5, toX: 15, fromY: 3, toY: -6 },
+];
+
+function KenBurnsImage({
+  uri,
+  isActive,
+  patternIndex,
+}: {
+  uri: string;
+  isActive: boolean;
+  patternIndex: number;
+}) {
+  const progress = useSharedValue(0);
+  const pattern = KEN_BURNS_PATTERNS[patternIndex % KEN_BURNS_PATTERNS.length];
+
+  useEffect(() => {
+    if (isActive) {
+      progress.value = 0;
+      progress.value = withRepeat(
+        withTiming(1, { duration: 18000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    } else {
+      progress.value = withTiming(0, { duration: 500 });
+    }
+  }, [isActive]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(progress.value, [0, 1], [pattern.fromScale, pattern.toScale]);
+    const translateX = interpolate(progress.value, [0, 1], [pattern.fromX, pattern.toX]);
+    const translateY = interpolate(progress.value, [0, 1], [pattern.fromY, pattern.toY]);
+    return {
+      transform: [
+        { scale },
+        { translateX },
+        { translateY },
+      ],
+    };
+  });
+
+  return (
+    <View style={kenBurnsStyles.container}>
+      <Animated.Image
+        source={{ uri }}
+        style={[kenBurnsStyles.image, animatedStyle]}
+        resizeMode="cover"
+      />
+    </View>
+  );
+}
+
+const kenBurnsStyles = StyleSheet.create({
+  container: {
+    width: ILLUSTRATION_WIDTH,
+    height: ILLUSTRATION_HEIGHT,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+});
+
 const illustrationStyles = StyleSheet.create({
   image: {
     width: ILLUSTRATION_WIDTH,
@@ -818,6 +940,9 @@ export default function SceneStoryScreen() {
   const [storyTitle, setStoryTitle] = useState("");
   const [quietMode, setQuietMode] = useState(false);
   const [quietModeLoaded, setQuietModeLoaded] = useState(false);
+  const [autoPlayMode, setAutoPlayMode] = useState(false);
+  const autoPlayRef = useRef(false);
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentMood = useMemo<SceneMood | null>(() => {
     if (scenes.length === 0 || !quietModeLoaded) return null;
@@ -841,6 +966,8 @@ export default function SceneStoryScreen() {
     return () => {
       Speech.stop();
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      autoPlayRef.current = false;
       cleanupAudio();
     };
   }, [id]);
@@ -866,17 +993,31 @@ export default function SceneStoryScreen() {
     }
   };
 
-  const handleReadToMe = useCallback(() => {
-    const scene = scenes[currentScene];
-    if (!scene) return;
-
-    if (isSpeaking) {
-      Speech.stop();
-      setIsSpeaking(false);
-      setCurrentWordIndex(0);
-      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+  const autoAdvanceToNext = useCallback((fromScene: number) => {
+    if (!autoPlayRef.current) return;
+    if (fromScene >= scenes.length - 1) {
+      setAutoPlayMode(false);
+      autoPlayRef.current = false;
       return;
     }
+
+    autoAdvanceTimer.current = setTimeout(() => {
+      if (!autoPlayRef.current) return;
+      const nextIdx = fromScene + 1;
+      setCurrentScene(nextIdx);
+      flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+
+      setTimeout(() => {
+        if (autoPlayRef.current) {
+          startNarration(nextIdx);
+        }
+      }, 800);
+    }, 1500);
+  }, [scenes.length]);
+
+  const startNarration = useCallback((sceneIdx: number) => {
+    const scene = scenes[sceneIdx];
+    if (!scene) return;
 
     const words = scene.narration.split(/\s+/);
     setIsSpeaking(true);
@@ -888,34 +1029,68 @@ export default function SceneStoryScreen() {
       wordIdx++;
       if (wordIdx >= words.length) {
         if (wordTimerRef.current) clearInterval(wordTimerRef.current);
-        setIsSpeaking(false);
-        setCurrentWordIndex(0);
-        if (scene.pauseAndWonder && !answeredWonders.has(scene.sceneIndex)) {
-          setShowWonder(scene.sceneIndex);
-        }
         return;
       }
       setCurrentWordIndex(wordIdx);
     }, avgWordDuration);
 
+    const onNarrationEnd = () => {
+      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      setIsSpeaking(false);
+      setCurrentWordIndex(0);
+      if (scene.pauseAndWonder && !answeredWonders.has(scene.sceneIndex)) {
+        setShowWonder(scene.sceneIndex);
+      } else {
+        autoAdvanceToNext(sceneIdx);
+      }
+    };
+
     Speech.speak(scene.narration, {
       language: "en-US",
       rate: isLittleLambs ? 0.85 : 0.95,
-      onDone: () => {
-        if (wordTimerRef.current) clearInterval(wordTimerRef.current);
-        setIsSpeaking(false);
-        setCurrentWordIndex(0);
-        if (scene.pauseAndWonder && !answeredWonders.has(scene.sceneIndex)) {
-          setShowWonder(scene.sceneIndex);
-        }
-      },
+      onDone: onNarrationEnd,
       onStopped: () => {
         if (wordTimerRef.current) clearInterval(wordTimerRef.current);
         setIsSpeaking(false);
         setCurrentWordIndex(0);
       },
     });
-  }, [currentScene, scenes, isSpeaking, isLittleLambs, answeredWonders]);
+  }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext]);
+
+  const handleReadToMe = useCallback(() => {
+    const scene = scenes[currentScene];
+    if (!scene) return;
+
+    if (isSpeaking) {
+      Speech.stop();
+      setIsSpeaking(false);
+      setCurrentWordIndex(0);
+      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      setAutoPlayMode(false);
+      autoPlayRef.current = false;
+      return;
+    }
+
+    startNarration(currentScene);
+  }, [currentScene, scenes, isSpeaking, startNarration]);
+
+  const handleAutoPlay = useCallback(() => {
+    if (autoPlayMode) {
+      Speech.stop();
+      setIsSpeaking(false);
+      setCurrentWordIndex(0);
+      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      setAutoPlayMode(false);
+      autoPlayRef.current = false;
+      return;
+    }
+
+    setAutoPlayMode(true);
+    autoPlayRef.current = true;
+    startNarration(currentScene);
+  }, [autoPlayMode, currentScene, startNarration]);
 
   const handleWonderAnswer = useCallback(
     (sceneIdx: number, optionIdx: number) => {
@@ -929,9 +1104,16 @@ export default function SceneStoryScreen() {
       setTimeout(() => {
         setShowConfetti(false);
         setShowWonder(null);
+
+        if (autoPlayRef.current) {
+          const sceneIndex = scenes.findIndex((s) => s.sceneIndex === sceneIdx);
+          if (sceneIndex >= 0) {
+            autoAdvanceToNext(sceneIndex);
+          }
+        }
       }, 1800);
     },
-    []
+    [scenes, autoAdvanceToNext]
   );
 
   const goToScene = useCallback(
@@ -1035,10 +1217,10 @@ export default function SceneStoryScreen() {
           <View style={[styles.sceneContent, { paddingTop: topPad + 16 }]}>
             <View style={styles.illustrationArea}>
               {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}` }}
-                  style={illustrationStyles.image}
-                  resizeMode="cover"
+                <KenBurnsImage
+                  uri={item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`}
+                  isActive={index === currentScene}
+                  patternIndex={index}
                 />
               ) : (
                 <SceneIllustration
@@ -1195,6 +1377,15 @@ export default function SceneStoryScreen() {
       )}
 
       <View style={[styles.topHeader, { paddingTop: topPad + 8 }]}>
+        {autoPlayMode && (
+          <Animated.View
+            entering={FadeIn.duration(300)}
+            style={styles.autoPlayBadge}
+          >
+            <Ionicons name="play-forward" size={12} color="#A78BFA" />
+            <Text style={styles.autoPlayBadgeText}>Auto-Read</Text>
+          </Animated.View>
+        )}
         <Pressable
           onPress={toggleQuietMode}
           style={[
@@ -1232,17 +1423,33 @@ export default function SceneStoryScreen() {
           <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
         </View>
 
-        <Pressable
-          onPress={handleReadToMe}
-          style={[styles.readToMeBtn, { backgroundColor: isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.2)" }]}
-          testID="read-to-me"
-        >
-          <Ionicons
-            name={isSpeaking ? "stop" : "volume-high"}
-            size={20}
-            color="#fff"
-          />
-        </Pressable>
+        <View style={styles.audioControls}>
+          <Pressable
+            onPress={handleAutoPlay}
+            style={[
+              styles.autoPlayBtn,
+              { backgroundColor: autoPlayMode ? "#A78BFA" : "rgba(255,255,255,0.15)" },
+            ]}
+            testID="auto-play"
+          >
+            <Ionicons
+              name={autoPlayMode ? "pause" : "play-forward"}
+              size={16}
+              color="#fff"
+            />
+          </Pressable>
+          <Pressable
+            onPress={handleReadToMe}
+            style={[styles.readToMeBtn, { backgroundColor: isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.2)" }]}
+            testID="read-to-me"
+          >
+            <Ionicons
+              name={isSpeaking ? "stop" : "volume-high"}
+              size={20}
+              color="#fff"
+            />
+          </Pressable>
+        </View>
       </View>
 
       {currentScene > 0 && (
@@ -1439,12 +1646,24 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
   },
+  audioControls: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  autoPlayBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
   readToMeBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   topHeader: {
     position: "absolute",
@@ -1457,12 +1676,26 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     zIndex: 20,
   },
+  autoPlayBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    backgroundColor: "rgba(167,139,250,0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  autoPlayBadgeText: {
+    color: "#A78BFA",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
   quietModeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   navArrow: {
     position: "absolute",

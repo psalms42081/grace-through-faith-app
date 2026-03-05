@@ -18,6 +18,7 @@ The application is built with a mobile-first architecture. The frontend uses **E
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
 - **Kids Club UI:** Features a playful and vibrant design with custom elements, animations, and larger touch targets.
+- **Kids Read-Along Experience (Phase 1):** Scene-based story viewer (`app/kids/story/[id].tsx`) enhanced with: Ken Burns effect on illustrations (7 unique pan/zoom patterns, 18s animation cycles using `react-native-reanimated`); sentence-level text highlighting (current word in gold, current sentence bright, past sentences dimmed, future sentences faded); auto-play mode that reads through all scenes automatically, auto-advancing after 1.5s pause between scenes (purple badge "Auto-Read" shown when active); integrates with Pause & Wonder quiz system (auto-play resumes after answering).
 
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content, including progress tracking and deep study modes.
