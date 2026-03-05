@@ -1423,40 +1423,6 @@ function AdultHomeScreen() {
         </Text>
       </View>
 
-      <View style={s.hubGrid}>
-        <Pressable
-          onPress={() => router.push("/church-connect" as any)}
-          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <View style={[s.hubIconWrap, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="location" size={22} color={theme.accent} />
-          </View>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Church Connect
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Find SDA churches near you
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/groups" as any)}
-          style={({ pressed }) => [s.hubCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <View style={[s.hubIconWrap, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
-            <Ionicons name="people-circle" size={22} color="#10B981" />
-          </View>
-          <Text style={[s.hubCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Small Groups
-          </Text>
-          <Text style={[s.hubCardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Join study groups worldwide
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginTop: 4 }} />
-        </Pressable>
-      </View>
-
       <Pressable
         onPress={() => router.push("/study-paths" as any)}
         style={({ pressed }) => [s.hubCardWide, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
@@ -1824,18 +1790,6 @@ const s = StyleSheet.create({
   hubTitle: {
     fontSize: 20,
     letterSpacing: -0.3,
-  },
-  hubGrid: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
-  hubCard: {
-    flex: 1,
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    gap: 6,
   },
   hubIconWrap: {
     width: 44,
