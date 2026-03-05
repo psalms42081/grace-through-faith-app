@@ -6,6 +6,7 @@ import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
 import { getApiUrl } from "@/lib/query-client";
+import { useAudioContext } from "@/contexts/AudioContext";
 
 const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
 const VOICE_ID_STORAGE_KEY = "@grace-through-faith/tts-voice-id";
@@ -70,7 +71,9 @@ export default function useBibleAudio(
   chapter: string,
   translation: string,
   scrollViewRef: React.RefObject<ScrollView | null>,
+  bookName?: string,
 ): UseBibleAudioReturn {
+  const audioCtx = useAudioContext();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
@@ -90,6 +93,12 @@ export default function useBibleAudio(
   const playerRef = useRef<AudioPlayer | null>(null);
   const selectedVoiceRef = useRef("nova");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     versesRef.current = verses;
@@ -131,8 +140,30 @@ export default function useBibleAudio(
   useEffect(() => {
     setAudioModeAsync({
       playsInSilentMode: true,
+      shouldPlayInBackground: true,
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    audioCtx.updatePlaybackState({
+      isSpeaking,
+      isPaused,
+      speakingVerseIndex,
+      isLoadingAudio,
+    });
+  }, [isSpeaking, isPaused, speakingVerseIndex, isLoadingAudio]);
+
+  useEffect(() => {
+    audioCtx.setControls({
+      play: () => handlePlayRef.current(),
+      pause: () => handlePauseRef.current(),
+      stop: () => handleStopRef.current(),
+    });
+  }, []);
+
+  const handlePlayRef = useRef(() => {});
+  const handlePauseRef = useRef(() => {});
+  const handleStopRef = useRef(() => {});
 
   const cleanupPlayer = useCallback(() => {
     if (playerRef.current) {
@@ -153,19 +184,12 @@ export default function useBibleAudio(
     setIsLoadingAudio(false);
     setUsingFallback(false);
     currentIndexRef.current = -1;
-  }, [cleanupPlayer]);
+    audioCtx.clearSession();
+  }, [cleanupPlayer, audioCtx]);
 
   useEffect(() => {
     resetPlayback();
   }, [bookId, chapter, translation, resetPlayback]);
-
-  useEffect(() => {
-    return () => {
-      sessionRef.current += 1;
-      cleanupPlayer();
-      Speech.stop();
-    };
-  }, [cleanupPlayer]);
 
   const scrollToVerseEstimate = useCallback((index: number) => {
     if (index < 0 || !scrollViewRef.current) return;
@@ -199,6 +223,7 @@ export default function useBibleAudio(
       setIsPaused(false);
       setSpeakingVerseIndex(-1);
       currentIndexRef.current = -1;
+      audioCtx.clearSession();
       return;
     }
 
@@ -222,6 +247,7 @@ export default function useBibleAudio(
           setIsSpeaking(false);
           setIsPaused(false);
           setSpeakingVerseIndex(-1);
+          audioCtx.clearSession();
         }
       },
     };
@@ -233,8 +259,9 @@ export default function useBibleAudio(
       setIsPaused(false);
       setSpeakingVerseIndex(-1);
       currentIndexRef.current = -1;
+      audioCtx.clearSession();
     }
-  }, []);
+  }, [audioCtx]);
 
   const BATCH_SIZE = 3;
 
@@ -248,6 +275,7 @@ export default function useBibleAudio(
       setSpeakingVerseIndex(-1);
       setIsLoadingAudio(false);
       currentIndexRef.current = -1;
+      audioCtx.clearSession();
       return;
     }
 
@@ -328,11 +356,18 @@ export default function useBibleAudio(
       setIsLoadingAudio(false);
       speakVerseFallback(index, session);
     }
-  }, [cleanupPlayer, speakVerseFallback]);
+  }, [cleanupPlayer, speakVerseFallback, audioCtx]);
 
   const handlePlay = useCallback(() => {
     const vrs = versesRef.current;
     if (!vrs.length) return;
+
+    audioCtx.registerSession({
+      bookId,
+      bookName: bookName || "",
+      chapter,
+      translation,
+    });
 
     if (isPaused && currentIndexRef.current >= 0) {
       setIsPaused(false);
@@ -355,7 +390,7 @@ export default function useBibleAudio(
       setUsingFallback(false);
       speakVerseAI(0, session);
     }
-  }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback]);
+  }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation, audioCtx]);
 
   const handlePause = useCallback(() => {
     if (usingFallback) {
@@ -374,6 +409,12 @@ export default function useBibleAudio(
   const handleStop = useCallback(() => {
     resetPlayback();
   }, [resetPlayback]);
+
+  useEffect(() => {
+    handlePlayRef.current = handlePlay;
+    handlePauseRef.current = handlePause;
+    handleStopRef.current = handleStop;
+  }, [handlePlay, handlePause, handleStop]);
 
   const handleSpeedChange = useCallback((rate: number) => {
     speechRateRef.current = rate;

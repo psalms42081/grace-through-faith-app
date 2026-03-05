@@ -169,5 +169,72 @@ router.post("/api/devotionals/reflect", async (req, res) => {
 });
 
 
+router.post("/api/reading-plans/generate", async (req, res) => {
+  try {
+    const { topic, durationDays, difficulty, userId } = req.body;
+    if (!topic || !durationDays) {
+      return res.status(400).json({ error: "topic and durationDays are required" });
+    }
+
+    const { generateReadingPlan, resolveBookId } = await import("../services/ai-engine");
+
+    const plan = await generateReadingPlan({
+      topic: String(topic).slice(0, 200),
+      durationDays: Math.min(Math.max(Number(durationDays), 3), 30),
+      difficulty: String(difficulty || "intermediate"),
+    });
+
+    const [savedPlan] = await db
+      .insert(devotionalPlans)
+      .values({
+        title: plan.title,
+        description: plan.description,
+        totalDays: plan.days.length,
+        theme: plan.theme,
+        targetGoals: plan.targetGoals,
+        difficultyLevel: difficulty || "intermediate",
+        estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
+        isPublished: false,
+        isAiGenerated: true,
+        generatedForUserId: userId || null,
+      })
+      .returning();
+
+    const dayValues = plan.days.map((day) => {
+      const bookId = resolveBookId(day.bookName);
+      return {
+        planId: savedPlan.id,
+        dayNumber: day.dayNumber,
+        title: day.title,
+        bookId,
+        chapter: day.chapter,
+        verseStart: day.verseStart,
+        verseEnd: day.verseEnd,
+        passageLabel: day.passageLabel,
+        contextNote: day.contextNote,
+        reflectionQuestions: day.reflectionQuestions,
+        prayerPrompt: day.prayerPrompt,
+        thenContext: day.thenContext,
+        nowApplication: day.nowApplication,
+      };
+    });
+
+    if (dayValues.length > 0) {
+      await db.insert(devotionalDays).values(dayValues);
+    }
+
+    const savedDays = await db
+      .select()
+      .from(devotionalDays)
+      .where(eq(devotionalDays.planId, savedPlan.id))
+      .orderBy(devotionalDays.dayNumber);
+
+    return res.json({ plan: savedPlan, days: savedDays });
+  } catch (err: any) {
+    console.error("Generate reading plan error:", err);
+    return res.status(500).json({ error: err.message || "Failed to generate reading plan" });
+  }
+});
+
   export default router;
   

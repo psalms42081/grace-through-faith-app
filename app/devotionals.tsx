@@ -233,6 +233,31 @@ export default function DevotionalsScreen() {
           </Text>
         </View>
 
+        <Pressable
+          onPress={() => router.push("/create-plan")}
+          style={({ pressed }) => [
+            styles.createPlanBtn,
+            {
+              backgroundColor: theme.accent + "14",
+              borderColor: theme.accent,
+              opacity: pressed ? 0.75 : 1,
+            },
+          ]}
+        >
+          <View style={[styles.createPlanIcon, { backgroundColor: theme.accent }]}>
+            <Ionicons name="sparkles" size={18} color="#fff" />
+          </View>
+          <View style={styles.createPlanInfo}>
+            <Text style={[styles.createPlanTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              Create AI Plan
+            </Text>
+            <Text style={[styles.createPlanSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Generate a custom plan on any topic
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.accent} />
+        </Pressable>
+
         {isLoading && (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="small" color={theme.accent} />
@@ -419,4 +444,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   backText: { fontSize: 14 },
+  createPlanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 14,
+    gap: 12,
+  },
+  createPlanIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  createPlanInfo: { flex: 1, gap: 2 },
+  createPlanTitle: { fontSize: 15 },
+  createPlanSub: { fontSize: 12 },
 });

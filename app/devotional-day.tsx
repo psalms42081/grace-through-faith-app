@@ -282,13 +282,15 @@ const rStyles = StyleSheet.create({
 });
 
 export default function DevotionalDayScreen() {
-  const { planId } = useLocalSearchParams<{ planId?: string }>();
+  const { planId, groupId } = useLocalSearchParams<{ planId?: string; groupId?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [shareToGroup, setShareToGroup] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -331,6 +333,16 @@ export default function DevotionalDayScreen() {
         dayId: day.id,
         journalEntry: journalText.trim() || null,
       });
+      if (shareToGroup && groupId && journalText.trim()) {
+        try {
+          await apiRequest("POST", `/api/groups/${groupId}/share-reflection`, {
+            content: journalText.trim(),
+            dayTitle: day.title,
+            passageLabel: day.passageLabel || null,
+          });
+          setShared(true);
+        } catch {}
+      }
       setCompleted(true);
       queryClient.invalidateQueries({ queryKey: [todayQueryKey] });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
@@ -574,6 +586,22 @@ export default function DevotionalDayScreen() {
                 fontFamily: "Inter_400Regular",
               }]}
             />
+            {groupId ? (
+              <Pressable
+                onPress={() => setShareToGroup(!shareToGroup)}
+                style={[styles.shareToggleRow, { backgroundColor: shareToGroup ? theme.accent + "15" : "transparent", borderColor: theme.border }]}
+              >
+                <Ionicons
+                  name={shareToGroup ? "checkbox" : "square-outline"}
+                  size={20}
+                  color={shareToGroup ? theme.accent : theme.textMuted}
+                />
+                <Text style={[styles.shareToggleText, { color: shareToGroup ? theme.accent : theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  Share reflection with group
+                </Text>
+                <Ionicons name="people" size={16} color={shareToGroup ? theme.accent : theme.textMuted} />
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={handleComplete}
               disabled={completing}
@@ -601,7 +629,7 @@ export default function DevotionalDayScreen() {
               Day {day.dayNumber} Complete
             </Text>
             <Text style={[styles.doneBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Come back tomorrow for your next reading.
+              {shared ? "Your reflection was shared with your group. " : ""}Come back tomorrow for your next reading.
             </Text>
           </View>
         )}
@@ -710,6 +738,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   browseBtnText: { color: "#fff", fontSize: 14 },
+  shareToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  shareToggleText: { fontSize: 13, flex: 1 },
   egwLink: {
     flexDirection: "row",
     alignItems: "center",

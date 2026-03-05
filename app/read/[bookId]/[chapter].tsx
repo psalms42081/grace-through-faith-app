@@ -115,7 +115,7 @@ export default function VerseReaderScreen() {
 
   const verses = data?.verses ?? [];
 
-  const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef);
+  const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef, bookName);
 
   useEffect(() => {
     if (data?.book?.name && bookId && chapter) {

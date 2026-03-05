@@ -15,6 +15,8 @@ import { TutorialProvider } from "@/contexts/TutorialContext";
 import { useTheme } from "@/hooks/useTheme";
 import { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
+import { AudioProvider } from "@/contexts/AudioContext";
+import MiniPlayer from "@/components/MiniPlayer";
 import {
   useFonts,
   Lora_400Regular,
@@ -139,11 +141,14 @@ export default function RootLayout() {
               <KidsModeProvider>
                 <ProProvider>
                   <TutorialProvider>
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                      <KeyboardProvider>
-                        <RootLayoutNav />
-                      </KeyboardProvider>
-                    </GestureHandlerRootView>
+                    <AudioProvider>
+                      <GestureHandlerRootView style={{ flex: 1 }}>
+                        <KeyboardProvider>
+                          <RootLayoutNav />
+                          <MiniPlayer />
+                        </KeyboardProvider>
+                      </GestureHandlerRootView>
+                    </AudioProvider>
                   </TutorialProvider>
                 </ProProvider>
               </KidsModeProvider>

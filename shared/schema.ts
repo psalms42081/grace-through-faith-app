@@ -79,6 +79,7 @@ export const prayerGroups = pgTable("prayer_groups", {
   isPublic: boolean("is_public").default(false).notNull(),
   churchId: varchar("church_id"),
   assignedTrackId: varchar("assigned_track_id"),
+  groupPlanId: varchar("group_plan_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -448,6 +449,8 @@ export const devotionalPlans = pgTable("devotional_plan", {
   estimatedMinutesPerDay: integer("estimated_minutes_per_day"),
   traditionKey: varchar("tradition_key", { length: 30 }).default("core").notNull(),
   isPublished: boolean("is_published").default(false),
+  isAiGenerated: boolean("is_ai_generated").default(false),
+  generatedForUserId: varchar("generated_for_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1410,3 +1413,18 @@ export const sabbathReflections = pgTable(
 );
 
 export type SabbathReflection = typeof sabbathReflections.$inferSelect;
+
+// ─── SEMANTIC SEARCH CACHE ──────────────────────────────────────────────────
+
+export const searchCache = pgTable("search_cache", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  queryText: text("query_text").notNull(),
+  queryHash: varchar("query_hash", { length: 64 }).notNull().unique(),
+  results: jsonb("results").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export type SearchCache = typeof searchCache.$inferSelect;

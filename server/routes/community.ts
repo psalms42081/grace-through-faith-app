@@ -14,6 +14,10 @@ import { Router } from "express";
     sdaChurches,
     liveSessions,
     sabbathReflections,
+    devotionalPlans,
+    devotionalDays,
+    userPlanEnrollments,
+    userPlanProgress,
   } from "../../shared/schema";
   import { eq, and, ilike, sql, desc } from "drizzle-orm";
   import { extractUserId, generateCode } from "../middleware/auth";
@@ -639,6 +643,133 @@ router.get("/api/churches/:id", async (req, res) => {
   } catch (err) {
     console.error("Church detail error:", err);
     return res.status(500).json({ error: "Failed to get church details" });
+  }
+});
+
+// ─── GROUP DEVOTIONAL PLANS ──────────────────────────────────────────────
+
+router.post("/api/groups/:id/assign-plan", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const { id } = req.params;
+    const { planId } = req.body;
+    if (!planId) return res.status(400).json({ error: "Plan ID is required" });
+
+    const [member] = await db.select().from(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+    if (!member || (member.role !== "leader" && member.role !== "moderator")) {
+      return res.status(403).json({ error: "Only leaders and moderators can assign devotional plans" });
+    }
+
+    const [plan] = await db.select().from(devotionalPlans).where(eq(devotionalPlans.id, planId));
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+    await db.update(prayerGroups).set({ groupPlanId: planId }).where(eq(prayerGroups.id, id));
+
+    return res.json({ success: true, plan });
+  } catch (err) {
+    console.error("Assign plan error:", err);
+    return res.status(500).json({ error: "Failed to assign plan" });
+  }
+});
+
+router.get("/api/groups/:id/plan-progress", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const { id } = req.params;
+    const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
+    if (!group) return res.status(404).json({ error: "Group not found" });
+
+    if (!group.isPublic) {
+      const [membership] = await db.select().from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+      if (!membership) return res.status(403).json({ error: "You must be a member to view group progress" });
+    }
+
+    if (!group.groupPlanId) return res.json({ plan: null, members: [] });
+
+    const [plan] = await db.select().from(devotionalPlans).where(eq(devotionalPlans.id, group.groupPlanId));
+    if (!plan) return res.json({ plan: null, members: [] });
+
+    const days = await db.select().from(devotionalDays).where(eq(devotionalDays.planId, plan.id));
+    const totalDays = days.length || plan.totalDays;
+
+    const members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+
+    const memberProgress = [];
+    for (const member of members) {
+      const [enrollment] = await db.select().from(userPlanEnrollments)
+        .where(and(eq(userPlanEnrollments.userId, member.userId), eq(userPlanEnrollments.planId, plan.id)));
+
+      let completedDays = 0;
+      if (enrollment) {
+        const progress = await db.select().from(userPlanProgress)
+          .where(eq(userPlanProgress.enrollmentId, enrollment.id));
+        completedDays = progress.length;
+      }
+
+      memberProgress.push({
+        userId: member.userId,
+        displayName: member.displayName || "Member",
+        role: member.role,
+        enrolled: !!enrollment,
+        completedDays,
+        totalDays,
+        percent: totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0,
+      });
+    }
+
+    const enrolledCount = memberProgress.filter(m => m.enrolled).length;
+    const avgPercent = enrolledCount > 0
+      ? Math.round(memberProgress.filter(m => m.enrolled).reduce((s, m) => s + m.percent, 0) / enrolledCount)
+      : 0;
+
+    return res.json({
+      plan: {
+        id: plan.id,
+        title: plan.title,
+        description: plan.description,
+        totalDays,
+        theme: plan.theme,
+      },
+      members: memberProgress,
+      enrolledCount,
+      totalMembers: members.length,
+      averagePercent: avgPercent,
+    });
+  } catch (err) {
+    console.error("Plan progress error:", err);
+    return res.status(500).json({ error: "Failed to get plan progress" });
+  }
+});
+
+router.post("/api/groups/:id/share-reflection", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const { id } = req.params;
+    const { content, dayTitle, passageLabel } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
+
+    const [membership] = await db.select().from(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+    if (!membership) return res.status(403).json({ error: "You must be a member to share reflections" });
+
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+    const prefix = dayTitle ? `[${dayTitle}${passageLabel ? ` - ${passageLabel}` : ""}] ` : "";
+    const fullContent = prefix + content.trim();
+
+    const [discussion] = await db.insert(groupDiscussions).values({
+      groupId: id,
+      userId,
+      authorName: user?.displayName || user?.username || "Member",
+      content: fullContent,
+    }).returning();
+
+    return res.json(discussion);
+  } catch (err) {
+    console.error("Share reflection error:", err);
+    return res.status(500).json({ error: "Failed to share reflection" });
   }
 });
 

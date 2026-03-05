@@ -10,6 +10,7 @@ import { Router } from "express";
     readingHistory,
     readingStreaks,
     bibleBooks,
+    bibleVerses,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { extractUserId } from "../middleware/auth";
@@ -175,10 +176,24 @@ router.post("/api/user/dismiss-mission-invite", async (req, res) => {
   router.get("/api/notes/:userId", async (req, res) => {
   try {
     const notes = await db
-      .select()
+      .select({
+        id: userNotes.id,
+        userId: userNotes.userId,
+        verseId: userNotes.verseId,
+        content: userNotes.content,
+        createdAt: userNotes.createdAt,
+        updatedAt: userNotes.updatedAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        bookName: bibleBooks.name,
+      })
       .from(userNotes)
+      .leftJoin(bibleVerses, eq(userNotes.verseId, bibleVerses.id))
+      .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
       .where(eq(userNotes.userId, String(req.params.userId)))
-      .orderBy(userNotes.updatedAt);
+      .orderBy(desc(userNotes.updatedAt));
     return res.json(notes);
   } catch (err) {
     console.error(err);
@@ -208,9 +223,23 @@ router.post("/api/notes", async (req, res) => {
 router.get("/api/highlights/:userId", async (req, res) => {
   try {
     const highlights = await db
-      .select()
+      .select({
+        id: userHighlights.id,
+        userId: userHighlights.userId,
+        verseId: userHighlights.verseId,
+        color: userHighlights.color,
+        createdAt: userHighlights.createdAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        bookName: bibleBooks.name,
+      })
       .from(userHighlights)
-      .where(eq(userHighlights.userId, String(req.params.userId)));
+      .leftJoin(bibleVerses, eq(userHighlights.verseId, bibleVerses.id))
+      .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
+      .where(eq(userHighlights.userId, String(req.params.userId)))
+      .orderBy(desc(userHighlights.createdAt));
     return res.json(highlights);
   } catch (err) {
     console.error(err);
@@ -241,10 +270,23 @@ router.post("/api/highlights", async (req, res) => {
 router.get("/api/bookmarks/:userId", async (req, res) => {
   try {
     const bookmarks = await db
-      .select()
+      .select({
+        id: userBookmarks.id,
+        userId: userBookmarks.userId,
+        verseId: userBookmarks.verseId,
+        label: userBookmarks.label,
+        createdAt: userBookmarks.createdAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        bookName: bibleBooks.name,
+      })
       .from(userBookmarks)
+      .leftJoin(bibleVerses, eq(userBookmarks.verseId, bibleVerses.id))
+      .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
       .where(eq(userBookmarks.userId, String(req.params.userId)))
-      .orderBy(userBookmarks.createdAt);
+      .orderBy(desc(userBookmarks.createdAt));
     return res.json(bookmarks);
   } catch (err) {
     console.error(err);

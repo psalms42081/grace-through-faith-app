@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Share,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
@@ -56,10 +57,45 @@ interface GroupDetail {
     groupType: string;
     isPublic: boolean;
     assignedTrackId: string | null;
+    groupPlanId: string | null;
     createdAt: string;
   };
   members: GroupMember[];
   trackProgress: TrackProgress | null;
+}
+
+interface DevotionalPlanInfo {
+  id: string;
+  title: string;
+  description: string | null;
+  totalDays: number;
+  theme: string | null;
+}
+
+interface MemberPlanProgress {
+  userId: string;
+  displayName: string;
+  role: string;
+  enrolled: boolean;
+  completedDays: number;
+  totalDays: number;
+  percent: number;
+}
+
+interface GroupPlanProgress {
+  plan: DevotionalPlanInfo | null;
+  members: MemberPlanProgress[];
+  enrolledCount: number;
+  totalMembers: number;
+  averagePercent: number;
+}
+
+interface AvailablePlan {
+  id: string;
+  title: string;
+  description: string | null;
+  totalDays: number;
+  theme: string | null;
 }
 
 interface Discussion {
@@ -88,7 +124,7 @@ interface AvailableTrack {
   category: string;
 }
 
-type GroupTab = "discussion" | "prayer" | "study";
+type GroupTab = "discussion" | "prayer" | "study" | "devotional";
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -103,6 +139,7 @@ export default function GroupDetailScreen() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const [showTrackPicker, setShowTrackPicker] = useState(false);
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [newPostText, setNewPostText] = useState("");
   const [expandedDiscussion, setExpandedDiscussion] = useState<string | null>(null);
   const [goLiveTitle, setGoLiveTitle] = useState("");
@@ -121,6 +158,16 @@ export default function GroupDetailScreen() {
   const { data: tracks } = useQuery<AvailableTrack[]>({
     queryKey: ["/api/tracks"],
     enabled: showTrackPicker,
+  });
+
+  const { data: planProgress } = useQuery<GroupPlanProgress>({
+    queryKey: [`/api/groups/${id}/plan-progress`],
+    enabled: !!id && (activeTab === "devotional" || activeTab === "study"),
+  });
+
+  const { data: availablePlans } = useQuery<AvailablePlan[]>({
+    queryKey: ["/api/devotionals/plans"],
+    enabled: showPlanPicker,
   });
 
   const leaveMutation = useMutation({
@@ -160,6 +207,17 @@ export default function GroupDetailScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
       setShowTrackPicker(false);
+    },
+  });
+
+  const assignPlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      return await apiRequest("POST", `/api/groups/${id}/assign-plan`, { planId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}/plan-progress`] });
+      setShowPlanPicker(false);
     },
   });
 
@@ -210,6 +268,15 @@ export default function GroupDetailScreen() {
       setCodeCopied(true);
       setTimeout(() => setCodeCopied(false), 2000);
     }
+  };
+
+  const handleShareInvite = async () => {
+    if (!data?.group) return;
+    try {
+      await Share.share({
+        message: `Join my group "${data.group.name}" on Grace Through Faith! Use invite code: ${data.group.joinCode}`,
+      });
+    } catch {}
   };
 
   const handleLeave = () => {
@@ -380,6 +447,116 @@ export default function GroupDetailScreen() {
     </View>
   );
 
+  const renderDevotionalTab = () => (
+    <View style={s.tabContent}>
+      {planProgress?.plan ? (
+        <>
+          <View style={[s.studyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={s.studyHeader}>
+              <View style={[s.studyIcon, { backgroundColor: theme.accent + "20" }]}>
+                <Ionicons name="flame" size={22} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.studyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {planProgress.plan.title}
+                </Text>
+                <Text style={[s.studyMeta, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {planProgress.plan.totalDays} days
+                  {planProgress.plan.theme ? ` \u00B7 ${planProgress.plan.theme}` : ""}
+                </Text>
+              </View>
+            </View>
+            {planProgress.plan.description ? (
+              <Text style={[{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20 }]}>
+                {planProgress.plan.description}
+              </Text>
+            ) : null}
+            <View style={s.progressSection}>
+              <View style={s.progressLabelRow}>
+                <Text style={[s.progressLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  Group Progress ({planProgress.enrolledCount}/{planProgress.totalMembers} enrolled)
+                </Text>
+                <Text style={[s.progressPercent, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {planProgress.averagePercent}%
+                </Text>
+              </View>
+              <View style={[s.progressBarBg, { backgroundColor: isDark ? "#2A2A3E" : "#E8E4DD" }]}>
+                <View style={[s.progressBarFill, { width: `${planProgress.averagePercent}%`, backgroundColor: theme.accent }]} />
+              </View>
+            </View>
+          </View>
+
+          <View style={[s.studyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginTop: 10 }]}>
+            <Text style={[s.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 4 }]}>
+              Member Progress
+            </Text>
+            {planProgress.members.map((member) => (
+              <View key={member.userId} style={[s.memberProgressRow, { borderColor: theme.border }]}>
+                <View style={[s.memberAvatar, { backgroundColor: theme.accent + "20" }]}>
+                  <Text style={[{ color: theme.accent, fontSize: 12, fontFamily: "Inter_600SemiBold" }]}>
+                    {member.displayName[0]?.toUpperCase() || "M"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={[{ color: theme.text, fontSize: 13, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                      {member.displayName}
+                    </Text>
+                    <Text style={[{ color: member.enrolled ? theme.accent : theme.textMuted, fontSize: 11, fontFamily: "Inter_500Medium" }]}>
+                      {member.enrolled ? `${member.completedDays}/${member.totalDays}` : "Not enrolled"}
+                    </Text>
+                  </View>
+                  {member.enrolled ? (
+                    <View style={[s.progressBarBg, { backgroundColor: isDark ? "#2A2A3E" : "#E8E4DD", height: 4, marginTop: 4 }]}>
+                      <View style={[s.progressBarFill, { width: `${member.percent}%`, backgroundColor: theme.accent, height: 4 }]} />
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <Pressable
+            onPress={() => router.push(`/devotional-day?planId=${planProgress.plan!.id}&groupId=${id}`)}
+            style={[s.startReadingBtn, { backgroundColor: theme.accent }]}
+          >
+            <Ionicons name="book" size={18} color="#fff" />
+            <Text style={[{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }]}>
+              Start Today's Reading
+            </Text>
+          </Pressable>
+
+          {(isLeader || isModerator) ? (
+            <Pressable
+              onPress={() => setShowPlanPicker(true)}
+              style={[s.changeTrackBtn, { borderColor: theme.border }]}
+            >
+              <Ionicons name="swap-horizontal" size={16} color={theme.textSecondary} />
+              <Text style={[s.changeTrackText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                Change Devotional Plan
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
+      ) : (
+        <View style={s.tabEmpty}>
+          <Ionicons name="flame-outline" size={40} color={theme.textMuted} />
+          <Text style={[s.tabEmptyText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            No devotional plan assigned yet
+          </Text>
+          {(isLeader || isModerator) ? (
+            <Pressable
+              onPress={() => setShowPlanPicker(true)}
+              style={[s.assignBtn, { backgroundColor: theme.accent }]}
+            >
+              <Text style={[s.assignBtnText, { fontFamily: "Inter_600SemiBold" }]}>Assign a Devotional Plan</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad + 24 }}>
@@ -423,6 +600,13 @@ export default function GroupDetailScreen() {
                 color={codeCopied ? "#7ED321" : theme.accent}
               />
             </View>
+          </Pressable>
+
+          <Pressable onPress={handleShareInvite} style={[s.shareInviteBtn, { borderColor: theme.accent }]}>
+            <Ionicons name="share-social" size={16} color={theme.accent} />
+            <Text style={[{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }]}>
+              Share Invite
+            </Text>
           </Pressable>
 
           {groupStream ? (
@@ -526,7 +710,8 @@ export default function GroupDetailScreen() {
           {([
             { key: "discussion" as const, icon: "chatbubbles" as const, label: "Discussion" },
             { key: "prayer" as const, icon: "heart" as const, label: "Prayer" },
-            { key: "study" as const, icon: "book" as const, label: "Study Plan" },
+            { key: "devotional" as const, icon: "flame" as const, label: "Devotional" },
+            { key: "study" as const, icon: "book" as const, label: "Study" },
           ]).map((t) => (
             <Pressable
               key={t.key}
@@ -547,6 +732,7 @@ export default function GroupDetailScreen() {
             <PrayerWall groupId={id} />
           </View>
         )}
+        {activeTab === "devotional" && renderDevotionalTab()}
         {activeTab === "study" && renderStudyTab()}
 
         <Pressable onPress={handleLeave} style={s.leaveBtn}>
@@ -582,6 +768,44 @@ export default function GroupDetailScreen() {
               </ScrollView>
             )}
             <Pressable onPress={() => setShowTrackPicker(false)} style={[s.pickerCancel, { borderColor: theme.border }]}>
+              <Text style={[s.pickerCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {showPlanPicker ? (
+        <View style={s.pickerOverlay}>
+          <View style={[s.pickerCard, { backgroundColor: theme.backgroundCard }]}>
+            <Text style={[s.pickerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Assign Devotional Plan
+            </Text>
+            {(availablePlans || []).length === 0 ? (
+              <ActivityIndicator color={theme.accent} style={{ marginVertical: 20 }} />
+            ) : (
+              <ScrollView style={s.pickerList}>
+                {(availablePlans || []).map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    onPress={() => assignPlanMutation.mutate(plan.id)}
+                    style={[s.pickerItem, { borderColor: theme.border }]}
+                  >
+                    <View style={[s.pickerIcon, { backgroundColor: theme.accent + "20" }]}>
+                      <Ionicons name="flame" size={18} color={theme.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.pickerItemText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {plan.title}
+                      </Text>
+                      <Text style={[{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }]}>
+                        {plan.totalDays} days{plan.theme ? ` \u00B7 ${plan.theme}` : ""}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+            <Pressable onPress={() => setShowPlanPicker(false)} style={[s.pickerCancel, { borderColor: theme.border }]}>
               <Text style={[s.pickerCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
             </Pressable>
           </View>
@@ -725,6 +949,17 @@ const s = StyleSheet.create({
   codeLabel: { fontSize: 11 },
   codeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   codeText: { fontSize: 20, letterSpacing: 3 },
+  shareInviteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    width: "100%",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
   membersSection: {
     marginHorizontal: 16,
     marginBottom: 12,
@@ -828,6 +1063,22 @@ const s = StyleSheet.create({
     borderRadius: 12,
   },
   changeTrackText: { fontSize: 13 },
+  memberProgressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+  },
+  startReadingBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 10,
+  },
   leaveBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -874,6 +874,221 @@ Respond with JSON: {"response": "your thoughtful reply", "followUp": "optional f
   }
 }
 
+export interface SemanticSearchResult {
+  reference: string;
+  bookId: number;
+  chapter: number;
+  verseStart: number;
+  verseEnd: number | null;
+  text: string;
+  relevance: string;
+}
+
+export async function generateSemanticSearch(query: string): Promise<SemanticSearchResult[]> {
+  const openai = createOpenAIClient();
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a Bible search engine. Given a natural language query, find the most relevant Bible passages. Return 8-12 results ranked by relevance.
+
+Return valid JSON only, no markdown:
+[
+  {
+    "reference": "John 3:16",
+    "bookId": 43,
+    "chapter": 3,
+    "verseStart": 16,
+    "verseEnd": null,
+    "text": "For God so loved the world...",
+    "relevance": "Brief explanation of why this passage is relevant"
+  }
+]
+
+Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66
+
+Use KJV text for verse quotations. Include a mix of well-known and lesser-known passages. Provide the full verse text when possible.`,
+      },
+      {
+        role: "user",
+        content: query,
+      },
+    ],
+    temperature: 0.5,
+    max_tokens: 3000,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "[]";
+  const cleaned = cleanJsonResponse(raw);
+  let parsed: any[];
+  try {
+    parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed)) parsed = [parsed];
+  } catch {
+    console.error("Failed to parse semantic search AI response:", raw.substring(0, 500));
+    throw new Error("Failed to parse AI response");
+  }
+
+  return parsed.map((r: any) => ({
+    reference: r.reference || "",
+    bookId: r.bookId || 1,
+    chapter: r.chapter || 1,
+    verseStart: r.verseStart || 1,
+    verseEnd: r.verseEnd || null,
+    text: r.text || "",
+    relevance: r.relevance || "",
+  }));
+}
+
+export interface GeneratedPlanDay {
+  dayNumber: number;
+  title: string;
+  passageLabel: string;
+  bookName: string;
+  chapter: number;
+  verseStart: number | null;
+  verseEnd: number | null;
+  contextNote: string;
+  reflectionQuestions: string[];
+  prayerPrompt: string;
+  thenContext: string;
+  nowApplication: string;
+}
+
+export interface GeneratedPlan {
+  title: string;
+  description: string;
+  theme: string;
+  targetGoals: string[];
+  estimatedMinutesPerDay: number;
+  days: GeneratedPlanDay[];
+}
+
+const BOOK_NAME_TO_ID: Record<string, number> = {
+  "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5,
+  "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
+  "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14,
+  "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalms": 19,
+  "Proverbs": 20, "Ecclesiastes": 21, "Song of Solomon": 22, "Isaiah": 23,
+  "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27,
+  "Hosea": 28, "Joel": 29, "Amos": 30, "Obadiah": 31, "Jonah": 32,
+  "Micah": 33, "Nahum": 34, "Habakkuk": 35, "Zephaniah": 36, "Haggai": 37,
+  "Zechariah": 38, "Malachi": 39, "Matthew": 40, "Mark": 41, "Luke": 42,
+  "John": 43, "Acts": 44, "Romans": 45, "1 Corinthians": 46,
+  "2 Corinthians": 47, "Galatians": 48, "Ephesians": 49, "Philippians": 50,
+  "Colossians": 51, "1 Thessalonians": 52, "2 Thessalonians": 53,
+  "1 Timothy": 54, "2 Timothy": 55, "Titus": 56, "Philemon": 57,
+  "Hebrews": 58, "James": 59, "1 Peter": 60, "2 Peter": 61,
+  "1 John": 62, "2 John": 63, "3 John": 64, "Jude": 65, "Revelation": 66,
+};
+
+export function resolveBookId(bookName: string): number | null {
+  if (BOOK_NAME_TO_ID[bookName]) return BOOK_NAME_TO_ID[bookName];
+  const lower = bookName.toLowerCase();
+  for (const [key, val] of Object.entries(BOOK_NAME_TO_ID)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+  return null;
+}
+
+export async function generateReadingPlan(params: {
+  topic: string;
+  durationDays: number;
+  difficulty: string;
+}): Promise<GeneratedPlan> {
+  const { topic, durationDays, difficulty } = params;
+  const openai = createOpenAIClient();
+
+  const difficultyGuide =
+    difficulty === "beginner"
+      ? "Choose well-known, accessible passages. Keep reflections simple and practical."
+      : difficulty === "advanced"
+        ? "Include deeper theological passages, Old and New Testament connections, and challenging reflections."
+        : "Balance accessible and moderately challenging passages with thoughtful reflections.";
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert Bible study curriculum designer. Create personalized reading plans that guide believers through Scripture on a specific topic. ${difficultyGuide}
+
+Return valid JSON only, no markdown. Use KJV book names exactly as they appear in the Bible (e.g., "Genesis", "1 Corinthians", "Psalms").`,
+      },
+      {
+        role: "user",
+        content: `Create a ${durationDays}-day Bible reading plan on the topic: "${topic}"
+Difficulty level: ${difficulty}
+
+Return JSON:
+{
+  "title": "An engaging title for this reading plan",
+  "description": "2-3 sentence description of what this plan covers and who it's for",
+  "theme": "One-word or short-phrase theme",
+  "targetGoals": ["Goal 1 the reader will achieve", "Goal 2", "Goal 3"],
+  "estimatedMinutesPerDay": 10,
+  "days": [
+    {
+      "dayNumber": 1,
+      "title": "Day title capturing the theme",
+      "passageLabel": "Book Chapter:VerseStart-VerseEnd",
+      "bookName": "Exact KJV book name",
+      "chapter": 1,
+      "verseStart": 1,
+      "verseEnd": 10,
+      "contextNote": "1-2 sentences setting context for this passage",
+      "reflectionQuestions": ["Question 1", "Question 2", "Question 3"],
+      "prayerPrompt": "A prayer prompt responding to this passage",
+      "thenContext": "What this passage meant to the original audience (2-3 sentences)",
+      "nowApplication": "How this applies to believers today (2-3 sentences)"
+    }
+  ]
+}
+
+Generate exactly ${durationDays} days. Each day should have a different passage. Vary between Old and New Testament where appropriate. Make passages focused (typically 5-15 verses, not full chapters).`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 4000,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const cleaned = cleanJsonResponse(raw);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.error("Failed to parse reading plan AI response:", raw.substring(0, 500));
+    throw new Error("Failed to generate reading plan. Please try again.");
+  }
+
+  return {
+    title: parsed.title || `${topic} Reading Plan`,
+    description: parsed.description || `A ${durationDays}-day plan exploring ${topic}.`,
+    theme: parsed.theme || topic,
+    targetGoals: Array.isArray(parsed.targetGoals) ? parsed.targetGoals : [],
+    estimatedMinutesPerDay: parsed.estimatedMinutesPerDay || 10,
+    days: Array.isArray(parsed.days)
+      ? parsed.days.map((d: any, i: number) => ({
+          dayNumber: d.dayNumber || i + 1,
+          title: d.title || `Day ${i + 1}`,
+          passageLabel: d.passageLabel || "",
+          bookName: d.bookName || "",
+          chapter: d.chapter || 1,
+          verseStart: d.verseStart || null,
+          verseEnd: d.verseEnd || null,
+          contextNote: d.contextNote || "",
+          reflectionQuestions: Array.isArray(d.reflectionQuestions) ? d.reflectionQuestions : [],
+          prayerPrompt: d.prayerPrompt || "",
+          thenContext: d.thenContext || "",
+          nowApplication: d.nowApplication || "",
+        }))
+      : [],
+  };
+}
+
 export async function generateVerseExplanation(params: {
   reference: string;
   lessonContext?: string;

@@ -692,6 +692,7 @@ export default function ProfileScreen() {
         )}
 
         {[
+          { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
           { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
           { title: t("profile.prayerGroups"), icon: "people-circle" as const, color: "#10B981", route: "/groups" },
           { title: t("profile.parentControls"), icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },

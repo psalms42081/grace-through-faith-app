@@ -184,6 +184,30 @@ export default function SearchScreen() {
           Find verses, passages & topics
         </Text>
 
+        <Pressable
+          onPress={() => router.push("/semantic-search")}
+          style={({ pressed }) => [
+            styles.aiSearchBanner,
+            {
+              backgroundColor: isDark ? theme.accent + "12" : theme.accent + "0E",
+              borderColor: theme.accent + "30",
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+          testID="semantic-search-btn"
+        >
+          <MaterialCommunityIcons name="brain" size={20} color={theme.accent} />
+          <View style={styles.aiSearchContent}>
+            <Text style={[styles.aiSearchTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Ask the Bible
+            </Text>
+            <Text style={[styles.aiSearchDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Search with natural language
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.accent} />
+        </Pressable>
+
         <View
           style={[
             styles.searchBar,
@@ -547,4 +571,17 @@ const styles = StyleSheet.create({
   errorSub: { fontSize: 14, textAlign: "center" as const },
   emptyState: { alignItems: "center" as const, gap: 12, paddingTop: 60 },
   emptyText: { fontSize: 15, textAlign: "center" as const },
+  aiSearchBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+  },
+  aiSearchContent: { flex: 1 },
+  aiSearchTitle: { fontSize: 15, marginBottom: 2 },
+  aiSearchDesc: { fontSize: 12 },
 });
