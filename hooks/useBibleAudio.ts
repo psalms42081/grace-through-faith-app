@@ -272,16 +272,30 @@ export default function useBibleAudio(
       const prepareUrl = new URL("/api/tts/prepare", apiUrl);
 
       console.log("[TTS speakVerseAI] Calling prepare:", prepareUrl.href, "voice:", selectedVoiceRef.current, "text length:", textToSpeak.length);
-      const prepareRes = await fetch(prepareUrl.href, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textToSpeak, voice: selectedVoiceRef.current }),
-      });
 
-      if (!prepareRes.ok) {
-        const errBody = await prepareRes.text().catch(() => "");
-        console.log("[TTS speakVerseAI] Prepare failed:", prepareRes.status, errBody);
-        throw new Error(`TTS prepare failed: ${prepareRes.status}`);
+      let prepareRes: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (session !== sessionRef.current) return;
+        try {
+          prepareRes = await fetch(prepareUrl.href, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: textToSpeak, voice: selectedVoiceRef.current }),
+          });
+          if (prepareRes.ok) break;
+          console.log(`[TTS speakVerseAI] Prepare attempt ${attempt + 1} failed: ${prepareRes.status}`);
+          prepareRes = null;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+        } catch (fetchErr: any) {
+          console.log(`[TTS speakVerseAI] Prepare attempt ${attempt + 1} error:`, fetchErr.message);
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      if (!prepareRes || !prepareRes.ok) {
+        const errBody = prepareRes ? await prepareRes.text().catch(() => "") : "no response";
+        console.log("[TTS speakVerseAI] Prepare failed after retries:", prepareRes?.status, errBody);
+        throw new Error(`TTS prepare failed: ${prepareRes?.status || "network"}`);
       }
 
       const { audioId } = await prepareRes.json();
