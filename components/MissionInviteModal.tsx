@@ -374,12 +374,15 @@ const ms = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   dismissBtn: {
-    paddingVertical: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: "center",
+    marginBottom: 8,
   },
   dismissText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
+    textDecorationLine: "underline" as const,
   },
   sparkleContainer: {
     position: "absolute",
