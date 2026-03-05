@@ -313,8 +313,12 @@ export default function useBibleAudio(
 
       const player = createAudioPlayer(audioUri);
       console.log("[TTS speakVerseAI] Player created");
-      player.playbackRate = speechRateRef.current;
-      console.log("[TTS speakVerseAI] Playback rate set to:", speechRateRef.current);
+      try {
+        player.setPlaybackRate(speechRateRef.current);
+        console.log("[TTS speakVerseAI] Playback rate set to:", speechRateRef.current);
+      } catch {
+        console.log("[TTS speakVerseAI] Could not set playback rate, using default");
+      }
       playerRef.current = player;
 
       setIsLoadingAudio(false);
