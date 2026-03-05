@@ -1716,6 +1716,7 @@ export default function SceneStoryScreen() {
     try {
       const apiBase = getApiUrl();
       const prepareUrl = new URL("/api/tts/prepare", apiBase).toString();
+      console.log("[Kids TTS] Calling prepare:", prepareUrl, "voice:", narratorVoice, "text length:", scene.narration.length);
       const prepareRes = await fetch(prepareUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1724,7 +1725,10 @@ export default function SceneStoryScreen() {
       });
 
       if (abortCtrl.signal.aborted) return;
-      if (!prepareRes.ok) throw new Error("TTS prepare failed");
+      if (!prepareRes.ok) {
+        const errBody = await prepareRes.text().catch(() => "");
+        throw new Error(`TTS prepare failed: ${prepareRes.status} ${errBody}`);
+      }
 
       const { audioId } = await prepareRes.json();
       if (abortCtrl.signal.aborted) return;

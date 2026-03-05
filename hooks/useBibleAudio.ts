@@ -73,6 +73,9 @@ export default function useBibleAudio(
   bookName?: string,
 ): UseBibleAudioReturn {
   const audioCtx = useAudioContext();
+  const audioCtxRef = useRef(audioCtx);
+  useEffect(() => { audioCtxRef.current = audioCtx; }, [audioCtx]);
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speakingVerseIndex, setSpeakingVerseIndex] = useState(-1);
@@ -159,8 +162,8 @@ export default function useBibleAudio(
     setIsLoadingAudio(false);
     setUsingFallback(false);
     currentIndexRef.current = -1;
-    audioCtx.clearSession();
-  }, [cleanupPlayer, audioCtx]);
+    audioCtxRef.current.clearSession();
+  }, [cleanupPlayer]);
 
   useEffect(() => {
     resetPlayback();
@@ -198,7 +201,7 @@ export default function useBibleAudio(
       setIsPaused(false);
       setSpeakingVerseIndex(-1);
       currentIndexRef.current = -1;
-      audioCtx.clearSession();
+      audioCtxRef.current.clearSession();
       return;
     }
 
@@ -222,7 +225,7 @@ export default function useBibleAudio(
           setIsSpeaking(false);
           setIsPaused(false);
           setSpeakingVerseIndex(-1);
-          audioCtx.clearSession();
+          audioCtxRef.current.clearSession();
         }
       },
     };
@@ -234,9 +237,9 @@ export default function useBibleAudio(
       setIsPaused(false);
       setSpeakingVerseIndex(-1);
       currentIndexRef.current = -1;
-      audioCtx.clearSession();
+      audioCtxRef.current.clearSession();
     }
-  }, [audioCtx]);
+  }, []);
 
   const BATCH_SIZE = 3;
 
@@ -250,7 +253,7 @@ export default function useBibleAudio(
       setSpeakingVerseIndex(-1);
       setIsLoadingAudio(false);
       currentIndexRef.current = -1;
-      audioCtx.clearSession();
+      audioCtxRef.current.clearSession();
       return;
     }
 
@@ -268,6 +271,7 @@ export default function useBibleAudio(
       const apiUrl = getApiUrl();
       const prepareUrl = new URL("/api/tts/prepare", apiUrl);
 
+      console.log("[TTS speakVerseAI] Calling prepare:", prepareUrl.href, "voice:", selectedVoiceRef.current, "text length:", textToSpeak.length);
       const prepareRes = await fetch(prepareUrl.href, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -275,7 +279,9 @@ export default function useBibleAudio(
       });
 
       if (!prepareRes.ok) {
-        throw new Error("TTS prepare failed");
+        const errBody = await prepareRes.text().catch(() => "");
+        console.log("[TTS speakVerseAI] Prepare failed:", prepareRes.status, errBody);
+        throw new Error(`TTS prepare failed: ${prepareRes.status}`);
       }
 
       const { audioId } = await prepareRes.json();
@@ -313,7 +319,7 @@ export default function useBibleAudio(
       setIsLoadingAudio(false);
       speakVerseFallback(index, session);
     }
-  }, [cleanupPlayer, speakVerseFallback, audioCtx]);
+  }, [cleanupPlayer, speakVerseFallback]);
 
   const handlePlay = useCallback(() => {
     const vrs = versesRef.current;
@@ -323,7 +329,7 @@ export default function useBibleAudio(
       return;
     }
 
-    audioCtx.registerSession({
+    audioCtxRef.current.registerSession({
       bookId,
       bookName: bookName || "",
       chapter,
@@ -348,7 +354,7 @@ export default function useBibleAudio(
     setIsPaused(false);
     setUsingFallback(false);
     speakVerseAI(0, session);
-  }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation, audioCtx]);
+  }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation]);
 
   const handlePause = useCallback(() => {
     if (usingFallback) {
