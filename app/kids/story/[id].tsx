@@ -33,8 +33,9 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
-import { createAudioPlayer, setIsAudioActiveAsync } from "expo-audio";
+import { createAudioPlayer, setIsAudioActiveAsync, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import * as FileSystem from "expo-file-system";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
@@ -1731,22 +1732,34 @@ export default function SceneStoryScreen() {
 
       if (!res.ok) throw new Error("TTS fetch failed");
 
-      const arrayBuf = await res.arrayBuffer();
-      if (abortCtrl.signal.aborted) return;
+      let audioUri: string;
 
-      let audioUrl: string;
       if (Platform.OS === "web") {
-        audioUrl = URL.createObjectURL(new Blob([arrayBuf], { type: "audio/mpeg" }));
-        narrationBlobUrlRef.current = audioUrl;
+        const blob = await res.blob();
+        if (abortCtrl.signal.aborted) return;
+        audioUri = URL.createObjectURL(blob);
+        narrationBlobUrlRef.current = audioUri;
       } else {
-        const bytes = new Uint8Array(arrayBuf);
-        let binary = "";
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        audioUrl = "data:audio/mpeg;base64," + btoa(binary);
+        const arrayBuffer = await res.arrayBuffer();
+        if (abortCtrl.signal.aborted) return;
+        const fileUri = `${FileSystem.cacheDirectory}kids_tts_${sceneIdx}_${Date.now()}.mp3`;
+        const bytes = new Uint8Array(arrayBuffer);
+        const binChunks: string[] = [];
+        for (let i = 0; i < bytes.length; i += 4096) {
+          binChunks.push(String.fromCharCode(...bytes.subarray(i, Math.min(i + 4096, bytes.length))));
+        }
+        const base64Data = btoa(binChunks.join(""));
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        audioUri = fileUri;
       }
 
+      if (abortCtrl.signal.aborted) return;
+
       await setIsAudioActiveAsync(true);
-      const player = createAudioPlayer(audioUrl);
+      await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+      const player = createAudioPlayer({ uri: audioUri });
       narrationPlayerRef.current = player;
 
       const avgWordDuration = isLittleLambs ? 380 : 300;
@@ -1761,14 +1774,14 @@ export default function SceneStoryScreen() {
       }, avgWordDuration);
 
       const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
-        if (status.didJustFinish || (status.isLoaded === false && status.error)) {
+        if (status.didJustFinish) {
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
           statusSub?.remove();
           if (narrationPlayerRef.current === player) {
             narrationPlayerRef.current = null;
           }
-          if (Platform.OS === "web" && narrationBlobUrlRef.current === audioUrl) {
-            try { URL.revokeObjectURL(audioUrl); } catch {}
+          if (Platform.OS === "web" && narrationBlobUrlRef.current === audioUri) {
+            try { URL.revokeObjectURL(audioUri); } catch {}
             narrationBlobUrlRef.current = null;
           }
           if (!abortCtrl.signal.aborted) {
