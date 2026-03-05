@@ -328,11 +328,20 @@ export default function ChurchConnectScreen() {
             <View style={s.emptyState}>
               <Ionicons name="business-outline" size={48} color={theme.textMuted} />
               <Text style={[s.emptyText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                No churches found
+                No churches found nearby
               </Text>
               <Text style={[s.emptySubtext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Try searching a different city or expanding your radius
+                Try a different search or expand your radius
               </Text>
+              <Pressable
+                onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
+                style={[s.directoryBtn, { backgroundColor: theme.accent }]}
+              >
+                <Ionicons name="globe-outline" size={18} color="#fff" />
+                <Text style={[s.directoryBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Search Adventist Directory
+                </Text>
+              </Pressable>
             </View>
           ) : (
             <FlatList
@@ -340,6 +349,18 @@ export default function ChurchConnectScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderChurchCard}
               contentContainerStyle={{ padding: 16, paddingBottom: bottomPad + 24 }}
+              ListFooterComponent={
+                <Pressable
+                  onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
+                  style={[s.directoryFooter, { borderColor: theme.border }]}
+                >
+                  <Ionicons name="globe-outline" size={16} color={theme.accent} />
+                  <Text style={[s.directoryFooterText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                    Search full Adventist Directory
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color={theme.accent} />
+                </Pressable>
+              }
             />
           )}
         </>
@@ -418,4 +439,25 @@ const s = StyleSheet.create({
   emptyState: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10, paddingBottom: 80 },
   emptyText: { fontSize: 16 },
   emptySubtext: { fontSize: 13, textAlign: "center", maxWidth: 260 },
+  directoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 12,
+  },
+  directoryBtnText: { fontSize: 15, color: "#fff" },
+  directoryFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    marginTop: 6,
+    marginBottom: 8,
+    borderTopWidth: 1,
+  },
+  directoryFooterText: { fontSize: 13 },
 });
