@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView } from "react-native";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
-import * as FileSystem from "expo-file-system";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
 import { getApiUrl } from "@/lib/query-client";
@@ -266,43 +266,25 @@ export default function useBibleAudio(
 
     try {
       const apiUrl = getApiUrl();
-      const url = new URL("/api/tts", apiUrl);
+      const prepareUrl = new URL("/api/tts/prepare", apiUrl);
 
-      const response = await fetch(url.href, {
+      const prepareRes = await fetch(prepareUrl.href, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: textToSpeak, voice: selectedVoiceRef.current }),
       });
 
-      if (!response.ok) {
-        throw new Error("TTS API failed");
+      if (!prepareRes.ok) {
+        throw new Error("TTS prepare failed");
       }
+
+      const { audioId } = await prepareRes.json();
 
       if (session !== sessionRef.current) return;
 
       cleanupPlayer();
 
-      let audioUri: string;
-
-      if (Platform.OS === "web") {
-        const blob = await response.blob();
-        audioUri = URL.createObjectURL(blob);
-      } else {
-        const fileUri = `${FileSystem.cacheDirectory}tts_batch_${index}_${Date.now()}.mp3`;
-        const arrayBuffer = await response.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        const binChunks: string[] = [];
-        for (let i = 0; i < bytes.length; i += 4096) {
-          binChunks.push(String.fromCharCode(...bytes.subarray(i, Math.min(i + 4096, bytes.length))));
-        }
-        const base64Data = btoa(binChunks.join(""));
-        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        audioUri = fileUri;
-      }
-
-      if (session !== sessionRef.current) return;
+      const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
 
       const player = createAudioPlayer({ uri: audioUri });
       player.playbackRate = speechRateRef.current;
@@ -335,7 +317,11 @@ export default function useBibleAudio(
 
   const handlePlay = useCallback(() => {
     const vrs = versesRef.current;
-    if (!vrs.length) return;
+    console.log("[TTS handlePlay] verses count:", vrs.length, "isPaused:", isPaused, "currentIndex:", currentIndexRef.current);
+    if (!vrs.length) {
+      console.log("[TTS handlePlay] No verses, returning early");
+      return;
+    }
 
     audioCtx.registerSession({
       bookId,
@@ -345,6 +331,7 @@ export default function useBibleAudio(
     });
 
     if (isPaused && currentIndexRef.current >= 0) {
+      console.log("[TTS handlePlay] Resuming from pause at index:", currentIndexRef.current);
       setIsPaused(false);
       setIsSpeaking(true);
       if (usingFallback) {
@@ -356,6 +343,7 @@ export default function useBibleAudio(
     }
 
     const session = ++sessionRef.current;
+    console.log("[TTS handlePlay] Starting new session:", session);
     setIsSpeaking(true);
     setIsPaused(false);
     setUsingFallback(false);

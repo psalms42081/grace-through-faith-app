@@ -35,7 +35,6 @@ import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, setIsAudioActiveAsync, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
-import * as FileSystem from "expo-file-system";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
@@ -1587,7 +1586,6 @@ export default function SceneStoryScreen() {
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrationPlayerRef = useRef<AudioPlayer | null>(null);
   const narrationAbortRef = useRef<AbortController | null>(null);
-  const narrationBlobUrlRef = useRef<string | null>(null);
   const narrationListenerRef = useRef<{ remove: () => void } | null>(null);
 
   const currentMood = useMemo<SceneMood | null>(() => {
@@ -1625,10 +1623,6 @@ export default function SceneStoryScreen() {
       try { narrationPlayerRef.current.pause(); } catch {}
       try { narrationPlayerRef.current.remove(); } catch {}
       narrationPlayerRef.current = null;
-    }
-    if (narrationBlobUrlRef.current && Platform.OS === "web") {
-      try { URL.revokeObjectURL(narrationBlobUrlRef.current); } catch {}
-      narrationBlobUrlRef.current = null;
     }
     Speech.stop();
   }, []);
@@ -1720,8 +1714,9 @@ export default function SceneStoryScreen() {
     narrationAbortRef.current = abortCtrl;
 
     try {
-      const ttsUrl = new URL("/api/tts", getApiUrl()).toString();
-      const res = await fetch(ttsUrl, {
+      const apiBase = getApiUrl();
+      const prepareUrl = new URL("/api/tts/prepare", apiBase).toString();
+      const prepareRes = await fetch(prepareUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: scene.narration, voice: narratorVoice }),
@@ -1729,33 +1724,12 @@ export default function SceneStoryScreen() {
       });
 
       if (abortCtrl.signal.aborted) return;
+      if (!prepareRes.ok) throw new Error("TTS prepare failed");
 
-      if (!res.ok) throw new Error("TTS fetch failed");
-
-      let audioUri: string;
-
-      if (Platform.OS === "web") {
-        const blob = await res.blob();
-        if (abortCtrl.signal.aborted) return;
-        audioUri = URL.createObjectURL(blob);
-        narrationBlobUrlRef.current = audioUri;
-      } else {
-        const arrayBuffer = await res.arrayBuffer();
-        if (abortCtrl.signal.aborted) return;
-        const fileUri = `${FileSystem.cacheDirectory}kids_tts_${sceneIdx}_${Date.now()}.mp3`;
-        const bytes = new Uint8Array(arrayBuffer);
-        const binChunks: string[] = [];
-        for (let i = 0; i < bytes.length; i += 4096) {
-          binChunks.push(String.fromCharCode(...bytes.subarray(i, Math.min(i + 4096, bytes.length))));
-        }
-        const base64Data = btoa(binChunks.join(""));
-        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        audioUri = fileUri;
-      }
-
+      const { audioId } = await prepareRes.json();
       if (abortCtrl.signal.aborted) return;
+
+      const audioUri = new URL(`/api/tts/audio/${audioId}`, apiBase).href;
 
       await setIsAudioActiveAsync(true);
       await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -1779,10 +1753,6 @@ export default function SceneStoryScreen() {
           statusSub?.remove();
           if (narrationPlayerRef.current === player) {
             narrationPlayerRef.current = null;
-          }
-          if (Platform.OS === "web" && narrationBlobUrlRef.current === audioUri) {
-            try { URL.revokeObjectURL(audioUri); } catch {}
-            narrationBlobUrlRef.current = null;
           }
           if (!abortCtrl.signal.aborted) {
             onNarrationEnd();

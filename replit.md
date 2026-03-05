@@ -20,7 +20,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content.
 - **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation, with all generated content cached in PostgreSQL. Features include a Socratic AI Study Guide and Dynamic AI Reading Plans.
-- **Text-to-Speech (TTS):** Employs ElevenLabs (`eleven_turbo_v2_5` model) for high-quality cinematic voices, with fallback to `expo-speech` device voices when offline. Includes background audio playback with a persistent MiniPlayer.
+- **Text-to-Speech (TTS):** Employs ElevenLabs (`eleven_turbo_v2_5` model) for high-quality cinematic voices, with fallback to `expo-speech` device voices when offline. Audio served via `GET /api/tts/stream?text=...&voice=...` endpoint with in-memory caching (10-min TTL). Client uses `createAudioPlayer({uri})` with remote URL (avoids Android local-file bug). Includes background audio playback with a persistent MiniPlayer.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
 - **User Features:** Includes notes, highlights, bookmarks, a prayer journal, reading history with streak tracking, and a unified "My Library" screen.
 - **Semantic Search:** AI-powered natural language Bible search using OpenAI, also searching user's notes/highlights/bookmarks, with results cached.
