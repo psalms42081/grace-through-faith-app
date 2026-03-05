@@ -278,6 +278,51 @@ export const PROFILE_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
+export const FAMILY_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    illustration: <IconBadge name="people" size={46} />,
+    label: "FAMILY",
+    title: "Your Family's\nFaith Journey",
+    description:
+      "The Family Dashboard brings your household together in faith. Create or join a family group, track your children's spiritual progress, and grow as a family.",
+  },
+  {
+    illustration: (
+      <ComposedIcons
+        icons={[
+          { name: "happy", size: 32 },
+          { name: "star", size: 26, style: { marginLeft: -2 } },
+        ]}
+      />
+    ),
+    label: "KIDS PROGRESS",
+    title: "Track Your\nChildren",
+    description:
+      "Add your children's profiles and monitor their Bible story progress, quiz scores, and badges earned. See what they've been learning each week.",
+  },
+  {
+    illustration: <IconBadge name="chatbubbles" size={46} />,
+    label: "DINNER TABLE",
+    title: "Conversation\nStarters",
+    description:
+      "Get AI-powered discussion questions based on what your kids have been studying. Turn Bible stories into meaningful dinner table conversations.",
+  },
+  {
+    illustration: (
+      <ComposedIcons
+        icons={[
+          { name: "heart", size: 28 },
+          { name: "flame", size: 26, style: { marginLeft: -2 } },
+        ]}
+      />
+    ),
+    label: "PRAYER WALL",
+    title: "Family\nPrayer Wall",
+    description:
+      "Share prayer requests within your family. See what each member is praying about and lift each other up together.",
+  },
+];
+
 export const PRAYER_JOURNAL_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="journal" size={46} />,

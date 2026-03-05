@@ -21,6 +21,8 @@ import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/hooks/useTheme";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { FAMILY_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 
 interface FamilyInfo {
   id: string;
@@ -297,6 +299,7 @@ export default function FamilyDashboard() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <FeatureTutorial tutorialId="family-dashboard" steps={FAMILY_TUTORIAL_STEPS} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={{

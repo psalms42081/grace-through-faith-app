@@ -36,7 +36,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     id: "lifetalk-radio",
     name: "LifeTalk Radio",
     tagline: "SDA Christian Radio",
-    streamUrl: "http://ltr.streamon.fm:8000/LTR-64k.aac?dist=app",
+    streamUrl: "https://listen.streamon.fm/ltr",
     icon: "radio",
     color: "#2E7D32",
     category: "adventist",

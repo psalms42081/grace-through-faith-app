@@ -10,7 +10,8 @@ export type TutorialId =
   | "connect"
   | "explore"
   | "profile"
-  | "prayer-journal";
+  | "prayer-journal"
+  | "family-dashboard";
 
 interface TutorialContextType {
   hasSeenTutorial: (id: TutorialId) => boolean;
