@@ -173,90 +173,20 @@ export default function MissionInviteModal({
               If not, no worries -- enjoy the full experience on us.
             </Text>
 
-            <Text style={[ms.amountLabel, { color: theme.text }]}>
-              Choose Your Amount
-            </Text>
-
-            <View style={ms.presetRow}>
-              {DONATION_PRESETS.map((amt) => (
-                <Pressable
-                  key={amt}
-                  style={[
-                    ms.presetBtn,
-                    {
-                      backgroundColor: !showCustom && selectedAmount === amt ? "#C9933A" : (isDark ? "#1A1A24" : "#F0EBE0"),
-                      borderColor: !showCustom && selectedAmount === amt ? "#C9933A" : theme.border,
-                    },
-                  ]}
-                  onPress={() => { setSelectedAmount(amt); setShowCustom(false); }}
-                  testID={`donate-preset-${amt}`}
-                >
-                  <Text
-                    style={[
-                      ms.presetText,
-                      { color: !showCustom && selectedAmount === amt ? "#fff" : theme.text },
-                    ]}
-                  >
-                    ${amt}
-                  </Text>
-                </Pressable>
-              ))}
-              <Pressable
-                style={[
-                  ms.presetBtn,
-                  {
-                    backgroundColor: showCustom ? "#C9933A" : (isDark ? "#1A1A24" : "#F0EBE0"),
-                    borderColor: showCustom ? "#C9933A" : theme.border,
-                  },
-                ]}
-                onPress={() => setShowCustom(true)}
-              >
-                <Text style={[ms.presetText, { color: showCustom ? "#fff" : theme.text }]}>
-                  Other
-                </Text>
-              </Pressable>
+            <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
+              <Ionicons name="time-outline" size={20} color={theme.accent} />
+              <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center" }}>
+                Donations will be available soon. For now, enjoy the full experience on us.
+              </Text>
             </View>
-
-            {showCustom && (
-              <View style={[ms.customInputRow, { borderColor: theme.border }]}>
-                <Text style={[ms.dollarSign, { color: theme.text }]}>$</Text>
-                <TextInput
-                  style={[ms.customInput, { color: theme.text }]}
-                  placeholder="Enter amount"
-                  placeholderTextColor={theme.textMuted}
-                  keyboardType="numeric"
-                  value={customAmount}
-                  onChangeText={setCustomAmount}
-                  testID="donation-custom-input"
-                />
-              </View>
-            )}
-
-            <Pressable
-              style={[ms.donateBtn, { opacity: isDonating ? 0.7 : 1 }]}
-              onPress={handleDonate}
-              disabled={isDonating}
-              testID="donate-submit-btn"
-            >
-              {isDonating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="heart" size={18} color="#fff" />
-                  <Text style={ms.donateBtnText}>
-                    Become a Partner (${showCustom ? (parseInt(customAmount) || 5) : selectedAmount})
-                  </Text>
-                </>
-              )}
-            </Pressable>
 
             <Pressable
               style={ms.dismissBtn}
               onPress={handleClose}
               testID="mission-dismiss-btn"
             >
-              <Text style={[ms.dismissText, { color: theme.textMuted }]}>
-                Not now, just keep studying
+              <Text style={[ms.dismissText, { color: theme.accent }]}>
+                Continue Studying
               </Text>
             </Pressable>
           </Animated.View>
@@ -372,6 +302,15 @@ const ms = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontFamily: "Inter_700Bold",
+  },
+  comingSoonBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 4,
   },
   dismissBtn: {
     paddingVertical: 18,
