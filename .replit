@@ -40,14 +40,6 @@ author = "agent"
 task = "workflow.run"
 args = "Start App"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start Backend"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start Frontend"
-
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -64,6 +56,7 @@ args = "Start Frontend"
 [[workflows.workflow]]
 name = "Start Backend"
 author = "agent"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -73,8 +66,10 @@ waitForPort = 5000
 [[workflows.workflow]]
 name = "Start Frontend"
 author = "agent"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
+ensurePreviewReachable = "/status"
