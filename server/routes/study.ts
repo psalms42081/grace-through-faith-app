@@ -1334,8 +1334,56 @@ router.get("/api/study-journal/revisit", async (req, res) => {
   }
 });
 
-// ─── FAMILY DASHBOARD ─────────────────────────────────────────────────────
+const topicReflectionCache = new Map<string, { data: unknown; date: string }>();
 
+router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { topicId } = req.params;
+    const today = new Date().toISOString().split("T")[0];
+    const cacheKey = `${topicId}-${today}`;
+
+    const cached = topicReflectionCache.get(cacheKey);
+    if (cached && cached.date === today) {
+      return res.json(cached.data);
+    }
+
+    const client = new (await import("openai")).default({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a Seventh-day Adventist Bible teacher. Generate a fresh daily reflection for the topic "${topicId}". Include:
+1. A thought-provoking reflection (3-4 sentences) connecting the topic to daily life
+2. A discussion question for small groups or personal journaling
+3. A practical application challenge for today
+4. A lesser-known Bible verse related to this topic (different from common ones)
+Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`,
+        },
+        {
+          role: "user",
+          content: `Generate today's reflection for the topic: ${topicId}. Today is ${today}. Make it unique and fresh.`,
+        },
+      ],
+      temperature: 0.9,
+    });
+
+    const raw = response.choices[0]?.message?.content || "{}";
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const data = JSON.parse(cleaned);
+
+    topicReflectionCache.set(cacheKey, { data, date: today });
+
+    return res.json(data);
+  } catch (err) {
+    console.error("Topic reflection error:", err);
+    return res.status(500).json({ error: "Failed to generate reflection" });
+  }
+});
 
   export default router;
   

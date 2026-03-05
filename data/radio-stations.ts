@@ -1,0 +1,172 @@
+import { Ionicons } from "@expo/vector-icons";
+
+export interface RadioStation {
+  id: string;
+  name: string;
+  tagline: string;
+  streamUrl: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  category: "adventist" | "gospel" | "worship" | "international";
+  country: string;
+}
+
+export const RADIO_STATIONS: RadioStation[] = [
+  {
+    id: "3abn-radio",
+    name: "3ABN Radio",
+    tagline: "Mending Broken People",
+    streamUrl: "https://war.streamguys1.com:7185/live",
+    icon: "radio",
+    color: "#1565C0",
+    category: "adventist",
+    country: "USA",
+  },
+  {
+    id: "3abn-music",
+    name: "3ABN Music",
+    tagline: "Christian Music 24/7",
+    streamUrl: "https://war.streamguys1.com:7185/MC01",
+    icon: "musical-notes",
+    color: "#6A1B9A",
+    category: "adventist",
+    country: "USA",
+  },
+  {
+    id: "lifetalk-radio",
+    name: "LifeTalk Radio",
+    tagline: "SDA Christian Radio",
+    streamUrl: "http://ltr.streamon.fm:8000/LTR-64k.aac?dist=app",
+    icon: "radio",
+    color: "#2E7D32",
+    category: "adventist",
+    country: "USA",
+  },
+  {
+    id: "lifetalk-kids",
+    name: "LifeTalk Kids",
+    tagline: "Christian Radio for Kids",
+    streamUrl: "https://listen.streamon.fm/ltrkids",
+    icon: "happy",
+    color: "#F9A825",
+    category: "adventist",
+    country: "USA",
+  },
+  {
+    id: "lifetalk-music",
+    name: "LifeTalk Music",
+    tagline: "Uplifting Music All Day",
+    streamUrl: "https://listen.streamon.fm/ltrmusic",
+    icon: "musical-notes",
+    color: "#00796B",
+    category: "adventist",
+    country: "USA",
+  },
+  {
+    id: "3abn-australia",
+    name: "3ABN Australia",
+    tagline: "Adventist Radio Down Under",
+    streamUrl: "https://stream.3abnaustralia.org.au:8443/stream",
+    icon: "radio",
+    color: "#1565C0",
+    category: "adventist",
+    country: "Australia",
+  },
+  {
+    id: "awr-manila",
+    name: "Adventist World Radio",
+    tagline: "AWR Manila 89.1",
+    streamUrl: "http://192.53.113.120:8000/stream",
+    icon: "globe",
+    color: "#E65100",
+    category: "adventist",
+    country: "Philippines",
+  },
+  {
+    id: "awr-south-ph",
+    name: "AWR South Philippines",
+    tagline: "Adventist Radio South PH",
+    streamUrl: "https://stream3.awr.live/listen/adventist_radio_southph/radio.mp3",
+    icon: "globe",
+    color: "#E65100",
+    category: "adventist",
+    country: "Philippines",
+  },
+  {
+    id: "jesus-is-lord",
+    name: "Jesus Is Lord Radio",
+    tagline: "Gospel Radio from Kenya",
+    streamUrl: "https://s3.radio.co/s97f38db97/listen",
+    icon: "radio",
+    color: "#C62828",
+    category: "gospel",
+    country: "Kenya",
+  },
+  {
+    id: "gospel-fm-jamaica",
+    name: "Gospel FM Jamaica",
+    tagline: "Caribbean Gospel Music",
+    streamUrl: "https://stream-37.zeno.fm/zpksre88rm0uv",
+    icon: "radio",
+    color: "#FF6F00",
+    category: "gospel",
+    country: "Jamaica",
+  },
+  {
+    id: "ggfm-jamaica",
+    name: "GGFM 90.1",
+    tagline: "Discovery Bay Gospel",
+    streamUrl: "http://usa14.fastcast4u.com:5192/;",
+    icon: "radio",
+    color: "#4527A0",
+    category: "gospel",
+    country: "Jamaica",
+  },
+  {
+    id: "clr",
+    name: "Christian Life Radio",
+    tagline: "Inspiring Christian Content",
+    streamUrl: "https://ice64.securenetsystems.net/CLR1MP3",
+    icon: "radio",
+    color: "#00838F",
+    category: "worship",
+    country: "USA",
+  },
+  {
+    id: "mcf-kampala",
+    name: "MCF Radio 98.7",
+    tagline: "Gospel Radio from Uganda",
+    streamUrl: "https://streams.radio.co/s79fbbb432/listen",
+    icon: "radio",
+    color: "#AD1457",
+    category: "gospel",
+    country: "Uganda",
+  },
+  {
+    id: "nigerian-gospel",
+    name: "Nigerian Gospel Radio",
+    tagline: "Nigerian Gospel Music",
+    streamUrl: "http://stream.zeno.fm/3fmqr74a7f8uv",
+    icon: "radio",
+    color: "#2E7D32",
+    category: "gospel",
+    country: "Nigeria",
+  },
+  {
+    id: "london-soul",
+    name: "London Soul Radio",
+    tagline: "Gospel & Soul from London",
+    streamUrl: "http://londonsoulradio.out.airtime.pro:8000/londonsoulradio_a",
+    icon: "radio",
+    color: "#1565C0",
+    category: "gospel",
+    country: "UK",
+  },
+];
+
+export const RADIO_CATEGORIES = [
+  { id: "adventist" as const, label: "Adventist", icon: "shield-checkmark" as const },
+  { id: "gospel" as const, label: "Gospel", icon: "mic" as const },
+  { id: "worship" as const, label: "Worship", icon: "musical-notes" as const },
+  { id: "international" as const, label: "International", icon: "globe" as const },
+];

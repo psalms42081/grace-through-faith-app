@@ -7,11 +7,13 @@ import {
   Pressable,
   Platform,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { getSpeakerColor, getSpeakerInitials } from "@/constants/speakers";
 import { TOPICS } from "@/data/topics";
@@ -30,6 +32,14 @@ const MEDIA_TYPE_LABEL: Record<string, string> = {
   music: "Music",
 };
 
+interface DailyReflection {
+  reflection: string;
+  question: string;
+  challenge: string;
+  verseReference: string;
+  verseText: string;
+}
+
 export default function TopicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme, isDark } = useTheme();
@@ -38,18 +48,44 @@ export default function TopicScreen() {
 
   const topic = TOPICS[id ?? ""] ?? TOPICS.love;
 
+  const { data: dailyReflection, isLoading: reflectionLoading } = useQuery<DailyReflection>({
+    queryKey: [`/api/topic-reflection/${id}`],
+    enabled: !!id,
+  });
+
+  const todaySeed = useMemo(() => {
+    const d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }, []);
+
   const shuffledMedia = useMemo(() => {
     const items = [...topic.media];
+    let seed = todaySeed;
     for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      seed = (seed * 16807) % 2147483647;
+      const j = seed % (i + 1);
       [items[i], items[j]] = [items[j], items[i]];
     }
     return items;
-  }, [id]);
+  }, [id, todaySeed]);
+
+  const shuffledVerses = useMemo(() => {
+    const items = [...topic.verses];
+    let seed = todaySeed + 31;
+    for (let i = items.length - 1; i > 0; i--) {
+      seed = (seed * 16807) % 2147483647;
+      const j = seed % (i + 1);
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  }, [id, todaySeed]);
 
   const openLink = (url: string) => {
     Linking.openURL(url);
   };
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <>
@@ -74,16 +110,82 @@ export default function TopicScreen() {
               <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>{topic.verses.length} Verses</Text>
             </View>
             <View style={styles.heroBadge}>
-              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>{topic.media.length} Media</Text>
+              <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Daily Refresh</Text>
             </View>
           </View>
         </LinearGradient>
+
+        <View style={styles.reflectionSection}>
+          <View style={styles.reflectionHeader}>
+            <Ionicons name="sparkles" size={18} color={theme.accent} />
+            <Text style={[styles.sectionLabel, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Today's Reflection
+            </Text>
+          </View>
+          <Text style={[styles.dateLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {dateStr}
+          </Text>
+
+          {reflectionLoading ? (
+            <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+              <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.reflectionLoading, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Generating today's reflection...
+              </Text>
+            </View>
+          ) : dailyReflection ? (
+            <>
+              <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                <Text style={[styles.reflectionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                  {dailyReflection.reflection}
+                </Text>
+              </View>
+
+              {dailyReflection.verseReference ? (
+                <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                  <View style={[styles.verseRefBadge, { backgroundColor: topic.gradient[0] + "18" }]}>
+                    <Text style={[styles.verseRef, { color: topic.gradient[0], fontFamily: "Inter_700Bold" }]}>
+                      {dailyReflection.verseReference}
+                    </Text>
+                  </View>
+                  <Text style={[styles.dailyVerseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                    {dailyReflection.verseText}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                <View style={styles.challengeRow}>
+                  <Ionicons name="help-circle" size={16} color={theme.accent} />
+                  <Text style={[styles.challengeLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Discussion Question
+                  </Text>
+                </View>
+                <Text style={[styles.reflectionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                  {dailyReflection.question}
+                </Text>
+              </View>
+
+              <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                <View style={styles.challengeRow}>
+                  <Ionicons name="flash" size={16} color="#E65100" />
+                  <Text style={[styles.challengeLabel, { color: "#E65100", fontFamily: "Inter_600SemiBold" }]}>
+                    Today's Challenge
+                  </Text>
+                </View>
+                <Text style={[styles.reflectionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                  {dailyReflection.challenge}
+                </Text>
+              </View>
+            </>
+          ) : null}
+        </View>
 
         <View style={styles.versesSection}>
           <Text style={[styles.sectionLabel, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Scripture
           </Text>
-          {topic.verses.map((v, i) => (
+          {shuffledVerses.map((v, i) => (
             <Pressable
               key={i}
               onPress={() => router.push(`/read/${v.bookId}/${v.chapter}`)}
@@ -111,7 +213,7 @@ export default function TopicScreen() {
             Sermons & Teaching
           </Text>
           <Text style={[styles.sectionSubLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            From today's most-loved pastors and worship artists
+            Refreshed daily from pastors and worship artists
           </Text>
 
           {shuffledMedia.map((item, idx) => {
@@ -178,6 +280,31 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   heroBadgeText: { color: "#fff", fontSize: 12 },
+  reflectionSection: {
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    gap: 10,
+  },
+  reflectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dateLabel: { fontSize: 12, marginTop: -4, marginBottom: 4 },
+  reflectionCard: {
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  reflectionText: { fontSize: 15, lineHeight: 24 },
+  reflectionLoading: { fontSize: 13, textAlign: "center" },
+  dailyVerseText: { fontSize: 16, lineHeight: 26, fontStyle: "italic" },
+  challengeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  challengeLabel: { fontSize: 13 },
   versesSection: {
     paddingHorizontal: 22,
     paddingTop: 24,
