@@ -72,10 +72,10 @@ name = "Start Frontend"
 author = "agent"
 mode = "sequential"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
-
-[workflows.workflow.metadata]
-outputType = "webview"
