@@ -312,7 +312,9 @@ export default function useBibleAudio(
       console.log("[TTS speakVerseAI] Creating player with URI:", audioUri);
 
       const player = createAudioPlayer(audioUri);
+      console.log("[TTS speakVerseAI] Player created");
       player.playbackRate = speechRateRef.current;
+      console.log("[TTS speakVerseAI] Playback rate set to:", speechRateRef.current);
       playerRef.current = player;
 
       setIsLoadingAudio(false);
@@ -352,7 +354,8 @@ export default function useBibleAudio(
         cleanupPlayer();
         speakVerseAI(batchEnd, session);
       }
-    } catch {
+    } catch (err: any) {
+      console.log("[TTS speakVerseAI] Error, falling back:", err?.message || err);
       if (session !== sessionRef.current) return;
       setUsingFallback(true);
       setIsLoadingAudio(false);
