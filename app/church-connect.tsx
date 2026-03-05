@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -50,26 +50,39 @@ export default function ChurchConnectScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const RADIUS_OPTIONS = [25, 50, 100, 500] as const;
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchCity, setSearchCity] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "granted" | "denied">("idle");
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(50);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchCity.trim());
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchCity]);
 
   const buildQueryKey = useCallback(() => {
     const params = new URLSearchParams();
     if (userLat != null && userLng != null) {
       params.set("lat", userLat.toString());
       params.set("lng", userLng.toString());
-      params.set("radius", "500");
+      params.set("radius", radiusKm.toString());
     }
-    if (searchCity.trim()) {
-      params.set("city", searchCity.trim());
+    if (debouncedSearch) {
+      params.set("city", debouncedSearch);
     }
     const qs = params.toString();
     return `/api/churches${qs ? `?${qs}` : ""}`;
-  }, [userLat, userLng, searchCity]);
+  }, [userLat, userLng, debouncedSearch, radiusKm]);
 
   const { data: churches, isLoading } = useQuery<Church[]>({
     queryKey: [buildQueryKey()],
@@ -222,6 +235,39 @@ export default function ChurchConnectScreen() {
         ) : null}
       </View>
 
+      {locationStatus === "granted" && !debouncedSearch ? (
+        <View style={s.radiusRow}>
+          <Text style={[s.radiusLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            Radius:
+          </Text>
+          {RADIUS_OPTIONS.map((r) => (
+            <Pressable
+              key={r}
+              onPress={() => setRadiusKm(r)}
+              style={[
+                s.radiusChip,
+                {
+                  backgroundColor: radiusKm === r ? theme.accent : (isDark ? "#1A1A2E" : "#F5F3EE"),
+                  borderColor: radiusKm === r ? theme.accent : theme.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  s.radiusChipText,
+                  {
+                    color: radiusKm === r ? "#fff" : theme.textSecondary,
+                    fontFamily: radiusKm === r ? "Inter_600SemiBold" : "Inter_400Regular",
+                  },
+                ]}
+              >
+                {r} km
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       {locationStatus === "denied" ? (
         <Pressable onPress={requestLocation} style={[s.locBanner, { backgroundColor: theme.accent + "12" }]}>
           <Ionicons name="navigate" size={16} color={theme.accent} />
@@ -354,6 +400,21 @@ const s = StyleSheet.create({
   cardDetails: { marginTop: 10, gap: 6 },
   detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   detailText: { fontSize: 12, flex: 1 },
+  radiusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 8,
+    gap: 6,
+  },
+  radiusLabel: { fontSize: 13, marginRight: 2 },
+  radiusChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  radiusChipText: { fontSize: 12 },
   emptyState: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10, paddingBottom: 80 },
   emptyText: { fontSize: 16 },
   emptySubtext: { fontSize: 13, textAlign: "center", maxWidth: 260 },

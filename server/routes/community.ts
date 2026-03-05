@@ -594,7 +594,7 @@ router.post("/api/groups/:id/announcement", async (req, res) => {
     if (lat && lng) {
       const userLat = parseFloat(lat);
       const userLng = parseFloat(lng);
-      const radiusKm = parseFloat(radius || "100");
+      const radiusKm = parseFloat(radius || "50");
 
       if (isNaN(userLat) || isNaN(userLng) || isNaN(radiusKm)) {
         return res.status(400).json({ error: "Invalid lat, lng, or radius values" });
