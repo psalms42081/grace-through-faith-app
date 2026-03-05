@@ -575,9 +575,17 @@ router.post("/api/groups/:id/announcement", async (req, res) => {
 
     let allChurches = await db.select().from(sdaChurches);
 
-    if (city) {
-      const q = city.toLowerCase();
-      allChurches = allChurches.filter(c => c.city.toLowerCase().includes(q) || (c.state || "").toLowerCase().includes(q) || c.country.toLowerCase().includes(q));
+    const hasTextSearch = !!city;
+
+    if (hasTextSearch) {
+      const q = city!.toLowerCase();
+      allChurches = allChurches.filter(c =>
+        c.city.toLowerCase().includes(q) ||
+        (c.state || "").toLowerCase().includes(q) ||
+        c.country.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        c.address.toLowerCase().includes(q)
+      );
     }
 
     if (lat && lng) {
@@ -599,11 +607,17 @@ router.post("/api/groups/:id/announcement", async (req, res) => {
       };
 
       const withDist = allChurches
-        .map(c => ({ ...c, distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)) }))
-        .filter(c => c.distance <= radiusKm)
-        .sort((a, b) => a.distance - b.distance);
+        .map(c => ({ ...c, distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)) }));
 
-      return res.json(withDist);
+      if (hasTextSearch) {
+        return res.json(withDist.sort((a, b) => a.distance - b.distance));
+      }
+
+      return res.json(
+        withDist
+          .filter(c => c.distance <= radiusKm)
+          .sort((a, b) => a.distance - b.distance)
+      );
     }
 
     return res.json(allChurches);

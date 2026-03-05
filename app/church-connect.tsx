@@ -210,7 +210,7 @@ export default function ChurchConnectScreen() {
         <Ionicons name="search" size={18} color={theme.textMuted} />
         <TextInput
           style={[s.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-          placeholder="Search by city, state, or country..."
+          placeholder="Search by name, city, or country..."
           placeholderTextColor={theme.textMuted}
           value={searchCity}
           onChangeText={setSearchCity}
