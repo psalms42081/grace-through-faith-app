@@ -311,7 +311,7 @@ export default function useBibleAudio(
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
       console.log("[TTS speakVerseAI] Creating player with URI:", audioUri);
 
-      const player = createAudioPlayer({ uri: audioUri });
+      const player = createAudioPlayer(audioUri);
       player.playbackRate = speechRateRef.current;
       playerRef.current = player;
 

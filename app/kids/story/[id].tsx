@@ -1756,7 +1756,7 @@ export default function SceneStoryScreen() {
       await setAudioModeAsync({ playsInSilentMode: true }).catch((e: any) => console.log("[Kids TTS] setAudioModeAsync error:", e.message));
 
       console.log("[Kids TTS] Creating audio player...");
-      const player = createAudioPlayer({ uri: audioUri });
+      const player = createAudioPlayer(audioUri);
       narrationPlayerRef.current = player;
       console.log("[Kids TTS] Player created, setting up listener...");
 
