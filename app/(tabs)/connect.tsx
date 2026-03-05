@@ -76,26 +76,7 @@ export default function ConnectScreen() {
 
         <SectionDivider theme={theme} />
 
-        <SectionHeader title={t("connect.community")} theme={theme} />
-
-        <Pressable
-          onPress={() => router.push("/groups" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
-            <Ionicons name="people-circle" size={24} color="#10B981" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.smallGroups")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.smallGroupsSub")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+        <SectionHeader title="Watch" theme={theme} />
 
         <Pressable
           onPress={() => router.push("/broadcasts" as any)}
@@ -130,6 +111,29 @@ export default function ConnectScreen() {
             <Text style={[st.smallBadgeText, { color: theme.accent }]}>{t("connect.soon")}</Text>
           </View>
         </View>
+
+        <SectionDivider theme={theme} />
+
+        <SectionHeader title={t("connect.community")} theme={theme} />
+
+        <Pressable
+          onPress={() => router.push("/groups" as any)}
+          style={({ pressed }) => [
+            st.actionCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.actionIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+            <Ionicons name="people-circle" size={24} color="#10B981" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.smallGroups")}</Text>
+            <Text style={[st.actionSub, { color: theme.textMuted }]}>
+              {t("connect.smallGroupsSub")}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
 
         <SectionDivider theme={theme} />
 
