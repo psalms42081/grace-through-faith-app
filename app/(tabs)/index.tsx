@@ -1249,17 +1249,6 @@ function AdultHomeScreen() {
               </Text>
               <Text style={[s.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
             </View>
-            <View style={s.verseActions}>
-              <Pressable style={s.verseActionBtn} hitSlop={8}>
-                <Ionicons name="heart-outline" size={20} color="rgba(255,255,255,0.8)" />
-              </Pressable>
-              <Pressable style={s.verseActionBtn} hitSlop={8}>
-                <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.8)" />
-              </Pressable>
-              <Pressable style={s.verseActionBtn} hitSlop={8}>
-                <Ionicons name="bookmark-outline" size={20} color="rgba(255,255,255,0.8)" />
-              </Pressable>
-            </View>
           </View>
         </LinearGradient>
       </ImageBackground>
@@ -1698,18 +1687,6 @@ const s = StyleSheet.create({
   },
   verseRef: { color: "#C9933A", fontSize: 16, marginBottom: 2 },
   verseTrans: { color: "rgba(255,255,255,0.5)", fontSize: 11 },
-  verseActions: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  verseActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   streakCard: {
     borderRadius: 20,
     padding: 20,
