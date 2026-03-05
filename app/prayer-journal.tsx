@@ -76,6 +76,7 @@ export default function PrayerJournalScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
       setShowAdd(false);
       setNewTitle("");
       setNewContent("");

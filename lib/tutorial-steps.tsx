@@ -278,6 +278,45 @@ export const PROFILE_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
+export const SPIRITUAL_RINGS_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    illustration: (
+      <ComposedIcons
+        icons={[
+          { name: "ellipse-outline", size: 40, color: "#5B8DEF" },
+          { name: "ellipse-outline", size: 30, color: "#4ECCA3", style: { marginLeft: -35 } },
+          { name: "ellipse-outline", size: 20, color: "#E8A838", style: { marginLeft: -27 } },
+        ]}
+      />
+    ),
+    label: "DAILY GOALS",
+    title: "Your Spiritual\nRings",
+    description:
+      "Like closing your fitness rings, build daily spiritual habits. Three rings track your Study, Prayer, and Engagement. Close all three every day to grow in faith.",
+  },
+  {
+    illustration: <IconBadge name="book" size={46} color="#5B8DEF" />,
+    label: "STUDY",
+    title: "Close the\nStudy Ring",
+    description:
+      "The blue ring tracks chapters you read each day. Read 3 chapters to close it. Open any book in the Bible reader and your ring fills automatically.",
+  },
+  {
+    illustration: <IconBadge name="hand-left" size={46} color="#4ECCA3" />,
+    label: "PRAYER",
+    title: "Close the\nPrayer Ring",
+    description:
+      "The green ring tracks your prayer life. Add 2 prayers to your Prayer Journal each day to close this ring. Pour out your heart and watch it fill.",
+  },
+  {
+    illustration: <IconBadge name="sparkles" size={46} color="#E8A838" />,
+    label: "ENGAGE",
+    title: "Close the\nEngage Ring",
+    description:
+      "The gold ring tracks deeper engagement — study journal entries, AI study guide sessions, and reflections. Complete 2 engagements daily to close it.",
+  },
+];
+
 export const FAMILY_TUTORIAL_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="people" size={46} />,

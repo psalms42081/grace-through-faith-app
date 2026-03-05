@@ -1490,13 +1490,11 @@ function AdultHomeScreen() {
           {guidedToolsSection}
           {devotionalSection}
           {verseSection}
-          {streakSection}
         </>
       ) : (
         <>
           {verseSection}
           <SpiritualRings theme={theme} isDark={isDark} />
-          {streakSection}
           {continueReadingSection}
           {guidedToolsSection}
           {devotionalSection}

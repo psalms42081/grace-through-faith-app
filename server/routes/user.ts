@@ -509,30 +509,27 @@ router.get("/api/spiritual-rings", async (req, res) => {
     const userId = String(req.query.userId || "guest");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
 
-    const [studyResult] = await db.execute(sql`
-      SELECT COUNT(DISTINCT (book_id::text || ':' || chapter::text)) as chapters_read
-      FROM reading_history
-      WHERE user_id = ${userId} AND read_at >= ${todayISO}
-    `);
-    const chaptersRead = Number((studyResult as any)?.chapters_read ?? 0);
+    const studyRows = await db
+      .select({ cnt: sql<number>`COUNT(DISTINCT (${readingHistory.bookId}::text || ':' || ${readingHistory.chapter}::text))` })
+      .from(readingHistory)
+      .where(and(eq(readingHistory.userId, userId), sql`${readingHistory.readAt} >= ${today}`));
+    const chaptersRead = Number(studyRows[0]?.cnt ?? 0);
 
-    const [prayerResult] = await db.execute(sql`
-      SELECT COUNT(*) as prayer_count
-      FROM prayer_request
-      WHERE user_id = ${userId} AND created_at >= ${todayISO}
-    `);
-    const prayerCount = Number((prayerResult as any)?.prayer_count ?? 0);
+    const prayerRows = await db
+      .select({ cnt: sql<number>`COUNT(*)` })
+      .from(prayerRequests)
+      .where(and(eq(prayerRequests.userId, userId), sql`${prayerRequests.createdAt} >= ${today}`));
+    const prayerCount = Number(prayerRows[0]?.cnt ?? 0);
 
-    const [shareResult] = await db.execute(sql`
-      SELECT COUNT(*) as share_count FROM (
-        SELECT id FROM study_journal_entries WHERE user_id = ${userId} AND created_at >= ${todayISO}
+    const journalResult = await db.execute(sql`
+      SELECT COUNT(*) as cnt FROM (
+        SELECT id FROM study_journal_entries WHERE user_id = ${userId} AND created_at >= ${today}
         UNION ALL
-        SELECT id FROM study_guide_session WHERE user_id = ${userId} AND created_at >= ${todayISO}
+        SELECT id FROM study_guide_session WHERE user_id = ${userId} AND created_at >= ${today}
       ) combined
     `);
-    const shareCount = Number((shareResult as any)?.share_count ?? 0);
+    const shareCount = Number((journalResult as any).rows?.[0]?.cnt ?? 0);
 
     return res.json({
       study: { current: chaptersRead, goal: 3, label: "Study" },

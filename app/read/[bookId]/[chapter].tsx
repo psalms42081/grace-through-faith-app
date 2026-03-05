@@ -129,6 +129,8 @@ export default function VerseReaderScreen() {
         .then(() => {
           queryClient.invalidateQueries({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
           queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks/weekly?userId=${userId}`] });
         })
         .catch(() => {});
     }

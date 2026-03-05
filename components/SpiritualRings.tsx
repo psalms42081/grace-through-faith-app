@@ -11,6 +11,8 @@ import Animated, {
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import FeatureTutorial from "@/components/FeatureTutorial";
+import { SPIRITUAL_RINGS_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -141,6 +143,8 @@ export default function SpiritualRings({
   const { userId } = useAuth();
   const { data } = useQuery<SpiritualRingsData>({
     queryKey: [`/api/spiritual-rings?userId=${userId}`],
+    staleTime: 30_000,
+    refetchOnMount: "always",
   });
 
   const study = data?.study ?? { current: 0, goal: 3, label: "Study" };
@@ -158,6 +162,8 @@ export default function SpiritualRings({
   const innerR = middleR - STROKE_WIDTH - 3;
 
   return (
+    <>
+    <FeatureTutorial tutorialId="spiritual-rings" steps={SPIRITUAL_RINGS_TUTORIAL_STEPS} />
     <View style={[styles.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
@@ -228,6 +234,7 @@ export default function SpiritualRings({
         </View>
       </View>
     </View>
+    </>
   );
 }
 
