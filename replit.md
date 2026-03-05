@@ -15,7 +15,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Color Scheme:** A deep dark mode (`#050507`) with a warm gold accent (`#C9933A`), distinct palettes for Kids Mode, and a specific Sabbath theme with warmer tones.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
-- **Kids Club UI:** Playful, vibrant design with custom elements, animations, and larger touch targets. Features include a scene-based story viewer with Ken Burns effect, sentence-level text highlighting, auto-play mode, mood-based animated particle overlays, tap-to-interact animations, and an optional Cinema Mode for synchronized video shorts.
+- **Kids Club UI:** Playful, vibrant design with custom elements, animations, and larger touch targets. Features include a scene-based story viewer with Ken Burns effect, sentence-level text highlighting, auto-play mode, mood-based animated particle overlays, tap-to-interact animations, an optional Cinema Mode for synchronized video shorts, and ElevenLabs narrator voice selection (7 voices, persisted via AsyncStorage, with device voice fallback).
 
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text (KJV, ASV, WEB) with historical context, classic commentaries, and AI-generated application content.

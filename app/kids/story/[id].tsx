@@ -43,6 +43,19 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+const KIDS_VOICE_KEY = "@grace-kids/narrator-voice";
+
+type NarratorVoice = "george" | "daniel" | "brian" | "callum" | "sarah" | "lily" | "alice";
+const NARRATOR_VOICES: { id: NarratorVoice; label: string; desc: string; gender: "male" | "female" }[] = [
+  { id: "george", label: "George", desc: "Warm storyteller", gender: "male" },
+  { id: "daniel", label: "Daniel", desc: "Steady broadcaster", gender: "male" },
+  { id: "brian", label: "Brian", desc: "Deep & comforting", gender: "male" },
+  { id: "callum", label: "Callum", desc: "Husky & fun", gender: "male" },
+  { id: "sarah", label: "Sarah", desc: "Reassuring & confident", gender: "female" },
+  { id: "lily", label: "Lily", desc: "Velvety actress", gender: "female" },
+  { id: "alice", label: "Alice", desc: "Clear educator", gender: "female" },
+];
+
 type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
 
 interface VideoTimecodeSegment {
@@ -1567,8 +1580,14 @@ export default function SceneStoryScreen() {
   const [quietMode, setQuietMode] = useState(false);
   const [quietModeLoaded, setQuietModeLoaded] = useState(false);
   const [autoPlayMode, setAutoPlayMode] = useState(false);
+  const [narratorVoice, setNarratorVoice] = useState<NarratorVoice>("george");
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
   const autoPlayRef = useRef(false);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const narrationPlayerRef = useRef<AudioPlayer | null>(null);
+  const narrationAbortRef = useRef<AbortController | null>(null);
+  const narrationBlobUrlRef = useRef<string | null>(null);
+  const narrationListenerRef = useRef<{ remove: () => void } | null>(null);
 
   const currentMood = useMemo<SceneMood | null>(() => {
     if (scenes.length === 0 || !quietModeLoaded) return null;
@@ -1585,12 +1604,38 @@ export default function SceneStoryScreen() {
       if (val === "true") setQuietMode(true);
       setQuietModeLoaded(true);
     }).catch(() => setQuietModeLoaded(true));
+    AsyncStorage.getItem(KIDS_VOICE_KEY).then((val) => {
+      if (val && NARRATOR_VOICES.some(v => v.id === val)) {
+        setNarratorVoice(val as NarratorVoice);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const stopNarrationAudio = useCallback(() => {
+    if (narrationAbortRef.current) {
+      narrationAbortRef.current.abort();
+      narrationAbortRef.current = null;
+    }
+    if (narrationListenerRef.current) {
+      try { narrationListenerRef.current.remove(); } catch {}
+      narrationListenerRef.current = null;
+    }
+    if (narrationPlayerRef.current) {
+      try { narrationPlayerRef.current.pause(); } catch {}
+      try { narrationPlayerRef.current.remove(); } catch {}
+      narrationPlayerRef.current = null;
+    }
+    if (narrationBlobUrlRef.current && Platform.OS === "web") {
+      try { URL.revokeObjectURL(narrationBlobUrlRef.current); } catch {}
+      narrationBlobUrlRef.current = null;
+    }
+    Speech.stop();
   }, []);
 
   useEffect(() => {
     loadScenes();
     return () => {
-      Speech.stop();
+      stopNarrationAudio();
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       autoPlayRef.current = false;
@@ -1641,25 +1686,17 @@ export default function SceneStoryScreen() {
     }, 1500);
   }, [scenes.length]);
 
-  const startNarration = useCallback((sceneIdx: number) => {
+  const startNarration = useCallback(async (sceneIdx: number) => {
     const scene = scenes[sceneIdx];
     if (!scene) return;
     if (scene.videoUrl) return;
 
+    stopNarrationAudio();
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+
     const words = scene.narration.split(/\s+/);
     setIsSpeaking(true);
     setCurrentWordIndex(0);
-
-    const avgWordDuration = isLittleLambs ? 380 : 300;
-    let wordIdx = 0;
-    wordTimerRef.current = setInterval(() => {
-      wordIdx++;
-      if (wordIdx >= words.length) {
-        if (wordTimerRef.current) clearInterval(wordTimerRef.current);
-        return;
-      }
-      setCurrentWordIndex(wordIdx);
-    }, avgWordDuration);
 
     const onNarrationEnd = () => {
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
@@ -1672,24 +1709,105 @@ export default function SceneStoryScreen() {
       }
     };
 
-    Speech.speak(scene.narration, {
-      language: "en-US",
-      rate: isLittleLambs ? 0.85 : 0.95,
-      onDone: onNarrationEnd,
-      onStopped: () => {
-        if (wordTimerRef.current) clearInterval(wordTimerRef.current);
-        setIsSpeaking(false);
-        setCurrentWordIndex(0);
-      },
-    });
-  }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext]);
+    const onNarrationStopped = () => {
+      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      setIsSpeaking(false);
+      setCurrentWordIndex(0);
+    };
+
+    const abortCtrl = new AbortController();
+    narrationAbortRef.current = abortCtrl;
+
+    try {
+      const ttsUrl = new URL("/api/tts", getApiUrl()).toString();
+      const res = await fetch(ttsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: scene.narration, voice: narratorVoice }),
+        signal: abortCtrl.signal,
+      });
+
+      if (abortCtrl.signal.aborted) return;
+
+      if (!res.ok) throw new Error("TTS fetch failed");
+
+      const arrayBuf = await res.arrayBuffer();
+      if (abortCtrl.signal.aborted) return;
+
+      let audioUrl: string;
+      if (Platform.OS === "web") {
+        audioUrl = URL.createObjectURL(new Blob([arrayBuf], { type: "audio/mpeg" }));
+        narrationBlobUrlRef.current = audioUrl;
+      } else {
+        const bytes = new Uint8Array(arrayBuf);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        audioUrl = "data:audio/mpeg;base64," + btoa(binary);
+      }
+
+      await setIsAudioActiveAsync(true);
+      const player = createAudioPlayer(audioUrl);
+      narrationPlayerRef.current = player;
+
+      const avgWordDuration = isLittleLambs ? 380 : 300;
+      let wordIdx = 0;
+      wordTimerRef.current = setInterval(() => {
+        wordIdx++;
+        if (wordIdx >= words.length) {
+          if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+          return;
+        }
+        setCurrentWordIndex(wordIdx);
+      }, avgWordDuration);
+
+      const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
+        if (status.didJustFinish || (status.isLoaded === false && status.error)) {
+          if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
+          statusSub?.remove();
+          if (narrationPlayerRef.current === player) {
+            narrationPlayerRef.current = null;
+          }
+          if (Platform.OS === "web" && narrationBlobUrlRef.current === audioUrl) {
+            try { URL.revokeObjectURL(audioUrl); } catch {}
+            narrationBlobUrlRef.current = null;
+          }
+          if (!abortCtrl.signal.aborted) {
+            onNarrationEnd();
+          }
+        }
+      });
+      narrationListenerRef.current = statusSub;
+
+      player.play();
+    } catch (err: any) {
+      if (abortCtrl.signal.aborted) return;
+      console.log("[Kids TTS] ElevenLabs failed, falling back to device voice:", err.message);
+      const avgWordDuration = isLittleLambs ? 380 : 300;
+      let wordIdx = 0;
+      wordTimerRef.current = setInterval(() => {
+        wordIdx++;
+        if (wordIdx >= words.length) {
+          if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+          return;
+        }
+        setCurrentWordIndex(wordIdx);
+      }, avgWordDuration);
+
+      Speech.speak(scene.narration, {
+        language: "en-US",
+        rate: isLittleLambs ? 0.85 : 0.95,
+        onDone: onNarrationEnd,
+        onStopped: onNarrationStopped,
+      });
+    }
+  }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext, narratorVoice, stopNarrationAudio]);
 
   const handleReadToMe = useCallback(() => {
     const scene = scenes[currentScene];
     if (!scene) return;
 
     if (isSpeaking) {
-      Speech.stop();
+      stopNarrationAudio();
       setIsSpeaking(false);
       setCurrentWordIndex(0);
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
@@ -1700,11 +1818,11 @@ export default function SceneStoryScreen() {
     }
 
     startNarration(currentScene);
-  }, [currentScene, scenes, isSpeaking, startNarration]);
+  }, [currentScene, scenes, isSpeaking, startNarration, stopNarrationAudio]);
 
   const handleAutoPlay = useCallback(() => {
     if (autoPlayMode) {
-      Speech.stop();
+      stopNarrationAudio();
       setIsSpeaking(false);
       setCurrentWordIndex(0);
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
@@ -1717,7 +1835,7 @@ export default function SceneStoryScreen() {
     setAutoPlayMode(true);
     autoPlayRef.current = true;
     startNarration(currentScene);
-  }, [autoPlayMode, currentScene, startNarration]);
+  }, [autoPlayMode, currentScene, startNarration, stopNarrationAudio]);
 
   const handleWonderAnswer = useCallback(
     (sceneIdx: number, optionIdx: number) => {
@@ -1746,14 +1864,14 @@ export default function SceneStoryScreen() {
   const goToScene = useCallback(
     (idx: number) => {
       if (idx < 0 || idx >= scenes.length) return;
-      Speech.stop();
+      stopNarrationAudio();
       setIsSpeaking(false);
       setCurrentWordIndex(0);
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
       setCurrentScene(idx);
       flatListRef.current?.scrollToIndex({ index: idx, animated: true });
     },
-    [scenes.length]
+    [scenes.length, stopNarrationAudio]
   );
 
   const progressUserId = activeChildProfileId || "guest";
@@ -2092,6 +2210,16 @@ export default function SceneStoryScreen() {
 
         <View style={styles.audioControls}>
           <Pressable
+            onPress={() => setShowVoicePicker(true)}
+            style={[styles.voicePickerBtn, { backgroundColor: "rgba(255,255,255,0.15)" }]}
+            testID="voice-picker"
+          >
+            <Ionicons name="mic" size={14} color="#fff" />
+            <Text style={styles.voicePickerLabel}>
+              {NARRATOR_VOICES.find(v => v.id === narratorVoice)?.label || "George"}
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={handleAutoPlay}
             style={[
               styles.autoPlayBtn,
@@ -2152,6 +2280,73 @@ export default function SceneStoryScreen() {
         theme={theme}
         onClose={() => setShowStreak(false)}
       />
+
+      <Modal
+        visible={showVoicePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVoicePicker(false)}
+      >
+        <Pressable style={styles.voiceOverlay} onPress={() => setShowVoicePicker(false)}>
+          <View style={styles.voiceSheet}>
+            <Text style={styles.voiceSheetTitle}>Choose Narrator</Text>
+            <Text style={styles.voiceSheetSubtitle}>MALE VOICES</Text>
+            {NARRATOR_VOICES.filter(v => v.gender === "male").map(v => (
+              <Pressable
+                key={v.id}
+                style={[
+                  styles.voiceOption,
+                  narratorVoice === v.id && styles.voiceOptionSelected,
+                ]}
+                onPress={() => {
+                  setNarratorVoice(v.id);
+                  AsyncStorage.setItem(KIDS_VOICE_KEY, v.id);
+                  setShowVoicePicker(false);
+                }}
+              >
+                <View style={styles.voiceOptionRow}>
+                  <Ionicons
+                    name={narratorVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                    size={20}
+                    color={narratorVoice === v.id ? "#A78BFA" : "#888"}
+                  />
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={[styles.voiceOptionName, narratorVoice === v.id && { color: "#A78BFA" }]}>{v.label}</Text>
+                    <Text style={styles.voiceOptionDesc}>{v.desc}</Text>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+            <Text style={[styles.voiceSheetSubtitle, { marginTop: 16 }]}>FEMALE VOICES</Text>
+            {NARRATOR_VOICES.filter(v => v.gender === "female").map(v => (
+              <Pressable
+                key={v.id}
+                style={[
+                  styles.voiceOption,
+                  narratorVoice === v.id && styles.voiceOptionSelected,
+                ]}
+                onPress={() => {
+                  setNarratorVoice(v.id);
+                  AsyncStorage.setItem(KIDS_VOICE_KEY, v.id);
+                  setShowVoicePicker(false);
+                }}
+              >
+                <View style={styles.voiceOptionRow}>
+                  <Ionicons
+                    name={narratorVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                    size={20}
+                    color={narratorVoice === v.id ? "#A78BFA" : "#888"}
+                  />
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={[styles.voiceOptionName, narratorVoice === v.id && { color: "#A78BFA" }]}>{v.label}</Text>
+                    <Text style={styles.voiceOptionDesc}>{v.desc}</Text>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -2380,5 +2575,69 @@ const styles = StyleSheet.create({
   },
   navRight: {
     right: 4,
+  },
+  voicePickerBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 15,
+  },
+  voicePickerLabel: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  voiceOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  voiceSheet: {
+    backgroundColor: "#1a1a2e",
+    borderRadius: 20,
+    padding: 24,
+    width: "85%" as any,
+    maxWidth: 340,
+  },
+  voiceSheetTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center" as const,
+    marginBottom: 20,
+  },
+  voiceSheetSubtitle: {
+    color: "#A78BFA",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  voiceOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  voiceOptionSelected: {
+    backgroundColor: "rgba(167,139,250,0.15)",
+  },
+  voiceOptionRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+  },
+  voiceOptionName: {
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  voiceOptionDesc: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
 });
