@@ -96,6 +96,8 @@ export default function useBibleAudio(
   const selectedVoiceRef = useRef("george");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const playbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const batchInfoRef = useRef<{ startIndex: number; endIndex: number; charOffsets: number[] } | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -144,6 +146,10 @@ export default function useBibleAudio(
   const handleStopRef = useRef(() => {});
 
   const cleanupPlayer = useCallback(() => {
+    if (playbackTimeoutRef.current) {
+      clearTimeout(playbackTimeoutRef.current);
+      playbackTimeoutRef.current = null;
+    }
     if (playerRef.current) {
       try {
         playerRef.current.pause();
@@ -153,6 +159,7 @@ export default function useBibleAudio(
       } catch {}
       playerRef.current = null;
     }
+    batchInfoRef.current = null;
   }, []);
 
   const resetPlayback = useCallback(() => {
@@ -270,6 +277,14 @@ export default function useBibleAudio(
       .map((v) => v.text)
       .join(" ");
 
+    const charOffsets: number[] = [];
+    let cumulative = 0;
+    for (let i = 0; i < batchVerses.length; i++) {
+      charOffsets.push(cumulative);
+      cumulative += batchVerses[i].text.length + 1;
+    }
+    const totalChars = cumulative;
+
     try {
       const apiUrl = getApiUrl();
       const prepareUrl = new URL("/api/tts/prepare", apiUrl);
@@ -324,8 +339,9 @@ export default function useBibleAudio(
       }
       playerRef.current = player;
 
+      batchInfoRef.current = { startIndex: index, endIndex: batchEnd, charOffsets };
+
       setIsLoadingAudio(false);
-      setSpeakingVerseIndex(batchEnd - 1);
 
       const playFinished = await new Promise<boolean>((resolve) => {
         let resolved = false;
@@ -342,6 +358,26 @@ export default function useBibleAudio(
             loggedPlaying = true;
             console.log("[TTS speakVerseAI] Audio is playing");
           }
+
+          if (status.playing && status.currentTime != null && status.duration && status.duration > 0) {
+            const progress = status.currentTime / status.duration;
+            const charPosition = progress * totalChars;
+            const batch = batchInfoRef.current;
+            if (batch) {
+              let verseIdx = batch.startIndex;
+              for (let i = batch.charOffsets.length - 1; i >= 0; i--) {
+                if (charPosition >= batch.charOffsets[i]) {
+                  verseIdx = batch.startIndex + i;
+                  break;
+                }
+              }
+              if (verseIdx !== currentIndexRef.current) {
+                currentIndexRef.current = verseIdx;
+                setSpeakingVerseIndex(verseIdx);
+              }
+            }
+          }
+
           if (status.didJustFinish) {
             resolved = true;
             subscription.remove();
@@ -351,22 +387,26 @@ export default function useBibleAudio(
 
         const timeout = setTimeout(() => {
           if (!resolved) {
-            console.log("[TTS speakVerseAI] Audio playback timed out after 30s, falling back");
+            console.log("[TTS speakVerseAI] Audio playback timed out after 60s, falling back");
             resolved = true;
             subscription.remove();
             resolve(false);
           }
-        }, 30000);
+        }, 60000);
+        playbackTimeoutRef.current = timeout;
 
         player.play();
         console.log("[TTS speakVerseAI] player.play() called");
       });
+
+      playbackTimeoutRef.current = null;
 
       if (!playFinished) {
         throw new Error("Audio playback timed out");
       }
 
       if (session === sessionRef.current) {
+        currentIndexRef.current = batchEnd > 0 ? batchEnd - 1 : index;
         cleanupPlayer();
         speakVerseAI(batchEnd, session);
       }
@@ -424,6 +464,10 @@ export default function useBibleAudio(
   }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation]);
 
   const handlePause = useCallback(() => {
+    if (playbackTimeoutRef.current) {
+      clearTimeout(playbackTimeoutRef.current);
+      playbackTimeoutRef.current = null;
+    }
     if (usingFallback) {
       Speech.stop();
     } else {
