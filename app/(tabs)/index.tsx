@@ -1615,7 +1615,7 @@ const s = StyleSheet.create({
     gap: 2,
   },
   kidsModeBtnLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.3,
   },
