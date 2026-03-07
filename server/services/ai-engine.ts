@@ -1257,6 +1257,7 @@ export interface GeneratedPlanDay {
   verseStart: number | null;
   verseEnd: number | null;
   contextNote: string;
+  devotionalThought: string;
   reflectionQuestions: string[];
   prayerPrompt: string;
   thenContext: string;
@@ -1314,6 +1315,8 @@ export async function generateReadingPlan(params: {
         ? "Include deeper theological passages, Old and New Testament connections, and challenging reflections."
         : "Balance accessible and moderately challenging passages with thoughtful reflections.";
 
+  const clampedDays = Math.max(3, Math.min(14, durationDays));
+
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -1344,13 +1347,29 @@ IMPORTANT RESTRICTIONS:
 - Prayer prompts should reflect Adventist devotional life (preparation for Christ's return, sanctification, service)
 - "nowApplication" sections should connect to Adventist mission and end-time living where appropriate
 
+CONTENT INTEGRITY GUARDRAILS:
+- Prioritize Scripture above all — every day must be anchored in a specific Bible passage
+- Avoid speculative theology — do not present uncertain interpretations as settled doctrine
+- Never fabricate quotes from Ellen G. White, church pioneers, or any other source
+- Remain respectful of historic Christian teaching even when presenting distinctive Adventist positions
+- Align with Adventist interpretation for prophecy, sanctuary, and eschatological themes
+- Keep devotional thoughts grounded in what the text actually says — no eisegesis
+
+REQUIRED FIELDS FOR EACH DAY:
+Every day MUST include ALL of these five elements:
+1. Day Title — a clear, engaging title capturing the day's theme
+2. Primary Scripture — a specific Bible passage (book, chapter, verses)
+3. Short devotional thought — a concise devotional reflection (120 words maximum) connecting the passage to the topic
+4. Reflection question — at least one thoughtful question for personal meditation
+5. Prayer prompt — a specific prayer prompt responding to the passage
+
 ${difficultyGuide}
 
 Return valid JSON only, no markdown. Use KJV book names exactly as they appear in the Bible (e.g., "Genesis", "1 Corinthians", "Psalms").`,
       },
       {
         role: "user",
-        content: `Create a ${durationDays}-day Bible reading plan on the topic: "${topic}"
+        content: `Create a ${clampedDays}-day Bible reading plan on the topic: "${topic}"
 Difficulty level: ${difficulty}
 
 This plan is for Seventh-day Adventist believers. Ensure all content aligns with SDA theology and the 28 Fundamental Beliefs.
@@ -1372,6 +1391,7 @@ Return JSON:
       "verseStart": 1,
       "verseEnd": 10,
       "contextNote": "1-2 sentences setting context for this passage from an Adventist perspective",
+      "devotionalThought": "A short devotional reflection (120 words max) connecting the passage to the topic. Must be grounded in what the text says. No fabricated quotes.",
       "reflectionQuestions": ["Question 1", "Question 2", "Question 3"],
       "prayerPrompt": "A prayer prompt responding to this passage, reflecting Adventist devotional life",
       "thenContext": "What this passage meant to the original audience (2-3 sentences)",
@@ -1380,7 +1400,7 @@ Return JSON:
   ]
 }
 
-Generate exactly ${durationDays} days. Each day should have a different passage. Vary between Old and New Testament where appropriate. Make passages focused (typically 5-15 verses, not full chapters). Include passages that illuminate distinctive Adventist doctrines when they connect naturally to the topic.`,
+Generate exactly ${clampedDays} days. Each day should have a different passage. Vary between Old and New Testament where appropriate. Make passages focused (typically 5-15 verses, not full chapters). Include passages that illuminate distinctive Adventist doctrines when they connect naturally to the topic.`,
       },
     ],
     temperature: 0.7,
@@ -1413,6 +1433,7 @@ Generate exactly ${durationDays} days. Each day should have a different passage.
           verseStart: d.verseStart || null,
           verseEnd: d.verseEnd || null,
           contextNote: d.contextNote || "",
+          devotionalThought: d.devotionalThought || "",
           reflectionQuestions: Array.isArray(d.reflectionQuestions) ? d.reflectionQuestions : [],
           prayerPrompt: d.prayerPrompt || "",
           thenContext: d.thenContext || "",

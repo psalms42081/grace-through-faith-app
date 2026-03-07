@@ -18,7 +18,7 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 
-const DURATIONS = [7, 14, 21, 30] as const;
+const DURATIONS = [3, 5, 7, 10, 14] as const;
 const DIFFICULTIES = ["beginner", "intermediate", "advanced"] as const;
 
 const DIFFICULTY_LABELS: Record<string, { label: string; desc: string; color: string }> = {

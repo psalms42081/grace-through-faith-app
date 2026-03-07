@@ -810,6 +810,67 @@ export default function ProphecyExplorerScreen() {
           </Text>
         </View>
 
+        <View style={styles.introCardsSection}>
+          <Text style={[styles.introCardsHeading, { color: theme.text }]}>
+            How to Understand Bible Prophecy
+          </Text>
+
+          <View style={[styles.introCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={[styles.introCardIconWrap, { backgroundColor: "rgba(59, 130, 246, 0.12)" }]}>
+              <Ionicons name="eye-outline" size={20} color="#3B82F6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.introCardTitle, { color: theme.text }]}>Symbolic Language</Text>
+              <Text style={[styles.introCardDesc, { color: theme.textSecondary }]}>
+                Bible prophecy uses vivid imagery — beasts, horns, and other symbols — to represent kingdoms, powers, and movements across history. Understanding these symbols unlocks the prophetic narrative.
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.introCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={[styles.introCardIconWrap, { backgroundColor: "rgba(124, 58, 237, 0.12)" }]}>
+              <Ionicons name="time-outline" size={20} color="#7C3AED" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.introCardTitle, { color: theme.text }]}>Historicist Method</Text>
+              <Text style={[styles.introCardDesc, { color: theme.textSecondary }]}>
+                Adventists interpret prophecy as a continuous unfolding through history, from ancient empires to the present day. This approach connects biblical visions to real, verifiable historical events.
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.introCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View style={[styles.introCardIconWrap, { backgroundColor: "rgba(201, 147, 58, 0.12)" }]}>
+              <Ionicons name="library-outline" size={20} color="#C9933A" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.introCardTitle, { color: theme.text }]}>Daniel Before Revelation</Text>
+              <Text style={[styles.introCardDesc, { color: theme.textSecondary }]}>
+                The book of Daniel lays the foundation for understanding Revelation. The same kingdoms, timelines, and themes introduced in Daniel are expanded and completed in Revelation.
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              const firstSectionY = sectionYPositions.current[PROPHECY_SECTIONS[0].id];
+              if (firstSectionY !== undefined && scrollRef.current) {
+                scrollRef.current.scrollTo({ y: firstSectionY - 10, animated: true });
+              } else {
+                scrollRef.current?.scrollTo({ y: 600, animated: true });
+              }
+            }}
+            style={({ pressed }) => [
+              styles.beginButton,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Ionicons name="compass-outline" size={18} color="#FFF" />
+            <Text style={styles.beginButtonText}>Begin Prophecy Study</Text>
+            <Ionicons name="arrow-down" size={16} color="#FFF" />
+          </Pressable>
+        </View>
+
         <TimelineBar theme={theme} onMarkerPress={handleTimelinePress} />
 
         {PROPHECY_SECTIONS.map((section) => (
@@ -877,6 +938,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.2,
     flex: 1,
+  },
+  introCardsSection: {
+    marginHorizontal: 4,
+    marginBottom: 20,
+    gap: 10,
+  },
+  introCardsHeading: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 18,
+    lineHeight: 24,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  introCard: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  introCardIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginTop: 2,
+  },
+  introCardTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  introCardDesc: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  beginButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    backgroundColor: "#C9933A",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  beginButtonText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#FFF",
+    letterSpacing: 0.3,
   },
   closingCard: {
     marginHorizontal: 4,

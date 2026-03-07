@@ -81,6 +81,51 @@ router.post("/api/devotionals/enroll", async (req, res) => {
   }
 });
 
+router.get("/api/devotionals/user-progress", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
+    const enrollments = await db
+      .select()
+      .from(userPlanEnrollments)
+      .where(eq(userPlanEnrollments.userId, String(userId)));
+
+    if (!enrollments.length) {
+      return res.json([]);
+    }
+
+    const results = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const allDays = await db
+          .select()
+          .from(devotionalDays)
+          .where(eq(devotionalDays.planId, enrollment.planId))
+          .orderBy(devotionalDays.dayNumber);
+
+        const completedDays = await db
+          .select()
+          .from(userPlanProgress)
+          .where(eq(userPlanProgress.enrollmentId, enrollment.id));
+
+        return {
+          planId: enrollment.planId,
+          isActive: enrollment.isActive,
+          completedCount: completedDays.length,
+          totalDays: allDays.length,
+        };
+      })
+    );
+
+    return res.json(results);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/devotionals/today", async (req, res) => {
   try {
     const { userId, planId, depth } = req.query;

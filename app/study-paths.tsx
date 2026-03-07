@@ -265,8 +265,23 @@ export default function StudyPathsScreen() {
                         </View>
                       </View>
 
-                      {isEnrolled && (
+                      {isEnrolled && progress!.percentComplete === 100 && (
+                        <View style={styles.completedBadge}>
+                          <View style={styles.completedIconCircle}>
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          </View>
+                          <Text style={styles.completedText}>Completed</Text>
+                        </View>
+                      )}
+
+                      {isEnrolled && progress!.percentComplete < 100 && (
                         <View style={styles.progressSection}>
+                          <View style={styles.modulePositionRow}>
+                            <Ionicons name="layers" size={14} color={theme.accent} />
+                            <Text style={[styles.modulePositionText, { color: theme.accent }]}>
+                              Module {Math.max(1, Math.ceil((progress!.percentComplete / 100) * (track.modulesCount ?? track.totalModules)))} of {track.modulesCount ?? track.totalModules}
+                            </Text>
+                          </View>
                           <View style={[styles.progressBarBg, { backgroundColor: theme.border }]}>
                             <View
                               style={[
@@ -287,7 +302,7 @@ export default function StudyPathsScreen() {
                               style={[styles.continueBtn, { backgroundColor: theme.accent + "18" }]}
                             >
                               <Text style={[styles.continueBtnText, { color: theme.accent }]}>
-                                Continue
+                                Continue Path
                               </Text>
                               <Ionicons name="arrow-forward" size={14} color={theme.accent} />
                             </Pressable>
@@ -420,6 +435,37 @@ const styles = StyleSheet.create({
   },
   difficultyText: {
     fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  completedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    justifyContent: "center",
+  },
+  completedIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#2E7D32",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completedText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#2E7D32",
+  },
+  modulePositionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  modulePositionText: {
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
   progressSection: {

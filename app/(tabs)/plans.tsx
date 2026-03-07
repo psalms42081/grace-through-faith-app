@@ -33,15 +33,40 @@ interface TodayResponse {
   planComplete?: boolean;
 }
 
+interface PlanProgress {
+  planId: string;
+  isActive: boolean;
+  completedCount: number;
+  totalDays: number;
+}
+
 const TABS = ["Find Plans", "My Plans"] as const;
 
-const CATEGORIES = [
-  { label: "All", icon: "apps" as const },
-  { label: "Faith", icon: "shield" as const },
-  { label: "Prayer", icon: "hand-left" as const },
-  { label: "Wisdom", icon: "bulb" as const },
-  { label: "Love", icon: "heart" as const },
-  { label: "Hope", icon: "sunny" as const },
+const PLAN_SECTIONS = [
+  {
+    id: "scripture",
+    label: "Scripture Journeys",
+    icon: "book" as const,
+    titles: ["Foundations of Faith", "The Life of Christ", "Women of the Bible", "Parables of Jesus", "Walking Through the Wilderness"],
+  },
+  {
+    id: "living",
+    label: "Christian Living",
+    icon: "leaf" as const,
+    titles: ["Wisdom for Life", "A Life of Prayer", "Grace Upon Grace", "Finding Peace", "Strength in Weakness", "Living in Hope"],
+  },
+  {
+    id: "encouragement",
+    label: "Encouragement",
+    icon: "heart" as const,
+    titles: ["Psalms of Comfort", "God's Unfailing Love"],
+  },
+  {
+    id: "adventist",
+    label: "Adventist Foundations",
+    icon: "shield" as const,
+    titles: ["The Sabbath Rest", "Daniel's Prophecies", "The Heavenly Sanctuary", "Death, Sleep, and Resurrection", "God's Health Blueprint"],
+  },
 ];
 
 const PLAN_GRADIENTS: [string, string][] = [
@@ -63,8 +88,6 @@ export default function PlansScreen() {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Find Plans");
-  const [activeCategory, setActiveCategory] = useState("All");
-
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -76,17 +99,32 @@ export default function PlansScreen() {
     queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
+  const { data: userProgress } = useQuery<PlanProgress[]>({
+    queryKey: [`/api/devotionals/user-progress?userId=${userId}`],
+    enabled: !!userId,
+  });
+
+  const progressMap = new Map<string, PlanProgress>();
+  (userProgress || []).forEach((p) => progressMap.set(p.planId, p));
+
   const hasActivePlan = todayData?.today != null;
   const dayNumber = todayData?.today?.dayNumber ?? 0;
   const progress = todayData?.completedCount ?? dayNumber;
   const total = todayData?.totalDays ?? 1;
   const progressPct = total > 0 ? Math.min((progress / total) * 100, 100) : 0;
 
-  const filteredPlans = plans?.filter((p) => {
-    if (activeCategory === "All") return true;
-    const themes = (p.theme || "").toLowerCase().split(",").map(t => t.trim());
-    return themes.some(t => t.includes(activeCategory.toLowerCase()));
+  const sectionTitleSet = new Set(PLAN_SECTIONS.flatMap((s) => s.titles.map((t) => t.toLowerCase())));
+
+  const groupedSections = PLAN_SECTIONS.map((section) => {
+    const sectionPlans = (plans || []).filter((p) =>
+      section.titles.some((t) => p.title.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(p.title.toLowerCase()))
+    );
+    return { ...section, plans: sectionPlans };
   });
+
+  const uncategorizedPlans = (plans || []).filter(
+    (p) => !sectionTitleSet.has(p.title.toLowerCase()) && !PLAN_SECTIONS.some((s) => s.titles.some((t) => p.title.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(p.title.toLowerCase())))
+  );
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
@@ -176,80 +214,139 @@ export default function PlansScreen() {
           contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
           showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={st.categoryRow}
-          >
-            {CATEGORIES.map((cat) => (
-              <Pressable
-                key={cat.label}
-                onPress={() => setActiveCategory(cat.label)}
-                style={[
-                  st.categoryChip,
-                  activeCategory === cat.label
-                    ? { backgroundColor: theme.accent }
-                    : { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" },
-                ]}
-              >
-                <Ionicons
-                  name={cat.icon}
-                  size={14}
-                  color={activeCategory === cat.label ? "#fff" : theme.textSecondary}
-                />
-                <Text
-                  style={[
-                    st.categoryText,
-                    {
-                      color: activeCategory === cat.label ? "#fff" : theme.textSecondary,
-                      fontFamily: activeCategory === cat.label ? "Inter_600SemiBold" : "Inter_400Regular",
-                    },
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {filteredPlans && filteredPlans.length > 0 ? (
-            <View style={st.planGrid}>
-              {filteredPlans.map((plan, i) => (
-                <Pressable
-                  key={plan.id}
-                  onPress={() => router.push("/devotionals")}
-                  style={({ pressed }) => [st.planCardWrap, { opacity: pressed ? 0.85 : 1 }]}
-                >
-                  <LinearGradient
-                    colors={PLAN_GRADIENTS[i % PLAN_GRADIENTS.length]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={st.planCard}
-                  >
-                    <Ionicons
-                      name={PLAN_ICONS[i % PLAN_ICONS.length]}
-                      size={36}
-                      color="rgba(255,255,255,0.15)"
-                      style={st.planCardBgIcon}
-                    />
-                    <View style={st.planCardContent}>
-                      <Text style={[st.planCardTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                        {plan.title}
-                      </Text>
-                      <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
-                        {plan.totalDays} days
-                        {plan.estimatedMinutesPerDay ? ` · ${plan.estimatedMinutesPerDay} min/day` : ""}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
+          {plans && plans.length === 0 && (
             <View style={st.noResults}>
+              <Ionicons name="library-outline" size={32} color={theme.textMuted} />
               <Text style={[st.noResultsText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No plans found for this category
+                No devotional plans available yet
               </Text>
+            </View>
+          )}
+          {groupedSections.map((section, si) => {
+            if (section.plans.length === 0) return null;
+            return (
+              <View key={section.id} style={st.sectionBlock}>
+                <View style={st.sectionHeaderRow}>
+                  <Ionicons name={section.icon} size={18} color={theme.accent} />
+                  <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                    {section.label}
+                  </Text>
+                </View>
+                <View style={st.planGrid}>
+                  {section.plans.map((plan, i) => {
+                    const gi = si * 4 + i;
+                    const pp = progressMap.get(plan.id);
+                    const isCompleted = pp && pp.completedCount >= pp.totalDays && pp.totalDays > 0;
+                    const isInProgress = pp && !isCompleted && pp.completedCount > 0;
+                    return (
+                      <Pressable
+                        key={plan.id}
+                        onPress={() => router.push("/devotionals")}
+                        style={({ pressed }) => [st.planCardWrap, { opacity: pressed ? 0.85 : 1 }]}
+                      >
+                        <LinearGradient
+                          colors={PLAN_GRADIENTS[gi % PLAN_GRADIENTS.length]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={st.planCard}
+                        >
+                          <Ionicons
+                            name={PLAN_ICONS[gi % PLAN_ICONS.length]}
+                            size={36}
+                            color="rgba(255,255,255,0.15)"
+                            style={st.planCardBgIcon}
+                          />
+                          <View style={st.planCardContent}>
+                            <Text style={[st.planCardTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                              {plan.title}
+                            </Text>
+                            {isCompleted ? (
+                              <View style={st.progressRow}>
+                                <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                                <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>Completed</Text>
+                              </View>
+                            ) : isInProgress ? (
+                              <View style={st.progressRow}>
+                                <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
+                                  Day {pp.completedCount + 1} / {pp.totalDays}
+                                </Text>
+                                <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
+                              </View>
+                            ) : (
+                              <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
+                                {plan.totalDays} days
+                                {plan.estimatedMinutesPerDay ? ` · ${plan.estimatedMinutesPerDay} min/day` : ""}
+                              </Text>
+                            )}
+                          </View>
+                        </LinearGradient>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })}
+
+          {uncategorizedPlans.length > 0 && (
+            <View style={st.sectionBlock}>
+              <View style={st.sectionHeaderRow}>
+                <Ionicons name="sparkles" size={18} color={theme.accent} />
+                <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                  More Plans
+                </Text>
+              </View>
+              <View style={st.planGrid}>
+                {uncategorizedPlans.map((plan, i) => {
+                  const pp = progressMap.get(plan.id);
+                  const isCompleted = pp && pp.completedCount >= pp.totalDays && pp.totalDays > 0;
+                  const isInProgress = pp && !isCompleted && pp.completedCount > 0;
+                  return (
+                    <Pressable
+                      key={plan.id}
+                      onPress={() => router.push("/devotionals")}
+                      style={({ pressed }) => [st.planCardWrap, { opacity: pressed ? 0.85 : 1 }]}
+                    >
+                      <LinearGradient
+                        colors={PLAN_GRADIENTS[(i + 3) % PLAN_GRADIENTS.length]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={st.planCard}
+                      >
+                        <Ionicons
+                          name={PLAN_ICONS[(i + 3) % PLAN_ICONS.length]}
+                          size={36}
+                          color="rgba(255,255,255,0.15)"
+                          style={st.planCardBgIcon}
+                        />
+                        <View style={st.planCardContent}>
+                          <Text style={[st.planCardTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                            {plan.title}
+                          </Text>
+                          {isCompleted ? (
+                            <View style={st.progressRow}>
+                              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                              <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>Completed</Text>
+                            </View>
+                          ) : isInProgress ? (
+                            <View style={st.progressRow}>
+                              <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
+                                Day {pp.completedCount + 1} / {pp.totalDays}
+                              </Text>
+                              <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
+                            </View>
+                          ) : (
+                            <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
+                              {plan.totalDays} days
+                              {plan.estimatedMinutesPerDay ? ` · ${plan.estimatedMinutesPerDay} min/day` : ""}
+                            </Text>
+                          )}
+                        </View>
+                      </LinearGradient>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -304,19 +401,18 @@ const st = StyleSheet.create({
   },
   tabText: { fontSize: 14 },
   content: { paddingHorizontal: 20, paddingTop: 12 },
-  categoryRow: {
-    gap: 8,
-    paddingBottom: 16,
+  sectionBlock: {
+    marginBottom: 24,
   },
-  categoryChip: {
+  sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    gap: 8,
+    marginBottom: 12,
   },
-  categoryText: { fontSize: 13 },
+  sectionTitle: {
+    fontSize: 18,
+  },
   planGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -339,6 +435,25 @@ const st = StyleSheet.create({
     right: 18,
   },
   planCardContent: { gap: 4 },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  progressText: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.85)",
+  },
+  continueLabel: {
+    fontSize: 11,
+    color: "#fff",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
   planCardTitle: { color: "#fff", fontSize: 16, lineHeight: 22 },
   planCardMeta: { color: "rgba(255,255,255,0.6)", fontSize: 12 },
   activePlanCard: {
