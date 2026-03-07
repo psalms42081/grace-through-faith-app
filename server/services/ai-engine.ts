@@ -409,7 +409,13 @@ RESPONSE RULES:
 - If the answer is random, unrelated, or nonsense, say: "That doesn't relate to the verse we're studying." Then point them to a specific part of the passage and ask a concrete question about it
 - Never over-praise. A brief "Good" or "Right" is enough
 - Never invent facts not in the biblical text
-- Never give the answer directly — ask questions that lead the student to discover truth`;
+- Never give the answer directly — ask questions that lead the student to discover truth
+
+EVALUATION (required):
+After your response, on a NEW line, add exactly one evaluation tag. This tag will be stripped before showing your response to the student.
+- [MEANINGFUL] — the student gave a substantive, relevant answer that demonstrates engagement with the text
+- [SHALLOW] — the answer was somewhat related but vague, too short, or lacked depth
+- [OFF_TOPIC] — the answer was unrelated, nonsense, or a copy of the question`;
 
   const formattedMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant",
@@ -424,10 +430,89 @@ RESPONSE RULES:
       { role: "system", content: systemPrompt },
       ...formattedMessages,
     ],
-    max_tokens: 250,
+    max_tokens: 280,
   });
 
-  return completion.choices[0]?.message?.content || "That's a thoughtful response. Let's continue exploring this passage.";
+  return completion.choices[0]?.message?.content || "That's a thoughtful response. Let's continue exploring this passage.\n[SHALLOW]";
+}
+
+export function parseEvaluationTag(
+  response: string,
+  userResponse?: string,
+  verseText?: string
+): { text: string; quality: "meaningful" | "shallow" | "off_topic" } {
+  const tagMatch = response.match(/\n?\s*\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?\s*$/i);
+  if (tagMatch) {
+    const tag = tagMatch[1].toUpperCase();
+    const text = response.replace(tagMatch[0], "").trim();
+    const quality = tag === "MEANINGFUL" ? "meaningful" : tag === "OFF_TOPIC" ? "off_topic" : "shallow";
+    return { text, quality };
+  }
+
+  const inlineMatch = response.match(/\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?/i);
+  if (inlineMatch) {
+    const tag = inlineMatch[1].toUpperCase();
+    const text = response.replace(inlineMatch[0], "").trim();
+    const quality = tag === "MEANINGFUL" ? "meaningful" : tag === "OFF_TOPIC" ? "off_topic" : "shallow";
+    return { text, quality };
+  }
+
+  if (userResponse) {
+    const words = userResponse.trim().split(/\s+/);
+    const len = userResponse.trim().length;
+
+    if (len < 10 || words.length < 3) {
+      return { text: response.trim(), quality: "off_topic" };
+    }
+
+    const redirectPhrases = ["doesn't relate", "does not relate", "not related", "try looking", "look again", "focus on the verse", "focus on the passage", "back to the verse", "back to the text"];
+    const lower = response.toLowerCase();
+    if (redirectPhrases.some((p) => lower.includes(p))) {
+      return { text: response.trim(), quality: "off_topic" };
+    }
+
+    const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted"];
+    if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + "."))) {
+      if (len > 20 && words.length > 5) {
+        return { text: response.trim(), quality: "meaningful" };
+      }
+    }
+
+    if (len > 30 && words.length > 8) {
+      return { text: response.trim(), quality: "meaningful" };
+    }
+
+    return { text: response.trim(), quality: "shallow" };
+  }
+
+  return { text: response.trim(), quality: "shallow" };
+}
+
+export async function generateStudySummary(params: {
+  verseReference: string;
+  verseText: string;
+  userAnswers: { observe: string[]; interpret: string[]; apply: string[] };
+}): Promise<string> {
+  const { verseReference, verseText, userAnswers } = params;
+
+  const client = createOpenAIClient();
+
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You write brief study completion summaries. Given a verse and the student's answers across three study stages (Observe, Interpret, Apply), write a 2-3 sentence summary of what they discovered. Use second person ("You observed...", "You reflected..."). Be specific to their actual answers. End with their practical takeaway. Keep it under 60 words total. No theatrical language.`,
+      },
+      {
+        role: "user",
+        content: `Verse: "${verseText}" — ${verseReference}\n\nObserve answers: ${userAnswers.observe.join(" | ")}\n\nInterpret answers: ${userAnswers.interpret.join(" | ")}\n\nApply answers: ${userAnswers.apply.join(" | ")}`,
+      },
+    ],
+    max_tokens: 150,
+  });
+
+  return completion.choices[0]?.message?.content || "Study complete. You explored this passage through observation, interpretation, and application.";
 }
 
 export interface VerseMapData {

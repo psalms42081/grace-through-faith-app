@@ -26,6 +26,19 @@ interface Message {
   timestamp: string;
 }
 
+interface StageProgress {
+  completed: boolean;
+  responses: string[];
+  meaningfulCount: number;
+  completedAt: string | null;
+}
+
+interface Progression {
+  observe: StageProgress;
+  interpret: StageProgress;
+  apply: StageProgress;
+}
+
 type Persona = "scholarly" | "pastoral" | "ancient";
 
 const PERSONAS: { id: Persona; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
@@ -63,6 +76,8 @@ export default function StudyGuideScreen() {
   const [selectedPersona, setSelectedPersona] = useState<Persona>("scholarly");
   const [showPersonaPicker, setShowPersonaPicker] = useState(true);
   const [checkingResume, setCheckingResume] = useState(true);
+  const [progression, setProgression] = useState<Progression | null>(null);
+  const [studySummary, setStudySummary] = useState<string | null>(null);
   const initRef = useRef(false);
   const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
@@ -73,6 +88,8 @@ export default function StudyGuideScreen() {
     setIsComplete(data.session.phase === "complete" || !!data.session.completedAt);
     setIsResumed(!!data.resumed);
     setSelectedPersona(data.session.persona || "scholarly");
+    if (data.session.progression) setProgression(data.session.progression);
+    if (data.session.summary) setStudySummary(data.session.summary);
     setShowPersonaPicker(false);
     setIsStarting(false);
     setCheckingResume(false);
@@ -113,6 +130,8 @@ export default function StudyGuideScreen() {
       setCurrentPhase(data.phase);
       setIsComplete(data.isComplete);
       setIsResumed(false);
+      if (data.progression) setProgression(data.progression);
+      if (data.summary) setStudySummary(data.summary);
     },
   });
 
@@ -159,6 +178,8 @@ export default function StudyGuideScreen() {
     setIsComplete(false);
     setShowPersonaPicker(true);
     setIsStarting(false);
+    setProgression(null);
+    setStudySummary(null);
 
     if (oldSessionId) {
       apiRequest("POST", `/api/study-guide/complete/${oldSessionId}`, {}).catch(() => {});
@@ -185,8 +206,19 @@ export default function StudyGuideScreen() {
 
   const getPhaseIndex = () => {
     if (isComplete) return 3;
+    if (progression) {
+      const stageKey = currentPhase as keyof Progression;
+      const idx = PHASES.findIndex((p) => p.id === currentPhase);
+      return idx >= 0 ? idx : 0;
+    }
     const idx = PHASES.findIndex((p) => p.id === currentPhase);
     return idx >= 0 ? idx : 0;
+  };
+
+  const isStageComplete = (stageId: string): boolean => {
+    if (!progression) return false;
+    const stage = progression[stageId as keyof Progression];
+    return stage?.completed || false;
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
@@ -246,7 +278,7 @@ export default function StudyGuideScreen() {
         {PHASES.map((phase, i) => {
           const phaseIdx = getPhaseIndex();
           const isActive = i === phaseIdx;
-          const isDone = i < phaseIdx;
+          const isDone = isStageComplete(phase.id) || i < phaseIdx;
           const dotColor = isActive ? theme.accent : isDone ? "#2E7D32" : theme.textMuted + "40";
           return (
             <View key={phase.id} style={styles.phaseItem}>
@@ -421,6 +453,11 @@ export default function StudyGuideScreen() {
                     Study Complete
                   </Text>
                 </View>
+                {studySummary ? (
+                  <Text style={[styles.summaryText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                    {studySummary}
+                  </Text>
+                ) : null}
                 <View style={styles.completeActions}>
                   <ShareInsightButton
                     onPress={() => {
@@ -667,6 +704,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completeText: { fontSize: 14 },
+  summaryText: { fontSize: 13, lineHeight: 20, textAlign: "center" as const, paddingHorizontal: 8 },
   completeActions: {
     flexDirection: "row",
     alignItems: "center",

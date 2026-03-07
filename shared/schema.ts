@@ -947,6 +947,8 @@ export const studyGuideSessions = pgTable(
     phase: varchar("phase", { length: 20 }).default("observe").notNull(),
     persona: varchar("persona", { length: 20 }).default("scholarly").notNull(),
     messages: text("messages").default("[]").notNull(),
+    progression: text("progression").default("{}").notNull(),
+    summary: text("summary"),
     completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
