@@ -378,18 +378,34 @@ async function connect() {
 
 btnMic.addEventListener('click', async () => {
   if (!room) return;
-  micEnabled = !micEnabled;
-  await room.localParticipant.setMicrophoneEnabled(micEnabled);
-  btnMic.classList.toggle('active', micEnabled);
-  btnMic.classList.toggle('off', !micEnabled);
+  try {
+    micEnabled = !micEnabled;
+    await room.localParticipant.setMicrophoneEnabled(micEnabled);
+    btnMic.classList.toggle('active', micEnabled);
+    btnMic.classList.toggle('off', !micEnabled);
+  } catch (err) {
+    micEnabled = !micEnabled;
+    console.error('Mic toggle failed:', err);
+    statusText.textContent = 'Microphone access denied';
+    overlay.classList.remove('hidden');
+    setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+  }
 });
 
 btnCamera.addEventListener('click', async () => {
   if (!room) return;
-  camEnabled = !camEnabled;
-  await room.localParticipant.setCameraEnabled(camEnabled);
-  btnCamera.classList.toggle('active', camEnabled);
-  btnCamera.classList.toggle('off', !camEnabled);
+  try {
+    camEnabled = !camEnabled;
+    await room.localParticipant.setCameraEnabled(camEnabled);
+    btnCamera.classList.toggle('active', camEnabled);
+    btnCamera.classList.toggle('off', !camEnabled);
+  } catch (err) {
+    camEnabled = !camEnabled;
+    console.error('Camera toggle failed:', err);
+    statusText.textContent = 'Camera access denied';
+    overlay.classList.remove('hidden');
+    setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+  }
 });
 
 btnLeave.addEventListener('click', async () => {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Linking,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
@@ -16,6 +17,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
+import { Camera } from "expo-camera";
+import { Audio } from "expo-av";
 
 interface StreamSession {
   id: string;
@@ -32,7 +35,6 @@ interface StreamSession {
   groupName?: string | null;
 }
 
-
 export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
@@ -41,6 +43,41 @@ export default function StreamScreen() {
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const [webViewLoading, setWebViewLoading] = useState(true);
+  const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === "web");
+  const [permissionsDenied, setPermissionsDenied] = useState(false);
+  const [permissionsChecking, setPermissionsChecking] = useState(Platform.OS !== "web");
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    async function requestPerms() {
+      try {
+        const [camResult, micResult] = await Promise.all([
+          Camera.requestCameraPermissionsAsync(),
+          Audio.requestPermissionsAsync(),
+        ]);
+
+        if (camResult.granted && micResult.granted) {
+          setPermissionsGranted(true);
+        } else {
+          const canAskCam = camResult.canAskAgain !== false;
+          const canAskMic = micResult.canAskAgain !== false;
+          if (!canAskCam || !canAskMic) {
+            setPermissionsDenied(true);
+          } else {
+            setPermissionsDenied(true);
+          }
+        }
+      } catch (err) {
+        console.error("Permission request error:", err);
+        setPermissionsGranted(true);
+      } finally {
+        setPermissionsChecking(false);
+      }
+    }
+
+    requestPerms();
+  }, []);
 
   const { data: session, isLoading } = useQuery<StreamSession>({
     queryKey: [`/api/streams/${id}`],
@@ -48,7 +85,6 @@ export default function StreamScreen() {
   });
 
   const displayName = user?.displayName || session?.hostDisplayName || "Guest";
-
 
   const endMutation = useMutation({
     mutationFn: async () => {
@@ -98,10 +134,42 @@ export default function StreamScreen() {
     } catch {}
   }, []);
 
-  if (isLoading) {
+  if (isLoading || permissionsChecking) {
     return (
       <View style={[s.container, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: topPad + 100 }} />
+      </View>
+    );
+  }
+
+  if (permissionsDenied) {
+    return (
+      <View style={[s.container, { backgroundColor: theme.background }]}>
+        <View style={[s.header, { paddingTop: topPad + 12 }]}>
+          <Pressable onPress={() => router.back()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={theme.text} />
+          </Pressable>
+        </View>
+        <View style={s.centered}>
+          <Ionicons name="mic-off-outline" size={48} color={theme.textMuted} />
+          <Text style={[s.endedTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Permissions Required
+          </Text>
+          <Text style={[s.emptyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            Camera and microphone access are needed to join live sessions. Please enable them in your device settings.
+          </Text>
+          <Pressable
+            onPress={() => {
+              try { Linking.openSettings(); } catch {}
+            }}
+            style={[s.returnBtn, { backgroundColor: theme.accent }]}
+          >
+            <Text style={[s.returnBtnText, { fontFamily: "Inter_600SemiBold" }]}>Open Settings</Text>
+          </Pressable>
+          <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
+            <Text style={[s.emptyText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>Go Back</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -207,6 +275,8 @@ export default function StreamScreen() {
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
             mediaCapturePermissionGrantType="grant"
+            androidLayerType="hardware"
+            allowsProtectedMedia
             onLoadEnd={() => setWebViewLoading(false)}
             onMessage={handleWebViewMessage}
             originWhitelist={["https://*", "http://*"]}
