@@ -79,6 +79,7 @@ export default function VerseMapScreen() {
   });
 
   const [generateError, setGenerateError] = useState(false);
+  const [wordGenTriggered, setWordGenTriggered] = useState(false);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -101,11 +102,41 @@ export default function VerseMapScreen() {
     },
   });
 
+  const wordGenMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/strong/generate", {
+        verseId: params.verseId,
+        verseText: params.verseText,
+        bookName: params.bookName,
+        chapter: parseInt(params.chapter || "1"),
+        verse: parseInt(params.verse || "1"),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [`/api/verse-map/${params.verseId}`] });
+    },
+  });
+
   useEffect(() => {
     if (mapData && !mapData.hasCachedData && !generateMutation.isPending) {
       generateMutation.mutate();
     }
   }, [mapData?.hasCachedData]);
+
+  useEffect(() => {
+    if (
+      mapData &&
+      mapData.words.length === 0 &&
+      !wordGenMutation.isPending &&
+      !wordGenTriggered &&
+      params.verseId &&
+      params.verseText
+    ) {
+      setWordGenTriggered(true);
+      wordGenMutation.mutate();
+    }
+  }, [mapData?.words?.length, wordGenTriggered]);
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -197,7 +228,7 @@ export default function VerseMapScreen() {
                   <View style={[styles.emptySection, { backgroundColor: theme.backgroundCard }]}>
                     <Ionicons name="language-outline" size={24} color={theme.textMuted} />
                     <Text style={[styles.emptySectionText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {generateMutation.isPending ? "Generating word analysis..." : "No word mappings available yet"}
+                      {wordGenMutation.isPending ? "Generating word analysis..." : "No word mappings available yet"}
                     </Text>
                   </View>
                 ) : (
