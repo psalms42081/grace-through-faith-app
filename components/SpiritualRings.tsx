@@ -167,7 +167,7 @@ export default function SpiritualRings({
     <View style={[styles.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Daily Spiritual Goals
+          Daily Formation
         </Text>
         {allClosed && (
           <View style={[styles.completeBadge, { backgroundColor: "rgba(78,204,163,0.12)" }]}>

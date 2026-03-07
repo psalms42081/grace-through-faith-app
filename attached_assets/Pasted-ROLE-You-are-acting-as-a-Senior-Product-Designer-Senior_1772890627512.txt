@@ -1,0 +1,224 @@
+ROLE
+You are acting as a Senior Product Designer + Senior Software Architect reviewing and improving an existing production-ready application.
+
+Your task is to refine the product experience around the core concept of "Spiritual Formation" without breaking existing functionality, navigation, or APIs.
+
+The application is already stable and passing tests. Your responsibility is UX clarity, product narrative, and small structural improvements only.
+
+DO NOT introduce regressions.
+
+---
+
+PROJECT CONTEXT
+
+The application is a Spiritual Formation platform for Seventh-day Adventists.
+
+The app already includes the following systems:
+
+• Bible reading
+• Deep Study (Text → Context → Insight → Transformation)
+• Prayer journal
+• Sabbath Experience (time-based spiritual environment)
+• Sabbath School (Adventech integration)
+• Prophecy Explorer
+• Kids Mode with stories, quizzes, memory verses, rewards
+• Spiritual Growth Map (5 dimensions of growth)
+• Groups and discussion features
+• AI discussion preparation tools
+
+The product direction is not a Bible utility, but a guided spiritual formation journey.
+
+The core product loop should feel like:
+
+Read → Reflect → Pray → Practice → Grow
+
+---
+
+PRIMARY OBJECTIVE
+
+Improve the clarity of the Spiritual Formation journey across the app.
+
+Users should understand within 30 seconds that the app helps them:
+
+• grow spiritually
+• build daily rhythm with God
+• deepen Bible understanding
+• live the Sabbath rhythm
+
+This should be achieved through UX improvements only.
+
+Do NOT rewrite large code sections.
+
+---
+
+RULES
+
+1. DO NOT change database schemas
+2. DO NOT modify backend APIs
+3. DO NOT alter authentication
+4. DO NOT change existing navigation structure
+5. DO NOT touch LiveKit streaming
+6. DO NOT modify AI doctrinal guardrails
+7. DO NOT break the existing test suite
+8. DO NOT introduce new dependencies
+
+Only perform safe UI/UX refinements.
+
+---
+
+TASKS
+
+T001 — Clarify the Home Screen Purpose
+
+The Home screen currently surfaces multiple features but does not clearly communicate the app's spiritual journey.
+
+Improve the top section to frame the app as a daily formation path.
+
+The first visible section should reinforce the idea of a daily rhythm with God.
+
+Ensure the following order appears clearly:
+
+Today's Path
+Continue Your Journey
+Sabbath Experience (when active)
+
+Do not remove existing features — only improve presentation hierarchy.
+
+---
+
+T002 — Improve "Continue Journey" Context
+
+The Continue card should clearly represent spiritual progress.
+
+Ensure it surfaces the user's most recent activity:
+
+• Bible reading
+• Sabbath School lesson
+• devotional plan
+• deep study session
+
+If multiple activities exist, show the most recent.
+
+Label example:
+
+"Continue Your Journey"
+
+---
+
+T003 — Clarify Study Tab Intent
+
+The Study tab currently feels like a tool library.
+
+Restructure the top of the screen so it emphasizes continuing formation, not browsing tools.
+
+Top order should be:
+
+Continue Study
+Deep Study
+Study Paths
+
+Below that, keep existing study tools:
+
+Topics
+Popular passages
+Maps
+Timeline
+Historic commentary
+
+This should be a layout adjustment only.
+
+---
+
+T004 — Reinforce Spiritual Growth Map
+
+The Spiritual Growth Map tracks:
+
+• Prayer Life
+• Scripture
+• Service
+• Character
+• Wisdom
+
+Ensure the Growth Map is presented clearly as progress in spiritual formation, not a gamified score.
+
+Avoid numerical ranking language.
+
+Use wording like:
+
+"Your Growth"
+
+---
+
+T005 — Kids Mode Consistency Check
+
+Verify that Kids Mode:
+
+• is visually distinct from Adult Mode
+• keeps the story → lesson → reward loop
+• maintains stable navigation
+
+Do not redesign Kids Mode.
+
+Only ensure that:
+
+Kids Sabbath School → links to story experience
+Memory verses → connect to learning loop
+
+---
+
+T006 — Micro Copy Improvements
+
+Improve wording across key areas so the product communicates spiritual formation.
+
+Examples:
+
+Instead of generic labels like:
+"Explore"
+
+Use formation-focused language like:
+"Grow"
+"Reflect"
+"Continue Your Journey"
+
+Do not rename major tabs.
+
+---
+
+T007 — Performance & Stability Check
+
+Perform a lightweight code review to ensure:
+
+• no unused imports
+• no unnecessary re-renders
+• no large inline components
+
+Do NOT refactor large files like:
+
+study.tsx
+index.tsx
+
+Only safe improvements.
+
+---
+
+SUCCESS CRITERIA
+
+The app should:
+
+• feel like a guided spiritual journey
+• maintain existing navigation
+• keep all current features intact
+• introduce no regressions
+• pass all existing tests
+
+The user should immediately understand that the purpose of the app is spiritual formation and daily rhythm with God.
+
+---
+
+IMPORTANT
+
+Do not invent new systems.
+
+Do not add new features.
+
+This task is about clarity, hierarchy, and polish.

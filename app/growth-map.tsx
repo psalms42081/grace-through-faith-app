@@ -393,7 +393,7 @@ export default function GrowthMapScreen() {
 
   return (
     <View style={[st.root, { backgroundColor: theme.background }]}>
-      <ScreenHeader title="Spiritual Growth" />
+      <ScreenHeader title="Your Growth" />
 
       {isLoading ? (
         <View style={st.loadingContainer}>

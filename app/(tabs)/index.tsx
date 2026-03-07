@@ -545,7 +545,7 @@ function KidsHomeScreen() {
             testID="browse-stories"
           >
             <Ionicons name="book-outline" size={28} color="#fff" />
-            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Browse Stories</Text>
+            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Discover Stories</Text>
             <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Read Bible stories</Text>
           </BouncyActionCard>
           <BouncyActionCard
@@ -554,7 +554,7 @@ function KidsHomeScreen() {
             testID="take-quiz"
           >
             <Ionicons name="school-outline" size={28} color="#fff" />
-            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Learn</Text>
+            <Text style={[kidsStyles.actionTitle, { fontFamily: "Inter_600SemiBold" }]}>Grow</Text>
             <Text style={[kidsStyles.actionDesc, { fontFamily: "Inter_400Regular" }]}>Quizzes & verses</Text>
           </BouncyActionCard>
         </View>
@@ -989,7 +989,10 @@ function AdultHomeScreen() {
             {greeting}
           </Text>
           <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Adventist Spiritual Formation
+            Grace Through Faith
+          </Text>
+          <Text style={[s.headerTagline, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            Read · Reflect · Pray · Practice · Grow
           </Text>
         </View>
         <View>
@@ -1070,8 +1073,7 @@ function AdultHomeScreen() {
         </>
       ) : (
         <>
-          <AnimatedSection index={0}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
-          <AnimatedSection index={1}>
+          <AnimatedSection index={0}>
             <TodaysPath
               theme={theme}
               isDark={isDark}
@@ -1082,8 +1084,7 @@ function AdultHomeScreen() {
               hasActivePlan={hasActivePlan}
             />
           </AnimatedSection>
-          <AnimatedSection index={2}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={3}>
+          <AnimatedSection index={1}>
             <ContinueCard
               lastRead={lastRead}
               ssData={ssData}
@@ -1093,6 +1094,8 @@ function AdultHomeScreen() {
               isDark={isDark}
             />
           </AnimatedSection>
+          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={3}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={4}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {ssData && <AnimatedSection index={5}><SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} /></AnimatedSection>}
           <AnimatedSection index={6}>

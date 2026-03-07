@@ -31,22 +31,22 @@ const ACTIVITY_CONFIG: Record<ActivityType, {
 }> = {
   reading: {
     icon: "book",
-    label: "Continue Reading",
+    label: "Continue Your Journey",
     gradientColors: ["#C9933A", "#A67B2E"],
   },
   "sabbath-school": {
     icon: "school",
-    label: "Continue Sabbath School",
+    label: "Continue Your Journey",
     gradientColors: ["#5B8DEF", "#3A6DD0"],
   },
   "study-path": {
     icon: "compass",
-    label: "Continue Study Path",
+    label: "Continue Your Journey",
     gradientColors: ["#4ECCA3", "#2EAD84"],
   },
   devotional: {
     icon: "sunny",
-    label: "Continue Devotional",
+    label: "Continue Your Journey",
     gradientColors: ["#E8A838", "#C98A20"],
   },
 };

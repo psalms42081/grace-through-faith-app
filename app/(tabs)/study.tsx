@@ -1786,10 +1786,10 @@ export default function StudyScreen() {
       <FeatureTutorial tutorialId="four-layer-study" steps={FOUR_LAYER_STUDY_STEPS} />
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Study Tools
+          Deepen Your Faith
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Deep dive into Scripture
+          Continue your formation journey
         </Text>
       </View>
 

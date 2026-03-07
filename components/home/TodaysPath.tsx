@@ -73,7 +73,7 @@ export default function TodaysPath({
       <View style={s.header}>
         <Ionicons name="sunny-outline" size={18} color={theme.accent} />
         <Text style={[s.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Today's Path
+          Your Daily Rhythm
         </Text>
       </View>
       {items.map((item, i) => (

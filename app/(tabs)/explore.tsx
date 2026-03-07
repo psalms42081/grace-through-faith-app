@@ -94,6 +94,9 @@ export default function StudyScreen() {
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Study
         </Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          Deepen your faith
+        </Text>
       </View>
 
       <ScrollView
@@ -103,7 +106,7 @@ export default function StudyScreen() {
       >
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Adventist Studies
+            Adventist Formation
           </Text>
         </View>
 
@@ -138,7 +141,7 @@ export default function StudyScreen() {
           icon="trail-sign"
           iconColor="#2E7D32"
           title="Study Paths"
-          subtitle="Structured SDA formation pathways"
+          subtitle="Guided growth journeys"
           onPress={() => router.push("/study-paths" as any)}
           style={{ marginBottom: 8 }}
         />
@@ -158,7 +161,7 @@ export default function StudyScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Study Resources
+            Wisdom & Insight
           </Text>
         </View>
 
@@ -175,7 +178,7 @@ export default function StudyScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Study Tools
+            Discovery Tools
           </Text>
         </View>
 
@@ -212,7 +215,7 @@ export default function StudyScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Popular Passages
+            Beloved Passages
           </Text>
         </View>
 
@@ -241,7 +244,7 @@ export default function StudyScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Topics to Explore
+            Spiritual Themes
           </Text>
         </View>
 
@@ -278,6 +281,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   title: { fontSize: 24 },
+  subtitle: { fontSize: 14, marginTop: 4 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
   divider: {

@@ -23,7 +23,7 @@ export default function LiveNowSection({ theme, isDark }: LiveNowSectionProps) {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" }} />
         <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>
-          LIVE NOW
+          LIVE FELLOWSHIP
         </Text>
       </View>
       {activeStreams.map((stream: any) => (

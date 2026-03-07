@@ -27,7 +27,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
             <Ionicons name="layers" size={20} color={theme.accent} />
           </View>
           <Text style={[styles.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
-          <Text style={[styles.guidedSub, { fontFamily: "Inter_400Regular" }]}>Deep Bible analysis</Text>
+          <Text style={[styles.guidedSub, { fontFamily: "Inter_400Regular" }]}>Guided formation through Scripture</Text>
         </LinearGradient>
       </Pressable>
 
@@ -45,7 +45,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
             <Ionicons name="journal" size={20} color="#66BB6A" />
           </View>
           <Text style={[styles.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Prayer Journal</Text>
-          <Text style={[styles.guidedSub, { fontFamily: "Inter_400Regular" }]}>Your prayer life</Text>
+          <Text style={[styles.guidedSub, { fontFamily: "Inter_400Regular" }]}>Nurture your prayer life</Text>
         </LinearGradient>
       </Pressable>
     </View>
