@@ -2428,23 +2428,6 @@ export default function SceneStoryScreen() {
             <Text style={styles.autoPlayBadgeText}>Auto-Read</Text>
           </Animated.View>
         )}
-        <Pressable
-          onPress={toggleQuietMode}
-          style={[
-            styles.quietModeBtn,
-            { backgroundColor: quietMode ? "rgba(255,100,100,0.25)" : "rgba(255,255,255,0.15)" },
-          ]}
-          testID="quiet-mode-toggle"
-        >
-          <Ionicons
-            name={quietMode ? "volume-mute" : "musical-notes"}
-            size={18}
-            color={quietMode ? "#FF6B6B" : "rgba(255,255,255,0.8)"}
-          />
-        </Pressable>
-        {currentMood && !quietMode && (
-          <MoodBadge mood={currentMood} />
-        )}
       </View>
 
       <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
