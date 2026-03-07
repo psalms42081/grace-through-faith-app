@@ -73,6 +73,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 20,
     padding: 18,
+    marginTop: 4,
     marginBottom: 20,
   },
   devotionalLeft: {

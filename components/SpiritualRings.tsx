@@ -219,9 +219,9 @@ export default function SpiritualRings({
           <RingLabel ring={prayer} colorKey="prayer" theme={theme} />
           <RingLabel ring={engage} colorKey="engage" theme={theme} />
 
-          <View style={[styles.tipBox, { backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" }]}>
-            <Ionicons name="bulb-outline" size={12} color={theme.textMuted} />
-            <Text style={[styles.tipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <View style={[styles.tipBox, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}>
+            <Ionicons name="bulb-outline" size={12} color={theme.accent} />
+            <Text style={[styles.tipText, { color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.5)", fontFamily: "Inter_400Regular" }]}>
               {study.current < study.goal
                 ? "Read a chapter to grow your study ring"
                 : prayer.current < prayer.goal

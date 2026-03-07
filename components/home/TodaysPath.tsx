@@ -88,11 +88,11 @@ export default function TodaysPath({
             pressed && { opacity: 0.85 },
           ]}
         >
-          <View style={[s.iconWrap, { backgroundColor: item.completed ? theme.accent + "20" : (isDark ? "#1A1A2E" : "#F0EBE0") }]}>
+          <View style={[s.iconWrap, { backgroundColor: item.completed ? theme.accent + "20" : (isDark ? "#1E1E38" : "#EBE5D8") }]}>
             <Ionicons
               name={item.completed ? "checkmark" : item.icon}
               size={18}
-              color={item.completed ? theme.accent : theme.textMuted}
+              color={item.completed ? theme.accent : (isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)")}
             />
           </View>
           <Text
