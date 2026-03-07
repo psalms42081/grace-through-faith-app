@@ -153,22 +153,28 @@ export default function StreamScreen() {
     );
   }
 
-  const jitsiConfig = new URL(session.roomUrl);
-  jitsiConfig.hash = "";
-  jitsiConfig.searchParams.set("config.prejoinConfig.enabled", "false");
-  jitsiConfig.searchParams.set("config.prejoinPageEnabled", "false");
-  jitsiConfig.searchParams.set("config.startWithAudioMuted", "true");
-  jitsiConfig.searchParams.set("config.disableDeepLinking", "true");
-  jitsiConfig.searchParams.set("config.disableThirdPartyRequests", "true");
-  jitsiConfig.searchParams.set("config.hideConferenceSubject", "false");
-  jitsiConfig.searchParams.set("config.disableProfile", "true");
-  jitsiConfig.searchParams.set("interfaceConfig.SHOW_JITSI_WATERMARK", "false");
-  jitsiConfig.searchParams.set("interfaceConfig.SHOW_WATERMARK_FOR_GUESTS", "false");
-  jitsiConfig.searchParams.set("interfaceConfig.SHOW_BRAND_WATERMARK", "false");
-  jitsiConfig.searchParams.set("interfaceConfig.SHOW_POWERED_BY", "false");
-  jitsiConfig.searchParams.set("interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS", "true");
-  jitsiConfig.searchParams.set("interfaceConfig.MOBILE_APP_PROMO", "false");
-  const jitsiUrl = jitsiConfig.toString();
+  const jitsiBase = session.roomUrl.split("?")[0].split("#")[0];
+  const configParts = [
+    "config.prejoinConfig.enabled=false",
+    "config.prejoinPageEnabled=false",
+    "config.startWithAudioMuted=true",
+    "config.disableDeepLinking=true",
+    "config.deeplinking.disabled=true",
+    "config.disableThirdPartyRequests=true",
+    "config.hideConferenceSubject=false",
+    "config.disableProfile=true",
+    "config.enableInsecureRoomNameWarning=false",
+    "interfaceConfig.SHOW_JITSI_WATERMARK=false",
+    "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
+    "interfaceConfig.SHOW_BRAND_WATERMARK=false",
+    "interfaceConfig.SHOW_POWERED_BY=false",
+    "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
+    "interfaceConfig.MOBILE_APP_PROMO=false",
+  ];
+  const jitsiUrl = `${jitsiBase}#${configParts.join("&")}`;
+
+  const DESKTOP_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
   const roomSlug = session.roomUrl.split("/").pop() || "";
 
@@ -193,6 +199,41 @@ export default function StreamScreen() {
         ended = true;
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'call_ended' }));
       }
+
+      function autoBypassDeepLink() {
+        var links = document.querySelectorAll('a');
+        for (var i = 0; i < links.length; i++) {
+          var text = (links[i].textContent || '').trim().toLowerCase();
+          if (text === 'join in browser' || text === 'launch in web') {
+            links[i].click();
+            return true;
+          }
+        }
+        var buttons = document.querySelectorAll('button, [role="button"]');
+        for (var j = 0; j < buttons.length; j++) {
+          var btnText = (buttons[j].textContent || '').trim().toLowerCase();
+          if (btnText.indexOf('browser') > -1 || btnText.indexOf('web') > -1) {
+            buttons[j].click();
+            return true;
+          }
+        }
+        return false;
+      }
+
+      var deepLinkCheckCount = 0;
+      var deepLinkInterval = setInterval(function() {
+        deepLinkCheckCount++;
+        var pageText = document.body ? (document.body.innerText || '') : '';
+        if (pageText.indexOf('How do you want to join') > -1 ||
+            pageText.indexOf('Join in app') > -1 ||
+            pageText.indexOf('Download from App Store') > -1 ||
+            pageText.indexOf('Download from Google Play') > -1) {
+          if (autoBypassDeepLink()) {
+            clearInterval(deepLinkInterval);
+          }
+        }
+        if (deepLinkCheckCount > 30) clearInterval(deepLinkInterval);
+      }, 500);
 
       var origPushState = history.pushState;
       var origReplaceState = history.replaceState;
@@ -230,16 +271,6 @@ export default function StreamScreen() {
         }
       });
       observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-
-      if (typeof window.JitsiMeetExternalAPI !== 'undefined') {
-        try {
-          var api = window.JitsiMeetExternalAPI;
-          if (api && api.addEventListener) {
-            api.addEventListener('readyToClose', notifyEnd);
-            api.addEventListener('videoConferenceLeft', notifyEnd);
-          }
-        } catch(e) {}
-      }
 
       setInterval(function() {
         if (roomSlug && window.location.href.indexOf(roomSlug) === -1) {
@@ -315,11 +346,26 @@ export default function StreamScreen() {
             domStorageEnabled
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
+            userAgent={DESKTOP_USER_AGENT}
             onLoadEnd={() => setWebViewLoading(false)}
             onNavigationStateChange={handleNavChange}
             onMessage={handleWebViewMessage}
             injectedJavaScript={hangupDetectionJS}
-            originWhitelist={["*"]}
+            onShouldStartLoadWithRequest={(request) => {
+              const url = request.url || "";
+              if (
+                url.startsWith("intent://") ||
+                url.startsWith("market://") ||
+                url.startsWith("itms-apps://") ||
+                url.startsWith("https://play.google.com") ||
+                url.startsWith("https://apps.apple.com") ||
+                url.startsWith("org.jitsi.meet://")
+              ) {
+                return false;
+              }
+              return true;
+            }}
+            originWhitelist={["https://*", "http://*"]}
             allowsBackForwardNavigationGestures={false}
           />
         </>
