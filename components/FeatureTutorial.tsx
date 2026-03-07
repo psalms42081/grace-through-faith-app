@@ -220,14 +220,14 @@ const stepStyles = StyleSheet.create({
     fontSize: 28,
     color: PARCHMENT,
     textAlign: "center",
-    lineHeight: 36,
-    marginBottom: 14,
+    lineHeight: 38,
+    marginBottom: 16,
   },
   description: {
     fontSize: 15,
     color: "rgba(237, 229, 213, 0.6)",
     textAlign: "center",
-    lineHeight: 23,
+    lineHeight: 24,
     maxWidth: 320,
   },
 });
@@ -260,7 +260,7 @@ const dotStyles = StyleSheet.create({
     borderRadius: 4,
   },
   active: {
-    width: 28,
+    width: 24,
     height: 8,
     backgroundColor: GOLD,
     borderRadius: 4,
@@ -268,7 +268,7 @@ const dotStyles = StyleSheet.create({
   inactive: {
     width: 8,
     height: 8,
-    backgroundColor: "rgba(201, 147, 58, 0.25)",
+    backgroundColor: "rgba(201, 147, 58, 0.2)",
     borderRadius: 4,
   },
 });
@@ -341,6 +341,8 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
             <Pressable
               onPress={handleSkip}
               hitSlop={16}
+              accessibilityLabel="Skip tutorial"
+              accessibilityRole="button"
               style={({ pressed }) => [modalStyles.skipBtn, pressed && { opacity: 0.6 }]}
             >
               <Text style={[modalStyles.skipText, { fontFamily: "Inter_500Medium" }]}>
@@ -379,9 +381,11 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
             {isLastStep ? (
               <Pressable
                 onPress={handleDismiss}
+                accessibilityLabel="Start exploring"
+                accessibilityRole="button"
                 style={({ pressed }) => [
                   modalStyles.primaryBtn,
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
                 ]}
               >
                 <Text style={[modalStyles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
@@ -392,9 +396,11 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
             ) : (
               <Pressable
                 onPress={handleNext}
+                accessibilityLabel="Continue to next step"
+                accessibilityRole="button"
                 style={({ pressed }) => [
                   modalStyles.primaryBtn,
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
                 ]}
               >
                 <Text style={[modalStyles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>

@@ -83,14 +83,14 @@ export const HOME_TUTORIAL_STEPS: TutorialStep[] = [
     label: "WELCOME HOME",
     title: "Your Spiritual\nDashboard",
     description:
-      "This is your home base. Each day you'll find a fresh verse, your reading streak, and quick access to every feature in the app.",
+      "Your daily home base. Find a fresh verse, track your streak, and access every tool — all in one place.",
   },
   {
     illustration: <IconBadge name="sunny" size={46} />,
     label: "DAILY INSPIRATION",
     title: "Verse of the Day",
     description:
-      "Start each morning with a handpicked Scripture verse. Tap it to open the full passage in the Bible reader and begin a deeper study.",
+      "Start each morning with a handpicked verse. Tap to open the full passage and begin a deeper study.",
   },
   {
     illustration: (
@@ -102,17 +102,17 @@ export const HOME_TUTORIAL_STEPS: TutorialStep[] = [
         ]}
       />
     ),
-    label: "QUICK ACCESS",
-    title: "Feature Cards",
+    label: "POWERFUL TOOLS",
+    title: "Powerful Study\nTools",
     description:
-      "Below the verse you'll find cards for the 4-Layer Study, Prayer Journal, Devotional Plans, and more. Each card is a gateway to a powerful tool.",
+      "Quick access to the 4-Layer Study, Prayer Journal, Devotionals, and more. Each card opens a powerful tool.",
   },
   {
     illustration: <IconBadge name="flame" size={46} />,
-    label: "BUILD CONSISTENCY",
-    title: "Your Reading\nStreak",
+    label: "DAILY HABIT",
+    title: "Build a\nDaily Habit",
     description:
-      "Every day you open Scripture builds your streak. Stay consistent and watch your spiritual discipline grow over time.",
+      "Every day in Scripture builds your streak. Stay consistent and watch your spiritual discipline grow.",
   },
 ];
 
@@ -172,9 +172,9 @@ export const BIBLE_READER_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="hand-left" size={46} />,
     label: "INTERACT",
-    title: "Tap Any Verse",
+    title: "Study Any Verse",
     description:
-      "Tap on a verse to highlight it, bookmark it, copy it, or share it. You can also jump straight into a 4-Layer Study from any verse you select.",
+      "Tap a verse to highlight, bookmark, copy, or share it. Jump straight into a 4-Layer Study from any verse.",
   },
   {
     illustration: (
@@ -233,22 +233,22 @@ export const CONNECT_TUTORIAL_STEPS: TutorialStep[] = [
 export const EXPLORE_TUTORIAL_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="library" size={46} />,
-    label: "STUDY HUB",
-    title: "Your Study\nLibrary",
+    label: "FORMATION HUB",
+    title: "Your Formation\nLibrary",
     description:
-      "This is your hub for deeper learning. Browse curated study paths, Adventist resources, topical studies, and guided formation tracks.",
+      "Your hub for deeper learning. Browse study paths, Adventist formation resources, and guided growth tracks.",
   },
   {
     illustration: <IconBadge name="map" size={46} />,
-    label: "GUIDED PATHS",
-    title: "Study Paths",
+    label: "GROWTH JOURNEYS",
+    title: "Growth Journeys",
     description:
-      "Follow structured study pathways designed for spiritual growth. Each path has multiple lessons that build on each other progressively.",
+      "Follow structured pathways designed for spiritual growth. Each path builds progressively on the one before.",
   },
   {
     illustration: <IconBadge name="sparkles" size={46} />,
-    label: "DIVE DEEP",
-    title: "Topical Studies\n& Inspirations",
+    label: "GO DEEPER",
+    title: "Spiritual Themes\n& Inspirations",
     description:
       "Explore topics like the Armor of God, the Beatitudes, and more. Each study opens with the relevant passage ready for your 4-Layer analysis.",
   },
@@ -289,10 +289,10 @@ export const SPIRITUAL_RINGS_TUTORIAL_STEPS: TutorialStep[] = [
         ]}
       />
     ),
-    label: "DAILY GOALS",
+    label: "DAILY FORMATION",
     title: "Your Spiritual\nRings",
     description:
-      "Like closing your fitness rings, build daily spiritual habits. Three rings track your Study, Prayer, and Engagement. Close all three every day to grow in faith.",
+      "Build daily spiritual habits with three rings — Study, Prayer, and Engagement. Close all three every day to grow in faith.",
   },
   {
     illustration: <IconBadge name="book" size={46} color="#5B8DEF" />,

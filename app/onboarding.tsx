@@ -65,7 +65,7 @@ function WelcomePage() {
         </Text>
         <View style={pageStyles.dividerLine} />
         <Text style={[pageStyles.tagline, { fontFamily: "Lora_400Regular_Italic" }]}>
-          A spiritual formation platform{"\n"}designed to help Adventists grow{"\n"}in Scripture, prayer, and Sabbath life.
+          Helping Adventists grow deeper{"\n"}in Scripture, prayer, and Sabbath life.
         </Text>
       </Animated.View>
       <View style={pageStyles.bottomSpacer} />
@@ -78,17 +78,17 @@ function StudyModelPage() {
     {
       icon: "book-outline" as const,
       title: "Study Deeply",
-      desc: "Study the Bible deeply with multiple translations and Strong's concordance",
+      desc: "Study the Bible with multiple translations, Strong's concordance, and original languages",
     },
     {
       icon: "shield-checkmark-outline" as const,
       title: "Understand Doctrine",
-      desc: "Understand Adventist doctrine through the 28 Fundamental Beliefs",
+      desc: "Explore Adventist doctrine through the 28 Fundamental Beliefs",
     },
     {
       icon: "trending-up-outline" as const,
       title: "Grow Daily",
-      desc: "Grow spiritually each day with guided devotionals and study paths",
+      desc: "Build daily habits with guided devotionals, study paths, and spiritual rings",
     },
   ];
 
@@ -138,8 +138,8 @@ function StudyModelPage() {
 function ExperiencePage() {
   const experiences = [
     { icon: "sunny-outline" as const, label: "Sabbath Experience", sub: "Embrace the rhythm of rest and renewal each week" },
-    { icon: "journal-outline" as const, label: "Prayer Journaling", sub: "Record your prayers and watch God answer" },
-    { icon: "analytics-outline" as const, label: "Spiritual Growth Tracking", sub: "Visualize your journey with rings and streaks" },
+    { icon: "journal-outline" as const, label: "Prayer Journaling", sub: "Record your prayers and see God's faithfulness over time" },
+    { icon: "analytics-outline" as const, label: "Spiritual Growth Tracking", sub: "Track your growth with daily rings and reading streaks" },
     { icon: "people-outline" as const, label: "Community", sub: "Connect with your church and study groups" },
   ];
 
@@ -191,7 +191,7 @@ function GetStartedPage({ onGetStarted }: { onGetStarted: () => void }) {
           Begin Your{"\n"}Journey
         </Text>
         <Text style={[pageStyles.startDesc, { fontFamily: "Inter_400Regular" }]}>
-          Your journey of faith begins here. Study Scripture, deepen your prayer life, and grow in community.
+          Study Scripture, deepen your prayer life, and grow together in community.
         </Text>
         <Pressable
           style={({ pressed }) => [pageStyles.startBtn, pressed && { opacity: 0.85 }]}
@@ -311,11 +311,11 @@ export default function OnboardingScreen() {
       <View style={[styles.bottomBar, { paddingBottom: 16 }]}>
         {currentPage < PAGES.length - 1 ? (
           <>
-            <Pressable onPress={handleSkip} hitSlop={12}>
+            <Pressable onPress={handleSkip} hitSlop={12} accessibilityLabel="Skip onboarding" accessibilityRole="button">
               <Text style={[styles.skipText, { fontFamily: "Inter_500Medium" }]}>Skip</Text>
             </Pressable>
             <DotIndicator current={currentPage} total={PAGES.length} />
-            <Pressable onPress={handleNext} hitSlop={12} style={styles.nextBtn}>
+            <Pressable onPress={handleNext} hitSlop={12} style={styles.nextBtn} accessibilityLabel="Next step" accessibilityRole="button">
               <Ionicons name="arrow-forward" size={22} color={NAVY} />
             </Pressable>
           </>
