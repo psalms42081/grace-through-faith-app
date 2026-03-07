@@ -2163,7 +2163,12 @@ export default function SceneStoryScreen() {
               )}
             </View>
 
-            <View style={styles.narrationArea}>
+            <ScrollView
+              style={styles.narrationArea}
+              contentContainerStyle={styles.narrationScroll}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
               {index === currentScene ? (
                 <WordHighlightText
                   text={item.narration}
@@ -2182,7 +2187,7 @@ export default function SceneStoryScreen() {
                   {item.narration}
                 </Text>
               )}
-            </View>
+            </ScrollView>
 
             {item.pauseAndWonder && !answeredWonders.has(item.sceneIndex) && index === currentScene && (
               <Pressable
@@ -2539,7 +2544,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   illustrationArea: {
     height: ILLUSTRATION_HEIGHT + 8,
@@ -2569,8 +2574,12 @@ const styles = StyleSheet.create({
   },
   narrationArea: {
     flex: 1,
-    justifyContent: "center",
     paddingHorizontal: 8,
+  },
+  narrationScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingBottom: 12,
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",
