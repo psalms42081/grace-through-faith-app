@@ -171,43 +171,41 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
           </View>
         </View>
 
-        <View style={styles.cardBottom}>
-          <View style={styles.tagsRow}>
-            {cardContent.tags.map((tag) => (
-              <View
-                key={tag}
+        <View style={styles.tagsRow}>
+          {cardContent.tags.map((tag) => (
+            <View
+              key={tag}
+              style={[
+                styles.tag,
+                { backgroundColor: cardContent.accentColor + "18" },
+              ]}
+            >
+              <Text
                 style={[
-                  styles.tag,
-                  { backgroundColor: cardContent.accentColor + "18" },
+                  styles.tagText,
+                  {
+                    color: cardContent.accentColor,
+                    fontFamily: "Inter_500Medium",
+                  },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.tagText,
-                    {
-                      color: cardContent.accentColor,
-                      fontFamily: "Inter_500Medium",
-                    },
-                  ]}
-                >
-                  {tag}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <View
-            style={[
-              styles.ctaBtn,
-              { backgroundColor: cardContent.accentColor },
-            ]}
+                {tag}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <View
+          style={[
+            styles.ctaBtn,
+            { backgroundColor: cardContent.accentColor },
+          ]}
+        >
+          <Text
+            style={[styles.ctaBtnText, { fontFamily: "Inter_600SemiBold" }]}
           >
-            <Text
-              style={[styles.ctaBtnText, { fontFamily: "Inter_600SemiBold" }]}
-            >
-              {cardContent.cta}
-            </Text>
-            <Ionicons name="arrow-forward" size={14} color="#fff" />
-          </View>
+            {cardContent.cta}
+          </Text>
+          <Ionicons name="arrow-forward" size={14} color="#fff" />
         </View>
       </Pressable>
 
@@ -551,14 +549,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  cardBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   tagsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
+    marginBottom: 12,
   },
   tag: {
     paddingHorizontal: 10,
@@ -571,9 +566,10 @@ const styles = StyleSheet.create({
   ctaBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 10,
   },
   ctaBtnText: {
