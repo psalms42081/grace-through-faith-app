@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   headerRow: {
     flexDirection: "row",
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   centerPercent: { fontSize: 16 },
   labelsCol: {
     flex: 1,
-    gap: 10,
+    gap: 8,
   },
   ringLabelRow: {
     flexDirection: "row",
@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  ringLabelText: { fontSize: 13, flex: 1 },
-  ringLabelValue: { fontSize: 13 },
+  ringLabelText: { fontSize: 12, flex: 1 },
+  ringLabelValue: { fontSize: 12 },
   tipBox: {
     flexDirection: "row",
     alignItems: "flex-start",

@@ -89,7 +89,7 @@ export default function ContinueCard({
       onPress={onPress}
       style={({ pressed }) => [
         s.card,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.9 : 1 },
       ]}
       testID="home-continue-card"
     >
@@ -113,7 +113,7 @@ export default function ContinueCard({
         <Text style={[s.hint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
           {subtitle}
         </Text>
-        <Ionicons name="play-circle" size={36} color={theme.accent} />
+        <Ionicons name="play-circle" size={40} color={theme.accent} />
       </View>
     </Pressable>
   );
@@ -123,7 +123,7 @@ const s = StyleSheet.create({
   card: {
     borderRadius: 20,
     padding: 20,
-    marginBottom: 18,
+    marginBottom: 20,
   },
   top: {
     flexDirection: "row",
@@ -132,9 +132,9 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },

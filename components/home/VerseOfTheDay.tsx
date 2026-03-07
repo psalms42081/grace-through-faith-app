@@ -17,7 +17,7 @@ export default function VerseOfTheDay({ verse, bgImage }: VerseOfTheDayProps) {
         resizeMode="cover"
       >
         <LinearGradient
-          colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
+          colors={["rgba(0,0,0,0.2)", "rgba(0,0,0,0.6)", "rgba(0,0,0,0.85)"]}
           style={styles.verseOverlay}
         >
           <View style={styles.verseBadge}>
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   verseCardWrap: {
     borderRadius: 22,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   verseImageBg: {
     width: "100%",
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   verseFooter: {
     flexDirection: "row",

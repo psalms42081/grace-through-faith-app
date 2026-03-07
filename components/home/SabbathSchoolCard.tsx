@@ -20,7 +20,7 @@ export default function SabbathSchoolCard({ ssData, theme, isDark }: SabbathScho
   return (
     <Pressable
       onPress={() => router.push("/sabbath-school" as any)}
-      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
     >
       <LinearGradient
         colors={isDark ? ["#0D1A2E", "#0A1322"] : ["#1A2E46", "#152640"]}
@@ -51,9 +51,10 @@ export default function SabbathSchoolCard({ ssData, theme, isDark }: SabbathScho
 
 const styles = StyleSheet.create({
   guidedCard: {
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: 20,
+    padding: 18,
     gap: 8,
+    marginBottom: 20,
   },
   guidedIconWrap: {
     width: 40,
@@ -62,8 +63,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(201,147,58,0.15)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: 0,
   },
   guidedTitle: { color: "#fff", fontSize: 15 },
-  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 18 },
+  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 17 },
 });

@@ -69,9 +69,9 @@ const styles = StyleSheet.create({
   devotionalCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 18,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   devotionalLeft: {
     flexDirection: "row",

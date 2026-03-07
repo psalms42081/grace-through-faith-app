@@ -1,0 +1,278 @@
+Good — this is the right screen to focus on. The Home screen is the most important screen in the entire app, and yours is already very strong structurally. The goal now is polish, clarity, and hierarchy, not new features.
+
+Below is the Replit agent prompt exactly as requested so it can refine the Home screen without adding new features or changing architecture.
+
+
+---
+
+Prompt for Replit Agent
+
+You are acting as a Senior Product Designer and Senior Mobile Engineer reviewing the Home screen of a React Native / Expo mobile application called Grace Through Faith.
+
+Your task is to refine the existing Home screen without adding new features, removing features, or changing navigation structure.
+
+Focus only on:
+
+• visual hierarchy
+• clarity
+• consistency
+• micro-interaction polish
+• readability
+
+Do not introduce new UI elements or functionality.
+
+
+---
+
+Context
+
+The Home screen currently contains the following sections in this order:
+
+1. Greeting + App title ("Grace Through Faith")
+
+
+2. Kids Mode button
+
+
+3. Tagline ("Read • Reflect • Pray • Practice • Grow")
+
+
+4. Your Daily Rhythm card
+
+Read today’s passage
+
+Pray
+
+Continue your study
+
+Sabbath School lesson
+
+
+
+5. Continue Your Journey card
+
+
+6. Verse of the Day
+
+
+7. Daily Formation progress rings
+
+
+8. Feature cards:
+
+4-Layer Study
+
+Prayer Journal
+
+
+
+9. This Week’s Lesson
+
+
+10. Devotional Plans
+
+
+
+The app uses:
+
+• dark navy theme
+• gold accent color
+• serif headers
+• rounded cards
+• icon-based navigation
+
+These design principles must remain unchanged.
+
+
+---
+
+Task 1 — Improve Visual Hierarchy
+
+Review the order and spacing of elements.
+
+Ensure:
+
+• the most important daily action appears first
+• sections are visually separated clearly
+• vertical spacing between cards is consistent
+
+Do not change the order of sections, but improve padding, margins, and alignment where necessary.
+
+
+---
+
+Task 2 — Refine “Your Daily Rhythm” Section
+
+This section is strong but should feel like the primary daily action hub.
+
+Improve:
+
+• spacing between list rows
+• icon alignment
+• tap target sizes
+
+Ensure each row:
+
+• feels clearly tappable
+• has consistent padding
+• uses consistent icon sizing
+
+
+---
+
+Task 3 — Improve Continue Journey Card
+
+The Continue Your Journey card should visually communicate progress.
+
+Ensure:
+
+• lesson progress text has clear contrast
+• the play button alignment is centered vertically
+• the card feels visually distinct from the cards below it
+
+Maintain existing design language.
+
+
+---
+
+Task 4 — Verse of the Day Card
+
+Improve readability over the image background.
+
+Check:
+
+• text contrast against the image
+• gradient overlay strength
+• scripture readability on smaller screens
+
+If needed, slightly increase overlay opacity for readability.
+
+Do not remove the image.
+
+
+---
+
+Task 5 — Daily Formation Rings
+
+Ensure the formation rings communicate progress clearly.
+
+Review:
+
+• ring thickness
+• spacing between rings
+• icon size in the center
+
+Improve the layout of the right-side legend:
+
+Study
+Prayer
+Engage
+
+Ensure:
+
+• text does not wrap awkwardly (Engage currently breaks)
+• alignment is visually balanced
+
+
+---
+
+Task 6 — Feature Cards (4-Layer Study / Prayer Journal)
+
+Ensure these cards:
+
+• have consistent icon size
+• equal padding
+• identical border radius
+• consistent gradient style
+
+Check card tap feedback animation.
+
+
+---
+
+Task 7 — Section Consistency
+
+Review the lower sections:
+
+• This Week’s Lesson
+• Devotional Plans
+
+Ensure they follow the same visual system as the upper cards.
+
+Avoid introducing new card styles.
+
+
+---
+
+Task 8 — Micro-Interaction Polish
+
+Ensure all tappable elements have:
+
+• press feedback
+• consistent animation timing
+• no delay in navigation response
+
+Use the existing Button / Card primitives.
+
+
+---
+
+Task 9 — Accessibility Review
+
+Check:
+
+• contrast ratios for text over dark background
+• legibility of scripture text on Verse of the Day
+• tap targets at least 44px high
+
+
+---
+
+Task 10 — Code Cleanliness
+
+Review the Home screen implementation.
+
+Ensure:
+
+• no duplicated styling objects exist
+• repeated patterns use shared components
+• layout logic is readable and modular
+
+Do not refactor the entire file structure.
+
+
+---
+
+Output Required
+
+Provide a summary of:
+
+1. Visual hierarchy improvements
+
+
+2. Readability fixes
+
+
+3. Layout adjustments
+
+
+4. Micro-interaction improvements
+
+
+5. Accessibility improvements
+
+
+6. Code cleanup
+
+
+
+Confirm that:
+
+• navigation remains unchanged
+• no new features were added
+• all existing functionality still works
+
+
+---
+
+If you'd like, I can also write the next prompt for the Study tab, which is likely your second most important screen after Home.

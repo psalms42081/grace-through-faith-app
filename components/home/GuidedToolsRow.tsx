@@ -15,7 +15,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
     <View style={styles.guidedRow}>
       <Pressable
         onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } })}
-        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
       >
         <LinearGradient
           colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
@@ -33,7 +33,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
 
       <Pressable
         onPress={() => router.push("/prayer-journal")}
-        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
       >
         <LinearGradient
           colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   guidedRow: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   guidedCard: {
     borderRadius: 18,

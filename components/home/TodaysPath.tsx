@@ -89,7 +89,7 @@ export default function TodaysPath({
           <View style={[s.iconWrap, { backgroundColor: item.completed ? theme.accent + "20" : (isDark ? "#1A1A2E" : "#F0EBE0") }]}>
             <Ionicons
               name={item.completed ? "checkmark" : item.icon}
-              size={16}
+              size={18}
               color={item.completed ? theme.accent : theme.textMuted}
             />
           </View>
@@ -105,7 +105,7 @@ export default function TodaysPath({
           >
             {item.label}
           </Text>
-          <Ionicons name="chevron-forward" size={14} color={theme.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         </Pressable>
       ))}
     </View>
@@ -115,14 +115,14 @@ export default function TodaysPath({
 const s = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     marginBottom: 16,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   title: {
     fontSize: 17,
@@ -130,13 +130,13 @@ const s = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 12,
   },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },

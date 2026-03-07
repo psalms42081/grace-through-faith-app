@@ -1012,6 +1012,8 @@ function AdultHomeScreen() {
             }}
             style={[s.kidsModeBtn, { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" }]}
             testID="enter-kids-mode"
+            accessibilityLabel="Switch to Kids Mode"
+            accessibilityRole="button"
           >
             <Ionicons name="people" size={18} color={theme.accent} />
             <Text style={[s.kidsModeBtnLabel, { color: theme.accent }]}>Kids</Text>
