@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
+import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { FOUR_LAYER_STUDY_STEPS } from "@/lib/tutorial-steps";
 
 type Tab = "word" | "context" | "voices" | "application";
@@ -3247,6 +3248,9 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
         <Text style={[styles.appLayerSub, { fontFamily: "Inter_400Regular" }]}>
           Bridge the ancient text to your life today -- Then vs. Now context, reflection questions, and prayer prompts.
         </Text>
+        <View style={{ marginTop: 8 }}>
+          <SDAVerifiedBadge variant="compact" />
+        </View>
       </View>
 
       {!selectedBook && (

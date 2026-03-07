@@ -21,6 +21,7 @@ import { useTheme } from "@/hooks/useTheme";
 import * as Haptics from "expo-haptics";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
+import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 
 interface TodayResponse {
   today: DayContent | null;
@@ -434,6 +435,10 @@ export default function DevotionalDayScreen() {
               </Text>
             </View>
           )}
+        </View>
+
+        <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
+          <SDAVerifiedBadge variant="compact" />
         </View>
 
         {filteredVerses.length > 0 && (

@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
 import { useStudyDepth, StudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
+import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTheme } from "@/hooks/useTheme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -770,7 +771,12 @@ export default function LessonScreen() {
       )}
 
       {!sabbathMode && (
-        <StudyDepthSelector compact />
+        <View style={{ gap: 4 }}>
+          <StudyDepthSelector compact />
+          <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+            <SDAVerifiedBadge variant="compact" />
+          </View>
+        </View>
       )}
 
       <ScrollView
