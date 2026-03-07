@@ -309,7 +309,6 @@ export default function StreamScreen() {
             </View>
           )}
           <WebView
-            ref={webViewRef}
             source={{ uri: jitsiUrl }}
             style={{ flex: 1 }}
             javaScriptEnabled
