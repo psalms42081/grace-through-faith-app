@@ -39,7 +39,7 @@ interface PassageResponse {
 }
 
 export default function VerseReaderScreen() {
-  const { bookId, chapter, translation: txParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string }>();
+  const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
   const { theme, isDark } = useTheme();
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
@@ -63,6 +63,31 @@ export default function VerseReaderScreen() {
   const focusedVerseRef = useRef<number | null>(null);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [highlightedFromNav, setHighlightedFromNav] = useState<number | null>(null);
+  const [navHighlightAlpha, setNavHighlightAlpha] = useState(0);
+
+  useEffect(() => {
+    if (verseParam) {
+      const vNum = parseInt(verseParam, 10);
+      if (!isNaN(vNum)) {
+        setHighlightedFromNav(vNum);
+        setNavHighlightAlpha(0.35);
+        const fadeStart = setTimeout(() => {
+          const steps = 10;
+          let step = 0;
+          const interval = setInterval(() => {
+            step++;
+            setNavHighlightAlpha(0.35 * (1 - step / steps));
+            if (step >= steps) {
+              clearInterval(interval);
+              setHighlightedFromNav(null);
+            }
+          }, 100);
+        }, 500);
+        return () => clearTimeout(fadeStart);
+      }
+    }
+  }, [verseParam]);
 
   useFocusEffect(
     useCallback(() => {
@@ -350,11 +375,14 @@ export default function VerseReaderScreen() {
                     const isDimmed = focusedVerse !== null && !isFocused;
                     const isHighlighted = highlightedVerseIds.has(v.id);
                     const isBookmarked = bookmarkedVerseIds.has(v.id);
-                    const bgColor = i === audio.speakingVerseIndex
-                      ? theme.highlightYellow
-                      : isHighlighted
-                        ? (isDark ? "rgba(201, 147, 58, 0.2)" : "rgba(255, 215, 0, 0.25)")
-                        : "transparent";
+                    const isNavHighlighted = highlightedFromNav === v.verse;
+                    const bgColor = isNavHighlighted
+                      ? `rgba(201, 147, 58, ${navHighlightAlpha})`
+                      : i === audio.speakingVerseIndex
+                        ? theme.highlightYellow
+                        : isHighlighted
+                          ? (isDark ? "rgba(201, 147, 58, 0.2)" : "rgba(255, 215, 0, 0.25)")
+                          : "transparent";
                     return (
                       <React.Fragment key={v.id}>
                         <Text

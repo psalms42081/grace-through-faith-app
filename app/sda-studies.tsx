@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,45 @@ import {
   Pressable,
   Linking,
   Platform,
+  Animated,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { BELIEFS, CATEGORIES, CATEGORY_COLORS } from "@/data/beliefs";
+
+const VIEWED_KEY = "beliefs_viewed";
+
+function parseVerseFromRef(ref: string): string | undefined {
+  const match = ref.match(/:(\d+)/);
+  return match ? match[1] : undefined;
+}
+
+function AnimatedChevron({ isExpanded, color }: { isExpanded: boolean; color: string }) {
+  const rotation = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(rotation, {
+      toValue: isExpanded ? 1 : 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [isExpanded]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <Ionicons name="chevron-down" size={16} color={color} />
+    </Animated.View>
+  );
+}
 
 export default function SDAStudiesScreen() {
   const { theme } = useTheme();
@@ -22,6 +54,44 @@ export default function SDAStudiesScreen() {
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [expandedBelief, setExpandedBelief] = useState<number | null>(null);
+  const [viewedBeliefs, setViewedBeliefs] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    AsyncStorage.getItem(VIEWED_KEY).then((val) => {
+      if (val) {
+        try {
+          const arr = JSON.parse(val) as number[];
+          setViewedBeliefs(new Set(arr));
+        } catch {}
+      }
+    });
+  }, []);
+
+  const markViewed = useCallback((num: number) => {
+    setViewedBeliefs((prev) => {
+      if (prev.has(num)) return prev;
+      const next = new Set(prev);
+      next.add(num);
+      AsyncStorage.setItem(VIEWED_KEY, JSON.stringify([...next])).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const handleToggle = useCallback((num: number) => {
+    setExpandedBelief((prev) => {
+      const next = prev === num ? null : num;
+      if (next !== null) markViewed(next);
+      return next;
+    });
+  }, [markViewed]);
+
+  const handleScriptureTap = useCallback((s: { bookId: number; chapter: number; ref: string }) => {
+    const verse = parseVerseFromRef(s.ref);
+    const url = verse
+      ? `/read/${s.bookId}/${s.chapter}?verse=${verse}`
+      : `/read/${s.bookId}/${s.chapter}`;
+    router.push(url as any);
+  }, []);
 
   const filtered = activeCategory === "all"
     ? BELIEFS
@@ -80,15 +150,21 @@ export default function SDAStudiesScreen() {
         {filtered.map((belief) => {
           const isExpanded = expandedBelief === belief.number;
           const catColor = CATEGORY_COLORS[belief.category] || theme.accent;
+          const isViewed = viewedBeliefs.has(belief.number);
           return (
             <Pressable
               key={belief.number}
-              onPress={() => setExpandedBelief(isExpanded ? null : belief.number)}
+              onPress={() => handleToggle(belief.number)}
               style={[styles.beliefCard, { backgroundColor: theme.backgroundCard }]}
               testID={`belief-${belief.number}`}
             >
               <View style={styles.beliefHeader}>
                 <View style={[styles.beliefNumber, { backgroundColor: catColor + "20" }]}>
+                  {isViewed && (
+                    <View style={styles.viewedCheck}>
+                      <Ionicons name="checkmark" size={8} color="#2E7D32" />
+                    </View>
+                  )}
                   <Text style={[styles.beliefNumberText, { color: catColor, fontFamily: "Inter_700Bold" }]}>
                     {belief.number}
                   </Text>
@@ -103,11 +179,7 @@ export default function SDAStudiesScreen() {
                     </Text>
                   </View>
                 </View>
-                <Ionicons
-                  name={isExpanded ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={theme.textMuted}
-                />
+                <AnimatedChevron isExpanded={isExpanded} color={theme.textSecondary} />
               </View>
 
               <Text
@@ -126,28 +198,28 @@ export default function SDAStudiesScreen() {
                     {belief.scriptures.map((s, i) => (
                       <Pressable
                         key={i}
-                        onPress={() => router.push(`/read/${s.bookId}/${s.chapter}` as any)}
-                        style={styles.scriptureRow}
+                        onPress={() => handleScriptureTap(s)}
+                        style={[styles.scriptureRow, { backgroundColor: theme.accent + "08" }]}
                       >
                         <Ionicons name="book-outline" size={14} color={theme.accent} />
-                        <Text style={[styles.scriptureRef, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        <Text style={[styles.scriptureRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                           {s.ref}
                         </Text>
-                        <Ionicons name="chevron-forward" size={12} color={theme.textMuted} />
+                        <Ionicons name="chevron-forward" size={12} color={theme.accent + "90"} />
                       </Pressable>
                     ))}
                   </View>
 
                   <Pressable
                     onPress={() => Linking.openURL(belief.egwLink)}
-                    style={[styles.egwButton, { backgroundColor: theme.accent + "15" }]}
+                    style={[styles.egwButton, { backgroundColor: theme.accent + "0D" }]}
                     testID="egw-link"
                   >
-                    <Ionicons name="library-outline" size={16} color={theme.accent} />
-                    <Text style={[styles.egwButtonText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    <Ionicons name="library-outline" size={16} color={theme.accent + "D9"} />
+                    <Text style={[styles.egwButtonText, { color: theme.accent + "D9", fontFamily: "Inter_500Medium" }]}>
                       Read in Ellen G. White Writings
                     </Text>
-                    <Ionicons name="open-outline" size={14} color={theme.accent} />
+                    <Ionicons name="open-outline" size={14} color={theme.accent + "99"} />
                   </Pressable>
                 </>
               )}
@@ -188,6 +260,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   beliefNumberText: { fontSize: 14 },
+  viewedCheck: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#2E7D3220",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   beliefTitleArea: { flex: 1, gap: 4 },
   beliefTitle: { fontSize: 16 },
   beliefCatBadge: {
@@ -204,7 +287,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
   },
   scriptureRef: { flex: 1, fontSize: 14 },
   egwButton: {
