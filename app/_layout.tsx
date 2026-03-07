@@ -66,7 +66,6 @@ function RootLayoutNav() {
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
       <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
-      <Stack.Screen name="kids-story/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="prayer-journal" options={{ headerShown: true, title: "Prayer Journal" }} />
       <Stack.Screen name="topic/[id]" options={{ headerShown: false }} />
       <Stack.Screen

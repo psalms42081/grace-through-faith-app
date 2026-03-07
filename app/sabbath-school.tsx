@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenHeader from "@/components/ScreenHeader";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,7 +52,6 @@ export default function SabbathSchoolScreen() {
   const { userId } = useAuth();
   const { depth } = useStudyDepth();
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const { data, isLoading, error } = useQuery<{
@@ -73,17 +73,7 @@ export default function SabbathSchoolScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            Sabbath School
-          </Text>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title="Sabbath School" />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -253,23 +243,6 @@ export default function SabbathSchoolScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: {
-    fontFamily: "Lora_700Bold",
-    fontSize: 18,
-  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",

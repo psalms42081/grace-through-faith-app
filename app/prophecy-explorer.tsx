@@ -9,10 +9,10 @@ import {
   LayoutAnimation,
   UIManager,
 } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import ScreenHeader from "@/components/ScreenHeader";
 
 if (
   Platform.OS === "android" &&
@@ -739,7 +739,6 @@ export default function ProphecyExplorerScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const sectionYPositions = useRef<Record<string, number>>({});
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const toggleSection = useCallback((id: string) => {
@@ -780,20 +779,10 @@ export default function ProphecyExplorerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            Prophecy Explorer
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-            Daniel & Revelation Timelines
-          </Text>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="Prophecy Explorer"
+        subtitle="Daniel & Revelation Timelines"
+      />
 
       <ScrollView
         ref={scrollRef}
@@ -851,31 +840,6 @@ export default function ProphecyExplorerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontFamily: "Lora_700Bold",
-    fontSize: 18,
-  },
-  headerSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    marginTop: 2,
   },
   scroll: {
     flex: 1,

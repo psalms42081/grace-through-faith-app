@@ -8,16 +8,16 @@ import {
   Linking,
   Platform,
 } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenHeader from "@/components/ScreenHeader";
 import { useTheme } from "@/hooks/useTheme";
 import { BELIEFS, CATEGORIES, CATEGORY_COLORS } from "@/data/beliefs";
 
 export default function SDAStudiesScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : 0;
 
   const [activeCategory, setActiveCategory] = useState("all");
@@ -31,20 +31,12 @@ export default function SDAStudiesScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} testID="sda-back">
-          <Ionicons name="chevron-back" size={22} color={theme.text} />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Fundamental Beliefs
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            28 Core Doctrines
-          </Text>
-        </View>
-        <View style={{ width: 34 }} />
-      </View>
+      <ScreenHeader
+        title="Fundamental Beliefs"
+        subtitle="28 Core Doctrines"
+        backIcon="chevron-back"
+        testID="sda-back"
+      />
 
       <ScrollView
         horizontal
@@ -169,16 +161,6 @@ export default function SDAStudiesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-  },
-  backBtn: { width: 34, height: 34, justifyContent: "center", alignItems: "center" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 20 },
-  headerSubtitle: { fontSize: 12, marginTop: 2 },
   categoryRow: { flexGrow: 0, marginBottom: 12 },
   categoryChip: {
     paddingHorizontal: 14,

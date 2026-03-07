@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenHeader from "@/components/ScreenHeader";
 import { useQuery } from "@tanstack/react-query";
 import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
@@ -363,9 +361,7 @@ const pathStyles = StyleSheet.create({
 
 export default function GrowthMapScreen() {
   const { theme, isDark } = useTheme();
-  const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { data, isLoading } = useQuery<GrowthMapResponse>({
     queryKey: [userId ? `/api/growth-map?userId=${userId}` : `/api/growth-map`],
@@ -397,13 +393,7 @@ export default function GrowthMapScreen() {
 
   return (
     <View style={[st.root, { backgroundColor: theme.background }]}>
-      <View style={[st.header, { paddingTop: topPad + 8 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </Pressable>
-        <Text style={st.headerTitle}>Spiritual Growth</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Spiritual Growth" />
 
       {isLoading ? (
         <View style={st.loadingContainer}>
@@ -507,18 +497,6 @@ export default function GrowthMapScreen() {
 const st = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontFamily: "Lora_700Bold",
-    fontSize: 20,
-    color: "#F0EBE0",
   },
   loadingContainer: {
     flex: 1,

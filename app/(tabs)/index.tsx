@@ -11,15 +11,13 @@ import {
   Modal,
   TextInput,
   Alert,
-  ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
-  FadeInDown,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
@@ -31,13 +29,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors, { getSabbathTheme } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
-import { getApiUrl, apiRequest } from "@/lib/query-client";
+import { getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { HOME_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
+import AnimatedSection from "@/components/AnimatedSection";
+import GoldDivider from "@/components/home/GoldDivider";
+import VerseOfTheDay from "@/components/home/VerseOfTheDay";
+import ContinueReadingCard from "@/components/home/ContinueReadingCard";
+import GuidedToolsRow from "@/components/home/GuidedToolsRow";
+import SabbathSchoolCard from "@/components/home/SabbathSchoolCard";
+import DevotionalCard from "@/components/home/DevotionalCard";
+import SabbathBanner from "@/components/home/SabbathBanner";
+import LiveNowSection from "@/components/home/LiveNowSection";
+import WeeklyCalendar from "@/components/home/WeeklyCalendar";
+import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
+import ChildPickerModal from "@/components/home/ChildPickerModal";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -75,16 +85,6 @@ interface TodayResponse {
   planComplete?: boolean;
 }
 
-function GoldDivider({ theme }: { theme: typeof Colors.dark }) {
-  return (
-    <View style={styles.dividerRow}>
-      <View style={[styles.dividerLine, { backgroundColor: theme.accent + "30" }]} />
-      <Ionicons name="diamond-outline" size={10} color={theme.accent + "60"} />
-      <View style={[styles.dividerLine, { backgroundColor: theme.accent + "30" }]} />
-    </View>
-  );
-}
-
 const KIDS_VERSES = [
   { text: "God is love.", reference: "1 John 4:8" },
   { text: "Be kind to one another.", reference: "Ephesians 4:32" },
@@ -104,8 +104,6 @@ function useImageBaseUrl() {
     }
   }, []);
 }
-
-import AnimatedSection from "@/components/AnimatedSection";
 
 function PulsingFlame({ size, color }: { size: number; color: string }) {
   const pulseScale = useSharedValue(1);
@@ -655,401 +653,6 @@ const kidsStyles = StyleSheet.create({
   actionDesc: { color: "rgba(255,255,255,0.75)", fontSize: 12 },
 });
 
-const AGE_TIERS: { value: AgeGroup; label: string; ages: string }[] = [
-  { value: "little_lambs", label: "Little Lambs", ages: "Ages 3-6" },
-  { value: "young_disciples", label: "Young Disciples", ages: "Ages 7-9" },
-  { value: "young_disciples_plus", label: "Young Disciples+", ages: "Ages 10-12" },
-];
-
-interface ChildProfile {
-  id: string;
-  name: string;
-  ageGroup: AgeGroup;
-  totalPoints: number;
-  currentLevel: number;
-}
-
-function ChildPickerModal({
-  visible,
-  onClose,
-  onSelectChild,
-  userId,
-  lastActiveChildId,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSelectChild: (child: ChildProfile) => void;
-  userId: string;
-  lastActiveChildId: string | null;
-}) {
-  const { theme, isDark } = useTheme();
-  const qc = useQueryClient();
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newChildName, setNewChildName] = useState("");
-  const [newChildTier, setNewChildTier] = useState<AgeGroup>("little_lambs");
-
-  const { data: children, isLoading } = useQuery<ChildProfile[]>({
-    queryKey: [`/api/family/children?userId=${userId}`],
-    enabled: visible,
-  });
-
-  const addChildMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/family/children", {
-        userId,
-        name: newChildName.trim(),
-        ageGroup: newChildTier,
-      });
-      return res.json();
-    },
-    onSuccess: (child: ChildProfile) => {
-      qc.invalidateQueries({ queryKey: [`/api/family/children?userId=${userId}`] });
-      setNewChildName("");
-      setNewChildTier("little_lambs");
-      setShowAddForm(false);
-      onSelectChild(child);
-    },
-    onError: (err: Error) => {
-      const msg = err.message || "Could not add child. Please try again.";
-      if (Platform.OS === "web") window.alert(msg);
-      else Alert.alert("Error", msg);
-    },
-  });
-
-  const hasChildren = children && children.length > 0;
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={cpStyles.overlay}>
-        <View style={[cpStyles.container, { backgroundColor: isDark ? theme.backgroundCard : "#FAFAF5" }]}>
-          <View style={cpStyles.header}>
-            <Text style={[cpStyles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              Who's reading today?
-            </Text>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Ionicons name="close" size={24} color={theme.textMuted} />
-            </Pressable>
-          </View>
-
-          {isLoading && (
-            <View style={cpStyles.loadingWrap}>
-              <Text style={[cpStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Loading...
-              </Text>
-            </View>
-          )}
-
-          {!isLoading && hasChildren && !showAddForm && (
-            <ScrollView style={cpStyles.childList} showsVerticalScrollIndicator={false}>
-              {children.map((child) => {
-                const tierInfo = AGE_TIERS.find((t) => t.value === child.ageGroup) || AGE_TIERS[0];
-                const isLast = child.id === lastActiveChildId;
-                const initials = child.name.charAt(0).toUpperCase();
-                return (
-                  <Pressable
-                    key={child.id}
-                    onPress={() => onSelectChild(child)}
-                    style={({ pressed }) => [
-                      cpStyles.childCard,
-                      {
-                        backgroundColor: isDark ? (isLast ? theme.accent + "15" : theme.background) : (isLast ? "#FFF8EC" : "#fff"),
-                        borderColor: isLast ? theme.accent + "40" : (isDark ? theme.border : "#E8E0D0"),
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}
-                    testID={`child-picker-${child.id}`}
-                  >
-                    <LinearGradient
-                      colors={
-                        child.ageGroup === "little_lambs"
-                          ? ["#FF6B35", "#E55100"]
-                          : child.ageGroup === "young_disciples"
-                          ? ["#3B6CB5", "#2A4F8F"]
-                          : ["#8B5CF6", "#6D3BD4"]
-                      }
-                      style={cpStyles.avatar}
-                    >
-                      <Text style={[cpStyles.avatarText, { fontFamily: "Inter_700Bold" }]}>{initials}</Text>
-                    </LinearGradient>
-                    <View style={cpStyles.childInfo}>
-                      <Text style={[cpStyles.childName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {child.name}
-                      </Text>
-                      <Text style={[cpStyles.childTier, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {tierInfo.label} · {tierInfo.ages}
-                      </Text>
-                    </View>
-                    {isLast && (
-                      <View style={[cpStyles.lastBadge, { backgroundColor: theme.accent + "20" }]}>
-                        <Text style={[cpStyles.lastBadgeText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                          Last
-                        </Text>
-                      </View>
-                    )}
-                    <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-                  </Pressable>
-                );
-              })}
-              <Pressable
-                onPress={() => setShowAddForm(true)}
-                style={({ pressed }) => [
-                  cpStyles.addChildBtn,
-                  {
-                    borderColor: isDark ? theme.border : "#E8E0D0",
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <Ionicons name="add-circle-outline" size={22} color={theme.accent} />
-                <Text style={[cpStyles.addChildText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  Add Child Profile
-                </Text>
-              </Pressable>
-            </ScrollView>
-          )}
-
-          {(!isLoading && (!hasChildren || showAddForm)) && (
-            <View style={cpStyles.addForm}>
-              {showAddForm && hasChildren && (
-                <Pressable onPress={() => setShowAddForm(false)} style={cpStyles.backBtn}>
-                  <Ionicons name="arrow-back" size={20} color={theme.accent} />
-                  <Text style={[cpStyles.backText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>Back</Text>
-                </Pressable>
-              )}
-              {!hasChildren && (
-                <Text style={[cpStyles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Add a child to get started
-                </Text>
-              )}
-              <TextInput
-                value={newChildName}
-                onChangeText={setNewChildName}
-                placeholder="Child's name"
-                placeholderTextColor={theme.textMuted}
-                style={[cpStyles.input, { color: theme.text, borderColor: isDark ? theme.border : "#E0D8C8", backgroundColor: isDark ? theme.background : "#fff", fontFamily: "Inter_400Regular" }]}
-                testID="add-child-name-input"
-              />
-              <Text style={[cpStyles.tierLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-                Age Group
-              </Text>
-              <View style={cpStyles.tierRow}>
-                {AGE_TIERS.map((tier) => (
-                  <Pressable
-                    key={tier.value}
-                    onPress={() => setNewChildTier(tier.value)}
-                    style={[
-                      cpStyles.tierChip,
-                      {
-                        backgroundColor: newChildTier === tier.value ? theme.accent + "20" : (isDark ? theme.background : "#F5F0E8"),
-                        borderColor: newChildTier === tier.value ? theme.accent : (isDark ? theme.border : "#E0D8C8"),
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        cpStyles.tierChipText,
-                        {
-                          color: newChildTier === tier.value ? theme.accent : theme.textSecondary,
-                          fontFamily: newChildTier === tier.value ? "Inter_600SemiBold" : "Inter_400Regular",
-                        },
-                      ]}
-                    >
-                      {tier.label}
-                    </Text>
-                    <Text style={[cpStyles.tierChipAges, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {tier.ages}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Pressable
-                onPress={() => {
-                  if (!newChildName.trim()) {
-                    if (Platform.OS === "web") window.alert("Please enter a name");
-                    else Alert.alert("Name required", "Please enter a name for the child.");
-                    return;
-                  }
-                  addChildMutation.mutate();
-                }}
-                disabled={addChildMutation.isPending}
-                style={({ pressed }) => [
-                  cpStyles.addSubmitBtn,
-                  { backgroundColor: theme.accent, opacity: pressed || addChildMutation.isPending ? 0.7 : 1 },
-                ]}
-                testID="add-child-submit"
-              >
-                <Text style={[cpStyles.addSubmitText, { fontFamily: "Inter_600SemiBold" }]}>
-                  {addChildMutation.isPending ? "Adding..." : "Add & Start Reading"}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const cpStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  container: {
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    maxWidth: 400,
-    maxHeight: "80%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: { fontSize: 22 },
-  loadingWrap: { padding: 32, alignItems: "center" },
-  loadingText: { fontSize: 14 },
-  childList: { maxHeight: 350 },
-  childCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    gap: 12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { color: "#fff", fontSize: 18 },
-  childInfo: { flex: 1 },
-  childName: { fontSize: 16, marginBottom: 2 },
-  childTier: { fontSize: 12 },
-  lastBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  lastBadgeText: { fontSize: 10 },
-  addChildBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    padding: 14,
-    marginTop: 4,
-  },
-  addChildText: { fontSize: 14 },
-  addForm: { gap: 12 },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-  backText: { fontSize: 14 },
-  emptyText: { fontSize: 14, textAlign: "center", marginBottom: 8, lineHeight: 20 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-  },
-  tierLabel: { fontSize: 13, marginTop: 4 },
-  tierRow: { gap: 8 },
-  tierChip: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  tierChipText: { fontSize: 14 },
-  tierChipAges: { fontSize: 11 },
-  addSubmitBtn: {
-    borderRadius: 14,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  addSubmitText: { color: "#fff", fontSize: 15 },
-});
-
-function LiveNowSection({ theme, isDark }: { theme: typeof Colors.dark; isDark: boolean }) {
-  const { data: activeStreams } = useQuery<any[]>({
-    queryKey: ["/api/streams/active"],
-    refetchInterval: 30000,
-  });
-
-  if (!activeStreams || activeStreams.length === 0) return null;
-
-  return (
-    <View style={{ marginBottom: 20 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" }} />
-        <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>
-          LIVE NOW
-        </Text>
-      </View>
-      {activeStreams.map((stream: any) => (
-        <Pressable
-          key={stream.id}
-          onPress={() => router.push(`/stream/${stream.id}` as any)}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE",
-            borderRadius: 16,
-            padding: 14,
-            gap: 12,
-            marginBottom: 8,
-            opacity: pressed ? 0.85 : 1,
-            borderWidth: 1,
-            borderColor: "#FF3B3030",
-          })}
-        >
-          <View style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: "#FF3B3015",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Ionicons name="videocam" size={22} color="#FF3B30" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.text, fontSize: 14, fontFamily: "Inter_600SemiBold" }} numberOfLines={1}>
-              {stream.title}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-              {stream.hostDisplayName || "Host"}{stream.groupName ? ` \u00B7 ${stream.groupName}` : ""}
-            </Text>
-          </View>
-          <View style={{
-            backgroundColor: "#FF3B30",
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 10,
-          }}>
-            <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>JOIN</Text>
-          </View>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function HomeScreen() {
   const { isKidsMode } = useKidsMode();
 
@@ -1069,43 +672,6 @@ const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1518173946687-a3e33105820b?w=800&q=80",
   "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
 ];
-
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-
-interface WeeklyStreakData {
-  daysRead: boolean[];
-  perfectWeeks: number;
-  currentStreak: number;
-  longestStreak: number;
-  lastReadDate: string | null;
-}
-
-function WeeklyCalendar({ data, theme, isDark }: { data: WeeklyStreakData; theme: typeof Colors.dark; isDark: boolean }) {
-  const todayIdx = new Date().getDay();
-  return (
-    <View style={s.weekRow}>
-      {DAY_LABELS.map((label, i) => {
-        const isToday = i === todayIdx;
-        const didRead = data.daysRead[i];
-        return (
-          <View key={i} style={s.weekDayCol}>
-            <Text style={[s.weekLabel, { color: isToday ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              {label}
-            </Text>
-            <View
-              style={[
-                s.weekDot,
-                didRead && s.weekDotFilled,
-                isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 },
-                didRead && { backgroundColor: theme.accent },
-              ]}
-            />
-          </View>
-        );
-      })}
-    </View>
-  );
-}
 
 const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
 
@@ -1177,94 +743,6 @@ function AdultHomeScreen() {
 
   const isSabbathMode = sabbath.isSabbath;
 
-  const sabbathBanner = isSabbathMode ? (
-    <Pressable
-      onPress={() => router.push("/sabbath-experience" as any)}
-      style={{
-        backgroundColor: theme.accent + "12",
-        borderWidth: 1,
-        borderColor: theme.accent + "30",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-      }}
-      testID="sabbath-banner"
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: theme.accent + "20",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <Ionicons name="sunny" size={20} color={theme.accent} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            color: theme.text,
-            fontFamily: "Lora_600SemiBold",
-            fontSize: 15,
-          }}>
-            Sabbath has begun. Enter sacred time.
-          </Text>
-        </View>
-      </View>
-      <View style={{
-        backgroundColor: theme.accent,
-        borderRadius: 10,
-        paddingVertical: 10,
-        alignItems: "center",
-        marginTop: 12,
-      }}>
-        <Text style={{
-          color: "#fff",
-          fontFamily: "Inter_600SemiBold",
-          fontSize: 14,
-        }}>
-          Enter Sabbath
-        </Text>
-      </View>
-    </Pressable>
-  ) : null;
-
-  const verseSection = (
-    <View style={s.verseCardWrap}>
-      <ImageBackground
-        source={{ uri: bgImage }}
-        style={s.verseImageBg}
-        imageStyle={s.verseImageStyle}
-        resizeMode="cover"
-      >
-        <LinearGradient
-          colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
-          style={s.verseOverlay}
-        >
-          <View style={s.verseBadge}>
-            <View style={s.verseBadgeDot} />
-            <Text style={[s.verseBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
-              Verse of the Day
-            </Text>
-          </View>
-
-          <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-            {"\u201C"}{verse.text}{"\u201D"}
-          </Text>
-
-          <View style={s.verseFooter}>
-            <View>
-              <Text style={[s.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
-                {verse.reference}
-              </Text>
-              <Text style={[s.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </ImageBackground>
-    </View>
-  );
-
   const streakSection = weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) ? (
     <View style={[
       s.streakCard,
@@ -1299,166 +777,6 @@ function AdultHomeScreen() {
       <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
     </View>
   ) : null;
-
-  const continueReadingSection = lastRead ? (
-    <Pressable
-      onPress={() => router.push(`/read/${lastRead.bookId}/${lastRead.chapter}?translation=${lastRead.translation || "KJV"}`)}
-      style={({ pressed }) => [
-        s.continueCard,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-      ]}
-      testID="home-continue-reading"
-    >
-      <View style={s.continueTop}>
-        <LinearGradient
-          colors={[theme.accent, theme.accentDark]}
-          style={s.continueIcon}
-        >
-          <Ionicons name="book" size={20} color="#fff" />
-        </LinearGradient>
-        <View style={s.continueInfo}>
-          <Text style={[s.continueLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Continue Reading
-          </Text>
-          <Text style={[s.continueTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
-            {lastRead.bookName} {lastRead.chapter}
-          </Text>
-        </View>
-      </View>
-      <View style={s.continueBottom}>
-        <Text style={[s.continueHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Pick up where you left off
-        </Text>
-        <Ionicons name="play-circle" size={36} color={theme.accent} />
-      </View>
-    </Pressable>
-  ) : null;
-
-  const guidedToolsSection = (
-    <View style={s.guidedRow}>
-      <Pressable
-        onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } })}
-        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
-      >
-        <LinearGradient
-          colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.guidedCard}
-        >
-          <View style={s.guidedIconWrap}>
-            <Ionicons name="layers" size={20} color={theme.accent} />
-          </View>
-          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
-          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Deep Bible analysis</Text>
-        </LinearGradient>
-      </Pressable>
-
-      <Pressable
-        onPress={() => router.push("/prayer-journal")}
-        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
-      >
-        <LinearGradient
-          colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.guidedCard}
-        >
-          <View style={[s.guidedIconWrap, { backgroundColor: "rgba(102,187,106,0.15)" }]}>
-            <Ionicons name="journal" size={20} color="#66BB6A" />
-          </View>
-          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Prayer Journal</Text>
-          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular" }]}>Your prayer life</Text>
-        </LinearGradient>
-      </Pressable>
-    </View>
-  );
-
-  const sabbathSchoolSection = ssData?.currentLesson ? (
-    <Pressable
-      onPress={() => router.push("/sabbath-school" as any)}
-      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-    >
-      <LinearGradient
-        colors={isDark ? ["#0D1A2E", "#0A1322"] : ["#1A2E46", "#152640"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[s.guidedCard, { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }]}
-      >
-        <View style={[s.guidedIconWrap, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
-          <Ionicons name="book" size={20} color="#3B82F6" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold", textAlign: "left" }]}>
-            This Week's Lesson
-          </Text>
-          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular", textAlign: "left" }]} numberOfLines={1}>
-            {ssData.currentLesson.title}
-          </Text>
-        </View>
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#3B82F6" }}>
-            {ssData.completedDays || 0}/7
-          </Text>
-        </View>
-      </LinearGradient>
-    </Pressable>
-  ) : null;
-
-  const devotionalSection = (
-    <Pressable
-      onPress={() => {
-        if (hasActivePlan && todayData?.enrollment?.planId) {
-          router.push(`/devotional-day?planId=${todayData.enrollment.planId}`);
-        } else if (hasActivePlan) {
-          router.push("/devotional-day");
-        } else {
-          router.push("/devotionals");
-        }
-      }}
-      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-    >
-      <LinearGradient
-        colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
-        style={s.devotionalCard}
-      >
-        <View style={s.devotionalLeft}>
-          <View style={[s.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
-            <Ionicons name="flame" size={22} color={theme.accent} />
-          </View>
-          <View style={s.devotionalInfo}>
-            <Text style={[s.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {hasActivePlan ? "Continue Your Plan" : "Devotional Plans"}
-            </Text>
-            <Text style={[s.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {hasActivePlan
-                ? `Day ${progress} of ${total}`
-                : "Guided daily reading"}
-            </Text>
-          </View>
-        </View>
-        {hasActivePlan && (
-          <View style={s.devotionalProgress}>
-            <View style={[s.devotionalProgressTrack, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
-              <LinearGradient
-                colors={[theme.accent, theme.accentDark]}
-                style={[s.devotionalProgressFill, { width: `${Math.min((progress / total) * 100, 100)}%` as any }]}
-              />
-            </View>
-          </View>
-        )}
-        {!hasActivePlan && (
-          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
-        )}
-      </LinearGradient>
-    </Pressable>
-  );
-
-  const worshipPathwaysSection = (
-    <>
-      <LiveNowSection theme={theme} isDark={isDark} />
-    </>
-  );
 
   return (
     <>
@@ -1517,26 +835,40 @@ function AdultHomeScreen() {
 
       {isSabbathMode ? (
         <>
-          {sabbathBanner}
-          {worshipPathwaysSection}
+          <SabbathBanner theme={theme} />
+          <LiveNowSection theme={theme} isDark={isDark} />
           <GoldDivider theme={theme} />
           <SpiritualRings theme={theme} isDark={isDark} />
-          {continueReadingSection}
-          {guidedToolsSection}
-          {sabbathSchoolSection}
-          {devotionalSection}
-          {verseSection}
+          {lastRead && <ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} />}
+          <GuidedToolsRow theme={theme} isDark={isDark} />
+          {ssData && <SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} />}
+          <DevotionalCard
+            hasActivePlan={hasActivePlan}
+            progress={progress}
+            total={total}
+            enrollmentPlanId={todayData?.enrollment?.planId}
+            theme={theme}
+            isDark={isDark}
+          />
+          <VerseOfTheDay verse={verse} bgImage={bgImage} />
         </>
       ) : (
         <>
-          {verseSection}
+          <VerseOfTheDay verse={verse} bgImage={bgImage} />
           <SpiritualRings theme={theme} isDark={isDark} />
-          {continueReadingSection}
-          {guidedToolsSection}
-          {sabbathSchoolSection}
-          {devotionalSection}
+          {lastRead && <ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} />}
+          <GuidedToolsRow theme={theme} isDark={isDark} />
+          {ssData && <SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} />}
+          <DevotionalCard
+            hasActivePlan={hasActivePlan}
+            progress={progress}
+            total={total}
+            enrollmentPlanId={todayData?.enrollment?.planId}
+            theme={theme}
+            isDark={isDark}
+          />
           <GoldDivider theme={theme} />
-          {worshipPathwaysSection}
+          <LiveNowSection theme={theme} isDark={isDark} />
         </>
       )}
 
@@ -1551,17 +883,6 @@ const styles = StyleSheet.create({
   header: { marginBottom: 28 },
   greeting: { fontSize: 14, letterSpacing: 0.5, marginBottom: 8 },
   appName: { fontSize: 28, letterSpacing: -0.3 },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginVertical: 8,
-    paddingHorizontal: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
 });
 
 const s = StyleSheet.create({
@@ -1619,59 +940,6 @@ const s = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
   },
-  verseCardWrap: {
-    borderRadius: 22,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  verseImageBg: {
-    width: "100%",
-    minHeight: 280,
-  },
-  verseImageStyle: {
-    borderRadius: 22,
-  },
-  verseOverlay: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 28,
-    justifyContent: "flex-end",
-    minHeight: 280,
-  },
-  verseBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  verseBadgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#C9933A",
-  },
-  verseBadgeText: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  verseText: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    lineHeight: 32,
-    marginBottom: 20,
-    textShadowColor: "rgba(0,0,0,0.4)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  verseFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  verseRef: { color: "#C9933A", fontSize: 16, marginBottom: 2 },
-  verseTrans: { color: "rgba(255,255,255,0.5)", fontSize: 11 },
   streakCard: {
     borderRadius: 20,
     padding: 20,
@@ -1699,108 +967,4 @@ const s = StyleSheet.create({
     borderRadius: 12,
   },
   perfectText: { fontSize: 12 },
-  weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  weekDayCol: {
-    alignItems: "center",
-    gap: 8,
-  },
-  weekLabel: { fontSize: 12 },
-  weekDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(128,128,128,0.15)",
-  },
-  weekDotFilled: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  continueCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 18,
-  },
-  continueTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 14,
-  },
-  continueIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  continueInfo: { flex: 1 },
-  continueLabel: { fontSize: 12, marginBottom: 3 },
-  continueTitle: { fontSize: 19 },
-  continueBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(201,147,58,0.15)",
-  },
-  continueHint: { fontSize: 13, lineHeight: 19 },
-  guidedRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-  guidedCard: {
-    borderRadius: 18,
-    padding: 20,
-    gap: 8,
-  },
-  guidedIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(201,147,58,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  guidedTitle: { color: "#fff", fontSize: 15 },
-  guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 18 },
-  devotionalCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 20,
-  },
-  devotionalLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    flex: 1,
-  },
-  devotionalIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  devotionalInfo: { flex: 1 },
-  devotionalTitle: { fontSize: 16, marginBottom: 2 },
-  devotionalSub: { fontSize: 13, lineHeight: 19 },
-  devotionalProgress: { width: 56, marginLeft: 12 },
-  devotionalProgressTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  devotionalProgressFill: {
-    height: 6,
-    borderRadius: 3,
-  },
 });

@@ -10,9 +10,9 @@ import {
   LayoutAnimation,
   UIManager,
 } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import ScreenHeader from "@/components/ScreenHeader";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
@@ -347,7 +347,6 @@ export default function GreatControversyScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const toggleNode = useCallback((id: string) => {
@@ -356,20 +355,10 @@ export default function GreatControversyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            The Great Controversy
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-            The Cosmic Conflict Unveiled
-          </Text>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="The Great Controversy"
+        subtitle="The Cosmic Conflict Unveiled"
+      />
 
       <ScrollView
         ref={scrollRef}
@@ -416,31 +405,6 @@ export default function GreatControversyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontFamily: "Lora_700Bold",
-    fontSize: 18,
-  },
-  headerSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    marginTop: 2,
   },
   scroll: {
     flex: 1,
