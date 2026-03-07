@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { WebView } from "react-native-webview";
+import { WebView, WebViewNavigation } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -153,7 +153,111 @@ export default function StreamScreen() {
     );
   }
 
-  const jitsiUrl = `${session.roomUrl}#config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false&interfaceConfig.DEFAULT_BACKGROUND='#050507'`;
+  const jitsiConfig = new URL(session.roomUrl);
+  jitsiConfig.hash = "";
+  jitsiConfig.searchParams.set("config.prejoinConfig.enabled", "false");
+  jitsiConfig.searchParams.set("config.prejoinPageEnabled", "false");
+  jitsiConfig.searchParams.set("config.startWithAudioMuted", "true");
+  jitsiConfig.searchParams.set("config.disableDeepLinking", "true");
+  jitsiConfig.searchParams.set("config.disableThirdPartyRequests", "true");
+  jitsiConfig.searchParams.set("config.hideConferenceSubject", "false");
+  jitsiConfig.searchParams.set("config.disableProfile", "true");
+  jitsiConfig.searchParams.set("interfaceConfig.SHOW_JITSI_WATERMARK", "false");
+  jitsiConfig.searchParams.set("interfaceConfig.SHOW_WATERMARK_FOR_GUESTS", "false");
+  jitsiConfig.searchParams.set("interfaceConfig.SHOW_BRAND_WATERMARK", "false");
+  jitsiConfig.searchParams.set("interfaceConfig.SHOW_POWERED_BY", "false");
+  jitsiConfig.searchParams.set("interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS", "true");
+  jitsiConfig.searchParams.set("interfaceConfig.MOBILE_APP_PROMO", "false");
+  const jitsiUrl = jitsiConfig.toString();
+
+  const roomSlug = session.roomUrl.split("/").pop() || "";
+
+  const handleNavChange = useCallback((navState: WebViewNavigation) => {
+    const url = navState.url || "";
+    if (!url || url === "about:blank") return;
+    const hasRoomSlug = roomSlug && url.includes(roomSlug);
+    if (!hasRoomSlug && url.startsWith("https://")) {
+      router.back();
+    }
+  }, [roomSlug]);
+
+  const hangupDetectionJS = `
+    (function() {
+      if (window._gtfHangupSetup) return;
+      window._gtfHangupSetup = true;
+      var roomSlug = '${roomSlug}';
+      var ended = false;
+
+      function notifyEnd() {
+        if (ended) return;
+        ended = true;
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'call_ended' }));
+      }
+
+      var origPushState = history.pushState;
+      var origReplaceState = history.replaceState;
+      function checkNav() {
+        var url = window.location.href;
+        if (roomSlug && url.indexOf(roomSlug) === -1) {
+          notifyEnd();
+        }
+      }
+      history.pushState = function() {
+        origPushState.apply(this, arguments);
+        setTimeout(checkNav, 100);
+      };
+      history.replaceState = function() {
+        origReplaceState.apply(this, arguments);
+        setTimeout(checkNav, 100);
+      };
+      window.addEventListener('popstate', checkNav);
+      window.addEventListener('hashchange', checkNav);
+
+      var observer = new MutationObserver(function() {
+        var hangupBtns = document.querySelectorAll('[aria-label="Leave"], [aria-label="Hang up"], [id="okie-hangup"]');
+        hangupBtns.forEach(function(btn) {
+          if (!btn._gtfPatched) {
+            btn._gtfPatched = true;
+            btn.addEventListener('click', function() {
+              setTimeout(notifyEnd, 600);
+            });
+          }
+        });
+        var feedbackPage = document.querySelector('[class*="feedback"]') || document.querySelector('[class*="welcome"]');
+        var adContent = document.querySelector('[class*="okie"]') || document.querySelector('a[href*="jaas.8x8"]');
+        if (feedbackPage || adContent) {
+          setTimeout(notifyEnd, 300);
+        }
+      });
+      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
+      if (typeof window.JitsiMeetExternalAPI !== 'undefined') {
+        try {
+          var api = window.JitsiMeetExternalAPI;
+          if (api && api.addEventListener) {
+            api.addEventListener('readyToClose', notifyEnd);
+            api.addEventListener('videoConferenceLeft', notifyEnd);
+          }
+        } catch(e) {}
+      }
+
+      setInterval(function() {
+        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) {
+          notifyEnd();
+        }
+      }, 2000);
+    })();
+    true;
+  `;
+
+  const handleWebViewMessage = useCallback((event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "call_ended") {
+        router.back();
+      }
+    } catch {}
+  }, []);
 
   return (
     <View style={[s.container, { backgroundColor: "#000" }]}>
@@ -205,6 +309,7 @@ export default function StreamScreen() {
             </View>
           )}
           <WebView
+            ref={webViewRef}
             source={{ uri: jitsiUrl }}
             style={{ flex: 1 }}
             javaScriptEnabled
@@ -212,7 +317,11 @@ export default function StreamScreen() {
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
             onLoadEnd={() => setWebViewLoading(false)}
+            onNavigationStateChange={handleNavChange}
+            onMessage={handleWebViewMessage}
+            injectedJavaScript={hangupDetectionJS}
             originWhitelist={["*"]}
+            allowsBackForwardNavigationGestures={false}
           />
         </>
       )}
