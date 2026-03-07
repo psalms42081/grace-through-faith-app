@@ -40,7 +40,9 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
     generateChapterContext,
     generateScripturalEncouragement,
     generateSemanticSearch,
+    generateQuickInsight,
   } from "../services/ai-engine";
+  import type { StudyDepth } from "../services/ai-engine";
 
   const router = Router();
 
@@ -250,9 +252,10 @@ router.post("/api/context/generate", aiGenerationLimiter, async (req, res) => {
 
     const bookName = bookRows[0].name;
 
+    const depth = (req.body.depth || req.query.depth || "standard") as StudyDepth;
     let parsed;
     try {
-      parsed = await generateContextCards({ bookId: Number(bookId), chapter: Number(chapter), bookName });
+      parsed = await generateContextCards({ bookId: Number(bookId), chapter: Number(chapter), bookName, depth });
     } catch {
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
@@ -494,9 +497,10 @@ router.post("/api/application/generate", aiGenerationLimiter, async (req, res) =
 
     const bookName = bookRows[0].name;
 
+    const depth = (req.body.depth || req.query.depth || "standard") as StudyDepth;
     let parsed;
     try {
-      parsed = await generateApplicationStudy({ bookId: Number(bookId), chapter: Number(chapter), bookName });
+      parsed = await generateApplicationStudy({ bookId: Number(bookId), chapter: Number(chapter), bookName, depth });
     } catch {
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
@@ -630,6 +634,25 @@ router.get("/api/timeline/:id/verses", async (req, res) => {
     return res.json({
       explanation: "Unable to generate an explanation at this time. Please try again later.",
     });
+  }
+});
+
+router.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { passage, theme } = req.body;
+    if (!passage || typeof passage !== "string" || passage.trim().length < 3) {
+      return res.status(400).json({ error: "A valid passage reference is required" });
+    }
+
+    const insight = await generateQuickInsight({
+      passage: passage.trim(),
+      theme: theme?.trim(),
+    });
+
+    return res.json(insight);
+  } catch (err) {
+    console.error("Quick insight generation error:", err);
+    return res.status(500).json({ error: "Failed to generate quick insight" });
   }
 });
 

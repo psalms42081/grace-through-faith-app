@@ -11,6 +11,7 @@ import { Router } from "express";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { extractUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
+  import type { StudyDepth } from "../services/ai-engine";
 
   const router = Router();
 
@@ -82,7 +83,7 @@ router.post("/api/devotionals/enroll", async (req, res) => {
 
 router.get("/api/devotionals/today", async (req, res) => {
   try {
-    const { userId, planId } = req.query;
+    const { userId, planId, depth } = req.query;
     if (!userId) {
       return res.status(400).json({ error: "userId is required" });
     }
@@ -134,6 +135,7 @@ router.get("/api/devotionals/today", async (req, res) => {
       enrollment: activeEnrollment[0],
       completedCount: completedDays.length,
       totalDays: allDays.length,
+      depth: depth || "standard",
     });
   } catch (err) {
     console.error(err);
@@ -171,11 +173,12 @@ router.post("/api/devotionals/reflect", async (req, res) => {
 
 router.post("/api/reading-plans/generate", async (req, res) => {
   try {
-    const { topic, durationDays, difficulty, userId } = req.body;
+    const { topic, durationDays, difficulty, userId, depth } = req.body;
     if (!topic || !durationDays) {
       return res.status(400).json({ error: "topic and durationDays are required" });
     }
 
+    const studyDepth = (depth || "standard") as StudyDepth;
     const { generateReadingPlan, resolveBookId } = await import("../services/ai-engine");
 
     const plan = await generateReadingPlan({

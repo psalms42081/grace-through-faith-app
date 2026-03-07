@@ -11,6 +11,32 @@ function cleanJsonResponse(raw: string): string {
   return raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 }
 
+export type StudyDepth = "quick" | "standard" | "deep";
+
+function getDepthInstructions(depth: StudyDepth): string {
+  switch (depth) {
+    case "quick":
+      return "Be VERY concise. Provide only the essential insight in 2-3 sentences. No extended commentary, no lengthy historical background. Focus on ONE key takeaway and ONE practical action item.";
+    case "deep":
+      return "Provide extended, thorough content. Include Greek/Hebrew word studies where relevant, cross-references to other Scripture passages, references to Ellen G. White writings (with specific book and page citations), detailed historical and cultural context, and theological depth. Be comprehensive and scholarly while remaining accessible.";
+    case "standard":
+    default:
+      return "Provide balanced, moderately detailed content suitable for a 15-minute study session.";
+  }
+}
+
+function getDepthMaxTokens(depth: StudyDepth, standardTokens: number): number {
+  switch (depth) {
+    case "quick":
+      return Math.min(Math.round(standardTokens * 0.4), 400);
+    case "deep":
+      return Math.round(standardTokens * 2);
+    case "standard":
+    default:
+      return standardTokens;
+  }
+}
+
 const NT_BOOKS = [
   "Matthew", "Mark", "Luke", "John", "Acts", "Romans",
   "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
@@ -115,21 +141,38 @@ export async function generateContextCards(params: {
   bookId: number;
   chapter: number;
   bookName: string;
+  depth?: StudyDepth;
 }): Promise<ContextCardData> {
-  const { chapter, bookName } = params;
+  const { chapter, bookName, depth = "standard" } = params;
+  const depthGuide = getDepthInstructions(depth);
 
   const openai = createOpenAIClient();
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions.`,
-      },
-      {
-        role: "user",
-        content: `Provide historical context for ${bookName} chapter ${chapter}. Return JSON with these fields:
+  const quickFields = depth === "quick"
+    ? `Return JSON with these fields:
+{
+  "title": "A descriptive title for this chapter's context",
+  "content": "1-2 sentence overview of what this chapter covers",
+  "historicalBackground": null,
+  "culturalNotes": null,
+  "authorInfo": null,
+  "dateWritten": null,
+  "audience": null,
+  "themes": ["theme1", "theme2"]
+}`
+    : depth === "deep"
+      ? `Return JSON with these fields:
+{
+  "title": "A descriptive title for this chapter's context",
+  "content": "3-4 paragraph detailed overview of what this chapter covers and its significance, including its place in the broader biblical narrative",
+  "historicalBackground": "3-4 paragraphs with detailed historical setting, archaeological evidence, and scholarly perspectives",
+  "culturalNotes": "2-3 paragraphs on cultural practices, customs, social structures, and norms with cross-cultural comparisons",
+  "authorInfo": "Detailed note on authorship including scholarly consensus and evidence",
+  "dateWritten": "Approximate date with scholarly reasoning",
+  "audience": "Detailed description of the original audience and their circumstances",
+  "themes": ["theme1", "theme2", "theme3", "theme4", "theme5"]
+}`
+      : `Return JSON with these fields:
 {
   "title": "A descriptive title for this chapter's context",
   "content": "2-3 paragraph overview of what this chapter covers and its significance",
@@ -139,11 +182,22 @@ export async function generateContextCards(params: {
   "dateWritten": "Approximate date or range when this book was written",
   "audience": "Who was the original audience for this text",
   "themes": ["theme1", "theme2", "theme3"]
-}`,
+}`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions. ${depthGuide}`,
+      },
+      {
+        role: "user",
+        content: `Provide historical context for ${bookName} chapter ${chapter}. ${quickFields}`,
       },
     ],
     temperature: 0.7,
-    max_tokens: 1200,
+    max_tokens: getDepthMaxTokens(depth, 1200),
   });
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
@@ -180,32 +234,52 @@ export async function generateApplicationStudy(params: {
   bookId: number;
   chapter: number;
   bookName: string;
+  depth?: StudyDepth;
 }): Promise<ApplicationStudyData> {
-  const { chapter, bookName } = params;
+  const { chapter, bookName, depth = "standard" } = params;
+  const depthGuide = getDepthInstructions(depth);
 
   const openai = createOpenAIClient();
+
+  const jsonShape = depth === "quick"
+    ? `{
+  "thenContext": "1-2 sentences on original context",
+  "nowApplication": "1-2 sentences on practical application today",
+  "reflectionQuestions": ["One key reflection question"],
+  "prayerPrompt": "A one-sentence prayer prompt",
+  "keyTheme": "One word or short phrase"
+}`
+    : depth === "deep"
+      ? `{
+  "thenContext": "4-5 paragraphs with detailed historical, cultural, and theological context. Include original language insights and cross-references to related passages.",
+  "nowApplication": "3-4 paragraphs with deep, practical applications. Include connections to Ellen G. White writings where relevant (cite specific works), and tie to broader Adventist theology and end-time living.",
+  "reflectionQuestions": ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5", "Question 6"],
+  "prayerPrompt": "A detailed, multi-sentence prayer prompt that helps the reader respond to the depth of this passage",
+  "keyTheme": "A phrase capturing the main theme with theological nuance"
+}`
+      : `{
+  "thenContext": "2-3 paragraphs explaining what this passage meant to its original audience — their situation, challenges, and how they would have understood it",
+  "nowApplication": "2-3 paragraphs on how this passage applies to believers today — practical, real-world applications for daily life",
+  "reflectionQuestions": ["Question 1 for personal reflection", "Question 2", "Question 3", "Question 4"],
+  "prayerPrompt": "A brief prayer prompt that helps the reader respond to this passage in prayer",
+  "keyTheme": "One word or short phrase capturing the main theme"
+}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions.`,
+        content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions. ${depthGuide}`,
       },
       {
         role: "user",
         content: `Create a "Then & Now" application study for ${bookName} chapter ${chapter}. Return JSON:
-{
-  "thenContext": "2-3 paragraphs explaining what this passage meant to its original audience — their situation, challenges, and how they would have understood it",
-  "nowApplication": "2-3 paragraphs on how this passage applies to believers today — practical, real-world applications for daily life",
-  "reflectionQuestions": ["Question 1 for personal reflection", "Question 2", "Question 3", "Question 4"],
-  "prayerPrompt": "A brief prayer prompt that helps the reader respond to this passage in prayer",
-  "keyTheme": "One word or short phrase capturing the main theme"
-}`,
+${jsonShape}`,
       },
     ],
     temperature: 0.7,
-    max_tokens: 1500,
+    max_tokens: getDepthMaxTokens(depth, 1500),
   });
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
@@ -1120,6 +1194,59 @@ Generate exactly ${durationDays} days. Each day should have a different passage.
           nowApplication: d.nowApplication || "",
         }))
       : [],
+  };
+}
+
+export interface QuickInsightData {
+  keyVerse: string;
+  insight: string;
+  actionStep: string;
+}
+
+export async function generateQuickInsight(params: {
+  passage: string;
+  theme?: string;
+}): Promise<QuickInsightData> {
+  const { passage, theme } = params;
+  const openai = createOpenAIClient();
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a concise, warm Bible teacher. Generate a quick 5-minute devotional insight from a Bible passage. Return valid JSON only, no markdown. Be practical and encouraging.`,
+      },
+      {
+        role: "user",
+        content: `Generate a quick insight for the passage: ${passage}${theme ? ` (Theme: ${theme})` : ""}.
+
+Return JSON:
+{
+  "keyVerse": "The single most impactful verse reference from this passage (e.g., 'John 3:16')",
+  "insight": "A clear, meaningful insight in 2-3 sentences that captures the heart of this passage and connects it to daily life",
+  "actionStep": "One specific, practical action the reader can take today based on this passage (1-2 sentences)"
+}`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 400,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const cleaned = cleanJsonResponse(raw);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.error("Failed to parse quick insight AI response:", raw.substring(0, 500));
+    throw new Error("Failed to parse AI response");
+  }
+
+  return {
+    keyVerse: parsed.keyVerse || passage,
+    insight: parsed.insight || "",
+    actionStep: parsed.actionStep || "",
   };
 }
 

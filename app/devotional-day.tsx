@@ -19,6 +19,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import * as Haptics from "expo-haptics";
+import { useStudyDepth } from "@/contexts/StudyDepthContext";
+import StudyDepthSelector from "@/components/StudyDepthSelector";
 
 interface TodayResponse {
   today: DayContent | null;
@@ -286,6 +288,7 @@ export default function DevotionalDayScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { depth } = useStudyDepth();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -417,6 +420,8 @@ export default function DevotionalDayScreen() {
           Day {day.dayNumber} of {total} ({progress} completed)
         </Text>
 
+        <StudyDepthSelector compact />
+
         <View style={[styles.dayHeader, { backgroundColor: theme.primary }]}>
           <Text style={[styles.dayHeaderTitle, { fontFamily: "Lora_700Bold" }]}>
             {day.title}
@@ -452,7 +457,29 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.contextNote && (
+        {depth === "quick" && day.contextNote && (
+          <View style={[styles.card, { backgroundColor: theme.accent + "10", borderColor: theme.accent + "30" }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="flash" size={16} color={theme.accent} />
+              <Text style={[styles.cardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Key Insight
+              </Text>
+            </View>
+            <Text style={[styles.cardBody, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+              {day.contextNote}
+            </Text>
+            {day.nowApplication && (
+              <View style={[styles.quickActionItem, { backgroundColor: theme.success + "12", borderColor: theme.success + "25" }]}>
+                <Ionicons name="arrow-forward-circle" size={16} color={theme.success} />
+                <Text style={[styles.quickActionText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  {day.nowApplication.length > 200 ? day.nowApplication.substring(0, 200).trim() + "..." : day.nowApplication}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {depth !== "quick" && day.contextNote && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
@@ -466,7 +493,7 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.thenContext && (
+        {depth !== "quick" && day.thenContext && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="time-outline" size={16} color={theme.accent} />
@@ -480,7 +507,7 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.nowApplication && (
+        {depth !== "quick" && day.nowApplication && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="today-outline" size={16} color={theme.success} />
@@ -494,7 +521,7 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.historicVoiceExcerpt && (
+        {day.historicVoiceExcerpt && (depth === "deep" || depth === "standard") && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="library-outline" size={16} color="#8B5CF6" />
@@ -525,7 +552,44 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.reflectionQuestions && day.reflectionQuestions.length > 0 && (
+        {depth === "deep" && day.passageLabel && (
+          <View style={[styles.card, { backgroundColor: "#6D28D9" + "10", borderColor: "#6D28D9" + "30" }]}>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons name="language-outline" size={16} color="#8B5CF6" />
+              <Text style={[styles.cardLabel, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                Word Studies & Cross-References
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                if (day.bookId && day.chapter) {
+                  router.push(`/word-study?book=${day.bookId}&chapter=${day.chapter}${day.verseStart ? `&verse=${day.verseStart}` : ""}`);
+                }
+              }}
+              style={[styles.deepStudyLink, { backgroundColor: "#8B5CF6" + "12" }]}
+            >
+              <Ionicons name="search" size={14} color="#8B5CF6" />
+              <Text style={[styles.deepStudyLinkText, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                Explore Greek/Hebrew Word Studies
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (day.passageLabel) {
+                  router.push(`/passage-context?passage=${encodeURIComponent(day.passageLabel)}`);
+                }
+              }}
+              style={[styles.deepStudyLink, { backgroundColor: "#8B5CF6" + "12" }]}
+            >
+              <Ionicons name="git-network-outline" size={14} color="#8B5CF6" />
+              <Text style={[styles.deepStudyLinkText, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
+                View Cross-References & Context
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {depth !== "quick" && day.reflectionQuestions && day.reflectionQuestions.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="help-circle-outline" size={16} color={theme.bookmarkBlue} />
@@ -551,7 +615,7 @@ export default function DevotionalDayScreen() {
           </View>
         )}
 
-        {day.prayerPrompt && (
+        {depth !== "quick" && day.prayerPrompt && (
           <View style={[styles.card, { backgroundColor: theme.primary + "12", borderColor: theme.primary + "30" }]}>
             <View style={styles.cardHeaderRow}>
               <Ionicons name="hand-left-outline" size={16} color={theme.primary} />
@@ -567,25 +631,29 @@ export default function DevotionalDayScreen() {
 
         {!completed ? (
           <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name="journal-outline" size={16} color={theme.accent} />
-              <Text style={[styles.cardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                Journal (optional)
-              </Text>
-            </View>
-            <TextInput
-              value={journalText}
-              onChangeText={setJournalText}
-              placeholder="Write your reflections here..."
-              placeholderTextColor={theme.textMuted}
-              multiline
-              style={[styles.journalInput, {
-                color: theme.text,
-                backgroundColor: theme.backgroundSecondary,
-                borderColor: theme.border,
-                fontFamily: "Inter_400Regular",
-              }]}
-            />
+            {depth !== "quick" && (
+              <>
+                <View style={styles.cardHeaderRow}>
+                  <Ionicons name="journal-outline" size={16} color={theme.accent} />
+                  <Text style={[styles.cardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Journal (optional)
+                  </Text>
+                </View>
+                <TextInput
+                  value={journalText}
+                  onChangeText={setJournalText}
+                  placeholder="Write your reflections here..."
+                  placeholderTextColor={theme.textMuted}
+                  multiline
+                  style={[styles.journalInput, {
+                    color: theme.text,
+                    backgroundColor: theme.backgroundSecondary,
+                    borderColor: theme.border,
+                    fontFamily: "Inter_400Regular",
+                  }]}
+                />
+              </>
+            )}
             {groupId ? (
               <Pressable
                 onPress={() => setShareToGroup(!shareToGroup)}
@@ -760,4 +828,29 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   egwLinkText: { fontSize: 13 },
+  quickActionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 6,
+  },
+  quickActionText: {
+    fontSize: 13,
+    lineHeight: 20,
+    flex: 1,
+  },
+  deepStudyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  deepStudyLinkText: {
+    fontSize: 13,
+  },
 });

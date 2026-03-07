@@ -23,6 +23,8 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import FeatureTutorial from "@/components/FeatureTutorial";
+import StudyDepthSelector from "@/components/StudyDepthSelector";
+import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import { FOUR_LAYER_STUDY_STEPS } from "@/lib/tutorial-steps";
 
 type Tab = "word" | "context" | "voices" | "application";
@@ -1790,6 +1792,8 @@ export default function StudyScreen() {
         </Text>
       </View>
 
+      <StudyDepthSelector compact />
+
       {deepSession.active && (
         <DeepSessionBar
           layerIndex={deepSession.layerIndex}
@@ -2544,6 +2548,7 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
 }
 
 function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
+  const { depth } = useStudyDepth();
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [didInit, setDidInit] = useState(false);
@@ -2574,6 +2579,7 @@ function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: {
       const res = await apiRequest("POST", "/api/context/generate", {
         bookId: selectedBook!.id,
         chapter: selectedChapter,
+        depth,
       });
       return res.json();
     },
@@ -3167,6 +3173,7 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
 }
 
 function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
+  const { depth } = useStudyDepth();
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
   const [didInit, setDidInit] = useState(false);
@@ -3203,6 +3210,7 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
       const res = await apiRequest("POST", "/api/application/generate", {
         bookId: selectedBook!.id,
         chapter: selectedChapter,
+        depth,
       });
       return res.json();
     },

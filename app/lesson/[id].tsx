@@ -18,6 +18,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
+import { useStudyDepth, StudyDepth } from "@/contexts/StudyDepthContext";
+import StudyDepthSelector from "@/components/StudyDepthSelector";
 import { useTheme } from "@/hooks/useTheme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -538,6 +540,7 @@ export default function LessonScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { resolvedLang } = useContentLanguage();
+  const { depth, depthConfig } = useStudyDepth();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -599,9 +602,10 @@ export default function LessonScreen() {
   const [showTrackCompletion, setShowTrackCompletion] = useState(false);
 
   const lessonLangParam = resolvedLang !== "en" ? `&lang=${resolvedLang}` : "";
+  const lessonDepthParam = `&depth=${depth}`;
 
   const lessonQuery = useQuery<LessonData>({
-    queryKey: [`/api/lessons/${id}?userId=${userId}${lessonLangParam}`],
+    queryKey: [`/api/lessons/${id}?userId=${userId}${lessonLangParam}${lessonDepthParam}`],
   });
 
   React.useEffect(() => {
@@ -685,9 +689,18 @@ export default function LessonScreen() {
   }, []);
 
   const lesson = lessonQuery.data;
-  const sections = lesson?.sections || [];
+  const allSections = lesson?.sections || [];
   const assessment = lesson?.assessment;
+
+  const sections = React.useMemo(() => {
+    if (depth === "quick") {
+      return allSections.filter((s) => s.sectionType === "anchor" || s.sectionType === "practice");
+    }
+    return allSections;
+  }, [allSections, depth]);
+
   const allSectionsCompleted = sections.length > 0 && sections.every((s) => completedSections.includes(s.id));
+  const showAssessment = depth !== "quick";
 
   if (lessonQuery.isLoading || !sabbathModeLoaded) {
     return (
@@ -754,6 +767,10 @@ export default function LessonScreen() {
             />
           ))}
         </View>
+      )}
+
+      {!sabbathMode && (
+        <StudyDepthSelector compact />
       )}
 
       <ScrollView
@@ -872,7 +889,61 @@ export default function LessonScreen() {
           );
         })}
 
-        {assessment && (
+        {depth === "quick" && lesson && (
+          <View style={[styles.sectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "30" }]}>
+            <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#C9933A18", alignItems: "center" as const, justifyContent: "center" as const }}>
+                <Ionicons name="flash" size={20} color="#C9933A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.8, color: "#C9933A", marginBottom: 2 }}>
+                  Key Takeaway
+                </Text>
+                <Text style={{ fontSize: 16, fontFamily: "Lora_600SemiBold", color: theme.text }}>
+                  Core Insight
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 24, color: theme.text }}>
+              {lesson.description || "Focus on the anchor scripture above and reflect on how it applies to your life today."}
+            </Text>
+          </View>
+        )}
+
+        {depth === "deep" && lesson && (
+          <View style={[styles.sectionCard, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "25" }]}>
+            <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#8B5CF618", alignItems: "center" as const, justifyContent: "center" as const }}>
+                <Ionicons name="telescope" size={20} color="#8B5CF6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.8, color: "#8B5CF6", marginBottom: 2 }}>
+                  Deep Dive
+                </Text>
+                <Text style={{ fontSize: 16, fontFamily: "Lora_600SemiBold", color: theme.text }}>
+                  Extended Study
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22, color: theme.textSecondary, marginBottom: 12 }}>
+              Explore word studies, cross-references, and historical context for deeper understanding. Tap any scripture reference above to examine it in detail.
+            </Text>
+            {lesson.anchorText && (
+              <Pressable
+                onPress={() => router.push(`/word-study?passage=${encodeURIComponent(lesson.anchorText)}`)}
+                style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: "#8B5CF612", borderWidth: 1, borderColor: "#8B5CF625" }}
+              >
+                <Ionicons name="language" size={16} color="#8B5CF6" />
+                <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: "#8B5CF6", flex: 1 }}>
+                  Word Study: {lesson.anchorText}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color="#8B5CF6" />
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {showAssessment && assessment && (
           <View style={[styles.sectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <SectionHeader
               type="assessment"
@@ -1062,7 +1133,7 @@ export default function LessonScreen() {
         visible={showActionsSheet}
         onClose={() => setShowActionsSheet(false)}
         theme={theme}
-        sections={sections}
+        sections={allSections}
         completedSections={completedSections}
         onMarkComplete={() => completeMutation.mutate()}
         onToggleSection={toggleSection}

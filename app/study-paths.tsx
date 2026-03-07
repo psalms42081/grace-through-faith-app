@@ -15,6 +15,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
+import StudyDepthSelector from "@/components/StudyDepthSelector";
 
 interface Track {
   id: string;
@@ -139,6 +140,8 @@ export default function StudyPathsScreen() {
         <Text style={[styles.headerTitle, { color: theme.text }]}>Study Paths</Text>
         <View style={{ width: 36 }} />
       </View>
+
+      <StudyDepthSelector compact />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>

@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
+import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import MiniPlayer from "@/components/MiniPlayer";
 import {
   useFonts,
@@ -140,16 +141,18 @@ export default function RootLayout() {
             <ContentLanguageProvider>
               <KidsModeProvider>
                 <ProProvider>
-                  <TutorialProvider>
-                    <AudioProvider>
-                      <GestureHandlerRootView style={{ flex: 1 }}>
-                        <KeyboardProvider>
-                          <RootLayoutNav />
-                          <MiniPlayer />
-                        </KeyboardProvider>
-                      </GestureHandlerRootView>
-                    </AudioProvider>
-                  </TutorialProvider>
+                  <StudyDepthProvider>
+                    <TutorialProvider>
+                      <AudioProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                          <KeyboardProvider>
+                            <RootLayoutNav />
+                            <MiniPlayer />
+                          </KeyboardProvider>
+                        </GestureHandlerRootView>
+                      </AudioProvider>
+                    </TutorialProvider>
+                  </StudyDepthProvider>
                 </ProProvider>
               </KidsModeProvider>
             </ContentLanguageProvider>

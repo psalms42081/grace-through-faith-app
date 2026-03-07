@@ -18,6 +18,8 @@ import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
 import { useTheme } from "@/hooks/useTheme";
+import StudyDepthSelector, { DepthBadge } from "@/components/StudyDepthSelector";
+import { useStudyDepth } from "@/contexts/StudyDepthContext";
 
 const THEOLOGICAL_FRAMES = [
   {
@@ -236,6 +238,7 @@ export default function SabbathExperienceScreen() {
         <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 32 }]}>
           Worship Pathways
         </Text>
+        <StudyDepthSelector compact />
         <View style={[styles.pathwaysCard, { backgroundColor: theme.backgroundCard }]}>
           {WORSHIP_PATHWAYS.map((pathway, i) => (
             <Pressable
