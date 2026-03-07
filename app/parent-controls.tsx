@@ -264,7 +264,7 @@ export default function ParentControlsScreen() {
           <Text style={[st.sectionDesc, { color: theme.textSecondary }]}>
             {hasPin
               ? "A PIN is set. Children must enter it to exit Kids Mode or switch readers."
-              : "No PIN set. Children can freely exit Kids Mode. Set a PIN to require parent approval."}
+              : "Kids Mode is currently unlocked. Set a PIN to require parent approval before exiting."}
           </Text>
 
           <View style={[st.statusRow, { backgroundColor: hasPin ? "#10B981" + "15" : theme.textMuted + "10" }]}>

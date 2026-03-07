@@ -441,7 +441,7 @@ function KidsHomeScreen() {
               {completedCount}
             </Text>
             <Text style={[kidsStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Stories Read
+              Stories Completed
             </Text>
           </View>
           <View style={[kidsStyles.statBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -809,7 +809,7 @@ function ChildPickerModal({
               >
                 <Ionicons name="add-circle-outline" size={22} color={theme.accent} />
                 <Text style={[cpStyles.addChildText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  Add Child
+                  Add Child Profile
                 </Text>
               </Pressable>
             </ScrollView>

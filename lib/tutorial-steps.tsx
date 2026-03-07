@@ -368,7 +368,7 @@ export const PRAYER_JOURNAL_STEPS: TutorialStep[] = [
     label: "PRAYER LIFE",
     title: "Your Prayer\nJournal",
     description:
-      "A sacred space to record your prayers. Organize them by category — Personal, Family, Health, World, and Praise — and track God's faithfulness over time.",
+      "A sacred space to record your prayers. Organize them by category — Personal, Family, Health, World, and Praise — and remember God's faithfulness over time.",
   },
   {
     illustration: <IconBadge name="add-circle" size={46} />,
@@ -382,6 +382,6 @@ export const PRAYER_JOURNAL_STEPS: TutorialStep[] = [
     label: "ANSWERED",
     title: "Mark Prayers\nAnswered",
     description:
-      "When God answers, mark the prayer as answered. Build a record of faithfulness that you can look back on during difficult seasons.",
+      "When God answers, mark the prayer as answered. Build a record of God's faithfulness that you can look back on during difficult seasons.",
   },
 ];

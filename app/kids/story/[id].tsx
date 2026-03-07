@@ -379,7 +379,7 @@ function WordHighlightText({
   }, [sentences, currentWordIndex, isSpeaking]);
 
   return (
-    <Text style={{ textAlign: "center", lineHeight: fontSize * 1.8 }}>
+    <Text style={{ textAlign: "center", lineHeight: fontSize * 2.1 }}>
       {words.map((word, i) => {
         const isActive = isSpeaking && i === currentWordIndex;
         const isPast = isSpeaking && i < currentWordIndex;

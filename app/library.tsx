@@ -312,7 +312,7 @@ export default function LibraryScreen() {
 
   const renderEmptyState = () => {
     const config = {
-      notes: { icon: "document-text-outline" as const, text: "No notes yet. Add notes while reading to see them here." },
+      notes: { icon: "document-text-outline" as const, text: "Start capturing your insights. Highlight verses while reading to automatically add notes here." },
       highlights: { icon: "color-fill-outline" as const, text: "No highlights yet. Highlight verses while reading to see them here." },
       bookmarks: { icon: "bookmark-outline" as const, text: "No bookmarks yet. Bookmark verses while reading to see them here." },
     };
