@@ -231,7 +231,7 @@ export default function VerseActionsSheet() {
           />
           <ActionButton
             icon="chatbubble-ellipses-outline"
-            label="Voices"
+            label="Insight"
             theme={theme}
             onPress={handleHistoricVoices}
             color="#3B6CB5"

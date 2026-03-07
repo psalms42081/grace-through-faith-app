@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +29,26 @@ interface CommentaryEntry {
     name: string;
     tradition: string | null;
   };
+}
+
+const ADVENTIST_VOICE = "Ellen G. White";
+
+const VOICE_ORDER: string[] = [
+  ADVENTIST_VOICE,
+  "Matthew Henry",
+  "Jamieson, Fausset & Brown",
+  "Adam Clarke",
+  "John Gill",
+];
+
+function sortCommentatorNames(names: string[]): string[] {
+  return [...names].sort((a, b) => {
+    const ai = VOICE_ORDER.indexOf(a);
+    const bi = VOICE_ORDER.indexOf(b);
+    const aIdx = ai === -1 ? 999 : ai;
+    const bIdx = bi === -1 ? 999 : bi;
+    return aIdx - bIdx;
+  });
 }
 
 export default function HistoricVoicesScreen() {
@@ -73,21 +94,29 @@ export default function HistoricVoicesScreen() {
   }, [bookIdNum, chapterNum, isLoading, hasCommentary, generateMutation.isPending, generateMutation.isError]);
 
   const commentatorNames = hasCommentary
-    ? [...new Set(commentaryData!.map((c) => c.commentator.name))]
+    ? sortCommentatorNames([...new Set(commentaryData!.map((c) => c.commentator.name))])
     : [];
 
   const filteredCommentary = activeCommentator
     ? commentaryData?.filter((c) => c.commentator.name === activeCommentator)
     : commentaryData;
 
+  const filteredCount = filteredCommentary?.length ?? 0;
+
+  const handleChipPress = useCallback((name: string | null) => {
+    setActiveCommentator(name);
+  }, []);
+
   const topPad = Platform.OS === "web" ? 67 + insets.top : 0;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const hasEgw = commentatorNames.includes(ADVENTIST_VOICE);
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: `${bookName || ""} ${chapter || ""} — Voices`,
+          title: `${bookName || ""} ${chapter || ""} — Insight`,
           headerBackTitle: "Back",
         }}
       />
@@ -96,30 +125,87 @@ export default function HistoricVoicesScreen() {
         contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: bottomPad + 40, paddingHorizontal: 20 }}
       >
         <Text style={[styles.heading, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Historic Voices
+          Insight & Voices
         </Text>
         <Text style={[styles.subheading, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           Commentary on {bookName} {chapter}
         </Text>
 
         {commentatorNames.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            <Pressable
-              onPress={() => setActiveCommentator(null)}
-              style={[styles.filterPill, { backgroundColor: !activeCommentator ? theme.accent + "20" : theme.backgroundCard, borderColor: !activeCommentator ? theme.accent : theme.border }]}
+          <View style={styles.filterContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContent}
             >
-              <Text style={[styles.filterText, { color: !activeCommentator ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>All</Text>
-            </Pressable>
-            {commentatorNames.map((name) => (
               <Pressable
-                key={name}
-                onPress={() => setActiveCommentator(name === activeCommentator ? null : name)}
-                style={[styles.filterPill, { backgroundColor: activeCommentator === name ? theme.accent + "20" : theme.backgroundCard, borderColor: activeCommentator === name ? theme.accent : theme.border }]}
+                onPress={() => handleChipPress(null)}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: !activeCommentator ? theme.accent : theme.backgroundCard,
+                    borderColor: !activeCommentator ? theme.accent : theme.border,
+                  },
+                ]}
+                testID="filter-all"
+                accessibilityRole="button"
+                accessibilityLabel="Show all commentators"
+                accessibilityState={{ selected: !activeCommentator }}
               >
-                <Text style={[styles.filterText, { color: activeCommentator === name ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>{name}</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color: !activeCommentator ? "#fff" : theme.textSecondary,
+                      fontFamily: !activeCommentator ? "Inter_600SemiBold" : "Inter_500Medium",
+                    },
+                  ]}
+                >
+                  All
+                </Text>
               </Pressable>
-            ))}
-          </ScrollView>
+              {commentatorNames.map((name) => {
+                const isActive = activeCommentator === name;
+                const isAdventist = name === ADVENTIST_VOICE;
+                return (
+                  <Pressable
+                    key={name}
+                    onPress={() => handleChipPress(isActive ? null : name)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: isActive ? theme.accent : theme.backgroundCard,
+                        borderColor: isActive ? theme.accent : isAdventist ? theme.accent + "50" : theme.border,
+                      },
+                    ]}
+                    testID={`filter-${name.replace(/\s/g, "-").toLowerCase()}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter by ${name}`}
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: isActive ? "#fff" : isAdventist ? theme.accent : theme.textSecondary,
+                          fontFamily: isActive || isAdventist ? "Inter_600SemiBold" : "Inter_500Medium",
+                        },
+                      ]}
+                    >
+                      {name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {hasCommentary && filteredCount > 0 && (
+          <Text style={[styles.resultCount, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {filteredCount} {filteredCount === 1 ? "entry" : "entries"}
+            {activeCommentator ? ` from ${activeCommentator}` : ""}
+          </Text>
         )}
 
         {(isLoading || generateMutation.isPending) && (
@@ -155,30 +241,94 @@ export default function HistoricVoicesScreen() {
           </View>
         )}
 
-        {filteredCommentary?.map((item) => (
-          <View key={item.entry.id} style={[styles.commentCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-            <View style={styles.commentHeader}>
-              <Text style={[styles.commentatorName, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                {item.commentator.name}
-              </Text>
-              {item.commentator.tradition && (
-                <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {item.commentator.tradition}
-                </Text>
-              )}
-            </View>
-            {item.entry.verseStart && (
-              <Text style={[styles.verseRange, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                {item.entry.verseStart === item.entry.verseEnd || !item.entry.verseEnd
-                  ? `Verse ${item.entry.verseStart}`
-                  : `Verses ${item.entry.verseStart}–${item.entry.verseEnd}`}
-              </Text>
-            )}
-            <Text style={[styles.commentContent, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-              {item.entry.content}
+        {hasCommentary && filteredCount === 0 && activeCommentator && (
+          <View style={styles.emptyBox}>
+            <Ionicons name="filter-outline" size={36} color={theme.textMuted} />
+            <Text style={[styles.emptyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              No entries from {activeCommentator} for this chapter.
             </Text>
           </View>
-        ))}
+        )}
+
+        {filteredCommentary?.map((item) => {
+          const isAdventist = item.commentator.name === ADVENTIST_VOICE;
+          return (
+            <View
+              key={item.entry.id}
+              style={[
+                styles.commentCard,
+                {
+                  backgroundColor: theme.backgroundCard,
+                  borderColor: isAdventist ? theme.accent + "40" : theme.border,
+                  borderLeftWidth: isAdventist ? 3 : 1,
+                  borderLeftColor: isAdventist ? theme.accent : theme.border,
+                },
+              ]}
+            >
+              <View style={styles.commentHeader}>
+                <View style={styles.commentHeaderLeft}>
+                  {isAdventist && (
+                    <View style={[styles.adventistBadge, { backgroundColor: theme.accent + "18" }]}>
+                      <Ionicons name="star" size={10} color={theme.accent} />
+                    </View>
+                  )}
+                  <Text style={[styles.commentatorName, { color: isAdventist ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {item.commentator.name}
+                  </Text>
+                </View>
+                {item.commentator.tradition && (
+                  <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {item.commentator.tradition}
+                  </Text>
+                )}
+              </View>
+              {item.entry.verseStart && (
+                <Text style={[styles.verseRange, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  {item.entry.verseStart === item.entry.verseEnd || !item.entry.verseEnd
+                    ? `Verse ${item.entry.verseStart}`
+                    : `Verses ${item.entry.verseStart}–${item.entry.verseEnd}`}
+                </Text>
+              )}
+              <Text style={[styles.commentContent, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {item.entry.content}
+              </Text>
+              {isAdventist && (
+                <Pressable
+                  onPress={() => Linking.openURL("https://egwwritings.org")}
+                  style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <Ionicons name="open-outline" size={13} color={theme.accent} />
+                  <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                    Read more on egwwritings.org
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
+
+        {!hasEgw && hasCommentary && !isLoading && (
+          <Pressable
+            onPress={() => Linking.openURL("https://egwwritings.org")}
+            style={({ pressed }) => [
+              styles.egwPromo,
+              { backgroundColor: theme.accent + "10", borderColor: theme.accent + "30", opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <View style={styles.egwPromoInner}>
+              <Ionicons name="book-outline" size={20} color={theme.accent} />
+              <View style={styles.egwPromoText}>
+                <Text style={[styles.egwPromoTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  Ellen G. White Writings
+                </Text>
+                <Text style={[styles.egwPromoSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  Explore Adventist commentary on egwwritings.org
+                </Text>
+              </View>
+              <Ionicons name="open-outline" size={16} color={theme.accent} />
+            </View>
+          </Pressable>
+        )}
       </ScrollView>
     </>
   );
@@ -188,19 +338,23 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   heading: { fontSize: 24, marginBottom: 4 },
   subheading: { fontSize: 14, marginBottom: 20 },
-  filterRow: { marginBottom: 20, flexGrow: 0 },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  filterContainer: { marginBottom: 12 },
+  filterContent: { paddingRight: 20 },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
     marginRight: 8,
+    minHeight: 40,
+    justifyContent: "center" as const,
   },
-  filterText: { fontSize: 13 },
-  loadingBox: { alignItems: "center", paddingVertical: 60, gap: 16 },
+  filterChipText: { fontSize: 13 },
+  resultCount: { fontSize: 12, marginBottom: 16 },
+  loadingBox: { alignItems: "center" as const, paddingVertical: 60, gap: 16 },
   loadingText: { fontSize: 14 },
-  emptyBox: { alignItems: "center", paddingVertical: 60, gap: 12 },
-  emptyText: { fontSize: 14, textAlign: "center" },
+  emptyBox: { alignItems: "center" as const, paddingVertical: 60, gap: 12 },
+  emptyText: { fontSize: 14, textAlign: "center" as const },
   retryBtn: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
   retryText: { fontSize: 14 },
   commentCard: {
@@ -210,13 +364,50 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   commentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     marginBottom: 8,
+  },
+  commentHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  adventistBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   commentatorName: { fontSize: 14 },
   tradition: { fontSize: 11 },
   verseRange: { fontSize: 12, marginBottom: 8 },
   commentContent: { fontSize: 15, lineHeight: 24 },
+  egwLink: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  egwLinkText: { fontSize: 12 },
+  egwPromo: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  egwPromoInner: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  egwPromoText: { flex: 1 },
+  egwPromoTitle: { fontSize: 14, marginBottom: 2 },
+  egwPromoSub: { fontSize: 12 },
 });

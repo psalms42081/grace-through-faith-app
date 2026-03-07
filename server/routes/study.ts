@@ -332,6 +332,42 @@ const COMMENTARY_SOURCES = [
   { apiId: "john-gill", dbId: "john-gill", name: "John Gill", dates: "1697–1771", tradition: "Baptist" },
 ];
 
+const EGW_COMMENTATOR = {
+  dbId: "egw",
+  name: "Ellen G. White",
+  dates: "1827–1915",
+  tradition: "Adventist",
+};
+
+async function generateEgwInsight(bookName: string, chapter: number): Promise<string | null> {
+  try {
+    const OpenAI = (await import("openai")).default;
+    const client = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+    const resp = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.5,
+      max_tokens: 800,
+      messages: [
+        {
+          role: "system",
+          content: `You are an Adventist Bible study assistant. Provide a brief Adventist perspective on the given Bible chapter, drawing on themes commonly found in Ellen G. White's writings. Focus on the Great Controversy theme, character of God, practical Christian living, and the Sabbath where relevant. Do NOT fabricate specific EGW quotes — instead summarize thematic insights she emphasized. Keep the tone reverent and educational. Write in third person ("White emphasized..." not "I wrote..."). Limit to 2-3 paragraphs.`,
+        },
+        {
+          role: "user",
+          content: `Provide an Adventist perspective on ${bookName} chapter ${chapter}, highlighting themes Ellen G. White commonly addressed regarding this passage.`,
+        },
+      ],
+    });
+    return resp.choices[0]?.message?.content?.trim() || null;
+  } catch (err) {
+    console.error("[EGW Insight] Generation failed:", err);
+    return null;
+  }
+}
+
 async function fetchRealCommentary(apiId: string, bookCode: string, ch: number): Promise<{ verses: { number: number; content: string }[] } | null> {
   try {
     const resp = await fetch(`https://bible.helloao.org/api/c/${apiId}/${bookCode}/${ch}.json`);
@@ -428,6 +464,46 @@ router.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =>
 
       const cRow = await db.select().from(commentators).where(eq(commentators.id, src.dbId)).limit(1);
       results.push({ entry: inserted, commentator: cRow[0] || null });
+    }
+
+    if (!commentatorMap[EGW_COMMENTATOR.dbId]) {
+      await db.insert(commentators).values({
+        id: EGW_COMMENTATOR.dbId,
+        name: EGW_COMMENTATOR.name,
+        dates: EGW_COMMENTATOR.dates,
+        tradition: EGW_COMMENTATOR.tradition,
+      }).onConflictDoNothing();
+    }
+
+    const existingEgw = await db.select()
+      .from(commentaryEntries)
+      .where(and(
+        eq(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
+        eq(commentaryEntries.bookId, Number(bookId)),
+        eq(commentaryEntries.chapter, Number(chapter))
+      ))
+      .limit(1);
+
+    if (existingEgw.length > 0) {
+      const egwRow = await db.select().from(commentators).where(eq(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+      results.unshift({ entry: existingEgw[0], commentator: egwRow[0] || null });
+    } else {
+      const egwContent = await generateEgwInsight(bookName, Number(chapter));
+      if (egwContent) {
+        const [egwInserted] = await db
+          .insert(commentaryEntries)
+          .values({
+            commentatorId: EGW_COMMENTATOR.dbId,
+            bookId: Number(bookId),
+            chapter: Number(chapter),
+            content: egwContent,
+            title: `${bookName} ${chapter} — ${EGW_COMMENTATOR.name}`,
+          })
+          .returning();
+
+        const egwRow = await db.select().from(commentators).where(eq(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+        results.unshift({ entry: egwInserted, commentator: egwRow[0] || null });
+      }
     }
 
     return res.json(results);
