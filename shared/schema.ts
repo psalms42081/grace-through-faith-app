@@ -1432,3 +1432,18 @@ export const searchCache = pgTable("search_cache", {
 });
 
 export type SearchCache = typeof searchCache.$inferSelect;
+
+// ─── GREAT CONTROVERSY EXPLORATION CACHE ────────────────────────────────────
+
+export const gcExplorationCache = pgTable("gc_exploration_cache", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  nodeId: varchar("node_id", { length: 64 }).notNull().unique(),
+  narrativeExplanation: text("narrative_explanation").notNull(),
+  connections: jsonb("connections").notNull(),
+  reflectionQuestion: text("reflection_question").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type GCExplorationCache = typeof gcExplorationCache.$inferSelect;

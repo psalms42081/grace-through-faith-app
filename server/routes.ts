@@ -20,6 +20,7 @@ import kidsRoutes from "./routes/kids";
 import communityRoutes from "./routes/community";
 import familyDashboardRoutes from "./routes/family-dashboard";
 import formationRoutes from "./routes/formation";
+import greatControversyRoutes from "./routes/great-controversy";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -65,6 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(communityRoutes);
   app.use(familyDashboardRoutes);
   app.use(formationRoutes);
+  app.use(greatControversyRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

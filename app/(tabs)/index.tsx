@@ -1367,6 +1367,29 @@ function AdultHomeScreen() {
     </View>
   );
 
+  const greatControversySection = (
+    <Pressable
+      onPress={() => router.push("/great-controversy" as any)}
+      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+    >
+      <LinearGradient
+        colors={isDark ? ["#1A150D", "#120F08"] : ["#2A2010", "#1F1A0C"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[s.guidedCard, { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }]}
+      >
+        <View style={[s.guidedIconWrap, { backgroundColor: "rgba(201, 147, 58, 0.15)" }]}>
+          <Ionicons name="git-network" size={20} color="#C9933A" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold", textAlign: "left" }]}>The Great Controversy</Text>
+          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular", textAlign: "left" }]}>Trace the cosmic conflict</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="rgba(245,240,232,0.4)" />
+      </LinearGradient>
+    </Pressable>
+  );
+
   const devotionalSection = (
     <Pressable
       onPress={() => {
@@ -1488,6 +1511,7 @@ function AdultHomeScreen() {
           <SpiritualRings theme={theme} isDark={isDark} />
           {continueReadingSection}
           {guidedToolsSection}
+          {greatControversySection}
           {devotionalSection}
           {verseSection}
         </>
@@ -1497,6 +1521,7 @@ function AdultHomeScreen() {
           <SpiritualRings theme={theme} isDark={isDark} />
           {continueReadingSection}
           {guidedToolsSection}
+          {greatControversySection}
           {devotionalSection}
           <GoldDivider theme={theme} />
           {worshipPathwaysSection}

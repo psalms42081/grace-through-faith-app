@@ -143,6 +143,37 @@ export default function StudyPathsScreen() {
 
       <StudyDepthSelector compact />
 
+      <Pressable
+        onPress={() => router.push("/great-controversy" as any)}
+        style={({ pressed }) => [
+          {
+            marginHorizontal: 20,
+            marginBottom: 16,
+            flexDirection: "row" as const,
+            alignItems: "center" as const,
+            gap: 12,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            borderRadius: 14,
+            backgroundColor: "rgba(201, 147, 58, 0.08)",
+            borderWidth: 1,
+            borderColor: "rgba(201, 147, 58, 0.2)",
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}
+      >
+        <Ionicons name="git-network" size={22} color="#C9933A" />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
+            The Great Controversy Map
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+            Trace the cosmic conflict from Creation to the New Earth
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+      </Pressable>
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />

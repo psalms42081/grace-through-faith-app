@@ -36,6 +36,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
 - **Dynamic Topic Content:** Topic detail pages feature AI-generated daily reflections and shuffled verses/media.
 - **Guest User Identity:** Each device receives a unique UUID for API calls and data isolation.
+- **Great Controversy Map:** An immersive vertical timeline tracing the cosmic conflict from Creation to the New Earth through 15 narrative nodes aligned with Adventist theology. Each node shows scripture references, linked Fundamental Beliefs, connected study paths, and depth-aware content (Quick/Standard/Deep). Deep mode includes AI-generated contextual narratives via `POST /api/great-controversy/explore` with database caching (`gcExplorationCache` table). Entry points on Home screen, Sabbath Experience, and Study Paths. Data model in `data/great-controversy.ts`, screen at `app/great-controversy.tsx`, backend route at `server/routes/great-controversy.ts`.
 
 ## External Dependencies
 

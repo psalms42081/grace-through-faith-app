@@ -53,6 +53,7 @@ const PROMPTS = [
 const WORSHIP_PATHWAYS = [
   { icon: "book" as const, label: "Sabbath School", route: "/devotionals" },
   { icon: "school" as const, label: "Study Paths", route: "/study-paths" },
+  { icon: "git-network" as const, label: "Great Controversy", route: "/great-controversy" },
   { icon: "videocam" as const, label: "Live Streams", route: "/" },
   { icon: "location" as const, label: "Church Connect", route: "/church-connect" },
   { icon: "heart" as const, label: "Family Altar", route: "/prayer-journal" },

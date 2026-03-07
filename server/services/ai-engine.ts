@@ -1286,3 +1286,81 @@ export async function generateVerseExplanation(params: {
   const raw = completion.choices[0]?.message?.content?.trim() || "";
   return raw || "Unable to generate an explanation at this time. Please try again.";
 }
+
+export interface GCExplorationData {
+  narrativeExplanation: string;
+  connections: { before: string; after: string };
+  reflectionQuestion: string;
+}
+
+export async function generateGCExploration(params: {
+  nodeId: string;
+  title: string;
+  aiPromptContext: string;
+  prevNodeTitle: string | null;
+  nextNodeTitle: string | null;
+}): Promise<GCExplorationData> {
+  const { title, aiPromptContext, prevNodeTitle, nextNodeTitle } = params;
+  const openai = createOpenAIClient();
+
+  const connectionHint = [
+    prevNodeTitle ? `The previous event in the timeline is: "${prevNodeTitle}".` : "This is the first event in the timeline.",
+    nextNodeTitle ? `The next event in the timeline is: "${nextNodeTitle}".` : "This is the final event in the timeline.",
+  ].join(" ");
+
+  const systemPrompt = `You are a Seventh-day Adventist biblical scholar and storyteller guiding readers through the Great Controversy narrative — the cosmic conflict between Christ and Satan that spans all of history. Your content must:
+
+1. Be grounded in Scripture and consistent with Adventist theology (sanctuary doctrine, Sabbath, state of the dead, investigative judgment, three angels' messages, second coming, conditional immortality).
+2. Present the narrative in an engaging, accessible style — not academic or dry, but reverent and compelling.
+3. Show how each event fits into the larger cosmic conflict and God's plan to vindicate His character.
+4. Never quote or embed Ellen G. White text directly. You may allude to Great Controversy themes she articulated, but present them as biblical truths, not as her personal views.
+5. Never use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.
+6. Be warm and faith-building, helping the reader see God's love and justice throughout the narrative.
+
+Return valid JSON only, no markdown code fences.`;
+
+  const userPrompt = `Generate a Great Controversy narrative exploration for the event: "${title}"
+
+Doctrinal context: ${aiPromptContext}
+
+${connectionHint}
+
+Return JSON:
+{
+  "narrativeExplanation": "A 3-4 paragraph narrative explanation of how this event fits in the cosmic conflict between Christ and Satan. Show why it matters in the Great Controversy framework and what it reveals about God's character.",
+  "connections": {
+    "before": "1-2 sentences explaining how this event connects to what came before it in the Great Controversy timeline.",
+    "after": "1-2 sentences explaining how this event sets the stage for what comes next in the timeline."
+  },
+  "reflectionQuestion": "A thoughtful personal reflection question that helps the reader apply this part of the Great Controversy narrative to their own spiritual journey today."
+}`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: 1200,
+    temperature: 0.7,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const cleaned = cleanJsonResponse(raw);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.error("Failed to parse GC exploration AI response:", raw.substring(0, 500));
+    throw new Error("Failed to parse AI response");
+  }
+
+  return {
+    narrativeExplanation: parsed.narrativeExplanation || "",
+    connections: {
+      before: parsed.connections?.before || "",
+      after: parsed.connections?.after || "",
+    },
+    reflectionQuestion: parsed.reflectionQuestion || "",
+  };
+}

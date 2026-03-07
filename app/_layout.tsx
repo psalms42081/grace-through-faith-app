@@ -84,6 +84,7 @@ function RootLayoutNav() {
       <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="stream/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-experience" options={{ headerShown: false }} />
+      <Stack.Screen name="great-controversy" options={{ headerShown: false }} />
     </Stack>
   );
 }
