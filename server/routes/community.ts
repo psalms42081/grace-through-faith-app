@@ -804,7 +804,7 @@ router.post("/api/streams/create", async (req, res) => {
       .from(users).where(eq(users.id, userId));
 
     const roomName = generateJitsiRoom();
-    const roomUrl = `https://meet.jit.si/${roomName}`;
+    const roomUrl = `https://meet.init7.net/${roomName}`;
 
     const [session] = await db.insert(liveSessions).values({
       title,
