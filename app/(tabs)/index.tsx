@@ -1501,7 +1501,7 @@ function AdultHomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={s.headerRow}>
-        <View>
+        <View style={{ flex: 1, marginRight: 12 }}>
           <Text style={[s.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {greeting}
           </Text>
@@ -1605,7 +1605,7 @@ const s = StyleSheet.create({
     marginBottom: 24,
   },
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  headerTitle: { fontSize: 26, letterSpacing: -0.3, marginBottom: 2 },
+  headerTitle: { fontSize: 22, letterSpacing: -0.3, marginBottom: 2 },
   headerTagline: { fontSize: 12, letterSpacing: 0.2, marginTop: 4 },
   kidsModeBtn: {
     alignItems: "center",
