@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
 import FeatureTutorial from "@/components/FeatureTutorial";
+import FamilyWorshipLauncher from "@/components/FamilyWorshipLauncher";
 import { FAMILY_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 
 interface FamilyInfo {
@@ -114,6 +115,8 @@ export default function FamilyDashboard() {
   const [familyNameInput, setFamilyNameInput] = useState("");
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const prayerWallY = useRef(0);
 
   const hasFamilyGroup = isAuthenticated && !!user?.familyId;
 
@@ -301,6 +304,7 @@ export default function FamilyDashboard() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FeatureTutorial tutorialId="family-dashboard" steps={FAMILY_TUTORIAL_STEPS} />
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={{
           paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
@@ -544,6 +548,12 @@ export default function FamilyDashboard() {
 
         <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
 
+        <FamilyWorshipLauncher
+          theme={theme}
+          isDark={isDark}
+          onScrollToPrayerWall={() => scrollRef.current?.scrollTo({ y: prayerWallY.current, animated: true })}
+        />
+
         <View style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}>
           <Ionicons name="flame-outline" size={16} color={theme.accent} />
           <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Activity</Text>
@@ -552,7 +562,10 @@ export default function FamilyDashboard() {
 
         <View style={[styles.sectionDivider, { backgroundColor: theme.divider }]} />
 
-        <View style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}>
+        <View
+          onLayout={(e) => { prayerWallY.current = e.nativeEvent.layout.y; }}
+          style={[styles.sectionHeaderRow, { borderBottomColor: "transparent" }]}
+        >
           <Ionicons name="heart-outline" size={16} color={theme.accent} />
           <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Prayer Wall</Text>
         </View>
