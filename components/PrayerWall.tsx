@@ -25,6 +25,7 @@ import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface FamilyPrayer {
   id: string;
@@ -355,12 +356,11 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       )}
 
       {activePrayers.length === 0 && !showForm && (
-        <View style={styles.emptyState}>
-          <Ionicons name="flame-outline" size={32} color={theme.textMuted} />
-          <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-            {isGroupMode ? "No prayer requests yet. Lift your group up in prayer." : "No prayer requests yet. Lift your family up in prayer."}
-          </Text>
-        </View>
+        <EmptyState
+          icon="flame-outline"
+          title="No prayer requests yet"
+          description={isGroupMode ? "Lift your group up in prayer together" : "Lift your family up in prayer together"}
+        />
       )}
 
       {activePrayers.map((prayer) => (
@@ -552,18 +552,6 @@ const styles = StyleSheet.create({
   answeredText: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 24,
-    gap: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    maxWidth: 240,
-    lineHeight: 18,
   },
   answeredSection: {
     marginTop: 14,

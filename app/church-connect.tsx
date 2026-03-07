@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import ChurchMap from "@/components/ChurchMap";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface Church {
   id: string;
@@ -325,24 +326,13 @@ export default function ChurchConnectScreen() {
           {isLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
           ) : churchList.length === 0 ? (
-            <View style={s.emptyState}>
-              <Ionicons name="business-outline" size={48} color={theme.textMuted} />
-              <Text style={[s.emptyText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                No churches found nearby
-              </Text>
-              <Text style={[s.emptySubtext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Try a different search or expand your radius
-              </Text>
-              <Pressable
-                onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
-                style={[s.directoryBtn, { backgroundColor: theme.accent }]}
-              >
-                <Ionicons name="globe-outline" size={18} color="#fff" />
-                <Text style={[s.directoryBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Search Adventist Directory
-                </Text>
-              </Pressable>
-            </View>
+            <EmptyState
+              icon="business-outline"
+              title="No churches found nearby"
+              description="Try a different search or expand your radius"
+              actionLabel="Search Adventist Directory"
+              onAction={() => Linking.openURL("https://www.adventistdirectory.org")}
+            />
           ) : (
             <FlatList
               data={churchList}
@@ -436,19 +426,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   radiusChipText: { fontSize: 12 },
-  emptyState: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10, paddingBottom: 80 },
-  emptyText: { fontSize: 16 },
-  emptySubtext: { fontSize: 13, textAlign: "center", maxWidth: 260 },
-  directoryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 12,
-  },
-  directoryBtnText: { fontSize: 15, color: "#fff" },
   directoryFooter: {
     flexDirection: "row",
     alignItems: "center",

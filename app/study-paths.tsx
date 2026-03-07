@@ -16,6 +16,7 @@ import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface Track {
   id: string;
@@ -179,12 +180,11 @@ export default function StudyPathsScreen() {
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : tracks.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="trail-sign" size={48} color={theme.textMuted} />
-          <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-            No study paths available yet
-          </Text>
-        </View>
+        <EmptyState
+          icon="trail-sign"
+          title="No study paths available yet"
+          description="Study paths will appear here once they are available. Check back soon!"
+        />
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -357,16 +357,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
   },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 20 },

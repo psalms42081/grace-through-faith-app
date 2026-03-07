@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { track } from "@/lib/analytics";
 import ScreenHeader from "@/components/ScreenHeader";
 
 if (
@@ -740,6 +741,10 @@ export default function ProphecyExplorerScreen() {
   const sectionYPositions = useRef<Record<string, number>>({});
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  useEffect(() => {
+    track("prophecy_explorer_opened");
+  }, []);
 
   const toggleSection = useCallback((id: string) => {
     setExpandedSections((prev) => {

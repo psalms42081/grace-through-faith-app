@@ -71,3 +71,12 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 **Streaming:**
 - **LiveKit Cloud:** Real-time video/audio conferencing via WebRTC.
 - **react-native-webview:** Loads the LiveKit room HTML on native.
+
+**Phase 4 — Launch Readiness:**
+- **First-Run Onboarding (`app/onboarding.tsx`):** 4-screen onboarding flow (Welcome, Study pillars, Daily rhythm, CTA "Begin Your Journey"). Shown only once, stored in AsyncStorage `@grace-through-faith/onboarded`. Skippable.
+- **Today's Path (`components/home/TodaysPath.tsx`):** Daily guidance section on home screen showing actionable items (Read, Pray, Continue Study, Sabbath School, Devotional) with completion indicators from spiritual-rings data. Inserted after greeting in both regular and Sabbath modes.
+- **ContinueCard (`components/home/ContinueCard.tsx`):** Context-aware "continue" card that surfaces the most recent user activity — Bible reading, Sabbath School lesson, or devotional plan — replacing the static `ContinueReadingCard` on the home screen.
+- **Analytics System (`lib/analytics.ts`):** Lightweight event tracking with offline queue (AsyncStorage persistence). Events batched and flushed every 30s or at 10-event threshold. Backend logs with `[Analytics]` prefix via `POST /api/analytics/events`. Tracked events: `onboarding_completed`, `prayer_journal_entry`, `prophecy_explorer_opened`. Privacy: no personal content logged.
+- **Crash Reporting:** `ErrorBoundary` reports crashes to `POST /api/analytics/error` with stack traces. Global `unhandledrejection` handler in `_layout.tsx`. Backend logs with `[CrashReport]` prefix.
+- **Empty State Polish:** Migrated church-connect, PrayerWall, and study-paths inline empty states to shared `EmptyState` component.
+- **Analytics Route (`server/routes/analytics.ts`):** Receives event batches and error reports, logs to console for beta monitoring.

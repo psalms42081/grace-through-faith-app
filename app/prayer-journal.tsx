@@ -20,6 +20,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
+import { track } from "@/lib/analytics";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { PRAYER_JOURNAL_STEPS } from "@/lib/tutorial-steps";
 
@@ -77,6 +78,7 @@ export default function PrayerJournalScreen() {
       });
     },
     onSuccess: () => {
+      track("prayer_journal_entry", { category: newCategory });
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
       setShowAdd(false);

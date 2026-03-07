@@ -22,6 +22,7 @@ import familyDashboardRoutes from "./routes/family-dashboard";
 import formationRoutes from "./routes/formation";
 import greatControversyRoutes from "./routes/great-controversy";
 import sabbathSchoolRoutes from "./routes/sabbath-school";
+import analyticsRoutes from "./routes/analytics";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -69,6 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(formationRoutes);
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);
+  app.use("/api/analytics", analyticsRoutes);
 
   app.get("/api/growth-map", async (req, res) => {
     try {

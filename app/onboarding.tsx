@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { track } from "@/lib/analytics";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -64,10 +65,7 @@ function WelcomePage() {
         </Text>
         <View style={pageStyles.dividerLine} />
         <Text style={[pageStyles.tagline, { fontFamily: "Lora_400Regular_Italic" }]}>
-          "For by grace are ye saved{"\n"}through faith"
-        </Text>
-        <Text style={[pageStyles.taglineRef, { fontFamily: "Inter_500Medium" }]}>
-          Ephesians 2:8
+          A spiritual formation platform{"\n"}designed to help Adventists grow{"\n"}in Scripture, prayer, and Sabbath life.
         </Text>
       </Animated.View>
       <View style={pageStyles.bottomSpacer} />
@@ -76,26 +74,21 @@ function WelcomePage() {
 }
 
 function StudyModelPage() {
-  const layers = [
+  const pillars = [
     {
-      icon: "document-text-outline" as const,
-      title: "Text",
-      desc: "Read Scripture in multiple translations with Strong's numbers",
+      icon: "book-outline" as const,
+      title: "Study Deeply",
+      desc: "Study the Bible deeply with multiple translations and Strong's concordance",
     },
     {
-      icon: "layers-outline" as const,
-      title: "Context",
-      desc: "Historical background, cultural setting, and literary structure",
+      icon: "shield-checkmark-outline" as const,
+      title: "Understand Doctrine",
+      desc: "Understand Adventist doctrine through the 28 Fundamental Beliefs",
     },
     {
-      icon: "people-outline" as const,
-      title: "Historic Voices",
-      desc: "Insights from Church fathers, reformers, and theologians",
-    },
-    {
-      icon: "heart-outline" as const,
-      title: "Application",
-      desc: "Devotional plans and personal reflection for daily life",
+      icon: "trending-up-outline" as const,
+      title: "Grow Daily",
+      desc: "Grow spiritually each day with guided devotionals and study paths",
     },
   ];
 
@@ -104,28 +97,28 @@ function StudyModelPage() {
       <View style={pageStyles.container}>
         <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
           <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-            WHAT MAKES US DIFFERENT
+            YOUR SPIRITUAL GROWTH
           </Text>
           <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-            The 4-Layer{"\n"}Study Model
+            Study. Understand.{"\n"}Grow.
           </Text>
         </Animated.View>
         <View style={pageStyles.layersContainer}>
-          {layers.map((layer, i) => (
+          {pillars.map((pillar, i) => (
             <Animated.View
-              key={layer.title}
+              key={pillar.title}
               entering={FadeIn.delay(400 + i * 150).duration(600)}
               style={pageStyles.layerCard}
             >
               <View style={pageStyles.layerIconWrap}>
-                <Ionicons name={layer.icon} size={24} color={GOLD} />
+                <Ionicons name={pillar.icon} size={24} color={GOLD} />
               </View>
               <View style={pageStyles.layerTextWrap}>
                 <Text style={[pageStyles.layerTitle, { fontFamily: "Lora_600SemiBold" }]}>
-                  {layer.title}
+                  {pillar.title}
                 </Text>
                 <Text style={[pageStyles.layerDesc, { fontFamily: "Inter_400Regular" }]}>
-                  {layer.desc}
+                  {pillar.desc}
                 </Text>
               </View>
               <View style={pageStyles.layerNumber}>
@@ -142,14 +135,12 @@ function StudyModelPage() {
   );
 }
 
-function FeaturesPage() {
-  const features = [
-    { icon: "headset-outline" as const, label: "Audio Bible", sub: "Listen with lifelike AI voices" },
-    { icon: "cloud-offline-outline" as const, label: "Offline Reading", sub: "Full text always available" },
-    { icon: "language-outline" as const, label: "Strong's Concordance", sub: "Greek & Hebrew word study" },
-    { icon: "flame-outline" as const, label: "Devotional Plans", sub: "Guided daily reading" },
-    { icon: "map-outline" as const, label: "Maps & Timeline", sub: "Biblical geography & history" },
-    { icon: "color-palette-outline" as const, label: "Highlights & Notes", sub: "Mark and organize passages" },
+function ExperiencePage() {
+  const experiences = [
+    { icon: "sunny-outline" as const, label: "Sabbath Experience", sub: "Embrace the rhythm of rest and renewal each week" },
+    { icon: "journal-outline" as const, label: "Prayer Journaling", sub: "Record your prayers and watch God answer" },
+    { icon: "analytics-outline" as const, label: "Spiritual Growth Tracking", sub: "Visualize your journey with rings and streaks" },
+    { icon: "people-outline" as const, label: "Community", sub: "Connect with your church and study groups" },
   ];
 
   return (
@@ -157,14 +148,14 @@ function FeaturesPage() {
       <View style={pageStyles.container}>
         <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
           <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-            POWERFUL TOOLS
+            YOUR DAILY RHYTHM
           </Text>
           <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-            Everything You{"\n"}Need to Study
+            Experience.{"\n"}Reflect. Grow.
           </Text>
         </Animated.View>
         <View style={pageStyles.featuresGrid}>
-          {features.map((f, i) => (
+          {experiences.map((f, i) => (
             <Animated.View
               key={f.label}
               entering={FadeIn.delay(350 + i * 100).duration(500)}
@@ -200,14 +191,14 @@ function GetStartedPage({ onGetStarted }: { onGetStarted: () => void }) {
           Begin Your{"\n"}Journey
         </Text>
         <Text style={[pageStyles.startDesc, { fontFamily: "Inter_400Regular" }]}>
-          A study Bible designed for every believer seeking deeper understanding of God's Word.
+          Your journey of faith begins here. Study Scripture, deepen your prayer life, and grow in community.
         </Text>
         <Pressable
           style={({ pressed }) => [pageStyles.startBtn, pressed && { opacity: 0.85 }]}
           onPress={onGetStarted}
         >
           <Text style={[pageStyles.startBtnText, { fontFamily: "Inter_700Bold" }]}>
-            Get Started
+            Begin Your Journey
           </Text>
           <Ionicons name="arrow-forward" size={20} color={NAVY} />
         </Pressable>
@@ -259,11 +250,13 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const handleGetStarted = useCallback(async () => {
+    track("onboarding_completed", { method: "button" });
     await AsyncStorage.setItem(ONBOARDING_KEY, "true");
     router.replace("/(tabs)");
   }, []);
 
   const handleSkip = useCallback(async () => {
+    track("onboarding_completed", { method: "skip" });
     await AsyncStorage.setItem(ONBOARDING_KEY, "true");
     router.replace("/(tabs)");
   }, []);
@@ -283,7 +276,7 @@ export default function OnboardingScreen() {
           case "study-model":
             return <StudyModelPage />;
           case "features":
-            return <FeaturesPage />;
+            return <ExperiencePage />;
           case "get-started":
             return <GetStartedPage onGetStarted={handleGetStarted} />;
           default:

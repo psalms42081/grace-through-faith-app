@@ -18,6 +18,7 @@ import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import MiniPlayer from "@/components/MiniPlayer";
+import { initAnalytics, reportError } from "@/lib/analytics";
 import {
   useFonts,
   Lora_400Regular,
@@ -36,6 +37,18 @@ import {
 const ONBOARDING_KEY = "@grace-through-faith/onboarded";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+if (typeof globalThis !== "undefined" && !globalThis.__rejectionHandlerSet) {
+  globalThis.__rejectionHandlerSet = true;
+  const handler = (event: any) => {
+    const reason = event?.reason || event;
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    reportError(`Unhandled rejection: ${msg}`);
+  };
+  if (typeof globalThis.addEventListener === "function") {
+    globalThis.addEventListener("unhandledrejection", handler);
+  }
+}
 
 function RootLayoutNav() {
   const { theme, isDark } = useTheme();
@@ -111,6 +124,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
+    initAnalytics();
   }, []);
 
   useEffect(() => {
