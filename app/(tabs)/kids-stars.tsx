@@ -395,6 +395,7 @@ export default function KidsStarsScreen() {
 
   const { data: allBadges } = useQuery<Badge[]>({
     queryKey: ["/api/kids/badges"],
+    staleTime: 0,
   });
 
   const { data: earnedBadges } = useQuery<EarnedBadge[]>({
@@ -415,22 +416,24 @@ export default function KidsStarsScreen() {
   const memorizedCount = progress?.filter(p => p.memoryVerseMemorized).length ?? 0;
   const seedPoints = profileStats?.totalPoints ?? 0;
   const totalStars = completedCount + quizCount + (memorizedCount * 2);
-  const earnedIds = new Set(earnedBadges?.map(b => b.id) ?? []);
+  const earnedNames = useMemo(() => new Set(earnedBadges?.map(b => b.name) ?? []), [earnedBadges]);
+  const earnedIds = useMemo(() => new Set(earnedBadges?.map(b => b.id) ?? []), [earnedBadges]);
 
   const dedupedBadges = useMemo(() => {
     if (!allBadges) return [];
     const seen = new Set<string>();
-    const unique = allBadges.filter(b => {
-      if (seen.has(b.id)) return false;
-      seen.add(b.id);
-      return true;
-    });
-    return unique.sort((a, b) => {
-      const aEarned = earnedIds.has(a.id) ? 0 : 1;
-      const bEarned = earnedIds.has(b.id) ? 0 : 1;
-      return aEarned - bEarned;
-    });
-  }, [allBadges, earnedIds]);
+    return allBadges
+      .filter(b => {
+        if (seen.has(b.name)) return false;
+        seen.add(b.name);
+        return true;
+      })
+      .sort((a, b) => {
+        const aEarned = (earnedIds.has(a.id) || earnedNames.has(a.name)) ? 0 : 1;
+        const bEarned = (earnedIds.has(b.id) || earnedNames.has(b.name)) ? 0 : 1;
+        return aEarned - bEarned;
+      });
+  }, [allBadges, earnedIds, earnedNames]);
 
   const BADGE_ICONS: Record<string, string> = {
     "footsteps": "footsteps",
@@ -550,7 +553,7 @@ export default function KidsStarsScreen() {
         <AnimatedSection index={4} delayMultiplier={100}>
           <View style={styles.badgeGrid}>
             {dedupedBadges.map((badge) => {
-              const earned = earnedIds.has(badge.id);
+              const earned = earnedIds.has(badge.id) || earnedNames.has(badge.name);
               return (
                 <AnimatedBadgeItem
                   key={badge.id}
