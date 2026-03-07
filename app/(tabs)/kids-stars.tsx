@@ -56,13 +56,7 @@ interface StreakInfo {
   lastActivityDate: string | null;
 }
 
-function AnimatedSection({ children, index }: { children: React.ReactNode; index: number }) {
-  return (
-    <Animated.View entering={FadeInDown.delay(index * 100).duration(500).springify()}>
-      {children}
-    </Animated.View>
-  );
-}
+import AnimatedSection from "@/components/AnimatedSection";
 
 function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any }) {
   const glowOpacity = useSharedValue(0.6);
@@ -272,11 +266,11 @@ export default function KidsStarsScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad + 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <AnimatedSection index={0}>
+        <AnimatedSection index={0} delayMultiplier={100}>
           <PulsingStarCard totalStars={totalStars} theme={theme} />
         </AnimatedSection>
 
-        <AnimatedSection index={1}>
+        <AnimatedSection index={1} delayMultiplier={100}>
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <View style={[styles.statIconCircle, { backgroundColor: theme.accent + "18" }]}>
@@ -303,7 +297,7 @@ export default function KidsStarsScreen() {
         </AnimatedSection>
 
         {streak && (
-          <AnimatedSection index={2}>
+          <AnimatedSection index={2} delayMultiplier={100}>
             <View style={[styles.streakCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <View style={styles.streakHeader}>
                 <AnimatedFlameIcon />
@@ -334,13 +328,13 @@ export default function KidsStarsScreen() {
           </AnimatedSection>
         )}
 
-        <AnimatedSection index={3}>
+        <AnimatedSection index={3} delayMultiplier={100}>
           <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Badges
           </Text>
         </AnimatedSection>
 
-        <AnimatedSection index={4}>
+        <AnimatedSection index={4} delayMultiplier={100}>
           <View style={styles.badgeGrid}>
             {allBadges?.map((badge) => {
               const earned = earnedIds.has(badge.id);
@@ -357,7 +351,7 @@ export default function KidsStarsScreen() {
           </View>
         </AnimatedSection>
 
-        <AnimatedSection index={5}>
+        <AnimatedSection index={5} delayMultiplier={100}>
           <Pressable
             onPress={handleExitKidsMode}
             style={styles.exitBtn}

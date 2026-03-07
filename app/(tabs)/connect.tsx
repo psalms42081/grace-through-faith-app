@@ -10,22 +10,13 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { CONNECT_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 
-function SectionHeader({ title, theme }: { title: string; theme: typeof Colors.dark }) {
-  return (
-    <View style={st.sectionHeader}>
-      <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-        {title}
-      </Text>
-    </View>
-  );
-}
+import SectionHeaderShared from "@/components/SectionHeader";
 
 function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
   return <View style={[st.divider, { backgroundColor: theme.divider }]} />;
@@ -53,7 +44,7 @@ export default function ConnectScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <SectionHeader title={t("connect.findAChurch")} theme={theme} />
+        <SectionHeaderShared title={t("connect.findAChurch")} color={theme.text} />
 
         <Pressable
           onPress={() => router.push("/church-connect" as any)}
@@ -76,7 +67,7 @@ export default function ConnectScreen() {
 
         <SectionDivider theme={theme} />
 
-        <SectionHeader title="Watch" theme={theme} />
+        <SectionHeaderShared title="Watch & Listen" color={theme.text} />
 
         <Pressable
           onPress={() => router.push("/broadcasts" as any)}
@@ -112,9 +103,28 @@ export default function ConnectScreen() {
           </View>
         </View>
 
+        <Pressable
+          onPress={() => router.push("/music" as any)}
+          style={({ pressed }) => [
+            st.actionCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[st.actionIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="radio" size={24} color="#C9933A" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.actionTitle, { color: theme.text }]}>Christian Radio</Text>
+            <Text style={[st.actionSub, { color: theme.textMuted }]}>
+              Live Adventist & gospel streams
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
         <SectionDivider theme={theme} />
 
-        <SectionHeader title={t("connect.community")} theme={theme} />
+        <SectionHeaderShared title={t("connect.community")} color={theme.text} />
 
         <Pressable
           onPress={() => router.push("/groups" as any)}
@@ -137,7 +147,7 @@ export default function ConnectScreen() {
 
         <SectionDivider theme={theme} />
 
-        <SectionHeader title={t("connect.family")} theme={theme} />
+        <SectionHeaderShared title={t("connect.family")} color={theme.text} />
 
         <Pressable
           onPress={() => router.push("/(tabs)/family" as any)}
@@ -171,10 +181,6 @@ const st = StyleSheet.create({
   title: { fontSize: 24 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
-  sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: { fontSize: 22 },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginVertical: 24,

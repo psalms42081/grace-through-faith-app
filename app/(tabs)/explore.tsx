@@ -337,34 +337,6 @@ export default function StudyScreen() {
           ))}
         </View>
 
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Adventist Resources
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={() => router.push("/music")}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1, marginBottom: 8 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="radio" size={22} color="#C9933A" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Christian Radio
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Live Adventist & gospel streams
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
       </ScrollView>
     </View>
   );
