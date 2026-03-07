@@ -16,6 +16,8 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
       <Pressable
         onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } })}
         style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Open 4-Layer Study"
       >
         <LinearGradient
           colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
@@ -34,6 +36,8 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
       <Pressable
         onPress={() => router.push("/prayer-journal")}
         style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Open Prayer Journal"
       >
         <LinearGradient
           colors={isDark ? ["#1A1610", "#15120D"] : ["#2E3D1F", "#1B2A12"]}
@@ -59,7 +63,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   guidedCard: {
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 20,
     gap: 8,
   },

@@ -80,10 +80,12 @@ export default function TodaysPath({
         <Pressable
           key={item.label}
           onPress={item.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
           style={({ pressed }) => [
             s.row,
             i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border },
-            pressed && { opacity: 0.7 },
+            pressed && { opacity: 0.85 },
           ]}
         >
           <View style={[s.iconWrap, { backgroundColor: item.completed ? theme.accent + "20" : (isDark ? "#1A1A2E" : "#F0EBE0") }]}>
@@ -114,9 +116,9 @@ export default function TodaysPath({
 
 const s = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   header: {
     flexDirection: "row",

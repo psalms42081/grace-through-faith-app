@@ -26,7 +26,9 @@ export default function DevotionalCard({ hasActivePlan, progress, total, enrollm
           router.push("/devotionals");
         }
       }}
-      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+      accessibilityRole="button"
+      accessibilityLabel={hasActivePlan ? "Continue your devotional plan" : "Browse devotional plans"}
     >
       <LinearGradient
         colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
@@ -34,7 +36,7 @@ export default function DevotionalCard({ hasActivePlan, progress, total, enrollm
       >
         <View style={styles.devotionalLeft}>
           <View style={[styles.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
-            <Ionicons name="flame" size={22} color={theme.accent} />
+            <Ionicons name="flame" size={20} color={theme.accent} />
           </View>
           <View style={styles.devotionalInfo}>
             <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 20,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   devotionalLeft: {
     flexDirection: "row",

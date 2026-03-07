@@ -89,9 +89,11 @@ export default function ContinueCard({
       onPress={onPress}
       style={({ pressed }) => [
         s.card,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.9 : 1 },
+        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
       ]}
       testID="home-continue-card"
+      accessibilityRole="button"
+      accessibilityLabel={"Continue " + title}
     >
       <View style={s.top}>
         <LinearGradient

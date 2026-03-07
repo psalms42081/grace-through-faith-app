@@ -47,16 +47,16 @@ export default function VerseOfTheDay({ verse, bgImage }: VerseOfTheDayProps) {
 
 const styles = StyleSheet.create({
   verseCardWrap: {
-    borderRadius: 22,
+    borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   verseImageBg: {
     width: "100%",
     minHeight: 280,
   },
   verseImageStyle: {
-    borderRadius: 22,
+    borderRadius: 20,
   },
   verseOverlay: {
     flex: 1,

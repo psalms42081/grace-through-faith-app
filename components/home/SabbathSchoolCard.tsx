@@ -21,17 +21,19 @@ export default function SabbathSchoolCard({ ssData, theme, isDark }: SabbathScho
     <Pressable
       onPress={() => router.push("/sabbath-school" as any)}
       style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+      accessibilityRole="button"
+      accessibilityLabel="Open this week's Sabbath School lesson"
     >
       <LinearGradient
         colors={isDark ? ["#0D1A2E", "#0A1322"] : ["#1A2E46", "#152640"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.guidedCard, { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }]}
+        style={styles.guidedCard}
       >
         <View style={[styles.guidedIconWrap, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
           <Ionicons name="book" size={20} color="#3B82F6" />
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={styles.lessonInfo}>
           <Text style={[styles.guidedTitle, { fontFamily: "Inter_600SemiBold", textAlign: "left" }]}>
             This Week's Lesson
           </Text>
@@ -39,8 +41,8 @@ export default function SabbathSchoolCard({ ssData, theme, isDark }: SabbathScho
             {ssData.currentLesson.title}
           </Text>
         </View>
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#3B82F6" }}>
+        <View style={styles.progressWrap}>
+          <Text style={styles.progressText}>
             {ssData.completedDays || 0}/7
           </Text>
         </View>
@@ -53,8 +55,11 @@ const styles = StyleSheet.create({
   guidedCard: {
     borderRadius: 20,
     padding: 18,
-    gap: 8,
+    gap: 14,
     marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
   },
   guidedIconWrap: {
     width: 40,
@@ -67,4 +72,7 @@ const styles = StyleSheet.create({
   },
   guidedTitle: { color: "#fff", fontSize: 15 },
   guidedSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 17 },
+  lessonInfo: { flex: 1 },
+  progressWrap: { alignItems: "center" },
+  progressText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#3B82F6" },
 });

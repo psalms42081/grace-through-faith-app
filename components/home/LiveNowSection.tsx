@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" },
   liveLabel: { color: "#FF3B30", fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
-  streamCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, padding: 14, gap: 12, marginBottom: 8, borderWidth: 1, borderColor: "#FF3B3030" },
+  streamCard: { flexDirection: "row", alignItems: "center", borderRadius: 20, padding: 14, gap: 12, marginBottom: 8, borderWidth: 1, borderColor: "#FF3B3030" },
   streamIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FF3B3015", alignItems: "center", justifyContent: "center" },
   streamInfo: { flex: 1 },
   streamTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
