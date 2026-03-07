@@ -832,66 +832,31 @@ router.get("/api/streams/:id/embed", async (req, res) => {
 
     const roomName = session.roomUrl.replace("https://meet.jit.si/", "");
 
-    const html = `<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<style>*{margin:0;padding:0;box-sizing:border-box}html,body,#meet{width:100%;height:100%;background:#000;overflow:hidden}</style>
-</head><body>
-<div id="meet"></div>
-<script src="https://meet.jit.si/external_api.js"></script>
-<script>
-var api = new JitsiMeetExternalAPI("meet.jit.si", {
-  roomName: "${roomName}",
-  parentNode: document.getElementById("meet"),
-  width: "100%",
-  height: "100%",
-  userInfo: { displayName: decodeURIComponent("${encodeURIComponent(displayName)}") },
-  configOverwrite: {
-    prejoinPageEnabled: false,
-    prejoinConfig: { enabled: false },
-    startWithAudioMuted: true,
-    startWithVideoMuted: false,
-    disableDeepLinking: true,
-    enableClosePage: false,
-    disableThirdPartyRequests: true,
-    enableInsecureRoomNameWarning: false,
-    hideConferenceSubject: true,
-    disableProfile: true,
-    enableLobbyChat: false,
-    requireDisplayName: false,
-    toolbarButtons: [
-      "microphone","camera","desktop","chat","raisehand",
-      "participants-pane","toggle-camera","fullscreen","hangup"
-    ]
-  },
-  interfaceConfigOverwrite: {
-    SHOW_JITSI_WATERMARK: false,
-    SHOW_WATERMARK_FOR_GUESTS: false,
-    SHOW_BRAND_WATERMARK: false,
-    SHOW_POWERED_BY: false,
-    MOBILE_APP_PROMO: false,
-    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-    HIDE_DEEP_LINKING_LOGO: true,
-    HIDE_INVITE_MORE_HEADER: true,
-    DEFAULT_BACKGROUND: "#050507"
-  }
-});
-api.addEventListener("readyToClose", function() {
-  if (window.ReactNativeWebView) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "call_ended" }));
-  }
-});
-api.addEventListener("videoConferenceLeft", function() {
-  if (window.ReactNativeWebView) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "call_ended" }));
-  }
-});
-</script>
-</body></html>`;
+    const configHash = [
+      "config.prejoinConfig.enabled=false",
+      "config.prejoinPageEnabled=false",
+      "config.startWithAudioMuted=true",
+      "config.disableDeepLinking=true",
+      "config.deeplinking.disabled=true",
+      "config.enableClosePage=false",
+      "config.disableThirdPartyRequests=true",
+      "config.enableInsecureRoomNameWarning=false",
+      "config.hideConferenceSubject=true",
+      "config.disableProfile=true",
+      "config.enableLobbyChat=false",
+      "config.requireDisplayName=false",
+      `userInfo.displayName=${encodeURIComponent(displayName)}`,
+      "interfaceConfig.SHOW_JITSI_WATERMARK=false",
+      "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
+      "interfaceConfig.SHOW_BRAND_WATERMARK=false",
+      "interfaceConfig.SHOW_POWERED_BY=false",
+      "interfaceConfig.MOBILE_APP_PROMO=false",
+      "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
+      "interfaceConfig.HIDE_DEEP_LINKING_LOGO=true",
+    ].join("&");
+    const jitsiDirectUrl = `https://meet.jit.si/${roomName}#${configHash}`;
 
-    res.setHeader("Content-Type", "text/html");
-    return res.send(html);
+    return res.json({ embedUrl: jitsiDirectUrl, roomName });
   } catch (err) {
     console.error("Stream embed error:", err);
     return res.status(500).send("Error loading stream");

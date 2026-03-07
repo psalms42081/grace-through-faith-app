@@ -154,7 +154,129 @@ export default function StreamScreen() {
   }
 
   const displayName = user?.displayName || session.hostDisplayName || "Guest";
-  const embedUrl = `${getApiUrl()}/api/streams/${id}/embed?displayName=${encodeURIComponent(displayName)}`;
+  const configParts = [
+    "config.prejoinConfig.enabled=false",
+    "config.prejoinPageEnabled=false",
+    "config.startWithAudioMuted=true",
+    "config.disableDeepLinking=true",
+    "config.deeplinking.disabled=true",
+    "config.enableClosePage=false",
+    "config.disableThirdPartyRequests=true",
+    "config.enableInsecureRoomNameWarning=false",
+    "config.hideConferenceSubject=true",
+    "config.disableProfile=true",
+    "config.enableLobbyChat=false",
+    "config.requireDisplayName=false",
+    `userInfo.displayName=${encodeURIComponent(displayName)}`,
+    "interfaceConfig.SHOW_JITSI_WATERMARK=false",
+    "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
+    "interfaceConfig.SHOW_BRAND_WATERMARK=false",
+    "interfaceConfig.SHOW_POWERED_BY=false",
+    "interfaceConfig.MOBILE_APP_PROMO=false",
+    "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
+  ];
+  const roomSlug = session.roomUrl.split("/").pop() || "";
+  const jitsiUrl = `${session.roomUrl}#${configParts.join("&")}`;
+
+  const preloadJS = `
+    (function() {
+      if (window._gtfPatched) return;
+      window._gtfPatched = true;
+
+      var origOpen = window.open;
+      window.open = function(url) {
+        if (!url) return origOpen ? origOpen.apply(this, arguments) : null;
+        var s = String(url);
+        if (s.indexOf('itms-apps:') > -1 || s.indexOf('market:') > -1 ||
+            s.indexOf('play.google.com') > -1 || s.indexOf('apps.apple.com') > -1 ||
+            s.indexOf('intent:') > -1 || s.indexOf('org.jitsi.meet:') > -1) {
+          return null;
+        }
+        return origOpen ? origOpen.apply(this, arguments) : null;
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.userAgent) {
+        try {
+          Object.defineProperty(navigator, 'userAgent', {
+            get: function() {
+              return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            },
+            configurable: true
+          });
+        } catch(e) {}
+      }
+    })();
+    true;
+  `;
+
+  const postLoadJS = `
+    (function() {
+      if (window._gtfPostSetup) return;
+      window._gtfPostSetup = true;
+      var roomSlug = '${roomSlug}';
+      var ended = false;
+
+      function notifyEnd() {
+        if (ended) return;
+        ended = true;
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'call_ended' }));
+        }
+      }
+
+      function clickJoinInBrowser() {
+        var links = document.querySelectorAll('a, button, [role="button"]');
+        for (var i = 0; i < links.length; i++) {
+          var t = (links[i].textContent || '').trim().toLowerCase();
+          if (t === 'join in browser' || t === 'launch in web' || t === 'join meeting') {
+            links[i].click();
+            return true;
+          }
+        }
+        return false;
+      }
+
+      var deepCheckCount = 0;
+      var deepCheckTimer = setInterval(function() {
+        deepCheckCount++;
+        var text = document.body ? (document.body.innerText || '') : '';
+        if (text.indexOf('How do you want to join') > -1 ||
+            text.indexOf('Download from App Store') > -1 ||
+            text.indexOf('Download from Google Play') > -1) {
+          if (clickJoinInBrowser()) clearInterval(deepCheckTimer);
+        }
+        if (deepCheckCount > 20) clearInterval(deepCheckTimer);
+      }, 500);
+
+      var origPush = history.pushState;
+      var origReplace = history.replaceState;
+      function checkLeft() {
+        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) notifyEnd();
+      }
+      history.pushState = function() { origPush.apply(this, arguments); setTimeout(checkLeft, 200); };
+      history.replaceState = function() { origReplace.apply(this, arguments); setTimeout(checkLeft, 200); };
+      window.addEventListener('popstate', checkLeft);
+
+      setInterval(function() {
+        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) notifyEnd();
+        var text = document.body ? (document.body.innerText || '') : '';
+        if (text.indexOf('meeting has ended') > -1 ||
+            text.indexOf('You left the meeting') > -1 ||
+            text.indexOf('okie') > -1) notifyEnd();
+      }, 2000);
+
+      new MutationObserver(function() {
+        var btns = document.querySelectorAll('[aria-label="Leave"],[aria-label="Hang up"]');
+        btns.forEach(function(b) {
+          if (!b._gtf) {
+            b._gtf = true;
+            b.addEventListener('click', function() { setTimeout(notifyEnd, 800); });
+          }
+        });
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    })();
+    true;
+  `;
 
   const handleWebViewMessage = useCallback((event: any) => {
     try {
@@ -195,7 +317,7 @@ export default function StreamScreen() {
 
       {Platform.OS === "web" ? (
         <iframe
-          src={embedUrl}
+          src={jitsiUrl}
           style={{
             flex: 1,
             width: "100%",
@@ -215,12 +337,15 @@ export default function StreamScreen() {
             </View>
           )}
           <WebView
-            source={{ uri: embedUrl }}
+            source={{ uri: jitsiUrl }}
             style={{ flex: 1 }}
             javaScriptEnabled
             domStorageEnabled
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
+            mediaCapturePermissionGrantType="grant"
+            injectedJavaScriptBeforeContentLoaded={preloadJS}
+            injectedJavaScript={postLoadJS}
             onLoadEnd={() => setWebViewLoading(false)}
             onMessage={handleWebViewMessage}
             onShouldStartLoadWithRequest={(request) => {
