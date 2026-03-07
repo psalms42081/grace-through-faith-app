@@ -139,7 +139,7 @@ function ExperiencePage() {
   const experiences = [
     { icon: "sunny-outline" as const, label: "Sabbath Experience", sub: "Embrace the rhythm of rest and renewal each week" },
     { icon: "journal-outline" as const, label: "Prayer Journaling", sub: "Record your prayers and see God's faithfulness over time" },
-    { icon: "analytics-outline" as const, label: "Spiritual Growth Tracking", sub: "Track your growth with daily rings and reading streaks" },
+    { icon: "analytics-outline" as const, label: "Growth Tracking", sub: "Track your growth with daily rings and reading streaks" },
     { icon: "people-outline" as const, label: "Community", sub: "Connect with your church and study groups" },
   ];
 

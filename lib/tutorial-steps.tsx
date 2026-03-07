@@ -102,10 +102,10 @@ export const HOME_TUTORIAL_STEPS: TutorialStep[] = [
         ]}
       />
     ),
-    label: "POWERFUL TOOLS",
+    label: "STUDY TOOLS",
     title: "Powerful Study\nTools",
     description:
-      "Quick access to the 4-Layer Study, Prayer Journal, Devotionals, and more. Each card opens a powerful tool.",
+      "Quick access to the 4-Layer Study, Prayer Journal, Devotionals, and more — right from your home screen.",
   },
   {
     illustration: <IconBadge name="flame" size={46} />,
@@ -122,7 +122,7 @@ export const FOUR_LAYER_STUDY_STEPS: TutorialStep[] = [
     label: "SIGNATURE METHOD",
     title: "The 4-Layer\nStudy Model",
     description:
-      "This isn't ordinary Bible reading. The 4-Layer Study guides you through a progressive, scholarly method — from the original text all the way to personal transformation.",
+      "More than ordinary Bible reading. The 4-Layer Study guides you through a progressive, scholarly method — from the original text all the way to personal transformation.",
   },
   {
     illustration: <IconBadge name="document-text" size={46} />,
@@ -233,17 +233,17 @@ export const CONNECT_TUTORIAL_STEPS: TutorialStep[] = [
 export const EXPLORE_TUTORIAL_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="library" size={46} />,
-    label: "FORMATION HUB",
-    title: "Your Formation\nLibrary",
+    label: "YOUR LIBRARY",
+    title: "Your Study\nLibrary",
     description:
-      "Your hub for deeper learning. Browse study paths, Adventist formation resources, and guided growth tracks.",
+      "Your hub for deeper learning. Browse Adventist resources, study paths, and guided growth tracks.",
   },
   {
     illustration: <IconBadge name="map" size={46} />,
-    label: "GROWTH JOURNEYS",
-    title: "Growth Journeys",
+    label: "GUIDED PATHS",
+    title: "Guided Study\nPaths",
     description:
-      "Follow structured pathways designed for spiritual growth. Each path builds progressively on the one before.",
+      "Follow structured study paths designed for spiritual growth. Each path builds progressively on the one before.",
   },
   {
     illustration: <IconBadge name="sparkles" size={46} />,
