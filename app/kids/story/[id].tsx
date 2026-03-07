@@ -1751,6 +1751,7 @@ export default function SceneStoryScreen() {
   const [narratorVoice, setNarratorVoice] = useState<NarratorVoice>("george");
   const [showVoicePicker, setShowVoicePicker] = useState(false);
   const autoPlayRef = useRef(false);
+  const narrationActiveRef = useRef(false);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const narrationPlayerRef = useRef<AudioPlayer | null>(null);
   const narrationAbortRef = useRef<AbortController | null>(null);
@@ -1802,6 +1803,7 @@ export default function SceneStoryScreen() {
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       autoPlayRef.current = false;
+      narrationActiveRef.current = false;
       cleanupAudio();
     };
   }, [id]);
@@ -1930,18 +1932,28 @@ export default function SceneStoryScreen() {
       narrationPlayerRef.current = player;
       console.log("[Kids TTS] Player created, setting up listener...");
 
-      const avgWordDuration = isLittleLambs ? 380 : 300;
-      let wordIdx = 0;
-      wordTimerRef.current = setInterval(() => {
-        wordIdx++;
-        if (wordIdx >= words.length) {
-          if (wordTimerRef.current) clearInterval(wordTimerRef.current);
-          return;
-        }
-        setCurrentWordIndex(wordIdx);
-      }, avgWordDuration);
+      let wordTimerStarted = false;
+      const startWordTimer = (durationMs?: number) => {
+        if (wordTimerStarted) return;
+        wordTimerStarted = true;
+        const avgWordDuration = durationMs && durationMs > 0
+          ? Math.max(300, durationMs / Math.max(words.length, 1))
+          : (isLittleLambs ? 480 : 400);
+        let wordIdx = 0;
+        wordTimerRef.current = setInterval(() => {
+          wordIdx++;
+          if (wordIdx >= words.length) {
+            if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+            return;
+          }
+          setCurrentWordIndex(wordIdx);
+        }, avgWordDuration);
+      };
 
       const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
+        if (status.playing && !wordTimerStarted && status.duration && status.duration > 0) {
+          startWordTimer(status.duration * 1000);
+        }
         if (status.didJustFinish) {
           console.log("[Kids TTS] Audio finished playing");
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
@@ -1956,13 +1968,19 @@ export default function SceneStoryScreen() {
       });
       narrationListenerRef.current = statusSub;
 
+      setTimeout(() => {
+        if (!wordTimerStarted && !abortCtrl.signal.aborted) {
+          startWordTimer();
+        }
+      }, 600);
+
       console.log("[Kids TTS] Calling player.play()...");
       player.play();
       console.log("[Kids TTS] player.play() called successfully");
     } catch (err: any) {
       if (abortCtrl.signal.aborted) return;
       console.log("[Kids TTS] ElevenLabs failed, falling back to device voice:", err.message);
-      const avgWordDuration = isLittleLambs ? 380 : 300;
+      const avgWordDuration = isLittleLambs ? 480 : 400;
       let wordIdx = 0;
       wordTimerRef.current = setInterval(() => {
         wordIdx++;
@@ -2015,9 +2033,11 @@ export default function SceneStoryScreen() {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       setAutoPlayMode(false);
       autoPlayRef.current = false;
+      narrationActiveRef.current = false;
       return;
     }
 
+    narrationActiveRef.current = true;
     startNarration(currentScene);
   }, [currentScene, scenes, isSpeaking, startNarration, stopNarrationAudio]);
 
@@ -2030,11 +2050,13 @@ export default function SceneStoryScreen() {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       setAutoPlayMode(false);
       autoPlayRef.current = false;
+      narrationActiveRef.current = false;
       return;
     }
 
     setAutoPlayMode(true);
     autoPlayRef.current = true;
+    narrationActiveRef.current = true;
     startNarration(currentScene);
   }, [autoPlayMode, currentScene, startNarration, stopNarrationAudio]);
 
@@ -2069,8 +2091,14 @@ export default function SceneStoryScreen() {
       setIsSpeaking(false);
       setCurrentWordIndex(0);
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+      prevSceneRef.current = idx;
       setCurrentScene(idx);
       flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+      if (narrationActiveRef.current) {
+        setTimeout(() => {
+          startNarrationRef.current(idx);
+        }, 500);
+      }
     },
     [scenes.length, stopNarrationAudio]
   );
@@ -2137,11 +2165,19 @@ export default function SceneStoryScreen() {
     completeMutation.mutate();
   }, []);
 
+  const prevSceneRef = useRef(0);
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       const idx = viewableItems[0].index;
       if (typeof idx === "number") {
+        const changed = prevSceneRef.current !== idx;
+        prevSceneRef.current = idx;
         setCurrentScene(idx);
+        if (changed && narrationActiveRef.current && !autoPlayRef.current) {
+          setTimeout(() => {
+            startNarrationRef.current(idx);
+          }, 400);
+        }
       }
     }
   }).current;

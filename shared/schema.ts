@@ -680,8 +680,7 @@ export const kidsProgress = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
-      .notNull()
-      .references(() => users.id),
+      .notNull(),
     storyId: varchar("story_id")
       .notNull()
       .references(() => kidsStories.id),
@@ -777,8 +776,7 @@ export const kidsUserBadges = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
-      .notNull()
-      .references(() => users.id),
+      .notNull(),
     badgeId: varchar("badge_id")
       .notNull()
       .references(() => kidsBadges.id),
@@ -797,8 +795,7 @@ export const kidsStreaks = pgTable("kids_streak", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   userId: varchar("user_id")
-    .notNull()
-    .references(() => users.id),
+    .notNull(),
   currentStreak: integer("current_streak").default(0),
   longestStreak: integer("longest_streak").default(0),
   lastActivityDate: text("last_activity_date"),
