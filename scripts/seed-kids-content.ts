@@ -1045,8 +1045,13 @@ async function seed() {
     },
   ];
 
-  await db.insert(kidsBadges).values(badgeData);
-  console.log(`${badgeData.length} badges created.`);
+  const existingBadges = await db.select({ name: kidsBadges.name }).from(kidsBadges);
+  const existingNames = new Set(existingBadges.map(b => b.name));
+  const newBadges = badgeData.filter(b => !existingNames.has(b.name));
+  if (newBadges.length > 0) {
+    await db.insert(kidsBadges).values(newBadges);
+  }
+  console.log(`${newBadges.length} new badges created (${existingBadges.length} already existed).`);
 
   console.log("Kids Club seed complete!");
   console.log(`  Collections: 6`);

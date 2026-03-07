@@ -136,6 +136,78 @@ router.get("/api/kids/stories/:id/quiz", async (req, res) => {
   }
 });
 
+async function checkAndAwardBadges(userId: string) {
+  try {
+    const allBadges = await db.select().from(kidsBadges);
+    const earned = await db.select({ badgeId: kidsUserBadges.badgeId }).from(kidsUserBadges).where(eq(kidsUserBadges.userId, userId));
+    const earnedSet = new Set(earned.map(e => e.badgeId));
+
+    const completedStories = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(kidsProgress)
+      .where(and(eq(kidsProgress.userId, userId), eq(kidsProgress.completed, true)));
+    const storyCount = completedStories[0]?.count ?? 0;
+
+    const quizzes = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(kidsProgress)
+      .where(and(eq(kidsProgress.userId, userId), sql`${kidsProgress.quizScore} = 100`));
+    const perfectQuizCount = quizzes[0]?.count ?? 0;
+
+    const verses = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(kidsProgress)
+      .where(and(eq(kidsProgress.userId, userId), eq(kidsProgress.memoryVerseMemorized, true)));
+    const verseCount = verses[0]?.count ?? 0;
+
+    const streakData = await db.select().from(kidsStreaks).where(eq(kidsStreaks.userId, userId)).limit(1);
+    const longestStreak = streakData[0]?.longestStreak ?? 0;
+
+    const collectionProgress = await db.execute(sql`
+      SELECT ks.collection_id, COUNT(*)::int as completed_count,
+        (SELECT COUNT(*)::int FROM kids_story WHERE collection_id = ks.collection_id AND published = true) as total_count
+      FROM kids_progress kp
+      JOIN kids_story ks ON ks.id = kp.story_id
+      WHERE kp.user_id = ${userId} AND kp.completed = true
+      GROUP BY ks.collection_id
+    `);
+    const completedCollection = (collectionProgress as any).rows?.some((r: any) => r.completed_count >= r.total_count && r.total_count > 0);
+
+    const badgesToAward: string[] = [];
+    for (const badge of allBadges) {
+      if (earnedSet.has(badge.id)) continue;
+      let qualifies = false;
+      switch (badge.requirement) {
+        case "complete_story":
+          qualifies = storyCount >= (badge.requiredCount ?? 1);
+          break;
+        case "memorize_verse":
+          qualifies = verseCount >= (badge.requiredCount ?? 5);
+          break;
+        case "complete_collection":
+          qualifies = !!completedCollection;
+          break;
+        case "streak_days":
+          qualifies = longestStreak >= (badge.requiredCount ?? 7);
+          break;
+        case "perfect_quiz":
+          qualifies = perfectQuizCount >= (badge.requiredCount ?? 5);
+          break;
+      }
+      if (qualifies) badgesToAward.push(badge.id);
+    }
+
+    for (const badgeId of badgesToAward) {
+      await db.insert(kidsUserBadges).values({ userId, badgeId }).onConflictDoNothing();
+    }
+
+    return badgesToAward.length;
+  } catch (err) {
+    console.error("[BadgeCheck] Error:", err);
+    return 0;
+  }
+}
+
 router.post("/api/kids/progress/complete", async (req, res) => {
   try {
     const { userId, storyId } = req.body;
@@ -158,13 +230,15 @@ router.post("/api/kids/progress/complete", async (req, res) => {
         .set({ completed: true, completedAt: new Date() })
         .where(eq(kidsProgress.id, existing[0].id))
         .returning();
-      return res.json(updated[0]);
+      const badgesAwarded = await checkAndAwardBadges(userId);
+      return res.json({ ...updated[0], badgesAwarded });
     }
     const progress = await db
       .insert(kidsProgress)
       .values({ userId, storyId, completed: true, completedAt: new Date() })
       .returning();
-    return res.json(progress[0]);
+    const badgesAwarded = await checkAndAwardBadges(userId);
+    return res.json({ ...progress[0], badgesAwarded });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -693,13 +767,15 @@ router.post("/api/kids/story/award-points", async (req, res) => {
     const { userId = "guest", storyId, childProfileId: providedProfileId, points = 25 } = req.body;
 
     let profileId = providedProfileId;
-    if (!profileId) {
-      const [firstChild] = await db
+    if (!profileId && userId !== "guest") {
+      const [directProfile] = await db
         .select({ id: childProfiles.id })
         .from(childProfiles)
-        .where(eq(childProfiles.parentId, userId))
+        .where(eq(childProfiles.id, userId))
         .limit(1);
-      profileId = firstChild?.id;
+      if (directProfile) {
+        profileId = directProfile.id;
+      }
     }
 
     if (!profileId) {
@@ -739,6 +815,34 @@ router.post("/api/kids/story/award-points", async (req, res) => {
     });
   } catch (err) {
     console.error("Award points error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/kids/profile/:userId/stats", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const [profile] = await db
+      .select({
+        totalPoints: childProfiles.totalPoints,
+        currentLevel: childProfiles.currentLevel,
+        name: childProfiles.name,
+      })
+      .from(childProfiles)
+      .where(eq(childProfiles.id, userId))
+      .limit(1);
+
+    if (profile) {
+      return res.json({
+        totalPoints: profile.totalPoints ?? 0,
+        currentLevel: profile.currentLevel ?? 1,
+        name: profile.name,
+      });
+    }
+
+    return res.json({ totalPoints: 0, currentLevel: 1, name: null });
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

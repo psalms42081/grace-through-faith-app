@@ -2104,6 +2104,8 @@ export default function SceneStoryScreen() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/kids/streak/${progressUserId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/profile/${progressUserId}/stats`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/badges/${progressUserId}`] });
 
       if (data.points?.leveledUp) {
         setNewLevel(data.points.currentLevel);

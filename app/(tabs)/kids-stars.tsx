@@ -58,6 +58,12 @@ interface StreakInfo {
   lastActivityDate: string | null;
 }
 
+interface ProfileStats {
+  totalPoints: number;
+  currentLevel: number;
+  name: string | null;
+}
+
 import AnimatedSection from "@/components/AnimatedSection";
 
 function StarCardSparkle({ index, color }: { index: number; color: string }) {
@@ -141,7 +147,7 @@ function AnimatedStarCount({ target }: { target: number }) {
   );
 }
 
-function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any }) {
+function PulsingStarCard({ totalStars, seedPoints, theme }: { totalStars: number; seedPoints: number; theme: any }) {
   const glowOpacity = useSharedValue(0.6);
   const starScale = useSharedValue(0.8);
   const countScale = useSharedValue(0.5);
@@ -195,6 +201,11 @@ function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any
         <AnimatedStarCount target={totalStars} />
       </Animated.View>
       <Text style={[styles.starLabel, { fontFamily: "Inter_500Medium" }]}>Total Stars</Text>
+      {seedPoints > 0 && (
+        <Text style={[styles.seedPointsLabel, { fontFamily: "Inter_400Regular" }]}>
+          {seedPoints} Seed Points earned
+        </Text>
+      )}
     </Animated.View>
   );
 }
@@ -394,21 +405,30 @@ export default function KidsStarsScreen() {
     queryKey: [`/api/kids/streak/${progressUserId}`],
   });
 
+  const { data: profileStats } = useQuery<ProfileStats>({
+    queryKey: [`/api/kids/profile/${progressUserId}/stats`],
+    enabled: progressUserId !== "guest",
+  });
+
   const completedCount = progress?.filter(p => p.completed).length ?? 0;
   const quizCount = progress?.filter(p => p.quizScore !== null).length ?? 0;
   const memorizedCount = progress?.filter(p => p.memoryVerseMemorized).length ?? 0;
+  const seedPoints = profileStats?.totalPoints ?? 0;
   const totalStars = completedCount + quizCount + (memorizedCount * 2);
   const earnedIds = new Set(earnedBadges?.map(b => b.id) ?? []);
 
   const BADGE_ICONS: Record<string, string> = {
     "footsteps": "footsteps",
+    "footprints": "footsteps",
     "bookmark": "bookmark",
     "compass": "compass",
     "book": "book",
+    "brain": "bulb",
     "trophy": "trophy",
     "star": "star",
     "ribbon": "ribbon",
     "shield": "shield",
+    "flame": "flame",
   };
 
   const handleExitKidsMode = async () => {
@@ -445,7 +465,7 @@ export default function KidsStarsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AnimatedSection index={0} delayMultiplier={100}>
-          <PulsingStarCard totalStars={totalStars} theme={theme} />
+          <PulsingStarCard totalStars={totalStars} seedPoints={seedPoints} theme={theme} />
         </AnimatedSection>
 
         <AnimatedSection index={1} delayMultiplier={100}>
@@ -616,6 +636,7 @@ const styles = StyleSheet.create({
   },
   starCount: { fontSize: 48, color: "#fff", marginTop: 6 },
   starLabel: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
+  seedPointsLabel: { fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   statCard: {
     flex: 1,
