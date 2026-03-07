@@ -336,9 +336,11 @@ You guide through three phases:
 
 Rules:
 - Ask ONE focused question at a time
-- Affirm good observations warmly but briefly
-- If the student is off-track, gently redirect without being condescending
-- Keep responses concise (2-4 sentences max)
+- When the student makes a correct observation, affirm it briefly (one short phrase) and move on
+- When the student makes an inaccurate or imprecise statement, gently clarify the misunderstanding before asking the next question. For example: "Good observation noticing Sosthenes. Paul is the primary author here, with Sosthenes mentioned as a fellow believer connected with the message. Now..."
+- Do NOT over-praise weak or vague answers. Acknowledge effort without inflating quality
+- Never invent facts that are not present in the biblical text
+- Keep responses under 120 words total
 - You are starting in the OBSERVE phase now`;
 
   const userPrompt = `The student wants to study this verse:\n\n"${verseText}" — ${verseReference}\n\nBegin the OBSERVE phase. Ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text.`;
@@ -370,13 +372,13 @@ export async function generateStudyGuideResponse(params: {
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
 
   const phaseInstructions: Record<string, string> = {
-    observe: "Continue in the OBSERVE phase. Ask another observation question about what they can see in the text. Affirm their previous answer briefly first.",
+    observe: "Continue in the OBSERVE phase. Ask another observation question about what they can see in the text.",
     interpret: targetPhase === "interpret" && currentPhase === "observe"
-      ? "The student has made good observations. Now TRANSITION to the INTERPRET phase. Briefly affirm their work, then say something like 'Now let\\'s dig deeper into what this means...' and ask your first interpretation question."
-      : "Continue in the INTERPRET phase. Ask about meaning, context, or theology. Affirm their answer briefly first.",
+      ? "The student has made good observations. Now TRANSITION to the INTERPRET phase. Briefly acknowledge their work, then say something like 'Now let\\'s dig deeper into what this means...' and ask your first interpretation question."
+      : "Continue in the INTERPRET phase. Ask about meaning, context, or theology.",
     apply: targetPhase === "apply" && currentPhase === "interpret"
-      ? "The student has interpreted well. Now TRANSITION to the APPLY phase. Briefly affirm their insight, then say something like 'Now let\\'s bring this into your daily life...' and ask your first application question."
-      : "Continue in the APPLY phase. Ask about personal application, specific actions, or life changes. Affirm their answer briefly first.",
+      ? "The student has interpreted well. Now TRANSITION to the APPLY phase. Briefly acknowledge their insight, then say something like 'Now let\\'s bring this into your daily life...' and ask your first application question."
+      : "Continue in the APPLY phase. Ask about personal application, specific actions, or life changes.",
     complete: "The student has completed all three phases. Give a warm, encouraging summary of what they discovered. Mention 1-2 key insights from their observations, interpretation, and application. End with a brief prayer prompt or blessing. Keep it to 3-4 sentences.",
   };
 
@@ -386,7 +388,14 @@ ${p.style}
 
 ${phaseInstructions[targetPhase] || phaseInstructions[currentPhase]}
 
-Rules: Ask ONE question at a time. Be concise (2-4 sentences). Never give the answer directly.`;
+Rules:
+- Ask ONE question at a time
+- When the student makes a correct point, acknowledge briefly (one short phrase) and move on
+- When the student says something inaccurate or imprecise, gently correct the misunderstanding before asking the next question. Do not simply affirm incorrect statements
+- Do NOT over-praise weak or vague answers. Acknowledge effort without inflating quality
+- Never invent facts that are not present in the biblical text
+- Keep your total response under 120 words
+- Never give the answer directly — ask questions that lead the student to discover truth`;
 
   const formattedMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant",
@@ -436,10 +445,16 @@ export async function generateVerseMap(params: {
 Return JSON:
 {
   "crossReferences": [
-    { "reference": "John 3:16", "text": "For God so loved...", "connection": "Both passages speak of God's redemptive love", "bookId": 43, "chapter": 3, "verse": 16 }
+    { "reference": "John 3:16", "text": "For God so loved...", "connection": "Both passages speak of redemptive love.", "bookId": 43, "chapter": 3, "verse": 16 }
   ],
   "contextSnippet": "Brief historical and cultural context..."
 }
+
+IMPORTANT rules for the "connection" field:
+- Keep each connection under 20 words
+- Describe only historical, linguistic, or literary connections
+- Do NOT make doctrinal claims or speculative theology
+- Stay concise and neutral. Example: "Both verses highlight Paul's calling as an apostle."
 
 Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66`,
       },

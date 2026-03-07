@@ -128,7 +128,7 @@ export default function HistoricVoicesScreen() {
           Insight & Voices
         </Text>
         <Text style={[styles.subheading, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Commentary on {bookName} {chapter}
+          Insights and perspectives on {bookName} {chapter}
         </Text>
 
         {commentatorNames.length > 0 && (
@@ -275,12 +275,15 @@ export default function HistoricVoicesScreen() {
                   <Text style={[styles.commentatorName, { color: isAdventist ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
                     {item.commentator.name}
                   </Text>
+                  {item.commentator.tradition && (
+                    <>
+                      <Text style={[styles.traditionSep, { color: theme.textMuted }]}>{" \u2014 "}</Text>
+                      <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        {item.commentator.tradition}
+                      </Text>
+                    </>
+                  )}
                 </View>
-                {item.commentator.tradition && (
-                  <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {item.commentator.tradition}
-                  </Text>
-                )}
               </View>
               {item.entry.verseStart && (
                 <Text style={[styles.verseRange, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
@@ -293,15 +296,20 @@ export default function HistoricVoicesScreen() {
                 {item.entry.content}
               </Text>
               {isAdventist && (
-                <Pressable
-                  onPress={() => Linking.openURL("https://egwwritings.org")}
-                  style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <Ionicons name="open-outline" size={13} color={theme.accent} />
-                  <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                    Read more on egwwritings.org
+                <View style={styles.egwFooter}>
+                  <Text style={[styles.egwDisclaimer, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Summary inspired by themes in Ellen G. White's writings.
                   </Text>
-                </Pressable>
+                  <Pressable
+                    onPress={() => Linking.openURL("https://egwwritings.org")}
+                    style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <Ionicons name="open-outline" size={13} color={theme.accent} />
+                    <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                      Read more on egwwritings.org
+                    </Text>
+                  </Pressable>
+                </View>
               )}
             </View>
           );
@@ -365,7 +373,6 @@ const styles = StyleSheet.create({
   },
   commentHeader: {
     flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
     alignItems: "center" as const,
     marginBottom: 8,
   },
@@ -373,6 +380,8 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,
+    flexWrap: "wrap" as const,
+    flex: 1,
   },
   adventistBadge: {
     width: 20,
@@ -382,17 +391,22 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
   },
   commentatorName: { fontSize: 14 },
-  tradition: { fontSize: 11 },
+  traditionSep: { fontSize: 12 },
+  tradition: { fontSize: 12 },
   verseRange: { fontSize: 12, marginBottom: 8 },
   commentContent: { fontSize: 15, lineHeight: 24 },
-  egwLink: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
+  egwFooter: {
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.08)",
+    gap: 8,
+  },
+  egwDisclaimer: { fontSize: 11, fontStyle: "italic" as const },
+  egwLink: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
   },
   egwLinkText: { fontSize: 12 },
   egwPromo: {
