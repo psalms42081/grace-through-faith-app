@@ -228,6 +228,7 @@ function removeTile(identity) {
 function attachTrack(track, identity, name) {
   const tile = getOrCreateTile(identity, name);
   const avatar = document.getElementById('avatar-' + identity);
+  const isLocal = room && room.localParticipant && identity === room.localParticipant.identity;
 
   if (track.kind === 'video') {
     const existing = tile.querySelector('video');
@@ -236,9 +237,11 @@ function attachTrack(track, identity, name) {
     el.style.width = '100%';
     el.style.height = '100%';
     el.style.objectFit = 'cover';
+    if (isLocal) el.muted = true;
     tile.insertBefore(el, tile.firstChild);
     if (avatar) avatar.style.display = 'none';
   } else if (track.kind === 'audio') {
+    if (isLocal) return;
     const el = track.attach();
     el.style.display = 'none';
     tile.appendChild(el);
@@ -264,6 +267,14 @@ async function connect() {
     adaptiveStream: true,
     dynacast: true,
     videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
+    audioCaptureDefaults: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+    audioOutput: {
+      deviceId: 'default',
+    },
   });
 
   room.on(RoomEvent.Connected, () => {
