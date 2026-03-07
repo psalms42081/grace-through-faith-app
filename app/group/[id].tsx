@@ -427,7 +427,7 @@ export default function GroupDetailScreen() {
               onPress={() => setShowTrackPicker(true)}
               style={[s.assignBtn, { backgroundColor: theme.accent }]}
             >
-              <Text style={[s.assignBtnText, { fontFamily: "Inter_600SemiBold" }]}>Assign a Formation Track</Text>
+              <Text style={[s.assignBtnText, { fontFamily: "Inter_600SemiBold" }]}>Assign a Study Path</Text>
             </Pressable>
           ) : null}
         </View>
@@ -745,7 +745,7 @@ export default function GroupDetailScreen() {
         <View style={s.pickerOverlay}>
           <View style={[s.pickerCard, { backgroundColor: theme.backgroundCard }]}>
             <Text style={[s.pickerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Assign Formation Track
+              Assign Study Path
             </Text>
             {(tracks || []).length === 0 ? (
               <ActivityIndicator color={theme.accent} style={{ marginVertical: 20 }} />

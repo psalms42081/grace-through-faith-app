@@ -112,7 +112,7 @@ export const HOME_TUTORIAL_STEPS: TutorialStep[] = [
     label: "DAILY HABIT",
     title: "Build a\nDaily Habit",
     description:
-      "Every day in Scripture builds your streak. Stay consistent and watch your spiritual discipline grow.",
+      "Every day in Scripture builds your streak. Stay consistent and watch your discipline grow.",
   },
 ];
 
@@ -236,14 +236,14 @@ export const EXPLORE_TUTORIAL_STEPS: TutorialStep[] = [
     label: "YOUR LIBRARY",
     title: "Your Study\nLibrary",
     description:
-      "Your hub for deeper learning. Browse Adventist resources, study paths, and guided growth tracks.",
+      "Your hub for deeper study. Browse Adventist resources, study paths, and curated themes.",
   },
   {
     illustration: <IconBadge name="map" size={46} />,
     label: "GUIDED PATHS",
     title: "Guided Study\nPaths",
     description:
-      "Follow structured study paths designed for spiritual growth. Each path builds progressively on the one before.",
+      "Follow structured study paths designed for deeper understanding. Each path builds progressively on the one before.",
   },
   {
     illustration: <IconBadge name="sparkles" size={46} />,
@@ -260,7 +260,7 @@ export const PROFILE_TUTORIAL_STEPS: TutorialStep[] = [
     label: "YOUR JOURNEY",
     title: "Your Spiritual\nProfile",
     description:
-      "Track your growth over time. Your profile shows reading streaks, study minutes, badges earned, and a complete picture of your Bible journey.",
+      "Track your growth over time. Your profile shows reading streaks, study minutes, badges earned, and a complete picture of your time in Scripture.",
   },
   {
     illustration: <IconBadge name="grid" size={46} />,
@@ -274,7 +274,7 @@ export const PROFILE_TUTORIAL_STEPS: TutorialStep[] = [
     label: "ACHIEVEMENTS",
     title: "Badges &\nMilestones",
     description:
-      "Earn badges for consistent reading, completing study paths, and deepening your knowledge. Each badge marks a real milestone in your spiritual growth.",
+      "Earn badges for consistent reading, completing study paths, and deepening your knowledge. Each badge marks a real milestone in your walk with God.",
   },
 ];
 
@@ -292,7 +292,7 @@ export const SPIRITUAL_RINGS_TUTORIAL_STEPS: TutorialStep[] = [
     label: "DAILY FORMATION",
     title: "Your Spiritual\nRings",
     description:
-      "Build daily spiritual habits with three rings — Study, Prayer, and Engagement. Close all three every day to grow in faith.",
+      "Build daily habits with three rings — Study, Prayer, and Engagement. Close all three every day to grow in faith.",
   },
   {
     illustration: <IconBadge name="book" size={46} color="#5B8DEF" />,
@@ -323,7 +323,7 @@ export const FAMILY_TUTORIAL_STEPS: TutorialStep[] = [
     label: "FAMILY",
     title: "Your Family's\nFaith Journey",
     description:
-      "The Family Dashboard brings your household together in faith. Create or join a family group, track your children's spiritual progress, and grow as a family.",
+      "The Family Dashboard brings your household together in faith. Create or join a family group, track your children's progress, and grow as a family.",
   },
   {
     illustration: (

@@ -285,7 +285,7 @@ export default function FamilyDashboard() {
           <Ionicons name="people" size={64} color={theme.accent} />
           <Text style={[styles.proGateTitle, { color: theme.text }]}>Family Dashboard</Text>
           <Text style={[styles.proGateSubtitle, { color: theme.textSecondary }]}>
-            Track your children's faith journey, see their progress, and get AI-powered conversation starters.
+            Track your children's progress, see their growth, and get AI-powered conversation starters.
           </Text>
           <Pressable
             style={[styles.proGateButton, { backgroundColor: theme.accent }]}
@@ -315,7 +315,7 @@ export default function FamilyDashboard() {
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Family</Text>
           <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-            Your family's faith journey
+            Your family's growth
           </Text>
         </View>
 

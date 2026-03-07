@@ -141,7 +141,7 @@ export default function StudyScreen() {
           icon="trail-sign"
           iconColor="#2E7D32"
           title="Study Paths"
-          subtitle="Guided growth journeys"
+          subtitle="Structured paths through Scripture"
           onPress={() => router.push("/study-paths" as any)}
           style={{ marginBottom: 8 }}
         />

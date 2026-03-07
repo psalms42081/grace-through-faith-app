@@ -88,7 +88,7 @@ function StudyModelPage() {
     {
       icon: "trending-up-outline" as const,
       title: "Grow Daily",
-      desc: "Build daily habits with guided devotionals, study paths, and spiritual rings",
+      desc: "Build daily habits with guided devotionals, study paths, and formation rings",
     },
   ];
 
@@ -97,7 +97,7 @@ function StudyModelPage() {
       <View style={pageStyles.container}>
         <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
           <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-            YOUR SPIRITUAL GROWTH
+            YOUR GROWTH
           </Text>
           <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
             Study. Understand.{"\n"}Grow.

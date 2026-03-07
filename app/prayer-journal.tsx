@@ -203,7 +203,7 @@ export default function PrayerJournalScreen() {
             <EmptyState
               icon={filter === "active" ? "journal-outline" : "checkmark-done-outline"}
               title={filter === "active" ? "No Active Prayers" : "No Answered Prayers"}
-              description={filter === "active" ? "Begin your prayer journey by adding your first request." : "Mark prayers as answered to build your testimony of God's faithfulness."}
+              description={filter === "active" ? "Add your first prayer request to get started." : "Mark prayers as answered to build your testimony of God's faithfulness."}
               actionLabel={filter === "active" ? "Add Prayer" : undefined}
               onAction={filter === "active" ? () => setShowAdd(true) : undefined}
             />

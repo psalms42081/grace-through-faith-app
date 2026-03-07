@@ -1789,7 +1789,7 @@ export default function StudyScreen() {
           Deepen Your Faith
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Continue your formation journey
+          Continue your study
         </Text>
       </View>
 

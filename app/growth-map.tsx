@@ -406,9 +406,9 @@ export default function GrowthMapScreen() {
         >
           <View style={[st.summaryCard, { backgroundColor: theme.backgroundCard }]}>
             <GrowthRings dimensions={dimensions} />
-            <Text style={st.summaryTitle}>Your Journey</Text>
+            <Text style={st.summaryTitle}>Your Progress</Text>
             <Text style={st.summarySubtitle}>
-              {overallLevel}% overall spiritual growth
+              {overallLevel}% overall growth
             </Text>
             <View style={st.legendRow}>
               {dimensions.map((dim) => (

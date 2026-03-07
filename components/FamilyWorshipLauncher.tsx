@@ -94,7 +94,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
     return {
       title: "Worship Together Tonight",
       subtitle:
-        "Continue your family's faith journey with one story, one verse, and one conversation prompt.",
+        "Continue with one story, one verse, and one conversation prompt.",
       cta: "Start Family Worship",
       icon: "people" as const,
       accentColor: "#7B61FF",
