@@ -230,18 +230,22 @@ function attachTrack(track, identity, name) {
   const avatar = document.getElementById('avatar-' + identity);
   const isLocal = room && room.localParticipant && identity === room.localParticipant.identity;
 
+  if (isLocal && track.kind === 'audio') return;
+
   if (track.kind === 'video') {
     const existing = tile.querySelector('video');
-    if (existing) existing.remove();
+    if (existing) { existing.srcObject = null; existing.remove(); }
     const el = track.attach();
     el.style.width = '100%';
     el.style.height = '100%';
     el.style.objectFit = 'cover';
-    if (isLocal) el.muted = true;
+    el.muted = isLocal;
+    el.volume = isLocal ? 0 : 1;
     tile.insertBefore(el, tile.firstChild);
     if (avatar) avatar.style.display = 'none';
   } else if (track.kind === 'audio') {
-    if (isLocal) return;
+    const existing = tile.querySelectorAll('audio');
+    existing.forEach(a => { a.srcObject = null; a.remove(); });
     const el = track.attach();
     el.style.display = 'none';
     tile.appendChild(el);
@@ -271,9 +275,11 @@ async function connect() {
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true,
+      channelCount: 1,
     },
-    audioOutput: {
-      deviceId: 'default',
+    publishDefaults: {
+      dtx: true,
+      red: true,
     },
   });
 
@@ -289,6 +295,7 @@ async function connect() {
   });
 
   room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+    if (room.localParticipant && participant.identity === room.localParticipant.identity) return;
     attachTrack(track, participant.identity, participant.name);
   });
 
