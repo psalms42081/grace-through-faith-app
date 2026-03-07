@@ -850,7 +850,17 @@ router.get("/api/kids/profile/:userId/stats", async (req, res) => {
 
 // ─── KIDS SABBATH SCHOOL ─────────────────────────────────────────────────────
 
-const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; memoryVerse: string; memoryVerseRef: string; thinkAboutIt: string; prayer: string }[]> = {
+interface SSLesson {
+  title: string;
+  storySummary: string;
+  memoryVerse: string;
+  memoryVerseRef: string;
+  thinkAboutIt: string;
+  prayer: string;
+  linkedStorySearch: string;
+}
+
+const KIDS_SS_LESSONS: Record<string, SSLesson[]> = {
   little_lambs: [
     {
       title: "God Made the World",
@@ -859,6 +869,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Genesis 1:31",
       thinkAboutIt: "What is your favorite thing God made? Can you draw it?",
       prayer: "Dear God, thank You for making the world so beautiful. Thank You for making me! Amen.",
+      linkedStorySearch: "God Made the Light",
     },
     {
       title: "Noah and the Big Boat",
@@ -867,6 +878,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Genesis 6:22",
       thinkAboutIt: "If you were on the ark, which two animals would you want to sit next to?",
       prayer: "Dear God, help me to listen to You and obey, just like Noah did. Amen.",
+      linkedStorySearch: "Noah Trusts God",
     },
     {
       title: "God Takes Care of Me",
@@ -875,6 +887,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Matthew 6:26",
       thinkAboutIt: "Have you seen a bird today? Who feeds it?",
       prayer: "Dear God, thank You for taking care of me every day. I love You! Amen.",
+      linkedStorySearch: "God Made the Animals",
     },
     {
       title: "Jesus Loves the Little Children",
@@ -883,6 +896,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Mark 10:14",
       thinkAboutIt: "If you could sit on Jesus' lap, what would you tell Him?",
       prayer: "Dear Jesus, thank You for loving me. I want to be close to You always. Amen.",
+      linkedStorySearch: "God Made Me",
     },
   ],
   young_disciples: [
@@ -893,6 +907,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Genesis 1:1",
       thinkAboutIt: "Why do you think God rested on the seventh day? What can we learn from that?",
       prayer: "Lord, thank You for creating this amazing world. Help me to care for it and remember that I am made in Your image. Amen.",
+      linkedStorySearch: "In the Beginning: Creation",
     },
     {
       title: "David Trusts God Against Goliath",
@@ -901,6 +916,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "1 Samuel 17:37",
       thinkAboutIt: "What is a 'giant' problem in your life right now? How can you trust God with it?",
       prayer: "God, when I face big problems, help me remember that You are bigger. Give me courage like David. Amen.",
+      linkedStorySearch: "David and the Giant",
     },
     {
       title: "The Sabbath: God's Special Day",
@@ -909,6 +925,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Exodus 20:8",
       thinkAboutIt: "What are your favorite things to do on Sabbath? How can you make it more special?",
       prayer: "Dear God, thank You for the gift of Sabbath. Help me to use this day to grow closer to You and my family. Amen.",
+      linkedStorySearch: "In the Beginning: Creation",
     },
     {
       title: "Daniel's Faithfulness in Babylon",
@@ -917,6 +934,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Daniel 3:17",
       thinkAboutIt: "Has it ever been hard to do the right thing when others around you weren't? What happened?",
       prayer: "Lord, give me the same courage Daniel had. Help me stay faithful to You no matter what. Amen.",
+      linkedStorySearch: "Daniel and the Lions",
     },
   ],
   young_disciples_plus: [
@@ -927,6 +945,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Psalm 139:14",
       thinkAboutIt: "When do you feel most pressured to be someone you're not? How does knowing God made you on purpose change that?",
       prayer: "God, help me find my identity in You, not in what the world says. Remind me that I am enough because You made me. Amen.",
+      linkedStorySearch: "Who Am I? Identity in Christ",
     },
     {
       title: "The Great Controversy: Why Evil Exists",
@@ -935,6 +954,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Romans 16:20",
       thinkAboutIt: "How does understanding the great controversy help you make sense of suffering in the world?",
       prayer: "Lord, help me understand the bigger picture. Thank You that even though evil exists, You have already won the victory. Amen.",
+      linkedStorySearch: "Joseph: Integrity Through Injustice",
     },
     {
       title: "The Sabbath: Rest in a Restless World",
@@ -943,6 +963,7 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Matthew 11:28",
       thinkAboutIt: "Do you truly rest on Sabbath, or do you just avoid work? What would real Sabbath rest look like for you?",
       prayer: "God, teach me to truly rest in You. Help me see Sabbath not as a restriction but as Your gift of freedom. Amen.",
+      linkedStorySearch: "Purpose and Calling",
     },
     {
       title: "Standing Alone: Faith When It Costs You",
@@ -951,17 +972,37 @@ const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; mem
       memoryVerseRef: "Daniel 3:17",
       thinkAboutIt: "Have you ever had to stand alone for something you believed? What gave you strength?",
       prayer: "Lord, give me the courage to stand for what's right even when I stand alone. Walk with me through my fires. Amen.",
+      linkedStorySearch: "Standing Alone: When Faith Costs You",
     },
   ],
 };
 
-router.get("/api/kids/sabbath-school/current", (req, res) => {
+router.get("/api/kids/sabbath-school/current", async (req, res) => {
   try {
     const ageGroup = String(req.query.ageGroup || "little_lambs");
     const lessons = KIDS_SS_LESSONS[ageGroup] || KIDS_SS_LESSONS.little_lambs;
     const weekOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 86400000));
     const lesson = lessons[weekOfYear % lessons.length];
-    res.json({ lesson, weekNumber: weekOfYear + 1, ageGroup });
+
+    let linkedStory: { id: string; title: string } | null = null;
+    if (lesson.linkedStorySearch) {
+      const stories = await db
+        .select({ id: kidsStories.id, title: kidsStories.title })
+        .from(kidsStories)
+        .where(
+          and(
+            eq(kidsStories.published, true),
+            sql`${kidsStories.title} ILIKE ${'%' + lesson.linkedStorySearch + '%'}`
+          )
+        )
+        .limit(1);
+      if (stories.length > 0) {
+        linkedStory = stories[0];
+      }
+    }
+
+    const { linkedStorySearch, ...lessonData } = lesson;
+    res.json({ lesson: { ...lessonData, linkedStory }, weekNumber: weekOfYear + 1, ageGroup });
   } catch (err) {
     console.error("Kids SS error:", err);
     res.status(500).json({ error: "Internal server error" });

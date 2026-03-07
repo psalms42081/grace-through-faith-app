@@ -23,6 +23,7 @@ interface KidsLesson {
   memoryVerseRef: string;
   thinkAboutIt: string;
   prayer: string;
+  linkedStory: { id: string; title: string } | null;
 }
 
 interface KidsSSData {
@@ -120,6 +121,19 @@ export default function KidsSabbathSchoolScreen() {
                 <Text style={[styles.cardContent, { color: theme.text, fontFamily: card.key === "verse" ? "Lora_400Regular_Italic" : "Inter_400Regular" }]}>
                   {getCardContent(card.key)}
                 </Text>
+                {card.key === "story" && lesson?.linkedStory && (
+                  <Pressable
+                    testID="kids-ss-open-story"
+                    onPress={() => router.push(`/kids/story/${lesson.linkedStory!.id}`)}
+                    style={[styles.storyBtn, { backgroundColor: card.color }]}
+                  >
+                    <Ionicons name="book" size={16} color="#fff" />
+                    <Text style={[styles.storyBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                      Explore the Story
+                    </Text>
+                    <Ionicons name="arrow-forward" size={14} color="#fff" />
+                  </Pressable>
+                )}
               </View>
             </Animated.View>
           ))}
@@ -223,5 +237,19 @@ const styles = StyleSheet.create({
   cardContent: {
     fontSize: 15,
     lineHeight: 23,
+  },
+  storyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  storyBtnText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });

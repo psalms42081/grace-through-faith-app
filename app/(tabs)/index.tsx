@@ -508,7 +508,7 @@ function KidsHomeScreen() {
             </View>
             <View style={kidsStyles.dailyInfo}>
               <Text style={[kidsStyles.dailyLabel, { color: "#7B61FF", fontFamily: "Inter_600SemiBold" }]}>
-                Sabbath School
+                This Week's Sabbath School
               </Text>
               <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
                 {kidsSS.lesson.title}
@@ -516,6 +516,14 @@ function KidsHomeScreen() {
               <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {kidsSS.lesson.memoryVerseRef}
               </Text>
+              {kidsSS.lesson.linkedStory && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
+                  <Ionicons name="book" size={12} color="#4A90D9" />
+                  <Text style={{ color: "#4A90D9", fontSize: 12, fontFamily: "Inter_500Medium" }}>
+                    Read the full story: {kidsSS.lesson.linkedStory.title}
+                  </Text>
+                </View>
+              )}
             </View>
             <Ionicons name="chevron-forward" size={20} color="#7B61FF" />
           </Pressable>
