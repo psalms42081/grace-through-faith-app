@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   Pressable,
   StyleSheet,
   Platform,
@@ -2258,24 +2259,30 @@ export default function SceneStoryScreen() {
             </View>
 
             <View style={styles.narrationArea}>
-              {index === currentScene ? (
-                <WordHighlightText
-                  text={item.narration}
-                  currentWordIndex={currentWordIndex}
-                  isSpeaking={isSpeaking}
-                  theme={theme}
-                  isLittleLambs={isLittleLambs}
-                />
-              ) : (
-                <Text
-                  style={[
-                    styles.narrationText,
-                    { fontFamily: "Lora_400Regular", fontSize: isLittleLambs ? 22 : 20 },
-                  ]}
-                >
-                  {item.narration}
-                </Text>
-              )}
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.narrationScroll}
+              >
+                {index === currentScene ? (
+                  <WordHighlightText
+                    text={item.narration}
+                    currentWordIndex={currentWordIndex}
+                    isSpeaking={isSpeaking}
+                    theme={theme}
+                    isLittleLambs={isLittleLambs}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.narrationText,
+                      { fontFamily: "Lora_400Regular", fontSize: isLittleLambs ? 22 : 20 },
+                    ]}
+                  >
+                    {item.narration}
+                  </Text>
+                )}
+              </ScrollView>
             </View>
 
             {item.pauseAndWonder && !answeredWonders.has(item.sceneIndex) && index === currentScene && (
@@ -2664,8 +2671,11 @@ const styles = StyleSheet.create({
   narrationArea: {
     flex: 1,
     paddingHorizontal: 8,
-    justifyContent: "center",
     paddingBottom: 12,
+  },
+  narrationScroll: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",

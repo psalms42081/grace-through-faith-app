@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -417,6 +417,21 @@ export default function KidsStarsScreen() {
   const totalStars = completedCount + quizCount + (memorizedCount * 2);
   const earnedIds = new Set(earnedBadges?.map(b => b.id) ?? []);
 
+  const dedupedBadges = useMemo(() => {
+    if (!allBadges) return [];
+    const seen = new Set<string>();
+    const unique = allBadges.filter(b => {
+      if (seen.has(b.id)) return false;
+      seen.add(b.id);
+      return true;
+    });
+    return unique.sort((a, b) => {
+      const aEarned = earnedIds.has(a.id) ? 0 : 1;
+      const bEarned = earnedIds.has(b.id) ? 0 : 1;
+      return aEarned - bEarned;
+    });
+  }, [allBadges, earnedIds]);
+
   const BADGE_ICONS: Record<string, string> = {
     "footsteps": "footsteps",
     "footprints": "footsteps",
@@ -534,7 +549,7 @@ export default function KidsStarsScreen() {
 
         <AnimatedSection index={4} delayMultiplier={100}>
           <View style={styles.badgeGrid}>
-            {allBadges?.map((badge) => {
+            {dedupedBadges.map((badge) => {
               const earned = earnedIds.has(badge.id);
               return (
                 <AnimatedBadgeItem
