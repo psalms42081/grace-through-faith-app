@@ -413,6 +413,8 @@ export default function useBibleAudio(
       return;
     }
 
+    Speech.stop();
+    cleanupPlayer();
     const session = ++sessionRef.current;
     console.log("[TTS handlePlay] Starting new session:", session);
     setIsSpeaking(true);
@@ -452,10 +454,11 @@ export default function useBibleAudio(
     if (isSpeaking && currentIndexRef.current >= 0) {
       Speech.stop();
       cleanupPlayer();
+      const session = ++sessionRef.current;
       if (usingFallback) {
-        speakVerseFallback(currentIndexRef.current, sessionRef.current);
+        speakVerseFallback(currentIndexRef.current, session);
       } else {
-        speakVerseAI(currentIndexRef.current, sessionRef.current);
+        speakVerseAI(currentIndexRef.current, session);
       }
     }
   }, [isSpeaking, usingFallback, speakVerseFallback, speakVerseAI, cleanupPlayer]);
@@ -468,10 +471,11 @@ export default function useBibleAudio(
     if (isSpeaking && currentIndexRef.current >= 0) {
       Speech.stop();
       cleanupPlayer();
+      const session = ++sessionRef.current;
       if (usingFallback) {
-        speakVerseFallback(currentIndexRef.current, sessionRef.current);
+        speakVerseFallback(currentIndexRef.current, session);
       } else {
-        speakVerseAI(currentIndexRef.current, sessionRef.current);
+        speakVerseAI(currentIndexRef.current, session);
       }
     }
   }, [isSpeaking, usingFallback, speakVerseAI, speakVerseFallback, cleanupPlayer]);
