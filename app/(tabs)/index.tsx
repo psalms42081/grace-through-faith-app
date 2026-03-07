@@ -1506,9 +1506,6 @@ function AdultHomeScreen() {
             {greeting}
           </Text>
           <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Grace through Faith
-          </Text>
-          <Text style={[s.headerTagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             Adventist Spiritual Formation
           </Text>
         </View>
