@@ -225,20 +225,21 @@ router.post("/api/kids/progress/complete", async (req, res) => {
       )
       .limit(1);
     if (existing.length) {
+      const alreadyCompleted = existing[0].completed === true;
       const updated = await db
         .update(kidsProgress)
         .set({ completed: true, completedAt: new Date() })
         .where(eq(kidsProgress.id, existing[0].id))
         .returning();
       const badgesAwarded = await checkAndAwardBadges(userId);
-      return res.json({ ...updated[0], badgesAwarded });
+      return res.json({ ...updated[0], firstCompletion: !alreadyCompleted, badgesAwarded });
     }
     const progress = await db
       .insert(kidsProgress)
       .values({ userId, storyId, completed: true, completedAt: new Date() })
       .returning();
     const badgesAwarded = await checkAndAwardBadges(userId);
-    return res.json({ ...progress[0], badgesAwarded });
+    return res.json({ ...progress[0], firstCompletion: true, badgesAwarded });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

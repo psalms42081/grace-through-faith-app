@@ -2108,11 +2108,12 @@ export default function SceneStoryScreen() {
 
   const completeMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/kids/progress/complete", {
+      const completeRes = await apiRequest("POST", "/api/kids/progress/complete", {
         userId: progressUserId,
         storyId: id,
         childProfileId: activeChildProfileId,
       });
+      const completeData = await completeRes.json();
 
       const streakRes = await apiRequest("POST", "/api/kids/streak/update", {
         userId: progressUserId,
@@ -2120,13 +2121,16 @@ export default function SceneStoryScreen() {
       });
       const streakData = await streakRes.json();
 
-      const pointsRes = await apiRequest("POST", "/api/kids/story/award-points", {
-        userId: progressUserId,
-        storyId: id,
-        points: 25,
-        childProfileId: activeChildProfileId,
-      });
-      const pointsData = await pointsRes.json();
+      let pointsData = null;
+      if (completeData.firstCompletion) {
+        const pointsRes = await apiRequest("POST", "/api/kids/story/award-points", {
+          userId: progressUserId,
+          storyId: id,
+          points: 25,
+          childProfileId: activeChildProfileId,
+        });
+        pointsData = await pointsRes.json();
+      }
 
       return { streak: streakData, points: pointsData };
     },
