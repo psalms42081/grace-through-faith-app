@@ -210,6 +210,7 @@ function KidsHomeScreen() {
 
   const { data: kidsSS } = useQuery<{ lesson: { title: string; memoryVerse: string; memoryVerseRef: string; linkedStory: { id: string; title: string } | null } }>({
     queryKey: [`/api/kids/sabbath-school/current?ageGroup=${ageGroup}`],
+    staleTime: 0,
   });
 
   const { data: badges } = useQuery<{ id: string }[]>({

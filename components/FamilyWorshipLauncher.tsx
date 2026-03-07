@@ -74,6 +74,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
 
   const { data: ssData, isLoading: ssLoading } = useQuery<SSData>({
     queryKey: [`/api/kids/sabbath-school/current?ageGroup=${ageGroup}`],
+    staleTime: 0,
   });
 
   const isSabbath = sabbath.isSabbath;
@@ -238,6 +239,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
 
             <ScrollView
               style={styles.sheetScroll}
+              contentContainerStyle={{ paddingBottom: 20 }}
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.sheetHeader}>
@@ -329,7 +331,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                   >
                     {lesson.storySummary}
                   </Text>
-                  {lesson.linkedStory && (
+                  {lesson.linkedStory ? (
                     <Pressable
                       onPress={handleOpenStory}
                       style={[
@@ -348,7 +350,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                         Read: {lesson.linkedStory.title}
                       </Text>
                     </Pressable>
-                  )}
+                  ) : null}
                 </View>
               )}
 
