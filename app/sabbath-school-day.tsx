@@ -293,6 +293,13 @@ export default function SabbathSchoolDayScreen() {
             <MarkdownRenderer content={day.contentMarkdown} theme={theme} />
           )}
 
+          <View style={[styles.sourceAttribution, { borderTopColor: theme.border }]}>
+            <Ionicons name="library-outline" size={13} color={theme.textMuted} />
+            <Text style={[styles.sourceText, { color: theme.textMuted }]}>
+              Lesson content provided by Adventech / Sabbath School Lessons (sabbath-school.adventech.io). Used under open-source license.
+            </Text>
+          </View>
+
           <View style={[styles.journalSection, { borderTopColor: theme.border }]}>
             <View style={styles.journalHeader}>
               <Ionicons name="journal-outline" size={18} color={theme.accent} />
@@ -405,8 +412,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
+  sourceAttribution: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    marginTop: 20,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  sourceText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
+  },
   journalSection: {
-    marginTop: 24,
+    marginTop: 16,
     paddingTop: 20,
     borderTopWidth: 1,
     gap: 10,

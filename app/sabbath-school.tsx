@@ -237,6 +237,13 @@ export default function SabbathSchoolScreen() {
             <Ionicons name="chevron-forward" size={18} color="#050507" />
           </Pressable>
 
+          <View style={styles.sourceFooter}>
+            <Ionicons name="library-outline" size={12} color={theme.textMuted} />
+            <Text style={[styles.sourceFooterText, { color: theme.textMuted }]}>
+              Lesson content from Adventech (sabbath-school.adventech.io). Discussion prep is AI-generated.
+            </Text>
+          </View>
+
           <SDAVerifiedBadge />
         </ScrollView>
       )}
@@ -394,5 +401,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(5, 5, 7, 0.6)",
     marginTop: 1,
+  },
+  sourceFooter: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  sourceFooterText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
   },
 });

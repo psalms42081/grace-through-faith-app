@@ -7,6 +7,11 @@ import {
 import { eq, and } from "drizzle-orm";
 import YAML from "yaml";
 
+// CONTENT SOURCE: Official Adventech Sabbath School lesson content (open-source, MIT-licensed).
+// This service fetches and stores official lesson text (markdown) and metadata (YAML).
+// The raw content is displayed directly in the day reader — it is NOT transformed or paraphrased.
+// AI-generated discussion aids (questions, summaries, reflections) are produced separately
+// in ai-engine.ts and are clearly labeled as AI-generated in the frontend.
 const BASE_URL =
   "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
 

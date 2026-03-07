@@ -93,18 +93,26 @@ export default function SabbathSchoolDiscussionScreen() {
         </Text>
 
         {!data && !generateMutation.isPending && (
-          <Pressable
-            onPress={() => generateMutation.mutate()}
-            style={({ pressed }) => [
-              styles.generateBtn,
-              { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Ionicons name="sparkles" size={22} color="#050507" />
-            <Text style={styles.generateBtnText}>
-              Generate Discussion Prep
-            </Text>
-          </Pressable>
+          <View style={{ gap: 12 }}>
+            <Pressable
+              onPress={() => generateMutation.mutate()}
+              style={({ pressed }) => [
+                styles.generateBtn,
+                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Ionicons name="sparkles" size={22} color="#050507" />
+              <Text style={styles.generateBtnText}>
+                Generate Discussion Prep
+              </Text>
+            </Pressable>
+            <View style={styles.aiDisclaimer}>
+              <Ionicons name="information-circle-outline" size={14} color={theme.textMuted} />
+              <Text style={[styles.aiDisclaimerText, { color: theme.textMuted }]}>
+                Discussion questions, summaries, and reflections are AI-generated study aids based on the official Adventech lesson content. They are not official church materials.
+              </Text>
+            </View>
+          </View>
         )}
 
         {generateMutation.isPending && (
@@ -134,6 +142,13 @@ export default function SabbathSchoolDiscussionScreen() {
 
         {data && (
           <>
+            <View style={[styles.aiBanner, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
+              <Ionicons name="sparkles" size={14} color={theme.accent} />
+              <Text style={[styles.aiBannerText, { color: theme.textMuted }]}>
+                AI-generated study aid — not official church material. Based on Adventech lesson content.
+              </Text>
+            </View>
+
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="document-text-outline" size={18} color={theme.accent} />
@@ -257,6 +272,33 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 20 },
+  aiDisclaimer: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  aiDisclaimerText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
+  },
+  aiBanner: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  aiBannerText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
+    flex: 1,
+  },
   lessonTitle: {
     fontFamily: "Lora_600SemiBold",
     lineHeight: 30,
