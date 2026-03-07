@@ -379,13 +379,13 @@ export async function generateStudyGuideResponse(params: {
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
 
   const phaseInstructions: Record<string, string> = {
-    observe: "Continue in the OBSERVE phase. Ask another observation question about what the student can see in the text.",
+    observe: "Continue in the OBSERVE phase. Ask about a DIFFERENT observation category than what the student already covered. Observation categories: speaker, people mentioned, titles, actions, source of authority, repeated words, contrasts, structure. Pick a category the student has NOT yet addressed.",
     interpret: targetPhase === "interpret" && currentPhase === "observe"
-      ? "The student has finished observing. Transition to the INTERPRET phase. Briefly note the shift: 'Now let\\'s think about what this means.' Then ask your first interpretation question."
-      : "Continue in the INTERPRET phase. Ask about meaning, purpose, or context.",
+      ? "The student has finished observing. Transition to the INTERPRET phase. Briefly note the shift: 'Now let\\'s think about what this means.' Then ask your first interpretation question about the meaning or significance of something they observed."
+      : "Continue in the INTERPRET phase. Ask about meaning, purpose, theological significance, or historical context. Build on what the student said previously.",
     apply: targetPhase === "apply" && currentPhase === "interpret"
-      ? "The student has finished interpreting. Transition to the APPLY phase. Briefly note the shift: 'Now let\\'s think about how this connects to your life.' Then ask your first application question."
-      : "Continue in the APPLY phase. Ask about personal reflection or specific actions.",
+      ? "The student has finished interpreting. Transition to the APPLY phase. Briefly note the shift: 'Now let\\'s think about how this connects to your life.' Then ask a question that invites personal reflection, using words like 'you', 'your life', 'your own'."
+      : "Continue in the APPLY phase. The student must share a PERSONAL reflection — not just restate doctrine. If their answer lacks personal language (I, my, me, we, our, personally), prompt them: 'That\\'s a good insight about the passage. How might this truth affect the way you approach your own calling or responsibilities?'",
     complete: "The student has completed all three phases. Give a brief, warm summary of what they discovered (1-2 key insights). End with a short prayer prompt. Keep it to 3-4 sentences total.",
   };
 
@@ -403,19 +403,27 @@ TONE RULES (critical):
 RESPONSE RULES:
 - Ask ONE question at a time
 - Keep total response to 80-100 words maximum
-- Structure: (1) brief acknowledgment, (2) short clarification if needed, (3) next question
-- If correct, acknowledge in one short phrase ("Right.", "Good.") and ask the next question
-- If incorrect or imprecise, gently clarify what the text actually says, then ask a simpler follow-up question about something directly visible in the verse
-- If the answer is random, unrelated, or nonsense, say: "That doesn't relate to the verse we're studying." Then point them to a specific part of the passage and ask a concrete question about it
+- Structure: (1) brief acknowledgment that references what the student said, (2) short clarification if needed, (3) next question about a DIFFERENT aspect of the text
+- ALWAYS reference the student's previous answer in your acknowledgment. Example: "Yes, Paul identifies himself as an apostle. What does the phrase 'by the will of God' add to that title?"
+- If the student just copies words from the verse without explanation, say: "You're quoting the verse. What does that tell us about [specific element]?" Mark as [SHALLOW].
+- If correct, acknowledge briefly and ask about a DIFFERENT aspect than what they already covered
+- If incorrect or imprecise, gently clarify and ask a simpler follow-up
+- If random or nonsense, redirect to the passage with a concrete question
 - Never over-praise. A brief "Good" or "Right" is enough
 - Never invent facts not in the biblical text
-- Never give the answer directly — ask questions that lead the student to discover truth
+- Never give the answer directly
+- Never repeat a question you already asked earlier in the conversation
 
 EVALUATION (required):
-After your response, on a NEW line, add exactly one evaluation tag. This tag will be stripped before showing your response to the student.
-- [MEANINGFUL] — the student gave a substantive, relevant answer that demonstrates engagement with the text
-- [SHALLOW] — the answer was somewhat related but vague, too short, or lacked depth
-- [OFF_TOPIC] — the answer was unrelated, nonsense, or a copy of the question`;
+After your response, on a NEW line, add exactly one evaluation tag and one category tag. These will be stripped before showing your response.
+Tags:
+- [MEANINGFUL] — substantive, relevant answer showing real engagement with the text
+- [SHALLOW] — vague, too short, mere verse copying without explanation, or lacking depth
+- [OFF_TOPIC] — unrelated, nonsense, or a copy of the question
+Category (for OBSERVE phase only, on same line after the quality tag):
+- [CAT:speaker] [CAT:people] [CAT:titles] [CAT:actions] [CAT:authority] [CAT:repeated] [CAT:contrasts] [CAT:structure] [CAT:other]
+Example: [MEANINGFUL] [CAT:speaker]
+For INTERPRET/APPLY phases, just the quality tag is needed.`;
 
   const formattedMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant",
@@ -436,56 +444,135 @@ After your response, on a NEW line, add exactly one evaluation tag. This tag wil
   return completion.choices[0]?.message?.content || "That's a thoughtful response. Let's continue exploring this passage.\n[SHALLOW]";
 }
 
+export interface EvaluationResult {
+  text: string;
+  quality: "meaningful" | "shallow" | "off_topic";
+  category?: string;
+}
+
+function isVerseCopy(userResponse: string, verseText: string): boolean {
+  const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  const normalUser = normalizeStr(userResponse);
+  const normalVerse = normalizeStr(verseText);
+
+  if (normalUser.length < 10) return false;
+
+  const userWords = normalUser.split(" ");
+  const verseWords = new Set(normalVerse.split(" "));
+  const commonWords = new Set(["the", "a", "an", "is", "are", "was", "were", "in", "of", "and", "to", "that", "this", "it", "for", "with", "on", "at", "by", "from", "he", "she", "they", "his", "her"]);
+  const significantUserWords = userWords.filter((w) => !commonWords.has(w) && w.length > 2);
+  if (significantUserWords.length === 0) return false;
+  const matchCount = significantUserWords.filter((w) => verseWords.has(w)).length;
+  const matchRatio = matchCount / significantUserWords.length;
+
+  if (matchRatio > 0.8 && significantUserWords.length > 3) return true;
+
+  if (normalVerse.includes(normalUser) || normalUser.length < normalVerse.length * 1.2) {
+    const words3 = [];
+    for (let i = 0; i < userWords.length - 2; i++) {
+      words3.push(userWords.slice(i, i + 3).join(" "));
+    }
+    const longMatchCount = words3.filter((tri) => normalVerse.includes(tri)).length;
+    if (words3.length > 0 && longMatchCount / words3.length > 0.6) return true;
+  }
+
+  return false;
+}
+
+function hasPersonalReflection(text: string): boolean {
+  const lower = " " + text.toLowerCase() + " ";
+  const strongIndicators = [" i ", " my ", " me ", "personally", "reminds me", "challenges me", "makes me think", "i feel", "i think", "i should", "i need", "i want", "i believe", "my life", "my own", "my calling", "my responsibilities", "in my"];
+  const hasStrong = strongIndicators.some((ind) => lower.includes(ind));
+  if (!hasStrong) return false;
+  const actionIndicators = ["want to", "going to", "will try", "need to", "plan to", "hope to", "reminds me", "challenges me", "teaches me", "this week", "today", "each day", "every day", "going forward", "from now"];
+  const hasAction = actionIndicators.some((ind) => lower.includes(ind));
+  const hasSelfRef = [" i ", " me ", " my "].some((ind) => lower.includes(ind));
+  return hasSelfRef && (hasAction || lower.length > 80);
+}
+
+export function inferObserveCategory(userResponse: string): string {
+  const lower = userResponse.toLowerCase();
+  const patterns: [string, string[]][] = [
+    ["speaker", ["who is speaking", "the speaker", "god is the", "paul is", "jesus said", "author", "writer", "subject here", "active agent"]],
+    ["people", ["who else", "mentioned", "people", "names", "audience", "readers", "sosthenes", "timothy"]],
+    ["titles", ["title", "calls himself", "apostle", "servant", "lord", "master", "christ"]],
+    ["actions", ["action", "verb", "created", "made", "said", "commands", "doing", "performs", "acts"]],
+    ["authority", ["authority", "by the will", "source of", "calling", "commissioned", "sent by", "appointed"]],
+    ["repeated", ["repeated", "repetition", "emphasis", "again and again", "keeps saying"]],
+    ["contrasts", ["contrast", "but", "however", "opposite", "difference", "compared", "versus"]],
+    ["structure", ["structure", "merism", "literary", "phrase", "beginning", "opening", "closing", "order", "pattern", "totality", "heaven and earth"]],
+  ];
+  for (const [cat, keywords] of patterns) {
+    if (keywords.some((kw) => lower.includes(kw))) return cat;
+  }
+  return "observation_" + Date.now().toString(36).slice(-4);
+}
+
 export function parseEvaluationTag(
   response: string,
   userResponse?: string,
-  verseText?: string
-): { text: string; quality: "meaningful" | "shallow" | "off_topic" } {
-  const tagMatch = response.match(/\n?\s*\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?\s*$/i);
+  verseText?: string,
+  currentPhase?: string
+): EvaluationResult {
+  let cleanText = response;
+  let aiQuality: "meaningful" | "shallow" | "off_topic" | null = null;
+  let category: string | undefined;
+
+  const catMatch = response.match(/\[CAT:(\w+)\]/i);
+  if (catMatch) {
+    category = catMatch[1].toLowerCase();
+    cleanText = cleanText.replace(catMatch[0], "").trim();
+  }
+
+  const tagMatch = cleanText.match(/\n?\s*\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?\s*$/i);
   if (tagMatch) {
-    const tag = tagMatch[1].toUpperCase();
-    const text = response.replace(tagMatch[0], "").trim();
-    const quality = tag === "MEANINGFUL" ? "meaningful" : tag === "OFF_TOPIC" ? "off_topic" : "shallow";
-    return { text, quality };
+    aiQuality = tagMatch[1].toUpperCase() === "MEANINGFUL" ? "meaningful" : tagMatch[1].toUpperCase() === "OFF_TOPIC" ? "off_topic" : "shallow";
+    cleanText = cleanText.replace(tagMatch[0], "").trim();
+  } else {
+    const inlineMatch = cleanText.match(/\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?/i);
+    if (inlineMatch) {
+      aiQuality = inlineMatch[1].toUpperCase() === "MEANINGFUL" ? "meaningful" : inlineMatch[1].toUpperCase() === "OFF_TOPIC" ? "off_topic" : "shallow";
+      cleanText = cleanText.replace(inlineMatch[0], "").trim();
+    }
   }
 
-  const inlineMatch = response.match(/\[?(MEANINGFUL|SHALLOW|OFF_TOPIC)\]?/i);
-  if (inlineMatch) {
-    const tag = inlineMatch[1].toUpperCase();
-    const text = response.replace(inlineMatch[0], "").trim();
-    const quality = tag === "MEANINGFUL" ? "meaningful" : tag === "OFF_TOPIC" ? "off_topic" : "shallow";
-    return { text, quality };
+  if (userResponse && verseText && isVerseCopy(userResponse, verseText)) {
+    return { text: cleanText, quality: "shallow", category };
   }
 
-  if (userResponse) {
+  let resolvedQuality: "meaningful" | "shallow" | "off_topic" = aiQuality || "shallow";
+
+  if (!aiQuality && userResponse) {
     const words = userResponse.trim().split(/\s+/);
     const len = userResponse.trim().length;
 
     if (len < 10 || words.length < 3) {
-      return { text: response.trim(), quality: "off_topic" };
-    }
-
-    const redirectPhrases = ["doesn't relate", "does not relate", "not related", "try looking", "look again", "focus on the verse", "focus on the passage", "back to the verse", "back to the text"];
-    const lower = response.toLowerCase();
-    if (redirectPhrases.some((p) => lower.includes(p))) {
-      return { text: response.trim(), quality: "off_topic" };
-    }
-
-    const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted"];
-    if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + "."))) {
-      if (len > 20 && words.length > 5) {
-        return { text: response.trim(), quality: "meaningful" };
+      resolvedQuality = "off_topic";
+    } else {
+      const lower = cleanText.toLowerCase();
+      const redirectPhrases = ["doesn't relate", "does not relate", "not related", "try looking", "look again", "focus on the verse", "focus on the passage", "back to the verse", "back to the text", "you're quoting"];
+      if (redirectPhrases.some((p) => lower.includes(p))) {
+        resolvedQuality = "off_topic";
+      } else {
+        const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted"];
+        if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + "."))) {
+          if (len > 20 && words.length > 5) {
+            resolvedQuality = "meaningful";
+          }
+        } else if (len > 30 && words.length > 8) {
+          resolvedQuality = "meaningful";
+        }
       }
     }
-
-    if (len > 30 && words.length > 8) {
-      return { text: response.trim(), quality: "meaningful" };
-    }
-
-    return { text: response.trim(), quality: "shallow" };
   }
 
-  return { text: response.trim(), quality: "shallow" };
+  if (userResponse && currentPhase === "apply" && resolvedQuality === "meaningful") {
+    if (!hasPersonalReflection(userResponse)) {
+      resolvedQuality = "shallow";
+    }
+  }
+
+  return { text: cleanText, quality: resolvedQuality, category };
 }
 
 export async function generateStudySummary(params: {
@@ -502,7 +589,11 @@ export async function generateStudySummary(params: {
     messages: [
       {
         role: "system",
-        content: `You write brief study completion summaries. Given a verse and the student's answers across three study stages (Observe, Interpret, Apply), write a 2-3 sentence summary of what they discovered. Use second person ("You observed...", "You reflected..."). Be specific to their actual answers. End with their practical takeaway. Keep it under 60 words total. No theatrical language.`,
+        content: `You write brief study completion summaries based on what the student actually said. Follow this exact 3-part structure:
+1. "You observed that [specific thing from their observe answers]."
+2. "You reflected that [specific insight from their interpret answers]."
+3. "Your takeaway was [their specific personal application from apply answers]."
+Use their actual words and ideas, not generic doctrine. Keep it under 60 words total. No theatrical language. Use second person.`,
       },
       {
         role: "user",

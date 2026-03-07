@@ -37,6 +37,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
     generateStudyGuideStart,
     generateStudyGuideResponse,
     parseEvaluationTag,
+    inferObserveCategory,
     generateStudySummary,
     generateVerseMap,
     generateChapterContext,
@@ -840,9 +841,9 @@ router.post("/api/study-guide/start", aiGenerationLimiter, checkProStatus, async
     ];
 
     const initialProgression = {
-      observe: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null },
-      interpret: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null },
-      apply: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null },
+      observe: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null, categories: [] as string[] },
+      interpret: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null, categories: [] as string[] },
+      apply: { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null, categories: [] as string[] },
     };
 
     const [session] = await db.insert(studyGuideSessions).values({
@@ -900,15 +901,13 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, checkProStatus, asy
     const currentPhase = session.phase;
     const progression = JSON.parse(session.progression || "{}");
 
-    if (!progression.observe) {
-      progression.observe = { completed: false, responses: [], meaningfulCount: 0, completedAt: null };
-    }
-    if (!progression.interpret) {
-      progression.interpret = { completed: false, responses: [], meaningfulCount: 0, completedAt: null };
-    }
-    if (!progression.apply) {
-      progression.apply = { completed: false, responses: [], meaningfulCount: 0, completedAt: null };
-    }
+    const defaultStage = { completed: false, responses: [] as string[], meaningfulCount: 0, completedAt: null, categories: [] as string[] };
+    if (!progression.observe) progression.observe = { ...defaultStage };
+    if (!progression.interpret) progression.interpret = { ...defaultStage };
+    if (!progression.apply) progression.apply = { ...defaultStage };
+    if (!progression.observe.categories) progression.observe.categories = [];
+    if (!progression.interpret.categories) progression.interpret.categories = [];
+    if (!progression.apply.categories) progression.apply.categories = [];
 
     existingMessages.push({ role: "user", content: userResponse, phase: currentPhase, timestamp: new Date().toISOString() });
 
@@ -931,17 +930,29 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, checkProStatus, asy
       persona: session.persona,
     });
 
-    const { text: aiText, quality } = parseEvaluationTag(rawAiMessage, userResponse, session.verseText);
+    const { text: aiText, quality, category } = parseEvaluationTag(rawAiMessage, userResponse, session.verseText, currentPhase);
 
     if (stageData && quality === "meaningful") {
-      stageData.meaningfulCount++;
+      if (currentPhase === "observe") {
+        const resolvedCat = category && category !== "other" ? category : inferObserveCategory(userResponse);
+        if (!stageData.categories.includes(resolvedCat)) {
+          stageData.categories.push(resolvedCat);
+          stageData.meaningfulCount++;
+        }
+      } else {
+        stageData.meaningfulCount++;
+      }
     }
 
     const threshold = STAGE_THRESHOLDS[currentPhase] || 2;
     let shouldAdvance = false;
     let nextPhase = currentPhase;
 
-    if (stageData && stageData.meaningfulCount >= threshold && !stageData.completed) {
+    const meetsThreshold = currentPhase === "observe"
+      ? stageData && stageData.categories && stageData.categories.length >= threshold
+      : stageData && stageData.meaningfulCount >= threshold;
+
+    if (meetsThreshold && stageData && !stageData.completed) {
       stageData.completed = true;
       stageData.completedAt = new Date().toISOString();
       shouldAdvance = true;
