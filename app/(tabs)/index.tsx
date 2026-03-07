@@ -1131,6 +1131,10 @@ function AdultHomeScreen() {
         const seen = await AsyncStorage.getItem(KIDS_TOOLTIP_KEY);
         if (!seen) {
           setShowTooltip(true);
+          setTimeout(() => {
+            setShowTooltip(false);
+            AsyncStorage.setItem(KIDS_TOOLTIP_KEY, "true").catch(() => {});
+          }, 5000);
         }
       } catch {}
     })();
@@ -1511,8 +1515,8 @@ function AdultHomeScreen() {
         <View>
           {showTooltip && (
             <View style={[s.tooltip, { backgroundColor: theme.accent }]}>
+              <View style={[s.tooltipArrow, { borderBottomColor: theme.accent }]} />
               <Text style={s.tooltipText}>Switch to Kids Mode</Text>
-              <View style={[s.tooltipArrow, { borderTopColor: theme.accent }]} />
             </View>
           )}
           <Pressable
@@ -1621,9 +1625,9 @@ const s = StyleSheet.create({
   },
   tooltip: {
     position: "absolute",
-    bottom: "100%" as any,
+    top: "100%" as any,
     right: 0,
-    marginBottom: 8,
+    marginTop: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -1639,13 +1643,13 @@ const s = StyleSheet.create({
   },
   tooltipArrow: {
     position: "absolute",
-    bottom: -6,
+    top: -6,
     right: 16,
     width: 0,
     height: 0,
     borderLeftWidth: 6,
     borderRightWidth: 6,
-    borderTopWidth: 6,
+    borderBottomWidth: 6,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
   },
