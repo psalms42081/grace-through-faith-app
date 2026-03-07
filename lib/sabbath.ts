@@ -156,6 +156,27 @@ export function getSabbathWindow(
   return { start: sabbathStart, end: sabbathEnd, isActive, closingReflectionActive };
 }
 
+export type SabbathPhase = "friday-evening" | "sabbath-morning" | "afternoon" | "closing" | "outside";
+
+export function getSabbathPhase(start: Date, end: Date): SabbathPhase {
+  const now = new Date();
+  if (now < start || now > end) return "outside";
+
+  const midnight = new Date(start);
+  midnight.setDate(midnight.getDate() + 1);
+  midnight.setHours(0, 0, 0, 0);
+
+  const noon = new Date(midnight);
+  noon.setHours(12, 0, 0, 0);
+
+  const twoHoursBefore = new Date(end.getTime() - 2 * 60 * 60 * 1000);
+
+  if (now < midnight) return "friday-evening";
+  if (now < noon) return "sabbath-morning";
+  if (now < twoHoursBefore) return "afternoon";
+  return "closing";
+}
+
 interface SabbathState {
   isSabbath: boolean;
   closingReflectionActive: boolean;

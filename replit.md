@@ -25,14 +25,16 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **User Features:** Includes notes, highlights, bookmarks, a prayer journal, reading history with streak tracking, and a unified "My Library" screen.
 - **Semantic Search:** AI-powered natural language Bible search using OpenAI, also searching user's notes/highlights/bookmarks, with results cached.
 - **Formation System:** A curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking. Includes a Sabbath Mode UI toggle for lessons.
-- **Sabbath Experience Mode:** Detects Sabbath hours using astronomical sunset calculations, providing specialized home screen content and prompts.
+- **Sabbath Experience Mode (Full):** Time-phased Sabbath environment with four distinct phases: Friday Evening (opening scripture, family prayer, worship songs), Sabbath Morning (Sabbath School link, reflection questions, church prep), Afternoon (nature meditation, missionary stories, family discussions), and Closing (closing prayer, gratitude, farewell reflection). Phase detection via `getSabbathPhase()` in `lib/sabbath.ts` with auto-refresh every 60 seconds. Visual phase timeline indicator at top. Preserves existing theological framing, reflection saving, worship pathways, and study depth selection.
 - **Church Connect:** A global SDA church finder with geo-radius and text search capabilities, supporting map and list views.
 - **Spiritual Rings:** Apple Watch-style concentric SVG rings on the home screen tracking daily spiritual disciplines (Study, Prayer, Engage).
 - **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next`, with content translation architecture using overlay tables.
 - **Contextual Tutorial System:** Full-screen walkthrough tutorials for major features with persistence via AsyncStorage.
 - **Pro/Paywall System:** Guards premium features with a trial period, including a Family Dashboard.
 - **Small Groups 2.0:** Enhanced system for SDA small groups with member roles, discussions, and announcements.
-- **Live Streaming:** Integrates Jitsi Meet via WebView for live streaming.
+- **Live Streaming:** LiveKit Cloud-powered real-time video/audio via WebView with native permission handling.
+- **Prophecy Explorer:** Interactive Daniel & Revelation study screen (`app/prophecy-explorer.tsx`) with expandable/collapsible sections covering Daniel 2 (Great Image), Daniel 7 (Four Beasts), Daniel 8-9 (2300 Day Prophecy), and Revelation timelines (Seven Churches, Seals, Trumpets, Three Angels' Messages, Sanctuary). Each symbol includes Bible reference, SDA interpretation, and historical fulfillment. Visual timeline bar with date markers. Accessible from Study tab and Sabbath Experience worship pathways.
+- **Spiritual Growth Map:** Visual spiritual journey screen (`app/growth-map.tsx`) tracking 5 dimensions (Prayer Life, Scripture, Service, Character, Wisdom) with 4 levels each. Levels calculated from real app data via `GET /api/growth-map` endpoint (aggregates prayer entries, chapters read, group participation, study depth usage, study path progress). Concentric growth rings visualization and detailed breakdown cards with progress bars. Accessible from "You" tab quick links.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
 - **Dynamic Topic Content:** Topic detail pages feature AI-generated daily reflections and shuffled verses/media.
 - **Guest User Identity:** Each device receives a unique UUID for API calls and data isolation.

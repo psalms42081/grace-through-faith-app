@@ -88,6 +88,8 @@ function RootLayoutNav() {
       <Stack.Screen name="sabbath-school" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school-day" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school-discussion" options={{ headerShown: false }} />
+      <Stack.Screen name="prophecy-explorer" options={{ headerShown: false }} />
+      <Stack.Screen name="growth-map" options={{ headerShown: false }} />
     </Stack>
   );
 }

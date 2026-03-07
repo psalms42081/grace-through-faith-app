@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,10 +15,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSabbath } from "@/lib/sabbath";
+import { useSabbath, getSabbathPhase, SabbathPhase } from "@/lib/sabbath";
 import { useTheme } from "@/hooks/useTheme";
 import StudyDepthSelector, { DepthBadge } from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
+
+const GOLD = "#C9933A";
+const BG_DARK = "#050507";
 
 const THEOLOGICAL_FRAMES = [
   {
@@ -54,10 +56,149 @@ const WORSHIP_PATHWAYS = [
   { icon: "book" as const, label: "Sabbath School", route: "/sabbath-school" },
   { icon: "school" as const, label: "Study Paths", route: "/study-paths" },
   { icon: "git-network" as const, label: "Great Controversy", route: "/great-controversy" },
+  { icon: "telescope" as const, label: "Prophecy Explorer", route: "/prophecy-explorer" },
   { icon: "videocam" as const, label: "Live Streams", route: "/" },
   { icon: "location" as const, label: "Church Connect", route: "/church-connect" },
   { icon: "heart" as const, label: "Family Altar", route: "/prayer-journal" },
 ];
+
+interface PhaseConfig {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  subtitle: string;
+}
+
+const PHASE_CONFIGS: Record<SabbathPhase, PhaseConfig> = {
+  "friday-evening": {
+    label: "Friday Evening",
+    icon: "moon-outline",
+    color: "#8B6FBF",
+    subtitle: "Welcoming the Sabbath",
+  },
+  "sabbath-morning": {
+    label: "Sabbath Morning",
+    icon: "sunny-outline",
+    color: "#D4A245",
+    subtitle: "Worship & Study",
+  },
+  afternoon: {
+    label: "Sabbath Afternoon",
+    icon: "leaf-outline",
+    color: "#5A9E6F",
+    subtitle: "Rest & Fellowship",
+  },
+  closing: {
+    label: "Sabbath Closing",
+    icon: "star-outline",
+    color: "#C77B4A",
+    subtitle: "Farewell & Gratitude",
+  },
+  outside: {
+    label: "Preparing",
+    icon: "time-outline",
+    color: GOLD,
+    subtitle: "Awaiting Sacred Time",
+  },
+};
+
+const PHASE_ORDER: SabbathPhase[] = ["friday-evening", "sabbath-morning", "afternoon", "closing"];
+
+interface PhaseContentItem {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  text: string;
+  ref?: string;
+}
+
+const FRIDAY_EVENING_CONTENT: PhaseContentItem[] = [
+  {
+    icon: "book-outline",
+    title: "Opening Scripture",
+    text: "\"And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made.\"",
+    ref: "Genesis 2:3",
+  },
+  {
+    icon: "people-outline",
+    title: "Family Prayer",
+    text: "Gather your household and welcome the Sabbath together. Thank God for His provision this week and ask for His presence during these sacred hours.",
+  },
+  {
+    icon: "musical-notes-outline",
+    title: "Worship Song",
+    text: "Consider singing or listening to \"Day Is Dying in the West\" or another Sabbath vespers hymn as you transition from the week into holy time.",
+  },
+  {
+    icon: "heart-outline",
+    title: "Prepare Your Heart",
+    text: "Set aside the concerns of the week. Release your burdens to the One who carries them. The Sabbath is His gift of rest \u2014 receive it with an open heart.",
+  },
+];
+
+const SABBATH_MORNING_CONTENT: PhaseContentItem[] = [
+  {
+    icon: "school-outline",
+    title: "Sabbath School Study",
+    text: "Dive into this week's lesson with fellow believers. The Sabbath School is a time for corporate Bible study and spiritual growth.",
+  },
+  {
+    icon: "help-circle-outline",
+    title: "Reflection Questions",
+    text: "What truth from Scripture has been illuminated for you this week? How does the Sabbath reshape your understanding of God's character?",
+  },
+  {
+    icon: "shirt-outline",
+    title: "Church Preparation",
+    text: "Prepare yourself for corporate worship. Approach the sanctuary with reverence, knowing you are entering the presence of the King of kings.",
+    ref: "Psalm 100:4",
+  },
+];
+
+const AFTERNOON_CONTENT: PhaseContentItem[] = [
+  {
+    icon: "leaf-outline",
+    title: "Nature Meditation",
+    text: "Step outside and observe God's creation. The natural world is His second book \u2014 every leaf, every birdsong declares His glory and care.",
+    ref: "Psalm 19:1",
+  },
+  {
+    icon: "newspaper-outline",
+    title: "Missionary Story",
+    text: "Read or share a story of God's work around the world. The mission field extends from your neighborhood to the ends of the earth.",
+  },
+  {
+    icon: "chatbubbles-outline",
+    title: "Family Discussion",
+    text: "Share what you learned from the sermon today. What spoke to your heart? How can you apply it in the coming week? Let children share their thoughts too.",
+  },
+];
+
+const CLOSING_CONTENT: PhaseContentItem[] = [
+  {
+    icon: "hand-left-outline",
+    title: "Closing Prayer",
+    text: "As the sacred hours draw to a close, lift your heart in prayer. Thank God for the gift of rest and ask for strength for the week ahead.",
+  },
+  {
+    icon: "journal-outline",
+    title: "Gratitude Journal",
+    text: "Record three blessings from this Sabbath. What moments of peace, insight, or connection did you experience? Let gratitude seal these sacred hours.",
+  },
+  {
+    icon: "sparkles-outline",
+    title: "Farewell Reflection",
+    text: "As the sun sets, we bid farewell to the Sabbath with hope. The rest we have tasted is but a foretaste of the eternal rest that awaits God's people.",
+    ref: "Hebrews 4:9",
+  },
+];
+
+const PHASE_CONTENT: Record<SabbathPhase, PhaseContentItem[]> = {
+  "friday-evening": FRIDAY_EVENING_CONTENT,
+  "sabbath-morning": SABBATH_MORNING_CONTENT,
+  afternoon: AFTERNOON_CONTENT,
+  closing: CLOSING_CONTENT,
+  outside: FRIDAY_EVENING_CONTENT,
+};
 
 interface ReflectionData {
   id: string;
@@ -68,11 +209,97 @@ interface ReflectionData {
   createdAt: string;
 }
 
+function PhaseIndicator({ currentPhase }: { currentPhase: SabbathPhase }) {
+  const activeIdx = PHASE_ORDER.indexOf(currentPhase);
+
+  return (
+    <View style={phaseStyles.container}>
+      <View style={phaseStyles.timeline}>
+        {PHASE_ORDER.map((phase, i) => {
+          const config = PHASE_CONFIGS[phase];
+          const isActive = phase === currentPhase;
+          const isPast = activeIdx >= 0 && i < activeIdx;
+          const dotColor = isActive ? config.color : isPast ? config.color + "80" : "#333";
+
+          return (
+            <View key={phase} style={phaseStyles.phaseItem}>
+              {i > 0 && (
+                <View
+                  style={[
+                    phaseStyles.connector,
+                    { backgroundColor: isPast || isActive ? GOLD + "50" : "#1E1F24" },
+                  ]}
+                />
+              )}
+              <View
+                style={[
+                  phaseStyles.dot,
+                  {
+                    backgroundColor: dotColor,
+                    borderColor: isActive ? config.color : "transparent",
+                    borderWidth: isActive ? 2 : 0,
+                    width: isActive ? 14 : 10,
+                    height: isActive ? 14 : 10,
+                    borderRadius: isActive ? 7 : 5,
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  phaseStyles.phaseLabel,
+                  {
+                    color: isActive ? config.color : isPast ? "#9A8E7A" : "#5C5549",
+                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {config.label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {currentPhase !== "outside" && (
+        <View style={[phaseStyles.currentBanner, { backgroundColor: PHASE_CONFIGS[currentPhase].color + "18" }]}>
+          <Ionicons
+            name={PHASE_CONFIGS[currentPhase].icon}
+            size={18}
+            color={PHASE_CONFIGS[currentPhase].color}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[phaseStyles.bannerTitle, { color: PHASE_CONFIGS[currentPhase].color }]}>
+              {PHASE_CONFIGS[currentPhase].label}
+            </Text>
+            <Text style={phaseStyles.bannerSubtitle}>
+              {PHASE_CONFIGS[currentPhase].subtitle}
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function PhaseContentCard({ item, phaseColor }: { item: PhaseContentItem; phaseColor: string }) {
+  return (
+    <View style={[cardStyles.card, { borderColor: phaseColor + "20", backgroundColor: phaseColor + "08" }]}>
+      <View style={[cardStyles.iconWrap, { backgroundColor: phaseColor + "1A" }]}>
+        <Ionicons name={item.icon} size={20} color={phaseColor} />
+      </View>
+      <Text style={cardStyles.title}>{item.title}</Text>
+      <Text style={cardStyles.text}>{item.text}</Text>
+      {item.ref && <Text style={cardStyles.ref}>{item.ref}</Text>}
+    </View>
+  );
+}
+
 export default function SabbathExperienceScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const { closingReflectionActive } = useSabbath();
+  const { closingReflectionActive, sabbathStart, sabbathEnd, isSabbath } = useSabbath();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -86,6 +313,26 @@ export default function SabbathExperienceScreen() {
   const [closingResponse, setClosingResponse] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingClosing, setSavingClosing] = useState(false);
+
+  const [currentPhase, setCurrentPhase] = useState<SabbathPhase>(() => {
+    if (!sabbathStart || !sabbathEnd) return "outside";
+    return getSabbathPhase(sabbathStart, sabbathEnd);
+  });
+
+  useEffect(() => {
+    if (!sabbathStart || !sabbathEnd) {
+      setCurrentPhase("outside");
+      return;
+    }
+    setCurrentPhase(getSabbathPhase(sabbathStart, sabbathEnd));
+    const interval = setInterval(() => {
+      setCurrentPhase(getSabbathPhase(sabbathStart, sabbathEnd));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [sabbathStart, sabbathEnd]);
+
+  const phaseConfig = PHASE_CONFIGS[currentPhase];
+  const phaseContent = PHASE_CONTENT[currentPhase];
 
   const queryKey = [`/api/sabbath/reflections?userId=${userId}&date=${todayStr}`];
 
@@ -165,6 +412,8 @@ export default function SabbathExperienceScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <PhaseIndicator currentPhase={currentPhase} />
+
         <Text style={[styles.sectionTitle, { color: theme.accent }]}>
           Sacred Time
         </Text>
@@ -187,6 +436,36 @@ export default function SabbathExperienceScreen() {
             {frame.ref}
           </Text>
         </View>
+
+        <Text style={[styles.sectionTitle, { color: phaseConfig.color, marginTop: 32 }]}>
+          {phaseConfig.label}
+        </Text>
+        <Text style={[styles.phaseSubtitle, { color: theme.textSecondary }]}>
+          {phaseConfig.subtitle}
+        </Text>
+        {phaseContent.map((item, i) => (
+          <PhaseContentCard key={i} item={item} phaseColor={phaseConfig.color} />
+        ))}
+
+        {currentPhase === "sabbath-morning" && (
+          <Pressable
+            onPress={() => router.push("/sabbath-school" as any)}
+            style={({ pressed }) => [
+              styles.quickLink,
+              {
+                backgroundColor: phaseConfig.color + "15",
+                borderColor: phaseConfig.color + "30",
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="school-outline" size={20} color={phaseConfig.color} />
+            <Text style={[styles.quickLinkText, { color: phaseConfig.color }]}>
+              Open Sabbath School Study
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={phaseConfig.color} />
+          </Pressable>
+        )}
 
         <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 32 }]}>
           Sabbath Reflections
@@ -270,7 +549,7 @@ export default function SabbathExperienceScreen() {
           ))}
         </View>
 
-        {closingReflectionActive && (
+        {(closingReflectionActive || currentPhase === "closing") && (
           <>
             <Text
               style={[styles.sectionTitle, { color: theme.accent, marginTop: 32 }]}
@@ -333,6 +612,92 @@ export default function SabbathExperienceScreen() {
   );
 }
 
+const phaseStyles = StyleSheet.create({
+  container: {
+    marginBottom: 24,
+  },
+  timeline: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    marginBottom: 16,
+  },
+  phaseItem: {
+    alignItems: "center",
+    flex: 1,
+    position: "relative",
+  },
+  connector: {
+    position: "absolute",
+    top: 5,
+    right: "50%",
+    left: "-50%",
+    height: 2,
+    zIndex: -1,
+  },
+  dot: {
+    marginBottom: 6,
+  },
+  phaseLabel: {
+    fontSize: 10,
+    textAlign: "center",
+  },
+  currentBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  bannerTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  bannerSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#9A8E7A",
+    marginTop: 2,
+  },
+});
+
+const cardStyles = StyleSheet.create({
+  card: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 12,
+    gap: 8,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: 16,
+    fontFamily: "Lora_700Bold",
+    color: "#F0EBE0",
+  },
+  text: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: "Inter_400Regular",
+    color: "#9A8E7A",
+  },
+  ref: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5C5549",
+    marginTop: 2,
+  },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
@@ -352,6 +717,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Lora_700Bold",
     marginBottom: 14,
+  },
+  phaseSubtitle: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 16,
+    marginTop: -8,
   },
   framingCard: {
     borderWidth: 1,
@@ -440,5 +811,20 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 14,
     minHeight: 100,
+  },
+  quickLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  quickLinkText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
 });

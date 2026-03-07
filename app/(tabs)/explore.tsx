@@ -190,6 +190,27 @@ export default function StudyScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push("/prophecy-explorer" as any)}
+          style={({ pressed }) => [
+            styles.resourceCard,
+            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="telescope" size={22} color="#C9933A" />
+          </View>
+          <View style={styles.resourceInfo}>
+            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Prophecy Explorer
+            </Text>
+            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Interactive Daniel & Revelation timelines
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
         <EnrolledTracksPreview theme={theme} />
 
         <SectionDivider theme={theme} />

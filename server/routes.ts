@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { db } from "./db";
-import { users } from "../shared/schema";
+import { users, prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, layerCompletions, progressTracks } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
 import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
@@ -69,6 +69,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(formationRoutes);
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);
+
+  app.get("/api/growth-map", async (req, res) => {
+    try {
+      const userId = (req.query.userId as string) || "guest";
+
+      const prayerRows = await db.select().from(prayerRequests).where(eq(prayerRequests.userId, userId));
+      const readingRows = await db.select().from(readingHistory).where(eq(readingHistory.userId, userId));
+      const groupMemberRows = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.userId, userId));
+      const discussionRows = await db.select().from(groupDiscussions).where(eq(groupDiscussions.userId, userId));
+      const layerRows = await db.select().from(layerCompletions).where(eq(layerCompletions.userId, userId));
+      const progressTrackRows = await db.select().from(progressTracks).where(eq(progressTracks.userId, userId));
+
+      const uniqueChapters = new Set(
+        readingRows.map((r: any) => `${r.bookId}-${r.chapter}`)
+      );
+
+      const studyPathProgress = progressTrackRows.reduce(
+        (sum: number, p: any) => sum + (p.percentComplete || 0),
+        0
+      );
+      const studyPathNormalized = progressTrackRows.length > 0
+        ? Math.round(studyPathProgress / progressTrackRows.length / 2)
+        : 0;
+
+      const uniqueLayers = new Set(layerRows.map((l: any) => l.layer));
+
+      const completionRate = (() => {
+        const totalPossibleGoals = 7;
+        const goalsHit =
+          (prayerRows.length > 0 ? 1 : 0) +
+          (uniqueChapters.size > 0 ? 1 : 0) +
+          (groupMemberRows.length > 0 ? 1 : 0) +
+          (discussionRows.length > 0 ? 1 : 0) +
+          (layerRows.length > 0 ? 1 : 0) +
+          (progressTrackRows.length > 0 ? 1 : 0) +
+          (readingRows.length >= 7 ? 1 : 0);
+        return Math.round((goalsHit / totalPossibleGoals) * 100);
+      })();
+
+      res.json({
+        prayer: { count: prayerRows.length },
+        scripture: { chaptersRead: uniqueChapters.size },
+        service: {
+          groupCount: groupMemberRows.length,
+          discussionCount: discussionRows.length,
+        },
+        character: { completionRate },
+        wisdom: {
+          studyDepthUsage: uniqueLayers.size,
+          studyPathProgress: studyPathNormalized,
+        },
+      });
+    } catch (err) {
+      console.error("Growth map error:", err);
+      res.json({
+        prayer: { count: 0 },
+        scripture: { chaptersRead: 0 },
+        service: { groupCount: 0, discussionCount: 0 },
+        character: { completionRate: 0 },
+        wisdom: { studyDepthUsage: 0, studyPathProgress: 0 },
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

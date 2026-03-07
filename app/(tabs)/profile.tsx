@@ -692,6 +692,7 @@ export default function ProfileScreen() {
         )}
 
         {[
+          { title: "Spiritual Growth", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
           { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
           { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
           { title: t("profile.prayerGroups"), icon: "people-circle" as const, color: "#10B981", route: "/groups" },
