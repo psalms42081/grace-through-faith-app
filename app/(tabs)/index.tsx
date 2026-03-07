@@ -447,32 +447,41 @@ function KidsHomeScreen() {
         <AnimatedSection index={1}>
           <Pressable
             onPress={() => router.push("/kids/sabbath-school")}
-            style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: "#7B61FF40" }]}
+            style={[kidsStyles.ssCard, { backgroundColor: theme.backgroundCard, borderColor: "#7B61FF40" }]}
             testID="kids-sabbath-school"
           >
-            <View style={[kidsStyles.dailyIcon, { backgroundColor: "#7B61FF20" }]}>
-              <Ionicons name="sunny" size={28} color="#7B61FF" />
-            </View>
-            <View style={kidsStyles.dailyInfo}>
-              <Text style={[kidsStyles.dailyLabel, { color: "#7B61FF", fontFamily: "Inter_600SemiBold" }]}>
+            <View style={kidsStyles.ssCardHeader}>
+              <View style={[kidsStyles.ssIconWrap, { backgroundColor: "#7B61FF20" }]}>
+                <Ionicons name="sunny" size={22} color="#7B61FF" />
+              </View>
+              <Text style={[kidsStyles.ssLabel, { color: "#7B61FF", fontFamily: "Inter_600SemiBold" }]}>
                 This Week's Sabbath School
               </Text>
-              <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                {kidsSS.lesson.title}
-              </Text>
-              <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {kidsSS.lesson.memoryVerseRef}
-              </Text>
-              {kidsSS.lesson.linkedStory && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-                  <Ionicons name="book" size={12} color="#4A90D9" />
-                  <Text style={{ color: "#4A90D9", fontSize: 12, fontFamily: "Inter_500Medium" }}>
-                    Read the full story: {kidsSS.lesson.linkedStory.title}
-                  </Text>
-                </View>
-              )}
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#7B61FF" />
+            <Text style={[kidsStyles.ssTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              {kidsSS.lesson.title}
+            </Text>
+            <Text style={[kidsStyles.ssVerse, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {kidsSS.lesson.memoryVerseRef}
+            </Text>
+            {kidsSS.lesson.linkedStory && (
+              <Pressable
+                onPress={() => router.push(`/kids/story/${kidsSS.lesson.linkedStory!.id}`)}
+                style={kidsStyles.ssStoryLink}
+              >
+                <Ionicons name="book" size={14} color="#4A90D9" />
+                <Text style={[kidsStyles.ssStoryLinkText, { fontFamily: "Inter_500Medium" }]}>
+                  Read the full story: {kidsSS.lesson.linkedStory.title}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color="#4A90D9" />
+              </Pressable>
+            )}
+            <View style={[kidsStyles.ssCta, { backgroundColor: "#7B61FF" }]}>
+              <Ionicons name="sunny-outline" size={14} color="#fff" />
+              <Text style={[kidsStyles.ssCtaText, { fontFamily: "Inter_600SemiBold" }]}>
+                Open Lesson
+              </Text>
+            </View>
           </Pressable>
         </AnimatedSection>
       )}
@@ -731,6 +740,65 @@ const kidsStyles = StyleSheet.create({
   dailyLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
   dailyTitle: { fontSize: 16, marginBottom: 2 },
   dailyRef: { fontSize: 12 },
+  ssCard: {
+    padding: 16,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    marginBottom: 16,
+  },
+  ssCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  ssIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ssLabel: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+  },
+  ssTitle: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  ssVerse: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  ssStoryLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  ssStoryLinkText: {
+    flex: 1,
+    color: "#4A90D9",
+    fontSize: 13,
+  },
+  ssCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start" as const,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  ssCtaText: {
+    color: "#fff",
+    fontSize: 13,
+  },
   quickActions: { flexDirection: "row", gap: 10, marginBottom: 16 },
   actionCard: {
     flex: 1,

@@ -326,7 +326,6 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                         fontFamily: "Inter_400Regular",
                       },
                     ]}
-                    numberOfLines={3}
                   >
                     {lesson.storySummary}
                   </Text>
