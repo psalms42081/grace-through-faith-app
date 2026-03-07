@@ -36,7 +36,7 @@ export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const [webViewLoading, setWebViewLoading] = useState(true);
@@ -154,6 +154,7 @@ export default function StreamScreen() {
   }
 
   const jitsiBase = session.roomUrl.split("?")[0].split("#")[0];
+  const displayName = user?.displayName || session.hostDisplayName || "Guest";
   const configParts = [
     "config.prejoinConfig.enabled=false",
     "config.prejoinPageEnabled=false",
@@ -164,6 +165,11 @@ export default function StreamScreen() {
     "config.hideConferenceSubject=false",
     "config.disableProfile=true",
     "config.enableInsecureRoomNameWarning=false",
+    "config.enableLobbyChat=false",
+    "config.hideLobbyButton=true",
+    "config.requireDisplayName=false",
+    "config.enableClosePage=false",
+    `userInfo.displayName=${encodeURIComponent(displayName)}`,
     "interfaceConfig.SHOW_JITSI_WATERMARK=false",
     "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
     "interfaceConfig.SHOW_BRAND_WATERMARK=false",
@@ -173,8 +179,33 @@ export default function StreamScreen() {
   ];
   const jitsiUrl = `${jitsiBase}#${configParts.join("&")}`;
 
-  const DESKTOP_USER_AGENT =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  const deepLinkBypassJS = `
+    (function() {
+      if (window._gtfDeepLinkBypassed) return;
+      window._gtfDeepLinkBypassed = true;
+
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        get: function() { return window._gtfOrigLocation; },
+        set: function(val) { window._gtfOrigLocation = val; }
+      });
+
+      var origOpen = window.open;
+      window.open = function(url) {
+        if (url && (
+          url.indexOf('itms-apps://') > -1 ||
+          url.indexOf('market://') > -1 ||
+          url.indexOf('play.google.com') > -1 ||
+          url.indexOf('apps.apple.com') > -1 ||
+          url.indexOf('intent://') > -1
+        )) {
+          return null;
+        }
+        return origOpen ? origOpen.apply(this, arguments) : null;
+      };
+    })();
+    true;
+  `;
 
   const roomSlug = session.roomUrl.split("/").pop() || "";
 
@@ -346,7 +377,7 @@ export default function StreamScreen() {
             domStorageEnabled
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
-            userAgent={DESKTOP_USER_AGENT}
+            injectedJavaScriptBeforeContentLoaded={deepLinkBypassJS}
             onLoadEnd={() => setWebViewLoading(false)}
             onNavigationStateChange={handleNavChange}
             onMessage={handleWebViewMessage}
