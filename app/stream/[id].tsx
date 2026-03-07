@@ -195,15 +195,18 @@ export default function StreamScreen() {
         return origOpen ? origOpen.apply(this, arguments) : null;
       };
 
-      if (typeof navigator !== 'undefined' && navigator.userAgent) {
-        try {
-          Object.defineProperty(navigator, 'userAgent', {
-            get: function() {
-              return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            },
-            configurable: true
-          });
-        } catch(e) {}
+      var origAssign = null;
+      if (typeof window.location !== 'undefined' && window.location.assign) {
+        origAssign = window.location.assign.bind(window.location);
+        window.location.assign = function(url) {
+          var s = String(url || '');
+          if (s.indexOf('itms-apps:') > -1 || s.indexOf('market:') > -1 ||
+              s.indexOf('play.google.com') > -1 || s.indexOf('apps.apple.com') > -1 ||
+              s.indexOf('intent:') > -1 || s.indexOf('org.jitsi.meet:') > -1) {
+            return;
+          }
+          return origAssign(url);
+        };
       }
     })();
     true;
@@ -224,12 +227,26 @@ export default function StreamScreen() {
         }
       }
 
+      var joinClicked = false;
       function clickJoinInBrowser() {
-        var links = document.querySelectorAll('a, button, [role="button"]');
-        for (var i = 0; i < links.length; i++) {
-          var t = (links[i].textContent || '').trim().toLowerCase();
-          if (t === 'join in browser' || t === 'launch in web' || t === 'join meeting') {
-            links[i].click();
+        if (joinClicked) return true;
+        var all = document.querySelectorAll('a, button, span, div, [role="button"]');
+        for (var i = 0; i < all.length; i++) {
+          var t = (all[i].textContent || '').trim().toLowerCase();
+          if (t === 'launch in web' || t === 'join in browser' ||
+              t === 'join the meeting' || t === 'continue in browser' ||
+              t === 'join meeting' || t === 'open in browser') {
+            joinClicked = true;
+            all[i].click();
+            return true;
+          }
+        }
+        var anchors = document.querySelectorAll('a[href]');
+        for (var j = 0; j < anchors.length; j++) {
+          var href = anchors[j].getAttribute('href') || '';
+          if (href.indexOf(roomSlug) > -1 && href.indexOf('#') > -1) {
+            joinClicked = true;
+            anchors[j].click();
             return true;
           }
         }
@@ -239,14 +256,15 @@ export default function StreamScreen() {
       var deepCheckCount = 0;
       var deepCheckTimer = setInterval(function() {
         deepCheckCount++;
-        var text = document.body ? (document.body.innerText || '') : '';
-        if (text.indexOf('How do you want to join') > -1 ||
-            text.indexOf('Download from App Store') > -1 ||
-            text.indexOf('Download from Google Play') > -1) {
-          if (clickJoinInBrowser()) clearInterval(deepCheckTimer);
-        }
-        if (deepCheckCount > 20) clearInterval(deepCheckTimer);
-      }, 500);
+        clickJoinInBrowser();
+        if (joinClicked || deepCheckCount > 40) clearInterval(deepCheckTimer);
+      }, 300);
+
+      if (document.body) {
+        new MutationObserver(function(mutations, obs) {
+          if (clickJoinInBrowser()) obs.disconnect();
+        }).observe(document.body, { childList: true, subtree: true });
+      }
 
       var origPush = history.pushState;
       var origReplace = history.replaceState;

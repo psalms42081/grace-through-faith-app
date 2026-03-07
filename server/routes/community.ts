@@ -804,7 +804,7 @@ router.post("/api/streams/create", async (req, res) => {
       .from(users).where(eq(users.id, userId));
 
     const roomName = generateJitsiRoom();
-    const roomUrl = `https://meet.jit.si/${roomName}`;
+    const roomUrl = `https://jitsi.member.fsf.org/${roomName}`;
 
     const [session] = await db.insert(liveSessions).values({
       title,
@@ -830,33 +830,9 @@ router.get("/api/streams/:id/embed", async (req, res) => {
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).send("Session not found");
 
-    const roomName = session.roomUrl.replace("https://meet.jit.si/", "");
+    const roomName = session.roomUrl.split("/").pop() || "";
 
-    const configHash = [
-      "config.prejoinConfig.enabled=false",
-      "config.prejoinPageEnabled=false",
-      "config.startWithAudioMuted=true",
-      "config.disableDeepLinking=true",
-      "config.deeplinking.disabled=true",
-      "config.enableClosePage=false",
-      "config.disableThirdPartyRequests=true",
-      "config.enableInsecureRoomNameWarning=false",
-      "config.hideConferenceSubject=true",
-      "config.disableProfile=true",
-      "config.enableLobbyChat=false",
-      "config.requireDisplayName=false",
-      `userInfo.displayName=${encodeURIComponent(displayName)}`,
-      "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-      "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
-      "interfaceConfig.SHOW_BRAND_WATERMARK=false",
-      "interfaceConfig.SHOW_POWERED_BY=false",
-      "interfaceConfig.MOBILE_APP_PROMO=false",
-      "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
-      "interfaceConfig.HIDE_DEEP_LINKING_LOGO=true",
-    ].join("&");
-    const jitsiDirectUrl = `https://meet.jit.si/${roomName}#${configHash}`;
-
-    return res.json({ embedUrl: jitsiDirectUrl, roomName });
+    return res.json({ roomUrl: session.roomUrl, roomName });
   } catch (err) {
     console.error("Stream embed error:", err);
     return res.status(500).send("Error loading stream");

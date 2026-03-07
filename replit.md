@@ -63,5 +63,5 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **OpenStreetMap:** Embedded tile maps on the web platform.
 
 **Streaming:**
-- **Jitsi Meet (meet.jit.si):** Live video conferencing sessions.
-- **react-native-webview:** Embedding Jitsi Meet on native platforms.
+- **Jitsi Meet (jitsi.member.fsf.org):** Live video conferencing sessions (FSF instance, no auth required).
+- **react-native-webview:** Embedding Jitsi Meet on native platforms. Uses injected JS to auto-click through deep linking pages and block app store redirects.
