@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   Platform,
 } from "react-native";
 import { router } from "expo-router";
@@ -15,6 +14,8 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { CONNECT_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
+import ListItem from "@/components/ui/ListItem";
+import Badge from "@/components/ui/Badge";
 
 import SectionHeaderShared from "@/components/SectionHeader";
 
@@ -46,127 +47,72 @@ export default function ConnectScreen() {
       >
         <SectionHeaderShared title={t("connect.findAChurch")} color={theme.text} />
 
-        <Pressable
+        <ListItem
+          icon="location"
+          iconColor="#C9933A"
+          title={t("connect.churchConnect")}
+          subtitle={t("connect.churchConnectSub")}
           onPress={() => router.push("/church-connect" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="location" size={24} color="#C9933A" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.churchConnect")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.churchConnectSub")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 10 }}
+        />
 
         <SectionDivider theme={theme} />
 
         <SectionHeaderShared title="Watch & Listen" color={theme.text} />
 
-        <Pressable
+        <ListItem
+          icon="tv"
+          iconColor="#E8456B"
+          title={t("connect.broadcasts")}
+          subtitle={t("connect.broadcastsSub")}
           onPress={() => router.push("/broadcasts" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(232,69,107,0.12)" }]}>
-            <Ionicons name="tv" size={24} color="#E8456B" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.broadcasts")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.broadcastsSub")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 10 }}
+        />
 
-        <View style={[st.placeholderRow, { backgroundColor: theme.backgroundCard }]}>
-          <View style={[st.actionIcon, { backgroundColor: "rgba(232,69,107,0.08)" }]}>
-            <Ionicons name="videocam" size={24} color="#E8456B" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.liveStreams")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.liveStreamsSub")}
-            </Text>
-          </View>
-          <View style={[st.smallBadge, { backgroundColor: theme.accent + "18" }]}>
-            <Text style={[st.smallBadgeText, { color: theme.accent }]}>{t("connect.soon")}</Text>
-          </View>
-        </View>
+        <ListItem
+          icon="videocam"
+          iconColor="#E8456B"
+          title={t("connect.liveStreams")}
+          subtitle={t("connect.liveStreamsSub")}
+          showChevron={false}
+          rightElement={<Badge label={t("connect.soon")} variant="filled" />}
+          style={{ marginBottom: 10 }}
+        />
 
-        <Pressable
+        <ListItem
+          icon="radio"
+          iconColor="#C9933A"
+          title="Christian Radio"
+          subtitle="Live Adventist & gospel streams"
           onPress={() => router.push("/music" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="radio" size={24} color="#C9933A" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>Christian Radio</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              Live Adventist & gospel streams
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 10 }}
+        />
 
         <SectionDivider theme={theme} />
 
         <SectionHeaderShared title={t("connect.community")} color={theme.text} />
 
-        <Pressable
+        <ListItem
+          icon="people-circle"
+          iconColor="#10B981"
+          title={t("connect.smallGroups")}
+          subtitle={t("connect.smallGroupsSub")}
           onPress={() => router.push("/groups" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
-            <Ionicons name="people-circle" size={24} color="#10B981" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.smallGroups")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.smallGroupsSub")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 10 }}
+        />
 
         <SectionDivider theme={theme} />
 
         <SectionHeaderShared title={t("connect.family")} color={theme.text} />
 
-        <Pressable
+        <ListItem
+          icon="home"
+          iconColor="#5B86E5"
+          title={t("connect.familyDashboard")}
+          subtitle={t("connect.familyDashboardSub")}
           onPress={() => router.push("/(tabs)/family" as any)}
-          style={({ pressed }) => [
-            st.actionCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.actionIcon, { backgroundColor: "rgba(91,134,229,0.12)" }]}>
-            <Ionicons name="home" size={24} color="#5B86E5" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.actionTitle, { color: theme.text }]}>{t("connect.familyDashboard")}</Text>
-            <Text style={[st.actionSub, { color: theme.textMuted }]}>
-              {t("connect.familyDashboardSub")}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 10 }}
+        />
       </ScrollView>
     </View>
   );
@@ -185,85 +131,5 @@ const st = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginVertical: 24,
     opacity: 0.6,
-  },
-  placeholderCard: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: "center",
-    gap: 12,
-  },
-  cardIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-  },
-  cardDesc: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 21,
-    textAlign: "center",
-    paddingHorizontal: 8,
-  },
-  comingSoonBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 4,
-  },
-  comingSoonText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  actionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    marginBottom: 10,
-  },
-  placeholderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    marginBottom: 10,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 2,
-  },
-  actionSub: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 19,
-  },
-  smallBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  smallBadgeText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
   },
 });

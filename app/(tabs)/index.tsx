@@ -835,40 +835,44 @@ function AdultHomeScreen() {
 
       {isSabbathMode ? (
         <>
-          <SabbathBanner theme={theme} />
-          <LiveNowSection theme={theme} isDark={isDark} />
-          <GoldDivider theme={theme} />
-          <SpiritualRings theme={theme} isDark={isDark} />
-          {lastRead && <ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} />}
-          <GuidedToolsRow theme={theme} isDark={isDark} />
-          {ssData && <SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} />}
-          <DevotionalCard
-            hasActivePlan={hasActivePlan}
-            progress={progress}
-            total={total}
-            enrollmentPlanId={todayData?.enrollment?.planId}
-            theme={theme}
-            isDark={isDark}
-          />
-          <VerseOfTheDay verse={verse} bgImage={bgImage} />
+          <AnimatedSection index={0}><SabbathBanner theme={theme} /></AnimatedSection>
+          <AnimatedSection index={1}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={2}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={3}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          {lastRead && <AnimatedSection index={4}><ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} /></AnimatedSection>}
+          <AnimatedSection index={5}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          {ssData && <AnimatedSection index={6}><SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} /></AnimatedSection>}
+          <AnimatedSection index={7}>
+            <DevotionalCard
+              hasActivePlan={hasActivePlan}
+              progress={progress}
+              total={total}
+              enrollmentPlanId={todayData?.enrollment?.planId}
+              theme={theme}
+              isDark={isDark}
+            />
+          </AnimatedSection>
+          <AnimatedSection index={8}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
         </>
       ) : (
         <>
-          <VerseOfTheDay verse={verse} bgImage={bgImage} />
-          <SpiritualRings theme={theme} isDark={isDark} />
-          {lastRead && <ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} />}
-          <GuidedToolsRow theme={theme} isDark={isDark} />
-          {ssData && <SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} />}
-          <DevotionalCard
-            hasActivePlan={hasActivePlan}
-            progress={progress}
-            total={total}
-            enrollmentPlanId={todayData?.enrollment?.planId}
-            theme={theme}
-            isDark={isDark}
-          />
-          <GoldDivider theme={theme} />
-          <LiveNowSection theme={theme} isDark={isDark} />
+          <AnimatedSection index={0}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={1}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          {lastRead && <AnimatedSection index={2}><ContinueReadingCard lastRead={lastRead} theme={theme} isDark={isDark} /></AnimatedSection>}
+          <AnimatedSection index={3}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          {ssData && <AnimatedSection index={4}><SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} /></AnimatedSection>}
+          <AnimatedSection index={5}>
+            <DevotionalCard
+              hasActivePlan={hasActivePlan}
+              progress={progress}
+              total={total}
+              enrollmentPlanId={todayData?.enrollment?.planId}
+              theme={theme}
+              isDark={isDark}
+            />
+          </AnimatedSection>
+          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={7}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}
 

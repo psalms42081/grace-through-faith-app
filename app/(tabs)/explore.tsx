@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { EXPLORE_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import { TOPICS_LIST as TOPICS } from "@/data/topics";
+import ListItem from "@/components/ui/ListItem";
 
 const INSPIRATIONS = [
   { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5 },
@@ -106,110 +107,50 @@ export default function StudyScreen() {
           </Text>
         </View>
 
-        <Pressable
+        <ListItem
+          icon="school"
+          iconColor="#7C3AED"
+          title="28 Fundamental Beliefs"
+          subtitle="Core doctrines of the Adventist faith"
           onPress={() => router.push("/sda-studies" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(124,58,237,0.12)" }]}>
-            <Ionicons name="school" size={22} color="#7C3AED" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              28 Fundamental Beliefs
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Core doctrines of the Adventist faith
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
-        <Pressable
+        <ListItem
+          icon="flame"
+          iconColor="#C9933A"
+          title="Devotional Plans"
+          subtitle="Guided daily reading & SDA study plans"
           onPress={() => router.push("/devotionals" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="flame" size={22} color="#C9933A" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Devotional Plans
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Guided daily reading & SDA study plans
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
-        <Pressable
+        <ListItem
+          icon="chatbubbles"
+          iconColor="#8B5CF6"
+          title="Guided Study"
+          subtitle="Socratic AI-guided inductive Bible study"
           onPress={() => router.push("/study-guide" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
-            <Ionicons name="chatbubbles" size={22} color="#8B5CF6" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Guided Study
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Socratic AI-guided inductive Bible study
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
-        <Pressable
+        <ListItem
+          icon="trail-sign"
+          iconColor="#2E7D32"
+          title="Study Paths"
+          subtitle="Structured SDA formation pathways"
           onPress={() => router.push("/study-paths" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(46,125,50,0.12)" }]}>
-            <Ionicons name="trail-sign" size={22} color="#2E7D32" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Study Paths
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Structured SDA formation pathways
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
-        <Pressable
+        <ListItem
+          icon="telescope"
+          iconColor="#C9933A"
+          title="Prophecy Explorer"
+          subtitle="Interactive Daniel & Revelation timelines"
           onPress={() => router.push("/prophecy-explorer" as any)}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="telescope" size={22} color="#C9933A" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Prophecy Explorer
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Interactive Daniel & Revelation timelines
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
         <EnrolledTracksPreview theme={theme} />
 
@@ -221,26 +162,14 @@ export default function StudyScreen() {
           </Text>
         </View>
 
-        <Pressable
+        <ListItem
+          icon="chatbubble-ellipses"
+          iconColor="#3B6CB5"
+          title="Historic Voices"
+          subtitle="Commentary from Matthew Henry, Adam Clarke, John Gill & more"
           onPress={() => router.push("/(tabs)/study?tab=voices")}
-          style={({ pressed }) => [
-            styles.resourceCard,
-            { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[styles.resourceIcon, { backgroundColor: "rgba(59,108,181,0.12)" }]}>
-            <Ionicons name="chatbubble-ellipses" size={22} color="#3B6CB5" />
-          </View>
-          <View style={styles.resourceInfo}>
-            <Text style={[styles.resourceTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Historic Voices
-            </Text>
-            <Text style={[styles.resourceSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Commentary from Matthew Henry, Adam Clarke, John Gill & more
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 8 }}
+        />
 
         <SectionDivider theme={theme} />
 
@@ -394,33 +323,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topicTitle: { color: "#fff", fontSize: 13 },
-  resourceCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    marginBottom: 10,
-  },
-  resourceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  resourceInfo: { flex: 1 },
-  resourceTitle: { fontSize: 15, marginBottom: 2 },
-  resourceSub: { fontSize: 13, lineHeight: 19 },
-  soonBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  soonBadgeText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-  },
   toolsRow: {
     flexDirection: "row",
     gap: 12,

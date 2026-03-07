@@ -18,6 +18,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import EmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { PRAYER_JOURNAL_STEPS } from "@/lib/tutorial-steps";
 
@@ -196,12 +198,13 @@ export default function PrayerJournalScreen() {
           )}
 
           {!isLoading && displayPrayers.length === 0 && (
-            <View style={styles.emptyState}>
-              <Ionicons name={filter === "active" ? "journal-outline" : "checkmark-done-outline"} size={48} color={theme.textMuted} />
-              <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {filter === "active" ? "No active prayer requests.\nTap + to add one." : "No answered prayers yet."}
-              </Text>
-            </View>
+            <EmptyState
+              icon={filter === "active" ? "journal-outline" : "checkmark-done-outline"}
+              title={filter === "active" ? "No Active Prayers" : "No Answered Prayers"}
+              description={filter === "active" ? "Begin your prayer journey by adding your first request." : "Mark prayers as answered to build your testimony of God's faithfulness."}
+              actionLabel={filter === "active" ? "Add Prayer" : undefined}
+              onAction={filter === "active" ? () => setShowAdd(true) : undefined}
+            />
           )}
 
           {displayPrayers.map((prayer) => {
@@ -325,20 +328,15 @@ export default function PrayerJournalScreen() {
                 ))}
               </View>
 
-              <Pressable
-                onPress={() => {
-                  if (newTitle.trim()) addMutation.mutate();
-                }}
-                style={[styles.submitBtn, { backgroundColor: theme.accent, opacity: newTitle.trim() ? 1 : 0.5 }]}
-                disabled={!newTitle.trim() || addMutation.isPending}
+              <Button
+                variant="primary"
+                title="Add Prayer"
+                onPress={() => { if (newTitle.trim()) addMutation.mutate(); }}
+                disabled={!newTitle.trim()}
+                loading={addMutation.isPending}
                 testID="submit-prayer"
-              >
-                {addMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={[styles.submitText, { fontFamily: "Inter_600SemiBold" }]}>Add Prayer</Text>
-                )}
-              </Pressable>
+                style={{ marginTop: 8 }}
+              />
             </View>
           </View>
         </Modal>
@@ -473,11 +471,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   catChipText: { fontSize: 13 },
-  submitBtn: {
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  submitText: { color: "#fff", fontSize: 16 },
 });

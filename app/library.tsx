@@ -16,6 +16,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface EnrichedNote {
   id: string;
@@ -312,16 +313,19 @@ export default function LibraryScreen() {
 
   const renderEmptyState = () => {
     const config = {
-      notes: { icon: "document-text-outline" as const, text: "Start capturing your insights. Highlight verses while reading to automatically add notes here." },
-      highlights: { icon: "color-fill-outline" as const, text: "No highlights yet. Highlight verses while reading to see them here." },
-      bookmarks: { icon: "bookmark-outline" as const, text: "No bookmarks yet. Bookmark verses while reading to see them here." },
+      notes: { icon: "document-text-outline" as const, title: "No Notes Yet", description: "Start capturing your insights. Tap any verse while reading to add a note.", actionLabel: "Open Bible", onAction: () => router.push("/(tabs)/read" as any) },
+      highlights: { icon: "color-fill-outline" as const, title: "No Highlights Yet", description: "Long-press any verse while reading to highlight it. Your highlights will appear here.", actionLabel: "Open Bible", onAction: () => router.push("/(tabs)/read" as any) },
+      bookmarks: { icon: "bookmark-outline" as const, title: "No Bookmarks Yet", description: "Bookmark verses while reading to save them for later reference.", actionLabel: "Open Bible", onAction: () => router.push("/(tabs)/read" as any) },
     };
     const c = config[activeTab];
     return (
-      <View style={styles.emptyState}>
-        <Ionicons name={c.icon} size={48} color={theme.textMuted} />
-        <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{c.text}</Text>
-      </View>
+      <EmptyState
+        icon={c.icon}
+        title={c.title}
+        description={c.description}
+        actionLabel={c.actionLabel}
+        onAction={c.onAction}
+      />
     );
   };
 

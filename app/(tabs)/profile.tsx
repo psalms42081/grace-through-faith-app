@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
+import ListItem from "@/components/ui/ListItem";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { PROFILE_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import { useAuth } from "@/contexts/AuthContext";
@@ -335,39 +336,23 @@ export default function ProfileScreen() {
           { title: t("profile.parentControls"), icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },
           { title: t("profile.howItWorks"), icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
         ].map((link) => (
-          <Pressable
+          <ListItem
             key={link.route}
+            icon={link.icon}
+            iconColor={link.color}
+            title={link.title}
             onPress={() => router.push(link.route as any)}
-            style={({ pressed }) => [
-              st.linkRow,
-              { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[st.linkIcon, { backgroundColor: link.color + "15" }]}>
-              <Ionicons name={link.icon} size={18} color={link.color} />
-            </View>
-            <Text style={[st.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-              {link.title}
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
+            style={{ marginBottom: 6 }}
+          />
         ))}
 
-        <Pressable
+        <ListItem
+          icon="refresh"
+          iconColor="#C9933A"
+          title="Replay Tutorials"
           onPress={resetAllTutorials}
-          style={({ pressed }) => [
-            st.linkRow,
-            { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <View style={[st.linkIcon, { backgroundColor: "#C9933A15" }]}>
-            <Ionicons name="refresh" size={18} color="#C9933A" />
-          </View>
-          <Text style={[st.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-            Replay Tutorials
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-        </Pressable>
+          style={{ marginBottom: 6 }}
+        />
       </View>
     </ScrollView>
     </>
@@ -482,22 +467,6 @@ const st = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: { fontSize: 22, marginBottom: 14 },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 6,
-  },
-  linkIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  linkTitle: { flex: 1, fontSize: 15 },
   authBtn: {
     flexDirection: "row",
     alignItems: "center",

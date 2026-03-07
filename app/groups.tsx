@@ -18,6 +18,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
+import EmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
 
 interface SmallGroup {
   id: string;
@@ -128,17 +130,19 @@ export default function GroupsScreen() {
         <Text style={[s.emptyDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           Create an account to join small groups and connect with your church community
         </Text>
-        <Pressable
+        <Button
+          variant="primary"
+          title="Create Account"
           onPress={() => router.push("/(auth)/register")}
-          style={[s.ctaBtn, { backgroundColor: theme.accent }]}
-        >
-          <Text style={[s.ctaBtnText, { fontFamily: "Inter_600SemiBold" }]}>Create Account</Text>
-        </Pressable>
-        <Pressable onPress={() => router.push("/(auth)/login")}>
-          <Text style={[s.linkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-            Already have an account? Sign In
-          </Text>
-        </Pressable>
+          style={{ marginTop: 8, borderRadius: 24, paddingHorizontal: 28 }}
+        />
+        <Button
+          variant="ghost"
+          title="Already have an account? Sign In"
+          size="sm"
+          onPress={() => router.push("/(auth)/login")}
+          style={{ marginTop: 4 }}
+        />
       </View>
     );
   }
@@ -227,31 +231,32 @@ export default function GroupsScreen() {
       {tab === "my" ? (
         <>
           <View style={s.actionRow}>
-            <Pressable
+            <Button
+              variant="primary"
+              title="Create Group"
+              icon="add"
               onPress={() => { setError(""); setShowCreate(true); }}
-              style={[s.actionBtn, { backgroundColor: theme.accent }]}
-            >
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text style={[s.actionBtnText, { fontFamily: "Inter_600SemiBold" }]}>Create Group</Text>
-            </Pressable>
-            <Pressable
+              style={{ flex: 1 }}
+            />
+            <Button
+              variant="secondary"
+              title="Join Group"
+              icon="enter"
               onPress={() => { setError(""); setShowJoin(true); }}
-              style={[s.actionBtn, { backgroundColor: isDark ? "#2A2A3E" : "#E8E4DD" }]}
-            >
-              <Ionicons name="enter" size={18} color={theme.accent} />
-              <Text style={[s.actionBtnText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Join Group</Text>
-            </Pressable>
+              style={{ flex: 1 }}
+            />
           </View>
 
           {myLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
           ) : groups.length === 0 ? (
-            <View style={s.emptyState}>
-              <Ionicons name="people-outline" size={48} color={theme.textMuted} />
-              <Text style={[s.emptyStateText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                You haven't joined any groups yet
-              </Text>
-            </View>
+            <EmptyState
+              icon="people-outline"
+              title="No Groups Yet"
+              description="Join a small group to grow in faith with others. Browse public groups or enter a join code."
+              actionLabel="Browse Groups"
+              onAction={() => setTab("browse")}
+            />
           ) : (
             <FlatList
               data={groups}
@@ -307,12 +312,13 @@ export default function GroupsScreen() {
           {publicLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
           ) : (publicGroups || []).length === 0 ? (
-            <View style={s.emptyState}>
-              <Ionicons name="globe-outline" size={48} color={theme.textMuted} />
-              <Text style={[s.emptyStateText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                No public groups found
-              </Text>
-            </View>
+            <EmptyState
+              icon="globe-outline"
+              title="No Groups Found"
+              description="No public groups match your search. Try a different filter or create your own group."
+              actionLabel="Create Group"
+              onAction={() => setShowCreate(true)}
+            />
           ) : (
             <FlatList
               data={publicGroups}
@@ -402,20 +408,20 @@ export default function GroupsScreen() {
               </Pressable>
 
               <View style={s.modalActions}>
-                <Pressable onPress={() => setShowCreate(false)} style={[s.modalCancelBtn, { borderColor: theme.border }]}>
-                  <Text style={[s.modalCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
+                <Button
+                  variant="secondary"
+                  title="Cancel"
+                  onPress={() => setShowCreate(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  variant="primary"
+                  title="Create"
                   onPress={() => createMutation.mutate()}
                   disabled={!groupName.trim() || createMutation.isPending}
-                  style={[s.modalConfirmBtn, { backgroundColor: theme.accent, opacity: !groupName.trim() ? 0.5 : 1 }]}
-                >
-                  {createMutation.isPending ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={[s.modalConfirmText, { fontFamily: "Inter_600SemiBold" }]}>Create</Text>
-                  )}
-                </Pressable>
+                  loading={createMutation.isPending}
+                  style={{ flex: 1 }}
+                />
               </View>
             </View>
           </ScrollView>
@@ -442,20 +448,20 @@ export default function GroupsScreen() {
               maxLength={9}
             />
             <View style={s.modalActions}>
-              <Pressable onPress={() => setShowJoin(false)} style={[s.modalCancelBtn, { borderColor: theme.border }]}>
-                <Text style={[s.modalCancelText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
+              <Button
+                variant="secondary"
+                title="Cancel"
+                onPress={() => setShowJoin(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                variant="primary"
+                title="Join"
                 onPress={() => joinMutation.mutate()}
                 disabled={joinCode.trim().length < 5 || joinMutation.isPending}
-                style={[s.modalConfirmBtn, { backgroundColor: theme.accent, opacity: joinCode.trim().length < 5 ? 0.5 : 1 }]}
-              >
-                {joinMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={[s.modalConfirmText, { fontFamily: "Inter_600SemiBold" }]}>Join</Text>
-                )}
-              </Pressable>
+                loading={joinMutation.isPending}
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
         </View>
@@ -469,23 +475,10 @@ const s = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
   emptyTitle: { fontSize: 24, marginTop: 8 },
   emptyDesc: { fontSize: 14, textAlign: "center", lineHeight: 22 },
-  ctaBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24, marginTop: 8 },
-  ctaBtnText: { color: "#fff", fontSize: 15 },
-  linkText: { fontSize: 13, marginTop: 12 },
   tabRow: { flexDirection: "row", marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: "center" },
   tabText: { fontSize: 14 },
   actionRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  actionBtnText: { color: "#fff", fontSize: 14 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -560,14 +553,4 @@ const s = StyleSheet.create({
   toggleSwitch: { width: 44, height: 24, borderRadius: 12, justifyContent: "center" },
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  modalCancelText: { fontSize: 14 },
-  modalConfirmBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: "center" },
-  modalConfirmText: { color: "#fff", fontSize: 14 },
 });

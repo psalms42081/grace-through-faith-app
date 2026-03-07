@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import EmptyState from "@/components/ui/EmptyState";
 interface Plan {
   id: string;
   title: string;
@@ -160,26 +161,13 @@ export default function PlansScreen() {
             </Pressable>
           ) : (
             <View style={[st.emptyState, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-              <View style={[st.emptyIcon, { backgroundColor: theme.accent + "15" }]}>
-                <Ionicons name="book-outline" size={32} color={theme.accent} />
-              </View>
-              <Text style={[st.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                No Active Plans
-              </Text>
-              <Text style={[st.emptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Start a devotional plan to build a daily reading habit
-              </Text>
-              <Pressable
-                onPress={() => setActiveTab("Find Plans")}
-                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-              >
-                <LinearGradient
-                  colors={["#C9933A", "#A87828"]}
-                  style={st.emptyBtn}
-                >
-                  <Text style={[st.emptyBtnText, { fontFamily: "Inter_600SemiBold" }]}>Browse Plans</Text>
-                </LinearGradient>
-              </Pressable>
+              <EmptyState
+                icon="book-outline"
+                title="No Active Plans"
+                description="Start a devotional plan to build a daily reading habit"
+                actionLabel="Browse Plans"
+                onAction={() => setActiveTab("Find Plans")}
+              />
             </View>
           )}
         </ScrollView>
