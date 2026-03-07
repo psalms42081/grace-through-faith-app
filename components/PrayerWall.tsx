@@ -275,7 +275,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
     postMutation.mutate({
       title: prayerTitle.trim(),
       content: prayerContent.trim(),
-      authorName: authorName.trim() || "Family Member",
+      authorName: authorName.trim() || (isGroupMode ? "Group Member" : "Family Member"),
     });
   }, [prayerTitle, prayerContent, authorName]);
 
@@ -292,8 +292,8 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
       <View style={styles.titleRow}>
-        <Ionicons name="flame" size={18} color={theme.accent} />
-        <Text style={[styles.title, { color: theme.text }]}>Family Altar</Text>
+        <Ionicons name={isGroupMode ? "heart" : "flame"} size={18} color={theme.accent} />
+        <Text style={[styles.title, { color: theme.text }]}>{isGroupMode ? "Group Prayer Wall" : "Family Altar"}</Text>
         <Pressable
           style={[styles.addButton, { backgroundColor: theme.accent + "15" }]}
           onPress={() => setShowForm(!showForm)}
@@ -304,7 +304,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       </View>
 
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-        Lift up your family in prayer together
+        {isGroupMode ? "Lift up your group in prayer together" : "Lift up your family in prayer together"}
       </Text>
 
       {showForm && (
@@ -358,7 +358,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
         <View style={styles.emptyState}>
           <Ionicons name="flame-outline" size={32} color={theme.textMuted} />
           <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-            No prayer requests yet. Lift your family up in prayer.
+            {isGroupMode ? "No prayer requests yet. Lift your group up in prayer." : "No prayer requests yet. Lift your family up in prayer."}
           </Text>
         </View>
       )}
