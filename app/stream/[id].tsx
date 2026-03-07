@@ -8,12 +8,12 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { WebView, WebViewNavigation } from "react-native-webview";
+import { WebView } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -153,164 +153,8 @@ export default function StreamScreen() {
     );
   }
 
-  const jitsiBase = session.roomUrl.split("?")[0].split("#")[0];
   const displayName = user?.displayName || session.hostDisplayName || "Guest";
-  const configParts = [
-    "config.prejoinConfig.enabled=false",
-    "config.prejoinPageEnabled=false",
-    "config.startWithAudioMuted=true",
-    "config.disableDeepLinking=true",
-    "config.deeplinking.disabled=true",
-    "config.disableThirdPartyRequests=true",
-    "config.hideConferenceSubject=false",
-    "config.disableProfile=true",
-    "config.enableInsecureRoomNameWarning=false",
-    "config.enableLobbyChat=false",
-    "config.hideLobbyButton=true",
-    "config.requireDisplayName=false",
-    "config.enableClosePage=false",
-    `userInfo.displayName=${encodeURIComponent(displayName)}`,
-    "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-    "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
-    "interfaceConfig.SHOW_BRAND_WATERMARK=false",
-    "interfaceConfig.SHOW_POWERED_BY=false",
-    "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
-    "interfaceConfig.MOBILE_APP_PROMO=false",
-  ];
-  const jitsiUrl = `${jitsiBase}#${configParts.join("&")}`;
-
-  const deepLinkBypassJS = `
-    (function() {
-      if (window._gtfDeepLinkBypassed) return;
-      window._gtfDeepLinkBypassed = true;
-
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        get: function() { return window._gtfOrigLocation; },
-        set: function(val) { window._gtfOrigLocation = val; }
-      });
-
-      var origOpen = window.open;
-      window.open = function(url) {
-        if (url && (
-          url.indexOf('itms-apps://') > -1 ||
-          url.indexOf('market://') > -1 ||
-          url.indexOf('play.google.com') > -1 ||
-          url.indexOf('apps.apple.com') > -1 ||
-          url.indexOf('intent://') > -1
-        )) {
-          return null;
-        }
-        return origOpen ? origOpen.apply(this, arguments) : null;
-      };
-    })();
-    true;
-  `;
-
-  const roomSlug = session.roomUrl.split("/").pop() || "";
-
-  const handleNavChange = useCallback((navState: WebViewNavigation) => {
-    const url = navState.url || "";
-    if (!url || url === "about:blank") return;
-    const hasRoomSlug = roomSlug && url.includes(roomSlug);
-    if (!hasRoomSlug && url.startsWith("https://")) {
-      router.back();
-    }
-  }, [roomSlug]);
-
-  const hangupDetectionJS = `
-    (function() {
-      if (window._gtfHangupSetup) return;
-      window._gtfHangupSetup = true;
-      var roomSlug = '${roomSlug}';
-      var ended = false;
-
-      function notifyEnd() {
-        if (ended) return;
-        ended = true;
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'call_ended' }));
-      }
-
-      function autoBypassDeepLink() {
-        var links = document.querySelectorAll('a');
-        for (var i = 0; i < links.length; i++) {
-          var text = (links[i].textContent || '').trim().toLowerCase();
-          if (text === 'join in browser' || text === 'launch in web') {
-            links[i].click();
-            return true;
-          }
-        }
-        var buttons = document.querySelectorAll('button, [role="button"]');
-        for (var j = 0; j < buttons.length; j++) {
-          var btnText = (buttons[j].textContent || '').trim().toLowerCase();
-          if (btnText.indexOf('browser') > -1 || btnText.indexOf('web') > -1) {
-            buttons[j].click();
-            return true;
-          }
-        }
-        return false;
-      }
-
-      var deepLinkCheckCount = 0;
-      var deepLinkInterval = setInterval(function() {
-        deepLinkCheckCount++;
-        var pageText = document.body ? (document.body.innerText || '') : '';
-        if (pageText.indexOf('How do you want to join') > -1 ||
-            pageText.indexOf('Join in app') > -1 ||
-            pageText.indexOf('Download from App Store') > -1 ||
-            pageText.indexOf('Download from Google Play') > -1) {
-          if (autoBypassDeepLink()) {
-            clearInterval(deepLinkInterval);
-          }
-        }
-        if (deepLinkCheckCount > 30) clearInterval(deepLinkInterval);
-      }, 500);
-
-      var origPushState = history.pushState;
-      var origReplaceState = history.replaceState;
-      function checkNav() {
-        var url = window.location.href;
-        if (roomSlug && url.indexOf(roomSlug) === -1) {
-          notifyEnd();
-        }
-      }
-      history.pushState = function() {
-        origPushState.apply(this, arguments);
-        setTimeout(checkNav, 100);
-      };
-      history.replaceState = function() {
-        origReplaceState.apply(this, arguments);
-        setTimeout(checkNav, 100);
-      };
-      window.addEventListener('popstate', checkNav);
-      window.addEventListener('hashchange', checkNav);
-
-      var observer = new MutationObserver(function() {
-        var hangupBtns = document.querySelectorAll('[aria-label="Leave"], [aria-label="Hang up"], [id="okie-hangup"]');
-        hangupBtns.forEach(function(btn) {
-          if (!btn._gtfPatched) {
-            btn._gtfPatched = true;
-            btn.addEventListener('click', function() {
-              setTimeout(notifyEnd, 600);
-            });
-          }
-        });
-        var feedbackPage = document.querySelector('[class*="feedback"]') || document.querySelector('[class*="welcome"]');
-        var adContent = document.querySelector('[class*="okie"]') || document.querySelector('a[href*="jaas.8x8"]');
-        if (feedbackPage || adContent) {
-          setTimeout(notifyEnd, 300);
-        }
-      });
-      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-
-      setInterval(function() {
-        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) {
-          notifyEnd();
-        }
-      }, 2000);
-    })();
-    true;
-  `;
+  const embedUrl = `${getApiUrl()}/api/streams/${id}/embed?displayName=${encodeURIComponent(displayName)}`;
 
   const handleWebViewMessage = useCallback((event: any) => {
     try {
@@ -351,7 +195,7 @@ export default function StreamScreen() {
 
       {Platform.OS === "web" ? (
         <iframe
-          src={jitsiUrl}
+          src={embedUrl}
           style={{
             flex: 1,
             width: "100%",
@@ -371,17 +215,14 @@ export default function StreamScreen() {
             </View>
           )}
           <WebView
-            source={{ uri: jitsiUrl }}
+            source={{ uri: embedUrl }}
             style={{ flex: 1 }}
             javaScriptEnabled
             domStorageEnabled
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
-            injectedJavaScriptBeforeContentLoaded={deepLinkBypassJS}
             onLoadEnd={() => setWebViewLoading(false)}
-            onNavigationStateChange={handleNavChange}
             onMessage={handleWebViewMessage}
-            injectedJavaScript={hangupDetectionJS}
             onShouldStartLoadWithRequest={(request) => {
               const url = request.url || "";
               if (
