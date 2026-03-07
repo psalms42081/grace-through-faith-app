@@ -56,6 +56,39 @@ const NARRATOR_VOICES: { id: NarratorVoice; label: string; desc: string; gender:
   { id: "alice", label: "Alice", desc: "Clear educator", gender: "female" },
 ];
 
+const VOICE_PITCH_MAP: Record<NarratorVoice, { pitch: number; rate: number; gender: "male" | "female" }> = {
+  george: { pitch: 0.9, rate: 0, gender: "male" },
+  daniel: { pitch: 1.0, rate: 0, gender: "male" },
+  brian: { pitch: 0.75, rate: 0, gender: "male" },
+  callum: { pitch: 0.85, rate: 0.05, gender: "male" },
+  sarah: { pitch: 1.1, rate: 0, gender: "female" },
+  lily: { pitch: 1.0, rate: -0.05, gender: "female" },
+  alice: { pitch: 1.15, rate: 0.05, gender: "female" },
+};
+
+let cachedDeviceVoices: { male: Speech.Voice | null; female: Speech.Voice | null } | null = null;
+
+async function getBestDeviceVoice(gender: "male" | "female"): Promise<Speech.Voice | undefined> {
+  if (!cachedDeviceVoices) {
+    try {
+      const voices = await Speech.getAvailableVoicesAsync();
+      const enVoices = voices.filter(v => v.language?.startsWith("en"));
+      cachedDeviceVoices = {
+        male: enVoices.find(v => v.name?.toLowerCase().includes("male") || v.identifier?.toLowerCase().includes("male")) ||
+              enVoices.find(v => v.name?.toLowerCase().includes("daniel") || v.name?.toLowerCase().includes("james") || v.name?.toLowerCase().includes("david")) ||
+              null,
+        female: enVoices.find(v => v.name?.toLowerCase().includes("female") || v.identifier?.toLowerCase().includes("female")) ||
+                enVoices.find(v => v.name?.toLowerCase().includes("samantha") || v.name?.toLowerCase().includes("karen") || v.name?.toLowerCase().includes("victoria")) ||
+                null,
+      };
+    } catch {
+      cachedDeviceVoices = { male: null, female: null };
+    }
+  }
+  const picked = gender === "male" ? cachedDeviceVoices.male : cachedDeviceVoices.female;
+  return picked || undefined;
+}
+
 type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
 
 interface VideoTimecodeSegment {
@@ -1940,11 +1973,30 @@ export default function SceneStoryScreen() {
         setCurrentWordIndex(wordIdx);
       }, avgWordDuration);
 
-      Speech.speak(scene.narration, {
-        language: "en-US",
-        rate: isLittleLambs ? 0.85 : 0.95,
-        onDone: onNarrationEnd,
-        onStopped: onNarrationStopped,
+      const voiceConfig = VOICE_PITCH_MAP[narratorVoice] || VOICE_PITCH_MAP.george;
+      const baseRate = isLittleLambs ? 0.85 : 0.95;
+      getBestDeviceVoice(voiceConfig.gender).then((deviceVoice) => {
+        if (abortCtrl.signal.aborted) return;
+        const speechOpts: Speech.SpeechOptions = {
+          language: "en-US",
+          rate: baseRate + voiceConfig.rate,
+          pitch: voiceConfig.pitch,
+          onDone: onNarrationEnd,
+          onStopped: onNarrationStopped,
+        };
+        if (deviceVoice) {
+          speechOpts.voice = deviceVoice.identifier;
+        }
+        Speech.speak(scene.narration, speechOpts);
+      }).catch(() => {
+        if (abortCtrl.signal.aborted) return;
+        Speech.speak(scene.narration, {
+          language: "en-US",
+          rate: baseRate,
+          pitch: voiceConfig.pitch,
+          onDone: onNarrationEnd,
+          onStopped: onNarrationStopped,
+        });
       });
     }
   }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext, narratorVoice, stopNarrationAudio]);
