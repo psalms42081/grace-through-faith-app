@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  ScrollView,
   Pressable,
   StyleSheet,
   Platform,
@@ -1795,6 +1794,8 @@ export default function SceneStoryScreen() {
     }
   };
 
+  const startNarrationRef = useRef<(sceneIdx: number) => void>(() => {});
+
   const autoAdvanceToNext = useCallback((fromScene: number) => {
     if (!autoPlayRef.current) return;
     if (fromScene >= scenes.length - 1) {
@@ -1811,7 +1812,7 @@ export default function SceneStoryScreen() {
 
       setTimeout(() => {
         if (autoPlayRef.current) {
-          startNarration(nextIdx);
+          startNarrationRef.current(nextIdx);
         }
       }, 800);
     }, 1500);
@@ -1947,6 +1948,8 @@ export default function SceneStoryScreen() {
       });
     }
   }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext, narratorVoice, stopNarrationAudio]);
+
+  startNarrationRef.current = startNarration;
 
   const handleReadToMe = useCallback(() => {
     const scene = scenes[currentScene];
@@ -2164,12 +2167,7 @@ export default function SceneStoryScreen() {
               )}
             </View>
 
-            <ScrollView
-              style={styles.narrationArea}
-              contentContainerStyle={styles.narrationScroll}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled
-            >
+            <View style={styles.narrationArea}>
               {index === currentScene ? (
                 <WordHighlightText
                   text={item.narration}
@@ -2188,7 +2186,7 @@ export default function SceneStoryScreen() {
                   {item.narration}
                 </Text>
               )}
-            </ScrollView>
+            </View>
 
             {item.pauseAndWonder && !answeredWonders.has(item.sceneIndex) && index === currentScene && (
               <Pressable
@@ -2576,9 +2574,6 @@ const styles = StyleSheet.create({
   narrationArea: {
     flex: 1,
     paddingHorizontal: 8,
-  },
-  narrationScroll: {
-    flexGrow: 1,
     justifyContent: "center",
     paddingBottom: 12,
   },

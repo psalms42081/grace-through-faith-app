@@ -333,7 +333,7 @@ export default function KidsStoriesScreen() {
         </Text>
         <View style={styles.ageToggle}>
           <Pressable
-            onPress={() => setAgeGroup("little_lambs")}
+            onPress={() => { setAgeGroup("little_lambs"); setSelectedCollection(null); }}
             style={[
               styles.ageBtn,
               { backgroundColor: ageGroup === "little_lambs" ? theme.accent : theme.backgroundCard, borderColor: theme.border },
@@ -344,7 +344,7 @@ export default function KidsStoriesScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => setAgeGroup("young_disciples")}
+            onPress={() => { setAgeGroup("young_disciples"); setSelectedCollection(null); }}
             style={[
               styles.ageBtn,
               { backgroundColor: ageGroup === "young_disciples" ? (theme as any).purple || theme.accent : theme.backgroundCard, borderColor: theme.border },
@@ -355,7 +355,7 @@ export default function KidsStoriesScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => setAgeGroup("young_disciples_plus")}
+            onPress={() => { setAgeGroup("young_disciples_plus"); setSelectedCollection(null); }}
             style={[
               styles.ageBtn,
               { backgroundColor: ageGroup === "young_disciples_plus" ? "#1565C0" : theme.backgroundCard, borderColor: theme.border },
