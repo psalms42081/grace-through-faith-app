@@ -32,9 +32,10 @@ interface StreamSession {
   groupName?: string | null;
 }
 
+
 export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId, user } = useAuth();
   const queryClient = useQueryClient();
@@ -45,6 +46,9 @@ export default function StreamScreen() {
     queryKey: [`/api/streams/${id}`],
     enabled: !!id,
   });
+
+  const displayName = user?.displayName || session?.hostDisplayName || "Guest";
+
 
   const endMutation = useMutation({
     mutationFn: async () => {
@@ -84,6 +88,15 @@ export default function StreamScreen() {
       );
     }
   }, [endMutation]);
+
+  const handleWebViewMessage = useCallback((event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "call_ended") {
+        router.back();
+      }
+    } catch {}
+  }, []);
 
   if (isLoading) {
     return (
@@ -135,175 +148,7 @@ export default function StreamScreen() {
     );
   }
 
-  if (!session.roomUrl) {
-    return (
-      <View style={[s.container, { backgroundColor: theme.background }]}>
-        <View style={[s.header, { paddingTop: topPad + 12 }]}>
-          <Pressable onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
-          </Pressable>
-        </View>
-        <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color={theme.textMuted} />
-          <Text style={[s.emptyText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-            Invalid session URL
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  const displayName = user?.displayName || session.hostDisplayName || "Guest";
-  const configParts = [
-    "config.prejoinConfig.enabled=false",
-    "config.prejoinPageEnabled=false",
-    "config.startWithAudioMuted=true",
-    "config.disableDeepLinking=true",
-    "config.deeplinking.disabled=true",
-    "config.enableClosePage=false",
-    "config.disableThirdPartyRequests=true",
-    "config.enableInsecureRoomNameWarning=false",
-    "config.hideConferenceSubject=true",
-    "config.disableProfile=true",
-    "config.enableLobbyChat=false",
-    "config.requireDisplayName=false",
-    `userInfo.displayName=${encodeURIComponent(displayName)}`,
-    "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-    "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
-    "interfaceConfig.SHOW_BRAND_WATERMARK=false",
-    "interfaceConfig.SHOW_POWERED_BY=false",
-    "interfaceConfig.MOBILE_APP_PROMO=false",
-    "interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS=true",
-  ];
-  const roomSlug = session.roomUrl.split("/").pop() || "";
-  const jitsiUrl = `${session.roomUrl}#${configParts.join("&")}`;
-
-  const preloadJS = `
-    (function() {
-      if (window._gtfPatched) return;
-      window._gtfPatched = true;
-
-      var origOpen = window.open;
-      window.open = function(url) {
-        if (!url) return origOpen ? origOpen.apply(this, arguments) : null;
-        var s = String(url);
-        if (s.indexOf('itms-apps:') > -1 || s.indexOf('market:') > -1 ||
-            s.indexOf('play.google.com') > -1 || s.indexOf('apps.apple.com') > -1 ||
-            s.indexOf('intent:') > -1 || s.indexOf('org.jitsi.meet:') > -1) {
-          return null;
-        }
-        return origOpen ? origOpen.apply(this, arguments) : null;
-      };
-
-      var origAssign = null;
-      if (typeof window.location !== 'undefined' && window.location.assign) {
-        origAssign = window.location.assign.bind(window.location);
-        window.location.assign = function(url) {
-          var s = String(url || '');
-          if (s.indexOf('itms-apps:') > -1 || s.indexOf('market:') > -1 ||
-              s.indexOf('play.google.com') > -1 || s.indexOf('apps.apple.com') > -1 ||
-              s.indexOf('intent:') > -1 || s.indexOf('org.jitsi.meet:') > -1) {
-            return;
-          }
-          return origAssign(url);
-        };
-      }
-    })();
-    true;
-  `;
-
-  const postLoadJS = `
-    (function() {
-      if (window._gtfPostSetup) return;
-      window._gtfPostSetup = true;
-      var roomSlug = '${roomSlug}';
-      var ended = false;
-
-      function notifyEnd() {
-        if (ended) return;
-        ended = true;
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'call_ended' }));
-        }
-      }
-
-      var joinClicked = false;
-      function clickJoinInBrowser() {
-        if (joinClicked) return true;
-        var all = document.querySelectorAll('a, button, span, div, [role="button"]');
-        for (var i = 0; i < all.length; i++) {
-          var t = (all[i].textContent || '').trim().toLowerCase();
-          if (t === 'launch in web' || t === 'join in browser' ||
-              t === 'join the meeting' || t === 'continue in browser' ||
-              t === 'join meeting' || t === 'open in browser') {
-            joinClicked = true;
-            all[i].click();
-            return true;
-          }
-        }
-        var anchors = document.querySelectorAll('a[href]');
-        for (var j = 0; j < anchors.length; j++) {
-          var href = anchors[j].getAttribute('href') || '';
-          if (href.indexOf(roomSlug) > -1 && href.indexOf('#') > -1) {
-            joinClicked = true;
-            anchors[j].click();
-            return true;
-          }
-        }
-        return false;
-      }
-
-      var deepCheckCount = 0;
-      var deepCheckTimer = setInterval(function() {
-        deepCheckCount++;
-        clickJoinInBrowser();
-        if (joinClicked || deepCheckCount > 40) clearInterval(deepCheckTimer);
-      }, 300);
-
-      if (document.body) {
-        new MutationObserver(function(mutations, obs) {
-          if (clickJoinInBrowser()) obs.disconnect();
-        }).observe(document.body, { childList: true, subtree: true });
-      }
-
-      var origPush = history.pushState;
-      var origReplace = history.replaceState;
-      function checkLeft() {
-        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) notifyEnd();
-      }
-      history.pushState = function() { origPush.apply(this, arguments); setTimeout(checkLeft, 200); };
-      history.replaceState = function() { origReplace.apply(this, arguments); setTimeout(checkLeft, 200); };
-      window.addEventListener('popstate', checkLeft);
-
-      setInterval(function() {
-        if (roomSlug && window.location.href.indexOf(roomSlug) === -1) notifyEnd();
-        var text = document.body ? (document.body.innerText || '') : '';
-        if (text.indexOf('meeting has ended') > -1 ||
-            text.indexOf('You left the meeting') > -1 ||
-            text.indexOf('okie') > -1) notifyEnd();
-      }, 2000);
-
-      new MutationObserver(function() {
-        var btns = document.querySelectorAll('[aria-label="Leave"],[aria-label="Hang up"]');
-        btns.forEach(function(b) {
-          if (!b._gtf) {
-            b._gtf = true;
-            b.addEventListener('click', function() { setTimeout(notifyEnd, 800); });
-          }
-        });
-      }).observe(document.documentElement, { childList: true, subtree: true });
-    })();
-    true;
-  `;
-
-  const handleWebViewMessage = useCallback((event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === "call_ended") {
-        router.back();
-      }
-    } catch {}
-  }, []);
+  const roomPageUrl = `${getApiUrl()}/api/streams/${id}/room?displayName=${encodeURIComponent(displayName)}`;
 
   return (
     <View style={[s.container, { backgroundColor: "#000" }]}>
@@ -335,7 +180,7 @@ export default function StreamScreen() {
 
       {Platform.OS === "web" ? (
         <iframe
-          src={jitsiUrl}
+          src={roomPageUrl}
           style={{
             flex: 1,
             width: "100%",
@@ -355,31 +200,15 @@ export default function StreamScreen() {
             </View>
           )}
           <WebView
-            source={{ uri: jitsiUrl }}
+            source={{ uri: roomPageUrl }}
             style={{ flex: 1 }}
             javaScriptEnabled
             domStorageEnabled
             mediaPlaybackRequiresUserAction={false}
             allowsInlineMediaPlayback
             mediaCapturePermissionGrantType="grant"
-            injectedJavaScriptBeforeContentLoaded={preloadJS}
-            injectedJavaScript={postLoadJS}
             onLoadEnd={() => setWebViewLoading(false)}
             onMessage={handleWebViewMessage}
-            onShouldStartLoadWithRequest={(request) => {
-              const url = request.url || "";
-              if (
-                url.startsWith("intent://") ||
-                url.startsWith("market://") ||
-                url.startsWith("itms-apps://") ||
-                url.startsWith("https://play.google.com") ||
-                url.startsWith("https://apps.apple.com") ||
-                url.startsWith("org.jitsi.meet://")
-              ) {
-                return false;
-              }
-              return true;
-            }}
             originWhitelist={["https://*", "http://*"]}
             allowsBackForwardNavigationGestures={false}
           />

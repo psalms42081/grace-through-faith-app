@@ -775,7 +775,10 @@ router.post("/api/groups/:id/share-reflection", async (req, res) => {
 
 // ─── LIVE STREAMING ──────────────────────────────────────────────────────
 
-function generateJitsiRoom(): string {
+import { createLiveKitRoom, generateToken, deleteLiveKitRoom, getLiveKitUrl } from "../services/livekit";
+import path from "path";
+
+function generateRoomName(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let room = "gtf-";
   for (let i = 0; i < 12; i++) room += chars[Math.floor(Math.random() * chars.length)];
@@ -803,8 +806,8 @@ router.post("/api/streams/create", async (req, res) => {
     const [user] = await db.select({ displayName: users.displayName, username: users.username })
       .from(users).where(eq(users.id, userId));
 
-    const roomName = generateJitsiRoom();
-    const roomUrl = `https://jitsi.member.fsf.org/${roomName}`;
+    const roomName = generateRoomName();
+    await createLiveKitRoom(roomName);
 
     const [session] = await db.insert(liveSessions).values({
       title,
@@ -812,7 +815,7 @@ router.post("/api/streams/create", async (req, res) => {
       churchId: churchId || null,
       hostUserId: userId,
       hostDisplayName: user?.displayName || user?.username || "Host",
-      roomUrl,
+      roomUrl: roomName,
       status: "live",
     }).returning();
 
@@ -823,19 +826,61 @@ router.post("/api/streams/create", async (req, res) => {
   }
 });
 
-router.get("/api/streams/:id/embed", async (req, res) => {
+router.get("/api/streams/:id/token", async (req, res) => {
   try {
     const { id } = req.params;
     const displayName = (req.query.displayName as string) || "Guest";
+    let userId: string | null = null;
+    try { userId = extractUserId(req); } catch {}
+
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
+
+    const isHost = userId === session.hostUserId;
+    const token = await generateToken(session.roomUrl, displayName, isHost);
+
+    return res.json({
+      token,
+      wsUrl: getLiveKitUrl(),
+      roomName: session.roomUrl,
+    });
+  } catch (err) {
+    console.error("Stream token error:", err);
+    return res.status(500).json({ error: "Failed to generate token" });
+  }
+});
+
+router.get("/api/streams/:id/room", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const displayName = (req.query.displayName as string) || "Guest";
+
+    let userId: string | null = null;
+    try { userId = extractUserId(req); } catch {}
+
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).send("Session not found");
+    if (session.status === "ended") return res.status(410).send("Session has ended");
 
-    const roomName = session.roomUrl.split("/").pop() || "";
+    const isHost = userId === session.hostUserId;
+    const token = await generateToken(session.roomUrl, displayName, isHost);
+    const wsUrl = getLiveKitUrl();
 
-    return res.json({ roomUrl: session.roomUrl, roomName });
+    const htmlPath = path.join(__dirname, "..", "templates", "livekit-room.html");
+    const fs = await import("fs");
+    let html = fs.readFileSync(htmlPath, "utf-8");
+
+    html = html.replace(
+      "<!--SERVER_INJECTED_CONFIG-->",
+      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName })};</script>`
+    );
+
+    res.setHeader("Content-Type", "text/html");
+    return res.send(html);
   } catch (err) {
-    console.error("Stream embed error:", err);
-    return res.status(500).send("Error loading stream");
+    console.error("Stream room error:", err);
+    return res.status(500).send("Error loading room");
   }
 });
 
@@ -899,6 +944,8 @@ router.post("/api/streams/:id/end", async (req, res) => {
       status: "ended",
       endedAt: new Date(),
     }).where(eq(liveSessions.id, id)).returning();
+
+    deleteLiveKitRoom(session.roomUrl).catch(() => {});
 
     return res.json(updated);
   } catch (err) {

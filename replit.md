@@ -63,5 +63,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **OpenStreetMap:** Embedded tile maps on the web platform.
 
 **Streaming:**
-- **Jitsi Meet (jitsi.member.fsf.org):** Live video conferencing sessions (FSF instance, no auth required).
-- **react-native-webview:** Embedding Jitsi Meet on native platforms. Uses injected JS to auto-click through deep linking pages and block app store redirects.
+- **LiveKit Cloud:** Real-time video/audio conferencing via WebRTC. Backend generates tokens via `livekit-server-sdk`. Room name stored in `liveSessions.roomUrl`.
+- **server/services/livekit.ts:** Room creation, token generation, room cleanup.
+- **server/templates/livekit-room.html:** Self-contained LiveKit room UI (loads `livekit-client` from CDN). Served at `/api/streams/:id/room`.
+- **react-native-webview:** Loads the LiveKit room HTML on native. `mediaCapturePermissionGrantType="grant"` for camera/mic.
+- **Env vars:** `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL` (wss:// URL).
