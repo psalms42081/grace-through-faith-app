@@ -9,12 +9,13 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  ScrollView,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -255,6 +256,127 @@ export default function StudyGuideScreen() {
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const hasVerseParams = !!(params.verseReference && params.verseText);
+
+  const { data: recentSessions, isLoading: sessionsLoading } = useQuery<any[]>({
+    queryKey: [`/api/study-guide/sessions?userId=${userId}`],
+    enabled: !hasVerseParams,
+  });
+
+  if (!hasVerseParams) {
+    const activeSessions = (recentSessions || []).filter((s: any) => !s.completedAt);
+    const completedSessions = (recentSessions || []).filter((s: any) => !!s.completedAt);
+
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={theme.text} />
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Guided Study
+            </Text>
+          </View>
+          <View style={{ width: 34 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={[styles.hubContent, { paddingBottom: bottomPadding + 40 }]} showsVerticalScrollIndicator={false}>
+          <View style={[styles.hubPromptCard, { backgroundColor: theme.backgroundCard }]}>
+            <Ionicons name="book-outline" size={32} color={theme.accent} />
+            <Text style={[styles.hubPromptTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+              Start a New Study
+            </Text>
+            <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Open a passage in the Bible reader, select a verse, and choose "Guided Study" to begin an inductive study session.
+            </Text>
+            <Pressable
+              style={[styles.hubOpenReaderBtn, { backgroundColor: theme.accent }]}
+              onPress={() => router.push("/(tabs)/read" as any)}
+            >
+              <Ionicons name="book" size={16} color="#fff" />
+              <Text style={[styles.hubOpenReaderText, { fontFamily: "Inter_600SemiBold" }]}>Open Bible Reader</Text>
+            </Pressable>
+          </View>
+
+          {sessionsLoading && (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 24 }} />
+          )}
+
+          {activeSessions.length > 0 && (
+            <View style={styles.hubSection}>
+              <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Active Sessions
+              </Text>
+              {activeSessions.map((s: any) => (
+                <Pressable
+                  key={s.id}
+                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: theme.accent }]}
+                  onPress={() => router.push({
+                    pathname: "/study-guide" as any,
+                    params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                  })}
+                >
+                  <View style={styles.hubSessionTop}>
+                    <Text style={[styles.hubSessionRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      {s.verseReference}
+                    </Text>
+                    <View style={[styles.hubPhaseBadge, { backgroundColor: theme.accent + "20" }]}>
+                      <Text style={[styles.hubPhaseText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                        {s.phase}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
+                    "{s.verseText}"
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {completedSessions.length > 0 && (
+            <View style={styles.hubSection}>
+              <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Completed Studies
+              </Text>
+              {completedSessions.slice(0, 10).map((s: any) => (
+                <Pressable
+                  key={s.id}
+                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#2E7D32" }]}
+                  onPress={() => router.push({
+                    pathname: "/study-guide" as any,
+                    params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                  })}
+                >
+                  <View style={styles.hubSessionTop}>
+                    <Text style={[styles.hubSessionRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                      {s.verseReference}
+                    </Text>
+                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                  </View>
+                  <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
+                    "{s.verseText}"
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {!sessionsLoading && activeSessions.length === 0 && completedSessions.length === 0 && (
+            <View style={styles.hubEmptyState}>
+              <Ionicons name="chatbubbles-outline" size={40} color={theme.textMuted} />
+              <Text style={[styles.hubEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                No study sessions yet. Open a passage to begin your first inductive Bible study.
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
 
   const getPhaseIndex = () => {
     if (isComplete) return 3;
@@ -782,4 +904,82 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   doneBtnText: { color: "#fff", fontSize: 13 },
+  hubContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  hubPromptCard: {
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center" as const,
+    gap: 10,
+  },
+  hubPromptTitle: {
+    fontSize: 20,
+    marginTop: 4,
+  },
+  hubPromptDesc: {
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center" as const,
+  },
+  hubOpenReaderBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginTop: 8,
+  },
+  hubOpenReaderText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  hubSection: {
+    marginTop: 28,
+    gap: 10,
+  },
+  hubSectionTitle: {
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  hubSessionCard: {
+    borderRadius: 14,
+    padding: 14,
+    borderLeftWidth: 3,
+    gap: 6,
+  },
+  hubSessionTop: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  hubSessionRef: {
+    fontSize: 14,
+  },
+  hubPhaseBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  hubPhaseText: {
+    fontSize: 11,
+    textTransform: "capitalize" as const,
+  },
+  hubSessionVerse: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  hubEmptyState: {
+    alignItems: "center" as const,
+    marginTop: 40,
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  hubEmptyText: {
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center" as const,
+  },
 });
