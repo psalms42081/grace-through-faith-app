@@ -204,11 +204,21 @@ function KidsHomeScreen() {
     queryKey: [`/api/kids/streak/${progressUserId}`],
   });
 
-  const { data: progress } = useQuery<{ completed: boolean }[]>({
+  const { data: progress } = useQuery<{ completed: boolean; quizScore: number | null; memoryVerseMemorized: boolean }[]>({
     queryKey: [`/api/kids/progress/${progressUserId}`],
   });
 
+  const { data: kidsSS } = useQuery<{ lesson: { title: string; memoryVerseRef: string } }>({
+    queryKey: [`/api/kids/sabbath-school/current?ageGroup=${ageGroup}`],
+  });
+
+  const { data: badges } = useQuery<{ id: string }[]>({
+    queryKey: [`/api/kids/badges/${progressUserId}`],
+  });
+
   const completedCount = progress?.filter(p => p.completed).length ?? 0;
+  const memorizedCount = progress?.filter(p => p.memoryVerseMemorized).length ?? 0;
+  const badgeCount = badges?.length ?? 0;
 
   return (
     <ScrollView
@@ -486,7 +496,58 @@ function KidsHomeScreen() {
         </AnimatedSection>
       )}
 
-      <AnimatedSection index={5}>
+      {kidsSS?.lesson && (
+        <AnimatedSection index={5}>
+          <Pressable
+            onPress={() => router.push("/kids/sabbath-school")}
+            style={[kidsStyles.dailyCard, { backgroundColor: theme.backgroundCard, borderColor: "#7B61FF40" }]}
+            testID="kids-sabbath-school"
+          >
+            <View style={[kidsStyles.dailyIcon, { backgroundColor: "#7B61FF20" }]}>
+              <Ionicons name="sunny" size={28} color="#7B61FF" />
+            </View>
+            <View style={kidsStyles.dailyInfo}>
+              <Text style={[kidsStyles.dailyLabel, { color: "#7B61FF", fontFamily: "Inter_600SemiBold" }]}>
+                Sabbath School
+              </Text>
+              <Text style={[kidsStyles.dailyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                {kidsSS.lesson.title}
+              </Text>
+              <Text style={[kidsStyles.dailyRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {kidsSS.lesson.memoryVerseRef}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#7B61FF" />
+          </Pressable>
+        </AnimatedSection>
+      )}
+
+      <AnimatedSection index={6}>
+        <View style={kidsStyles.progressSummary}>
+          <Text style={[kidsStyles.progressTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            My Progress
+          </Text>
+          <View style={kidsStyles.progressRow}>
+            <View style={[kidsStyles.progressItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+              <Text style={[kidsStyles.progressNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{completedCount}</Text>
+              <Text style={[kidsStyles.progressLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Stories</Text>
+            </View>
+            <View style={[kidsStyles.progressItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="bookmark" size={20} color="#E8A838" />
+              <Text style={[kidsStyles.progressNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{memorizedCount}</Text>
+              <Text style={[kidsStyles.progressLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Verses</Text>
+            </View>
+            <View style={[kidsStyles.progressItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <Ionicons name="ribbon" size={20} color="#7B61FF" />
+              <Text style={[kidsStyles.progressNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{badgeCount}</Text>
+              <Text style={[kidsStyles.progressLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Badges</Text>
+            </View>
+          </View>
+        </View>
+      </AnimatedSection>
+
+      <AnimatedSection index={7}>
         <View style={kidsStyles.quickActions}>
           <BouncyActionCard
             onPress={() => router.push("/(tabs)/kids-stories")}
@@ -653,6 +714,33 @@ const kidsStyles = StyleSheet.create({
   },
   actionTitle: { color: "#fff", fontSize: 15, marginTop: 4 },
   actionDesc: { color: "rgba(255,255,255,0.75)", fontSize: 12 },
+  progressSummary: {
+    marginBottom: 16,
+  },
+  progressTitle: {
+    fontSize: 15,
+    marginBottom: 10,
+  },
+  progressRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  progressItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+  },
+  progressNum: {
+    fontSize: 18,
+  },
+  progressLabel: {
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 });
 
 export default function HomeScreen() {

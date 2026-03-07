@@ -26,6 +26,44 @@ import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 
+function QuizResultSparkle({ delay, x, y, color }: { delay: number; x: number; y: number; color: string }) {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const rotate = useSharedValue(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scale.value = withSequence(
+        withSpring(1.3, { damping: 5, stiffness: 180 }),
+        withSpring(0, { damping: 10, stiffness: 120 })
+      );
+      opacity.value = withSequence(
+        withTiming(1, { duration: 150 }),
+        withTiming(0, { duration: 250 })
+      );
+      rotate.value = withTiming((Math.random() - 0.5) * 360, { duration: 400 });
+    }, delay);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: x },
+      { translateY: y },
+      { scale: scale.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+    opacity: opacity.value,
+    position: "absolute" as const,
+  }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Ionicons name="star" size={14} color={color} />
+    </Animated.View>
+  );
+}
+
 interface QuizQuestion {
   id: string;
   storyId: string;
@@ -206,29 +244,58 @@ function BouncyMemorizeBtn({
   idx: number;
 }) {
   const scale = useSharedValue(1);
+  const checkScale = useSharedValue(1);
+  const checkRotate = useSharedValue(0);
+  const [tapped, setTapped] = useState(false);
+
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const checkAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }, { rotate: `${checkRotate.value}deg` }],
+  }));
+
+  const handlePress = () => {
+    scale.value = withSequence(
+      withSpring(0.9, { damping: 8, stiffness: 200 }),
+      withSpring(1.08, { damping: 6, stiffness: 180 }),
+      withSpring(1, { damping: 10, stiffness: 160 })
+    );
+    checkScale.value = withSequence(
+      withSpring(1.6, { damping: 5, stiffness: 200 }),
+      withSpring(1, { damping: 8, stiffness: 150 })
+    );
+    checkRotate.value = withSequence(
+      withTiming(-15, { duration: 80 }),
+      withTiming(15, { duration: 80 }),
+      withTiming(0, { duration: 60 })
+    );
+    setTapped(true);
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    onPress();
+  };
+
   return (
     <AnimatedPressable
       testID={`memorize-${idx}`}
-      onPressIn={() => {
-        scale.value = withSpring(0.95, { damping: 12, stiffness: 200 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
-      }}
-      onPress={onPress}
+      onPress={handlePress}
       style={[
         animStyle,
         styles.memorizeBtn,
-        { backgroundColor: theme.success + "20", borderColor: theme.success },
+        {
+          backgroundColor: tapped ? theme.success + "35" : theme.success + "20",
+          borderColor: theme.success,
+        },
       ]}
     >
-      <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+      <Animated.View style={checkAnimStyle}>
+        <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+      </Animated.View>
       <Text style={[styles.memorizeBtnText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-        I Memorized This
+        {tapped ? "Memorized!" : "I Memorized This"}
       </Text>
     </AnimatedPressable>
   );
@@ -397,13 +464,31 @@ export default function KidsLearnScreen() {
         )}
 
         {activeTab === "quiz" && quizState.done && quizQuestions && (
-          <View style={styles.quizResult}>
+          <Animated.View
+            entering={FadeInDown.springify().damping(10).stiffness(120)}
+            style={styles.quizResult}
+          >
             {isPerfectScore && <StarBurst theme={theme} />}
-            <Ionicons
-              name={quizScore === quizQuestions.length ? "trophy" : quizScore > 0 ? "star" : "refresh"}
-              size={56}
-              color={(theme as any).starGold || theme.accent}
-            />
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <Ionicons
+                name={quizScore === quizQuestions.length ? "trophy" : quizScore > 0 ? "star" : "refresh"}
+                size={56}
+                color={(theme as any).starGold || theme.accent}
+              />
+              {quizScore > 0 && (
+                <>
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <QuizResultSparkle
+                      key={i}
+                      delay={i * 60}
+                      x={(Math.cos((i * 60) * Math.PI / 180)) * 45}
+                      y={(Math.sin((i * 60) * Math.PI / 180)) * 45}
+                      color={i % 2 === 0 ? ((theme as any).starGold || "#F5A623") : theme.accent}
+                    />
+                  ))}
+                </>
+              )}
+            </View>
             <Text style={[styles.resultTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               {quizScore === quizQuestions.length ? "Perfect Score!" : quizScore > 0 ? "Great Job!" : "Keep Trying!"}
             </Text>
@@ -417,7 +502,7 @@ export default function KidsLearnScreen() {
             >
               <Text style={[styles.resultBtnText, { fontFamily: "Inter_600SemiBold" }]}>Try Another</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         )}
 
         {activeTab === "memory" && (

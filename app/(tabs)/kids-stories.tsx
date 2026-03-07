@@ -18,6 +18,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -43,6 +45,16 @@ interface Story {
   estimatedMinutes: number;
   memoryVerseRef: string | null;
   imageUrl: string | null;
+  collectionId: string | null;
+}
+
+interface ProgressItem {
+  id: string;
+  storyId: string;
+  completed: boolean;
+  quizScore: number | null;
+  memoryVerseMemorized: boolean;
+  completedAt: string | null;
 }
 
 const COLLECTION_ICONS: Record<string, string> = {
@@ -64,17 +76,60 @@ function useImageBaseUrl() {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+function ProgressBar({
+  completed,
+  total,
+  theme,
+}: {
+  completed: number;
+  total: number;
+  theme: any;
+}) {
+  const progress = useSharedValue(0);
+  const fraction = total > 0 ? completed / total : 0;
+
+  React.useEffect(() => {
+    progress.value = withTiming(fraction, {
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [fraction]);
+
+  const barStyle = useAnimatedStyle(() => ({
+    width: `${Math.min(progress.value * 100, 100)}%` as any,
+  }));
+
+  return (
+    <View style={styles.progressBarContainer}>
+      <View style={[styles.progressBarTrack, { backgroundColor: theme.border + "80" }]}>
+        <Animated.View
+          style={[
+            styles.progressBarFill,
+            { backgroundColor: fraction >= 1 ? (theme.success || "#4CAF50") : theme.accent },
+            barStyle,
+          ]}
+        />
+      </View>
+      <Text style={[styles.progressBarLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+        {completed}/{total}
+      </Text>
+    </View>
+  );
+}
+
 function AnimatedCollectionCard({
   col,
   idx,
   theme,
   baseUrl,
+  completedCount,
   onPress,
 }: {
   col: Collection;
   idx: number;
   theme: any;
   baseUrl: string;
+  completedCount: number;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -90,6 +145,8 @@ function AnimatedCollectionCard({
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   }, []);
 
+  const allDone = completedCount >= col.storyCount && col.storyCount > 0;
+
   return (
     <Animated.View entering={FadeInDown.delay(idx * 80).duration(400).springify()}>
       <AnimatedPressable
@@ -99,7 +156,7 @@ function AnimatedCollectionCard({
         onPressOut={handlePressOut}
         style={[
           styles.collectionCard,
-          { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+          { backgroundColor: theme.backgroundCard, borderColor: allDone ? (theme.success || "#4CAF50") + "60" : theme.border },
           animatedStyle,
         ]}
       >
@@ -127,12 +184,15 @@ function AnimatedCollectionCard({
               {col.description}
             </Text>
           )}
-          <View style={styles.storyCountRow}>
-            <Text style={[styles.collectionMeta, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              {col.storyCount} stories
-            </Text>
-            <Ionicons name="sparkles" size={12} color={theme.starGold} style={{ marginLeft: 4 }} />
-          </View>
+          <ProgressBar completed={completedCount} total={col.storyCount} theme={theme} />
+          {allDone && (
+            <View style={styles.completedBadge}>
+              <Ionicons name="checkmark-circle" size={14} color={theme.success || "#4CAF50"} />
+              <Text style={[styles.completedText, { color: theme.success || "#4CAF50", fontFamily: "Inter_600SemiBold" }]}>
+                Complete
+              </Text>
+            </View>
+          )}
         </View>
         <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
       </AnimatedPressable>
@@ -217,12 +277,13 @@ function AnimatedStoryCard({
 export default function KidsStoriesScreen() {
   const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
-  const { ageGroup, setAgeGroup } = useKidsMode();
+  const { ageGroup, setAgeGroup, activeChildProfileId } = useKidsMode();
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const baseUrl = useImageBaseUrl();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const progressUserId = activeChildProfileId || "guest";
 
   const { data: collections, isLoading: loadingCollections } = useQuery<Collection[]>({
     queryKey: [`/api/kids/collections?ageGroup=${ageGroup}`],
@@ -232,6 +293,37 @@ export default function KidsStoriesScreen() {
     queryKey: [`/api/kids/collections/${selectedCollection?.id}/stories`],
     enabled: !!selectedCollection,
   });
+
+  const { data: progress } = useQuery<ProgressItem[]>({
+    queryKey: [`/api/kids/progress/${progressUserId}`],
+  });
+
+  const completedStoryIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    progress?.forEach((p) => {
+      if (p.completed) ids.add(p.storyId);
+    });
+    return ids;
+  }, [progress]);
+
+  const { data: allStories } = useQuery<Story[]>({
+    queryKey: [`/api/kids/collections/all/stories?ageGroup=${ageGroup}`],
+    enabled: !!collections && collections.length > 0,
+  });
+
+  const collectionCompletedCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!allStories || !collections) return counts;
+    collections.forEach((col) => {
+      const colStories = allStories.filter(
+        (s) => s.collectionId === col.id
+      );
+      counts[col.id] = colStories.filter((s) =>
+        completedStoryIds.has(s.id)
+      ).length;
+    });
+    return counts;
+  }, [allStories, collections, completedStoryIds]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -293,6 +385,7 @@ export default function KidsStoriesScreen() {
                   idx={idx}
                   theme={theme}
                   baseUrl={baseUrl}
+                  completedCount={collectionCompletedCounts[col.id] || 0}
                   onPress={() => setSelectedCollection(col)}
                 />
               ))
@@ -395,6 +488,35 @@ const styles = StyleSheet.create({
   collectionDesc: { fontSize: 13, lineHeight: 18, marginBottom: 4 },
   collectionMeta: { fontSize: 12 },
   storyCountRow: { flexDirection: "row", alignItems: "center" },
+  progressBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  progressBarTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressBarLabel: {
+    fontSize: 11,
+    minWidth: 24,
+  },
+  completedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  completedText: {
+    fontSize: 11,
+  },
   backRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8, marginTop: 4 },
   backText: { fontSize: 14 },
   collectionBanner: {

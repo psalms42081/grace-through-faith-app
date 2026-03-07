@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ import Animated, {
   withDelay,
   FadeInDown,
   Easing,
+  interpolate,
+  runOnJS,
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -58,8 +60,91 @@ interface StreakInfo {
 
 import AnimatedSection from "@/components/AnimatedSection";
 
+function StarCardSparkle({ index, color }: { index: number; color: string }) {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    const angle = (index * 72) * (Math.PI / 180);
+    const startDelay = 400 + index * 120;
+    scale.value = withDelay(
+      startDelay,
+      withRepeat(
+        withSequence(
+          withSpring(1.2, { damping: 5, stiffness: 160 }),
+          withTiming(0, { duration: 600, easing: Easing.out(Easing.ease) })
+        ),
+        -1,
+        false
+      )
+    );
+    opacity.value = withDelay(
+      startDelay,
+      withRepeat(
+        withSequence(
+          withTiming(0.9, { duration: 200 }),
+          withTiming(0, { duration: 600 })
+        ),
+        -1,
+        false
+      )
+    );
+  }, []);
+
+  const angle = (index * 72) * (Math.PI / 180);
+  const radius = 55;
+  const animStyle = useAnimatedStyle(() => ({
+    position: "absolute" as const,
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+    left: Math.cos(angle) * radius,
+    top: Math.sin(angle) * radius,
+  }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Ionicons name="sparkles" size={12} color={color} />
+    </Animated.View>
+  );
+}
+
+function AnimatedStarCount({ target }: { target: number }) {
+  const [displayVal, setDisplayVal] = useState(0);
+  const animProgress = useSharedValue(0);
+  const prevRef = useRef(0);
+
+  useEffect(() => {
+    prevRef.current = displayVal;
+    animProgress.value = 0;
+    animProgress.value = withTiming(1, {
+      duration: Math.min(900, Math.max(400, Math.abs(target - prevRef.current) * 50)),
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [target]);
+
+  const updateVal = React.useCallback((v: number) => {
+    setDisplayVal(Math.round(v));
+  }, []);
+
+  useAnimatedStyle(() => {
+    const current = interpolate(
+      animProgress.value,
+      [0, 1],
+      [prevRef.current, target]
+    );
+    runOnJS(updateVal)(current);
+    return {};
+  });
+
+  return (
+    <Text style={[styles.starCount, { fontFamily: "Lora_700Bold" }]}>{displayVal}</Text>
+  );
+}
+
 function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any }) {
   const glowOpacity = useSharedValue(0.6);
+  const starScale = useSharedValue(0.8);
+  const countScale = useSharedValue(0.5);
 
   useEffect(() => {
     glowOpacity.value = withRepeat(
@@ -70,17 +155,45 @@ function PulsingStarCard({ totalStars, theme }: { totalStars: number; theme: any
       -1,
       false
     );
-  }, []);
+    starScale.value = withSequence(
+      withSpring(1.2, { damping: 6, stiffness: 140 }),
+      withSpring(1, { damping: 8, stiffness: 120 })
+    );
+    countScale.value = withDelay(
+      200,
+      withSequence(
+        withSpring(1.15, { damping: 6, stiffness: 150 }),
+        withSpring(1, { damping: 10, stiffness: 130 })
+      )
+    );
+  }, [totalStars]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
   }));
 
+  const starIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: starScale.value }],
+  }));
+
+  const countStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: countScale.value }],
+  }));
+
   return (
     <Animated.View style={[styles.starCard, { backgroundColor: theme.starGold || theme.accent }]}>
       <Animated.View style={[styles.starGlowOverlay, glowStyle]} />
-      <Ionicons name="star" size={44} color="#fff" />
-      <Text style={[styles.starCount, { fontFamily: "Lora_700Bold" }]}>{totalStars}</Text>
+      <View style={{ alignItems: "center", justifyContent: "center" }}>
+        <Animated.View style={starIconStyle}>
+          <Ionicons name="star" size={44} color="#fff" />
+        </Animated.View>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <StarCardSparkle key={i} index={i} color="rgba(255,255,255,0.7)" />
+        ))}
+      </View>
+      <Animated.View style={countStyle}>
+        <AnimatedStarCount target={totalStars} />
+      </Animated.View>
       <Text style={[styles.starLabel, { fontFamily: "Inter_500Medium" }]}>Total Stars</Text>
     </Animated.View>
   );
@@ -112,6 +225,52 @@ function AnimatedFlameIcon() {
   );
 }
 
+function BadgeStarburst({ earned, color }: { earned: boolean; color: string }) {
+  const burstScale = useSharedValue(0);
+  const burstOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (earned) {
+      burstScale.value = withDelay(
+        300,
+        withRepeat(
+          withSequence(
+            withTiming(1.6, { duration: 800, easing: Easing.out(Easing.ease) }),
+            withTiming(0, { duration: 100 })
+          ),
+          -1,
+          false
+        )
+      );
+      burstOpacity.value = withDelay(
+        300,
+        withRepeat(
+          withSequence(
+            withTiming(0.6, { duration: 200 }),
+            withTiming(0, { duration: 700 })
+          ),
+          -1,
+          false
+        )
+      );
+    }
+  }, [earned]);
+
+  const burstStyle = useAnimatedStyle(() => ({
+    position: "absolute" as const,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: color,
+    transform: [{ scale: burstScale.value }],
+    opacity: burstOpacity.value,
+  }));
+
+  if (!earned) return null;
+  return <Animated.View style={burstStyle} />;
+}
+
 function AnimatedBadgeItem({
   badge,
   earned,
@@ -124,6 +283,7 @@ function AnimatedBadgeItem({
   BADGE_ICONS: Record<string, string>;
 }) {
   const scale = useSharedValue(earned ? 0.95 : 1);
+  const glowOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (earned) {
@@ -135,11 +295,26 @@ function AnimatedBadgeItem({
         -1,
         false
       );
+      glowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.4, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
     }
   }, [earned]);
 
   const scaleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: theme.accent,
+    borderRadius: 18,
+    opacity: glowOpacity.value,
   }));
 
   return (
@@ -150,10 +325,13 @@ function AnimatedBadgeItem({
         {
           backgroundColor: earned ? theme.accent + "15" : theme.backgroundCard,
           borderColor: earned ? theme.accent : theme.border,
+          overflow: "hidden" as const,
         },
       ]}
     >
-      <View style={[styles.badgeIconCircle, { backgroundColor: earned ? theme.accent + "20" : theme.border + "60" }]}>
+      {earned && <Animated.View style={glowStyle} />}
+      <View style={[styles.badgeIconCircle, { backgroundColor: earned ? theme.accent + "20" : theme.border + "60", alignItems: "center", justifyContent: "center" }]}>
+        <BadgeStarburst earned={earned} color={theme.accent} />
         <Ionicons
           name={(BADGE_ICONS[badge.icon || "star"] || "star") as any}
           size={28}

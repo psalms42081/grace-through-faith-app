@@ -31,12 +31,56 @@ import { Router } from "express";
     if (ageGroup) {
       conditions.push(eq(kidsCollections.ageGroup, String(ageGroup)));
     }
-    const collections = await db
+    const allCollections = await db
       .select()
       .from(kidsCollections)
       .where(and(...conditions))
       .orderBy(kidsCollections.orderIndex);
-    return res.json(collections);
+
+    const seen = new Map<string, typeof allCollections[0]>();
+    for (const col of allCollections) {
+      const key = `${col.title}::${col.ageGroup}`;
+      if (!seen.has(key)) {
+        seen.set(key, col);
+      }
+    }
+    const collections = Array.from(seen.values());
+
+    const collectionsWithCounts = await Promise.all(
+      collections.map(async (col) => {
+        const [countResult] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(kidsStories)
+          .where(
+            and(
+              eq(kidsStories.collectionId, col.id),
+              eq(kidsStories.published, true)
+            )
+          );
+        return { ...col, storyCount: countResult?.count ?? col.storyCount ?? 0 };
+      })
+    );
+
+    return res.json(collectionsWithCounts);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/kids/collections/all/stories", async (req, res) => {
+  try {
+    const { ageGroup } = req.query;
+    const conditions = [eq(kidsStories.published, true)];
+    if (ageGroup) {
+      conditions.push(eq(kidsStories.ageGroup, String(ageGroup)));
+    }
+    const stories = await db
+      .select()
+      .from(kidsStories)
+      .where(and(...conditions))
+      .orderBy(kidsStories.orderInCollection);
+    return res.json(stories);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -699,8 +743,125 @@ router.post("/api/kids/story/award-points", async (req, res) => {
   }
 });
 
-// ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
+// ─── KIDS SABBATH SCHOOL ─────────────────────────────────────────────────────
 
+const KIDS_SS_LESSONS: Record<string, { title: string; storySummary: string; memoryVerse: string; memoryVerseRef: string; thinkAboutIt: string; prayer: string }[]> = {
+  little_lambs: [
+    {
+      title: "God Made the World",
+      storySummary: "In the very beginning, God made everything! He made the bright sun, the blue sky, the tall trees, and all the animals. He made you too! Everything God made was good.",
+      memoryVerse: "God saw all that he had made, and it was very good.",
+      memoryVerseRef: "Genesis 1:31",
+      thinkAboutIt: "What is your favorite thing God made? Can you draw it?",
+      prayer: "Dear God, thank You for making the world so beautiful. Thank You for making me! Amen.",
+    },
+    {
+      title: "Noah and the Big Boat",
+      storySummary: "God told Noah to build a very big boat called an ark. Noah listened to God even when people laughed at him. God kept Noah, his family, and the animals safe inside the ark when the big rain came.",
+      memoryVerse: "Noah did everything just as God commanded him.",
+      memoryVerseRef: "Genesis 6:22",
+      thinkAboutIt: "If you were on the ark, which two animals would you want to sit next to?",
+      prayer: "Dear God, help me to listen to You and obey, just like Noah did. Amen.",
+    },
+    {
+      title: "God Takes Care of Me",
+      storySummary: "God takes care of the birds and the flowers. He feeds the birds every day and makes the flowers beautiful. If God takes care of them, He will take care of you too! You are very special to God.",
+      memoryVerse: "Look at the birds of the air; your heavenly Father feeds them.",
+      memoryVerseRef: "Matthew 6:26",
+      thinkAboutIt: "Have you seen a bird today? Who feeds it?",
+      prayer: "Dear God, thank You for taking care of me every day. I love You! Amen.",
+    },
+    {
+      title: "Jesus Loves the Little Children",
+      storySummary: "One day, parents brought their little children to see Jesus. Some grown-ups said the children should go away. But Jesus said, 'Let the little children come to me!' Jesus loves children very much.",
+      memoryVerse: "Let the little children come to me.",
+      memoryVerseRef: "Mark 10:14",
+      thinkAboutIt: "If you could sit on Jesus' lap, what would you tell Him?",
+      prayer: "Dear Jesus, thank You for loving me. I want to be close to You always. Amen.",
+    },
+  ],
+  young_disciples: [
+    {
+      title: "Creation: A World Designed with Purpose",
+      storySummary: "God created the world in six days and rested on the seventh. Each day He spoke, and something amazing appeared — light, sky, land, plants, stars, animals, and finally people. God made humans in His own image and gave them the job of caring for the earth.",
+      memoryVerse: "In the beginning God created the heavens and the earth.",
+      memoryVerseRef: "Genesis 1:1",
+      thinkAboutIt: "Why do you think God rested on the seventh day? What can we learn from that?",
+      prayer: "Lord, thank You for creating this amazing world. Help me to care for it and remember that I am made in Your image. Amen.",
+    },
+    {
+      title: "David Trusts God Against Goliath",
+      storySummary: "A giant named Goliath challenged Israel's army, and everyone was afraid. But young David trusted God. With just a sling and a stone, David defeated Goliath — not because he was strong, but because God was with him.",
+      memoryVerse: "The Lord who rescued me from the paw of the lion will rescue me from this Philistine.",
+      memoryVerseRef: "1 Samuel 17:37",
+      thinkAboutIt: "What is a 'giant' problem in your life right now? How can you trust God with it?",
+      prayer: "God, when I face big problems, help me remember that You are bigger. Give me courage like David. Amen.",
+    },
+    {
+      title: "The Sabbath: God's Special Day",
+      storySummary: "After creating the world, God set apart the seventh day as holy. He blessed it and rested. The Sabbath is God's gift to us — a day to rest, worship, and spend time with family and God. It reminds us that God is our Creator.",
+      memoryVerse: "Remember the Sabbath day by keeping it holy.",
+      memoryVerseRef: "Exodus 20:8",
+      thinkAboutIt: "What are your favorite things to do on Sabbath? How can you make it more special?",
+      prayer: "Dear God, thank You for the gift of Sabbath. Help me to use this day to grow closer to You and my family. Amen.",
+    },
+    {
+      title: "Daniel's Faithfulness in Babylon",
+      storySummary: "Daniel was taken far from home to Babylon. Even in a strange land with different rules, Daniel stayed faithful to God. He prayed three times a day, even when a law said he would be thrown to the lions. God protected Daniel because of his faithfulness.",
+      memoryVerse: "The God we serve is able to deliver us.",
+      memoryVerseRef: "Daniel 3:17",
+      thinkAboutIt: "Has it ever been hard to do the right thing when others around you weren't? What happened?",
+      prayer: "Lord, give me the same courage Daniel had. Help me stay faithful to You no matter what. Amen.",
+    },
+  ],
+  young_disciples_plus: [
+    {
+      title: "Identity in Christ: Who Am I Really?",
+      storySummary: "The world constantly tells you who you should be — through social media, culture, and peer pressure. But God says something different. You are created in His image, chosen, and deeply loved. Your identity is not in what you do or what others think, but in who God says you are.",
+      memoryVerse: "I praise you because I am fearfully and wonderfully made.",
+      memoryVerseRef: "Psalm 139:14",
+      thinkAboutIt: "When do you feel most pressured to be someone you're not? How does knowing God made you on purpose change that?",
+      prayer: "God, help me find my identity in You, not in what the world says. Remind me that I am enough because You made me. Amen.",
+    },
+    {
+      title: "The Great Controversy: Why Evil Exists",
+      storySummary: "Sin didn't start on earth — it began in heaven when Lucifer rebelled against God. The great controversy is the cosmic battle between good and evil. God didn't destroy Satan immediately because He wanted the universe to understand His character of love. We live in the middle of this battle, but God has already won through Jesus.",
+      memoryVerse: "And the God of peace will crush Satan under your feet shortly.",
+      memoryVerseRef: "Romans 16:20",
+      thinkAboutIt: "How does understanding the great controversy help you make sense of suffering in the world?",
+      prayer: "Lord, help me understand the bigger picture. Thank You that even though evil exists, You have already won the victory. Amen.",
+    },
+    {
+      title: "The Sabbath: Rest in a Restless World",
+      storySummary: "In a world that never stops — notifications, homework, social pressure — the Sabbath is God's counter-cultural gift. It's not just a rule; it's an invitation to rest, reconnect, and remember who made you. The Sabbath is a weekly reminder that your worth isn't in your productivity.",
+      memoryVerse: "Come to me, all you who are weary and burdened, and I will give you rest.",
+      memoryVerseRef: "Matthew 11:28",
+      thinkAboutIt: "Do you truly rest on Sabbath, or do you just avoid work? What would real Sabbath rest look like for you?",
+      prayer: "God, teach me to truly rest in You. Help me see Sabbath not as a restriction but as Your gift of freedom. Amen.",
+    },
+    {
+      title: "Standing Alone: Faith When It Costs You",
+      storySummary: "Daniel's three friends — Shadrach, Meshach, and Abednego — were told to bow to an idol or be thrown into a fiery furnace. They refused. They said, 'Our God is able to save us, but even if He doesn't, we will not bow.' God walked with them through the fire.",
+      memoryVerse: "If we are thrown into the blazing furnace, the God we serve is able to deliver us.",
+      memoryVerseRef: "Daniel 3:17",
+      thinkAboutIt: "Have you ever had to stand alone for something you believed? What gave you strength?",
+      prayer: "Lord, give me the courage to stand for what's right even when I stand alone. Walk with me through my fires. Amen.",
+    },
+  ],
+};
+
+router.get("/api/kids/sabbath-school/current", (req, res) => {
+  try {
+    const ageGroup = String(req.query.ageGroup || "little_lambs");
+    const lessons = KIDS_SS_LESSONS[ageGroup] || KIDS_SS_LESSONS.little_lambs;
+    const weekOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 86400000));
+    const lesson = lessons[weekOfYear % lessons.length];
+    res.json({ lesson, weekNumber: weekOfYear + 1, ageGroup });
+  } catch (err) {
+    console.error("Kids SS error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
   export default router;
   

@@ -876,10 +876,96 @@ const MOOD_CONFIG: Record<SceneMood, { icon: string; color: string; label: strin
   JOY: { icon: "sunny", color: "#FBBF24", label: "Joy" },
 };
 
-function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoaded }: { sceneId: string; illustrationPrompt: string; isVisible: boolean; onImageLoaded?: (url: string) => void }) {
+const FALLBACK_MOOD_GRADIENTS: Record<SceneMood, string[]> = {
+  AWE: ["#2E1065", "#6B21A8", "#A78BFA"],
+  PEACE: ["#064E3B", "#166534", "#6EE7B7"],
+  TENSION: ["#7C2D12", "#C2410C", "#FDBA74"],
+  JOY: ["#78350F", "#D97706", "#FDE68A"],
+};
+
+const FALLBACK_MOOD_ICONS: Record<SceneMood, { name: string; color: string }> = {
+  AWE: { name: "sparkles", color: "#DDD6FE" },
+  PEACE: { name: "leaf", color: "#A7F3D0" },
+  TENSION: { name: "flame", color: "#FED7AA" },
+  JOY: { name: "sunny", color: "#FEF3C7" },
+};
+
+function SceneIllustrationPlaceholder({ mood, loading }: { mood: SceneMood; loading: boolean }) {
+  const gradientColors = FALLBACK_MOOD_GRADIENTS[mood] || FALLBACK_MOOD_GRADIENTS.PEACE;
+  const moodIcon = FALLBACK_MOOD_ICONS[mood] || FALLBACK_MOOD_ICONS.PEACE;
+
+  const pulseScale = useSharedValue(1);
+  const iconRotate = useSharedValue(0);
+  const glowOpacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    iconRotate.value = withRepeat(
+      withSequence(
+        withTiming(8, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-8, { duration: 3000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const iconAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: pulseScale.value },
+      { rotate: `${iconRotate.value}deg` },
+    ],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
+  return (
+    <LinearGradient
+      colors={gradientColors as [string, string, ...string[]]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={illustrationStyles.placeholderGradient}
+    >
+      <Animated.View style={[illustrationStyles.placeholderGlow, glowStyle]} />
+      <Animated.View style={iconAnimStyle}>
+        <Ionicons
+          name={moodIcon.name as any}
+          size={loading ? 48 : 56}
+          color={moodIcon.color}
+        />
+      </Animated.View>
+      {loading && (
+        <View style={illustrationStyles.loadingRow}>
+          <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" />
+          <Text style={illustrationStyles.loadingLabel}>Painting your scene...</Text>
+        </View>
+      )}
+    </LinearGradient>
+  );
+}
+
+function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoaded, mood }: { sceneId: string; illustrationPrompt: string; isVisible: boolean; onImageLoaded?: (url: string) => void; mood?: SceneMood }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const baseUrl = useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
   }, []);
@@ -908,37 +994,18 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
     return () => { cancelled = true; };
   }, [isVisible, sceneId]);
 
-  const cleanPrompt = illustrationPrompt.replace("Soft watercolor, 2D animation style, warm earth tones, biblically inspired. ", "");
-
-  if (imageUrl) {
+  if (imageUrl && !imageLoadError) {
     return (
       <Image
         source={{ uri: imageUrl }}
         style={illustrationStyles.image}
         resizeMode="cover"
+        onError={() => setImageLoadError(true)}
       />
     );
   }
 
-  return (
-    <View style={illustrationStyles.placeholder}>
-      {loading ? (
-        <>
-          <ActivityIndicator size="small" color="rgba(255,255,255,0.6)" />
-          <Text style={illustrationStyles.label} numberOfLines={2}>
-            Creating illustration...
-          </Text>
-        </>
-      ) : (
-        <>
-          <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.4)" />
-          <Text style={illustrationStyles.label} numberOfLines={3}>
-            {cleanPrompt}
-          </Text>
-        </>
-      )}
-    </View>
-  );
+  return <SceneIllustrationPlaceholder mood={mood || "PEACE"} loading={loading && !failed} />;
 }
 
 const ILLUSTRATION_WIDTH = SCREEN_WIDTH - 48;
@@ -958,11 +1025,16 @@ function KenBurnsImage({
   uri,
   isActive,
   patternIndex,
+  mood,
+  onError,
 }: {
   uri: string;
   isActive: boolean;
   patternIndex: number;
+  mood?: SceneMood;
+  onError?: () => void;
 }) {
+  const [hasError, setHasError] = useState(false);
   const progress = useSharedValue(0);
   const pattern = KEN_BURNS_PATTERNS[patternIndex % KEN_BURNS_PATTERNS.length];
 
@@ -992,12 +1064,20 @@ function KenBurnsImage({
     };
   });
 
+  if (hasError) {
+    return <SceneIllustrationPlaceholder mood={mood || "PEACE"} loading={false} />;
+  }
+
   return (
     <View style={kenBurnsStyles.container}>
       <Animated.Image
         source={{ uri }}
         style={[kenBurnsStyles.image, animatedStyle]}
         resizeMode="cover"
+        onError={() => {
+          setHasError(true);
+          onError?.();
+        }}
       />
     </View>
   );
@@ -1352,24 +1432,79 @@ const illustrationStyles = StyleSheet.create({
     height: ILLUSTRATION_HEIGHT,
     borderRadius: 16,
   },
-  placeholder: {
+  placeholderGradient: {
     width: ILLUSTRATION_WIDTH,
     height: ILLUSTRATION_HEIGHT,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
+    gap: 12,
+    overflow: "hidden",
   },
-  label: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 11,
-    textAlign: "center",
-    fontFamily: "Inter_400Regular",
-    lineHeight: 15,
+  placeholderGlow: {
+    position: "absolute",
+    width: ILLUSTRATION_WIDTH * 0.7,
+    height: ILLUSTRATION_WIDTH * 0.7,
+    borderRadius: ILLUSTRATION_WIDTH * 0.35,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  loadingLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
 });
+
+function CompletionSparkle({ index, color }: { index: number; color: string }) {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    const angle = (index * 45) * (Math.PI / 180);
+    const radius = 40 + Math.random() * 20;
+    const delay = 300 + index * 50;
+    scale.value = withDelay(
+      delay,
+      withSequence(
+        withSpring(1.4, { damping: 5, stiffness: 180 }),
+        withSpring(0, { damping: 10, stiffness: 120 })
+      )
+    );
+    opacity.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 300 })
+      )
+    );
+    translateX.value = withDelay(delay, withTiming(Math.cos(angle) * radius, { duration: 400 }));
+    translateY.value = withDelay(delay, withTiming(Math.sin(angle) * radius, { duration: 400 }));
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    position: "absolute" as const,
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Ionicons name="sparkles" size={12 + Math.random() * 6} color={color} />
+    </Animated.View>
+  );
+}
 
 function MoodBadge({ mood }: { mood: SceneMood }) {
   const config = MOOD_CONFIG[mood];
@@ -2003,12 +2138,14 @@ export default function SceneStoryScreen() {
                   uri={item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`}
                   isActive={index === currentScene}
                   patternIndex={index}
+                  mood={item.mood || "PEACE"}
                 />
               ) : (
                 <SceneIllustration
                   sceneId={item.id}
                   illustrationPrompt={item.illustrationPrompt}
                   isVisible={Math.abs(index - currentScene) <= 1}
+                  mood={item.mood || "PEACE"}
                   onImageLoaded={(url) => {
                     setScenes(prev => prev.map(s => s.id === item.id ? { ...s, imageUrl: url } : s));
                   }}
@@ -2084,14 +2221,23 @@ export default function SceneStoryScreen() {
             )}
 
             {storyComplete && isLastScene && (
-              <Animated.View entering={FadeIn.duration(500)} style={styles.completeMessage}>
-                <Ionicons name="star" size={44} color={theme.starGold || "#F5A623"} />
+              <Animated.View entering={FadeInDown.springify().damping(10).stiffness(120)} style={styles.completeMessage}>
+                <View style={{ alignItems: "center", justifyContent: "center" }}>
+                  <Animated.View entering={FadeIn.delay(200).duration(300)}>
+                    <Ionicons name="star" size={44} color={theme.starGold || "#F5A623"} />
+                  </Animated.View>
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
+                  ))}
+                </View>
                 <Text style={[styles.completeTitle, { fontFamily: "Lora_700Bold" }]}>
                   Story Complete!
                 </Text>
-                <Text style={[styles.completeSubtitle, { fontFamily: "Inter_500Medium" }]}>
-                  +25 Seed Points earned
-                </Text>
+                <Animated.View entering={FadeInUp.delay(400).springify()}>
+                  <Text style={[styles.completeSubtitle, { fontFamily: "Inter_500Medium" }]}>
+                    +25 Seed Points earned
+                  </Text>
+                </Animated.View>
               </Animated.View>
             )}
           </View>

@@ -80,3 +80,11 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Crash Reporting:** `ErrorBoundary` reports crashes to `POST /api/analytics/error` with stack traces. Global `unhandledrejection` handler in `_layout.tsx`. Backend logs with `[CrashReport]` prefix.
 - **Empty State Polish:** Migrated church-connect, PrayerWall, and study-paths inline empty states to shared `EmptyState` component.
 - **Analytics Route (`server/routes/analytics.ts`):** Receives event batches and error reports, logs to console for beta monitoring.
+
+**Kids Mode Improvements:**
+- **Story Animation Fallback (`app/kids/story/[id].tsx`):** `SceneIllustrationPlaceholder` shows mood-themed gradient + animated icon when images fail to load. `KenBurnsImage` catches load errors and falls back gracefully. Never shows a blank scene.
+- **Micro Animations:** Star reward sparkle effects on quiz/story completion, "Great job!" bounce-in card, memory verse checkmark bounce animation. All use react-native-reanimated, under 300ms.
+- **Kids Sabbath School (`app/kids/sabbath-school.tsx`):** Template-based weekly lesson with 4 cards: Story of the Week, Memory Verse, Think About It (discussion), Prayer. Backend at `GET /api/kids/sabbath-school/current?ageGroup=`. Content is age-adaptive: Little Lambs (simple), Young Disciples (intermediate), Young Adults (reflective). Rotates weekly.
+- **Progress Visualization (`app/(tabs)/kids-stories.tsx`, `app/(tabs)/kids-stars.tsx`):** Collection cards show animated progress bars (completed/total). Badge unlock glow/starburst animation. Star count animated increment.
+- **Duplicate Collections Fix (`server/routes/kids.ts`):** Backend deduplicates collections by title+ageGroup key. Recalculates actual story counts per collection.
+- **Kids Home Layout (`app/(tabs)/index.tsx` KidsHomeScreen):** Enhanced layout: Greeting → Today's Verse → Streak → Stats → Today's Story → Sabbath School card → My Progress (stories/verses/badges counts) → Quick Actions.
