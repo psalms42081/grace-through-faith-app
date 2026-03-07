@@ -37,6 +37,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Spiritual Growth Map:** Visual spiritual journey screen tracking 5 dimensions (Prayer Life, Scripture, Service, Character, Wisdom) with 4 levels each, calculated from app data.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
 - **Dynamic Topic Content:** Topic detail pages feature AI-generated daily reflections and shuffled verses/media.
+- **Verse Action Tools:** Bottom-sheet verse tools (Copy, Highlight, Bookmark, Words, Voices, Verse Map, Guided Study) navigate to standalone stack routes (`/word-study`, `/historic-voices`, `/verse-map`, `/study-guide`, `/passage-context`) for proper Android back-button behavior. All tools available to all users (no pro gate).
 - **Guest User Identity:** Each device receives a unique UUID for API calls and data isolation.
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content, with robust backend sync service and timezone-safe date calculations.
 - **Great Controversy Map:** An immersive vertical timeline tracing the cosmic conflict from Creation to the New Earth through 15 narrative nodes aligned with Adventist theology, including scripture, Fundamental Beliefs, and depth-aware content.

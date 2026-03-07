@@ -15,7 +15,6 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
 import { apiRequest, queryClient } from "@/lib/query-client";
-import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function VerseActionsSheet() {
@@ -33,11 +32,21 @@ export default function VerseActionsSheet() {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const { isPro, showProGate } = useProStatus();
-
+  const canonicalVerseId = verseId || `${bookId}_${chapter}_${verse}`;
   const reference = `${bookName} ${chapter}:${verse}`;
-
   const txLabel = translation || "KJV";
+
+  const navigateTo = useCallback((pathname: string, params?: Record<string, string>) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.back();
+    setTimeout(() => {
+      if (params) {
+        router.push({ pathname: pathname as any, params });
+      } else {
+        router.push(pathname as any);
+      }
+    }, 300);
+  }, []);
 
   const handleCopy = useCallback(async () => {
     await Clipboard.setStringAsync(`${text}\n\u2014 ${reference} (${txLabel})`);
@@ -45,114 +54,99 @@ export default function VerseActionsSheet() {
   }, [text, reference, txLabel]);
 
   const handleStudy = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
-    setTimeout(() => {
-      router.push(`/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
-    }, 300);
-  }, [bookId, chapter, bookName]);
+    navigateTo("/passage-context", {
+      bookId: bookId || "",
+      chapter: chapter || "",
+      bookName: bookName || "",
+    });
+  }, [bookId, chapter, bookName, navigateTo]);
 
   const handleWordStudy = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
-    setTimeout(() => {
-      router.push(`/(tabs)/study?tab=word&bookId=${bookId}&chapter=${chapter}&verse=${verse}&verseId=${encodeURIComponent(verseId || "")}&verseText=${encodeURIComponent(text || "")}&bookName=${encodeURIComponent(bookName || "")}`);
-    }, 300);
-  }, [verseId, bookName, chapter, verse, text, bookId]);
+    navigateTo("/word-study", {
+      bookId: bookId || "",
+      chapter: chapter || "",
+      verse: verse || "",
+      verseId: canonicalVerseId,
+      verseText: text || "",
+      bookName: bookName || "",
+    });
+  }, [canonicalVerseId, bookName, chapter, verse, text, bookId, navigateTo]);
 
   const handleHistoricVoices = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
-    setTimeout(() => {
-      router.push(`/(tabs)/study?tab=voices&bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName || "")}`);
-    }, 300);
-  }, [bookId, chapter, bookName]);
+    navigateTo("/historic-voices", {
+      bookId: bookId || "",
+      chapter: chapter || "",
+      bookName: bookName || "",
+    });
+  }, [bookId, chapter, bookName, navigateTo]);
 
   const handleVerseMap = useCallback(() => {
-    if (!isPro) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showProGate();
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
-    setTimeout(() => {
-      router.push({
-        pathname: "/verse-map" as any,
-        params: {
-          verseId: verseId || `${bookId}_${chapter}_${verse}`,
-          verseText: text,
-          verseReference: reference,
-          bookName: bookName || "",
-          bookId: bookId || "",
-          chapter: chapter || "",
-          verse: verse || "",
-        },
-      });
-    }, 300);
-  }, [verseId, text, reference, bookName, bookId, chapter, verse, isPro, showProGate]);
+    navigateTo("/verse-map", {
+      verseId: canonicalVerseId,
+      verseText: text || "",
+      verseReference: reference,
+      bookName: bookName || "",
+      bookId: bookId || "",
+      chapter: chapter || "",
+      verse: verse || "",
+    });
+  }, [canonicalVerseId, text, reference, bookName, bookId, chapter, verse, navigateTo]);
 
   const handleSocraticStudy = useCallback(() => {
-    if (!isPro) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showProGate();
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
-    setTimeout(() => {
-      router.push({
-        pathname: "/study-guide" as any,
-        params: {
-          verseReference: reference,
-          verseText: text,
-          bookName: bookName || "",
-          chapter: chapter || "",
-          verse: verse || "",
-        },
-      });
-    }, 300);
-  }, [reference, text, bookName, chapter, verse, isPro, showProGate]);
+    navigateTo("/study-guide", {
+      verseReference: reference,
+      verseText: text || "",
+      bookName: bookName || "",
+      chapter: chapter || "",
+      verse: verse || "",
+    });
+  }, [reference, text, bookName, chapter, verse, navigateTo]);
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   const handleHighlight = useCallback(async () => {
+    if (!userId) {
+      setFeedbackMsg("Sign in to highlight");
+      setTimeout(() => setFeedbackMsg(null), 1500);
+      return;
+    }
     try {
       await apiRequest("POST", "/api/highlights", {
         userId,
-        verseId: verseId || `${bookId}_${chapter}_${verse}`,
+        verseId: canonicalVerseId,
         color: "yellow",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       setFeedbackMsg("Highlighted!");
       setTimeout(() => router.back(), 600);
-    } catch {
+    } catch (err) {
+      console.error("Highlight failed:", err);
       setFeedbackMsg("Failed to highlight");
-      setTimeout(() => {
-        setFeedbackMsg(null);
-        router.back();
-      }, 800);
+      setTimeout(() => setFeedbackMsg(null), 1500);
     }
-  }, [verseId, bookId, chapter, verse]);
+  }, [userId, canonicalVerseId]);
 
   const handleBookmark = useCallback(async () => {
+    if (!userId) {
+      setFeedbackMsg("Sign in to bookmark");
+      setTimeout(() => setFeedbackMsg(null), 1500);
+      return;
+    }
     try {
       await apiRequest("POST", "/api/bookmarks", {
         userId,
-        verseId: verseId || `${bookId}_${chapter}_${verse}`,
+        verseId: canonicalVerseId,
         label: reference,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       setFeedbackMsg("Bookmarked!");
       setTimeout(() => router.back(), 600);
-    } catch {
+    } catch (err) {
+      console.error("Bookmark failed:", err);
       setFeedbackMsg("Failed to bookmark");
-      setTimeout(() => {
-        setFeedbackMsg(null);
-        router.back();
-      }, 800);
+      setTimeout(() => setFeedbackMsg(null), 1500);
     }
-  }, [verseId, bookId, chapter, verse, reference]);
+  }, [userId, canonicalVerseId, reference]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
