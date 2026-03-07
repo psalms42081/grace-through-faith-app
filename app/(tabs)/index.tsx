@@ -1160,6 +1160,15 @@ function AdultHomeScreen() {
     queryKey: [`/api/reading-streaks/weekly?userId=${userId}`],
   });
 
+  const { data: ssData } = useQuery<{
+    quarterly: { title: string } | null;
+    currentLesson: { title: string; lessonNumber: number } | null;
+    completedDays: number;
+    currentLessonNumber: number;
+  }>({
+    queryKey: [`/api/sabbath-school/current?userId=${userId}`],
+  });
+
   const lastRead = recentReads?.[0];
   const streak = weeklyData?.currentStreak ?? 0;
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
@@ -1390,6 +1399,37 @@ function AdultHomeScreen() {
     </Pressable>
   );
 
+  const sabbathSchoolSection = ssData?.currentLesson ? (
+    <Pressable
+      onPress={() => router.push("/sabbath-school" as any)}
+      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+    >
+      <LinearGradient
+        colors={isDark ? ["#0D1A2E", "#0A1322"] : ["#1A2E46", "#152640"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[s.guidedCard, { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }]}
+      >
+        <View style={[s.guidedIconWrap, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+          <Ionicons name="book" size={20} color="#3B82F6" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.guidedTitle, { fontFamily: "Inter_600SemiBold", textAlign: "left" }]}>
+            This Week's Lesson
+          </Text>
+          <Text style={[s.guidedSub, { fontFamily: "Inter_400Regular", textAlign: "left" }]} numberOfLines={1}>
+            {ssData.currentLesson.title}
+          </Text>
+        </View>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#3B82F6" }}>
+            {ssData.completedDays || 0}/7
+          </Text>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  ) : null;
+
   const devotionalSection = (
     <Pressable
       onPress={() => {
@@ -1511,6 +1551,7 @@ function AdultHomeScreen() {
           <SpiritualRings theme={theme} isDark={isDark} />
           {continueReadingSection}
           {guidedToolsSection}
+          {sabbathSchoolSection}
           {greatControversySection}
           {devotionalSection}
           {verseSection}
@@ -1521,6 +1562,7 @@ function AdultHomeScreen() {
           <SpiritualRings theme={theme} isDark={isDark} />
           {continueReadingSection}
           {guidedToolsSection}
+          {sabbathSchoolSection}
           {greatControversySection}
           {devotionalSection}
           <GoldDivider theme={theme} />

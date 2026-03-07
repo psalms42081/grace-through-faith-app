@@ -1364,3 +1364,77 @@ Return JSON:
     reflectionQuestion: parsed.reflectionQuestion || "",
   };
 }
+
+export async function generateDiscussionPrep(params: {
+  lessonTitle: string;
+  daysContent: string;
+  depth?: StudyDepth;
+}): Promise<{
+  keyQuestions: string[];
+  aiSummary: string;
+  reflectionPrompts: string[];
+}> {
+  const { lessonTitle, daysContent, depth = "standard" } = params;
+  const openai = createOpenAIClient();
+
+  const questionCount = depth === "quick" ? 3 : depth === "deep" ? 8 : 5;
+  const promptCount = depth === "quick" ? 2 : depth === "deep" ? 5 : 3;
+
+  const depthExtra =
+    depth === "deep"
+      ? " Include connections to Ellen G. White writings (cite specific book and page references). Add Greek/Hebrew word insights where relevant. Reference connections to the 28 Fundamental Beliefs where applicable."
+      : "";
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    max_tokens: getDepthMaxTokens(depth, 1200),
+    messages: [
+      {
+        role: "system",
+        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator. Generate discussion prep content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
+
+Return ONLY valid JSON in this format:
+{
+  "keyQuestions": ["question1", "question2", ...],
+  "aiSummary": "A ${depth === "quick" ? "brief 1-paragraph" : depth === "deep" ? "detailed 3-4 paragraph" : "2-3 paragraph"} overview of the lesson's main themes and theological significance.",
+  "reflectionPrompts": ["prompt1", "prompt2", ...]
+}`,
+      },
+      {
+        role: "user",
+        content: `Generate Sabbath School discussion preparation for this week's lesson.
+
+Lesson Title: "${lessonTitle}"
+
+Lesson Content (all daily readings):
+${daysContent.substring(0, 6000)}
+
+Generate:
+- ${questionCount} discussion questions that encourage deep thinking and personal application
+- A summary of the lesson's main themes
+- ${promptCount} personal reflection prompts for journaling`,
+      },
+    ],
+  });
+
+  const raw = response.choices[0]?.message?.content || "";
+  const cleaned = cleanJsonResponse(raw);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.error("Failed to parse discussion prep AI response:", raw.substring(0, 500));
+    return {
+      keyQuestions: ["What is the central theme of this week's lesson?"],
+      aiSummary: "Discussion prep could not be generated at this time.",
+      reflectionPrompts: ["How does this lesson apply to your daily life?"],
+    };
+  }
+
+  return {
+    keyQuestions: Array.isArray(parsed.keyQuestions) ? parsed.keyQuestions : [],
+    aiSummary: parsed.aiSummary || "",
+    reflectionPrompts: Array.isArray(parsed.reflectionPrompts) ? parsed.reflectionPrompts : [],
+  };
+}

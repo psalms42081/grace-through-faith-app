@@ -1447,3 +1447,75 @@ export const gcExplorationCache = pgTable("gc_exploration_cache", {
 });
 
 export type GCExplorationCache = typeof gcExplorationCache.$inferSelect;
+
+export const sabbathSchoolQuarterlies = pgTable("sabbath_school_quarterly", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  quarterCode: varchar("quarter_code", { length: 16 }).notNull().unique(),
+  language: varchar("language", { length: 8 }).notNull().default("en"),
+  title: text("title").notNull(),
+  description: text("description"),
+  humanDate: varchar("human_date", { length: 100 }),
+  startDate: varchar("start_date", { length: 16 }),
+  endDate: varchar("end_date", { length: 16 }),
+  colorPrimary: varchar("color_primary", { length: 16 }),
+  coverUrl: text("cover_url"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sabbathSchoolLessons = pgTable("sabbath_school_lesson", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  quarterlyId: varchar("quarterly_id")
+    .notNull()
+    .references(() => sabbathSchoolQuarterlies.id),
+  lessonNumber: integer("lesson_number").notNull(),
+  title: text("title").notNull(),
+  startDate: varchar("start_date", { length: 16 }),
+  endDate: varchar("end_date", { length: 16 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sabbathSchoolDays = pgTable("sabbath_school_day", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id")
+    .notNull()
+    .references(() => sabbathSchoolLessons.id),
+  dayNumber: integer("day_number").notNull(),
+  title: text("title"),
+  date: varchar("date", { length: 16 }),
+  contentMarkdown: text("content_markdown"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sabbathSchoolUserProgress = pgTable("sabbath_school_user_progress", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  dayId: varchar("day_id")
+    .notNull()
+    .references(() => sabbathSchoolDays.id),
+  completed: boolean("completed").notNull().default(false),
+  journalEntry: text("journal_entry"),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export const sabbathSchoolDiscussionPrep = pgTable("sabbath_school_discussion_prep", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id")
+    .notNull()
+    .references(() => sabbathSchoolLessons.id),
+  keyQuestions: jsonb("key_questions").notNull(),
+  aiSummary: text("ai_summary").notNull(),
+  reflectionPrompts: jsonb("reflection_prompts").notNull(),
+  depth: varchar("depth", { length: 16 }).default("standard").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

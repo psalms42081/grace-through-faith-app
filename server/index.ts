@@ -275,8 +275,14 @@ function setupErrorHandler(app: express.Application) {
       port,
       host: "0.0.0.0",
     },
-    () => {
+    async () => {
       log(`express server serving on port ${port}`);
+      try {
+        const { initSabbathSchoolSync } = await import("./services/sabbath-school-sync");
+        initSabbathSchoolSync();
+      } catch (err) {
+        console.error("Sabbath School sync init failed:", err);
+      }
     },
   );
 })();
