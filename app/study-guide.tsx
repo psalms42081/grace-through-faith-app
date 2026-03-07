@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Stack, useLocalSearchParams, router } from "expo-router";
@@ -52,6 +53,57 @@ const PHASES = [
   { id: "interpret", label: "Interpret", icon: "bulb-outline" as const },
   { id: "apply", label: "Apply", icon: "heart-outline" as const },
 ];
+
+function AnimatedPhaseDot({
+  isActive,
+  isDone,
+  icon,
+  accentColor,
+  mutedColor,
+}: {
+  isActive: boolean;
+  isDone: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  accentColor: string;
+  mutedColor: string;
+}) {
+  const scaleAnim = useRef(new Animated.Value(isDone ? 1 : isActive ? 1 : 0.85)).current;
+  const opacityAnim = useRef(new Animated.Value(isDone ? 0.7 : isActive ? 1 : 0.5)).current;
+  const prevDone = useRef(isDone);
+  const prevActive = useRef(isActive);
+
+  useEffect(() => {
+    if (isDone && !prevDone.current) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
+      ]).start();
+      Animated.timing(opacityAnim, { toValue: 0.7, duration: 200, useNativeDriver: true }).start();
+    } else if (isActive && !prevActive.current) {
+      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    }
+    prevDone.current = isDone;
+    prevActive.current = isActive;
+  }, [isDone, isActive]);
+
+  const bgColor = isDone ? "#2E7D32" : isActive ? accentColor : mutedColor + "40";
+
+  return (
+    <Animated.View
+      style={[
+        styles.phaseDot,
+        { backgroundColor: bgColor, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+      ]}
+    >
+      {isDone ? (
+        <Ionicons name="checkmark" size={12} color="#fff" />
+      ) : (
+        <Ionicons name={icon} size={10} color={isActive ? "#fff" : mutedColor} />
+      )}
+    </Animated.View>
+  );
+}
 
 export default function StudyGuideScreen() {
   const { theme } = useTheme();
@@ -243,9 +295,23 @@ export default function StudyGuideScreen() {
               {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Scholarly"} Tutor
             </Text>
           )}
-          <Text style={[styles.messageText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-            {item.content}
-          </Text>
+          {isAI ? (
+            item.content.split(/\n\n+/).filter(Boolean).map((para, idx) => (
+              <Text
+                key={idx}
+                style={[
+                  styles.messageText,
+                  { color: theme.text, fontFamily: "Inter_400Regular", marginTop: idx > 0 ? 10 : 0 },
+                ]}
+              >
+                {para.trim()}
+              </Text>
+            ))
+          ) : (
+            <Text style={[styles.messageText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+              {item.content}
+            </Text>
+          )}
         </View>
       </View>
     );
@@ -279,29 +345,29 @@ export default function StudyGuideScreen() {
           const phaseIdx = getPhaseIndex();
           const isActive = i === phaseIdx;
           const isDone = isStageComplete(phase.id) || i < phaseIdx;
-          const dotColor = isActive ? theme.accent : isDone ? "#2E7D32" : theme.textMuted + "40";
           return (
             <View key={phase.id} style={styles.phaseItem}>
-              <View style={[styles.phaseDot, { backgroundColor: dotColor }]}>
-                {isDone ? (
-                  <Ionicons name="checkmark" size={10} color="#fff" />
-                ) : (
-                  <Ionicons name={phase.icon} size={10} color={isActive ? "#fff" : theme.textMuted} />
-                )}
-              </View>
+              <AnimatedPhaseDot
+                isActive={isActive}
+                isDone={isDone}
+                icon={phase.icon}
+                accentColor={theme.accent}
+                mutedColor={theme.textMuted}
+              />
               <Text
                 style={[
                   styles.phaseLabel,
                   {
-                    color: isActive ? theme.accent : isDone ? "#2E7D32" : theme.textMuted,
+                    color: isActive ? theme.accent : isDone ? "#2E7D32" : theme.textMuted + "80",
                     fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                    opacity: isDone ? 0.7 : isActive ? 1 : 0.5,
                   },
                 ]}
               >
-                {phase.id === "apply" ? "Apply" : phase.label}
+                {phase.label}
               </Text>
               {i < PHASES.length - 1 && (
-                <View style={[styles.phaseLine, { backgroundColor: isDone ? "#2E7D32" : theme.textMuted + "30" }]} />
+                <View style={[styles.phaseLine, { backgroundColor: isDone ? "#2E7D32" : theme.textMuted + "20" }]} />
               )}
             </View>
           );
