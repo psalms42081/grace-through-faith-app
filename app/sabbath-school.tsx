@@ -60,6 +60,7 @@ export default function SabbathSchoolScreen() {
     currentLessonNumber: number;
     totalLessons: number;
     completedDays: number;
+    todayDayNumber: number | null;
   }>({
     queryKey: [`/api/sabbath-school/current?userId=${userId}`],
   });
@@ -68,8 +69,7 @@ export default function SabbathSchoolScreen() {
   const lesson = data?.currentLesson;
   const days = lesson?.days || [];
   const completedCount = data?.completedDays || 0;
-
-  const todayDayOfWeek = new Date().getDay();
+  const todayDayNumber = data?.todayDayNumber || null;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -150,7 +150,7 @@ export default function SabbathSchoolScreen() {
 
           <View style={styles.daysGrid}>
             {days.map((day, index) => {
-              const isToday = index === todayDayOfWeek;
+              const isToday = todayDayNumber === day.dayNumber;
               const dayLabel = DAY_LABELS[index] || `Day ${day.dayNumber}`;
 
               return (

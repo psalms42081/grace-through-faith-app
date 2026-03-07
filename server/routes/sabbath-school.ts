@@ -12,6 +12,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { generateDiscussionPrep } from "../services/ai-engine";
 import {
   getCurrentLessonNumber,
+  getMostRecentQuarterly,
   syncCurrentQuarter,
 } from "../services/sabbath-school-sync";
 
@@ -21,43 +22,18 @@ router.get("/api/sabbath-school/current", async (req, res) => {
   try {
     const userId = (req.query.userId as string) || "guest";
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const quarter =
-      month <= 3 ? "01" : month <= 6 ? "02" : month <= 9 ? "03" : "04";
-    const quarterCode = `${year}-${quarter}`;
+    let q = await getMostRecentQuarterly();
 
-    let qResults = await db
-      .select()
-      .from(sabbathSchoolQuarterlies)
-      .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
-      .limit(1);
-
-    if (qResults.length === 0) {
+    if (!q) {
       try {
         await syncCurrentQuarter("en");
-        qResults = await db
-          .select()
-          .from(sabbathSchoolQuarterlies)
-          .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
-          .limit(1);
+        q = await getMostRecentQuarterly();
       } catch {}
     }
 
-    if (qResults.length === 0) {
-      qResults = await db
-        .select()
-        .from(sabbathSchoolQuarterlies)
-        .orderBy(desc(sabbathSchoolQuarterlies.createdAt))
-        .limit(1);
-    }
-
-    if (qResults.length === 0) {
+    if (!q) {
       return res.json({ quarterly: null, currentLesson: null, message: "No quarterly available" });
     }
-
-    const q = qResults[0];
 
     const currentLessonNum = await getCurrentLessonNumber(q.id);
 
@@ -96,6 +72,10 @@ router.get("/api/sabbath-school/current", async (req, res) => {
         progress.find((p) => p.dayId === day.id)?.journalEntry || null,
     }));
 
+    const now = new Date();
+    const todayStr = `${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${now.getUTCFullYear()}`;
+    const todayDayNumber = daysWithProgress.find((d) => d.date === todayStr)?.dayNumber || null;
+
     return res.json({
       quarterly: q,
       currentLesson: {
@@ -105,6 +85,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
       currentLessonNumber: currentLessonNum,
       totalLessons: lessons.length,
       completedDays: daysWithProgress.filter((d) => d.completed).length,
+      todayDayNumber,
     });
   } catch (err) {
     console.error("Sabbath School current error:", err);
@@ -117,20 +98,9 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
     const userId = (req.query.userId as string) || "guest";
     const lessonNumber = parseInt(req.params.lessonNumber);
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const quarter =
-      month <= 3 ? "01" : month <= 6 ? "02" : month <= 9 ? "03" : "04";
-    const quarterCode = `${year}-${quarter}`;
+    const quarterly = await getMostRecentQuarterly();
 
-    const quarterly = await db
-      .select()
-      .from(sabbathSchoolQuarterlies)
-      .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
-      .limit(1);
-
-    if (quarterly.length === 0) {
+    if (!quarterly) {
       return res.status(404).json({ error: "Quarterly not found" });
     }
 
@@ -139,7 +109,7 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
       .from(sabbathSchoolLessons)
       .where(
         and(
-          eq(sabbathSchoolLessons.quarterlyId, quarterly[0].id),
+          eq(sabbathSchoolLessons.quarterlyId, quarterly.id),
           eq(sabbathSchoolLessons.lessonNumber, lessonNumber)
         )
       )
@@ -177,7 +147,7 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
         ...lesson[0],
         days: daysWithProgress,
       },
-      quarterly: quarterly[0],
+      quarterly,
     });
   } catch (err) {
     console.error("Sabbath School lesson error:", err);

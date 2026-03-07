@@ -3,8 +3,9 @@ import {
   sabbathSchoolQuarterlies,
   sabbathSchoolLessons,
   sabbathSchoolDays,
+  sabbathSchoolDiscussionPrep,
 } from "../../shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import YAML from "yaml";
 
 // CONTENT SOURCE: Official Adventech Sabbath School lesson content (open-source, MIT-licensed).
@@ -15,10 +16,12 @@ import YAML from "yaml";
 const BASE_URL =
   "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
 
+const FETCH_TIMEOUT_MS = 15000;
+
 function getCurrentQuarterCode(): string {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
   const quarter = month <= 3 ? "01" : month <= 6 ? "02" : month <= 9 ? "03" : "04";
   return `${year}-${quarter}`;
 }
@@ -40,18 +43,32 @@ function parseDateStr(dateStr: string): Date | null {
   const parts = dateStr.split("/");
   if (parts.length === 3) {
     const [day, month, year] = parts;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
   }
-  return new Date(dateStr);
+  const parsed = new Date(dateStr);
+  if (isNaN(parsed.getTime())) return null;
+  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+}
+
+function todayUTCMidnight(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 async function fetchText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) return null;
     return await res.text();
-  } catch (err) {
-    console.error(`Failed to fetch ${url}:`, err);
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      console.error(`[SabbathSchool] Fetch timeout (${FETCH_TIMEOUT_MS}ms): ${url}`);
+    } else {
+      console.error(`[SabbathSchool] Fetch failed: ${url}`, err?.message || err);
+    }
     return null;
   }
 }
@@ -118,6 +135,8 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
     quarterlyId = inserted.id;
   }
 
+  const updatedLessonIds: string[] = [];
+
   for (let lessonNum = 1; lessonNum <= 13; lessonNum++) {
     const lessonDir = String(lessonNum).padStart(2, "0");
     const lessonInfoYml = await fetchText(
@@ -151,6 +170,7 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
           endDate: lessonInfo.end_date || null,
         })
         .where(eq(sabbathSchoolLessons.id, lessonId));
+      updatedLessonIds.push(lessonId);
     } else {
       const [insertedLesson] = await db
         .insert(sabbathSchoolLessons)
@@ -198,6 +218,7 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
         .limit(1);
 
       if (existingDay.length > 0) {
+        const contentChanged = existingDay[0].contentMarkdown !== contentBody;
         await db
           .update(sabbathSchoolDays)
           .set({
@@ -206,6 +227,9 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
             contentMarkdown: contentBody,
           })
           .where(eq(sabbathSchoolDays.id, existingDay[0].id));
+        if (contentChanged && !updatedLessonIds.includes(lessonId)) {
+          updatedLessonIds.push(lessonId);
+        }
       } else {
         await db.insert(sabbathSchoolDays).values({
           lessonId,
@@ -218,12 +242,15 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
     }
   }
 
+  if (updatedLessonIds.length > 0) {
+    await invalidateDiscussionCache(updatedLessonIds);
+  }
+
   console.log(`[SabbathSchool] Sync complete for ${activeQuarterCode}`);
 }
 
 export async function getCurrentLessonNumber(quarterlyId: string): Promise<number> {
-  const now = new Date();
-  const todayStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  const today = todayUTCMidnight();
 
   const lessons = await db
     .select()
@@ -231,13 +258,14 @@ export async function getCurrentLessonNumber(quarterlyId: string): Promise<numbe
     .where(eq(sabbathSchoolLessons.quarterlyId, quarterlyId))
     .orderBy(sabbathSchoolLessons.lessonNumber);
 
+  if (lessons.length === 0) return 1;
+
   for (const lesson of lessons) {
     if (lesson.startDate && lesson.endDate) {
       const start = parseDateStr(lesson.startDate);
       const end = parseDateStr(lesson.endDate);
       if (start && end) {
-        end.setHours(23, 59, 59, 999);
-        if (now >= start && now <= end) {
+        if (today >= start && today <= end) {
           return lesson.lessonNumber;
         }
       }
@@ -250,7 +278,7 @@ export async function getCurrentLessonNumber(quarterlyId: string): Promise<numbe
     if (lesson.startDate) {
       const start = parseDateStr(lesson.startDate);
       if (start) {
-        const diff = Math.abs(now.getTime() - start.getTime());
+        const diff = Math.abs(today.getTime() - start.getTime());
         if (diff < closestDiff) {
           closestDiff = diff;
           closest = lesson;
@@ -264,33 +292,92 @@ export async function getCurrentLessonNumber(quarterlyId: string): Promise<numbe
 
 export async function shouldSync(): Promise<boolean> {
   const quarterCode = getCurrentQuarterCode();
-  const existing = await db
+
+  const currentQ = await db
     .select()
     .from(sabbathSchoolQuarterlies)
     .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
     .limit(1);
 
-  if (existing.length === 0) return true;
+  if (currentQ.length > 0) {
+    const lastSynced = currentQ[0].lastSyncedAt;
+    if (lastSynced) {
+      const hoursSinceSync = (Date.now() - lastSynced.getTime()) / (1000 * 60 * 60);
+      return hoursSinceSync >= 24;
+    }
+    return true;
+  }
 
-  const lastSynced = existing[0].lastSyncedAt;
+  const anyQ = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .orderBy(desc(sabbathSchoolQuarterlies.lastSyncedAt))
+    .limit(1);
+
+  if (anyQ.length === 0) return true;
+
+  const lastSynced = anyQ[0].lastSyncedAt;
   if (!lastSynced) return true;
 
-  const hoursSinceSync =
-    (Date.now() - lastSynced.getTime()) / (1000 * 60 * 60);
+  const hoursSinceSync = (Date.now() - lastSynced.getTime()) / (1000 * 60 * 60);
   return hoursSinceSync >= 24;
 }
 
-export async function initSabbathSchoolSync(): Promise<void> {
+export async function getMostRecentQuarterly() {
+  const quarterCode = getCurrentQuarterCode();
+  const currentQ = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
+    .limit(1);
+
+  if (currentQ.length > 0) return currentQ[0];
+
+  const fallback = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
+    .limit(1);
+
+  return fallback[0] || null;
+}
+
+export async function invalidateDiscussionCache(lessonIds: string[]): Promise<void> {
+  if (lessonIds.length === 0) return;
   try {
-    const needsSync = await shouldSync();
-    if (needsSync) {
-      await syncCurrentQuarter("en");
-    } else {
-      console.log("[SabbathSchool] Content is fresh, skipping sync.");
-    }
+    await db
+      .delete(sabbathSchoolDiscussionPrep)
+      .where(inArray(sabbathSchoolDiscussionPrep.lessonId, lessonIds));
+    console.log(`[SabbathSchool] Invalidated discussion prep cache for ${lessonIds.length} lessons`);
   } catch (err) {
-    console.error("[SabbathSchool] Initial sync failed:", err);
+    console.error("[SabbathSchool] Failed to invalidate discussion cache:", err);
   }
+}
+
+export async function initSabbathSchoolSync(): Promise<void> {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 10000;
+
+  async function attemptSync(attempt: number): Promise<void> {
+    try {
+      const needsSync = await shouldSync();
+      if (needsSync) {
+        await syncCurrentQuarter("en");
+      } else {
+        console.log("[SabbathSchool] Content is fresh, skipping sync.");
+      }
+    } catch (err) {
+      console.error(`[SabbathSchool] Sync attempt ${attempt}/${MAX_RETRIES} failed:`, err);
+      if (attempt < MAX_RETRIES) {
+        console.log(`[SabbathSchool] Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        return attemptSync(attempt + 1);
+      }
+      console.error("[SabbathSchool] All sync retries exhausted. Will try again in 24h.");
+    }
+  }
+
+  await attemptSync(1);
 
   setInterval(
     async () => {
