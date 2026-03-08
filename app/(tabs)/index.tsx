@@ -234,7 +234,7 @@ function KidsHomeScreen() {
           </Text>
         </View>
         <View style={kidsStyles.headerRow}>
-          <View>
+          <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={[styles.greeting, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               {activeChildName ? `Welcome back, ${activeChildName}` : greeting}
             </Text>
@@ -253,6 +253,7 @@ function KidsHomeScreen() {
               }}
               style={[kidsStyles.switchBtn, { backgroundColor: theme.accent + "20" }]}
               testID="switch-child"
+              accessibilityLabel="Switch child"
             >
               <Ionicons name="swap-horizontal" size={16} color={theme.accent} />
             </Pressable>
@@ -266,10 +267,11 @@ function KidsHomeScreen() {
               }}
               style={[kidsStyles.exitBtn, { backgroundColor: theme.textMuted + "20" }]}
               testID="exit-kids-mode"
+              accessibilityLabel="Exit Kids Mode"
             >
               <Ionicons name="log-out-outline" size={16} color={theme.textSecondary} />
               <Text style={[kidsStyles.exitBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                Exit Kids Mode
+                Exit
               </Text>
             </Pressable>
           </View>
