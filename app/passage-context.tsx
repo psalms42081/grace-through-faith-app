@@ -29,31 +29,6 @@ interface ContextCard {
   themes: string[] | null;
 }
 
-interface CommentaryEntryData {
-  id: string;
-  commentatorId: string;
-  bookId: number;
-  chapter: number;
-  verseStart: number;
-  verseEnd: number | null;
-  title: string | null;
-  content: string;
-}
-
-interface Commentator {
-  id: string;
-  name: string;
-  dates: string | null;
-  tradition: string | null;
-  bio: string | null;
-  isExternal?: boolean;
-  externalUrl?: string;
-}
-
-interface CommentaryResult {
-  entry: CommentaryEntryData;
-  commentator: Commentator | null;
-}
 
 export default function PassageContextScreen() {
   const { bookId, chapter, bookName } = useLocalSearchParams<{
@@ -70,10 +45,6 @@ export default function PassageContextScreen() {
     queryKey: [`/api/context?book=${bookId}&chapter=${chapter}`],
   });
 
-  const { data: commentaryResults, isLoading: comLoading } = useQuery<CommentaryResult[]>({
-    queryKey: [`/api/commentary?book=${bookId}&chapter=${chapter}`],
-  });
-
   const generateCtxMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/context/generate", { bookId: Number(bookId), chapter: Number(chapter) });
@@ -84,24 +55,12 @@ export default function PassageContextScreen() {
     },
   });
 
-  const generateComMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/commentary/generate", { bookId: Number(bookId), chapter: Number(chapter) });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/commentary?book=${bookId}&chapter=${chapter}`] });
-    },
-  });
-
   const hasContext = (contextCards?.length ?? 0) > 0;
-  const hasCommentary = (commentaryResults?.length ?? 0) > 0;
-  const isGenerating = generateCtxMutation.isPending || generateComMutation.isPending;
-  const isLoading = ctxLoading || comLoading || isGenerating;
-  const hasContent = hasContext || hasCommentary;
+  const isGenerating = generateCtxMutation.isPending;
+  const isLoading = ctxLoading || isGenerating;
+  const hasContent = hasContext;
 
   const [ctxGenDone, setCtxGenDone] = React.useState(false);
-  const [comGenDone, setComGenDone] = React.useState(false);
 
   useEffect(() => {
     if (!ctxLoading && !hasContext && !generateCtxMutation.isPending && !ctxGenDone) {
@@ -109,13 +68,6 @@ export default function PassageContextScreen() {
       generateCtxMutation.mutate();
     }
   }, [ctxLoading, hasContext]);
-
-  useEffect(() => {
-    if (!comLoading && !hasCommentary && !generateComMutation.isPending && !comGenDone) {
-      setComGenDone(true);
-      generateComMutation.mutate();
-    }
-  }, [comLoading, hasCommentary]);
 
   return (
     <>
@@ -140,7 +92,7 @@ export default function PassageContextScreen() {
             {bookName} {chapter}
           </Text>
           <Text style={[styles.heroSub, { fontFamily: "Inter_400Regular" }]}>
-            Context, background & commentary
+            Historical background & cultural context
           </Text>
         </View>
 
@@ -168,15 +120,6 @@ export default function PassageContextScreen() {
                 <SectionHeader icon="time-outline" label="Historical Context" theme={theme} />
                 {contextCards!.map((card) => (
                   <ContextCardView key={card.id} card={card} theme={theme} />
-                ))}
-              </>
-            )}
-
-            {hasCommentary && (
-              <>
-                <SectionHeader icon="chatbubbles-outline" label="Commentary" theme={theme} />
-                {commentaryResults!.map((result) => (
-                  <CommentaryCardView key={result.entry.id} result={result} theme={theme} />
                 ))}
               </>
             )}
@@ -241,49 +184,6 @@ function ContextCardView({ card, theme }: { card: any; theme: typeof Colors.ligh
               </Text>
             </View>
           ))}
-        </View>
-      )}
-    </View>
-  );
-}
-
-function CommentaryCardView({ result, theme }: { result: CommentaryResult; theme: typeof Colors.light }) {
-  const { entry, commentator } = result;
-  const verseRange = entry.verseEnd
-    ? `vv. ${entry.verseStart}-${entry.verseEnd}`
-    : `v. ${entry.verseStart}`;
-
-  return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-      <View style={styles.commentaryHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {commentator?.name ?? "Unknown"}
-          </Text>
-          <Text style={[styles.commentatorMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {[commentator?.tradition, commentator?.dates].filter(Boolean).join(" | ")}
-          </Text>
-        </View>
-        <View style={[styles.verseBadge, { backgroundColor: theme.accent + "18" }]}>
-          <Text style={[styles.verseBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {verseRange}
-          </Text>
-        </View>
-      </View>
-      {entry.title && (
-        <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Lora_600SemiBold", marginTop: 8 }]}>
-          {entry.title}
-        </Text>
-      )}
-      <Text style={[styles.cardContent, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-        {entry.content}
-      </Text>
-      {commentator?.isExternal && commentator?.externalUrl && (
-        <View style={[styles.externalBadge, { backgroundColor: theme.accent + "18" }]}>
-          <Ionicons name="open-outline" size={12} color={theme.accent} />
-          <Text style={[styles.externalText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-            External resource
-          </Text>
         </View>
       )}
     </View>
@@ -368,26 +268,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, marginBottom: 8 },
   cardContent: { fontSize: 14, lineHeight: 22 },
-  commentaryHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  commentatorName: { fontSize: 14 },
-  commentatorMeta: { fontSize: 11, marginTop: 2 },
-  verseBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  verseBadgeText: { fontSize: 11 },
-  externalBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-start",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginTop: 10,
-  },
-  externalText: { fontSize: 11 },
   infoRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   infoLabel: { fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" as const, marginBottom: 2 },
   infoValue: { fontSize: 13, lineHeight: 20 },
