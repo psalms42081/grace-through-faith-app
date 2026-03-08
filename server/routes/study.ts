@@ -799,7 +799,7 @@ router.post("/api/devotionals/complete", async (req, res) => {
   }
 });
 
-router.post("/api/study-guide/start", aiGenerationLimiter, checkProStatus, async (req, res) => {
+router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
     const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false, persona = "scholarly" } = req.body;
     if (!verseReference || !verseText) {
@@ -872,7 +872,7 @@ router.post("/api/study-guide/start", aiGenerationLimiter, checkProStatus, async
 const STAGE_THRESHOLDS: Record<string, number> = { observe: 2, interpret: 2, apply: 1 };
 const STAGE_ORDER = ["observe", "interpret", "apply"];
 
-router.post("/api/study-guide/respond", aiGenerationLimiter, checkProStatus, async (req, res) => {
+router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) => {
   try {
     const { sessionId, userResponse, userId = "guest" } = req.body;
     if (!sessionId || !userResponse) {
@@ -1064,7 +1064,7 @@ router.get("/api/study-guide/session/:id", async (req, res) => {
 
 // ─── VISUAL VERSE MAPPER ──────────────────────────────────────────────────
 
-router.get("/api/verse-map/:verseId", checkProStatus, async (req, res) => {
+router.get("/api/verse-map/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);
 
@@ -1099,7 +1099,7 @@ router.get("/api/verse-map/:verseId", checkProStatus, async (req, res) => {
   }
 });
 
-router.post("/api/verse-map/generate", aiGenerationLimiter, checkProStatus, async (req, res) => {
+router.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => {
   try {
     const { verseId, verseText, verseReference, bookName, chapter, verse } = req.body;
     if (!verseId || !verseText || !verseReference) {
@@ -1135,7 +1135,7 @@ router.post("/api/verse-map/generate", aiGenerationLimiter, checkProStatus, asyn
 
 // ─── 4D SCRIPTURE — CHAPTER CONTEXT ────────────────────────────────────────
 
-router.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, res) => {
+router.get("/api/chapter-context/:bookId/:chapter", async (req, res) => {
   try {
     const bookId = parseInt(String(req.params.bookId));
     const chapter = parseInt(String(req.params.chapter));
