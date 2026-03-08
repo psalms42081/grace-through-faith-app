@@ -13,6 +13,11 @@ const BOOK_IDS: Record<string, number> = {
 };
 
 async function seed() {
+  const existing = await db.select().from(devotionalPlans).limit(10);
+  if (existing.length >= 5) {
+    console.log("SDA devotional plans already seeded. Skipping.");
+    return;
+  }
   console.log("Seeding SDA-focused devotional plans...");
 
   // ==================== PLAN 1: THE SABBATH REST ====================

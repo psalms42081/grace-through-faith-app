@@ -11,6 +11,12 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
 async function seed() {
+  const existing = await db.select().from(kidsCollections).limit(1);
+  if (existing.length > 0) {
+    console.log("Kids content already seeded. Skipping.");
+    await pool.end();
+    return;
+  }
   console.log("Seeding Kids Club content...");
 
   const [godMade] = await db
