@@ -1040,11 +1040,8 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              studyDone={(ringsData?.study.current ?? 0) > 0}
               prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
-              hasSabbathSchool={!!ssData?.currentLesson}
-              hasActivePlan={hasActivePlan}
             />
           </AnimatedSection>
           <AnimatedSection index={2}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
@@ -1077,11 +1074,8 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              studyDone={(ringsData?.study.current ?? 0) > 0}
               prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
-              hasSabbathSchool={!!ssData?.currentLesson}
-              hasActivePlan={hasActivePlan}
             />
           </AnimatedSection>
           <AnimatedSection index={1}>

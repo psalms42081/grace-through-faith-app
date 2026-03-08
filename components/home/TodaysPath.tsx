@@ -13,21 +13,15 @@ interface PathItem {
 interface TodaysPathProps {
   theme: any;
   isDark: boolean;
-  studyDone: boolean;
   prayerDone: boolean;
   hasRecentRead: boolean;
-  hasSabbathSchool: boolean;
-  hasActivePlan: boolean;
 }
 
 export default function TodaysPath({
   theme,
   isDark,
-  studyDone,
   prayerDone,
   hasRecentRead,
-  hasSabbathSchool,
-  hasActivePlan,
 }: TodaysPathProps) {
   const items: PathItem[] = [
     {
@@ -42,31 +36,7 @@ export default function TodaysPath({
       completed: prayerDone,
       onPress: () => router.push("/prayer-journal"),
     },
-    {
-      icon: "compass-outline",
-      label: "Continue your study",
-      completed: studyDone,
-      onPress: () => router.push("/study-paths"),
-    },
   ];
-
-  if (hasSabbathSchool) {
-    items.push({
-      icon: "school-outline",
-      label: "Sabbath School lesson",
-      completed: false,
-      onPress: () => router.push("/sabbath-school"),
-    });
-  }
-
-  if (hasActivePlan) {
-    items.splice(2, 0, {
-      icon: "calendar-outline",
-      label: "Today's devotional",
-      completed: false,
-      onPress: () => router.push("/(tabs)/plans"),
-    });
-  }
 
   return (
     <View style={[s.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
