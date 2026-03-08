@@ -24,7 +24,7 @@ import { Router, Request } from "express";
 
   const router = Router();
 
-  router.get("/api/family/children", checkProStatus, async (req, res) => {
+  router.get("/api/family/children", async (req, res) => {
   try {
     const parentId = String(req.query.userId || req.query.parentId || "guest");
     const children = await db
@@ -39,7 +39,7 @@ import { Router, Request } from "express";
   }
 });
 
-router.post("/api/family/children", checkProStatus, async (req, res) => {
+router.post("/api/family/children", async (req, res) => {
   try {
     const userId = String(req.body?.userId || "guest");
     const { name, avatarUrl, ageGroup } = req.body;
@@ -63,7 +63,7 @@ router.post("/api/family/children", checkProStatus, async (req, res) => {
   }
 });
 
-router.patch("/api/family/children/:id", checkProStatus, async (req, res) => {
+router.patch("/api/family/children/:id", async (req, res) => {
   try {
     const userId = String(req.body?.userId || "guest");
     const { name, ageGroup } = req.body;
@@ -93,7 +93,7 @@ router.patch("/api/family/children/:id", checkProStatus, async (req, res) => {
   }
 });
 
-router.delete("/api/family/children/:id", checkProStatus, async (req, res) => {
+router.delete("/api/family/children/:id", async (req, res) => {
   try {
     const userId = String(req.query.userId || "guest");
     const [child] = await db
