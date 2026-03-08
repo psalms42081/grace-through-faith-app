@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Svg, { Rect } from "react-native-svg";
 import Colors from "@/constants/colors";
 
 export interface BookMapEntry {
@@ -42,10 +41,6 @@ export default function BibleHeatmap({ bibleMap, theme, isDark, userId }: BibleH
     enabled: !!selectedBook,
   });
 
-  const rows = Math.ceil(bibleMap.length / HEATMAP_COLS);
-  const svgWidth = HEATMAP_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP;
-  const svgHeight = rows * (CELL_SIZE + CELL_GAP) - CELL_GAP;
-
   const getCellColor = (book: BookMapEntry) => {
     if (!book.explored) return isDark ? "#1a1a1f" : "#e8e4df";
     const ratio = Math.min(book.chaptersRead / Math.max(book.chapterCount, 1), 1);
@@ -56,28 +51,25 @@ export default function BibleHeatmap({ bibleMap, theme, isDark, userId }: BibleH
 
   return (
     <View>
-      <View style={{ alignItems: "center" }}>
-        <Svg width={svgWidth} height={svgHeight}>
-          {bibleMap.map((book, i) => {
-            const col = i % HEATMAP_COLS;
-            const row = Math.floor(i / HEATMAP_COLS);
-            const x = col * (CELL_SIZE + CELL_GAP);
-            const y = row * (CELL_SIZE + CELL_GAP);
-            return (
-              <Rect
-                key={book.id}
-                x={x}
-                y={y}
-                width={CELL_SIZE}
-                height={CELL_SIZE}
-                rx={CELL_RADIUS}
-                ry={CELL_RADIUS}
-                fill={getCellColor(book)}
-                onPress={() => setSelectedBook(selectedBook?.id === book.id ? null : book)}
-              />
-            );
-          })}
-        </Svg>
+      <View style={styles.grid}>
+        {bibleMap.map((book) => {
+          const isSelected = selectedBook?.id === book.id;
+          return (
+            <Pressable
+              key={book.id}
+              onPress={() => setSelectedBook(isSelected ? null : book)}
+              accessibilityLabel={`${book.name}: ${book.chaptersRead} of ${book.chapterCount} chapters`}
+              style={[
+                styles.cell,
+                {
+                  backgroundColor: getCellColor(book),
+                  borderWidth: isSelected ? 2 : 0,
+                  borderColor: isSelected ? theme.accent : "transparent",
+                },
+              ]}
+            />
+          );
+        })}
       </View>
 
       {selectedBook && (
@@ -149,6 +141,17 @@ export default function BibleHeatmap({ bibleMap, theme, isDark, userId }: BibleH
 }
 
 const styles = StyleSheet.create({
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: CELL_GAP,
+    justifyContent: "center",
+  },
+  cell: {
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    borderRadius: CELL_RADIUS,
+  },
   tooltip: {
     marginTop: 12,
     borderRadius: 12,
