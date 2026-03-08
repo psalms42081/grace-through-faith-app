@@ -1044,6 +1044,7 @@ function AdultHomeScreen() {
               isDark={isDark}
               prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
+              dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
           <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
@@ -1078,6 +1079,7 @@ function AdultHomeScreen() {
               isDark={isDark}
               prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
+              dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
           <AnimatedSection index={1}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
