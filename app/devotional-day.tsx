@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
+import { useProStatus } from "@/contexts/ProContext";
 import { useTheme } from "@/hooks/useTheme";
 import * as Haptics from "expo-haptics";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
@@ -291,6 +292,7 @@ export default function DevotionalDayScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { depth } = useStudyDepth();
+  const { triggerMissionInvite } = useProStatus();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -351,6 +353,7 @@ export default function DevotionalDayScreen() {
         } catch {}
       }
       setCompleted(true);
+      triggerMissionInvite();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Animated.sequence([
         Animated.timing(doneAnim, { toValue: 1, duration: 400, useNativeDriver: true }),

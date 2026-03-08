@@ -6,19 +6,17 @@ import {
   Pressable,
   Modal,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 
-const PRO_BENEFITS = [
-  { icon: "school-outline" as const, title: "Socratic Study Guide", desc: "AI-guided inductive Bible study" },
+const SUPPORTER_BENEFITS = [
+  { icon: "people-outline" as const, title: "Family Dashboard", desc: "Track your family's spiritual growth" },
+  { icon: "school-outline" as const, title: "Guided Study", desc: "AI-guided inductive Bible study" },
   { icon: "layers-outline" as const, title: "Chapter Insights", desc: "Locations, timeline, figures & culture" },
   { icon: "map-outline" as const, title: "Visual Verse Mapper", desc: "Cross-references & original language" },
   { icon: "language-outline" as const, title: "Greek & Hebrew Deep Dive", desc: "Full Strong's word analysis" },
-  { icon: "share-social-outline" as const, title: "Share Insight Cards", desc: "Premium shareable study cards" },
-  { icon: "cloud-offline-outline" as const, title: "Offline Deep Study", desc: "Cache all study data locally" },
 ];
 
 interface ProGateModalProps {
@@ -52,18 +50,18 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
           </Pressable>
 
           <View style={ms.iconWrap}>
-            <Ionicons name="diamond" size={32} color="#C9933A" />
+            <Ionicons name="heart-circle" size={32} color="#C9933A" />
           </View>
 
           <Text style={[ms.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Unlock Deep Study
+            Supporter Features
           </Text>
           <Text style={[ms.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Go deeper with Pro features designed for serious Bible students
+            These features are available to those who support the mission of making deep Bible study accessible to every home.
           </Text>
 
           <View style={ms.benefitsList}>
-            {PRO_BENEFITS.map((b) => (
+            {SUPPORTER_BENEFITS.map((b) => (
               <View key={b.title} style={ms.benefitRow}>
                 <View style={[ms.benefitIcon, { backgroundColor: "rgba(201,147,58,0.1)" }]}>
                   <Ionicons name={b.icon} size={18} color="#C9933A" />
@@ -80,24 +78,22 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
             ))}
           </View>
 
-          <Pressable
-            onPress={onStartTrial}
-            disabled={isLoading}
-            style={({ pressed }) => [ms.trialBtn, { opacity: pressed ? 0.85 : 1 }]}
-            testID="start-trial-btn"
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[ms.trialBtnText, { fontFamily: "Inter_700Bold" }]}>
-                Start 7-Day Trial
-              </Text>
-            )}
-          </Pressable>
+          <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
+            <Ionicons name="time-outline" size={18} color={theme.accent} />
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center", flex: 1 }}>
+              Donations will be available soon. For now, enjoy the full experience on us.
+            </Text>
+          </View>
 
-          <Text style={[ms.terms, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Free for 7 days, then $4.99/month
-          </Text>
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [ms.dismissBtn, { opacity: pressed ? 0.85 : 1 }]}
+            testID="supporter-continue-btn"
+          >
+            <Text style={[ms.dismissText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+              Continue Studying
+            </Text>
+          </Pressable>
         </View>
       </View>
     </Modal>
@@ -152,7 +148,7 @@ const ms = StyleSheet.create({
   benefitsList: {
     width: "100%",
     gap: 12,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   benefitRow: {
     flexDirection: "row",
@@ -176,21 +172,23 @@ const ms = StyleSheet.create({
     fontSize: 12,
     marginTop: 1,
   },
-  trialBtn: {
-    width: "100%",
-    backgroundColor: "#C9933A",
-    paddingVertical: 16,
-    borderRadius: 16,
+  comingSoonBox: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    width: "100%",
   },
-  trialBtnText: {
-    color: "#fff",
-    fontSize: 16,
+  dismissBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: "center",
   },
-  terms: {
-    fontSize: 12,
-    textAlign: "center",
+  dismissText: {
+    fontSize: 14,
+    textDecorationLine: "underline" as const,
   },
 });

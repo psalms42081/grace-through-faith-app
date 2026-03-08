@@ -2,7 +2,11 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import MissionInviteModal from "@/components/MissionInviteModal";
+
+const COOLDOWN_KEY = "@grace-through-faith/mission-invite-last-shown";
+const COOLDOWN_DAYS = 7;
 
 interface ProContextType {
   isPro: boolean;
@@ -10,6 +14,7 @@ interface ProContextType {
   isLoading: boolean;
   showProGate: () => void;
   trackActivity: (featureType: string) => void;
+  triggerMissionInvite: () => void;
 }
 
 const ProContext = createContext<ProContextType>({
@@ -18,37 +23,50 @@ const ProContext = createContext<ProContextType>({
   isLoading: true,
   showProGate: () => {},
   trackActivity: () => {},
+  triggerMissionInvite: () => {},
 });
 
 export function useProStatus() {
   return useContext(ProContext);
 }
 
+async function canShowInvite(): Promise<boolean> {
+  try {
+    const lastShown = await AsyncStorage.getItem(COOLDOWN_KEY);
+    if (!lastShown) return true;
+    const elapsed = Date.now() - parseInt(lastShown, 10);
+    return elapsed >= COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  } catch {
+    return true;
+  }
+}
+
+async function markInviteShown(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(COOLDOWN_KEY, String(Date.now()));
+  } catch {}
+}
+
 export function ProProvider({ children }: { children: React.ReactNode }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [donating, setDonating] = useState(false);
   const qc = useQueryClient();
-  const activityCheckDone = useRef(false);
   const { userId } = useAuth();
 
   const { data, isLoading } = useQuery<{ isPro: boolean; isPatron: boolean; donationAmount: number }>({
     queryKey: [`/api/user/pro-status?userId=${userId}`],
   });
 
-  const { data: missionData } = useQuery<{ shouldInvite: boolean; isPatron: boolean; totalUses: number }>({
-    queryKey: [`/api/user/mission-status?userId=${userId}`],
-  });
-
   const isPro = data?.isPro ?? true;
   const isPatron = data?.isPatron ?? false;
 
-  useEffect(() => {
-    if (missionData?.shouldInvite && !isPatron && !activityCheckDone.current) {
-      activityCheckDone.current = true;
-      const timer = setTimeout(() => setModalVisible(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [missionData, isPatron]);
+  const triggerMissionInvite = useCallback(async () => {
+    if (isPatron) return;
+    const allowed = await canShowInvite();
+    if (!allowed) return;
+    await markInviteShown();
+    setTimeout(() => setModalVisible(true), 1500);
+  }, [isPatron]);
 
   const showProGate = useCallback(() => {
     if (!isPatron) {
@@ -62,9 +80,8 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
         userId,
         featureType,
       });
-      qc.invalidateQueries({ queryKey: [`/api/user/mission-status?userId=${userId}`] });
     } catch {}
-  }, [qc, userId]);
+  }, [userId]);
 
   const handleDonate = useCallback(async (amount: number) => {
     setDonating(true);
@@ -75,7 +92,6 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
         isPatron: true,
         donationAmount: amount,
       });
-      qc.invalidateQueries({ queryKey: [`/api/user/mission-status?userId=${userId}`] });
     } catch (e) {
       console.error("Donation error:", e);
     } finally {
@@ -88,13 +104,12 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     if (!isPatron) {
       try {
         await apiRequest("POST", "/api/user/dismiss-mission-invite", { userId });
-        qc.invalidateQueries({ queryKey: [`/api/user/mission-status?userId=${userId}`] });
       } catch {}
     }
-  }, [isPatron, qc, userId]);
+  }, [isPatron, userId]);
 
   return (
-    <ProContext.Provider value={{ isPro, isPatron, isLoading, showProGate, trackActivity }}>
+    <ProContext.Provider value={{ isPro, isPatron, isLoading, showProGate, trackActivity, triggerMissionInvite }}>
       {children}
       <MissionInviteModal
         visible={modalVisible}

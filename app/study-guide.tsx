@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
+import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 
@@ -109,6 +110,7 @@ function AnimatedPhaseDot({
 export default function StudyGuideScreen() {
   const { theme } = useTheme();
   const { userId } = useAuth();
+  const { triggerMissionInvite } = useProStatus();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     verseReference: string;
@@ -185,6 +187,9 @@ export default function StudyGuideScreen() {
       setIsResumed(false);
       if (data.progression) setProgression(data.progression);
       if (data.summary) setStudySummary(data.summary);
+      if (data.isComplete) {
+        triggerMissionInvite();
+      }
     },
   });
 

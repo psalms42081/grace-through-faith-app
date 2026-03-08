@@ -27,7 +27,7 @@ export async function checkProStatus(
     const userId = String(req.query.userId || req.body?.userId || "guest");
     const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
     if (!user || !user.isPro) {
-      return res.status(403).json({ error: "Upgrade to Pro to unlock Deep Study layers." });
+      return res.status(403).json({ error: "This feature is available to supporters. Support the mission to access Deep Study layers." });
     }
     next();
   } catch (err) {

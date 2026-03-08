@@ -6,8 +6,6 @@ import {
   Pressable,
   Modal,
   Platform,
-  ActivityIndicator,
-  TextInput,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,15 +15,11 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
-  withRepeat,
   FadeInDown,
   FadeIn,
-  Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
-
-const DONATION_PRESETS = [5, 10, 25, 50];
 
 function GoldSparkle({ index }: { index: number }) {
   const opacity = useSharedValue(0);
@@ -79,24 +73,16 @@ export default function MissionInviteModal({
   isDonating,
 }: MissionInviteModalProps) {
   const { theme, isDark } = useTheme();
-
-  const [selectedAmount, setSelectedAmount] = useState(10);
-  const [customAmount, setCustomAmount] = useState("");
-  const [showCustom, setShowCustom] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
 
   const handleDonate = useCallback(async () => {
-    const amount = showCustom ? Math.max(1, parseInt(customAmount) || 5) : selectedAmount;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await onDonate(amount);
+    await onDonate(0);
     setShowThankYou(true);
-  }, [selectedAmount, customAmount, showCustom, onDonate]);
+  }, [onDonate]);
 
   const handleClose = useCallback(() => {
     setShowThankYou(false);
-    setShowCustom(false);
-    setCustomAmount("");
-    setSelectedAmount(10);
     onClose();
   }, [onClose]);
 
@@ -144,8 +130,8 @@ export default function MissionInviteModal({
               </Text>
             </View>
 
-            <Pressable style={ms.doneBtn} onPress={handleClose} testID="mission-done-btn">
-              <Text style={ms.doneBtnText}>Continue Studying</Text>
+            <Pressable style={ms.primaryBtn} onPress={handleClose} testID="mission-done-btn">
+              <Text style={ms.primaryBtnText}>Continue Studying</Text>
             </Pressable>
           </Animated.View>
         ) : (
@@ -166,11 +152,22 @@ export default function MissionInviteModal({
             </Text>
 
             <Text style={[ms.body, { color: theme.textSecondary }]}>
-              Our mission is to make deep Bible study available to every home. We don't believe in paywalls, but we do rely on partners. Would you consider a one-time donation of any amount to keep this tool running for everyone?
+              Our mission is to make deep Bible study available to every home.
             </Text>
 
-            <Text style={[ms.body, { color: theme.textMuted, marginTop: 4 }]}>
-              If not, no worries -- enjoy the full experience on us.
+            <Text style={[ms.body, { color: theme.textSecondary, marginTop: 10 }]}>
+              This app stays free because people choose to support it. Your support helps bring Scripture, study tools, and discipleship resources to families around the world.
+            </Text>
+
+            <View style={[ms.impactRow, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0" }]}>
+              <Ionicons name="people-outline" size={18} color={theme.accent} />
+              <Text style={[ms.impactText, { color: theme.textSecondary }]}>
+                Helping families grow in Scripture every day.
+              </Text>
+            </View>
+
+            <Text style={[ms.closingLine, { color: theme.textMuted }]}>
+              If you'd like to be part of that mission, you can contribute any amount.
             </Text>
 
             <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
@@ -243,65 +240,29 @@ const ms = StyleSheet.create({
     lineHeight: 21,
     paddingHorizontal: 4,
   },
-  amountLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 20,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  presetRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    marginBottom: 12,
-  },
-  presetBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    minWidth: 56,
-    alignItems: "center",
-  },
-  presetText: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-  },
-  customInputRow: {
+  impactRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-  },
-  dollarSign: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-  },
-  customInput: {
-    flex: 1,
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+    gap: 10,
     paddingVertical: 12,
-    paddingLeft: 4,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 12,
+    alignSelf: "center",
   },
-  donateBtn: {
-    backgroundColor: "#C9933A",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 4,
+  impactText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    fontStyle: "italic",
   },
-  donateBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
+  closingLine: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 19,
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   comingSoonBox: {
     flexDirection: "row",
@@ -311,6 +272,18 @@ const ms = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 4,
+  },
+  primaryBtn: {
+    backgroundColor: "#C9933A",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    alignSelf: "stretch",
+  },
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
   },
   dismissBtn: {
     paddingVertical: 18,
@@ -371,18 +344,6 @@ const ms = StyleSheet.create({
   },
   patronBadgeText: {
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
-  },
-  doneBtn: {
-    backgroundColor: "#C9933A",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    alignSelf: "stretch",
-  },
-  doneBtnText: {
-    color: "#fff",
-    fontSize: 15,
     fontFamily: "Inter_700Bold",
   },
 });
