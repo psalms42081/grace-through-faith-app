@@ -1011,13 +1011,13 @@ function AdultHomeScreen() {
               }
               setShowChildPicker(true);
             }}
-            style={[s.kidsModeBtn, { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" }]}
+            style={[s.kidsModeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }]}
             testID="enter-kids-mode"
             accessibilityLabel="Switch to Kids Mode"
             accessibilityRole="button"
           >
-            <Ionicons name="people" size={18} color={theme.accent} />
-            <Text style={[s.kidsModeBtnLabel, { color: theme.accent }]}>Kids</Text>
+            <Ionicons name="people" size={16} color={theme.accent} style={{ opacity: 0.8 }} />
+            <Text style={[s.kidsModeBtnLabel, { color: theme.accent, opacity: 0.8 }]}>Kids</Text>
           </Pressable>
         </View>
       </View>
@@ -1044,19 +1044,20 @@ function AdultHomeScreen() {
               hasRecentRead={!!lastRead}
             />
           </AnimatedSection>
-          <AnimatedSection index={2}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={3}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={4}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={5}>
+          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={3}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={4}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={5}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={6}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={6}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={7}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={7}>
+            <AnimatedSection index={8}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1066,7 +1067,6 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
-          <AnimatedSection index={8}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
         </>
       ) : (
         <>
@@ -1078,14 +1078,14 @@ function AdultHomeScreen() {
               hasRecentRead={!!lastRead}
             />
           </AnimatedSection>
-          <AnimatedSection index={1}>
+          <AnimatedSection index={1}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={2}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
           <AnimatedSection index={3}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={4}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (

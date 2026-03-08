@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
   },
   verseText: {
     color: "#FFFFFF",
-    fontSize: 20,
-    lineHeight: 32,
+    fontSize: 18,
+    lineHeight: 29,
     marginBottom: 20,
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },

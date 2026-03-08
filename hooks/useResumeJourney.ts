@@ -260,12 +260,18 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
   }
 
   if (ssData?.currentLesson) {
+    const completedDays = ssData.completedDays || 0;
+    const ssSubtitle = completedDays === 0
+      ? "Start Lesson"
+      : completedDays >= 7
+        ? "Completed"
+        : `Day ${completedDays + 1} of 7`;
     candidates.push({
       ...TYPE_META.sabbath_school,
       type: "sabbath_school",
       id: `ss-${ssData.currentLesson.lessonNumber}`,
-      title: ssData.currentLesson.title,
-      subtitle: `Lesson ${ssData.currentLesson.lessonNumber} — ${ssData.completedDays}/7 days`,
+      title: `Lesson ${ssData.currentLesson.lessonNumber} · ${ssData.currentLesson.title}`,
+      subtitle: ssSubtitle,
       progressLabel: "Continue",
       route: "/sabbath-school",
       updatedAt: new Date().toISOString(),

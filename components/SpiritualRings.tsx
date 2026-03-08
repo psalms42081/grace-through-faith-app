@@ -223,12 +223,12 @@ export default function SpiritualRings({
             <Ionicons name="bulb-outline" size={12} color={theme.accent} />
             <Text style={[styles.tipText, { color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.5)", fontFamily: "Inter_400Regular" }]}>
               {study.current < study.goal
-                ? "Read a chapter to grow your study ring"
+                ? "Scripture renews the mind.\nRead a chapter to grow your study ring."
                 : prayer.current < prayer.goal
-                ? "Add a prayer to close your prayer ring"
+                ? "Prayer strengthens trust.\nAdd a prayer to grow your prayer ring."
                 : engage.current < engage.goal
-                ? "Write a journal entry to close engage"
-                : "All rings closed! Great discipline today"}
+                ? "Faith grows through action.\nComplete a study to grow your engage ring."
+                : "All rings closed! Great discipline today."}
             </Text>
           </View>
         </View>
