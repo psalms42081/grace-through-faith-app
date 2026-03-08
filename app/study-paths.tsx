@@ -266,10 +266,8 @@ export default function StudyPathsScreen() {
                       </View>
 
                       {isEnrolled && progress!.percentComplete === 100 && (
-                        <View style={styles.completedBadge}>
-                          <View style={styles.completedIconCircle}>
-                            <Ionicons name="checkmark" size={14} color="#fff" />
-                          </View>
+                        <View style={[styles.completedBadge, { backgroundColor: "#2E7D32" + "10", borderColor: "#2E7D32" + "25" }]}>
+                          <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
                           <Text style={styles.completedText}>Completed</Text>
                         </View>
                       )}
@@ -379,7 +377,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   categoryTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "Lora_700Bold",
     marginBottom: 14,
   },
@@ -443,7 +441,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
     paddingTop: 12,
+    paddingBottom: 12,
     justifyContent: "center",
+    borderRadius: 10,
+    borderWidth: 1,
   },
   completedIconCircle: {
     width: 24,
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   completedText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: "#2E7D32",
   },
@@ -502,6 +503,7 @@ const styles = StyleSheet.create({
   continueBtnText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
   },
   enrollBtn: {
     flexDirection: "row",

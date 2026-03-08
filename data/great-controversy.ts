@@ -13,12 +13,15 @@ export interface GCNode {
   yearLabel: string;
   description: string;
   significance: string;
+  conflictThread: string;
+  egwLink: { title: string; url: string } | null;
   icon: string;
   color: string;
   scriptureRefs: GCScriptureRef[];
   linkedBeliefs: number[];
   linkedTrackId: string | null;
   linkedDevotionalTheme: string | null;
+  linkedProphecyIds: string[];
   aiPromptContext: string;
   isCurrentEra: boolean;
 }
@@ -33,6 +36,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "In the Beginning",
     description: "God creates the heavens and the earth in six literal days and rests on the seventh, establishing the Sabbath as a memorial of His creative power. Humanity is made in God's image, placed in a perfect garden, and given dominion over the earth.",
     significance: "Creation reveals God's character of love and establishes His authority as Creator. The Sabbath, instituted before sin, is the foundational sign of this relationship. The Great Controversy begins against the backdrop of a perfect universe where free will is honored.",
+    conflictThread: "The Great Controversy begins here: God creates a perfect universe governed by love and freedom. Satan will later challenge whether God's law is necessary and whether His creatures can truly be free. Creation establishes the baseline — a world without sin — against which every subsequent act of rebellion and redemption is measured.",
+    egwLink: { title: "Patriarchs and Prophets, Ch. 1 — Why Was Sin Permitted?", url: "https://egwwritings.org/read/130.28" },
     icon: "sunny-outline",
     color: "#22C55E",
     scriptureRefs: [
@@ -44,6 +49,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [6, 20],
     linkedTrackId: null,
     linkedDevotionalTheme: "Creation and God's creative power",
+    linkedProphecyIds: [],
     aiPromptContext: "The creation account in Genesis 1-2, the institution of the seventh-day Sabbath at Creation as a memorial of God's creative authority, and the perfect state of the world before sin. Emphasize literal six-day creation and the Sabbath as foundational to Adventist theology.",
     isCurrentEra: false,
   },
@@ -56,6 +62,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "The Beginning of the Conflict",
     description: "Lucifer, a perfect angel, rebels against God's government in heaven. Deception enters the garden of Eden, and humanity falls into sin. Yet even in judgment, God announces the promise of a Redeemer who will crush the serpent's head.",
     significance: "The Great Controversy is revealed as a cosmic conflict that began in heaven before it touched earth. God does not destroy the rebel immediately because the universe must see the true nature of sin. The promise of Genesis 3:15 becomes the gospel's first proclamation.",
+    conflictThread: "Satan's rebellion in heaven and the fall in Eden reveal the two sides of the conflict: Satan claims God is unjust and His law oppressive; God responds not with force but with a promise of redemption. By allowing sin to run its course, God ensures the universe will see the truth about both His character and Satan's.",
+    egwLink: { title: "Patriarchs and Prophets, Ch. 3 — The Temptation and Fall", url: "https://egwwritings.org/read/130.49" },
     icon: "leaf-outline",
     color: "#EF4444",
     scriptureRefs: [
@@ -67,6 +75,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [7, 8, 9],
     linkedTrackId: null,
     linkedDevotionalTheme: "The origin of evil and God's response",
+    linkedProphecyIds: ["revelation"],
     aiPromptContext: "The origin of evil in Lucifer's rebellion (Isaiah 14, Ezekiel 28), the fall of humanity in Eden (Genesis 3), the protoevangelium (Genesis 3:15), and why God allows the Great Controversy to unfold rather than destroying Satan immediately. The nature of man after the fall: mortal, not possessing an immortal soul.",
     isCurrentEra: false,
   },
@@ -79,6 +88,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "c. 2000\u20131500 BC",
     description: "Through Abraham, Isaac, and Jacob, God establishes a covenant people. The patriarchal narratives reveal God's faithfulness to His promises despite human failure. The covenant includes the promise that through Abraham's seed, all nations will be blessed.",
     significance: "The covenant with Abraham is the Great Controversy playing out in human history. God works through imperfect people to preserve truth and prepare for the Messiah. Each patriarch's story demonstrates that salvation is by faith, not works.",
+    conflictThread: "In the conflict, Satan seeks to corrupt or destroy the line through which the Messiah will come. God's covenant with Abraham is His countermove — preserving a people of faith through whom salvation will reach all nations. Every threat to the patriarchs is an attack on the plan of redemption.",
+    egwLink: { title: "Patriarchs and Prophets, Ch. 12 — Abraham in Canaan", url: "https://egwwritings.org/read/130.120" },
     icon: "people-outline",
     color: "#F59E0B",
     scriptureRefs: [
@@ -90,6 +101,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [7, 10],
     linkedTrackId: null,
     linkedDevotionalTheme: "Faith of the patriarchs and covenant promise",
+    linkedProphecyIds: [],
     aiPromptContext: "The Abrahamic covenant, the faith journey of the patriarchs, and how God preserved a faithful line through which the Messiah would come. Righteousness by faith as demonstrated by Abraham (Genesis 15:6). The typology of Isaac's sacrifice pointing to Christ.",
     isCurrentEra: false,
   },
@@ -102,6 +114,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "c. 1500\u2013586 BC",
     description: "Through the Exodus, God delivers His people and establishes the sanctuary system. The tabernacle services, feasts, and sacrificial system are a prophetic blueprint of the plan of salvation, pointing forward to Christ's ministry in both its earthly and heavenly dimensions.",
     significance: "The earthly sanctuary is central to understanding the Great Controversy. It reveals how God deals with sin: through substitution, mediation, and judgment. The Day of Atonement (Leviticus 16) is a type of the final judgment. The sanctuary is the key that unlocks Adventist theology.",
+    conflictThread: "The sanctuary is God's visual teaching tool in the conflict. It reveals His method of dealing with sin — not by ignoring it, but through substitutionary sacrifice and priestly mediation. Satan's strategy is to obscure the sanctuary truth, because it reveals both the cost of sin and God's plan to eradicate it.",
+    egwLink: { title: "Patriarchs and Prophets, Ch. 30 — The Tabernacle and Its Services", url: "https://egwwritings.org/read/130.310" },
     icon: "home-outline",
     color: "#C9933A",
     scriptureRefs: [
@@ -113,6 +127,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [24, 10],
     linkedTrackId: null,
     linkedDevotionalTheme: "The sanctuary and God's plan to deal with sin",
+    linkedProphecyIds: ["daniel89"],
     aiPromptContext: "The Mosaic sanctuary system as a type of Christ's ministry. The daily and yearly services, the Day of Atonement as a type of the investigative judgment. How the sanctuary reveals the plan of salvation and God's method of dealing with sin in the Great Controversy. Adventist understanding of the sanctuary as the key to unlocking Bible prophecy.",
     isCurrentEra: false,
   },
@@ -125,6 +140,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "c. 800\u2013400 BC",
     description: "Through the prophets, God calls Israel to faithfulness, warns of coming judgment, and reveals increasingly specific prophecies about the Messiah. Daniel's apocalyptic visions reveal the sweep of history from Babylon to the end of time.",
     significance: "The prophetic books establish the historicist framework essential to Adventist theology. Daniel 2, 7, 8, and 9 provide the prophetic timeline that leads directly to 1844 and the investigative judgment. The prophets also reveal God's character of justice tempered by mercy.",
+    conflictThread: "Through the prophets, God pulls back the curtain on the conflict. Daniel's visions reveal that earthly empires rise and fall under heaven's watch — Satan works through political powers to oppose God's people, but prophecy proves God is sovereign. The prophets are God's war correspondents in the cosmic battle.",
+    egwLink: { title: "Prophets and Kings, Ch. 44 — In the Lion's Den", url: "https://egwwritings.org/read/88.484" },
     icon: "megaphone-outline",
     color: "#8B5CF6",
     scriptureRefs: [
@@ -136,6 +153,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [1, 18, 24],
     linkedTrackId: "track-prophecy",
     linkedDevotionalTheme: "Prophecy and the coming Messiah",
+    linkedProphecyIds: ["daniel2", "daniel7", "daniel89"],
     aiPromptContext: "The prophetic books of the Old Testament, especially Daniel's apocalyptic visions. Historicist interpretation of Daniel 2 (statue), Daniel 7 (four beasts), Daniel 8 (2300-day prophecy), and Daniel 9 (70 weeks). How these prophecies reveal God's foreknowledge and guide understanding of the Great Controversy timeline. Adventist historicist interpretation, not futurist or preterist.",
     isCurrentEra: false,
   },
@@ -148,6 +166,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "c. 4 BC\u2013AD 31",
     description: "Jesus Christ, the Son of God, enters human history as the promised Messiah. His life, teaching, death, and resurrection fulfill the sanctuary typology. On the cross, the Lamb of God bears the sin of the world, and the veil of the temple is torn, signaling the end of the earthly sanctuary system.",
     significance: "The cross is the center of the Great Controversy. It demonstrates God's justice and mercy simultaneously. Satan's true character is fully unmasked. The death of Christ is substitutionary and provides the basis for all salvation. The 70-week prophecy of Daniel 9 finds exact fulfillment.",
+    conflictThread: "The cross is the turning point of the entire conflict. Here Satan's true character is unmasked before the universe — he who accused God of being unloving is exposed as a murderer who killed the Son of God. The cross answers every charge Satan has raised and secures the ultimate victory, even though the conflict continues until its final resolution.",
+    egwLink: { title: "The Desire of Ages, Ch. 78 — Calvary", url: "https://egwwritings.org/read/130.1757" },
     icon: "add-outline",
     color: "#DC2626",
     scriptureRefs: [
@@ -159,6 +179,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [4, 9, 10],
     linkedTrackId: null,
     linkedDevotionalTheme: "The life and sacrifice of Christ",
+    linkedProphecyIds: ["daniel89"],
     aiPromptContext: "Christ's incarnation, earthly ministry, and atoning sacrifice on the cross. The fulfillment of the Daniel 9:24-27 prophecy (the 70 weeks). The cross as the center of the Great Controversy, demonstrating God's love and justice. Substitutionary atonement. The tearing of the temple veil signaling the transition from earthly to heavenly sanctuary ministry.",
     isCurrentEra: false,
   },
@@ -171,6 +192,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "AD 31",
     description: "Christ rises from the grave on the first day of the week, demonstrating His victory over sin and death. He ascends to heaven and enters the heavenly sanctuary as our High Priest, beginning His intercessory ministry in the Holy Place.",
     significance: "The resurrection is the guarantee of eternal life for all believers. Christ's ascension inaugurates His heavenly sanctuary ministry, which is the continuation of His saving work. The dead in Christ sleep until the resurrection \u2014 they do not go immediately to heaven or hell.",
+    conflictThread: "The resurrection is God's definitive answer to Satan's claim that sin leads to death with no remedy. Christ's victory over the grave proves that God has the power to undo every consequence of the conflict. His ascension to the heavenly sanctuary begins a new phase \u2014 intercession and judgment \u2014 that will bring the conflict to its final resolution.",
+    egwLink: { title: "The Desire of Ages, Ch. 81 \u2014 The Lord Is Risen", url: "https://egwwritings.org/read/130.1797" },
     icon: "arrow-up-circle-outline",
     color: "#F59E0B",
     scriptureRefs: [
@@ -182,6 +205,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [9, 10, 24, 26],
     linkedTrackId: null,
     linkedDevotionalTheme: "Christ's resurrection and heavenly ministry",
+    linkedProphecyIds: ["daniel89"],
     aiPromptContext: "Christ's bodily resurrection and ascension to heaven. The beginning of His high-priestly ministry in the heavenly sanctuary. The state of the dead: the dead are unconscious (soul sleep), awaiting the resurrection at Christ's second coming. No immortal soul doctrine. Christ as our intercessor in the Holy Place of the heavenly sanctuary.",
     isCurrentEra: false,
   },
@@ -194,6 +218,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "AD 31\u2013100",
     description: "Empowered by the Holy Spirit at Pentecost, the apostolic church carries the gospel to the known world. The early Christians worship on the seventh-day Sabbath, practice baptism by immersion, and live in expectation of Christ's return.",
     significance: "The early church represents the pure faith before apostasy. It demonstrates the power of the Holy Spirit working through ordinary believers. The book of Revelation is given to John, revealing the sweep of church history and the final events of the Great Controversy.",
+    conflictThread: "The early church is the first battlefield after the cross. Satan, defeated at Calvary, shifts strategy from direct confrontation to infiltration. He will work to corrupt the church from within. But first, the Holy Spirit empowers believers with such power that the gospel spreads like fire, demonstrating what God's people can accomplish when united with heaven.",
+    egwLink: { title: "The Acts of the Apostles, Ch. 2 \u2014 The Training of the Twelve", url: "https://egwwritings.org/read/127.27" },
     icon: "flame-outline",
     color: "#F97316",
     scriptureRefs: [
@@ -205,6 +231,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [12, 14, 17],
     linkedTrackId: null,
     linkedDevotionalTheme: "The early church and the power of the Holy Spirit",
+    linkedProphecyIds: ["revelation"],
     aiPromptContext: "The apostolic church, Pentecost, and the spread of the gospel. The early church's observance of the seventh-day Sabbath. The writing of the New Testament, especially Revelation. How the early church maintained pure doctrine before the great apostasy began.",
     isCurrentEra: false,
   },
@@ -217,6 +244,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "c. AD 100\u20131517",
     description: "Gradually, the church departs from biblical truth. The Sabbath is replaced by Sunday worship, the state of the dead is replaced by the immortality of the soul, and the papacy rises to political and religious power. For 1,260 prophetic years, faithful believers are persecuted.",
     significance: "The 1,260-day/year prophecy (Daniel 7:25, Revelation 12:6,14) finds precise fulfillment in this period. The Great Controversy intensifies as Satan works through institutional religion to obscure truth. Yet God preserves faithful witnesses throughout \u2014 the Waldenses, Hussites, and others.",
+    conflictThread: "This is Satan's most cunning strategy in the conflict: corrupting God's church from within. By substituting human traditions for biblical truth \u2014 Sunday for Sabbath, immortal soul for conditional immortality, human mediators for Christ's priesthood \u2014 Satan obscures the very truths that reveal God's character. Yet God always preserves a faithful remnant.",
+    egwLink: { title: "The Great Controversy, Ch. 1 \u2014 The Destruction of Jerusalem", url: "https://egwwritings.org/read/132.17" },
     icon: "moon-outline",
     color: "#64748B",
     scriptureRefs: [
@@ -228,6 +257,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [13, 18, 20],
     linkedTrackId: "track-prophecy",
     linkedDevotionalTheme: "The great apostasy and God's faithful remnant",
+    linkedProphecyIds: ["daniel7", "revelation"],
     aiPromptContext: "The great apostasy predicted by Paul (2 Thessalonians 2). The change of the Sabbath to Sunday by human authority. The 1,260-year period of papal supremacy (538-1798). The persecution of faithful believers (Waldenses, Hussites, etc.). Historicist interpretation of Daniel 7:25 and Revelation 12. How truth was gradually corrupted but never fully extinguished.",
     isCurrentEra: false,
   },
@@ -240,6 +270,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "AD 1517\u20131798",
     description: "Luther, Calvin, Wycliffe, Huss, and other reformers begin recovering biblical truths: salvation by grace through faith, the authority of Scripture, the priesthood of all believers. Each generation recovers more light, preparing the way for the final restoration of all truth.",
     significance: "The Reformation is not a single event but a progressive recovery of truth that continues through the Advent movement. Each reformer rediscovered part of what was lost during the apostasy. The principle of 'present truth' \u2014 that God reveals truth progressively \u2014 is central to Adventist identity.",
+    conflictThread: "The Reformation is God going on the offensive in the conflict. Truth suppressed for centuries begins breaking free. Satan responds with persecution and counter-reformation, but light cannot be permanently extinguished. Each reformer recovers another piece of truth, building toward the full restoration that comes with the Advent movement.",
+    egwLink: { title: "The Great Controversy, Ch. 7 \u2014 Luther Before the Diet", url: "https://egwwritings.org/read/132.126" },
     icon: "bulb-outline",
     color: "#EAB308",
     scriptureRefs: [
@@ -251,6 +283,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [1, 10, 13],
     linkedTrackId: null,
     linkedDevotionalTheme: "The Reformation and progressive truth",
+    linkedProphecyIds: ["daniel7", "revelation"],
     aiPromptContext: "The Protestant Reformation as part of God's plan to recover truth lost during the apostasy. Luther's justification by faith, the authority of Scripture alone, the priesthood of all believers. The concept of 'present truth' (2 Peter 1:12) and how each generation of reformers recovered more biblical truth. The end of the 1,260-year prophecy in 1798.",
     isCurrentEra: false,
   },
@@ -263,6 +296,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "AD 1798\u20131844",
     description: "The Millerite movement awakens thousands to the study of Daniel's prophecies. When Christ does not return in 1844 as expected, the Great Disappointment leads to deeper Bible study. The faithful discover that Daniel 8:14 points not to earth but to the heavenly sanctuary.",
     significance: "1844 is the pivotal date in Adventist theology. The 2,300-day prophecy of Daniel 8:14, beginning in 457 BC, reaches its fulfillment. The investigative judgment begins in heaven. This discovery launches the Seventh-day Adventist movement and defines its unique contribution to Christianity.",
+    conflictThread: "The 1844 movement marks a decisive moment in the conflict. God raises up a people who recover the sanctuary truth \u2014 the key to understanding how He deals with sin. Satan's centuries-long effort to bury this truth is countered as the Advent movement discovers that Christ is ministering in the heavenly sanctuary, preparing to close the conflict forever.",
+    egwLink: { title: "The Great Controversy, Ch. 18 \u2014 An American Reformer", url: "https://egwwritings.org/read/132.345" },
     icon: "telescope-outline",
     color: "#7C3AED",
     scriptureRefs: [
@@ -274,6 +309,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [24, 18],
     linkedTrackId: "track-prophecy",
     linkedDevotionalTheme: "The 2300-day prophecy and the Advent movement",
+    linkedProphecyIds: ["daniel89", "revelation"],
     aiPromptContext: "The Millerite movement, the study of Daniel 8:14 and the 2,300-day prophecy. The year-day principle in prophetic interpretation. The Great Disappointment of October 22, 1844. The correct understanding: Christ entered the Most Holy Place of the heavenly sanctuary to begin the investigative judgment. The sweet-then-bitter experience of Revelation 10. Historicist interpretation only.",
     isCurrentEra: false,
   },
@@ -286,6 +322,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "1844\u2013Present",
     description: "Since 1844, Christ has been conducting a work of investigative judgment in the Most Holy Place of the heavenly sanctuary. This pre-advent judgment examines the records of all who have professed faith in God, vindicating the righteous and demonstrating God's justice before the universe.",
     significance: "The investigative judgment answers the Great Controversy's central question: Is God fair? By reviewing every case openly before the watching universe, God demonstrates that His judgments are just and His mercy is genuine. This is not about God needing information \u2014 it's about vindicating His character before all creation.",
+    conflictThread: "The investigative judgment directly addresses the core accusation in the conflict: that God is unfair. By opening heaven's records before the watching universe, God proves His transparency. Every saved and lost case is reviewed openly. This is the pre-advent phase of God's final vindication \u2014 demonstrating that mercy and justice meet perfectly in Christ.",
+    egwLink: { title: "The Great Controversy, Ch. 28 \u2014 Facing Life's Record", url: "https://egwwritings.org/read/132.486" },
     icon: "scale-outline",
     color: "#C9933A",
     scriptureRefs: [
@@ -297,6 +335,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [24, 19],
     linkedTrackId: "track-prophecy",
     linkedDevotionalTheme: "The heavenly sanctuary and Christ's judgment ministry",
+    linkedProphecyIds: ["daniel7", "daniel89", "revelation"],
     aiPromptContext: "Christ's ministry in the Most Holy Place of the heavenly sanctuary since 1844. The investigative judgment as the antitype of the Day of Atonement (Leviticus 16). The purpose: to vindicate God's character before the universe, not to inform God. Daniel 7:9-10, Revelation 14:7. How this judgment demonstrates God's fairness in the Great Controversy. This is a distinctive Adventist doctrine.",
     isCurrentEra: false,
   },
@@ -309,6 +348,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "1844\u2013Present",
     description: "The three angels of Revelation 14 proclaim God's final messages to humanity: the everlasting gospel and call to worship the Creator, the fall of spiritual Babylon, and the warning against the mark of the beast. The Sabbath emerges as the central issue in the final conflict.",
     significance: "This is where we are now in the Great Controversy timeline. The three angels' messages define the Adventist mission mandate. They are not merely doctrinal statements but an urgent call to the world before Christ returns. The Sabbath-Sunday issue will become the decisive test of loyalty.",
+    conflictThread: "We are living in the final chapter of the conflict. The three angels' messages are God's last call to humanity before the conflict concludes. The first angel calls the world back to worshipping the Creator (Sabbath). The second exposes Satan's counterfeit religious system. The third warns against siding with the enemy. The Sabbath becomes the final loyalty test in the conflict.",
+    egwLink: { title: "The Great Controversy, Ch. 25 \u2014 God's Law Immutable", url: "https://egwwritings.org/read/132.445" },
     icon: "megaphone-outline",
     color: "#C9933A",
     scriptureRefs: [
@@ -320,6 +361,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [13, 20, 18],
     linkedTrackId: "track-prophecy",
     linkedDevotionalTheme: "The three angels' messages and our mission today",
+    linkedProphecyIds: ["revelation"],
     aiPromptContext: "The three angels' messages of Revelation 14:6-12 as the defining mission of Seventh-day Adventists. The first angel: everlasting gospel and call to worship the Creator (Sabbath). The second angel: fall of Babylon (apostate Christianity). The third angel: warning against the beast and its mark. The remnant church of Revelation 12:17 keeping God's commandments and having the testimony of Jesus. The Sabbath as the seal of God versus the mark of the beast.",
     isCurrentEra: true,
   },
@@ -332,6 +374,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "Soon",
     description: "The Great Controversy reaches its climax. A final crisis over worship and loyalty unfolds, followed by the literal, visible, personal return of Jesus Christ. The righteous dead are raised, the living righteous are transformed, and all are caught up to meet the Lord in the air.",
     significance: "The Second Coming is the blessed hope of the church. It is not a secret rapture but a visible, audible, glorious event. Christ comes as King of kings. The dead in Christ rise first \u2014 proving that they were asleep, not in heaven. The Great Controversy on earth comes to an end.",
+    conflictThread: "The Second Coming is Christ's personal intervention to end the conflict on earth. Satan's final desperate attempt to force worship through persecution and deception fails. Christ returns not as a suffering servant but as conquering King. The righteous are vindicated, the faithful dead are raised, and the earthly phase of the Great Controversy concludes.",
+    egwLink: { title: "The Great Controversy, Ch. 40 \u2014 God's People Delivered", url: "https://egwwritings.org/read/132.674" },
     icon: "cloud-outline",
     color: "#3B82F6",
     scriptureRefs: [
@@ -343,6 +387,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [25, 26],
     linkedTrackId: null,
     linkedDevotionalTheme: "The second coming of Christ and the blessed hope",
+    linkedProphecyIds: ["revelation"],
     aiPromptContext: "The literal, visible, personal, imminent second coming of Jesus Christ. Not a secret rapture. Every eye will see Him. The resurrection of the righteous dead and transformation of the living righteous. 1 Thessalonians 4:16-17, Revelation 1:7, Matthew 24:30-31. Signs of Christ's coming. The close of probation. The time of trouble (Daniel 12:1). Adventist rejection of the secret rapture doctrine.",
     isCurrentEra: false,
   },
@@ -355,6 +400,8 @@ export const GC_NODES: GCNode[] = [
     yearLabel: "The Age to Come",
     description: "The saints spend 1,000 years in heaven reviewing God's judgments. At the end of the millennium, the New Jerusalem descends, the wicked are raised and destroyed in the lake of fire (the second death), and God creates a new heaven and new earth where sin will never rise again.",
     significance: "The millennium is God's final act of transparency in the Great Controversy. The saints review every case and confirm that God was just. The destruction of the wicked is not eternal torment but the second death \u2014 complete annihilation. The Great Controversy ends with God's character fully vindicated and His universe eternally secure.",
+    conflictThread: "The conflict ends here, completely and forever. During the millennium, the saints review God's judgments and confirm He was just in every case. At the end, even the wicked acknowledge God's justice before the second death. God creates a new earth where sin will never rise again. The universe is eternally secure because every being has seen the full truth about both God's love and sin's destruction.",
+    egwLink: { title: "The Great Controversy, Ch. 42 \u2014 The Controversy Ended", url: "https://egwwritings.org/read/132.705" },
     icon: "sparkles-outline",
     color: "#22C55E",
     scriptureRefs: [
@@ -366,6 +413,7 @@ export const GC_NODES: GCNode[] = [
     linkedBeliefs: [27, 28, 26],
     linkedTrackId: null,
     linkedDevotionalTheme: "The millennium, new earth, and God's eternal kingdom",
+    linkedProphecyIds: ["revelation"],
     aiPromptContext: "The millennium of Revelation 20: saints in heaven reviewing God's judgments, Satan bound on a desolate earth. The second resurrection of the wicked at the end of the 1,000 years. The lake of fire as the second death (annihilation, not eternal torment). No immortal soul: the wicked are destroyed, not tortured forever. The new earth of Revelation 21-22. The Great Controversy ends: sin will never rise again (Nahum 1:9). God's character of love is vindicated before the entire universe.",
     isCurrentEra: false,
   },

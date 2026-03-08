@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,12 @@ import {
   ActivityIndicator,
   LayoutAnimation,
   UIManager,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Linking,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -19,6 +24,31 @@ import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { GC_NODES, GCNode } from "@/data/great-controversy";
 import { BELIEFS } from "@/data/beliefs";
+import { navigateToScripture } from "@/lib/scripture-nav";
+
+const GC_PROGRESS_KEY = "gc_timeline_progress";
+
+const TIMELINE_PHASES = [
+  { id: "creation", label: "Creation", nodeIds: ["creation"] },
+  { id: "fall", label: "Fall", nodeIds: ["fall"] },
+  { id: "patriarchs", label: "Patriarchs", nodeIds: ["patriarchs"] },
+  { id: "israel", label: "Israel & Sanctuary", nodeIds: ["sanctuary-type", "prophets"] },
+  { id: "christ", label: "Christ's Ministry", nodeIds: ["christ-ministry", "resurrection"] },
+  { id: "early-church", label: "Early Church", nodeIds: ["early-church"] },
+  { id: "apostasy", label: "Apostasy & Reform", nodeIds: ["apostasy", "reformation"] },
+  { id: "advent", label: "Advent Movement", nodeIds: ["1844", "investigative-judgment"] },
+  { id: "remnant", label: "Remnant Mission", nodeIds: ["three-angels"] },
+  { id: "second-coming", label: "Second Coming", nodeIds: ["second-coming"] },
+  { id: "new-earth", label: "New Earth", nodeIds: ["new-earth"] },
+];
+
+const LEGEND_ITEMS = [
+  { label: "Scripture", color: "#C9933A" },
+  { label: "History", color: "#3B82F6" },
+  { label: "Prophecy", color: "#8B5CF6" },
+  { label: "Belief", color: "#2E7D32" },
+  { label: "Hope", color: "#14B8A6" },
+];
 
 if (
   Platform.OS === "android" &&
@@ -177,9 +207,7 @@ function NodeCard({
                   {node.scriptureRefs.map((s) => (
                     <Pressable
                       key={s.ref}
-                      onPress={() =>
-                        router.push(`/read/${s.bookId}/${s.chapter}` as any)
-                      }
+                      onPress={() => navigateToScripture(s)}
                       style={({ pressed }) => [
                         styles.scriptureChip,
                         {
@@ -197,6 +225,20 @@ function NodeCard({
                   ))}
                 </View>
               </View>
+
+              {depth !== "quick" && node.conflictThread && (
+                <View style={[styles.conflictThreadBox, { backgroundColor: "rgba(139, 92, 246, 0.08)" }]}>
+                  <View style={styles.conflictThreadHeader}>
+                    <Ionicons name="git-merge-outline" size={14} color="#8B5CF6" />
+                    <Text style={[styles.conflictThreadLabel, { color: "#8B5CF6" }]}>
+                      Conflict Thread
+                    </Text>
+                  </View>
+                  <Text style={[styles.conflictThreadText, { color: theme.textSecondary }]}>
+                    {node.conflictThread}
+                  </Text>
+                </View>
+              )}
 
               {depth !== "quick" && linkedBeliefData.length > 0 && (
                 <View style={styles.sectionBlock}>
@@ -332,6 +374,111 @@ function NodeCard({
                   </Text>
                 </Pressable>
               )}
+
+              {node.egwLink && (
+                <Pressable
+                  onPress={() => Linking.openURL(node.egwLink!.url)}
+                  style={({ pressed }) => [
+                    styles.egwLink,
+                    {
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <Ionicons name="library-outline" size={12} color={theme.textMuted} />
+                  <Text style={[styles.egwLinkText, { color: theme.textMuted }]} numberOfLines={1}>
+                    {node.egwLink.title}
+                  </Text>
+                  <Ionicons name="open-outline" size={10} color={theme.textMuted} />
+                </Pressable>
+              )}
+
+              <View style={[styles.nextStepsSection, { borderTopColor: theme.border }]}>
+                <View style={styles.nextStepsHeader}>
+                  <Ionicons name="arrow-forward-circle-outline" size={14} color={theme.accent} />
+                  <Text style={[styles.nextStepsLabel, { color: theme.accent }]}>
+                    Next Steps
+                  </Text>
+                </View>
+                <View style={styles.nextStepsGrid}>
+                  {node.scriptureRefs.length > 0 && (
+                    <Pressable
+                      onPress={() => navigateToScripture(node.scriptureRefs[0])}
+                      style={({ pressed }) => [
+                        styles.nextStepButton,
+                        {
+                          backgroundColor: "rgba(201, 147, 58, 0.08)",
+                          borderColor: "rgba(201, 147, 58, 0.2)",
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="book-outline" size={16} color="#C9933A" />
+                      <Text style={[styles.nextStepText, { color: "#C9933A" }]} numberOfLines={1}>
+                        Read the key passage
+                      </Text>
+                    </Pressable>
+                  )}
+                  {node.linkedProphecyIds.length > 0 && (
+                    <Pressable
+                      onPress={() => router.push("/prophecy-explorer" as any)}
+                      style={({ pressed }) => [
+                        styles.nextStepButton,
+                        {
+                          backgroundColor: "rgba(139, 92, 246, 0.08)",
+                          borderColor: "rgba(139, 92, 246, 0.2)",
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="telescope-outline" size={16} color="#8B5CF6" />
+                      <Text style={[styles.nextStepText, { color: "#8B5CF6" }]} numberOfLines={1}>
+                        Explore related prophecy
+                      </Text>
+                    </Pressable>
+                  )}
+                  {linkedBeliefData.length > 0 && (
+                    <Pressable
+                      onPress={() => router.push("/sda-studies" as any)}
+                      style={({ pressed }) => [
+                        styles.nextStepButton,
+                        {
+                          backgroundColor: "rgba(46, 125, 50, 0.08)",
+                          borderColor: "rgba(46, 125, 50, 0.2)",
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="shield-checkmark-outline" size={16} color="#2E7D32" />
+                      <Text style={[styles.nextStepText, { color: "#2E7D32" }]} numberOfLines={1}>
+                        Open related belief
+                      </Text>
+                    </Pressable>
+                  )}
+                  {(node.linkedTrackId || node.linkedDevotionalTheme) && (
+                    <Pressable
+                      onPress={() =>
+                        node.linkedTrackId
+                          ? router.push(`/study-path/${node.linkedTrackId}` as any)
+                          : router.push("/devotionals" as any)
+                      }
+                      style={({ pressed }) => [
+                        styles.nextStepButton,
+                        {
+                          backgroundColor: "rgba(59, 130, 246, 0.08)",
+                          borderColor: "rgba(59, 130, 246, 0.2)",
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="compass-outline" size={16} color="#3B82F6" />
+                      <Text style={[styles.nextStepText, { color: "#3B82F6" }]} numberOfLines={1}>
+                        Begin a guided study
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
             </View>
           )}
         </Pressable>
@@ -345,13 +492,106 @@ export default function GreatControversyScreen() {
   const insets = useSafeAreaInsets();
   const { depth } = useStudyDepth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activePhaseId, setActivePhaseId] = useState<string>(TIMELINE_PHASES[0].id);
+  const [viewedNodes, setViewedNodes] = useState<Set<string>>(new Set());
   const scrollRef = useRef<ScrollView>(null);
+  const phaseScrollRef = useRef<ScrollView>(null);
+  const nodePositions = useRef<Record<string, number>>({});
+  const phaseChipPositions = useRef<Record<string, number>>({});
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const toggleNode = useCallback((id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+  const restoredPhaseRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(GC_PROGRESS_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data.viewedNodes) setViewedNodes(new Set(data.viewedNodes));
+          if (data.lastPhase) {
+            setActivePhaseId(data.lastPhase);
+            restoredPhaseRef.current = data.lastPhase;
+          }
+        }
+      } catch {}
+    })();
   }, []);
+
+  const markNodeViewed = useCallback(async (nodeId: string) => {
+    setViewedNodes((prev) => {
+      const next = new Set(prev);
+      next.add(nodeId);
+      AsyncStorage.setItem(GC_PROGRESS_KEY, JSON.stringify({
+        viewedNodes: Array.from(next),
+        lastPhase: activePhaseId,
+      })).catch(() => {});
+      return next;
+    });
+  }, [activePhaseId]);
+
+  const isPhaseViewed = useCallback((phaseId: string) => {
+    const phase = TIMELINE_PHASES.find((p) => p.id === phaseId);
+    if (!phase) return false;
+    return phase.nodeIds.every((nid) => viewedNodes.has(nid));
+  }, [viewedNodes]);
+
+  const toggleNode = useCallback((id: string) => {
+    setExpandedId((prev) => {
+      const next = prev === id ? null : id;
+      if (next) markNodeViewed(id);
+      return next;
+    });
+  }, [markNodeViewed]);
+
+  const handleNodeLayout = useCallback((nodeId: string, y: number) => {
+    nodePositions.current[nodeId] = y;
+  }, []);
+
+  const scrollToPhase = useCallback((phaseId: string) => {
+    const phase = TIMELINE_PHASES.find((p) => p.id === phaseId);
+    if (!phase) return;
+    const firstNodeId = phase.nodeIds[0];
+    const y = nodePositions.current[firstNodeId];
+    if (y !== undefined && scrollRef.current) {
+      scrollRef.current.scrollTo({ y: y - 10, animated: true });
+    }
+    setActivePhaseId(phaseId);
+    const chipX = phaseChipPositions.current[phaseId];
+    if (chipX !== undefined && phaseScrollRef.current) {
+      phaseScrollRef.current.scrollTo({ x: Math.max(0, chipX - 40), animated: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!restoredPhaseRef.current) return;
+    const timer = setTimeout(() => {
+      if (restoredPhaseRef.current) {
+        scrollToPhase(restoredPhaseRef.current);
+        restoredPhaseRef.current = null;
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [scrollToPhase]);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollY = event.nativeEvent.contentOffset.y + 120;
+    let currentPhase = TIMELINE_PHASES[0].id;
+    for (const phase of TIMELINE_PHASES) {
+      const firstNodeY = nodePositions.current[phase.nodeIds[0]];
+      if (firstNodeY !== undefined && scrollY >= firstNodeY) {
+        currentPhase = phase.id;
+      }
+    }
+    if (currentPhase !== activePhaseId) {
+      setActivePhaseId(currentPhase);
+      AsyncStorage.setItem(GC_PROGRESS_KEY, JSON.stringify({
+        viewedNodes: Array.from(viewedNodes),
+        lastPhase: currentPhase,
+      })).catch(() => {});
+    }
+  }, [activePhaseId, viewedNodes]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -360,11 +600,76 @@ export default function GreatControversyScreen() {
         subtitle="The Cosmic Conflict Unveiled"
       />
 
+      <View style={[styles.phaseBarContainer, { borderBottomColor: theme.border }]}>
+        <ScrollView
+          ref={phaseScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.phaseBarContent}
+        >
+          {TIMELINE_PHASES.map((phase) => {
+            const isActive = phase.id === activePhaseId;
+            const viewed = isPhaseViewed(phase.id);
+            return (
+              <Pressable
+                key={phase.id}
+                onPress={() => scrollToPhase(phase.id)}
+                onLayout={(e) => {
+                  phaseChipPositions.current[phase.id] = e.nativeEvent.layout.x;
+                }}
+                style={[
+                  styles.phaseChip,
+                  {
+                    backgroundColor: isActive
+                      ? "rgba(201, 147, 58, 0.18)"
+                      : viewed
+                      ? "rgba(46, 125, 50, 0.08)"
+                      : "rgba(245, 240, 232, 0.06)",
+                    borderColor: isActive
+                      ? "#C9933A"
+                      : viewed
+                      ? "rgba(46, 125, 50, 0.3)"
+                      : theme.border,
+                  },
+                ]}
+              >
+                {viewed && !isActive && (
+                  <Ionicons name="checkmark-circle" size={12} color="#2E7D32" style={{ marginRight: 2 }} />
+                )}
+                <Text
+                  style={[
+                    styles.phaseChipText,
+                    {
+                      color: isActive ? "#C9933A" : viewed ? "#2E7D32" : theme.textMuted,
+                    },
+                  ]}
+                >
+                  {phase.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.legendRow}>
+          {LEGEND_ITEMS.map((item) => (
+            <View key={item.label} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendText, { color: theme.textMuted }]}>
+                {item.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={64}
       >
         <View style={styles.introBlock}>
           <Text style={[styles.introText, { color: theme.textSecondary }]}>
@@ -377,14 +682,18 @@ export default function GreatControversyScreen() {
 
         <View style={styles.timeline}>
           {GC_NODES.map((node) => (
-            <NodeCard
+            <View
               key={node.id}
-              node={node}
-              isExpanded={expandedId === node.id}
-              onToggle={() => toggleNode(node.id)}
-              theme={theme}
-              depth={depth}
-            />
+              onLayout={(e) => handleNodeLayout(node.id, e.nativeEvent.layout.y)}
+            >
+              <NodeCard
+                node={node}
+                isExpanded={expandedId === node.id}
+                onToggle={() => toggleNode(node.id)}
+                theme={theme}
+                depth={depth}
+              />
+            </View>
           ))}
         </View>
 
@@ -625,6 +934,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
+  conflictThreadBox: {
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
+  },
+  conflictThreadHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  conflictThreadLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+  },
+  conflictThreadText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  egwLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  egwLinkText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    flex: 1,
+  },
   devotionalLink: {
     flexDirection: "row",
     alignItems: "center",
@@ -638,6 +978,38 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     flex: 1,
+  },
+  nextStepsSection: {
+    borderTopWidth: 1,
+    paddingTop: 12,
+    gap: 8,
+  },
+  nextStepsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  nextStepsLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+  },
+  nextStepsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  nextStepButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  nextStepText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
   },
   closingCard: {
     marginHorizontal: 8,
@@ -657,5 +1029,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 22,
+  },
+  phaseBarContainer: {
+    borderBottomWidth: 1,
+    paddingBottom: 8,
+  },
+  phaseBarContent: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    gap: 6,
+  },
+  phaseChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  phaseChipText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+  },
+  legendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 12,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 10,
   },
 });

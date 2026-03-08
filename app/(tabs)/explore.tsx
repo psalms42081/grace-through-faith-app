@@ -155,6 +155,15 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
+        <ListItem
+          icon="git-merge"
+          iconColor="#8B5CF6"
+          title="Great Controversy Timeline"
+          subtitle="Trace the cosmic conflict from Creation to the New Earth"
+          onPress={() => router.push("/great-controversy" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
         <EnrolledTracksPreview theme={theme} />
 
         <SectionDivider theme={theme} />

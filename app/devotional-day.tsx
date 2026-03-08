@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TextInput,
   Linking,
+  Animated,
 } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -295,6 +296,8 @@ export default function DevotionalDayScreen() {
   const [completed, setCompleted] = useState(false);
   const [shareToGroup, setShareToGroup] = useState(false);
   const [shared, setShared] = useState(false);
+  const doneAnim = useRef(new Animated.Value(0)).current;
+  const checkScale = useRef(new Animated.Value(0)).current;
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -348,6 +351,11 @@ export default function DevotionalDayScreen() {
         } catch {}
       }
       setCompleted(true);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Animated.sequence([
+        Animated.timing(doneAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(checkScale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+      ]).start();
       queryClient.invalidateQueries({ queryKey: [todayQueryKey] });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
     } catch {
@@ -696,15 +704,27 @@ export default function DevotionalDayScreen() {
             </Pressable>
           </View>
         ) : (
-          <View style={[styles.doneCard, { backgroundColor: theme.success + "15", borderColor: theme.success + "30" }]}>
-            <Ionicons name="checkmark-circle" size={28} color={theme.success} />
+          <Animated.View style={[styles.doneCard, { backgroundColor: theme.success + "15", borderColor: theme.success + "30", opacity: doneAnim, transform: [{ scale: doneAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }]}>
+            <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+              <Ionicons name="checkmark-circle" size={28} color={theme.success} />
+            </Animated.View>
             <Text style={[styles.doneTitle, { color: theme.success, fontFamily: "Lora_600SemiBold" }]}>
               Day {day.dayNumber} Complete
             </Text>
             <Text style={[styles.doneBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               {shared ? "Your reflection was shared with your group. " : ""}Come back tomorrow for your next reading.
             </Text>
-          </View>
+            {progress + 1 < total && (
+              <View style={styles.doneProgressRow}>
+                <View style={[styles.doneProgressBar, { backgroundColor: theme.success + "25" }]}>
+                  <View style={[styles.doneProgressFill, { backgroundColor: theme.success, width: `${Math.round(((progress + 1) / total) * 100)}%` as any }]} />
+                </View>
+                <Text style={[styles.doneProgressText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                  {progress + 1}/{total} days
+                </Text>
+              </View>
+            )}
+          </Animated.View>
         )}
       </ScrollView>
     </>
@@ -750,7 +770,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 2,
   },
-  cardLabel: { fontSize: 12, letterSpacing: 0.3 },
+  cardLabel: { fontSize: 15, letterSpacing: 0.3 },
   cardBody: { fontSize: 14, lineHeight: 22 },
   verseLine: {
     flexDirection: "row",
@@ -794,6 +814,26 @@ const styles = StyleSheet.create({
   },
   doneTitle: { fontSize: 18 },
   doneBody: { fontSize: 14, textAlign: "center" },
+  doneProgressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+    width: "100%",
+  },
+  doneProgressBar: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  doneProgressFill: {
+    height: 5,
+    borderRadius: 3,
+  },
+  doneProgressText: {
+    fontSize: 12,
+  },
   emptyCard: {
     borderRadius: 16,
     borderWidth: 1,

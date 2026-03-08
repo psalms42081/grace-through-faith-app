@@ -19,10 +19,7 @@ import { BELIEFS, CATEGORIES, CATEGORY_COLORS } from "@/data/beliefs";
 
 const VIEWED_KEY = "beliefs_viewed";
 
-function parseVerseFromRef(ref: string): string | undefined {
-  const match = ref.match(/:(\d+)/);
-  return match ? match[1] : undefined;
-}
+import { navigateToScripture } from "@/lib/scripture-nav";
 
 function AnimatedChevron({ isExpanded, color }: { isExpanded: boolean; color: string }) {
   const rotation = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
@@ -86,11 +83,7 @@ export default function SDAStudiesScreen() {
   }, [markViewed]);
 
   const handleScriptureTap = useCallback((s: { bookId: number; chapter: number; ref: string }) => {
-    const verse = parseVerseFromRef(s.ref);
-    const url = verse
-      ? `/read/${s.bookId}/${s.chapter}?verse=${verse}`
-      : `/read/${s.bookId}/${s.chapter}`;
-    router.push(url as any);
+    navigateToScripture(s);
   }, []);
 
   const filtered = activeCategory === "all"
@@ -162,7 +155,7 @@ export default function SDAStudiesScreen() {
                 <View style={[styles.beliefNumber, { backgroundColor: catColor + "20" }]}>
                   {isViewed && (
                     <View style={styles.viewedCheck}>
-                      <Ionicons name="checkmark" size={8} color="#2E7D32" />
+                      <Ionicons name="checkmark" size={10} color="#fff" />
                     </View>
                   )}
                   <Text style={[styles.beliefNumberText, { color: catColor, fontFamily: "Inter_700Bold" }]}>
@@ -262,12 +255,12 @@ const styles = StyleSheet.create({
   beliefNumberText: { fontSize: 14 },
   viewedCheck: {
     position: "absolute",
-    top: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#2E7D3220",
+    top: -3,
+    right: -3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#2E7D32",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -282,7 +275,7 @@ const styles = StyleSheet.create({
   beliefCatText: { fontSize: 10, textTransform: "uppercase" as const, letterSpacing: 0.5 },
   beliefSummary: { fontSize: 14, lineHeight: 21 },
   scripturesSection: { marginTop: 14, gap: 6 },
-  sectionLabel: { fontSize: 11, textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: 4 },
+  sectionLabel: { fontSize: 15, letterSpacing: 0.3, marginBottom: 4 },
   scriptureRow: {
     flexDirection: "row",
     alignItems: "center",

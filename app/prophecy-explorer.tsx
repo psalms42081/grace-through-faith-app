@@ -11,9 +11,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { track } from "@/lib/analytics";
 import ScreenHeader from "@/components/ScreenHeader";
+
+const PROPHECY_VIEWED_KEY = "prophecy_viewed";
 
 if (
   Platform.OS === "android" &&
@@ -444,11 +447,13 @@ function SymbolCard({
   isExpanded,
   onToggle,
   theme,
+  isViewed,
 }: {
   symbol: ProphecySymbol;
   isExpanded: boolean;
   onToggle: () => void;
   theme: any;
+  isViewed?: boolean;
 }) {
   return (
     <Pressable
@@ -481,6 +486,9 @@ function SymbolCard({
           <View style={[scStyles.dateBadge, { backgroundColor: symbol.color + "14" }]}>
             <Text style={[scStyles.dateText, { color: symbol.color }]}>{symbol.dateRange}</Text>
           </View>
+        )}
+        {isViewed && !isExpanded && (
+          <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
         )}
         <Ionicons
           name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -590,7 +598,7 @@ const scStyles = StyleSheet.create({
   },
   detailLabel: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.3,
     textTransform: "uppercase" as const,
   },
@@ -621,6 +629,7 @@ function SectionCard({
   isSectionExpanded,
   onToggleSection,
   theme,
+  viewedSymbols,
 }: {
   section: ProphecySection;
   expandedSymbolId: string | null;
@@ -628,7 +637,12 @@ function SectionCard({
   isSectionExpanded: boolean;
   onToggleSection: () => void;
   theme: any;
+  viewedSymbols: Set<string>;
 }) {
+  const viewedCount = section.symbols.filter((s) => viewedSymbols.has(s.id)).length;
+  const allViewed = viewedCount === section.symbols.length && viewedCount > 0;
+  const someViewed = viewedCount > 0 && !allViewed;
+
   return (
     <View style={secStyles.container}>
       <Pressable
@@ -655,6 +669,16 @@ function SectionCard({
         <View style={{ flex: 1 }}>
           <Text style={[secStyles.title, { color: theme.text }]}>{section.title}</Text>
           <Text style={[secStyles.subtitle, { color: theme.textMuted }]}>{section.subtitle}</Text>
+          {allViewed ? (
+            <View style={secStyles.progressIndicator}>
+              <Ionicons name="checkmark-circle" size={13} color="#2E7D32" />
+              <Text style={secStyles.completedLabel}>Explored</Text>
+            </View>
+          ) : someViewed ? (
+            <View style={secStyles.progressIndicator}>
+              <Text style={secStyles.inProgressLabel}>{viewedCount}/{section.symbols.length} viewed</Text>
+            </View>
+          ) : null}
         </View>
         <View style={secStyles.countBadge}>
           <Text style={[secStyles.countText, { color: section.color }]}>
@@ -677,6 +701,7 @@ function SectionCard({
               isExpanded={expandedSymbolId === symbol.id}
               onToggle={() => onToggleSymbol(symbol.id)}
               theme={theme}
+              isViewed={viewedSymbols.has(symbol.id)}
             />
           ))}
         </View>
@@ -705,7 +730,7 @@ const secStyles = StyleSheet.create({
     justifyContent: "center" as const,
   },
   title: {
-    fontFamily: "Lora_600SemiBold",
+    fontFamily: "Lora_700Bold",
     fontSize: 16,
     lineHeight: 22,
   },
@@ -726,6 +751,22 @@ const secStyles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 11,
   },
+  progressIndicator: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    marginTop: 4,
+  },
+  completedLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: "#2E7D32",
+  },
+  inProgressLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: "#C9933A",
+  },
   symbolsList: {
     paddingHorizontal: 8,
     paddingTop: 10,
@@ -737,6 +778,7 @@ export default function ProphecyExplorerScreen() {
   const insets = useSafeAreaInsets();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [viewedSymbols, setViewedSymbols] = useState<Set<string>>(new Set());
   const scrollRef = useRef<ScrollView>(null);
   const sectionYPositions = useRef<Record<string, number>>({});
 
@@ -744,6 +786,23 @@ export default function ProphecyExplorerScreen() {
 
   useEffect(() => {
     track("prophecy_explorer_opened");
+    AsyncStorage.getItem(PROPHECY_VIEWED_KEY).then((val) => {
+      if (val) {
+        try {
+          setViewedSymbols(new Set(JSON.parse(val) as string[]));
+        } catch {}
+      }
+    });
+  }, []);
+
+  const markSymbolViewed = useCallback((symbolId: string) => {
+    setViewedSymbols((prev) => {
+      if (prev.has(symbolId)) return prev;
+      const next = new Set(prev);
+      next.add(symbolId);
+      AsyncStorage.setItem(PROPHECY_VIEWED_KEY, JSON.stringify([...next])).catch(() => {});
+      return next;
+    });
   }, []);
 
   const toggleSection = useCallback((id: string) => {
@@ -759,8 +818,12 @@ export default function ProphecyExplorerScreen() {
   }, []);
 
   const toggleSymbol = useCallback((id: string) => {
-    setExpandedSymbol((prev) => (prev === id ? null : id));
-  }, []);
+    setExpandedSymbol((prev) => {
+      if (prev === id) return null;
+      markSymbolViewed(id);
+      return id;
+    });
+  }, [markSymbolViewed]);
 
   const handleTimelinePress = useCallback((sectionId: string, symbolId: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -770,13 +833,14 @@ export default function ProphecyExplorerScreen() {
       return next;
     });
     setExpandedSymbol(symbolId);
+    markSymbolViewed(symbolId);
     setTimeout(() => {
       const y = sectionYPositions.current[sectionId];
       if (y !== undefined && scrollRef.current) {
         scrollRef.current.scrollTo({ y: y - 10, animated: true });
       }
     }, 150);
-  }, []);
+  }, [markSymbolViewed]);
 
   const handleSectionLayout = useCallback((sectionId: string, y: number) => {
     sectionYPositions.current[sectionId] = y;
@@ -885,6 +949,7 @@ export default function ProphecyExplorerScreen() {
               isSectionExpanded={expandedSections.has(section.id)}
               onToggleSection={() => toggleSection(section.id)}
               theme={theme}
+              viewedSymbols={viewedSymbols}
             />
           </View>
         ))}
@@ -945,7 +1010,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   introCardsHeading: {
-    fontFamily: "Lora_600SemiBold",
+    fontFamily: "Lora_700Bold",
     fontSize: 18,
     lineHeight: 24,
     marginBottom: 4,
@@ -1005,7 +1070,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   closingTitle: {
-    fontFamily: "Lora_600SemiBold",
+    fontFamily: "Lora_700Bold",
     fontSize: 15,
     textAlign: "center",
     lineHeight: 22,

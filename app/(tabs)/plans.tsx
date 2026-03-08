@@ -184,7 +184,7 @@ export default function PlansScreen() {
                   {todayData?.today?.title || "Current Plan"}
                 </Text>
                 <Text style={[st.activePlanDay, { fontFamily: "Inter_400Regular" }]}>
-                  Day {progress} of {total}
+                  Day {progress} of {total} completed
                 </Text>
                 <View style={st.activePlanProgressTrack}>
                   <View style={[st.activePlanProgressFill, { width: `${progressPct}%` as any }]} />
@@ -262,20 +262,20 @@ export default function PlansScreen() {
                             </Text>
                             {isCompleted ? (
                               <View style={st.progressRow}>
-                                <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                                <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>Completed</Text>
+                                <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                                <Text style={[st.progressText, { fontFamily: "Inter_600SemiBold", color: "#2E7D32" }]}>Completed</Text>
                               </View>
                             ) : isInProgress ? (
                               <View style={st.progressRow}>
                                 <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
-                                  Day {pp.completedCount + 1} / {pp.totalDays}
+                                  Day {pp.completedCount + 1} of {pp.totalDays}
                                 </Text>
                                 <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
                               </View>
                             ) : (
                               <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
                                 {plan.totalDays} days
-                                {plan.estimatedMinutesPerDay ? ` · ${plan.estimatedMinutesPerDay} min/day` : ""}
+                                {plan.estimatedMinutesPerDay ? ` \u00b7 ~${plan.estimatedMinutesPerDay} min` : ""}
                               </Text>
                             )}
                           </View>
@@ -325,20 +325,20 @@ export default function PlansScreen() {
                           </Text>
                           {isCompleted ? (
                             <View style={st.progressRow}>
-                              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                              <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>Completed</Text>
+                              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                              <Text style={[st.progressText, { fontFamily: "Inter_600SemiBold", color: "#2E7D32" }]}>Completed</Text>
                             </View>
                           ) : isInProgress ? (
                             <View style={st.progressRow}>
                               <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
-                                Day {pp.completedCount + 1} / {pp.totalDays}
+                                Day {pp.completedCount + 1} of {pp.totalDays}
                               </Text>
                               <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
                             </View>
                           ) : (
                             <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
                               {plan.totalDays} days
-                              {plan.estimatedMinutesPerDay ? ` · ${plan.estimatedMinutesPerDay} min/day` : ""}
+                              {plan.estimatedMinutesPerDay ? ` \u00b7 ~${plan.estimatedMinutesPerDay} min` : ""}
                             </Text>
                           )}
                         </View>
@@ -442,11 +442,11 @@ const st = StyleSheet.create({
     marginTop: 2,
   },
   progressText: {
-    fontSize: 11,
+    fontSize: 13,
     color: "rgba(255,255,255,0.85)",
   },
   continueLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#fff",
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 8,

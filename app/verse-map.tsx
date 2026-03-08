@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
+import { navigateToScripture } from "@/lib/scripture-nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -334,7 +335,7 @@ export default function VerseMapScreen() {
                   crossRefs.map((ref, i) => (
                     <Pressable
                       key={i}
-                      onPress={() => router.push(`/read/${ref.bookId}/${ref.chapter}` as any)}
+                      onPress={() => navigateToScripture({ ref: ref.reference, bookId: ref.bookId, chapter: ref.chapter })}
                       style={[styles.crossRefCard, { backgroundColor: theme.backgroundCard }]}
                       testID={`crossref-${i}`}
                     >

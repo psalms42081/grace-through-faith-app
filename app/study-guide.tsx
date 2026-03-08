@@ -313,7 +313,7 @@ export default function StudyGuideScreen() {
               {activeSessions.map((s: any) => (
                 <Pressable
                   key={s.id}
-                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: theme.accent }]}
+                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#C9933A" }]}
                   onPress={() => router.push({
                     pathname: "/study-guide" as any,
                     params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
@@ -323,14 +323,17 @@ export default function StudyGuideScreen() {
                     <Text style={[styles.hubSessionRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                       {s.verseReference}
                     </Text>
-                    <View style={[styles.hubPhaseBadge, { backgroundColor: theme.accent + "20" }]}>
-                      <Text style={[styles.hubPhaseText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                        {s.phase}
+                    <View style={[styles.hubPhaseBadge, { backgroundColor: "#C9933A20" }]}>
+                      <Text style={[styles.hubPhaseText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                        Continue
                       </Text>
                     </View>
                   </View>
                   <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
                     "{s.verseText}"
+                  </Text>
+                  <Text style={[styles.hubSessionPhaseLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Phase: {s.phase}
                   </Text>
                 </Pressable>
               ))}
@@ -355,7 +358,10 @@ export default function StudyGuideScreen() {
                     <Text style={[styles.hubSessionRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                       {s.verseReference}
                     </Text>
-                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                    <View style={styles.hubCompletedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                      <Text style={[styles.hubCompletedText, { fontFamily: "Inter_600SemiBold" }]}>Completed</Text>
+                    </View>
                   </View>
                   <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
                     "{s.verseText}"
@@ -970,6 +976,19 @@ const styles = StyleSheet.create({
   hubSessionVerse: {
     fontSize: 13,
     lineHeight: 19,
+  },
+  hubSessionPhaseLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  hubCompletedBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  hubCompletedText: {
+    fontSize: 11,
+    color: "#2E7D32",
   },
   hubEmptyState: {
     alignItems: "center" as const,
