@@ -175,9 +175,18 @@ router.get("/api/devotionals/today", async (req, res) => {
       return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
     }
 
+    const [plan] = await db
+      .select({ title: devotionalPlans.title })
+      .from(devotionalPlans)
+      .where(eq(devotionalPlans.id, activeEnrollment[0].planId))
+      .limit(1);
+
     return res.json({
       today: todayDay,
-      enrollment: activeEnrollment[0],
+      enrollment: {
+        ...activeEnrollment[0],
+        plan: plan ? { title: plan.title } : null,
+      },
       completedCount: completedDays.length,
       totalDays: allDays.length,
       depth: depth || "standard",

@@ -41,6 +41,7 @@ import GoldDivider from "@/components/home/GoldDivider";
 import VerseOfTheDay from "@/components/home/VerseOfTheDay";
 import ContinueReadingCard from "@/components/home/ContinueReadingCard";
 import ContinueCard from "@/components/home/ContinueCard";
+import { useResumeJourney } from "@/hooks/useResumeJourney";
 import GuidedToolsRow from "@/components/home/GuidedToolsRow";
 import SabbathSchoolCard from "@/components/home/SabbathSchoolCard";
 import DevotionalCard from "@/components/home/DevotionalCard";
@@ -81,7 +82,7 @@ function getTodaysVerse() {
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
-  enrollment?: { planId: string };
+  enrollment?: { planId: string; plan?: { title: string } | null };
   completedCount?: number;
   totalDays?: number;
   planComplete?: boolean;
@@ -935,6 +936,8 @@ function AdultHomeScreen() {
   const progress = todayData?.completedCount ?? 0;
   const total = todayData?.totalDays ?? 1;
 
+  const { item: resumeItem } = useResumeJourney();
+
   const isSabbathMode = sabbath.isSabbath;
 
   const streakSection = weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) ? (
@@ -1051,10 +1054,7 @@ function AdultHomeScreen() {
           <AnimatedSection index={4}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard
-              lastRead={lastRead}
-              ssData={ssData}
-              hasActivePlan={hasActivePlan}
-              enrollmentPlanId={todayData?.enrollment?.planId}
+              item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
@@ -1088,10 +1088,7 @@ function AdultHomeScreen() {
           </AnimatedSection>
           <AnimatedSection index={1}>
             <ContinueCard
-              lastRead={lastRead}
-              ssData={ssData}
-              hasActivePlan={hasActivePlan}
-              enrollmentPlanId={todayData?.enrollment?.planId}
+              item={resumeItem}
               theme={theme}
               isDark={isDark}
             />

@@ -80,6 +80,10 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
 - **OpenStreetMap:** Embedded tile maps on the web platform.
 
+**Resume System:**
+- **`useResumeJourney` hook (`hooks/useResumeJourney.ts`):** Aggregates progress from 8 sources (guided study, devotional, study path, GC timeline, prophecy, beliefs, Bible reading, sabbath school) with priority-based selection. Builds normalized `ResumeItem` with type badge, progress label, and direct route. Caches last valid item to `@grace-through-faith/resume-item` in AsyncStorage.
+- **ContinueCard (`components/home/ContinueCard.tsx`):** Displays highest-priority resumable item on Home screen with type badge, progress subtitle, and "Resume" CTA. Returns null when no resumable progress exists.
+
 **Streaming:**
 - **LiveKit Cloud:** Real-time video/audio conferencing via WebRTC.
 - **react-native-webview:** Loads the LiveKit room HTML on native.
