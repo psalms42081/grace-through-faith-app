@@ -185,7 +185,7 @@ interface SabbathState {
   loading: boolean;
 }
 
-export function useSabbath(): SabbathState {
+export function useSabbath(enabled: boolean = true): SabbathState {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     null
   );
@@ -203,6 +203,7 @@ export function useSabbath(): SabbathState {
   });
 
   useEffect(() => {
+    if (!enabled) return;
     let mounted = true;
 
     async function getLocation() {
