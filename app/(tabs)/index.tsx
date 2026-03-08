@@ -39,11 +39,9 @@ import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
 import VerseOfTheDay from "@/components/home/VerseOfTheDay";
-import ContinueReadingCard from "@/components/home/ContinueReadingCard";
 import ContinueCard from "@/components/home/ContinueCard";
 import { useResumeJourney } from "@/hooks/useResumeJourney";
 import GuidedToolsRow from "@/components/home/GuidedToolsRow";
-import SabbathSchoolCard from "@/components/home/SabbathSchoolCard";
 import DevotionalCard from "@/components/home/DevotionalCard";
 import SabbathBanner from "@/components/home/SabbathBanner";
 import LiveNowSection from "@/components/home/LiveNowSection";
@@ -1060,18 +1058,18 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={6}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
-          {ssData && <AnimatedSection index={7}><SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} /></AnimatedSection>}
-          <AnimatedSection index={8}>
-            <DevotionalCard
-              hasActivePlan={hasActivePlan}
-              progress={progress}
-              total={total}
-              enrollmentPlanId={todayData?.enrollment?.planId}
-              theme={theme}
-              isDark={isDark}
-            />
-          </AnimatedSection>
-          <AnimatedSection index={9}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          {!resumeItem && !hasActivePlan && (
+            <AnimatedSection index={7}>
+              <DevotionalCard
+                hasActivePlan={false}
+                progress={0}
+                total={0}
+                theme={theme}
+                isDark={isDark}
+              />
+            </AnimatedSection>
+          )}
+          <AnimatedSection index={8}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
         </>
       ) : (
         <>
@@ -1096,19 +1094,19 @@ function AdultHomeScreen() {
           <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
           <AnimatedSection index={3}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={4}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
-          {ssData && <AnimatedSection index={5}><SabbathSchoolCard ssData={ssData} theme={theme} isDark={isDark} /></AnimatedSection>}
-          <AnimatedSection index={6}>
-            <DevotionalCard
-              hasActivePlan={hasActivePlan}
-              progress={progress}
-              total={total}
-              enrollmentPlanId={todayData?.enrollment?.planId}
-              theme={theme}
-              isDark={isDark}
-            />
-          </AnimatedSection>
-          <AnimatedSection index={7}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={8}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
+          {!resumeItem && !hasActivePlan && (
+            <AnimatedSection index={5}>
+              <DevotionalCard
+                hasActivePlan={false}
+                progress={0}
+                total={0}
+                theme={theme}
+                isDark={isDark}
+              />
+            </AnimatedSection>
+          )}
+          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={7}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}
 
