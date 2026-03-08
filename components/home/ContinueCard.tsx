@@ -60,9 +60,6 @@ export default function ContinueCard({ item, theme, isDark }: ContinueCardProps)
         </Text>
       </View>
       <View style={s.bottom}>
-        <Text style={[s.hint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {item.progressLabel}
-        </Text>
         <View style={[s.ctaButton, { backgroundColor: theme.accent + "18" }]}>
           <Text style={[s.ctaText, { color: theme.accent }]}>Resume</Text>
           <Ionicons name="arrow-forward" size={14} color={theme.accent} />
@@ -119,12 +116,11 @@ const s = StyleSheet.create({
   bottom: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     paddingTop: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(201,147,58,0.15)",
   },
-  hint: { fontSize: 13, lineHeight: 19 },
   ctaButton: {
     flexDirection: "row",
     alignItems: "center",
