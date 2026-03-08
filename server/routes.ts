@@ -9,6 +9,7 @@ import { seedBeliefsWave2 } from "./seed-beliefs-wave2";
 import { seedBeliefsWave3 } from "./seed-beliefs-wave3";
 import { seedBeliefsWave4 } from "./seed-beliefs-wave4";
 import { seedGlobalChurches } from "../scripts/seed-global-churches";
+import { seedBibleBooks } from "./seed-books";
 
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -32,6 +33,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Guest user created");
       });
     }
+  });
+
+  seedBibleBooks(db).catch((err) => {
+    console.error("Bible books seed error:", err);
   });
 
   seedFormationData(db).catch((err) => {
