@@ -14,11 +14,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
-import { useProStatus } from "@/contexts/ProContext";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
-import ContextPanel from "@/components/reader/ContextPanel";
 import RelatedContent from "@/components/reader/RelatedContent";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import useBibleAudio from "@/hooks/useBibleAudio";
@@ -44,7 +42,6 @@ export default function VerseReaderScreen() {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
-  const { isPro, showProGate } = useProStatus();
   const resolvedTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : (TRANSLATIONS.includes(globalTranslation as Translation) ? (globalTranslation as Translation) : "KJV");
   const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
 
@@ -231,11 +228,6 @@ export default function VerseReaderScreen() {
     });
   }, [bookId, chapter, bookName, translation]);
 
-  const hasBookmarksInChapter = useMemo(() => {
-    if (!verses.length || !bookmarkedVerseIds.size) return false;
-    return verses.some((v) => bookmarkedVerseIds.has(v.id));
-  }, [verses, bookmarkedVerseIds]);
-
   return (
     <>
       <Stack.Screen
@@ -271,24 +263,9 @@ export default function VerseReaderScreen() {
                     `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
                   )
                 }
+                accessibilityLabel="View passage context"
               >
-                <Ionicons name="layers-outline" size={20} color={theme.textSecondary} />
-              </Pressable>
-              <Pressable
-                hitSlop={8}
-                style={styles.headerBtn}
-                onPress={() => {
-                  if (verses.length > 0) {
-                    const firstVerse = verses[0];
-                    handleVerseTap(firstVerse);
-                  }
-                }}
-              >
-                <Ionicons
-                  name={hasBookmarksInChapter ? "bookmark" : "bookmark-outline"}
-                  size={20}
-                  color={hasBookmarksInChapter ? theme.bookmarkBlue : theme.textSecondary}
-                />
+                <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
               </Pressable>
             </View>
           ),
@@ -358,15 +335,6 @@ export default function VerseReaderScreen() {
                   {chapter}
                 </Text>
               </View>
-
-              <ContextPanel
-                bookId={Number(bookId)}
-                chapter={chapterNum}
-                theme={theme}
-                isDark={isDark}
-                isPro={isPro}
-                showProGate={showProGate}
-              />
 
               <View style={styles.proseContainer}>
                 <Text style={[styles.proseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
