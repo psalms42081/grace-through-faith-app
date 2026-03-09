@@ -146,14 +146,68 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
-        <ListItem
-          icon="library"
-          iconColor="#1565C0"
-          title="Resources"
-          subtitle="Study guides, devotionals, and family worship"
+        <Pressable
           onPress={() => router.push("/resources" as any)}
-          style={{ marginBottom: 8 }}
-        />
+          style={({ pressed }) => [
+            {
+              borderRadius: 16,
+              overflow: "hidden",
+              marginBottom: 12,
+              opacity: pressed ? 0.9 : 1,
+            },
+          ]}
+          testID="resources-featured-card"
+          accessibilityRole="button"
+          accessibilityLabel="Open Resources Library: Sabbath School companions, topical studies, family worship"
+        >
+          <LinearGradient
+            colors={["#1A237E", "#0D1442"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              padding: 20,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "#C9933A30",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#C9933A20", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="library" size={20} color="#C9933A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#FFFFFF", fontFamily: "Lora_700Bold", fontSize: 17 }}>
+                  Resources Library
+                </Text>
+                <Text style={{ color: "#FFFFFFAA", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                  Sabbath School companions, topical studies, family worship
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#C9933A" />
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[
+                { label: "Sabbath School", color: "#2E7D32" },
+                { label: "Topical", color: "#C9933A" },
+                { label: "Family", color: "#E65100" },
+              ].map((tag) => (
+                <View
+                  key={tag.label}
+                  style={{
+                    backgroundColor: tag.color + "25",
+                    borderRadius: 6,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                  }}
+                >
+                  <Text style={{ color: tag.color, fontFamily: "Inter_600SemiBold", fontSize: 10, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
+                    {tag.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </LinearGradient>
+        </Pressable>
 
         <ListItem
           icon="telescope"

@@ -63,6 +63,9 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
   - Resource types: sabbath-school-companion, family-worship, study-guide, devotional-series, topical-study.
   - Categories: sabbath-school, family, prophecy, doctrine, spiritual-growth, kids.
   - Frontend: `app/resources.tsx` (library with search/filter) and `app/resource-detail.tsx` (reader with type-specific rendering, progress, bookmarks, pro-gate).
+  - UX: Featured gradient entry card on Explore screen, resource cards with colored accent strips + type icons + explicit Free/Supporter tier badges, enhanced pro gate upsell with benefit list.
+  - Content renderers fully aligned with AI output schemas: sabbath-school companions (dayTitle/focusText/studyPrompt/keyInsight, structured memoryVerseGuide/egwConnections/familyWorshipAdaptation), topical studies (structured scriptureFoundation/applicationQuestions/sdaContext/furtherStudy), family worship (structured reading/activity/questions/songSuggestion + introduction/closingThought).
+  - Publish authorization: requires isPro (stopgap until admin role is added).
 
 ## External Dependencies
 

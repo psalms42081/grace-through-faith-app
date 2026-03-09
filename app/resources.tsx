@@ -72,6 +72,15 @@ function ResourceCard({
   const typeColor = TYPE_COLORS[item.resourceType] || "#C9933A";
   const isPro = item.tier === "pro";
 
+  const TYPE_ICONS: Record<string, string> = {
+    "sabbath-school-companion": "book",
+    "family-worship": "people",
+    "study-guide": "document-text",
+    "devotional-series": "flame",
+    "topical-study": "compass",
+  };
+  const typeIcon = TYPE_ICONS[item.resourceType] || "library";
+
   return (
     <Pressable
       onPress={() => router.push(`/resource-detail?slug=${item.slug}` as any)}
@@ -79,12 +88,20 @@ function ResourceCard({
         styles.resourceCard,
         {
           backgroundColor: theme.backgroundCard,
-          borderColor: theme.border,
-          opacity: pressed ? 0.8 : 1,
+          borderColor: isPro ? "#C9933A30" : theme.border,
+          opacity: pressed ? 0.85 : 1,
         },
       ]}
       testID={`resource-card-${item.slug}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}, ${typeLabel}, ${isPro ? "supporter content" : "free"}`}
     >
+      <View style={[styles.cardAccent, { backgroundColor: typeColor }]} />
+      <View style={styles.cardIconContainer}>
+        <View style={[styles.cardIconCircle, { backgroundColor: typeColor + "18" }]}>
+          <Ionicons name={typeIcon as any} size={18} color={typeColor} />
+        </View>
+      </View>
       <View style={styles.cardContent}>
         <View style={styles.cardTop}>
           <View style={[styles.typeBadge, { backgroundColor: typeColor + "18" }]}>
@@ -94,9 +111,19 @@ function ResourceCard({
               {typeLabel}
             </Text>
           </View>
-          {isPro && (
-            <View style={styles.proIndicator}>
-              <Ionicons name="lock-closed" size={14} color="#C9933A" />
+          {isPro ? (
+            <View style={[styles.tierBadge, { backgroundColor: "#C9933A18", borderColor: "#C9933A30" }]}>
+              <Ionicons name="lock-closed" size={10} color="#C9933A" />
+              <Text style={[styles.tierBadgeText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                Supporter
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.tierBadge, { backgroundColor: "#2E7D3218", borderColor: "#2E7D3230" }]}>
+              <Ionicons name="lock-open-outline" size={10} color="#2E7D32" />
+              <Text style={[styles.tierBadgeText, { color: "#2E7D32", fontFamily: "Inter_600SemiBold" }]}>
+                Free
+              </Text>
             </View>
           )}
         </View>
@@ -137,7 +164,7 @@ function ResourceCard({
           )}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} style={{ marginLeft: 8 }} />
+      <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
     </Pressable>
   );
 }
@@ -175,6 +202,12 @@ export default function ResourcesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScreenHeader title="Resources" testID="resources-header" />
+
+      <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+        <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+          Sabbath School companions, topical studies, and family worship plans rooted in Adventist faith.
+        </Text>
+      </View>
 
       <View style={styles.searchContainer}>
         <View style={[styles.searchBar, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -316,18 +349,37 @@ const styles = StyleSheet.create({
   resourceCard: {
     borderRadius: 14,
     borderWidth: 1,
-    padding: 16,
+    paddingVertical: 14,
+    paddingRight: 14,
+    paddingLeft: 0,
     flexDirection: "row",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  cardAccent: {
+    width: 3,
+    alignSelf: "stretch",
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+  },
+  cardIconContainer: {
+    paddingHorizontal: 12,
+  },
+  cardIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardContent: {
     flex: 1,
-    gap: 6,
+    gap: 5,
   },
   cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   typeBadge: {
     borderRadius: 6,
@@ -339,8 +391,20 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  proIndicator: {
+  tierBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     marginLeft: "auto",
+  },
+  tierBadgeText: {
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   cardTitle: {
     fontSize: 16,

@@ -414,6 +414,45 @@ function TopicalStudyContent({ content, theme, completedSections, toggleSection 
           ))}
         </SectionCard>
       )}
+
+      {content.sdaContext && (
+        <SectionCard
+          title="Adventist Perspective"
+          icon="school-outline"
+          iconColor="#7C3AED"
+          theme={theme}
+          completed={completedSections.has("sdaContext")}
+          onToggleComplete={() => toggleSection("sdaContext")}
+        >
+          <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            {content.sdaContext}
+          </Text>
+        </SectionCard>
+      )}
+
+      {content.furtherStudy?.length > 0 && (
+        <SectionCard
+          title="Further Study"
+          icon="reader-outline"
+          iconColor="#1565C0"
+          theme={theme}
+          completed={completedSections.has("furtherStudy")}
+          onToggleComplete={() => toggleSection("furtherStudy")}
+        >
+          {content.furtherStudy.map((item: any, i: number) => (
+            <View key={i} style={{ marginBottom: i < content.furtherStudy.length - 1 ? 10 : 0 }}>
+              <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                {typeof item === "string" ? item : item.resource}
+              </Text>
+              {typeof item === "object" && item.description && (
+                <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 }]}>
+                  {item.description}
+                </Text>
+              )}
+            </View>
+          ))}
+        </SectionCard>
+      )}
     </>
   );
 }
@@ -429,6 +468,21 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
 
   return (
     <>
+      {content.introduction && (
+        <SectionCard
+          title={content.theme ? `Theme: ${content.theme}` : "Introduction"}
+          icon="document-text-outline"
+          iconColor="#C9933A"
+          theme={theme}
+          completed={completedSections.has("fw-intro")}
+          onToggleComplete={() => toggleSection("fw-intro")}
+        >
+          <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            {content.introduction}
+          </Text>
+        </SectionCard>
+      )}
+
       {days.map((day: any, i: number) => (
         <SectionCard
           key={`fw-${i}`}
@@ -486,9 +540,17 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
             </View>
           )}
           {day.questions && (() => {
-            const qList: string[] = Array.isArray(day.questions)
-              ? day.questions
-              : [...(day.questions.children || []), ...(day.questions.teen || []), ...(day.questions.adult || [])];
+            let qList: string[] = [];
+            if (Array.isArray(day.questions)) {
+              qList = day.questions.map((q: any) => typeof q === "string" ? q : String(q));
+            } else if (typeof day.questions === "object") {
+              const collect = (v: any) => {
+                if (Array.isArray(v)) return v.map((q: any) => typeof q === "string" ? q : String(q));
+                if (typeof v === "string") return [v];
+                return [];
+              };
+              qList = [...collect(day.questions.children), ...collect(day.questions.teen), ...collect(day.questions.adult)];
+            }
             return qList.length > 0 ? (
               <View style={sStyles.subSection}>
                 <Text style={[sStyles.subLabel, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
@@ -531,6 +593,21 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
           )}
         </SectionCard>
       ))}
+
+      {content.closingThought && (
+        <SectionCard
+          title="Closing Thought"
+          icon="sparkles-outline"
+          iconColor="#6A1B9A"
+          theme={theme}
+          completed={completedSections.has("fw-closing")}
+          onToggleComplete={() => toggleSection("fw-closing")}
+        >
+          <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]}>
+            {content.closingThought}
+          </Text>
+        </SectionCard>
+      )}
     </>
   );
 }
@@ -684,21 +761,38 @@ export default function ResourceDetailScreen() {
             </View>
           )}
 
-          <View style={[styles.proGateCard, { backgroundColor: "#C9933A" + "12", borderColor: "#C9933A" + "30" }]}>
-            <Ionicons name="heart" size={24} color="#C9933A" />
-            <Text style={[styles.proGateTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Support the Mission
+          <View style={[styles.proGateCard, { backgroundColor: "#C9933A" + "0A", borderColor: "#C9933A" + "25" }]}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#C9933A15", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+              <Ionicons name="heart" size={22} color="#C9933A" />
+            </View>
+            <Text style={[styles.proGateTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              Supporter Resource
             </Text>
             <Text style={[styles.proGateText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              This resource is available to supporters who help keep Grace through Faith free for everyone.
+              This study is available to those who support the mission of keeping Grace through Faith free for everyone.
             </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, marginBottom: 4 }}>
+              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+              <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                Full structured content
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+              <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                Progress tracking and bookmarks
+              </Text>
+            </View>
             <Pressable
               onPress={showProGate}
               style={[styles.proGateBtn, { backgroundColor: "#C9933A" }]}
               testID="resource-pro-gate-btn"
+              accessibilityRole="button"
+              accessibilityLabel="Become a supporter to unlock this resource"
             >
+              <Ionicons name="heart-outline" size={16} color="#050507" style={{ marginRight: 6 }} />
               <Text style={[styles.proGateBtnText, { fontFamily: "Inter_700Bold" }]}>
-                Learn More
+                Become a Supporter
               </Text>
             </Pressable>
           </View>
@@ -843,11 +937,16 @@ function getTotalSections(resource: ResourceDetail | undefined | null): number {
     if (c.historicalContext) count++;
     if (c.applicationQuestions?.length) count++;
     if (c.prayerPrompts?.length) count++;
+    if (c.sdaContext) count++;
+    if (c.furtherStudy?.length) count++;
     return Math.max(count, 1);
   }
 
   if (resource.resourceType === "family-worship") {
-    return Math.max(c.days?.length || 0, 1);
+    let count = c.days?.length || 0;
+    if (c.introduction) count++;
+    if (c.closingThought) count++;
+    return Math.max(count, 1);
   }
 
   const entries = Object.entries(c).filter(([, v]) => v && typeof v === "string");
@@ -939,6 +1038,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   proGateBtnText: {
     color: "#050507",
