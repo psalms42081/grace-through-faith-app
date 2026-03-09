@@ -41,5 +41,23 @@ npx tsx scripts/seed-strongs-from-json.ts || true
 
 echo "=== Data seeding complete ==="
 
+echo "=== Running security regression gate ==="
+echo "Starting temporary server for security checks..."
+NODE_ENV=development node server_dist/index.js &
+SERVER_PID=$!
+sleep 5
+
+if bash scripts/security-regression.sh; then
+  echo "Security regression: ALL PASSED"
+else
+  echo "DEPLOY BLOCKED: Security regression failed"
+  kill $SERVER_PID 2>/dev/null || true
+  exit 1
+fi
+
+kill $SERVER_PID 2>/dev/null || true
+wait $SERVER_PID 2>/dev/null || true
+echo "Temporary server stopped"
+
 echo "=== Building Expo static ==="
 npm run expo:static:build
