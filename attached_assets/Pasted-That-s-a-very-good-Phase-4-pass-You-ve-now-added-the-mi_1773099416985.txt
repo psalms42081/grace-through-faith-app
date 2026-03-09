@@ -1,0 +1,143 @@
+That’s a very good Phase 4 pass.
+
+You’ve now added the missing editorial ergonomics that make the review workflow practical instead of just technically possible.
+
+What improved most
+
+The three strongest additions are:
+
+preview before action
+
+review notes attached to decisions
+
+filters for triage
+
+
+That combination matters because editors can now do real review work instead of clicking blind through a queue.
+
+Preview endpoint
+
+This is the biggest usability win. Returning:
+
+full content
+
+generation metadata
+
+source packet info
+
+reviewer info
+
+section summaries
+
+
+gives editors the context they actually need to decide.
+
+Review notes
+
+This is more important than it looks. Once notes are stored with review actions, you start building an editorial memory:
+
+why something was approved
+
+what was weak
+
+what needs regeneration
+
+what prompt issues keep recurring
+
+
+That becomes useful later for both prompt tuning and editorial standards.
+
+Filters
+
+These are exactly the right first filters:
+
+reviewStatus
+
+generationStatus
+
+quarterCode
+
+promptVersion
+
+
+That’s enough to manage the queue without overcomplicating the UI.
+
+Important correctness fixes
+
+The architect catches were real and you fixed the right ones:
+
+apiRequest signature alignment
+
+removing custom query functions that bypassed auth headers
+
+changing pipeline read access from requireAdmin to requireEditor
+
+
+That last one is especially important. Editors should be able to review without inheriting full admin powers.
+
+Where the system stands now
+
+You now have a full editorial loop that looks like this:
+
+source packet → generate draft → preview → annotate → approve/revise/reject → publish
+
+That is a real internal publishing workflow.
+
+Best next step
+
+The highest-value next editorial feature is now clearly:
+
+Diff view
+
+Show the editor:
+
+current published version
+
+latest draft/regenerated version
+
+changed sections highlighted
+
+
+That will become especially useful for regenerated companions after source changes.
+
+After that, I’d add:
+
+Queue helpers
+
+filter for “has review notes”
+
+filter for “source changed”
+
+filter for “regenerated”
+
+badge for prompt version drift
+
+
+One thing to fix soon
+
+The trust proxy / rate limiting issue is worth addressing in the next infrastructure pass. It is separate from this feature work, but it will keep creating noisy false failures in testing and admin usage if left alone.
+
+Overall read
+
+You’ve now built:
+
+generation
+
+validation
+
+source lineage
+
+review states
+
+roles
+
+admin UI
+
+preview
+
+notes
+
+filters
+
+
+That is a functioning editorial system, not just an AI feature.
