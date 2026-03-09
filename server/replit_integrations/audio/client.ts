@@ -6,12 +6,23 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { getTimeout } from "../../services/api-client";
+import { withAIConcurrency } from "../../services/ai-semaphore";
 
-export const openai = new OpenAI({
+const _openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   timeout: getTimeout("openai"),
 });
+
+const origChatCreate = _openai.chat.completions.create.bind(_openai.chat.completions);
+_openai.chat.completions.create = ((...args: any[]) =>
+  withAIConcurrency(() => origChatCreate(...args))) as any;
+
+const origTranscCreate = _openai.audio.transcriptions.create.bind(_openai.audio.transcriptions);
+_openai.audio.transcriptions.create = ((...args: any[]) =>
+  withAIConcurrency(() => origTranscCreate(...args))) as any;
+
+export const openai = _openai;
 
 export type AudioFormat = "wav" | "mp3" | "webm" | "mp4" | "ogg" | "unknown";
 

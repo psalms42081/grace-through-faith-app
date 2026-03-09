@@ -80,3 +80,40 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 **Maps & Location:**
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
 - **OpenStreetMap:** Embedded tile maps on the web platform.
+
+**Resume System:**
+- `useResumeJourney` hook aggregates progress from 8 sources.
+- `ContinueCard` displays the highest-priority resumable item.
+
+## Security & Deploy Configuration
+
+**Guest Persistence Policy:**
+- **Blocked (401):** Notes, highlights, bookmarks, prayers, donations, trial, mission-invite dismiss, account deletion, family dashboard, community writes.
+- **Guest fallback:** Reading history, progress, pro-status (returns defaults). Uses shared "guest" userId.
+- **Public reads (no auth):** Books, passages, tracks, streams, sabbath school, devotionals, kids collections, churches, feedback, health.
+
+**Pro-Gated Endpoints (requireAuth + checkProStatus):**
+- Family Dashboard: stats, heatmap, children, prayers, conversation starters, dinner topics.
+- Chapter Context: `/api/chapter-context/:bookId/:chapter`.
+
+**Deploy Environment Checklist:**
+- `DATABASE_URL` — required
+- `JWT_SECRET` — required, minimum 32 chars recommended
+- `RUN_STARTUP_SEEDS` — must be "false" in production (hard-fail on startup if "true")
+- `ALLOW_INSECURE_PASSWORD_RESET` — must be unset or "false" in production (hard-fail on startup if "true")
+- `AI_INTEGRATIONS_OPENAI_API_KEY` / `AI_INTEGRATIONS_OPENAI_BASE_URL` — required for AI features
+- `ELEVENLABS_API_KEY` — required for TTS narration
+- `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` / `LIVEKIT_URL` — required for live streaming
+- Startup logs print full security posture on boot for verification.
+- **Security Regression Script:** `bash scripts/security-regression.sh` — 37-check automated suite covering protected writes (401), invalid tokens (401), pro-only endpoints (401/403), spoofed userId rejection, disabled password reset (501), guest auth/me behavior, health endpoint (200 + DB ok), public reads (200), and community write auth. **Run gates:** before deploy (automated in deploy-build.sh), after auth/pro route changes, after middleware changes, after guest persistence changes. Exits with code 1 on any failure. **Deploy gate:** deploy-build.sh boots a temporary server after server build + seeds, runs the regression suite, and blocks the deploy (`exit 1`) if any check fails.
+
+## Observability & Performance
+
+- **Structured Request Logging:** All API requests logged as `[req] METHOD PATH STATUS DURATIONms`. Slow requests flagged with `[SLOW]` prefix (>2s normal, >15s AI routes).
+- **External API Timeout Protection:** OpenAI 30s, ElevenLabs 20s, external fetches 10s. Logged as `[api:ok]`/`[api:fail]`.
+- **AI Concurrency Control:** Process-level semaphore (`server/services/ai-semaphore.ts`) limits simultaneous OpenAI calls to 5 concurrent + 10 queued. Beyond that, 503 rejection. Logs `[ai:queue]`/`[ai:reject]`. Applied to all OpenAI clients: ai-engine.ts, openai-tts.ts, audio client, study.ts EGW insight.
+- **Response Cache:** In-memory TTL cache (`server/middleware/response-cache.ts`): `/api/books` (5min), `/api/tracks` (2min), `/api/devotionals/plans` (2min), `/api/kids/collections` (2min), `/api/churches` (5min), `/api/streams/active` (30s). Sets `X-Cache: HIT/MISS` header.
+- **Health Endpoint:** `GET /api/health` — returns status, uptime, DB connectivity, error counts, AI semaphore stats, cache stats. 200 when healthy, 503 when degraded.
+- **Error Categorization:** Global error handler categorizes errors (validation/auth/not_found/rate_limit/server) with `[error]` prefix.
+- **Rate Limiting:** `aiGenerationLimiter` (10/min/user), `ttsLimiter` (15/min/user), `authLimiter` (20/15min/user).
+- **Key files:** `server/index.ts`, `server/services/api-client.ts`, `server/services/ai-semaphore.ts`, `server/middleware/response-cache.ts`, `server/middleware/rate-limit.ts`, `server/routes.ts`.

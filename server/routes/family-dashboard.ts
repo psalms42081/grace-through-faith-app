@@ -1,5 +1,6 @@
 import { Router, Request } from "express";
   import { db } from "../db";
+  import { getErrorStatusCode } from "../services/ai-semaphore";
   import {
     users,
     childProfiles,
@@ -35,7 +36,7 @@ import { Router, Request } from "express";
     return res.json(children);
   } catch (err) {
     console.error("Family children error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -59,7 +60,7 @@ router.post("/api/family/children", requireAuth, async (req, res) => {
     return res.json(child);
   } catch (err) {
     console.error("Add child error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -89,7 +90,7 @@ router.patch("/api/family/children/:id", requireAuth, async (req, res) => {
     return res.json(updated);
   } catch (err) {
     console.error("Update child error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -107,7 +108,7 @@ router.delete("/api/family/children/:id", requireAuth, async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete child error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -200,7 +201,7 @@ router.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) =>
     });
   } catch (err) {
     console.error("Family stats error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -237,7 +238,7 @@ router.get("/api/family/conversation-starter/:childId", requireAuth, checkProSta
     return res.json({ childName: child.name, ...result });
   } catch (err) {
     console.error("Conversation starter error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -359,7 +360,7 @@ router.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res) 
     return res.json({ books, familyQuest });
   } catch (err) {
     console.error("Family heatmap error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -376,7 +377,7 @@ router.get("/api/family/prayers", requireAuth, checkProStatus, async (req, res) 
     return res.json(prayers);
   } catch (err) {
     console.error("Family prayers fetch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -422,7 +423,7 @@ router.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res)
     return res.json(prayer);
   } catch (err) {
     console.error("Family prayer post error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -459,7 +460,7 @@ router.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, asyn
     return res.json({ success: true, supportCount: updated.supportCount });
   } catch (err) {
     console.error("Prayer support error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -491,7 +492,7 @@ router.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, asy
     return res.json(updated);
   } catch (err) {
     console.error("Prayer answered error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -509,7 +510,7 @@ router.get("/api/family/dinner-topics", requireAuth, checkProStatus, async (req,
     return res.json(topics);
   } catch (err) {
     console.error("Dinner topics fetch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -555,7 +556,7 @@ router.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProStat
     return res.json({ success: true, bonusPoints });
   } catch (err) {
     console.error("Mark discussed error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 

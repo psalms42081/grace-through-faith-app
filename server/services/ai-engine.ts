@@ -1,12 +1,19 @@
 import OpenAI from "openai";
 import { getTimeout } from "./api-client";
+import { withAIConcurrency } from "./ai-semaphore";
 
 function createOpenAIClient(): OpenAI {
-  return new OpenAI({
+  const client = new OpenAI({
     apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     timeout: getTimeout("openai"),
   });
+
+  const originalCreate = client.chat.completions.create.bind(client.chat.completions);
+  client.chat.completions.create = ((...args: any[]) =>
+    withAIConcurrency(() => originalCreate(...args))) as any;
+
+  return client;
 }
 
 function cleanJsonResponse(raw: string): string {

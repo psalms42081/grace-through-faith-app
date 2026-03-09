@@ -1,5 +1,7 @@
 import { Router } from "express";
   import { db } from "../db";
+  import { cachedResponse } from "../middleware/response-cache";
+  import { getErrorStatusCode } from "../services/ai-semaphore";
   import {
     kidsCollections,
     kidsStories,
@@ -24,7 +26,7 @@ import { Router } from "express";
 
   const router = Router();
 
-  router.get("/api/kids/collections", async (req, res) => {
+  router.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
   try {
     const { ageGroup } = req.query;
     const conditions = [eq(kidsCollections.published, true)];
@@ -64,7 +66,7 @@ import { Router } from "express";
     return res.json(collectionsWithCounts);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -83,7 +85,7 @@ router.get("/api/kids/collections/all/stories", async (req, res) => {
     return res.json(stories);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -102,7 +104,7 @@ router.get("/api/kids/collections/:id/stories", async (req, res) => {
     return res.json(stories);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -119,7 +121,7 @@ router.get("/api/kids/stories/:id", async (req, res) => {
     return res.json(story[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -132,7 +134,7 @@ router.get("/api/kids/stories/:id/quiz", async (req, res) => {
     return res.json(questions);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -243,7 +245,7 @@ router.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
     return res.json({ ...progress[0], firstCompletion: true, badgesAwarded });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -325,7 +327,7 @@ router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -361,7 +363,7 @@ router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
     return res.json(progress[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -375,7 +377,7 @@ router.get("/api/kids/progress/:userId", optionalAuth, async (req, res) => {
     return res.json(progressRows);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -385,7 +387,7 @@ router.get("/api/kids/badges", async (_req, res) => {
     return res.json(badges);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -407,7 +409,7 @@ router.get("/api/kids/badges/:userId", optionalAuth, async (req, res) => {
     return res.json(flattened);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -425,7 +427,7 @@ router.get("/api/kids/streak/:userId", optionalAuth, async (req, res) => {
     return res.json(streak[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -465,7 +467,7 @@ router.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
     return res.json(newStreak[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -495,7 +497,7 @@ router.get("/api/kids/daily", async (req, res) => {
     return res.json(todayStory);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -849,7 +851,7 @@ router.get("/api/kids/profile/:userId/stats", optionalAuth, async (req, res) => 
     return res.json({ totalPoints: 0, currentLevel: 1, name: null });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 

@@ -6,6 +6,7 @@ import { Router } from "express";
     bibleTranslations,
   } from "../../shared/schema";
   import { eq, and, ilike, sql } from "drizzle-orm";
+  import { cachedResponse } from "../middleware/response-cache";
 
   const router = Router();
 
@@ -57,7 +58,7 @@ import { Router } from "express";
 
 // ─── BOOKS ──────────────────────────────────────────────────────────────────
 
-router.get("/api/books", async (_req, res) => {
+router.get("/api/books", cachedResponse(300), async (_req, res) => {
   try {
     const books = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
     return res.json(books);

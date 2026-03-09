@@ -7,6 +7,8 @@ import { env } from "./env";
 import { optionalAuth, getEffectiveUserId } from "./middleware/auth";
 import { sql } from "drizzle-orm";
 import { errorCounts } from "./index";
+import { getAISemaphoreStats } from "./services/ai-semaphore";
+import { getCacheStats } from "./middleware/response-cache";
 
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -103,6 +105,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       database: dbStatus,
       version: "1.0.0",
       errors: errorCounts,
+      ai: getAISemaphoreStats(),
+      cache: getCacheStats(),
     });
   });
 

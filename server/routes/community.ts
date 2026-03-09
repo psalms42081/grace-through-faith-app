@@ -1,5 +1,6 @@
 import { Router } from "express";
   import { db } from "../db";
+  import { cachedResponse } from "../middleware/response-cache";
   import {
     users,
     families,
@@ -573,7 +574,7 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   }
 });
 
-  router.get("/api/churches", async (req, res) => {
+  router.get("/api/churches", cachedResponse(300), async (req, res) => {
   try {
     const { lat, lng, radius, city } = req.query as { lat?: string; lng?: string; radius?: string; city?: string };
 
@@ -882,7 +883,7 @@ router.get("/api/streams/:id/room", async (req, res) => {
   }
 });
 
-router.get("/api/streams/active", async (_req, res) => {
+router.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
   try {
     const sessions = await db.select().from(liveSessions)
       .where(eq(liveSessions.status, "live"))

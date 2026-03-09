@@ -92,8 +92,13 @@ check "GET /api/auth/me user=null" "null" "$ME_USER"
 echo ""
 echo "--- 9. Public reads still return 200 ---"
 check "GET /api/health" "200" "$(status "$BASE/api/health")"
-HEALTH_DB=$(curl -s "$BASE/api/health" | node -e "process.stdin.on('data',d=>{try{process.stdout.write(JSON.parse(d).database)}catch{process.stdout.write('ERR')}})")
+HEALTH_BODY=$(curl -s "$BASE/api/health")
+HEALTH_DB=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{process.stdout.write(JSON.parse(d).database)}catch{process.stdout.write('ERR')}})")
 check "GET /api/health database=ok" "ok" "$HEALTH_DB"
+HEALTH_AI=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{const j=JSON.parse(d);process.stdout.write(typeof j.ai?.maxConcurrent==='number'?'ok':'ERR')}catch{process.stdout.write('ERR')}})")
+check "GET /api/health ai stats present" "ok" "$HEALTH_AI"
+HEALTH_CACHE=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{const j=JSON.parse(d);process.stdout.write(typeof j.cache?.hitRate==='number'?'ok':'ERR')}catch{process.stdout.write('ERR')}})")
+check "GET /api/health cache stats present" "ok" "$HEALTH_CACHE"
 check "GET /api/tracks" "200" "$(status "$BASE/api/tracks")"
 check "GET /api/streams/active" "200" "$(status "$BASE/api/streams/active")"
 check "GET /api/sabbath-school/current" "200" "$(status "$BASE/api/sabbath-school/current")"

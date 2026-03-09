@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
+import { getErrorStatusCode } from "../services/ai-semaphore";
   import {
     bibleBooks,
     bibleVerses,
@@ -70,7 +71,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
     return res.json(results);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -89,7 +90,7 @@ router.get("/api/strong/:id", async (req, res) => {
     return res.json(entry[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -116,7 +117,7 @@ router.get("/api/strong/verse/:verseId", async (req, res) => {
     return res.json(deduped);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -219,7 +220,7 @@ router.get("/api/context", async (req, res) => {
     return res.json(cards);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -312,7 +313,7 @@ router.get("/api/commentary", async (req, res) => {
     return res.json(entries);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -346,12 +347,13 @@ async function generateEgwInsight(bookName: string, chapter: number): Promise<st
   try {
     const OpenAI = (await import("openai")).default;
     const { getTimeout } = await import("../services/api-client");
+    const { withAIConcurrency } = await import("../services/ai-semaphore");
     const client = new OpenAI({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       timeout: getTimeout("openai"),
     });
-    const resp = await client.chat.completions.create({
+    const resp = await withAIConcurrency(() => client.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.5,
       max_tokens: 800,
@@ -365,7 +367,7 @@ async function generateEgwInsight(bookName: string, chapter: number): Promise<st
           content: `Provide an Adventist perspective on ${bookName} chapter ${chapter}, highlighting themes Ellen G. White commonly addressed regarding this passage.`,
         },
       ],
-    });
+    }));
     return resp.choices[0]?.message?.content?.trim() || null;
   } catch (err) {
     console.error("[EGW Insight] Generation failed:", err);
@@ -546,7 +548,7 @@ router.get("/api/application", async (req, res) => {
     return res.json(templates);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -618,7 +620,7 @@ router.get("/api/location", async (req, res) => {
     return res.json(allLocations);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -637,7 +639,7 @@ router.get("/api/location/:id", async (req, res) => {
     return res.json(location[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -653,7 +655,7 @@ router.get("/api/timeline", async (req, res) => {
     return res.json(events);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -676,7 +678,7 @@ router.get("/api/location/:id/verses", async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -698,7 +700,7 @@ router.get("/api/timeline/:id/verses", async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -757,7 +759,7 @@ router.post("/api/devotionals/complete", async (req, res) => {
     return res.json({ progress: progress[0] ?? null });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -801,7 +803,7 @@ router.post("/api/devotionals/complete", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -872,7 +874,7 @@ router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1026,7 +1028,7 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =>
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1040,7 +1042,7 @@ router.get("/api/study-guide/sessions", async (req, res) => {
     return res.json(sessions);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1053,7 +1055,7 @@ router.post("/api/study-guide/complete/:id", async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1066,7 +1068,7 @@ router.get("/api/study-guide/session/:id", async (req, res) => {
     return res.json({ ...session, messages: JSON.parse(session.messages) });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1103,7 +1105,7 @@ router.get("/api/verse-map/:verseId", async (req, res) => {
     return res.json({ words, crossReferences, contextSnippet, hasCachedData: !!cached });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1137,7 +1139,7 @@ router.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => 
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1183,7 +1185,7 @@ router.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, 
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -1222,7 +1224,7 @@ router.get("/api/chapter-summary", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 

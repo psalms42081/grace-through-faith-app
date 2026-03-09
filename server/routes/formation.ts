@@ -1,6 +1,7 @@
 import { Router } from "express";
   import type { Request, Response } from "express";
   import { db } from "../db";
+  import { cachedResponse } from "../middleware/response-cache";
   import {
     formationTracks,
     formationModules,
@@ -22,7 +23,7 @@ import { Router } from "express";
 
   const router = Router();
 
-  router.get("/api/tracks", async (req: Request, res: Response) => {
+  router.get("/api/tracks", cachedResponse(120), async (req: Request, res: Response) => {
   try {
     const lang = resolveContentLang(req);
 

@@ -1,5 +1,7 @@
 import { Router } from "express";
   import { db } from "../db";
+  import { cachedResponse } from "../middleware/response-cache";
+  import { getErrorStatusCode } from "../services/ai-semaphore";
   import {
     devotionalPlans,
     devotionalDays,
@@ -15,7 +17,7 @@ import { Router } from "express";
 
   const router = Router();
 
-  router.get("/api/devotionals/plans", async (req, res) => {
+  router.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => {
   try {
     const traditionKey = String(req.query.traditionKey || "all");
     const conditions = [eq(devotionalPlans.isPublished, true)];
@@ -29,7 +31,7 @@ import { Router } from "express";
     return res.json(plans);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -43,7 +45,7 @@ router.get("/api/devotionals/plans/:planId/days", async (req, res) => {
     return res.json(days);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -78,7 +80,7 @@ router.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
     return res.json({ enrollment: enrollment[0], alreadyEnrolled: false });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -120,7 +122,7 @@ router.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => {
     return res.json(results);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
@@ -189,7 +191,7 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
 
