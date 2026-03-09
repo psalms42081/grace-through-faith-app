@@ -17,7 +17,7 @@ import { Router } from "express";
     CONTENT_LANGUAGES,
   } from "../../shared/schema";
   import { eq, and, sql, asc } from "drizzle-orm";
-  import { extractUserId } from "../middleware/auth";
+  import { requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import { resolveContentLang } from "../middleware/content-lang";
 
   const router = Router();
@@ -53,7 +53,7 @@ import { Router } from "express";
 
 router.get("/api/tracks/progress", async (req: Request, res: Response) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const progress = await db
       .select()
       .from(progressTracks)
@@ -79,7 +79,7 @@ router.get("/api/tracks/progress", async (req: Request, res: Response) => {
 router.get("/api/tracks/:id", async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const lang = resolveContentLang(req);
 
     const [track] = await db
@@ -260,7 +260,7 @@ router.get("/api/lessons/:id", async (req: Request, res: Response) => {
       assessment = { ...assessments[0], items: localizedItems };
     }
 
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const [progressRow] = await db
       .select()
       .from(progressLessons)
@@ -280,9 +280,10 @@ router.get("/api/lessons/:id", async (req: Request, res: Response) => {
 
 router.post("/api/tracks/enroll", async (req: Request, res: Response) => {
   try {
-    const { userId, trackId } = req.body;
-    if (!userId || !trackId) {
-      return res.status(400).json({ error: "userId and trackId required" });
+    const userId = getAuthUserId(req) || "guest";
+    const { trackId } = req.body;
+    if (!trackId) {
+      return res.status(400).json({ error: "trackId required" });
     }
 
     const existing = await db
@@ -340,10 +341,8 @@ router.post("/api/tracks/enroll", async (req: Request, res: Response) => {
 router.post("/api/lessons/:id/complete", async (req: Request, res: Response) => {
   try {
     const lessonId = String(req.params.id);
-    const { userId, sectionsCompleted, assessmentScore, assessmentPassed } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: "userId required" });
-    }
+    const userId = getAuthUserId(req) || "guest";
+    const { sectionsCompleted, assessmentScore, assessmentPassed } = req.body;
 
     const existingProgress = await db
       .select()
@@ -519,9 +518,10 @@ router.post("/api/lessons/:id/complete", async (req: Request, res: Response) => 
 router.post("/api/modules/:id/confidence", async (req: Request, res: Response) => {
   try {
     const moduleId = String(req.params.id);
-    const { userId, rating } = req.body;
-    if (!userId || !rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "userId and rating (1-5) required" });
+    const userId = getAuthUserId(req) || "guest";
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "rating (1-5) required" });
     }
 
     const [mod] = await db
@@ -565,9 +565,10 @@ router.post("/api/modules/:id/confidence", async (req: Request, res: Response) =
 router.post("/api/assessments/:id/submit", async (req: Request, res: Response) => {
   try {
     const assessmentId = String(req.params.id);
-    const { userId, answers } = req.body;
-    if (!userId || !answers) {
-      return res.status(400).json({ error: "userId and answers required" });
+    const userId = getAuthUserId(req) || "guest";
+    const { answers } = req.body;
+    if (!answers) {
+      return res.status(400).json({ error: "answers required" });
     }
 
     const [assessment] = await db

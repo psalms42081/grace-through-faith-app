@@ -1,4 +1,11 @@
 import rateLimit from "express-rate-limit";
+import { getAuthUserId } from "./auth";
+
+function safeKeyGenerator(req: any): string {
+  const userId = getAuthUserId(req);
+  if (userId) return `user:${userId}`;
+  return "anon";
+}
 
 export const aiGenerationLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -6,11 +13,7 @@ export const aiGenerationLimiter = rateLimit({
   message: { error: "Too many AI requests. Please wait a moment and try again." },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    const userId = String(req.query.userId || req.body?.userId || "");
-    if (userId) return userId;
-    return "anon";
-  },
+  keyGenerator: safeKeyGenerator,
 });
 
 export const ttsLimiter = rateLimit({
@@ -19,11 +22,7 @@ export const ttsLimiter = rateLimit({
   message: { error: "Too many text-to-speech requests. Please wait a moment." },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    const userId = String(req.query.userId || req.body?.userId || "");
-    if (userId) return userId;
-    return "anon";
-  },
+  keyGenerator: safeKeyGenerator,
 });
 
 export const authLimiter = rateLimit({

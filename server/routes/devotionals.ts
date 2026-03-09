@@ -9,7 +9,7 @@ import { Router } from "express";
     bibleBooks,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { extractUserId } from "../middleware/auth";
+  import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
   import type { StudyDepth } from "../services/ai-engine";
 
@@ -47,11 +47,12 @@ router.get("/api/devotionals/plans/:planId/days", async (req, res) => {
   }
 });
 
-router.post("/api/devotionals/enroll", async (req, res) => {
+router.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
   try {
-    const { userId, planId } = req.body;
-    if (!userId || !planId) {
-      return res.status(400).json({ error: "userId and planId are required" });
+    const userId = getEffectiveUserId(req);
+    const { planId } = req.body;
+    if (!planId) {
+      return res.status(400).json({ error: "planId is required" });
     }
 
     const existing = await db
@@ -81,17 +82,14 @@ router.post("/api/devotionals/enroll", async (req, res) => {
   }
 });
 
-router.get("/api/devotionals/user-progress", async (req, res) => {
+router.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
+    const userId = getEffectiveUserId(req);
 
     const enrollments = await db
       .select()
       .from(userPlanEnrollments)
-      .where(eq(userPlanEnrollments.userId, String(userId)));
+      .where(eq(userPlanEnrollments.userId, userId));
 
     if (!enrollments.length) {
       return res.json([]);
@@ -126,15 +124,13 @@ router.get("/api/devotionals/user-progress", async (req, res) => {
   }
 });
 
-router.get("/api/devotionals/today", async (req, res) => {
+router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
   try {
-    const { userId, planId, depth } = req.query;
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
+    const userId = getEffectiveUserId(req);
+    const { planId, depth } = req.query;
 
     const conditions = [
-      eq(userPlanEnrollments.userId, String(userId)),
+      eq(userPlanEnrollments.userId, userId),
       eq(userPlanEnrollments.isActive, true),
     ];
     if (planId) {
@@ -225,9 +221,10 @@ router.post("/api/devotionals/reflect", async (req, res) => {
 });
 
 
-router.post("/api/reading-plans/generate", async (req, res) => {
+router.post("/api/reading-plans/generate", optionalAuth, async (req, res) => {
   try {
-    const { topic, durationDays, difficulty, userId, depth } = req.body;
+    const userId = getEffectiveUserId(req);
+    const { topic, durationDays, difficulty, depth } = req.body;
     if (!topic || !durationDays) {
       return res.status(400).json({ error: "topic and durationDays are required" });
     }

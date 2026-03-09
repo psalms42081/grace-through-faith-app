@@ -3,10 +3,19 @@ import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { users } from "../../shared/schema";
 import { eq } from "drizzle-orm";
+import { env } from "../env";
 
-export const JWT_SECRET = process.env.JWT_SECRET || "grace-through-faith-secret-key-2026";
+declare global {
+  namespace Express {
+    interface Request {
+      authUserId?: string;
+    }
+  }
+}
 
-export function extractUserId(req: Request): string {
+export const JWT_SECRET = env.JWT_SECRET;
+
+export function getAuthUserId(req: Request): string | null {
   try {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
@@ -15,7 +24,37 @@ export function extractUserId(req: Request): string {
       return decoded.userId;
     }
   } catch {}
-  return String(req.query.userId || req.body?.userId || "guest");
+  return null;
+}
+
+export function extractUserId(req: Request): string {
+  const authId = getAuthUserId(req);
+  if (authId) return authId;
+  return "guest";
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const userId = getAuthUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  req.authUserId = userId;
+  next();
+}
+
+export function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const userId = getAuthUserId(req);
+  if (userId) {
+    req.authUserId = userId;
+  }
+  next();
+}
+
+export function getEffectiveUserId(req: Request): string {
+  if (req.authUserId) return req.authUserId;
+  const authId = getAuthUserId(req);
+  if (authId) return authId;
+  return "guest";
 }
 
 export async function checkProStatus(
@@ -24,11 +63,15 @@ export async function checkProStatus(
   next: NextFunction
 ) {
   try {
-    const userId = String(req.query.userId || req.body?.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
     if (!user || !user.isPro) {
       return res.status(403).json({ error: "This feature is available to supporters. Support the mission to access Deep Study layers." });
     }
+    req.authUserId = userId;
     next();
   } catch (err) {
     console.error("Pro check error:", err);

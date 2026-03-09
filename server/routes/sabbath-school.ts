@@ -9,6 +9,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
+import { requireAuth, getAuthUserId } from "../middleware/auth";
 import { generateDiscussionPrep } from "../services/ai-engine";
 import {
   getCurrentLessonNumber,
@@ -20,7 +21,7 @@ const router = Router();
 
 router.get("/api/sabbath-school/current", async (req, res) => {
   try {
-    const userId = (req.query.userId as string) || "guest";
+    const userId = getAuthUserId(req) || "guest";
 
     let q = await getMostRecentQuarterly();
 
@@ -95,7 +96,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
 
 router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   try {
-    const userId = (req.query.userId as string) || "guest";
+    const userId = getAuthUserId(req) || "guest";
     const lessonNumber = parseInt(req.params.lessonNumber);
 
     const quarterly = await getMostRecentQuarterly();
@@ -157,10 +158,11 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
 
 router.post("/api/sabbath-school/complete", async (req, res) => {
   try {
-    const { userId, dayId, journalEntry } = req.body;
+    const userId = getAuthUserId(req) || "guest";
+    const { dayId, journalEntry } = req.body;
 
-    if (!userId || !dayId) {
-      return res.status(400).json({ error: "userId and dayId are required" });
+    if (!dayId) {
+      return res.status(400).json({ error: "dayId is required" });
     }
 
     const existing = await db

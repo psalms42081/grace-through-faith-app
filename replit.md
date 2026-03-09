@@ -76,6 +76,12 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 **Authentication & Security:**
 - **bcryptjs:** Password hashing.
 - **jsonwebtoken:** JWT token generation and verification.
+- **Environment Validation:** `server/env.ts` validates required env vars (DATABASE_URL, JWT_SECRET) on startup via Zod; server exits if missing.
+- **Auth Middleware:** `server/middleware/auth.ts` exports `requireAuth`, `optionalAuth`, `getAuthUserId`, `getEffectiveUserId`, `checkProStatus`. All user-owned route writes use `requireAuth`; reads use `optionalAuth` + `getEffectiveUserId`. Client-supplied `userId` in body/query is ignored for authenticated requests.
+- **Rate Limiting:** `server/middleware/rate-limit.ts` keys by authenticated JWT user ID or falls back to anonymous bucket. Auth limiter uses default IP-based keying.
+- **Password Reset:** Disabled (returns 501) — no token/email verification exists. Frontend handles 501 gracefully.
+- **Startup Seeds:** Guarded behind `RUN_STARTUP_SEEDS=true` env flag. Production does not seed on boot.
+- **JWT_SECRET:** Required env secret, minimum 16 characters. No hardcoded fallback.
 
 **Maps & Location:**
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.

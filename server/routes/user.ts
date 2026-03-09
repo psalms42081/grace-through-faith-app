@@ -13,13 +13,13 @@ import { Router } from "express";
     bibleVerses,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { extractUserId } from "../middleware/auth";
+  import { requireAuth, optionalAuth, getEffectiveUserId } from "../middleware/auth";
 
   const router = Router();
 
-  router.post("/api/user/start-trial", async (req, res) => {
+  router.post("/api/user/start-trial", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = req.authUserId!;
     await db.update(users).set({ isPro: true }).where(eq(users.id, userId));
     return res.json({ success: true, isPro: true });
   } catch (err) {
@@ -27,9 +27,12 @@ import { Router } from "express";
   }
 });
 
-router.get("/api/user/pro-status", async (req, res) => {
+router.get("/api/user/pro-status", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({ isPro: false, isPatron: false, donationAmount: 0 });
+    }
     const [user] = await db
       .select({ isPro: users.isPro, isPatron: users.isPatron, donationAmount: users.donationAmount })
       .from(users)
@@ -44,9 +47,9 @@ router.get("/api/user/pro-status", async (req, res) => {
   }
 });
 
-router.post("/api/user/donate", async (req, res) => {
+router.post("/api/user/donate", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = req.authUserId!;
     const amount = Math.max(1, Math.round(Number(req.body?.amount) || 5));
 
     const [user] = await db
@@ -65,7 +68,7 @@ router.post("/api/user/donate", async (req, res) => {
       })
       .where(eq(users.id, userId));
 
-    console.log(`\n🌟 MISSION PARTNER: User ${userId} donated $${amount} (total: $${currentDonation + amount})`);
+    console.log(`\nMISSION PARTNER: User ${userId} donated $${amount} (total: $${currentDonation + amount})`);
 
     return res.json({
       success: true,
@@ -79,9 +82,9 @@ router.post("/api/user/donate", async (req, res) => {
   }
 });
 
-router.post("/api/user/track-activity", async (req, res) => {
+router.post("/api/user/track-activity", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = getEffectiveUserId(req);
     const featureType = String(req.body?.featureType || "unknown");
 
     const [existing] = await db
@@ -113,9 +116,12 @@ router.post("/api/user/track-activity", async (req, res) => {
   }
 });
 
-router.get("/api/user/mission-status", async (req, res) => {
+router.get("/api/user/mission-status", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({ shouldInvite: false, isPatron: false, totalUses: 0 });
+    }
 
     const [user] = await db
       .select({
@@ -159,9 +165,9 @@ router.get("/api/user/mission-status", async (req, res) => {
   }
 });
 
-router.post("/api/user/dismiss-mission-invite", async (req, res) => {
+router.post("/api/user/dismiss-mission-invite", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = req.authUserId!;
     await db
       .update(users)
       .set({ lastMissionInvite: new Date() })
@@ -173,8 +179,12 @@ router.post("/api/user/dismiss-mission-invite", async (req, res) => {
 });
 
 
-  router.get("/api/notes/:userId", async (req, res) => {
+  router.get("/api/notes/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const notes = await db
       .select({
         id: userNotes.id,
@@ -192,7 +202,7 @@ router.post("/api/user/dismiss-mission-invite", async (req, res) => {
       .from(userNotes)
       .leftJoin(bibleVerses, eq(userNotes.verseId, bibleVerses.id))
       .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
-      .where(eq(userNotes.userId, String(req.params.userId)))
+      .where(eq(userNotes.userId, userId))
       .orderBy(desc(userNotes.updatedAt));
     return res.json(notes);
   } catch (err) {
@@ -201,11 +211,12 @@ router.post("/api/user/dismiss-mission-invite", async (req, res) => {
   }
 });
 
-router.post("/api/notes", async (req, res) => {
+router.post("/api/notes", requireAuth, async (req, res) => {
   try {
-    const { userId, verseId, content } = req.body;
-    if (!userId || !verseId || !content) {
-      return res.status(400).json({ error: "userId, verseId, and content are required" });
+    const userId = req.authUserId!;
+    const { verseId, content } = req.body;
+    if (!verseId || !content) {
+      return res.status(400).json({ error: "verseId and content are required" });
     }
     const note = await db
       .insert(userNotes)
@@ -218,10 +229,12 @@ router.post("/api/notes", async (req, res) => {
   }
 });
 
-// ─── USER HIGHLIGHTS ──────────────────────────────────────────────────────────
-
-router.get("/api/highlights/:userId", async (req, res) => {
+router.get("/api/highlights/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const highlights = await db
       .select({
         id: userHighlights.id,
@@ -238,7 +251,7 @@ router.get("/api/highlights/:userId", async (req, res) => {
       .from(userHighlights)
       .leftJoin(bibleVerses, eq(userHighlights.verseId, bibleVerses.id))
       .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
-      .where(eq(userHighlights.userId, String(req.params.userId)))
+      .where(eq(userHighlights.userId, userId))
       .orderBy(desc(userHighlights.createdAt));
     return res.json(highlights);
   } catch (err) {
@@ -247,11 +260,12 @@ router.get("/api/highlights/:userId", async (req, res) => {
   }
 });
 
-router.post("/api/highlights", async (req, res) => {
+router.post("/api/highlights", requireAuth, async (req, res) => {
   try {
-    const { userId, verseId, color = "yellow" } = req.body;
-    if (!userId || !verseId) {
-      return res.status(400).json({ error: "userId and verseId are required" });
+    const userId = req.authUserId!;
+    const { verseId, color = "yellow" } = req.body;
+    if (!verseId) {
+      return res.status(400).json({ error: "verseId is required" });
     }
     const highlight = await db
       .insert(userHighlights)
@@ -265,10 +279,12 @@ router.post("/api/highlights", async (req, res) => {
   }
 });
 
-// ─── USER BOOKMARKS ───────────────────────────────────────────────────────────
-
-router.get("/api/bookmarks/:userId", async (req, res) => {
+router.get("/api/bookmarks/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const bookmarks = await db
       .select({
         id: userBookmarks.id,
@@ -285,7 +301,7 @@ router.get("/api/bookmarks/:userId", async (req, res) => {
       .from(userBookmarks)
       .leftJoin(bibleVerses, eq(userBookmarks.verseId, bibleVerses.id))
       .leftJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
-      .where(eq(userBookmarks.userId, String(req.params.userId)))
+      .where(eq(userBookmarks.userId, userId))
       .orderBy(desc(userBookmarks.createdAt));
     return res.json(bookmarks);
   } catch (err) {
@@ -294,11 +310,12 @@ router.get("/api/bookmarks/:userId", async (req, res) => {
   }
 });
 
-router.post("/api/bookmarks", async (req, res) => {
+router.post("/api/bookmarks", requireAuth, async (req, res) => {
   try {
-    const { userId, verseId, label } = req.body;
-    if (!userId || !verseId) {
-      return res.status(400).json({ error: "userId and verseId are required" });
+    const userId = req.authUserId!;
+    const { verseId, label } = req.body;
+    if (!verseId) {
+      return res.status(400).json({ error: "verseId is required" });
     }
     const bookmark = await db
       .insert(userBookmarks)
@@ -312,8 +329,15 @@ router.post("/api/bookmarks", async (req, res) => {
   }
 });
 
-router.delete("/api/bookmarks/:id", async (req, res) => {
+router.delete("/api/bookmarks/:id", requireAuth, async (req, res) => {
   try {
+    const userId = req.authUserId!;
+    const [existing] = await db
+      .select({ userId: userBookmarks.userId })
+      .from(userBookmarks)
+      .where(eq(userBookmarks.id, String(req.params.id)));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
     await db
       .delete(userBookmarks)
       .where(eq(userBookmarks.id, String(req.params.id)));
@@ -324,12 +348,13 @@ router.delete("/api/bookmarks/:id", async (req, res) => {
   }
 });
 
-// ─── TEXT-TO-SPEECH ──────────────────────────────────────────────────────────
 
-
-  router.get("/api/prayers", async (req, res) => {
+  router.get("/api/prayers", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const prayers = await db
       .select()
       .from(prayerRequests)
@@ -342,9 +367,10 @@ router.delete("/api/bookmarks/:id", async (req, res) => {
   }
 });
 
-router.post("/api/prayers", async (req, res) => {
+router.post("/api/prayers", requireAuth, async (req, res) => {
   try {
-    const { userId = "guest", title, content, category = "personal" } = req.body;
+    const userId = req.authUserId!;
+    const { title, content, category = "personal" } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     const [prayer] = await db
       .insert(prayerRequests)
@@ -357,9 +383,17 @@ router.post("/api/prayers", async (req, res) => {
   }
 });
 
-router.patch("/api/prayers/:id", async (req, res) => {
+router.patch("/api/prayers/:id", requireAuth, async (req, res) => {
   try {
+    const userId = req.authUserId!;
     const { id } = req.params;
+    const [existing] = await db
+      .select({ userId: prayerRequests.userId })
+      .from(prayerRequests)
+      .where(eq(prayerRequests.id, id));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
     const updates: Record<string, any> = {};
     if (req.body.title !== undefined) updates.title = req.body.title;
     if (req.body.content !== undefined) updates.content = req.body.content;
@@ -382,9 +416,16 @@ router.patch("/api/prayers/:id", async (req, res) => {
   }
 });
 
-router.delete("/api/prayers/:id", async (req, res) => {
+router.delete("/api/prayers/:id", requireAuth, async (req, res) => {
   try {
+    const userId = req.authUserId!;
     const { id } = req.params;
+    const [existing] = await db
+      .select({ userId: prayerRequests.userId })
+      .from(prayerRequests)
+      .where(eq(prayerRequests.id, id));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
     await db.delete(prayerRequests).where(eq(prayerRequests.id, id));
     return res.json({ ok: true });
   } catch (err) {
@@ -393,11 +434,10 @@ router.delete("/api/prayers/:id", async (req, res) => {
   }
 });
 
-// ─── READING HISTORY & STREAKS ─────────────────────────────────────────────
-
-router.post("/api/reading-history", async (req, res) => {
+router.post("/api/reading-history", optionalAuth, async (req, res) => {
   try {
-    const { userId = "guest", bookId, bookName, chapter, translation = "KJV" } = req.body;
+    const userId = getEffectiveUserId(req);
+    const { bookId, bookName, chapter, translation = "KJV" } = req.body;
     if (!bookId || !chapter || !bookName) {
       return res.status(400).json({ error: "bookId, bookName, and chapter are required" });
     }
@@ -424,7 +464,6 @@ router.post("/api/reading-history", async (req, res) => {
       const streak = existing[0];
       const lastDate = streak.lastReadDate;
       if (lastDate === today) {
-        // already read today
       } else {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -448,9 +487,12 @@ router.post("/api/reading-history", async (req, res) => {
   }
 });
 
-router.get("/api/reading-history/recent", async (req, res) => {
+router.get("/api/reading-history/recent", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const recent = await db
       .select()
       .from(readingHistory)
@@ -464,9 +506,12 @@ router.get("/api/reading-history/recent", async (req, res) => {
   }
 });
 
-router.get("/api/reading-streaks", async (req, res) => {
+router.get("/api/reading-streaks", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
+    }
     const [streak] = await db
       .select()
       .from(readingStreaks)
@@ -492,9 +537,18 @@ router.get("/api/reading-streaks", async (req, res) => {
   }
 });
 
-router.get("/api/reading-streaks/weekly", async (req, res) => {
+router.get("/api/reading-streaks/weekly", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({
+        daysRead: [false, false, false, false, false, false, false],
+        perfectWeeks: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastReadDate: null,
+      });
+    }
     const now = new Date();
     const dayOfWeek = now.getDay();
     const startOfWeek = new Date(now);
@@ -546,9 +600,16 @@ router.get("/api/reading-streaks/weekly", async (req, res) => {
   }
 });
 
-router.get("/api/spiritual-rings", async (req, res) => {
+router.get("/api/spiritual-rings", optionalAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({
+        study: { current: 0, goal: 3, label: "Study" },
+        prayer: { current: 0, goal: 2, label: "Prayer" },
+        engage: { current: 0, goal: 2, label: "Engage" },
+      });
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -589,4 +650,3 @@ router.get("/api/spiritual-rings", async (req, res) => {
 });
 
   export default router;
-  

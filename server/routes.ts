@@ -1,15 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { db } from "./db";
-import { users, prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, layerCompletions, progressTracks, userFeedback } from "../shared/schema";
+import { prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, layerCompletions, progressTracks, userFeedback } from "../shared/schema";
 import { eq } from "drizzle-orm";
-import { seedFormationData } from "./seed-formation";
-import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
-import { seedBeliefsWave2 } from "./seed-beliefs-wave2";
-import { seedBeliefsWave3 } from "./seed-beliefs-wave3";
-import { seedBeliefsWave4 } from "./seed-beliefs-wave4";
-import { seedGlobalChurches } from "../scripts/seed-global-churches";
-import { seedBibleBooks } from "./seed-books";
+import { env } from "./env";
+import { optionalAuth, getEffectiveUserId } from "./middleware/auth";
 
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -27,41 +22,47 @@ import analyticsRoutes from "./routes/analytics";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  db.select().from(users).where(eq(users.id, "guest")).then((rows) => {
-    if (rows.length === 0) {
-      db.insert(users).values({ id: "guest", username: "guest", password: "guest" }).then(() => {
-        console.log("Guest user created");
-      });
-    }
-  });
+  if (env.RUN_STARTUP_SEEDS === "true") {
+    console.log("[startup] RUN_STARTUP_SEEDS=true — running seed scripts...");
 
-  seedBibleBooks(db).catch((err) => {
-    console.error("Bible books seed error:", err);
-  });
+    const { seedBibleBooks } = await import("./seed-books");
+    const { seedFormationData } = await import("./seed-formation");
+    const { seedBeliefsWave1 } = await import("./seed-beliefs-wave1");
+    const { seedBeliefsWave2 } = await import("./seed-beliefs-wave2");
+    const { seedBeliefsWave3 } = await import("./seed-beliefs-wave3");
+    const { seedBeliefsWave4 } = await import("./seed-beliefs-wave4");
+    const { seedGlobalChurches } = await import("../scripts/seed-global-churches");
 
-  seedFormationData(db).catch((err) => {
-    console.error("Formation seed error:", err);
-  });
+    seedBibleBooks(db).catch((err) => {
+      console.error("Bible books seed error:", err);
+    });
 
-  seedBeliefsWave1(db).catch((err) => {
-    console.error("Wave 1 beliefs seed error:", err);
-  });
+    seedFormationData(db).catch((err) => {
+      console.error("Formation seed error:", err);
+    });
 
-  seedBeliefsWave2(db).catch((err) => {
-    console.error("Wave 2 beliefs seed error:", err);
-  });
+    seedBeliefsWave1(db).catch((err) => {
+      console.error("Wave 1 beliefs seed error:", err);
+    });
 
-  seedBeliefsWave3(db).catch((err) => {
-    console.error("Wave 3 beliefs seed error:", err);
-  });
+    seedBeliefsWave2(db).catch((err) => {
+      console.error("Wave 2 beliefs seed error:", err);
+    });
 
-  seedBeliefsWave4(db).catch((err) => {
-    console.error("Wave 4 beliefs seed error:", err);
-  });
+    seedBeliefsWave3(db).catch((err) => {
+      console.error("Wave 3 beliefs seed error:", err);
+    });
 
-  seedGlobalChurches().catch((err) => {
-    console.error("Global churches seed error:", err);
-  });
+    seedBeliefsWave4(db).catch((err) => {
+      console.error("Wave 4 beliefs seed error:", err);
+    });
+
+    seedGlobalChurches().catch((err) => {
+      console.error("Global churches seed error:", err);
+    });
+  } else {
+    console.log("[startup] RUN_STARTUP_SEEDS is not enabled — skipping seed scripts");
+  }
 
   app.use(authRoutes);
   app.use(userRoutes);
@@ -77,9 +78,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(sabbathSchoolRoutes);
   app.use("/api/analytics", analyticsRoutes);
 
-  app.post("/api/feedback", async (req, res) => {
+  app.post("/api/feedback", optionalAuth, async (req, res) => {
     try {
-      const { userId, topic, message } = req.body;
+      const userId = getEffectiveUserId(req);
+      const { topic, message } = req.body;
       if (!message?.trim()) {
         return res.status(400).json({ error: "Message is required" });
       }
@@ -87,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeTopic = allowedTopics.includes(topic) ? topic : "other";
       const safeMessage = message.trim().substring(0, 5000);
       await db.insert(userFeedback).values({
-        userId: userId || "guest",
+        userId,
         topic: safeTopic,
         message: safeMessage,
       });
@@ -98,9 +100,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/growth-map", async (req, res) => {
+  app.get("/api/growth-map", optionalAuth, async (req, res) => {
     try {
-      const userId = (req.query.userId as string) || "guest";
+      const userId = getEffectiveUserId(req);
 
       const prayerRows = await db.select().from(prayerRequests).where(eq(prayerRequests.userId, userId));
       const readingRows = await db.select().from(readingHistory).where(eq(readingHistory.userId, userId));

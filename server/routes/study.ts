@@ -29,7 +29,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc, countDistinct, count, ilike, or } from "drizzle-orm";
   import * as crypto from "crypto";
-  import { extractUserId, checkProStatus } from "../middleware/auth";
+  import { extractUserId, checkProStatus, requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import {
     generateStrongWordStudy,
     generateContextCards,
@@ -760,7 +760,7 @@ router.post("/api/devotionals/complete", async (req, res) => {
 
   router.get("/api/study-guide/active", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const verseReference = String(req.query.verseReference || "");
     if (!verseReference) {
       return res.status(400).json({ error: "verseReference is required" });
@@ -801,7 +801,8 @@ router.post("/api/devotionals/complete", async (req, res) => {
 
 router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseReference, verseText, bookName, chapter, verse, userId = "guest", forceNew = false, persona = "scholarly" } = req.body;
+    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "scholarly" } = req.body;
+    const userId = getAuthUserId(req) || "guest";
     if (!verseReference || !verseText) {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
@@ -874,7 +875,8 @@ const STAGE_ORDER = ["observe", "interpret", "apply"];
 
 router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) => {
   try {
-    const { sessionId, userResponse, userId = "guest" } = req.body;
+    const { sessionId, userResponse } = req.body;
+    const userId = getAuthUserId(req) || "guest";
     if (!sessionId || !userResponse) {
       return res.status(400).json({ error: "sessionId and userResponse are required" });
     }
@@ -1024,7 +1026,7 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =>
 
 router.get("/api/study-guide/sessions", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const sessions = await db.select().from(studyGuideSessions)
       .where(eq(studyGuideSessions.userId, userId))
       .orderBy(desc(studyGuideSessions.createdAt))
@@ -1220,7 +1222,7 @@ router.get("/api/chapter-summary", async (req, res) => {
 
 router.get("/api/analytics/growth", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
 
     const sessions = await db
       .select({
@@ -1324,7 +1326,7 @@ router.get("/api/analytics/growth", async (req, res) => {
 
 router.get("/api/layer-completions", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
     const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
 
@@ -1351,8 +1353,9 @@ router.get("/api/layer-completions", async (req, res) => {
 
 router.post("/api/layer-completions", async (req, res) => {
   try {
-    const { userId, bookId, chapter, layer } = req.body;
-    if (!userId || bookId == null || chapter == null || !layer) {
+    const userId = getAuthUserId(req) || "guest";
+    const { bookId, chapter, layer } = req.body;
+    if (bookId == null || chapter == null || !layer) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const validLayers = ["word", "context", "voices", "application"];
@@ -1362,7 +1365,7 @@ router.post("/api/layer-completions", async (req, res) => {
 
     await db
       .insert(layerCompletions)
-      .values({ userId: String(userId), bookId: Number(bookId), chapter: Number(chapter), layer: String(layer) })
+      .values({ userId, bookId: Number(bookId), chapter: Number(chapter), layer: String(layer) })
       .onConflictDoNothing();
 
     return res.json({ success: true });
@@ -1374,7 +1377,7 @@ router.post("/api/layer-completions", async (req, res) => {
 
 router.get("/api/layer-completions/book-summary", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const bookId = Number(req.query.bookId);
     if (!bookId) return res.status(400).json({ error: "bookId required" });
 
@@ -1409,7 +1412,7 @@ router.get("/api/layer-completions/book-summary", async (req, res) => {
 
 router.get("/api/study-journal", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     const layer = req.query.layer ? String(req.query.layer) : undefined;
@@ -1443,8 +1446,9 @@ router.get("/api/study-journal", async (req, res) => {
 
 router.post("/api/study-journal", async (req, res) => {
   try {
-    const { userId, bookId, chapter, layer, sectionKey, content } = req.body;
-    if (!userId || bookId == null || chapter == null || !layer || !sectionKey) {
+    const userId = getAuthUserId(req) || "guest";
+    const { bookId, chapter, layer, sectionKey, content } = req.body;
+    if (bookId == null || chapter == null || !layer || !sectionKey) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -1453,7 +1457,7 @@ router.post("/api/study-journal", async (req, res) => {
         .delete(studyJournalEntries)
         .where(
           and(
-            eq(studyJournalEntries.userId, String(userId)),
+            eq(studyJournalEntries.userId, userId),
             eq(studyJournalEntries.bookId, Number(bookId)),
             eq(studyJournalEntries.chapter, Number(chapter)),
             eq(studyJournalEntries.layer, String(layer)),
@@ -1468,7 +1472,7 @@ router.post("/api/study-journal", async (req, res) => {
       .from(studyJournalEntries)
       .where(
         and(
-          eq(studyJournalEntries.userId, String(userId)),
+          eq(studyJournalEntries.userId, userId),
           eq(studyJournalEntries.bookId, Number(bookId)),
           eq(studyJournalEntries.chapter, Number(chapter)),
           eq(studyJournalEntries.layer, String(layer)),
@@ -1485,7 +1489,7 @@ router.post("/api/study-journal", async (req, res) => {
       await db
         .insert(studyJournalEntries)
         .values({
-          userId: String(userId),
+          userId,
           bookId: Number(bookId),
           chapter: Number(chapter),
           layer: String(layer),
@@ -1503,7 +1507,7 @@ router.post("/api/study-journal", async (req, res) => {
 
 router.get("/api/study-journal/revisit", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const limit = Math.min(Number(req.query.limit) || 10, 20);
 
     const entries = await db

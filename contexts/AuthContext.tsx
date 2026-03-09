@@ -167,22 +167,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const resetPassword = useCallback(async (email: string, newPassword: string) => {
+  const resetPassword = useCallback(async (email: string, _newPassword: string) => {
     try {
-      const res = await apiRequest("POST", "/api/auth/reset-password", { email, newPassword });
-      const data = (await (res as any).json()) as { user: AuthUser; token: string; error?: string };
+      const res = await apiRequest("POST", "/api/auth/reset-password", { email, newPassword: _newPassword });
+      const status = (res as any).status;
+      const data = (await (res as any).json()) as { user?: AuthUser; token?: string; error?: string };
+
+      if (status === 501) {
+        return { success: false, error: data.error || "Password reset is not available. Please contact support." };
+      }
 
       if (data.error) return { success: false, error: data.error };
 
-      tokenRef.current = data.token;
-      setToken(data.token);
-      setUser(data.user);
-      setAuthTokenGetter(() => data.token);
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
-      queryClient.clear();
+      if (data.token && data.user) {
+        tokenRef.current = data.token;
+        setToken(data.token);
+        setUser(data.user);
+        setAuthTokenGetter(() => data.token!);
+        await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        queryClient.clear();
+      }
       return { success: true };
     } catch (err: any) {
       const msg = err.message || "Password reset failed";
+      if (msg.includes("501")) {
+        return { success: false, error: "Password reset is not available. Please contact support." };
+      }
       const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
       try {
         const parsed = JSON.parse(errorText);

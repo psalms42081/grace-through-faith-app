@@ -14,7 +14,7 @@ import { Router } from "express";
     dinnerTableTopics,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { extractUserId } from "../middleware/auth";
+  import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
   import {
     generatePauseAndWonder,
     generateStoryScenes,
@@ -208,11 +208,12 @@ async function checkAndAwardBadges(userId: string) {
   }
 }
 
-router.post("/api/kids/progress/complete", async (req, res) => {
+router.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
   try {
-    const { userId, storyId } = req.body;
-    if (!userId || !storyId) {
-      return res.status(400).json({ error: "userId and storyId are required" });
+    const userId = getEffectiveUserId(req);
+    const { storyId } = req.body;
+    if (!storyId) {
+      return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db
       .select()
@@ -284,11 +285,12 @@ async function triggerParentBridge(storyId: string, quizScore: number, childProf
   console.log(`   🍽️ Dinner Question: ${topicData.dinnerQuestion}\n`);
 }
 
-router.post("/api/kids/progress/quiz", async (req, res) => {
+router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
   try {
-    const { userId, storyId, score, childProfileId } = req.body;
-    if (!userId || !storyId || score === undefined) {
-      return res.status(400).json({ error: "userId, storyId, and score are required" });
+    const userId = getEffectiveUserId(req);
+    const { storyId, score, childProfileId } = req.body;
+    if (!storyId || score === undefined) {
+      return res.status(400).json({ error: "storyId and score are required" });
     }
     const existing = await db
       .select()
@@ -327,11 +329,12 @@ router.post("/api/kids/progress/quiz", async (req, res) => {
   }
 });
 
-router.post("/api/kids/progress/memorize", async (req, res) => {
+router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
   try {
-    const { userId, storyId } = req.body;
-    if (!userId || !storyId) {
-      return res.status(400).json({ error: "userId and storyId are required" });
+    const userId = getEffectiveUserId(req);
+    const { storyId } = req.body;
+    if (!storyId) {
+      return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db
       .select()
@@ -362,12 +365,13 @@ router.post("/api/kids/progress/memorize", async (req, res) => {
   }
 });
 
-router.get("/api/kids/progress/:userId", async (req, res) => {
+router.get("/api/kids/progress/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
     const progressRows = await db
       .select()
       .from(kidsProgress)
-      .where(eq(kidsProgress.userId, req.params.userId));
+      .where(eq(kidsProgress.userId, userId));
     return res.json(progressRows);
   } catch (err) {
     console.error(err);
@@ -385,8 +389,9 @@ router.get("/api/kids/badges", async (_req, res) => {
   }
 });
 
-router.get("/api/kids/badges/:userId", async (req, res) => {
+router.get("/api/kids/badges/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
     const userBadges = await db
       .select({
         userBadge: kidsUserBadges,
@@ -394,7 +399,7 @@ router.get("/api/kids/badges/:userId", async (req, res) => {
       })
       .from(kidsUserBadges)
       .innerJoin(kidsBadges, eq(kidsUserBadges.badgeId, kidsBadges.id))
-      .where(eq(kidsUserBadges.userId, req.params.userId));
+      .where(eq(kidsUserBadges.userId, userId));
     const flattened = userBadges.map(ub => ({
       ...ub.badge,
       earnedAt: ub.userBadge.earnedAt,
@@ -406,12 +411,13 @@ router.get("/api/kids/badges/:userId", async (req, res) => {
   }
 });
 
-router.get("/api/kids/streak/:userId", async (req, res) => {
+router.get("/api/kids/streak/:userId", optionalAuth, async (req, res) => {
   try {
+    const userId = getEffectiveUserId(req);
     const streak = await db
       .select()
       .from(kidsStreaks)
-      .where(eq(kidsStreaks.userId, req.params.userId))
+      .where(eq(kidsStreaks.userId, userId))
       .limit(1);
     if (!streak.length) {
       return res.json({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
@@ -423,12 +429,9 @@ router.get("/api/kids/streak/:userId", async (req, res) => {
   }
 });
 
-router.post("/api/kids/streak/update", async (req, res) => {
+router.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
+    const userId = getEffectiveUserId(req);
     const today = new Date().toISOString().split("T")[0];
     const existing = await db
       .select()
@@ -533,9 +536,10 @@ router.get("/api/kids/stories/:id/wonder", async (req, res) => {
   }
 });
 
-router.post("/api/kids/wonder/answer", async (req, res) => {
+router.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
   try {
-    const { userId = "guest", storyId, momentIndex, childProfileId } = req.body;
+    const userId = getEffectiveUserId(req);
+    const { storyId, momentIndex, childProfileId } = req.body;
     if (!storyId || momentIndex === undefined) {
       return res.status(400).json({ error: "storyId and momentIndex are required" });
     }
@@ -763,9 +767,10 @@ router.get("/api/kids/audio-assets", (_req, res) => {
   });
 });
 
-router.post("/api/kids/story/award-points", async (req, res) => {
+router.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
   try {
-    const { userId = "guest", storyId, childProfileId: providedProfileId, points = 25 } = req.body;
+    const userId = getEffectiveUserId(req);
+    const { storyId, childProfileId: providedProfileId, points = 25 } = req.body;
 
     let profileId = providedProfileId;
     if (!profileId && userId !== "guest") {
@@ -820,9 +825,9 @@ router.post("/api/kids/story/award-points", async (req, res) => {
   }
 });
 
-router.get("/api/kids/profile/:userId/stats", async (req, res) => {
+router.get("/api/kids/profile/:userId/stats", optionalAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = getEffectiveUserId(req);
     const [profile] = await db
       .select({
         totalPoints: childProfiles.totalPoints,

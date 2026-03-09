@@ -20,14 +20,14 @@ import { Router } from "express";
     userPlanProgress,
   } from "../../shared/schema";
   import { eq, and, ilike, sql, desc } from "drizzle-orm";
-  import { extractUserId, generateCode } from "../middleware/auth";
+  import { generateCode, requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
 
   const router = Router();
 
-  router.post("/api/family/create", async (req, res) => {
+  router.post("/api/family/create", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "Family name is required" });
 
@@ -60,9 +60,9 @@ import { Router } from "express";
   }
 });
 
-router.post("/api/family/join", async (req, res) => {
+router.post("/api/family/join", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { inviteCode } = req.body;
     if (!inviteCode) return res.status(400).json({ error: "Invite code is required" });
 
@@ -87,7 +87,7 @@ router.post("/api/family/join", async (req, res) => {
 
 router.get("/api/family/info", async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = getAuthUserId(req) || "guest";
     const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
     if (!user?.familyId) {
       return res.json({ family: null });
@@ -111,7 +111,7 @@ router.get("/api/family/info", async (req, res) => {
 
 router.get("/api/family/members", async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = getAuthUserId(req) || "guest";
     const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
     if (!user?.familyId) return res.json({ members: [] });
 
@@ -129,9 +129,9 @@ router.get("/api/family/members", async (req, res) => {
 });
 
 
-  router.post("/api/groups/create", async (req, res) => {
+  router.post("/api/groups/create", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { name, description, groupType, isPublic } = req.body;
     if (!name) return res.status(400).json({ error: "Group name is required" });
 
@@ -169,9 +169,9 @@ router.get("/api/family/members", async (req, res) => {
   }
 });
 
-router.post("/api/groups/join", async (req, res) => {
+router.post("/api/groups/join", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { joinCode } = req.body;
     if (!joinCode) return res.status(400).json({ error: "Join code is required" });
 
@@ -205,7 +205,7 @@ router.post("/api/groups/join", async (req, res) => {
 
 router.get("/api/groups", async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = getAuthUserId(req) || "guest";
     const memberships = await db.select({ groupId: prayerGroupMembers.groupId })
       .from(prayerGroupMembers).where(eq(prayerGroupMembers.userId, userId));
 
@@ -281,9 +281,9 @@ router.get("/api/groups/:id", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/leave", async (req, res) => {
+router.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
 
     await db.delete(prayerGroupMembers)
@@ -314,9 +314,9 @@ router.get("/api/groups/:id/prayers", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/prayers", async (req, res) => {
+router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { title, content, authorName } = req.body;
     if (!title) return res.status(400).json({ error: "Prayer title is required" });
@@ -373,7 +373,7 @@ router.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/prayers/:prayerId/answered", async (req, res) => {
+router.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (req, res) => {
   try {
     const { prayerId } = req.params;
     await db.update(prayerRequests).set({
@@ -390,9 +390,9 @@ router.post("/api/groups/:id/prayers/:prayerId/answered", async (req, res) => {
 
 // ─── SMALL GROUPS 2.0 — DISCUSSIONS, STUDY PLANS, ROLES ─────────────────
 
-router.post("/api/groups/:id/assign-track", async (req, res) => {
+router.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { trackId } = req.body;
     if (!trackId) return res.status(400).json({ error: "Track ID is required" });
@@ -415,9 +415,9 @@ router.post("/api/groups/:id/assign-track", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/promote", async (req, res) => {
+router.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { targetUserId, newRole } = req.body;
     if (!targetUserId || !newRole) return res.status(400).json({ error: "Target user and role required" });
@@ -441,9 +441,9 @@ router.post("/api/groups/:id/promote", async (req, res) => {
   }
 });
 
-router.get("/api/groups/:id/discussions", async (req, res) => {
+router.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const [membership] = await db.select().from(prayerGroupMembers)
       .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
@@ -459,9 +459,9 @@ router.get("/api/groups/:id/discussions", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/discussion", async (req, res) => {
+router.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
@@ -499,9 +499,9 @@ router.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res)
   }
 });
 
-router.post("/api/groups/:id/discussions/:discussionId/reply", async (req, res) => {
+router.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id, discussionId } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
@@ -543,9 +543,9 @@ router.get("/api/groups/:id/announcements", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/announcement", async (req, res) => {
+router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
@@ -648,9 +648,9 @@ router.get("/api/churches/:id", async (req, res) => {
 
 // ─── GROUP DEVOTIONAL PLANS ──────────────────────────────────────────────
 
-router.post("/api/groups/:id/assign-plan", async (req, res) => {
+router.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { planId } = req.body;
     if (!planId) return res.status(400).json({ error: "Plan ID is required" });
@@ -675,7 +675,7 @@ router.post("/api/groups/:id/assign-plan", async (req, res) => {
 
 router.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = getAuthUserId(req) || "guest";
     const { id } = req.params;
     const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
     if (!group) return res.status(404).json({ error: "Group not found" });
@@ -743,9 +743,9 @@ router.get("/api/groups/:id/plan-progress", async (req, res) => {
   }
 });
 
-router.post("/api/groups/:id/share-reflection", async (req, res) => {
+router.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const { content, dayTitle, passageLabel } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
@@ -785,9 +785,9 @@ function generateRoomName(): string {
   return room;
 }
 
-router.post("/api/streams/create", async (req, res) => {
+router.post("/api/streams/create", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { title, groupId, churchId } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
 
@@ -830,14 +830,13 @@ router.get("/api/streams/:id/token", async (req, res) => {
   try {
     const { id } = req.params;
     const displayName = (req.query.displayName as string) || "Guest";
-    let userId: string | null = null;
-    try { userId = extractUserId(req); } catch {}
+    const userId = getAuthUserId(req);
 
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
 
-    const isHost = userId === session.hostUserId;
+    const isHost = !!userId && userId === session.hostUserId;
     const token = await generateToken(session.roomUrl, displayName, isHost);
 
     return res.json({
@@ -856,14 +855,13 @@ router.get("/api/streams/:id/room", async (req, res) => {
     const { id } = req.params;
     const displayName = (req.query.displayName as string) || "Guest";
 
-    let userId: string | null = null;
-    try { userId = extractUserId(req); } catch {}
+    const userId = getAuthUserId(req);
 
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).send("Session not found");
     if (session.status === "ended") return res.status(410).send("Session has ended");
 
-    const isHost = userId === session.hostUserId;
+    const isHost = !!userId && userId === session.hostUserId;
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
 
@@ -928,9 +926,9 @@ router.get("/api/streams/:id", async (req, res) => {
   }
 });
 
-router.post("/api/streams/:id/end", async (req, res) => {
+router.post("/api/streams/:id/end", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = req.authUserId!;
     const { id } = req.params;
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Stream not found" });
@@ -958,7 +956,7 @@ router.post("/api/streams/:id/end", async (req, res) => {
 
 router.get("/api/sabbath/reflections", async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = getAuthUserId(req) || "guest";
     const date = String(req.query.date || "");
     if (!date) return res.status(400).json({ error: "date is required" });
 
@@ -979,11 +977,12 @@ router.get("/api/sabbath/reflections", async (req, res) => {
   }
 });
 
-router.post("/api/sabbath/reflections", async (req, res) => {
+router.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
   try {
-    const { userId, date, prompt, response } = req.body;
-    if (!userId || !date || !prompt || !response) {
-      return res.status(400).json({ error: "userId, date, prompt, and response are required" });
+    const userId = req.authUserId!;
+    const { date, prompt, response } = req.body;
+    if (!date || !prompt || !response) {
+      return res.status(400).json({ error: "date, prompt, and response are required" });
     }
 
     const existing = await db

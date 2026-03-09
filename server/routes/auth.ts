@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { users } from "../../shared/schema";
 import { eq } from "drizzle-orm";
-import { JWT_SECRET, extractUserId } from "../middleware/auth";
+import { JWT_SECRET, requireAuth, getAuthUserId } from "../middleware/auth";
 import { validate, authRegisterSchema, authLoginSchema } from "../middleware/validate";
 import { authLimiter } from "../middleware/rate-limit";
 
@@ -98,13 +98,9 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
   }
 });
 
-router.post("/api/auth/delete-account", async (req, res) => {
+router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
   try {
-    const userId = extractUserId(req);
-    if (userId === "guest") {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    await db.delete(users).where(eq(users.id, userId));
+    await db.delete(users).where(eq(users.id, req.authUserId!));
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete account error:", err);
@@ -112,45 +108,14 @@ router.post("/api/auth/delete-account", async (req, res) => {
   }
 });
 
-router.post("/api/auth/reset-password", async (req, res) => {
-  try {
-    const { email, newPassword } = req.body;
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: "Email and new password are required" });
-    }
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = newPassword.trim();
-    if (cleanPassword.length < 4) {
-      return res.status(400).json({ error: "Password must be at least 4 characters" });
-    }
-    const [user] = await db.select().from(users).where(eq(users.email, cleanEmail));
-    if (!user) {
-      return res.status(404).json({ error: "No account found with this email" });
-    }
-    const hashedPassword = await bcrypt.hash(cleanPassword, 10);
-    await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
-    return res.json({
-      user: {
-        id: user.id,
-        displayName: user.displayName,
-        email: user.email,
-        familyId: user.familyId,
-        isPro: user.isPro,
-        isPatron: user.isPatron,
-      },
-      token,
-    });
-  } catch (err) {
-    console.error("Reset password error:", err);
-    return res.status(500).json({ error: "Failed to reset password" });
-  }
+router.post("/api/auth/reset-password", async (_req, res) => {
+  return res.status(501).json({ error: "Password reset is not available. Please contact support for account recovery." });
 });
 
 router.get("/api/auth/me", async (req, res) => {
   try {
-    const userId = extractUserId(req);
-    if (userId === "guest") {
+    const userId = getAuthUserId(req);
+    if (!userId) {
       return res.json({ user: null, isGuest: true });
     }
 

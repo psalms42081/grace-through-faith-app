@@ -15,7 +15,7 @@ import { Router, Request } from "express";
   } from "../../shared/schema";
   import { CONTENT_LANGUAGES } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { extractUserId, checkProStatus } from "../middleware/auth";
+  import { requireAuth, checkProStatus } from "../middleware/auth";
   import {
     generateConversationStarter,
     generateDinnerTableTopic,
@@ -24,9 +24,9 @@ import { Router, Request } from "express";
 
   const router = Router();
 
-  router.get("/api/family/children", async (req, res) => {
+  router.get("/api/family/children", requireAuth, async (req, res) => {
   try {
-    const parentId = String(req.query.userId || req.query.parentId || "guest");
+    const parentId = req.authUserId!;
     const children = await db
       .select()
       .from(childProfiles)
@@ -39,9 +39,9 @@ import { Router, Request } from "express";
   }
 });
 
-router.post("/api/family/children", async (req, res) => {
+router.post("/api/family/children", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = req.authUserId!;
     const { name, avatarUrl, ageGroup } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Child name is required" });
@@ -63,9 +63,9 @@ router.post("/api/family/children", async (req, res) => {
   }
 });
 
-router.patch("/api/family/children/:id", async (req, res) => {
+router.patch("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.body?.userId || "guest");
+    const userId = req.authUserId!;
     const { name, ageGroup } = req.body;
     const [existing] = await db
       .select()
@@ -93,9 +93,9 @@ router.patch("/api/family/children/:id", async (req, res) => {
   }
 });
 
-router.delete("/api/family/children/:id", async (req, res) => {
+router.delete("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
-    const userId = String(req.query.userId || "guest");
+    const userId = req.authUserId!;
     const [child] = await db
       .select()
       .from(childProfiles)
@@ -111,9 +111,9 @@ router.delete("/api/family/children/:id", async (req, res) => {
   }
 });
 
-router.get("/api/family/stats", checkProStatus, async (req, res) => {
+router.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) => {
   try {
-    const parentId = String(req.query.parentId || req.query.userId || "guest");
+    const parentId = req.authUserId!;
 
     const children = await db
       .select()
@@ -204,10 +204,10 @@ router.get("/api/family/stats", checkProStatus, async (req, res) => {
   }
 });
 
-router.get("/api/family/conversation-starter/:childId", checkProStatus, async (req, res) => {
+router.get("/api/family/conversation-starter/:childId", requireAuth, checkProStatus, async (req, res) => {
   try {
     const childId = String(req.params.childId);
-    const userId = String(req.query.userId || "guest");
+    const userId = req.authUserId!;
 
     const [child] = await db
       .select()
@@ -243,9 +243,9 @@ router.get("/api/family/conversation-starter/:childId", checkProStatus, async (r
 
 // ─── FAMILY KINGDOM MAP (Heatmap) ────────────────────────────────────────
 
-router.get("/api/family/heatmap", checkProStatus, async (req, res) => {
+router.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res) => {
   try {
-    const parentId = String(req.query.userId || req.query.parentId || "guest");
+    const parentId = req.authUserId!;
 
     const allBooks = await db
       .select()
@@ -365,9 +365,9 @@ router.get("/api/family/heatmap", checkProStatus, async (req, res) => {
 
 // ─── FAMILY ALTAR (Prayer Wall) ──────────────────────────────────────────
 
-router.get("/api/family/prayers", checkProStatus, async (req, res) => {
+router.get("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
   try {
-    const familyId = String(req.query.userId || req.query.familyId || "guest");
+    const familyId = req.authUserId!;
     const prayers = await db
       .select()
       .from(prayerRequests)
@@ -380,15 +380,15 @@ router.get("/api/family/prayers", checkProStatus, async (req, res) => {
   }
 });
 
-router.post("/api/family/prayers", checkProStatus, async (req, res) => {
+router.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
   try {
-    const { userId, familyId, title, content, category, authorName } = req.body;
+    const { title, content, category, authorName } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Prayer title is required" });
     }
 
-    const fId = familyId || userId || "guest";
-    const uId = userId || "guest";
+    const uId = req.authUserId!;
+    const fId = uId;
 
     let scripturalVerse: string | null = null;
     let scripturalNote: string | null = null;
@@ -426,10 +426,10 @@ router.post("/api/family/prayers", checkProStatus, async (req, res) => {
   }
 });
 
-router.post("/api/family/prayers/:id/support", checkProStatus, async (req, res) => {
+router.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id = String(req.params.id);
-    const memberName = String(req.body.memberName || req.body.userId || "guest");
+    const memberName = String(req.body.memberName || req.authUserId!);
 
     const [prayer] = await db
       .select()
@@ -463,10 +463,20 @@ router.post("/api/family/prayers/:id/support", checkProStatus, async (req, res) 
   }
 });
 
-router.post("/api/family/prayers/:id/answered", checkProStatus, async (req, res) => {
+router.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id = String(req.params.id);
+    const userId = req.authUserId!;
     const answered = req.body.answered !== false;
+
+    const [prayer] = await db
+      .select()
+      .from(prayerRequests)
+      .where(and(eq(prayerRequests.id, id), eq(prayerRequests.familyId, userId)));
+
+    if (!prayer) {
+      return res.status(404).json({ error: "Prayer not found" });
+    }
 
     const [updated] = await db
       .update(prayerRequests)
@@ -478,10 +488,6 @@ router.post("/api/family/prayers/:id/answered", checkProStatus, async (req, res)
       .where(eq(prayerRequests.id, id))
       .returning();
 
-    if (!updated) {
-      return res.status(404).json({ error: "Prayer not found" });
-    }
-
     return res.json(updated);
   } catch (err) {
     console.error("Prayer answered error:", err);
@@ -491,9 +497,9 @@ router.post("/api/family/prayers/:id/answered", checkProStatus, async (req, res)
 
 // ─── DINNER TABLE TOPICS (Parent Bridge) ─────────────────────────────────
 
-router.get("/api/family/dinner-topics", checkProStatus, async (req, res) => {
+router.get("/api/family/dinner-topics", requireAuth, checkProStatus, async (req, res) => {
   try {
-    const parentId = String(req.query.userId || req.query.parentId || "guest");
+    const parentId = req.authUserId!;
     const topics = await db
       .select()
       .from(dinnerTableTopics)
@@ -507,10 +513,10 @@ router.get("/api/family/dinner-topics", checkProStatus, async (req, res) => {
   }
 });
 
-router.post("/api/family/dinner-topics/:id/discussed", checkProStatus, async (req, res) => {
+router.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id = String(req.params.id);
-    const userId = String(req.body.userId || "guest");
+    const userId = req.authUserId!;
 
     const [topic] = await db
       .select()

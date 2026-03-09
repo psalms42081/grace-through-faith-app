@@ -1,0 +1,596 @@
+Yes — and you’re right to frame it that way.
+
+This is now a **production hardening pass**, not an MVP rewrite.
+
+From the codebase review, the biggest real issues are:
+
+* auth trusts `userId` from query/body in too many places
+* password reset is unsafe
+* JWT secret has a hardcoded fallback
+* rate limits are keyed off spoofable client ids
+* startup seeding is happening during normal app boot
+* guest mode is mixed into authenticated server-side writes
+
+Below is a **copy-paste Replit prompt** that tells it exactly what to fix.
+
+---
+
+## Replit prompt
+
+You are working on an existing Expo + Express + Drizzle app. This is a **production hardening pass**, not a feature rewrite. Preserve app behavior and UI as much as possible, but fix the security and backend architecture issues below.
+
+### Goal
+
+Make the app production-safe by fixing auth, authorization, password reset, rate limiting, environment validation, and startup seeding behavior.
+
+### Important constraints
+
+* Do **not** remove product features.
+* Do **not** break public/read-only content endpoints unless absolutely necessary.
+* Do **not** redesign the UI.
+* Keep guest mode for local/offline/non-account usage where reasonable, but **guest must not be allowed to write or read authenticated user-owned server data**.
+* Prefer small, targeted, maintainable changes.
+* After changes, run typecheck/build and fix any errors.
+
+---
+
+# 1. Fix auth foundation
+
+## Files to inspect first
+
+* `server/middleware/auth.ts`
+* `server/routes/auth.ts`
+* `server/middleware/rate-limit.ts`
+* `server/routes/user.ts`
+* `server/routes/family-dashboard.ts`
+* `server/routes/community.ts`
+* `server/routes/study.ts`
+* `server/routes/formation.ts`
+* `server/routes/sabbath-school.ts`
+* `server/routes.ts`
+* `server/index.ts`
+* `contexts/AuthContext.tsx`
+* frontend files that append `userId` in query/body for protected endpoints
+
+## Problems to fix
+
+Right now the backend often trusts:
+
+* `req.query.userId`
+* `req.body.userId`
+* path params like `:userId`
+
+That is not safe for authenticated routes.
+
+## Implement in `server/middleware/auth.ts`
+
+Replace the current loose auth approach with these helpers:
+
+### A. `getAuthUserId(req): string | null`
+
+* Read bearer token from `Authorization`
+* Verify JWT
+* Return `userId` from token if valid
+* Return `null` if no valid token
+
+### B. `requireAuth(req, res, next)`
+
+* Use `getAuthUserId`
+* If missing/invalid token, return `401`
+* Attach `req.auth = { userId }` or similar typed field
+* Continue on success
+
+### C. `optionalAuth(req, res, next)`
+
+* If valid token exists, attach `req.auth.userId`
+* Otherwise continue with `req.auth = null`
+
+### D. `getEffectiveUserId(req): string`
+
+* If authenticated, return `req.auth.userId`
+* Otherwise return `"guest"`
+
+### E. `requireSelfAccess(candidateUserId, authUserId)`
+
+* Small helper to compare ids for routes where a path param exists
+* If mismatch, return false / throw
+
+### F. `checkProStatus`
+
+* It must no longer read `req.query.userId` or `req.body.userId`
+* It must only use authenticated user identity
+* If unauthenticated, return `401`
+* If authenticated but not pro, return `403`
+
+### G. JWT secret handling
+
+Current behavior has a hardcoded fallback secret. Remove that.
+
+Create production-safe behavior:
+
+* if `JWT_SECRET` is missing, server must fail to start
+* no hardcoded production fallback secret
+* local dev can still use `.env`
+
+---
+
+# 2. Add environment validation
+
+## Create `server/env.ts`
+
+Use `zod` to validate environment variables on startup.
+
+Required:
+
+* `DATABASE_URL`
+* `JWT_SECRET`
+
+Optional:
+
+* `AI_INTEGRATIONS_OPENAI_API_KEY`
+* `AI_INTEGRATIONS_OPENAI_BASE_URL`
+* `ELEVENLABS_API_KEY`
+* `LIVEKIT_API_KEY`
+* `LIVEKIT_API_SECRET`
+* `LIVEKIT_URL`
+* `RUN_STARTUP_SEEDS`
+* `ALLOW_INSECURE_PASSWORD_RESET` (default false)
+
+Export a parsed `env` object and use it instead of raw `process.env` where practical.
+
+## Create `.env.example`
+
+Add a minimal example file documenting required vars.
+
+---
+
+# 3. Disable insecure password reset immediately
+
+## File
+
+* `server/routes/auth.ts`
+
+## Problem
+
+`POST /api/auth/reset-password` currently allows reset with just:
+
+* email
+* newPassword
+
+That is not production-safe.
+
+## Fix
+
+For now, do **not** build a full email reset flow unless it already exists. Instead:
+
+### Replace endpoint behavior with one of these safe options:
+
+Preferred:
+
+* return `501` with message:
+  `"Password reset is temporarily disabled until secure email verification is implemented."`
+
+Alternative only if already supported in codebase:
+
+* implement signed reset tokens, expiry, one-time use, and verified email flow
+
+Do not leave the current insecure reset logic in place.
+
+---
+
+# 4. Fix rate limiting
+
+## File
+
+* `server/middleware/rate-limit.ts`
+
+## Problem
+
+AI/TTS rate limits currently key off client-supplied `userId`, which is spoofable.
+
+## Fix
+
+Update limiter key generation rules:
+
+### For authenticated requests
+
+* key by verified JWT user id
+
+### For unauthenticated requests
+
+* key by IP address
+* optionally combine IP + route class
+
+### Add separate helper
+
+Create a reusable function like `getRateLimitKey(req)`.
+
+Do not use `req.query.userId` or `req.body.userId` for rate limiting anymore.
+
+---
+
+# 5. Stop seeding on every server boot
+
+## File
+
+* `server/routes.ts`
+
+## Problem
+
+Server startup currently triggers:
+
+* guest user creation
+* bible books seed
+* formation seed
+* beliefs wave seeds
+* global churches seed
+
+This should not happen during normal production boot.
+
+## Fix
+
+Move startup seed logic behind an explicit env flag.
+
+### Required behavior
+
+* By default, production app boot should **not** seed anything
+* Only run startup seeds if `RUN_STARTUP_SEEDS === "true"`
+* Add clear logs showing whether startup seeds are enabled or skipped
+
+### Keep guest handling
+
+Do **not** create a `"guest"` database user automatically on every boot.
+Guest mode should not rely on a physical guest row unless absolutely required.
+If the schema forces it in some places, handle it minimally and intentionally, not as broad startup behavior.
+
+---
+
+# 6. Lock down user-owned routes
+
+## File
+
+* `server/routes/user.ts`
+
+This file has several insecure patterns.
+
+## Required route policy
+
+### Public or guest-safe reads
+
+These may remain readable for guest/local use if they do not expose another user’s private data.
+
+### Authenticated user-owned reads/writes
+
+These must require JWT auth and must use the authenticated user id from token, never from request body/query/path.
+
+## Fix these endpoints specifically
+
+### `/api/user/start-trial`
+
+* require auth
+* ignore `req.body.userId`
+* apply to authenticated user only
+
+### `/api/user/pro-status`
+
+* if authenticated, return real status for auth user
+* if guest, return safe default guest status
+* do not allow querying another user id
+
+### `/api/user/donate`
+
+* require auth
+* ignore request `userId`
+* apply to authenticated user only
+
+### `/api/user/track-activity`
+
+* for authenticated users: write against auth user id
+* for guests: either skip server write and return success, or store only safe guest aggregate without creating user-owned records
+* do not trust body `userId`
+
+### `/api/user/mission-status`
+
+* same rule as pro-status: auth user only, guest gets safe default
+* no cross-user lookup via query param
+
+### `/api/user/dismiss-mission-invite`
+
+* require auth
+* use auth user id only
+
+### Notes / highlights / bookmarks / prayers / reading history / streaks
+
+Audit all of these.
+
+#### Private endpoints that must require auth:
+
+* creating notes
+* reading your notes
+* creating highlights
+* reading your highlights
+* creating bookmarks
+* reading your bookmarks
+* deleting bookmarks
+* creating prayers
+* editing prayers
+* deleting prayers
+* writing reading history if persisted server-side
+* reading streaks/history if tied to a real account
+
+#### For routes currently using `:userId`
+
+Examples:
+
+* `/api/notes/:userId`
+* `/api/highlights/:userId`
+* `/api/bookmarks/:userId`
+
+Change them so:
+
+* they require auth
+* they verify the path param matches the authenticated user, or better:
+* remove path-param dependence internally and always use auth user id
+
+If changing route signatures would break too much frontend code, keep the same URL shape but ignore the provided `:userId` unless it matches the token subject.
+
+#### For destructive actions
+
+Examples:
+
+* `DELETE /api/bookmarks/:id`
+* `PATCH /api/prayers/:id`
+* `DELETE /api/prayers/:id`
+
+Ensure the record belongs to the authenticated user before update/delete.
+
+---
+
+# 7. Lock down family routes
+
+## File
+
+* `server/routes/family-dashboard.ts`
+
+This file currently trusts query/body ids too much.
+
+## Required policy
+
+All family dashboard routes should require auth except any truly public content-only endpoints.
+
+### Use authenticated parent id only
+
+Do not trust:
+
+* `req.query.userId`
+* `req.query.parentId`
+* `req.body.userId`
+
+### Fix specifically
+
+* `/api/family/children` GET/POST
+* `/api/family/children/:id` PATCH/DELETE
+* `/api/family/stats`
+* `/api/family/conversation-starter/:childId`
+* `/api/family/dinner-topics`
+* `/api/family/heatmap`
+* any family prayer/family dashboard route
+
+### Ownership rules
+
+* parent can only access their own children
+* parent can only mutate their own family records
+* child/profile lookups must be scoped to authenticated parent
+
+### Pro checks
+
+For pro-only family endpoints, ensure:
+
+* `requireAuth` runs before `checkProStatus`
+* `checkProStatus` uses authenticated user only
+
+---
+
+# 8. Audit community, study, formation, and sabbath school routes
+
+## Files
+
+* `server/routes/community.ts`
+* `server/routes/study.ts`
+* `server/routes/formation.ts`
+* `server/routes/sabbath-school.ts`
+
+## Goal
+
+Do a focused authorization audit.
+
+### Rule
+
+* Public content endpoints can stay public
+* Any endpoint that reads/writes user progress, journals, completions, memberships, reactions, prayer participation, family/user state, etc. must not trust `query.userId` or `body.userId`
+
+### Examples to fix
+
+Anywhere you currently do:
+
+* `String(req.query.userId || "guest")`
+* `String(req.body?.userId || "guest")`
+* `extractUserId(req)` when `extractUserId` falls back to body/query ids
+
+Replace with:
+
+* authenticated identity for protected data
+* `optionalAuth/getEffectiveUserId` only for endpoints that legitimately support guest mode
+
+### Important
+
+Keep public lesson/content fetches working.
+Only harden the user-owned and stateful parts.
+
+---
+
+# 9. Frontend client cleanup
+
+## Files to audit
+
+* `contexts/AuthContext.tsx`
+* `contexts/ProContext.tsx`
+* `app/read/[bookId]/[chapter].tsx`
+* `app/(tabs)/profile.tsx`
+* `app/(tabs)/family.tsx`
+* `app/(tabs)/study.tsx`
+* `app/prayer-journal.tsx`
+* `app/verse-actions.tsx`
+* `components/home/FeedbackWidget.tsx`
+* `components/PrayerWall.tsx`
+* other files currently appending `userId` to protected endpoints
+
+## Goal
+
+Stop sending `userId` in query/body for authenticated protected routes.
+
+### Requirements
+
+* authenticated API calls should rely on bearer token
+* keep `Authorization: Bearer <token>` support consistent
+* preserve guest mode in client for non-auth flows
+
+### Guest behavior
+
+For guest users:
+
+* do not call private server persistence endpoints for notes/highlights/bookmarks/prayers/family/private progress
+* either:
+
+  * store guest-only data in AsyncStorage locally, or
+  * disable those server-backed features until sign-in
+
+### Keep public reads
+
+Public content endpoints can still be called without auth.
+
+---
+
+# 10. Feedback route hardening
+
+## File
+
+* `server/routes.ts`
+
+`/api/feedback` currently accepts `userId` from body.
+
+## Fix
+
+* If authenticated, use auth user id
+* If guest, store as guest or nullable user id
+* do not trust body-provided user id
+
+---
+
+# 11. Growth map and similar aggregate endpoints
+
+## Files
+
+* `server/routes.ts`
+* `server/routes/user.ts`
+* any other aggregate/profile endpoints
+
+## Fix
+
+Any endpoint returning user-specific private aggregates must:
+
+* use authenticated user id only
+* or return safe guest defaults
+
+Do not allow `?userId=someone-else`.
+
+---
+
+# 12. Logging and error behavior
+
+## File
+
+* `server/index.ts`
+
+Keep request logging, but ensure:
+
+* sensitive auth values are never logged
+* responses from auth endpoints do not accidentally log secrets
+* startup logs clearly show:
+
+  * env validation passed
+  * startup seeds enabled or skipped
+  * password reset disabled if that path is chosen
+
+---
+
+# 13. Keep compatibility where possible
+
+Because the frontend already uses many existing endpoints, minimize breaking changes.
+
+### Backward-compatible strategy
+
+If an endpoint currently uses:
+
+* path `:userId`
+* query `userId`
+* body `userId`
+
+you may keep the same route signature, but for protected routes:
+
+* ignore provided user id
+* use token subject instead
+* optionally return `403` if a provided user id/path param does not match token subject
+
+This avoids widespread UI breakage while hardening security.
+
+---
+
+# 14. Build checklist
+
+After implementing changes:
+
+1. Run lint/typecheck/build and fix errors
+2. Ensure server still starts
+3. Ensure authenticated login/register still work
+4. Ensure auth-protected endpoints work with bearer token
+5. Ensure guest users can still browse public content
+6. Ensure private routes reject spoofed `userId`
+7. Ensure insecure password reset is disabled
+8. Ensure startup seeds do not run unless explicitly enabled
+
+---
+
+# 15. Deliverables
+
+When finished, provide:
+
+### A. Summary
+
+* what files changed
+* what security issues were fixed
+
+### B. Endpoint behavior notes
+
+* which endpoints now require auth
+* which remain public
+* which still support guest mode
+
+### C. Any frontend follow-ups
+
+* list any screens/components that still need local guest storage or auth-aware handling
+
+### D. Final status
+
+* confirm whether build passed
+* mention any remaining known issues
+
+---
+
+## Extra instruction
+
+Be decisive. Do not propose a long architectural redesign. Implement the hardening changes directly in this codebase with minimal disruption.
+
+---
+
+If you want, I can also turn this into a **shorter agent-style prompt** and a **manual patch checklist** side by side so you can use whichever Replit handles better.
