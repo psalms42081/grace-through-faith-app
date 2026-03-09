@@ -98,6 +98,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - `ELEVENLABS_API_KEY` — required for TTS narration
 - `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` / `LIVEKIT_URL` — required for live streaming
 - Startup logs print full security posture on boot for verification.
+- **Security Regression Script:** `bash scripts/security-regression.sh` — 35-check automated suite covering protected writes (401), invalid tokens (401), pro-only endpoints (401/403), spoofed userId rejection, disabled password reset (501), guest auth/me behavior, public reads (200), and community write auth. Run after any auth/pro/guest logic changes.
 
 **Maps & Location:**
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
