@@ -1518,3 +1518,13 @@ export const sabbathSchoolDiscussionPrep = pgTable("sabbath_school_discussion_pr
   depth: varchar("depth", { length: 16 }).default("standard").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const userFeedback = pgTable("user_feedback", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  topic: varchar("topic", { length: 32 }).notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

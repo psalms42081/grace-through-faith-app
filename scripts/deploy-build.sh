@@ -4,6 +4,9 @@ set -e
 echo "=== Building server ==="
 npm run server:build
 
+echo "=== Pushing schema ==="
+npx drizzle-kit push --force || true
+
 echo "=== Seeding production data ==="
 
 echo "Seeding Bible verses..."

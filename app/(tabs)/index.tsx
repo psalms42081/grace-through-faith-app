@@ -50,6 +50,7 @@ import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
 import TodaysPath from "@/components/home/TodaysPath";
+import FeedbackWidget from "@/components/home/FeedbackWidget";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -1073,6 +1074,7 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
+          <AnimatedSection index={9}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       ) : (
         <>
@@ -1108,6 +1110,7 @@ function AdultHomeScreen() {
           )}
           <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
           <AnimatedSection index={7}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}
 

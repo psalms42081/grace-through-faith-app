@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { db } from "./db";
-import { users, prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, layerCompletions, progressTracks } from "../shared/schema";
+import { users, prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, layerCompletions, progressTracks, userFeedback } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { seedFormationData } from "./seed-formation";
 import { seedBeliefsWave1 } from "./seed-beliefs-wave1";
@@ -76,6 +76,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);
   app.use("/api/analytics", analyticsRoutes);
+
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { userId, topic, message } = req.body;
+      if (!message?.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      const allowedTopics = ["bug", "feature", "content", "other"];
+      const safeTopic = allowedTopics.includes(topic) ? topic : "other";
+      const safeMessage = message.trim().substring(0, 5000);
+      await db.insert(userFeedback).values({
+        userId: userId || "guest",
+        topic: safeTopic,
+        message: safeMessage,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Feedback error:", err);
+      res.status(500).json({ error: "Failed to save feedback" });
+    }
+  });
 
   app.get("/api/growth-map", async (req, res) => {
     try {

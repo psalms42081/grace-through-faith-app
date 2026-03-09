@@ -40,6 +40,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Dynamic Topic Content:** Topic detail pages feature AI-generated daily reflections and shuffled verses/media.
 - **Verse Action Tools:** Bottom-sheet verse tools (Copy, Highlight, Bookmark, Words, Insight, Verse Map, Guided Study) navigate to standalone stack routes.
 - **Insight & Voices:** Commentary screen with Adventist-first content ordering, including AI-generated Ellen G. White perspectives and classic commentators.
+- **Feedback Widget:** Home screen card ("Share Feedback") opens a modal with topic selection (Bug Report, Feature Request, Content, Other) and text input. Submits to `POST /api/feedback` which stores in `user_feedback` table with topic validation and 5000-char message cap.
 - **Guest User Identity:** Each device receives a unique UUID for API calls and data isolation.
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
 - **28 Fundamental Beliefs UX:** Belief cards feature animated chevron rotation, scripture navigation with verse-specific highlight, and authority hierarchy.
