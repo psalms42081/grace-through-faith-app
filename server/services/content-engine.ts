@@ -7,8 +7,10 @@ import {
   resources,
   sabbathSchoolLessons,
   sabbathSchoolDays,
+  lessonSourcePackets,
 } from "../../shared/schema";
 import { eq } from "drizzle-orm";
+import { buildSourcePacket, type SourcePacketJson } from "./source-packet-builder";
 
 const companionSchema = z.object({
   overview: z.string().min(400),
@@ -115,28 +117,56 @@ export interface SabbathSchoolCompanionContent {
   }>;
 }
 
-export async function generateSabbathSchoolCompanion(lessonId: string): Promise<string> {
+export async function generateSabbathSchoolCompanion(
+  lessonId: string,
+  options?: { sourcePacketId?: string }
+): Promise<string> {
   console.log(`[content:generate] Starting Sabbath School companion for lesson ${lessonId}`);
 
-  const lesson = await db
-    .select()
-    .from(sabbathSchoolLessons)
-    .where(eq(sabbathSchoolLessons.id, lessonId))
-    .limit(1);
+  let packetId = options?.sourcePacketId;
+  let sourcePacket: { id: string; sourceJson: SourcePacketJson; quarterlyId: string; lessonId: string };
 
-  if (lesson.length === 0) {
-    throw new Error(`Lesson ${lessonId} not found`);
+  if (packetId) {
+    const existing = await db
+      .select()
+      .from(lessonSourcePackets)
+      .where(eq(lessonSourcePackets.id, packetId))
+      .limit(1);
+    if (existing.length === 0) throw new Error(`Source packet ${packetId} not found`);
+    sourcePacket = {
+      id: existing[0].id,
+      sourceJson: existing[0].sourceJson as SourcePacketJson,
+      quarterlyId: existing[0].quarterlyId,
+      lessonId: existing[0].lessonId,
+    };
+  } else {
+    const result = await buildSourcePacket(lessonId);
+    packetId = result.id;
+    const packet = await db
+      .select()
+      .from(lessonSourcePackets)
+      .where(eq(lessonSourcePackets.id, packetId))
+      .limit(1);
+    sourcePacket = {
+      id: packet[0].id,
+      sourceJson: packet[0].sourceJson as SourcePacketJson,
+      quarterlyId: packet[0].quarterlyId,
+      lessonId: packet[0].lessonId,
+    };
   }
 
-  const days = await db
-    .select()
-    .from(sabbathSchoolDays)
-    .where(eq(sabbathSchoolDays.lessonId, lessonId))
-    .orderBy(sabbathSchoolDays.dayNumber);
-
-  const daysContent = days
-    .map((d) => `Day ${d.dayNumber}: ${d.title || "Untitled"}\n${d.contentMarkdown || "(no content)"}`)
+  const src = sourcePacket.sourceJson;
+  const daysContent = src.dailyBreakdown
+    .map((d) => `Day ${d.dayNumber}: ${d.title}\n${d.contentMarkdown || "(no content)"}`)
     .join("\n\n---\n\n");
+
+  const themeContext = src.doctrinalThemes.length > 0
+    ? `\nDetected doctrinal themes in this lesson: ${src.doctrinalThemes.join(", ")}`
+    : "";
+
+  const memoryVerseContext = src.memoryVerse
+    ? `\nMemory verse for this lesson: ${src.memoryVerse}`
+    : "";
 
   const openai = createOpenAIClient();
 
@@ -151,7 +181,9 @@ export async function generateSabbathSchoolCompanion(lessonId: string): Promise<
         role: "user",
         content: `Generate a comprehensive Sabbath School companion resource for the following lesson:
 
-Title: "${lesson[0].title}"
+Quarter: "${src.quarterMeta.title}" (${src.quarterMeta.humanDate || src.quarterMeta.quarterCode})
+Title: "${src.lessonTitle}" (Week ${src.weekNumber})
+${memoryVerseContext}${themeContext}
 
 Lesson Content:
 ${daysContent}
@@ -265,17 +297,21 @@ Requirements:
 
   const contentWithMeta = { ...contentJson, _generation: generationMeta };
 
-  const slug = slugify(`sabbath-school-companion-${lesson[0].title}-${Date.now()}`);
+  const slug = slugify(`sabbath-school-companion-${src.lessonTitle}-${Date.now()}`);
 
   const [inserted] = await db.insert(resources).values({
     slug,
-    title: `Companion: ${lesson[0].title}`,
-    description: contentJson.overview?.substring(0, 500) || `Study companion for the Sabbath School lesson "${lesson[0].title}"`,
+    title: `Companion: ${src.lessonTitle}`,
+    description: contentJson.overview?.substring(0, 500) || `Study companion for the Sabbath School lesson "${src.lessonTitle}"`,
     resourceType: "sabbath-school-companion",
     category: "sabbath-school",
     tier: "pro",
     contentJson: contentWithMeta,
-    sourceRef: { type: "sabbath-school", lessonId: lesson[0].id, quarterlyId: lesson[0].quarterlyId },
+    sourceRef: { type: "sabbath-school", lessonId: sourcePacket.lessonId, quarterlyId: sourcePacket.quarterlyId },
+    sourcePacketId: packetId,
+    promptVersion: COMPANION_PROMPT_VERSION,
+    generationStatus: "completed",
+    reviewStatus: "pending",
     ageGroup: "adult",
     estimatedMinutes: 30,
     tags: ["sabbath-school", "companion", "weekly-study"],
@@ -284,7 +320,7 @@ Requirements:
     generatedBy: "ai",
   }).returning();
 
-  console.log(`[content:ready] Sabbath School companion created: ${inserted.id} (${slug}) [${tokensUsed} tokens, ${COMPANION_PROMPT_VERSION}]`);
+  console.log(`[content:ready] Sabbath School companion created: ${inserted.id} (${slug}) [${tokensUsed} tokens, ${COMPANION_PROMPT_VERSION}, packet: ${packetId}]`);
   return inserted.id;
 }
 

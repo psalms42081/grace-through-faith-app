@@ -9,6 +9,7 @@ import {
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import YAML from "yaml";
 import { fetchWithTimeout } from "./api-client";
+import { buildSourcePacket } from "./source-packet-builder";
 
 const BASE_URL =
   "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
@@ -236,9 +237,28 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
 
   console.log(`[SabbathSchool] Sync complete for ${activeQuarterCode}`);
 
-  triggerCompanionGeneration(quarterlyId, updatedLessonIds).catch((err) => {
-    console.error("[content:generate] Companion generation failed:", err);
+  buildAndGenerateCompanions(quarterlyId, updatedLessonIds).catch((err) => {
+    console.error("[content:pipeline] Source packet + generation pipeline failed:", err);
   });
+}
+
+async function buildAndGenerateCompanions(quarterlyId: string, lessonIds: string[]): Promise<void> {
+  if (lessonIds.length === 0) return;
+
+  const packetResults: Array<{ lessonId: string; packetId: string; changed: boolean }> = [];
+
+  for (const lessonId of lessonIds) {
+    try {
+      const result = await buildSourcePacket(lessonId);
+      packetResults.push({ lessonId, packetId: result.id, changed: result.changed || result.isNew });
+    } catch (err) {
+      console.error(`[source-packet] Failed to build packet for lesson ${lessonId}:`, err);
+    }
+  }
+
+  console.log(`[source-packet] Built ${packetResults.length}/${lessonIds.length} packets`);
+
+  await triggerCompanionGeneration(quarterlyId, packetResults);
 }
 
 export async function getCurrentLessonNumber(quarterlyId: string): Promise<number> {
@@ -334,30 +354,60 @@ export async function getMostRecentQuarterly() {
   return fallback[0] || null;
 }
 
-async function triggerCompanionGeneration(quarterlyId: string, lessonIds: string[]): Promise<void> {
-  if (lessonIds.length === 0) return;
+async function triggerCompanionGeneration(
+  quarterlyId: string,
+  packets: Array<{ lessonId: string; packetId: string; changed: boolean }>
+): Promise<void> {
+  if (packets.length === 0) return;
 
   const { generateSabbathSchoolCompanion } = await import("./content-engine");
 
-  for (const lessonId of lessonIds) {
+  for (const { lessonId, packetId, changed } of packets) {
     const existing = await db
-      .select({ id: resources.id })
+      .select({ id: resources.id, sourcePacketId: resources.sourcePacketId })
       .from(resources)
       .where(
         sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`
       )
       .limit(1);
 
-    if (existing.length > 0) {
+    if (existing.length > 0 && !changed) {
       continue;
     }
 
+    if (existing.length > 0 && changed) {
+      console.log(`[content:regenerate] Source content changed for lesson ${lessonId}, regenerating companion`);
+      try {
+        await db.update(resources).set({
+          generationStatus: "regenerating",
+          updatedAt: new Date(),
+        }).where(eq(resources.id, existing[0].id));
+      } catch {}
+    }
+
     try {
-      console.log(`[content:generate] Generating companion for lesson ${lessonId}`);
-      await generateSabbathSchoolCompanion(lessonId);
+      console.log(`[content:generate] Generating companion for lesson ${lessonId} (packet: ${packetId})`);
+      await generateSabbathSchoolCompanion(lessonId, { sourcePacketId: packetId });
+
+      if (existing.length > 0) {
+        await db.update(resources).set({
+          status: "draft",
+          generationStatus: "completed",
+          reviewStatus: "pending",
+          updatedAt: new Date(),
+        }).where(eq(resources.id, existing[0].id));
+        console.log(`[content:regenerate] Old companion ${existing[0].id} marked as draft (superseded)`);
+      }
+
       console.log(`[content:ready] Companion for lesson ${lessonId} created`);
     } catch (err) {
       console.error(`[content:generate] Failed for lesson ${lessonId}:`, err);
+      if (existing.length > 0) {
+        await db.update(resources).set({
+          generationStatus: "failed",
+          updatedAt: new Date(),
+        }).where(eq(resources.id, existing[0].id)).catch(() => {});
+      }
     }
   }
 }

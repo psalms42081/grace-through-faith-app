@@ -1519,6 +1519,30 @@ export const sabbathSchoolDiscussionPrep = pgTable("sabbath_school_discussion_pr
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ─── LESSON SOURCE PACKETS ──────────────────────────────────────────────────
+
+export const lessonSourcePackets = pgTable("lesson_source_packets", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  quarterlyId: varchar("quarterly_id").notNull(),
+  lessonId: varchar("lesson_id").notNull(),
+  weekNumber: integer("week_number").notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  sourceJson: jsonb("source_json").notNull(),
+  sourceHash: varchar("source_hash", { length: 64 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("ingested"),
+  ingestedAt: timestamp("ingested_at").defaultNow().notNull(),
+  sourceVersion: varchar("source_version", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  lessonIdx: index("source_packets_lesson_idx").on(table.lessonId),
+  quarterlyIdx: index("source_packets_quarterly_idx").on(table.quarterlyId),
+  statusIdx: index("source_packets_status_idx").on(table.status),
+  hashIdx: uniqueIndex("source_packets_hash_idx").on(table.lessonId, table.sourceHash),
+}));
+
 // ─── RESOURCES ──────────────────────────────────────────────────────────────
 
 export const resources = pgTable("resources", {
@@ -1534,6 +1558,10 @@ export const resources = pgTable("resources", {
   coverImageUrl: text("cover_image_url"),
   contentJson: jsonb("content_json").notNull(),
   sourceRef: jsonb("source_ref"),
+  sourcePacketId: varchar("source_packet_id"),
+  promptVersion: varchar("prompt_version", { length: 20 }),
+  generationStatus: varchar("generation_status", { length: 20 }).default("completed"),
+  reviewStatus: varchar("review_status", { length: 20 }).default("pending"),
   ageGroup: varchar("age_group", { length: 20 }),
   estimatedMinutes: integer("estimated_minutes").default(15),
   tags: jsonb("tags").default([]),
@@ -1549,6 +1577,8 @@ export const resources = pgTable("resources", {
   categoryIdx: index("resources_category_idx").on(table.category),
   tierIdx: index("resources_tier_idx").on(table.tier),
   typeIdx: index("resources_type_idx").on(table.resourceType),
+  sourcePacketIdx: index("resources_source_packet_idx").on(table.sourcePacketId),
+  generationStatusIdx: index("resources_generation_status_idx").on(table.generationStatus),
 }));
 
 export const resourceProgress = pgTable("resource_progress", {
