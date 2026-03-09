@@ -11,37 +11,39 @@ import {
 import { eq } from "drizzle-orm";
 
 const companionSchema = z.object({
-  overview: z.string().min(200),
+  overview: z.string().min(400),
   dailyStudyPrompts: z.array(z.object({
     day: z.number(),
-    dayTitle: z.string(),
-    focusText: z.string(),
-    studyPrompt: z.string(),
-    keyInsight: z.string(),
+    dayTitle: z.string().min(5),
+    focusText: z.string().min(5),
+    studyPrompt: z.string().min(50),
+    keyInsight: z.string().min(30),
   })).min(5).max(7),
   discussionQuestions: z.array(z.object({
-    question: z.string(),
-    context: z.string(),
+    question: z.string().min(20),
+    context: z.string().min(20),
     depth: z.enum(["surface", "intermediate", "deep"]),
-  })).min(5).max(10),
+  })).min(6).max(10),
   memoryVerseGuide: z.object({
-    verse: z.string(),
-    reference: z.string(),
-    meditationSteps: z.array(z.string()).min(3).max(7),
-    applicationPrompt: z.string(),
+    verse: z.string().min(10),
+    reference: z.string().min(5),
+    meditationSteps: z.array(z.string().min(10)).min(4).max(7),
+    applicationPrompt: z.string().min(30),
   }),
   familyWorshipAdaptation: z.object({
-    kidsVersion: z.string().min(100),
-    activityIdea: z.string(),
-    discussionForKids: z.array(z.string()).min(2),
-    prayer: z.string(),
+    kidsVersion: z.string().min(300),
+    activityIdea: z.string().min(30),
+    discussionForKids: z.array(z.string().min(10)).min(2),
+    prayer: z.string().min(20),
   }),
   egwConnections: z.array(z.object({
-    topic: z.string(),
-    bookReference: z.string(),
-    relevance: z.string(),
+    topic: z.string().min(5),
+    bookReference: z.string().min(10),
+    relevance: z.string().min(30),
   })).min(3).max(7),
 });
+
+const COMPANION_PROMPT_VERSION = "v2.1";
 
 function createOpenAIClient(): OpenAI {
   const client = new OpenAI({
@@ -216,35 +218,52 @@ Requirements:
   const raw = completion.choices[0]?.message?.content ?? "{}";
   const cleaned = cleanJsonResponse(raw);
   let contentJson: SabbathSchoolCompanionContent;
+
+  function validateCompanion(json: unknown): SabbathSchoolCompanionContent {
+    const result = companionSchema.safeParse(json);
+    if (!result.success) {
+      const issues = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+      throw new Error(`Schema validation failed: ${issues}`);
+    }
+    return result.data as SabbathSchoolCompanionContent;
+  }
+
   try {
     const parsed = JSON.parse(cleaned);
-    const validated = companionSchema.safeParse(parsed);
-    if (!validated.success) {
-      console.warn("[content:validate] Schema validation issues:", validated.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '));
-      contentJson = parsed as SabbathSchoolCompanionContent;
-    } else {
-      contentJson = validated.data as SabbathSchoolCompanionContent;
-    }
-  } catch {
-    console.error("[content:generate] Failed to parse companion JSON, attempting repair...");
+    contentJson = validateCompanion(parsed);
+  } catch (firstError: any) {
+    console.warn("[content:validate] First pass failed:", firstError.message?.substring(0, 300));
+    console.log("[content:repair] Attempting JSON repair...");
     try {
       const repairCompletion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Fix the following malformed JSON. Return ONLY valid JSON, no markdown fences or commentary." },
+          { role: "system", content: "Fix the following malformed or incomplete JSON. Ensure it is valid JSON with all required fields populated. Return ONLY valid JSON, no markdown fences or commentary." },
           { role: "user", content: raw },
         ],
         temperature: 0,
         max_tokens: 6000,
       });
       const repaired = cleanJsonResponse(repairCompletion.choices[0]?.message?.content ?? "{}");
-      contentJson = JSON.parse(repaired) as SabbathSchoolCompanionContent;
-      console.log("[content:repair] JSON repair succeeded");
-    } catch {
-      console.error("[content:generate] JSON repair also failed:", raw.substring(0, 500));
-      throw new Error("Failed to parse AI-generated companion content");
+      const repairedParsed = JSON.parse(repaired);
+      contentJson = validateCompanion(repairedParsed);
+      console.log("[content:repair] JSON repair and validation succeeded");
+    } catch (repairError: any) {
+      console.error("[content:generate] Repair also failed:", repairError.message?.substring(0, 300));
+      throw new Error("Failed to generate valid companion content after repair attempt");
     }
   }
+
+  const tokensUsed = completion.usage?.total_tokens ?? 0;
+  const generationMeta = {
+    generatedAt: new Date().toISOString(),
+    promptVersion: COMPANION_PROMPT_VERSION,
+    model: completion.model ?? "gpt-4o-mini",
+    tokensUsed,
+    regenerationCount: 0,
+  };
+
+  const contentWithMeta = { ...contentJson, _generation: generationMeta };
 
   const slug = slugify(`sabbath-school-companion-${lesson[0].title}-${Date.now()}`);
 
@@ -255,7 +274,7 @@ Requirements:
     resourceType: "sabbath-school-companion",
     category: "sabbath-school",
     tier: "pro",
-    contentJson,
+    contentJson: contentWithMeta,
     sourceRef: { type: "sabbath-school", lessonId: lesson[0].id, quarterlyId: lesson[0].quarterlyId },
     ageGroup: "adult",
     estimatedMinutes: 30,
@@ -265,7 +284,7 @@ Requirements:
     generatedBy: "ai",
   }).returning();
 
-  console.log(`[content:ready] Sabbath School companion created: ${inserted.id} (${slug})`);
+  console.log(`[content:ready] Sabbath School companion created: ${inserted.id} (${slug}) [${tokensUsed} tokens, ${COMPANION_PROMPT_VERSION}]`);
   return inserted.id;
 }
 
