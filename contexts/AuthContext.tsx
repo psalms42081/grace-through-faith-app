@@ -14,6 +14,7 @@ interface AuthUser {
   familyId: string | null;
   isPro: boolean;
   isPatron: boolean;
+  role: string;
 }
 
 interface AuthContextType {

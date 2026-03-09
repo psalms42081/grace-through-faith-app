@@ -24,6 +24,7 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   email: text("email").unique(),
   familyId: varchar("family_id"),
+  role: varchar("role", { length: 16 }).default("user").notNull(),
   isPro: boolean("is_pro").default(false).notNull(),
   isPatron: boolean("is_patron").default(false),
   donationAmount: integer("donation_amount").default(0),

@@ -8,24 +8,9 @@ import {
   sabbathSchoolQuarterlies,
 } from "../../shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
-import { requireAuth } from "../middleware/auth";
+import { requireAdmin, requireEditor } from "../middleware/auth";
 
 const router = Router();
-
-function requireAdmin(req: Request, res: Response, next: Function) {
-  requireAuth(req, res, async () => {
-    const [authUser] = await db
-      .select({ isPro: users.isPro })
-      .from(users)
-      .where(eq(users.id, req.authUserId!))
-      .limit(1);
-
-    if (!authUser?.isPro) {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-    next();
-  });
-}
 
 router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
   try {
@@ -296,6 +281,47 @@ router.get("/api/admin/pipeline/quarters", requireAdmin, async (_req, res) => {
   } catch (err) {
     console.error("List quarters error:", err);
     return res.status(500).json({ error: "Failed to list quarters" });
+  }
+});
+
+router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["user", "editor", "admin"].includes(role)) {
+      return res.status(400).json({ error: "role must be user, editor, or admin" });
+    }
+
+    const [target] = await db
+      .select({ id: users.id, displayName: users.displayName })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (id === req.authUserId && role !== "admin") {
+      return res.status(400).json({ error: "Cannot demote yourself" });
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ role })
+      .where(eq(users.id, id))
+      .returning({
+        id: users.id,
+        displayName: users.displayName,
+        email: users.email,
+        role: users.role,
+      });
+
+    return res.json(updated);
+  } catch (err) {
+    console.error("Set user role error:", err);
+    return res.status(500).json({ error: "Failed to update user role" });
   }
 });
 

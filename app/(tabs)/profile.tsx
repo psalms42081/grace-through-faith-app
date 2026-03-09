@@ -329,6 +329,9 @@ export default function ProfileScreen() {
         />
 
         {[
+          ...(user?.role === "admin" || user?.role === "editor" ? [
+            { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
+          ] : []),
           { title: "Growth Map", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
           { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
           { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },

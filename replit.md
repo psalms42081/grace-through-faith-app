@@ -56,9 +56,15 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
     - `GET /api/admin/pipeline/quarter/:quarterCode` — per-lesson detail: packet status/hash, companion status/review/prompt version.
     - `POST /api/admin/pipeline/generate-quarter` — triggers batch generation (async, returns immediately).
     - `GET /api/admin/pipeline/quarters` — available quarters with lesson/companion counts.
-  - **Resource Review API:** `POST /api/resources/:id/review` (action: approved/rejected/needs_revision). Approved → publishes. Rejected → stays draft.
+  - **Resource Review API:** `POST /api/resources/:id/review` (requireEditor: editor+admin). Actions: approved (publishes), rejected/needs_revision (unpublishes to draft).
+  - **Resource Publish API:** `POST /api/resources/:id/publish` (requireAdmin only).
+  - **Role System:** `users.role` column: "user" | "editor" | "admin". Middleware: `requireRole(...roles)`, `requireEditor` (editor+admin), `requireAdmin` (admin only). All auth endpoints (register/login/me) return `role` field. `POST /api/admin/users/:id/role` for admin role management. Self-demotion prevented.
+  - **Admin Review UI:** `app/admin-review.tsx` — internal content management screen accessible from Profile (admin/editor only). Three tabs:
+    - Overview: source packet counts, companion status by generation/review, coverage %, prompt version distribution, failed generations list.
+    - Review: pending companions with approve/revise/reject actions per item.
+    - Quarter: quarter selector with per-lesson detail (packet status, companion status, review badges), batch generation trigger.
   - **CLI:** `scripts/gen-companions.ts` — batch quarter generation. Args: `--quarter 2026-01`, `--force`, `--dry-run`, `--list`.
-  - **Key files:** `server/services/source-packet-builder.ts`, `server/services/batch-generator.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/routes/admin-pipeline.ts`, `server/services/sabbath-school-sync.ts`, `shared/schema.ts`.
+  - **Key files:** `server/services/source-packet-builder.ts`, `server/services/batch-generator.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/routes/admin-pipeline.ts`, `server/middleware/auth.ts` (role middleware), `app/admin-review.tsx`, `shared/schema.ts`.
 
 ## External Dependencies
 

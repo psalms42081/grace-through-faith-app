@@ -7,7 +7,7 @@ import {
   users,
 } from "../../shared/schema";
 import { eq, and, ilike, sql, desc, asc, or } from "drizzle-orm";
-import { requireAuth, optionalAuth, getEffectiveUserId, getAuthUserId } from "../middleware/auth";
+import { requireAuth, optionalAuth, getEffectiveUserId, getAuthUserId, requireEditor, requireAdmin } from "../middleware/auth";
 import { cachedResponse } from "../middleware/response-cache";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 
@@ -367,19 +367,9 @@ router.post("/api/resources/generate/family-worship", requireAuth, aiGenerationL
   }
 });
 
-router.post("/api/resources/:id/publish", requireAuth, async (req, res) => {
+router.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-
-    const [authUser] = await db
-      .select({ isPro: users.isPro })
-      .from(users)
-      .where(eq(users.id, req.authUserId!))
-      .limit(1);
-
-    if (!authUser?.isPro) {
-      return res.status(403).json({ error: "Only administrators can publish resources" });
-    }
 
     const [resource] = await db
       .select()
@@ -411,23 +401,13 @@ router.post("/api/resources/:id/publish", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/resources/:id/review", requireAuth, async (req, res) => {
+router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   try {
     const { id } = req.params;
     const { action } = req.body;
 
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
       return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
-    }
-
-    const [authUser] = await db
-      .select({ isPro: users.isPro })
-      .from(users)
-      .where(eq(users.id, req.authUserId!))
-      .limit(1);
-
-    if (!authUser?.isPro) {
-      return res.status(403).json({ error: "Only administrators can review resources" });
     }
 
     const [resource] = await db

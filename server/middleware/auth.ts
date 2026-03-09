@@ -57,6 +57,29 @@ export function getEffectiveUserId(req: Request): string {
   return "guest";
 }
 
+export function requireRole(...allowedRoles: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    req.authUserId = userId;
+    try {
+      const [user] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+      if (!user || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({ error: "Insufficient permissions" });
+      }
+      next();
+    } catch (err) {
+      console.error("Role check error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}
+
+export const requireEditor = requireRole("editor", "admin");
+export const requireAdmin = requireRole("admin");
+
 export async function checkProStatus(
   req: Request,
   res: Response,

@@ -50,6 +50,7 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
         familyId: newUser.familyId,
         isPro: newUser.isPro,
         isPatron: newUser.isPatron,
+        role: newUser.role,
       },
       token,
     });
@@ -89,6 +90,7 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
         familyId: user.familyId,
         isPro: user.isPro,
         isPatron: user.isPatron,
+        role: user.role,
       },
       token,
     });
@@ -132,6 +134,7 @@ router.get("/api/auth/me", async (req, res) => {
         familyId: user.familyId,
         isPro: user.isPro,
         isPatron: user.isPatron,
+        role: user.role,
       },
       isGuest: false,
     });
