@@ -41,7 +41,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Verse Action Tools:** Bottom-sheet verse tools (Copy, Highlight, Bookmark, Words, Insight, Verse Map, Guided Study) navigate to standalone stack routes.
 - **Insight & Voices:** Commentary screen with Adventist-first content ordering, including AI-generated Ellen G. White perspectives and classic commentators.
 - **Feedback Widget:** Home screen card ("Share Feedback") opens a modal with topic selection (Bug Report, Feature Request, Content, Other) and text input. Submits to `POST /api/feedback` which stores in `user_feedback` table with topic validation and 5000-char message cap.
-- **Guest User Identity:** Each device receives a unique UUID for API calls and data isolation.
+- **Guest User Identity:** Unauthenticated requests use a shared "guest" userId on the server. Per-device UUIDs are generated client-side for cache isolation but are not sent to the server. Guest server-backed data (reading history, progress) is effectively anonymous and shared — meaningful personalization requires sign-in.
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
 - **28 Fundamental Beliefs UX:** Belief cards feature animated chevron rotation, scripture navigation with verse-specific highlight, and authority hierarchy.
 - **Great Controversy Timeline Engine:** An immersive vertical timeline tracing the cosmic conflict from Creation to the New Earth through 15 narrative nodes aligned with Adventist theology.
@@ -82,6 +82,22 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Password Reset:** Disabled (returns 501) — no token/email verification exists. Frontend handles 501 gracefully.
 - **Startup Seeds:** Guarded behind `RUN_STARTUP_SEEDS=true` env flag. Production does not seed on boot.
 - **JWT_SECRET:** Required env secret, minimum 16 characters. No hardcoded fallback.
+
+**Guest Persistence Policy:**
+- **Blocked until sign-in (401):** Notes, highlights, bookmarks, prayers, donations, family dashboard, account management, mission invite dismiss. These endpoints require Bearer token auth.
+- **Server-backed with guest fallback:** Reading history, activity tracking, feedback, study guide sessions, kids progress, devotional progress, formation progress, sabbath school progress. Unauthenticated requests use "guest" as userId — data goes to a shared guest bucket (effectively a no-op for personalization, but harmless).
+- **Public reads (no auth needed):** Bible text, study tracks listing, live streams, sabbath school content, devotional plans, kids collections, church directory, fundamental beliefs, radio stations, analytics events.
+- **Pro/Supporter-only (requires auth + isPro):** Family Dashboard (stats, heatmap, prayers, conversation starters, dinner topics), Chapter Context (4D Scripture deep study layer). These use `checkProStatus` middleware which enforces auth + pro status server-side.
+
+**Deploy Environment Checklist:**
+- `DATABASE_URL` — required, validated on startup
+- `JWT_SECRET` — required, min 16 chars, no hardcoded fallback
+- `RUN_STARTUP_SEEDS` — must be unset or "false" in production
+- `ALLOW_INSECURE_PASSWORD_RESET` — must be unset or "false" in production
+- `AI_INTEGRATIONS_OPENAI_API_KEY` / `AI_INTEGRATIONS_OPENAI_BASE_URL` — required for AI features
+- `ELEVENLABS_API_KEY` — required for TTS narration
+- `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` / `LIVEKIT_URL` — required for live streaming
+- Startup logs print full security posture on boot for verification.
 
 **Maps & Location:**
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.

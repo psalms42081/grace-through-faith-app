@@ -57,7 +57,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     queryKey: [`/api/user/pro-status?userId=${userId}`],
   });
 
-  const isPro = data?.isPro ?? true;
+  const isPro = data?.isPro ?? false;
   const isPatron = data?.isPatron ?? false;
 
   const triggerMissionInvite = useCallback(async () => {

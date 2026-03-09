@@ -1,4 +1,4 @@
-import "./env";
+import { logSecurityPosture } from "./env";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
@@ -259,6 +259,7 @@ function setupErrorHandler(app: express.Application) {
 }
 
 (async () => {
+  logSecurityPosture();
   setupCacheControl(app);
   setupCors(app);
   setupBodyParsing(app);

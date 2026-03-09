@@ -29,7 +29,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc, countDistinct, count, ilike, or } from "drizzle-orm";
   import * as crypto from "crypto";
-  import { extractUserId, checkProStatus, requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
+  import { checkProStatus, requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import {
     generateStrongWordStudy,
     generateContextCards,
@@ -1137,7 +1137,7 @@ router.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => 
 
 // ─── 4D SCRIPTURE — CHAPTER CONTEXT ────────────────────────────────────────
 
-router.get("/api/chapter-context/:bookId/:chapter", async (req, res) => {
+router.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, res) => {
   try {
     const bookId = parseInt(String(req.params.bookId));
     const chapter = parseInt(String(req.params.chapter));
@@ -1625,7 +1625,7 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
 
 router.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
   try {
-    const userId = extractUserId(req);
+    const userId = getAuthUserId(req) || "guest";
     const { query } = req.body;
     if (!query || typeof query !== "string" || query.trim().length < 3) {
       return res.status(400).json({ error: "A search query of at least 3 characters is required" });
