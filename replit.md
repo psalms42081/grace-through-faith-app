@@ -49,7 +49,16 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
   - **Pipeline flow:** sync quarterly → build source packets → check hash → generate companions → validate → store with packet linkage.
   - **Content quality (v2.1):** 400+ char overviews, SDA-distinctive insights, 4+ meditation steps, 300+ char kids versions, 6+ discussion questions, consistent EGW format.
   - **Frontend:** `app/resources.tsx` (library), `app/resource-detail.tsx` (reader with pro-gate). Featured card on Explore, colored accent strips, tier badges.
-  - **Key files:** `server/services/source-packet-builder.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/services/sabbath-school-sync.ts`, `shared/schema.ts` (lessonSourcePackets + resources tables).
+  - **Batch Generation:** `server/services/batch-generator.ts` — `generateQuarterCompanions(quarterCode, { force?, dryRun? })` generates all companions for a quarter. Builds source packets first, skips existing unless forced or content changed. Returns structured BatchResult with per-lesson details.
+  - **Review Workflow:** Auto-generated companions → `status=draft`, `reviewStatus=pending`. Review actions: `approved` (publishes), `rejected` (stays draft), `needs_revision`. Only `published` resources appear in public API.
+  - **Admin Pipeline API:** `server/routes/admin-pipeline.ts` (isPro-gated):
+    - `GET /api/admin/pipeline/overview` — packet status counts, companion counts by generation/review status, coverage %, prompt version distribution, failed generations, pending review list.
+    - `GET /api/admin/pipeline/quarter/:quarterCode` — per-lesson detail: packet status/hash, companion status/review/prompt version.
+    - `POST /api/admin/pipeline/generate-quarter` — triggers batch generation (async, returns immediately).
+    - `GET /api/admin/pipeline/quarters` — available quarters with lesson/companion counts.
+  - **Resource Review API:** `POST /api/resources/:id/review` (action: approved/rejected/needs_revision). Approved → publishes. Rejected → stays draft.
+  - **CLI:** `scripts/gen-companions.ts` — batch quarter generation. Args: `--quarter 2026-01`, `--force`, `--dry-run`, `--list`.
+  - **Key files:** `server/services/source-packet-builder.ts`, `server/services/batch-generator.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/routes/admin-pipeline.ts`, `server/services/sabbath-school-sync.ts`, `shared/schema.ts`.
 
 ## External Dependencies
 

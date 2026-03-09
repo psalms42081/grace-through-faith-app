@@ -315,8 +315,8 @@ Requirements:
     ageGroup: "adult",
     estimatedMinutes: 30,
     tags: ["sabbath-school", "companion", "weekly-study"],
-    status: "published",
-    publishedAt: new Date(),
+    status: "draft",
+    publishedAt: null,
     generatedBy: "ai",
   }).returning();
 

@@ -24,6 +24,7 @@ import greatControversyRoutes from "./routes/great-controversy";
 import sabbathSchoolRoutes from "./routes/sabbath-school";
 import analyticsRoutes from "./routes/analytics";
 import resourcesRoutes from "./routes/resources";
+import adminPipelineRoutes from "./routes/admin-pipeline";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -88,6 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(sabbathSchoolRoutes);
   app.use("/api/analytics", analyticsRoutes);
   app.use(resourcesRoutes);
+  app.use(adminPipelineRoutes);
 
   const startTime = Date.now();
 

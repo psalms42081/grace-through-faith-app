@@ -1,26 +1,67 @@
-import { generateSabbathSchoolCompanion } from "../server/services/content-engine";
+import { generateQuarterCompanions, getAvailableQuarters } from "../server/services/batch-generator";
 
-const LESSONS = [
-  { id: "2d5a9fa6-6446-4fd8-9390-8387d8ce08a0", num: 11, title: "Living With Christ" },
-  { id: "06671a37-9103-4967-b4cf-3afb3e27476b", num: 5, title: "Shining as Lights in the Night" },
-  { id: "6401c90d-d1ed-4d7a-a340-eb83d8c70720", num: 9, title: "Reconciliation and Hope" },
-  { id: "7c8ce001-1157-4e45-bdb1-452d8e83b07f", num: 8, title: "The Preeminence of Christ" },
-  { id: "2953bbd7-00bb-4c39-8225-7f3f3ff298d7", num: 4, title: "Unity Through Humility" },
-];
+function getCurrentQuarterCode(): string {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
+  const quarter = month <= 3 ? "01" : month <= 6 ? "02" : month <= 9 ? "03" : "04";
+  return `${year}-${quarter}`;
+}
 
 async function main() {
-  for (const lesson of LESSONS) {
-    console.log(`\n${"=".repeat(60)}`);
-    console.log(`Generating companion for Lesson ${lesson.num}: ${lesson.title}`);
-    console.log("=".repeat(60));
-    try {
-      const resourceId = await generateSabbathSchoolCompanion(lesson.id);
-      console.log(`SUCCESS: Resource created with ID: ${resourceId}`);
-    } catch (err: any) {
-      console.error(`FAILED: ${err.message}`);
+  const args = process.argv.slice(2);
+  const eqForm = args.find(a => a.startsWith("--quarter="))?.split("=")[1];
+  const flagIdx = args.indexOf("--quarter");
+  const posForm = flagIdx >= 0 && flagIdx + 1 < args.length && !args[flagIdx + 1].startsWith("--")
+    ? args[flagIdx + 1]
+    : undefined;
+  const quarterArg = eqForm || posForm;
+  const force = args.includes("--force");
+  const dryRun = args.includes("--dry-run");
+  const listQuarters = args.includes("--list");
+
+  if (listQuarters) {
+    const quarters = await getAvailableQuarters();
+    console.log("\nAvailable quarters:");
+    for (const q of quarters) {
+      console.log(`  ${q.quarterCode} - ${q.title} (${q.companionCount}/${q.lessonCount} companions)`);
     }
+    process.exit(0);
   }
-  console.log("\nAll done.");
+
+  const quarterCode = quarterArg || getCurrentQuarterCode();
+
+  console.log(`\n${"=".repeat(60)}`);
+  console.log(`Batch generating companions for quarter: ${quarterCode}`);
+  console.log(`Options: force=${force}, dryRun=${dryRun}`);
+  console.log("=".repeat(60));
+
+  try {
+    const result = await generateQuarterCompanions(quarterCode, { force, dryRun });
+
+    console.log(`\n${"=".repeat(60)}`);
+    console.log("BATCH GENERATION RESULTS");
+    console.log("=".repeat(60));
+    console.log(`Quarter: ${result.quarterTitle} (${result.quarterCode})`);
+    console.log(`Total lessons: ${result.total}`);
+    console.log(`Generated: ${result.generated}`);
+    console.log(`Skipped: ${result.skipped}`);
+    console.log(`Failed: ${result.failed}`);
+    console.log(`Duration: ${(result.durationMs / 1000).toFixed(1)}s`);
+    console.log(`\nPacket stats: ${result.packetStats.created} created, ${result.packetStats.updated} updated, ${result.packetStats.unchanged} unchanged`);
+
+    if (result.details.length > 0) {
+      console.log("\nDetails:");
+      for (const d of result.details) {
+        const icon = d.action === "generated" ? "+" : d.action === "skipped" ? "-" : "X";
+        console.log(`  [${icon}] Lesson ${d.weekNumber}: ${d.lessonTitle} (${d.action}${d.reason ? ` - ${d.reason}` : ""})`);
+      }
+    }
+  } catch (err: any) {
+    console.error(`\nFATAL: ${err.message}`);
+    process.exit(1);
+  }
+
   process.exit(0);
 }
 

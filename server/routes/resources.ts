@@ -396,6 +396,7 @@ router.post("/api/resources/:id/publish", requireAuth, async (req, res) => {
       .set({
         status: "published",
         publishedAt: new Date(),
+        reviewStatus: "approved",
         reviewedAt: new Date(),
         reviewedBy: req.authUserId,
         updatedAt: new Date(),
@@ -406,6 +407,63 @@ router.post("/api/resources/:id/publish", requireAuth, async (req, res) => {
     return res.json(updated);
   } catch (err) {
     console.error("Publish resource error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/resources/:id/review", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+
+    if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
+      return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
+    }
+
+    const [authUser] = await db
+      .select({ isPro: users.isPro })
+      .from(users)
+      .where(eq(users.id, req.authUserId!))
+      .limit(1);
+
+    if (!authUser?.isPro) {
+      return res.status(403).json({ error: "Only administrators can review resources" });
+    }
+
+    const [resource] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    const updateData: Record<string, any> = {
+      reviewStatus: action,
+      reviewedAt: new Date(),
+      reviewedBy: req.authUserId,
+      updatedAt: new Date(),
+    };
+
+    if (action === "approved") {
+      updateData.status = "published";
+      updateData.publishedAt = resource.publishedAt || new Date();
+    } else if (action === "rejected" || action === "needs_revision") {
+      updateData.status = "draft";
+      updateData.publishedAt = null;
+    }
+
+    const [updated] = await db
+      .update(resources)
+      .set(updateData)
+      .where(eq(resources.id, id))
+      .returning();
+
+    return res.json(updated);
+  } catch (err) {
+    console.error("Review resource error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
