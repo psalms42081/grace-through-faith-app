@@ -117,6 +117,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
         reviewNotes: resources.reviewNotes,
         reviewedAt: resources.reviewedAt,
         createdAt: resources.createdAt,
+        hasPreviousVersion: sql<boolean>`(${resources.previousContentJson} IS NOT NULL)`.as("has_previous_version"),
       })
       .from(resources)
       .where(and(...listConditions))
@@ -183,6 +184,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
         createdAt: resources.createdAt,
         updatedAt: resources.updatedAt,
         publishedAt: resources.publishedAt,
+        previousContentJson: resources.previousContentJson,
       })
       .from(resources)
       .where(eq(resources.id, id))
@@ -272,10 +274,122 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
         email: reviewer.email,
         reviewedAt: resource.reviewedAt,
       } : null,
+      hasPreviousVersion: !!resource.previousContentJson,
     });
   } catch (err) {
     console.error("Resource preview error:", err);
     return res.status(500).json({ error: "Failed to fetch resource preview" });
+  }
+});
+
+router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [resource] = await db
+      .select({
+        id: resources.id,
+        title: resources.title,
+        contentJson: resources.contentJson,
+        previousContentJson: resources.previousContentJson,
+        promptVersion: resources.promptVersion,
+        generationStatus: resources.generationStatus,
+        reviewStatus: resources.reviewStatus,
+        createdAt: resources.createdAt,
+      })
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    if (!resource.previousContentJson) {
+      return res.json({
+        hasPrevious: false,
+        resource: { id: resource.id, title: resource.title },
+        sections: [],
+      });
+    }
+
+    const current = resource.contentJson as any;
+    const previous = resource.previousContentJson as any;
+
+    const diffableSections = [
+      { key: "overview", label: "Overview", type: "text" as const },
+      { key: "dailyStudyPrompts", label: "Daily Study Prompts", type: "array" as const },
+      { key: "discussionQuestions", label: "Discussion Questions", type: "array" as const },
+      { key: "memoryVerseGuide", label: "Memory Verse Guide", type: "object" as const },
+      { key: "familyWorshipAdaptation", label: "Family Worship", type: "object" as const },
+      { key: "egwConnections", label: "EGW Connections", type: "array" as const },
+    ];
+
+    const sections = diffableSections.map((section) => {
+      const curVal = current?.[section.key];
+      const prevVal = previous?.[section.key];
+
+      const curStr = section.type === "text" ? (curVal || "") : JSON.stringify(curVal || null, null, 2);
+      const prevStr = section.type === "text" ? (prevVal || "") : JSON.stringify(prevVal || null, null, 2);
+
+      let status: "unchanged" | "changed" | "added" | "removed";
+      if (prevVal == null && curVal != null) status = "added";
+      else if (prevVal != null && curVal == null) status = "removed";
+      else if (curStr === prevStr) status = "unchanged";
+      else status = "changed";
+
+      return {
+        key: section.key,
+        label: section.label,
+        type: section.type,
+        status,
+        current: curVal ?? null,
+        previous: prevVal ?? null,
+      };
+    });
+
+    const currentGen = current?._generation || null;
+    const previousGen = previous?._generation || null;
+
+    const metaDiff = {
+      promptVersion: {
+        previous: previousGen?.promptVersion || null,
+        current: currentGen?.promptVersion || null,
+        changed: (previousGen?.promptVersion || null) !== (currentGen?.promptVersion || null),
+      },
+      model: {
+        previous: previousGen?.model || null,
+        current: currentGen?.model || null,
+        changed: (previousGen?.model || null) !== (currentGen?.model || null),
+      },
+      generatedAt: {
+        previous: previousGen?.generatedAt || null,
+        current: currentGen?.generatedAt || null,
+        changed: (previousGen?.generatedAt || null) !== (currentGen?.generatedAt || null),
+      },
+      tokensUsed: {
+        previous: previousGen?.tokensUsed || null,
+        current: currentGen?.tokensUsed || null,
+        changed: (previousGen?.tokensUsed || null) !== (currentGen?.tokensUsed || null),
+      },
+    };
+
+    const changedCount = sections.filter((s) => s.status !== "unchanged").length;
+
+    return res.json({
+      hasPrevious: true,
+      resource: { id: resource.id, title: resource.title },
+      metaDiff,
+      sections,
+      summary: {
+        total: sections.length,
+        changed: changedCount,
+        unchanged: sections.length - changedCount,
+      },
+    });
+  } catch (err) {
+    console.error("Resource diff error:", err);
+    return res.status(500).json({ error: "Failed to generate diff" });
   }
 });
 

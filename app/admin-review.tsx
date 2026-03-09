@@ -31,6 +31,27 @@ interface FilteredItem {
   reviewNotes: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  hasPreviousVersion: boolean;
+}
+
+interface DiffData {
+  hasPrevious: boolean;
+  resource: { id: string; title: string };
+  metaDiff?: {
+    promptVersion: { previous: string | null; current: string | null; changed: boolean };
+    model: { previous: string | null; current: string | null; changed: boolean };
+    generatedAt: { previous: string | null; current: string | null; changed: boolean };
+    tokensUsed: { previous: number | null; current: number | null; changed: boolean };
+  };
+  sections: Array<{
+    key: string;
+    label: string;
+    type: "text" | "array" | "object";
+    status: "unchanged" | "changed" | "added" | "removed";
+    current: any;
+    previous: any;
+  }>;
+  summary?: { total: number; changed: number; unchanged: number };
 }
 
 interface PipelineOverview {
@@ -551,6 +572,227 @@ function PreviewModal({
   );
 }
 
+function DiffStatusBadge({ status }: { status: string }) {
+  const colorMap: Record<string, { bg: string; text: string }> = {
+    changed: { bg: "#F59E0B20", text: "#F59E0B" },
+    added: { bg: "#10B98120", text: "#10B981" },
+    removed: { bg: "#EF444420", text: "#EF4444" },
+    unchanged: { bg: "#6B728020", text: "#6B7280" },
+  };
+  const colors = colorMap[status] || colorMap.unchanged;
+  return (
+    <View style={[styles.badge, { backgroundColor: colors.bg, borderColor: colors.text }]}>
+      <Text style={[styles.badgeText, { color: colors.text }]}>{status}</Text>
+    </View>
+  );
+}
+
+function renderTextContent(value: any, type: "text" | "array" | "object"): string {
+  if (!value) return "(empty)";
+  if (type === "text") return String(value);
+  if (type === "array" && Array.isArray(value)) {
+    return value.map((item: any, i: number) => {
+      if (typeof item === "string") return `${i + 1}. ${item}`;
+      const text = item.question || item.studyPrompt || item.dayTitle || item.topic || item.text || item.quote || item.relevance || "";
+      const label = item.day ? `Day ${item.day}` : item.reference || item.bookReference || `${i + 1}`;
+      return `${label}: ${text}`;
+    }).join("\n\n");
+  }
+  if (type === "object") {
+    if (typeof value === "object") {
+      return Object.entries(value)
+        .filter(([k]) => k !== "_generation")
+        .map(([k, v]) => {
+          const displayVal = Array.isArray(v) ? (v as any[]).join(", ") : String(v || "");
+          return `${k}: ${displayVal.substring(0, 200)}`;
+        })
+        .join("\n");
+    }
+  }
+  return JSON.stringify(value, null, 2);
+}
+
+function DiffModal({
+  visible,
+  resourceId,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  resourceId: string | null;
+  onClose: () => void;
+  theme: any;
+}) {
+  const insets = useSafeAreaInsets();
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+  const diffPath = resourceId ? `/api/admin/pipeline/resource/${resourceId}/diff` : "";
+
+  const { data: diffData, isLoading } = useQuery<DiffData>({
+    queryKey: [diffPath],
+    enabled: visible && !!resourceId,
+  });
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    if (diffData?.sections) {
+      const changed = new Set(
+        diffData.sections
+          .filter((s) => s.status !== "unchanged")
+          .map((s) => s.key)
+      );
+      setExpandedSections(changed);
+    }
+  }, [diffData]);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.previewModalContent,
+            {
+              backgroundColor: theme.background,
+              borderColor: theme.border,
+              paddingTop: Platform.OS === "web" ? 67 : insets.top + 12,
+              paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12,
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Changes</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+
+          {isLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={theme.accent} />
+            </View>
+          ) : !diffData?.hasPrevious ? (
+            <View style={styles.centered}>
+              <Ionicons name="document-outline" size={48} color={theme.textMuted} />
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                No previous version to compare
+              </Text>
+            </View>
+          ) : (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+              <Text style={[styles.previewTitle, { color: theme.text }]}>
+                {diffData.resource.title}
+              </Text>
+
+              {diffData.summary && (
+                <View style={[styles.diffSummary, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.diffSummaryText, { color: theme.text }]}>
+                    {diffData.summary.changed} of {diffData.summary.total} sections changed
+                  </Text>
+                </View>
+              )}
+
+              {diffData.metaDiff && (
+                <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.metaBlockTitle, { color: "#8B5CF6" }]}>Generation Metadata</Text>
+                  {Object.entries(diffData.metaDiff).map(([key, meta]) => (
+                    <View key={key} style={styles.diffMetaRow}>
+                      <Text style={[styles.metaLabel, { color: theme.textMuted }]}>{key}</Text>
+                      {meta.changed ? (
+                        <View style={styles.diffMetaValues}>
+                          <Text style={[styles.diffOldValue, { color: "#EF4444" }]}>
+                            {meta.previous != null ? String(meta.previous) : "n/a"}
+                          </Text>
+                          <Ionicons name="arrow-forward" size={10} color={theme.textMuted} />
+                          <Text style={[styles.diffNewValue, { color: "#10B981" }]}>
+                            {meta.current != null ? String(meta.current) : "n/a"}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={[styles.metaValue, { color: theme.text }]}>
+                          {meta.current != null ? String(meta.current) : "n/a"}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                Content Sections
+              </Text>
+
+              {diffData.sections.map((section) => {
+                const isExpanded = expandedSections.has(section.key);
+
+                return (
+                  <View key={section.key}>
+                    <Pressable
+                      style={[
+                        styles.diffSectionHeader,
+                        { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                      ]}
+                      onPress={() => toggleSection(section.key)}
+                    >
+                      <View style={styles.diffSectionLeft}>
+                        <Ionicons
+                          name={isExpanded ? "chevron-down" : "chevron-forward"}
+                          size={16}
+                          color={theme.textSecondary}
+                        />
+                        <Text style={[styles.diffSectionLabel, { color: theme.text }]}>
+                          {section.label}
+                        </Text>
+                      </View>
+                      <DiffStatusBadge status={section.status} />
+                    </Pressable>
+
+                    {isExpanded && section.status !== "unchanged" && (
+                      <View style={[styles.diffContent, { borderColor: theme.border }]}>
+                        {section.previous != null && (
+                          <View style={[styles.diffBlock, { backgroundColor: "#EF444408", borderColor: "#EF444430" }]}>
+                            <Text style={[styles.diffBlockLabel, { color: "#EF4444" }]}>Previous</Text>
+                            <Text style={[styles.diffBlockText, { color: theme.textSecondary }]}>
+                              {renderTextContent(section.previous, section.type)}
+                            </Text>
+                          </View>
+                        )}
+                        {section.current != null && (
+                          <View style={[styles.diffBlock, { backgroundColor: "#10B98108", borderColor: "#10B98130" }]}>
+                            <Text style={[styles.diffBlockLabel, { color: "#10B981" }]}>Current</Text>
+                            <Text style={[styles.diffBlockText, { color: theme.text }]}>
+                              {renderTextContent(section.current, section.type)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {isExpanded && section.status === "unchanged" && (
+                      <View style={[styles.diffContent, { borderColor: theme.border }]}>
+                        <Text style={[styles.diffUnchangedText, { color: theme.textMuted }]}>
+                          Content unchanged
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function MetaRow({ label, value, theme }: { label: string; value: string; theme: any }) {
   return (
     <View style={styles.metaRow}>
@@ -570,6 +812,7 @@ export default function AdminReviewScreen() {
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [diffId, setDiffId] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ id: string; action: string; title: string } | null>(null);
 
   const isAdmin = user?.role === "admin";
@@ -722,6 +965,7 @@ export default function AdminReviewScreen() {
               isAdmin={isAdmin}
               onReview={handleReviewStart}
               onPreview={setPreviewId}
+              onDiff={setDiffId}
               reviewLoading={reviewMutation.isPending}
               theme={theme}
             />
@@ -760,6 +1004,13 @@ export default function AdminReviewScreen() {
         visible={!!previewId}
         resourceId={previewId}
         onClose={() => setPreviewId(null)}
+        theme={theme}
+      />
+
+      <DiffModal
+        visible={!!diffId}
+        resourceId={diffId}
+        onClose={() => setDiffId(null)}
         theme={theme}
       />
     </View>
@@ -856,6 +1107,7 @@ function PendingTab({
   isAdmin,
   onReview,
   onPreview,
+  onDiff,
   reviewLoading,
   theme,
 }: {
@@ -864,6 +1116,7 @@ function PendingTab({
   isAdmin: boolean;
   onReview: (id: string, action: string, title: string) => void;
   onPreview: (id: string) => void;
+  onDiff: (id: string) => void;
   reviewLoading: boolean;
   theme: any;
 }) {
@@ -891,12 +1144,23 @@ function PendingTab({
           key={item.id}
           style={[styles.reviewCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
         >
-          <Pressable onPress={() => onPreview(item.id)} style={styles.reviewHeader}>
-            <Text style={[styles.reviewTitle, { color: theme.text }]} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Ionicons name="eye-outline" size={18} color={theme.accent} />
-          </Pressable>
+          <View style={styles.reviewHeader}>
+            <Pressable onPress={() => onPreview(item.id)} style={styles.reviewTitleArea}>
+              <Text style={[styles.reviewTitle, { color: theme.text }]} numberOfLines={2}>
+                {item.title}
+              </Text>
+            </Pressable>
+            <View style={styles.reviewHeaderIcons}>
+              {item.hasPreviousVersion && (
+                <Pressable onPress={() => onDiff(item.id)} hitSlop={8}>
+                  <Ionicons name="git-compare-outline" size={18} color="#F59E0B" />
+                </Pressable>
+              )}
+              <Pressable onPress={() => onPreview(item.id)} hitSlop={8}>
+                <Ionicons name="eye-outline" size={18} color={theme.accent} />
+              </Pressable>
+            </View>
+          </View>
           <View style={styles.reviewMeta}>
             <StatusBadge status={item.reviewStatus} type="review" />
             <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>{item.promptVersion}</Text>
@@ -1150,7 +1414,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  reviewTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", flex: 1, marginRight: 8 },
+  reviewTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   reviewMeta: { flexDirection: "row", gap: 12, marginTop: 6, alignItems: "center" },
   reviewMetaText: { fontSize: 12 },
   reviewActions: { flexDirection: "row", gap: 8, marginTop: 10 },
@@ -1287,4 +1551,50 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dayTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
+  reviewTitleArea: { flex: 1, marginRight: 8 },
+  reviewHeaderIcons: { flexDirection: "row", gap: 10, alignItems: "center" },
+  diffSummary: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  diffSummaryText: { fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  diffSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  diffSectionLeft: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
+  diffSectionLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  diffContent: {
+    marginHorizontal: 4,
+    paddingVertical: 8,
+    borderLeftWidth: 2,
+    paddingLeft: 12,
+    marginBottom: 4,
+  },
+  diffBlock: {
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  diffBlockLabel: { fontSize: 11, fontFamily: "Inter_700Bold", marginBottom: 4, textTransform: "uppercase" },
+  diffBlockText: { fontSize: 13, lineHeight: 19 },
+  diffUnchangedText: { fontSize: 12, fontStyle: "italic", paddingVertical: 4 },
+  diffMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  diffMetaValues: { flexDirection: "row", alignItems: "center", gap: 6 },
+  diffOldValue: { fontSize: 12, fontFamily: "Inter_500Medium", textDecorationLine: "line-through" },
+  diffNewValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 });

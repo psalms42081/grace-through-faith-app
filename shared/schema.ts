@@ -1571,6 +1571,7 @@ export const resources = pgTable("resources", {
   reviewedAt: timestamp("reviewed_at"),
   reviewedBy: varchar("reviewed_by"),
   reviewNotes: text("review_notes"),
+  previousContentJson: jsonb("previous_content_json"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

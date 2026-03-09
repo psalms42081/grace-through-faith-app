@@ -97,7 +97,7 @@ export async function generateQuarterCompanions(
     const contentChanged = packetInfo?.changed ?? false;
 
     const existing = await db
-      .select({ id: resources.id, sourcePacketId: resources.sourcePacketId })
+      .select({ id: resources.id, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson })
       .from(resources)
       .where(
         sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`
@@ -137,6 +137,8 @@ export async function generateQuarterCompanions(
       continue;
     }
 
+    const previousContentJson = existing.length > 0 ? existing[0].contentJson : null;
+
     if (existing.length > 0) {
       await db.delete(resources).where(eq(resources.id, existing[0].id));
       console.log(`[batch] Removed old companion ${existing[0].id} for lesson ${lesson.lessonNumber} (${actionReason})`);
@@ -147,6 +149,14 @@ export async function generateQuarterCompanions(
       const resourceId = await generateSabbathSchoolCompanion(lesson.id, {
         sourcePacketId: packetId,
       });
+
+      if (previousContentJson) {
+        await db.update(resources)
+          .set({ previousContentJson })
+          .where(eq(resources.id, resourceId));
+        console.log(`[batch] Preserved previous content for diff review`);
+      }
+
       console.log(`[batch] Companion created: ${resourceId}`);
       details.push({
         lessonId: lesson.id,
