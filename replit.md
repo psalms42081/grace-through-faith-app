@@ -54,6 +54,15 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Empty State Polish:** Consolidated empty states using a shared `EmptyState` component.
 - **Kids Mode Improvements:** Story animation fallbacks, micro animations, age-adaptive Kids Sabbath School lessons, and progress visualization.
 - **Resume System:** `useResumeJourney` hook aggregates progress from 8 sources and `ContinueCard` displays the highest-priority resumable item.
+- **Content Engine & Resources Library:** Centralized SDA content generation and distribution system:
+  - `server/services/content-engine.ts` — AI-powered generation functions: `generateSabbathSchoolCompanion`, `generateTopicalStudy`, `generateFamilyWorshipPlan`. All enforce SDA doctrinal guardrails and output structured JSON.
+  - `resources` table — central catalog with slug-based access, tier-based gating (free/pro), status workflow (draft/review/published), sourceRef linking to originating content.
+  - `resource_progress` / `resource_bookmarks` — per-user engagement tracking.
+  - `server/routes/resources.ts` — full CRUD API: list (paginated, filterable, cached), detail with pro-gating (teasers for non-pro users), progress tracking, bookmarks, generation triggers.
+  - Auto-generation: Sabbath School sync triggers companion generation for new/updated lessons (async, non-blocking).
+  - Resource types: sabbath-school-companion, family-worship, study-guide, devotional-series, topical-study.
+  - Categories: sabbath-school, family, prophecy, doctrine, spiritual-growth, kids.
+  - Frontend: `app/resources.tsx` (library with search/filter) and `app/resource-detail.tsx` (reader with type-specific rendering, progress, bookmarks, pro-gate).
 
 ## External Dependencies
 

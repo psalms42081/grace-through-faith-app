@@ -23,6 +23,7 @@ import formationRoutes from "./routes/formation";
 import greatControversyRoutes from "./routes/great-controversy";
 import sabbathSchoolRoutes from "./routes/sabbath-school";
 import analyticsRoutes from "./routes/analytics";
+import resourcesRoutes from "./routes/resources";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -64,6 +65,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     seedGlobalChurches().catch((err) => {
       console.error("Global churches seed error:", err);
     });
+
+    const { seedResources } = await import("./seed-resources");
+    seedResources(db).catch((err) => {
+      console.error("Resources seed error:", err);
+    });
   } else {
     console.log("[startup] RUN_STARTUP_SEEDS is not enabled — skipping seed scripts");
   }
@@ -81,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);
   app.use("/api/analytics", analyticsRoutes);
+  app.use(resourcesRoutes);
 
   const startTime = Date.now();
 
@@ -88,9 +95,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const uptimeMs = Date.now() - startTime;
     const uptimeSeconds = Math.floor(uptimeMs / 1000);
     let dbStatus: "ok" | "unreachable" = "ok";
+    let resourceStats = { published: 0, draft: 0 };
 
     try {
       await db.execute(sql`SELECT 1`);
+      const counts = await db.execute(sql`
+        SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
+      `);
+      for (const row of counts.rows as any[]) {
+        if (row.status === "published") resourceStats.published = row.count;
+        else if (row.status === "draft") resourceStats.draft = row.count;
+      }
     } catch {
       dbStatus = "unreachable";
     }
@@ -107,6 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       errors: errorCounts,
       ai: getAISemaphoreStats(),
       cache: getCacheStats(),
+      resources: resourceStats,
     });
   });
 

@@ -4,8 +4,9 @@ import {
   sabbathSchoolLessons,
   sabbathSchoolDays,
   sabbathSchoolDiscussionPrep,
+  resources,
 } from "../../shared/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import YAML from "yaml";
 import { fetchWithTimeout } from "./api-client";
 
@@ -169,6 +170,7 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
         })
         .returning();
       lessonId = insertedLesson.id;
+      updatedLessonIds.push(lessonId);
     }
 
     for (let dayNum = 1; dayNum <= 7; dayNum++) {
@@ -233,6 +235,10 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
   }
 
   console.log(`[SabbathSchool] Sync complete for ${activeQuarterCode}`);
+
+  triggerCompanionGeneration(quarterlyId, updatedLessonIds).catch((err) => {
+    console.error("[content:generate] Companion generation failed:", err);
+  });
 }
 
 export async function getCurrentLessonNumber(quarterlyId: string): Promise<number> {
@@ -326,6 +332,34 @@ export async function getMostRecentQuarterly() {
     .limit(1);
 
   return fallback[0] || null;
+}
+
+async function triggerCompanionGeneration(quarterlyId: string, lessonIds: string[]): Promise<void> {
+  if (lessonIds.length === 0) return;
+
+  const { generateSabbathSchoolCompanion } = await import("./content-engine");
+
+  for (const lessonId of lessonIds) {
+    const existing = await db
+      .select({ id: resources.id })
+      .from(resources)
+      .where(
+        sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      continue;
+    }
+
+    try {
+      console.log(`[content:generate] Generating companion for lesson ${lessonId}`);
+      await generateSabbathSchoolCompanion(lessonId);
+      console.log(`[content:ready] Companion for lesson ${lessonId} created`);
+    } catch (err) {
+      console.error(`[content:generate] Failed for lesson ${lessonId}:`, err);
+    }
+  }
 }
 
 export async function invalidateDiscussionCache(lessonIds: string[]): Promise<void> {

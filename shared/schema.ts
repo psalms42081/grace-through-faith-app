@@ -1519,6 +1519,68 @@ export const sabbathSchoolDiscussionPrep = pgTable("sabbath_school_discussion_pr
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ─── RESOURCES ──────────────────────────────────────────────────────────────
+
+export const resources = pgTable("resources", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  resourceType: varchar("resource_type", { length: 50 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  tier: varchar("tier", { length: 10 }).notNull().default("free"),
+  coverImageUrl: text("cover_image_url"),
+  contentJson: jsonb("content_json").notNull(),
+  sourceRef: jsonb("source_ref"),
+  ageGroup: varchar("age_group", { length: 20 }),
+  estimatedMinutes: integer("estimated_minutes").default(15),
+  tags: jsonb("tags").default([]),
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  generatedBy: varchar("generated_by", { length: 20 }).notNull().default("ai"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("resources_status_idx").on(table.status),
+  categoryIdx: index("resources_category_idx").on(table.category),
+  tierIdx: index("resources_tier_idx").on(table.tier),
+  typeIdx: index("resources_type_idx").on(table.resourceType),
+}));
+
+export const resourceProgress = pgTable("resource_progress", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  resourceId: varchar("resource_id").notNull(),
+  started: boolean("started").default(true).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  progressPercent: integer("progress_percent").default(0).notNull(),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow().notNull(),
+  notes: text("notes"),
+}, (table) => ({
+  userResourceUnique: uniqueIndex("progress_user_resource").on(table.userId, table.resourceId),
+}));
+
+export const resourceBookmarks = pgTable("resource_bookmarks", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  resourceId: varchar("resource_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userBookmarkUnique: uniqueIndex("bookmark_user_resource").on(table.userId, table.resourceId),
+}));
+
+export const insertResourceSchema = createInsertSchema(resources);
+export const insertResourceProgressSchema = createInsertSchema(resourceProgress);
+export const insertResourceBookmarkSchema = createInsertSchema(resourceBookmarks);
+
 export const userFeedback = pgTable("user_feedback", {
   id: varchar("id")
     .primaryKey()

@@ -147,6 +147,15 @@ export default function StudyScreen() {
         />
 
         <ListItem
+          icon="library"
+          iconColor="#1565C0"
+          title="Resources"
+          subtitle="Study guides, devotionals, and family worship"
+          onPress={() => router.push("/resources" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
+        <ListItem
           icon="telescope"
           iconColor="#C9933A"
           title="Prophecy Explorer"

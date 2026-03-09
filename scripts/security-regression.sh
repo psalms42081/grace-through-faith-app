@@ -99,12 +99,15 @@ HEALTH_AI=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{const
 check "GET /api/health ai stats present" "ok" "$HEALTH_AI"
 HEALTH_CACHE=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{const j=JSON.parse(d);process.stdout.write(typeof j.cache?.hitRate==='number'?'ok':'ERR')}catch{process.stdout.write('ERR')}})")
 check "GET /api/health cache stats present" "ok" "$HEALTH_CACHE"
+HEALTH_RES=$(echo "$HEALTH_BODY" | node -e "process.stdin.on('data',d=>{try{const j=JSON.parse(d);process.stdout.write(typeof j.resources?.published==='number'?'ok':'ERR')}catch{process.stdout.write('ERR')}})")
+check "GET /api/health resources stats present" "ok" "$HEALTH_RES"
 check "GET /api/tracks" "200" "$(status "$BASE/api/tracks")"
 check "GET /api/streams/active" "200" "$(status "$BASE/api/streams/active")"
 check "GET /api/sabbath-school/current" "200" "$(status "$BASE/api/sabbath-school/current")"
 check "GET /api/devotionals/plans" "200" "$(status "$BASE/api/devotionals/plans")"
 check "GET /api/kids/collections" "200" "$(status "$BASE/api/kids/collections")"
 check "GET /api/churches" "200" "$(status "$BASE/api/churches")"
+check "GET /api/resources" "200" "$(status "$BASE/api/resources")"
 check "POST /api/feedback (guest)" "200" "$(status -X POST "$BASE/api/feedback" -H 'Content-Type: application/json' -d '{"topic":"Bug Report","message":"regression test"}')"
 
 echo ""
