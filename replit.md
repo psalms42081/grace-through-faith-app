@@ -60,6 +60,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
   - `resource_progress` / `resource_bookmarks` — per-user engagement tracking.
   - `server/routes/resources.ts` — full CRUD API: list (paginated, filterable, cached), detail with pro-gating (teasers for non-pro users), progress tracking, bookmarks, generation triggers.
   - Auto-generation: Sabbath School sync triggers companion generation for new/updated lessons (async, non-blocking).
+  - Content quality pass (v2 prompt): Multi-paragraph overviews, SDA-distinctive key insights (sanctuary/Sabbath/health/second coming), 5 progressive meditation steps, 400+ char kids versions with concrete stories, consistent EGW "Book Title, Chapter X" format from major works, substantive discussion contexts, 6000 max_tokens.
   - Resource types: sabbath-school-companion, family-worship, study-guide, devotional-series, topical-study.
   - Categories: sabbath-school, family, prophecy, doctrine, spiritual-growth, kids.
   - Frontend: `app/resources.tsx` (library with search/filter) and `app/resource-detail.tsx` (reader with type-specific rendering, progress, bookmarks, pro-gate).

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { z } from "zod";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
 import { db } from "../db";
@@ -8,6 +9,39 @@ import {
   sabbathSchoolDays,
 } from "../../shared/schema";
 import { eq } from "drizzle-orm";
+
+const companionSchema = z.object({
+  overview: z.string().min(200),
+  dailyStudyPrompts: z.array(z.object({
+    day: z.number(),
+    dayTitle: z.string(),
+    focusText: z.string(),
+    studyPrompt: z.string(),
+    keyInsight: z.string(),
+  })).min(5).max(7),
+  discussionQuestions: z.array(z.object({
+    question: z.string(),
+    context: z.string(),
+    depth: z.enum(["surface", "intermediate", "deep"]),
+  })).min(5).max(10),
+  memoryVerseGuide: z.object({
+    verse: z.string(),
+    reference: z.string(),
+    meditationSteps: z.array(z.string()).min(3).max(7),
+    applicationPrompt: z.string(),
+  }),
+  familyWorshipAdaptation: z.object({
+    kidsVersion: z.string().min(100),
+    activityIdea: z.string(),
+    discussionForKids: z.array(z.string()).min(2),
+    prayer: z.string(),
+  }),
+  egwConnections: z.array(z.object({
+    topic: z.string(),
+    bookReference: z.string(),
+    relevance: z.string(),
+  })).min(3).max(7),
+});
 
 function createOpenAIClient(): OpenAI {
   const client = new OpenAI({
@@ -122,59 +156,94 @@ ${daysContent}
 
 Return a JSON object with this exact structure:
 {
-  "overview": "2-3 paragraph SDA-perspective summary of the lesson's key themes and significance",
+  "overview": "Write 2-3 separate paragraphs (separated by \\n\\n). First paragraph: the lesson's core theme and why it matters for Adventists today. Second paragraph: how this connects to the broader Philippians/Colossians narrative arc. Third paragraph (optional): relevance to the Three Angels' Messages or the Great Controversy theme.",
   "dailyStudyPrompts": [
     {
       "day": 1,
-      "dayTitle": "title for this day's study",
-      "focusText": "the specific scripture or passage to focus on",
-      "studyPrompt": "a thoughtful study prompt that goes deeper than the lesson material",
-      "keyInsight": "one key insight from an SDA perspective"
+      "dayTitle": "a concise title for this day's study",
+      "focusText": "the specific scripture passage to focus on (e.g. 'Colossians 3:1-4')",
+      "studyPrompt": "a thoughtful 2-3 sentence study prompt that adds depth beyond the lesson quarterly — ask a question that requires reflection, not just recall. Connect to lived experience.",
+      "keyInsight": "one distinctive SDA insight — connect to a specific doctrine (sanctuary, state of the dead, Sabbath, health message, second coming) where naturally relevant. Be specific, not generic."
     }
   ],
   "discussionQuestions": [
     {
-      "question": "a deeper discussion question",
-      "context": "brief context for why this question matters",
+      "question": "a substantive discussion question that could sustain 5-10 minutes of group conversation",
+      "context": "1-2 sentences explaining why this question matters for spiritual formation — what tension or growth opportunity does it surface?",
       "depth": "surface|intermediate|deep"
     }
   ],
   "memoryVerseGuide": {
-    "verse": "the memory verse text",
-    "reference": "the scripture reference",
-    "meditationSteps": ["step 1 for meditating on this verse", "step 2", "step 3"],
-    "applicationPrompt": "how to apply this verse in daily life"
+    "verse": "the exact memory verse text from the lesson (NKJV preferred)",
+    "reference": "the scripture reference (e.g. 'Colossians 3:14, NKJV')",
+    "meditationSteps": [
+      "Step 1: Read the verse aloud slowly three times",
+      "Step 2: Identify the key action or command in the verse",
+      "Step 3: Ask yourself: What does this reveal about God's character?",
+      "Step 4: Connect the verse to a specific situation in your life this week",
+      "Step 5: Write a one-sentence prayer response based on the verse"
+    ],
+    "applicationPrompt": "a specific, practical application prompt — not generic. Tie it to a real-life scenario (work, family, church, or personal struggle)."
   },
   "familyWorshipAdaptation": {
-    "kidsVersion": "a kid-friendly retelling of the lesson's main theme (2-3 paragraphs)",
-    "activityIdea": "a hands-on activity for children related to the lesson",
-    "discussionForKids": ["simple question 1", "simple question 2", "simple question 3"],
-    "prayer": "a simple prayer children can pray"
+    "kidsVersion": "Write 2-3 full paragraphs retelling the lesson's theme for children ages 5-10. Use a story, analogy, or everyday scenario they can relate to. Avoid abstract theology — make it concrete and vivid. Aim for 400+ characters.",
+    "activityIdea": "a specific, creative hands-on activity unique to THIS lesson's theme (avoid generic 'kindness chart' activities — tie it directly to the lesson's imagery or narrative)",
+    "discussionForKids": ["age-appropriate question tied to the lesson theme", "question that connects to their daily life", "question about how God helps them with this"],
+    "prayer": "a warm, simple prayer children can pray — 2-3 sentences, using language a 6-year-old would understand"
   },
   "egwConnections": [
     {
-      "topic": "the topic being connected",
-      "bookReference": "Ellen G. White book and chapter reference",
-      "relevance": "how this connects to the lesson"
+      "topic": "the specific lesson theme being connected",
+      "bookReference": "Prefer major EGW works: The Desire of Ages, Steps to Christ, The Great Controversy, Patriarchs and Prophets, Christ's Object Lessons, The Ministry of Healing, Education, The Acts of the Apostles. Use 'Book Title, Chapter X' format consistently — avoid page numbers unless the work is a devotional compilation.",
+      "relevance": "2-3 sentences explaining the specific connection — what does EGW add to the biblical discussion that enriches understanding?"
     }
   ]
 }
 
-Generate 7 daily study prompts (one per day), 6-8 discussion questions with mixed depths, 3-5 EGW connections, and 3-4 meditation steps.`,
+Requirements:
+- Generate exactly 7 daily study prompts (one per day, matching the lesson's day structure)
+- Generate 7-8 discussion questions: 2 surface, 3 intermediate, 2-3 deep
+- Generate 4-5 EGW connections from well-known major works
+- Generate exactly 5 meditation steps that are actionable and progressive
+- The overview MUST be 2-3 distinct paragraphs
+- Key insights should be distinctively Adventist where possible, not generic Christian observations`,
       },
     ],
     temperature: 0.7,
-    max_tokens: 4000,
+    max_tokens: 6000,
   });
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
   const cleaned = cleanJsonResponse(raw);
   let contentJson: SabbathSchoolCompanionContent;
   try {
-    contentJson = JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    const validated = companionSchema.safeParse(parsed);
+    if (!validated.success) {
+      console.warn("[content:validate] Schema validation issues:", validated.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '));
+      contentJson = parsed as SabbathSchoolCompanionContent;
+    } else {
+      contentJson = validated.data as SabbathSchoolCompanionContent;
+    }
   } catch {
-    console.error("[content:generate] Failed to parse companion JSON:", raw.substring(0, 500));
-    throw new Error("Failed to parse AI-generated companion content");
+    console.error("[content:generate] Failed to parse companion JSON, attempting repair...");
+    try {
+      const repairCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Fix the following malformed JSON. Return ONLY valid JSON, no markdown fences or commentary." },
+          { role: "user", content: raw },
+        ],
+        temperature: 0,
+        max_tokens: 6000,
+      });
+      const repaired = cleanJsonResponse(repairCompletion.choices[0]?.message?.content ?? "{}");
+      contentJson = JSON.parse(repaired) as SabbathSchoolCompanionContent;
+      console.log("[content:repair] JSON repair succeeded");
+    } catch {
+      console.error("[content:generate] JSON repair also failed:", raw.substring(0, 500));
+      throw new Error("Failed to parse AI-generated companion content");
+    }
   }
 
   const slug = slugify(`sabbath-school-companion-${lesson[0].title}-${Date.now()}`);
