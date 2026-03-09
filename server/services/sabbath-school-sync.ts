@@ -7,16 +7,10 @@ import {
 } from "../../shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import YAML from "yaml";
+import { fetchWithTimeout } from "./api-client";
 
-// CONTENT SOURCE: Official Adventech Sabbath School lesson content (open-source, MIT-licensed).
-// This service fetches and stores official lesson text (markdown) and metadata (YAML).
-// The raw content is displayed directly in the day reader — it is NOT transformed or paraphrased.
-// AI-generated discussion aids (questions, summaries, reflections) are produced separately
-// in ai-engine.ts and are clearly labeled as AI-generated in the frontend.
 const BASE_URL =
   "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
-
-const FETCH_TIMEOUT_MS = 15000;
 
 function getCurrentQuarterCode(): string {
   const now = new Date();
@@ -57,18 +51,10 @@ function todayUTCMidnight(): Date {
 
 async function fetchText(url: string): Promise<string | null> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
+    const res = await fetchWithTimeout(url, { service: "external", serviceLabel: "sabbath-school" });
     if (!res.ok) return null;
     return await res.text();
-  } catch (err: any) {
-    if (err?.name === "AbortError") {
-      console.error(`[SabbathSchool] Fetch timeout (${FETCH_TIMEOUT_MS}ms): ${url}`);
-    } else {
-      console.error(`[SabbathSchool] Fetch failed: ${url}`, err?.message || err);
-    }
+  } catch {
     return null;
   }
 }

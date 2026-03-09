@@ -76,30 +76,32 @@ function setupBodyParsing(app: express.Application) {
   app.use(express.urlencoded({ extended: false }));
 }
 
+const AI_PATH_PATTERNS = ["/generate", "/study-guide", "/context", "/semantic", "/tts", "/scene/"];
+const SLOW_THRESHOLD_NORMAL = 2000;
+const SLOW_THRESHOLD_AI = 15000;
+
+function isAIRoute(path: string): boolean {
+  return AI_PATH_PATTERNS.some((p) => path.includes(p));
+}
+
+export const errorCounts = { validation: 0, auth: 0, not_found: 0, rate_limit: 0, server: 0, total: 0 };
+
 function setupRequestLogging(app: express.Application) {
   app.use((req, res, next) => {
     const start = Date.now();
-    const path = req.path;
-    let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
-
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-      capturedJsonResponse = bodyJson;
-      return originalResJson.apply(res, [bodyJson, ...args]);
-    };
+    const reqPath = req.path;
 
     res.on("finish", () => {
-      if (!path.startsWith("/api")) return;
+      if (!reqPath.startsWith("/api")) return;
 
       const duration = Date.now() - start;
+      const status = res.statusCode;
+      const threshold = isAIRoute(reqPath) ? SLOW_THRESHOLD_AI : SLOW_THRESHOLD_NORMAL;
+      const isSlow = duration > threshold;
 
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      let logLine = `[req] ${req.method} ${reqPath} ${status} ${duration}ms`;
+      if (isSlow) {
+        logLine = `[SLOW] ${logLine} (threshold: ${threshold}ms)`;
       }
 
       log(logLine);
@@ -237,8 +239,16 @@ function configureExpoAndLanding(app: express.Application) {
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
+function categorizeError(status: number): keyof typeof errorCounts {
+  if (status === 400) return "validation";
+  if (status === 401 || status === 403) return "auth";
+  if (status === 404) return "not_found";
+  if (status === 429) return "rate_limit";
+  return "server";
+}
+
 function setupErrorHandler(app: express.Application) {
-  app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
     const error = err as {
       status?: number;
       statusCode?: number;
@@ -247,8 +257,15 @@ function setupErrorHandler(app: express.Application) {
 
     const status = error.status || error.statusCode || 500;
     const message = error.message || "Internal Server Error";
+    const category = categorizeError(status);
 
-    console.error("Internal Server Error:", err);
+    errorCounts[category]++;
+    errorCounts.total++;
+
+    console.error(`[error] ${req.method} ${req.path} ${status} ${category}: ${message}`);
+    if (status >= 500) {
+      console.error("[error] Stack:", err);
+    }
 
     if (res.headersSent) {
       return next(err);

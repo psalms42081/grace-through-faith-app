@@ -345,9 +345,11 @@ const EGW_COMMENTATOR = {
 async function generateEgwInsight(bookName: string, chapter: number): Promise<string | null> {
   try {
     const OpenAI = (await import("openai")).default;
+    const { getTimeout } = await import("../services/api-client");
     const client = new OpenAI({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      timeout: getTimeout("openai"),
     });
     const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -373,7 +375,11 @@ async function generateEgwInsight(bookName: string, chapter: number): Promise<st
 
 async function fetchRealCommentary(apiId: string, bookCode: string, ch: number): Promise<{ verses: { number: number; content: string }[] } | null> {
   try {
-    const resp = await fetch(`https://bible.helloao.org/api/c/${apiId}/${bookCode}/${ch}.json`);
+    const { fetchWithTimeout } = await import("../services/api-client");
+    const resp = await fetchWithTimeout(`https://bible.helloao.org/api/c/${apiId}/${bookCode}/${ch}.json`, {
+      service: "external",
+      serviceLabel: "bible-commentary",
+    });
     if (!resp.ok) return null;
     const data = await resp.json() as any;
     const items = data?.chapter?.content;

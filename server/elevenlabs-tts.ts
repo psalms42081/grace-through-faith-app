@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./services/api-client";
+
 const ELEVENLABS_VOICES = {
   george: "JBFqnCBsd6RMkjVDRZzb",
   callum: "N2lVS1w4EtoT3dr4eOWO",
@@ -28,7 +30,9 @@ export async function textToSpeech(
 
   console.log(`[ElevenLabs TTS] Generating audio for voice="${voice}" (${voiceId}), text=${text.length} chars`);
 
-  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+  const response = await fetchWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+    service: "elevenlabs",
+    serviceLabel: "elevenlabs-tts",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

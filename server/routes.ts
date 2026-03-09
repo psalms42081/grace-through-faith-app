@@ -5,6 +5,8 @@ import { prayerRequests, readingHistory, prayerGroupMembers, groupDiscussions, l
 import { eq } from "drizzle-orm";
 import { env } from "./env";
 import { optionalAuth, getEffectiveUserId } from "./middleware/auth";
+import { sql } from "drizzle-orm";
+import { errorCounts } from "./index";
 
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -77,6 +79,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);
   app.use("/api/analytics", analyticsRoutes);
+
+  const startTime = Date.now();
+
+  app.get("/api/health", async (_req, res) => {
+    const uptimeMs = Date.now() - startTime;
+    const uptimeSeconds = Math.floor(uptimeMs / 1000);
+    let dbStatus: "ok" | "unreachable" = "ok";
+
+    try {
+      await db.execute(sql`SELECT 1`);
+    } catch {
+      dbStatus = "unreachable";
+    }
+
+    const status = dbStatus === "ok" ? "ok" : "degraded";
+    const statusCode = status === "ok" ? 200 : 503;
+
+    res.status(statusCode).json({
+      status,
+      timestamp: new Date().toISOString(),
+      uptime: uptimeSeconds,
+      database: dbStatus,
+      version: "1.0.0",
+      errors: errorCounts,
+    });
+  });
 
   app.post("/api/feedback", optionalAuth, async (req, res) => {
     try {
