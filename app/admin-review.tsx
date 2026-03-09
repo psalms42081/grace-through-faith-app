@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  TextInput,
+  Modal,
 } from "react-native";
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +19,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface FilteredItem {
+  id: string;
+  title: string;
+  slug: string;
+  generationStatus: string;
+  reviewStatus: string;
+  promptVersion: string;
+  sourceRef: any;
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
 
 interface PipelineOverview {
   sourcePackets: { byStatus: Record<string, number>; total: number };
@@ -28,15 +43,13 @@ interface PipelineOverview {
   coverage: { totalLessons: number; lessonsWithCompanions: number; coveragePercent: number };
   promptVersionDistribution: Record<string, number>;
   failedGenerations: Array<{ id: string; title: string; updatedAt: string }>;
-  pendingReview: Array<{
-    id: string;
-    title: string;
-    slug: string;
-    generationStatus: string;
+  filteredList: FilteredItem[];
+  filters: {
     reviewStatus: string;
-    promptVersion: string;
-    createdAt: string;
-  }>;
+    generationStatus: string | null;
+    promptVersion: string | null;
+    quarterCode: string | null;
+  };
 }
 
 interface QuarterInfo {
@@ -75,6 +88,50 @@ interface QuarterDetail {
   }>;
 }
 
+interface ResourcePreview {
+  resource: {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    resourceType: string;
+    category: string;
+    tier: string;
+    status: string;
+    generationStatus: string;
+    reviewStatus: string;
+    reviewNotes: string | null;
+    promptVersion: string;
+    generatedBy: string;
+    createdAt: string;
+    updatedAt: string;
+    publishedAt: string | null;
+  };
+  generationMeta: {
+    model?: string;
+    promptVersion?: string;
+    generatedAt?: string;
+    tokensUsed?: number;
+  } | null;
+  contentSections: Array<{ key: string; label: string; preview: string }>;
+  fullContent: any;
+  sourcePacket: {
+    id: string;
+    title: string;
+    weekNumber: number;
+    status: string;
+    sourceHash: string;
+    sourceVersion: string | null;
+    updatedAt: string;
+  } | null;
+  reviewer: {
+    id: string;
+    displayName: string;
+    email: string;
+    reviewedAt: string;
+  } | null;
+}
+
 function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   const { theme } = useTheme();
   return (
@@ -106,6 +163,403 @@ function StatusBadge({ status, type }: { status: string; type: "generation" | "r
   );
 }
 
+function FilterBar({
+  reviewStatus,
+  promptVersion,
+  promptVersions,
+  onChangeReviewStatus,
+  onChangePromptVersion,
+  theme,
+}: {
+  reviewStatus: string;
+  promptVersion: string;
+  promptVersions: string[];
+  onChangeReviewStatus: (v: string) => void;
+  onChangePromptVersion: (v: string) => void;
+  theme: any;
+}) {
+  const statusOptions = ["pending", "approved", "rejected", "needs_revision"];
+
+  return (
+    <View style={styles.filterBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {statusOptions.map((s) => (
+          <Pressable
+            key={s}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor: reviewStatus === s ? theme.accent + "30" : theme.backgroundCard,
+                borderColor: reviewStatus === s ? theme.accent : theme.border,
+              },
+            ]}
+            onPress={() => onChangeReviewStatus(s)}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: reviewStatus === s ? theme.accent : theme.textSecondary },
+              ]}
+            >
+              {s.replace("_", " ")}
+            </Text>
+          </Pressable>
+        ))}
+        {promptVersions.length > 0 && (
+          <View style={styles.filterDivider} />
+        )}
+        {promptVersions.map((v) => (
+          <Pressable
+            key={v}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor: promptVersion === v ? "#8B5CF6" + "30" : theme.backgroundCard,
+                borderColor: promptVersion === v ? "#8B5CF6" : theme.border,
+              },
+            ]}
+            onPress={() => onChangePromptVersion(promptVersion === v ? "" : v)}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: promptVersion === v ? "#8B5CF6" : theme.textSecondary },
+              ]}
+            >
+              {v}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ReviewNotesModal({
+  visible,
+  onClose,
+  onSubmit,
+  action,
+  title,
+  theme,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (notes: string) => void;
+  action: string;
+  title: string;
+  theme: any;
+}) {
+  const [notes, setNotes] = useState("");
+  const insets = useSafeAreaInsets();
+
+  const actionLabel =
+    action === "approved" ? "Approve & Publish" : action === "rejected" ? "Reject" : "Request Revision";
+  const actionColor = action === "approved" ? "#10B981" : action === "rejected" ? "#EF4444" : "#F97316";
+
+  const handleSubmit = () => {
+    onSubmit(notes.trim());
+    setNotes("");
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: theme.background,
+              borderColor: theme.border,
+              paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16,
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>{actionLabel}</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+          <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]} numberOfLines={2}>
+            {title}
+          </Text>
+          <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Review Notes (optional)</Text>
+          <TextInput
+            style={[
+              styles.notesInput,
+              {
+                color: theme.text,
+                backgroundColor: theme.backgroundCard,
+                borderColor: theme.border,
+              },
+            ]}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add notes about this review decision..."
+            placeholderTextColor={theme.textMuted}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            maxLength={2000}
+          />
+          <View style={styles.modalActions}>
+            <Pressable style={[styles.modalBtn, { backgroundColor: theme.backgroundCard }]} onPress={onClose}>
+              <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancel</Text>
+            </Pressable>
+            <Pressable style={[styles.modalBtn, { backgroundColor: actionColor }]} onPress={handleSubmit}>
+              <Text style={[styles.modalBtnText, { color: "#fff" }]}>{actionLabel}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function PreviewModal({
+  visible,
+  resourceId,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  resourceId: string | null;
+  onClose: () => void;
+  theme: any;
+}) {
+  const insets = useSafeAreaInsets();
+
+  const previewPath = resourceId ? `/api/admin/pipeline/resource/${resourceId}/preview` : "";
+
+  const { data: preview, isLoading } = useQuery<ResourcePreview>({
+    queryKey: [previewPath],
+    enabled: visible && !!resourceId,
+  });
+
+  const fullContent = preview?.fullContent;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.previewModalContent,
+            {
+              backgroundColor: theme.background,
+              borderColor: theme.border,
+              paddingTop: Platform.OS === "web" ? 67 : insets.top + 12,
+              paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12,
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Content Preview</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Ionicons name="close" size={22} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+
+          {isLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={theme.accent} />
+            </View>
+          ) : !preview ? (
+            <View style={styles.centered}>
+              <Text style={{ color: theme.textSecondary }}>Failed to load preview</Text>
+            </View>
+          ) : (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+              <Text style={[styles.previewTitle, { color: theme.text }]}>{preview.resource.title}</Text>
+              <Text style={[styles.previewDesc, { color: theme.textSecondary }]}>
+                {preview.resource.description}
+              </Text>
+
+              <View style={styles.metaGrid}>
+                <MetaRow label="Status" value={preview.resource.status} theme={theme} />
+                <MetaRow label="Generation" value={preview.resource.generationStatus} theme={theme} />
+                <MetaRow label="Review" value={preview.resource.reviewStatus} theme={theme} />
+                <MetaRow label="Prompt" value={preview.resource.promptVersion || "unknown"} theme={theme} />
+                <MetaRow label="Generated By" value={preview.resource.generatedBy} theme={theme} />
+                <MetaRow
+                  label="Created"
+                  value={new Date(preview.resource.createdAt).toLocaleDateString()}
+                  theme={theme}
+                />
+                {preview.resource.publishedAt && (
+                  <MetaRow
+                    label="Published"
+                    value={new Date(preview.resource.publishedAt).toLocaleDateString()}
+                    theme={theme}
+                  />
+                )}
+              </View>
+
+              {preview.generationMeta && (
+                <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.metaBlockTitle, { color: "#8B5CF6" }]}>Generation Metadata</Text>
+                  {preview.generationMeta.model && (
+                    <MetaRow label="Model" value={preview.generationMeta.model} theme={theme} />
+                  )}
+                  {preview.generationMeta.tokensUsed != null && (
+                    <MetaRow
+                      label="Tokens"
+                      value={preview.generationMeta.tokensUsed.toLocaleString()}
+                      theme={theme}
+                    />
+                  )}
+                  {preview.generationMeta.generatedAt && (
+                    <MetaRow
+                      label="Generated At"
+                      value={new Date(preview.generationMeta.generatedAt).toLocaleString()}
+                      theme={theme}
+                    />
+                  )}
+                </View>
+              )}
+
+              {preview.sourcePacket && (
+                <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.metaBlockTitle, { color: "#3B82F6" }]}>Source Packet</Text>
+                  <MetaRow label="Title" value={preview.sourcePacket.title} theme={theme} />
+                  <MetaRow label="Week" value={String(preview.sourcePacket.weekNumber)} theme={theme} />
+                  <MetaRow label="Status" value={preview.sourcePacket.status} theme={theme} />
+                  <MetaRow label="Hash" value={preview.sourcePacket.sourceHash.substring(0, 12)} theme={theme} />
+                </View>
+              )}
+
+              {preview.reviewer && (
+                <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.metaBlockTitle, { color: "#10B981" }]}>Last Review</Text>
+                  <MetaRow label="By" value={preview.reviewer.displayName || preview.reviewer.email} theme={theme} />
+                  <MetaRow
+                    label="At"
+                    value={new Date(preview.reviewer.reviewedAt).toLocaleString()}
+                    theme={theme}
+                  />
+                </View>
+              )}
+
+              {preview.resource.reviewNotes && (
+                <View style={[styles.metaBlock, { backgroundColor: "#F97316" + "10", borderColor: "#F97316" + "40" }]}>
+                  <Text style={[styles.metaBlockTitle, { color: "#F97316" }]}>Review Notes</Text>
+                  <Text style={[styles.previewBody, { color: theme.text }]}>{preview.resource.reviewNotes}</Text>
+                </View>
+              )}
+
+              <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Content Sections</Text>
+              {preview.contentSections.map((section) => (
+                <View
+                  key={section.key}
+                  style={[styles.sectionBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.sectionBlockLabel, { color: theme.accent }]}>{section.label}</Text>
+                  <Text style={[styles.sectionBlockPreview, { color: theme.textSecondary }]}>
+                    {section.preview}
+                  </Text>
+                </View>
+              ))}
+
+              {fullContent?.overview && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Full Overview</Text>
+                  <Text style={[styles.previewBody, { color: theme.text }]}>{fullContent.overview}</Text>
+                </>
+              )}
+
+              {fullContent?.dailyStudyPrompts && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    Daily Study Prompts
+                  </Text>
+                  {fullContent.dailyStudyPrompts.map((day: any, i: number) => (
+                    <View
+                      key={i}
+                      style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.dayTitle, { color: theme.accent }]}>
+                        {day.day || `Day ${i + 1}`}
+                      </Text>
+                      <Text style={[styles.previewBody, { color: theme.text }]}>{day.passage || ""}</Text>
+                      <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4 }]}>
+                        {day.reflection || day.prompt || ""}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {fullContent?.discussionQuestions && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    Discussion Questions
+                  </Text>
+                  {fullContent.discussionQuestions.map((q: any, i: number) => (
+                    <Text key={i} style={[styles.previewBody, { color: theme.text, marginBottom: 8 }]}>
+                      {i + 1}. {typeof q === "string" ? q : q.question || q.text || JSON.stringify(q)}
+                    </Text>
+                  ))}
+                </>
+              )}
+
+              {fullContent?.memoryVerseGuide && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    Memory Verse Guide
+                  </Text>
+                  <Text style={[styles.previewBody, { color: theme.accent }]}>
+                    {fullContent.memoryVerseGuide.reference}
+                  </Text>
+                  <Text style={[styles.previewBody, { color: theme.text, marginTop: 4 }]}>
+                    {fullContent.memoryVerseGuide.text || ""}
+                  </Text>
+                  {fullContent.memoryVerseGuide.techniques && (
+                    <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4 }]}>
+                      {Array.isArray(fullContent.memoryVerseGuide.techniques)
+                        ? fullContent.memoryVerseGuide.techniques.join(", ")
+                        : fullContent.memoryVerseGuide.techniques}
+                    </Text>
+                  )}
+                </>
+              )}
+
+              {fullContent?.egwConnections && fullContent.egwConnections.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    EGW Connections
+                  </Text>
+                  {fullContent.egwConnections.map((conn: any, i: number) => (
+                    <View
+                      key={i}
+                      style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.dayTitle, { color: theme.accent }]}>
+                        {conn.source || conn.book || `Connection ${i + 1}`}
+                      </Text>
+                      <Text style={[styles.previewBody, { color: theme.text }]}>
+                        {conn.quote || conn.excerpt || conn.text || ""}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function MetaRow({ label, value, theme }: { label: string; value: string; theme: any }) {
+  return (
+    <View style={styles.metaRow}>
+      <Text style={[styles.metaLabel, { color: theme.textMuted }]}>{label}</Text>
+      <Text style={[styles.metaValue, { color: theme.text }]}>{value}</Text>
+    </View>
+  );
+}
+
 export default function AdminReviewScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -113,12 +567,18 @@ export default function AdminReviewScreen() {
   const queryClient = useQueryClient();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending">("overview");
+  const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
+  const [filterPromptVersion, setFilterPromptVersion] = useState("");
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [reviewModal, setReviewModal] = useState<{ id: string; action: string; title: string } | null>(null);
 
   const isAdmin = user?.role === "admin";
   const isEditor = user?.role === "editor" || isAdmin;
 
+  const overviewPath = `/api/admin/pipeline/overview?reviewStatus=${filterReviewStatus}${filterPromptVersion ? `&promptVersion=${filterPromptVersion}` : ""}`;
+
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<PipelineOverview>({
-    queryKey: ["/api/admin/pipeline/overview"],
+    queryKey: [overviewPath],
     enabled: isEditor,
   });
 
@@ -133,9 +593,8 @@ export default function AdminReviewScreen() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: string }) => {
-      const url = new URL(`/api/resources/${id}/review`, getApiUrl());
-      return apiRequest(url.toString(), { method: "POST", body: JSON.stringify({ action }) });
+    mutationFn: async ({ id, action, notes }: { id: string; action: string; notes?: string }) => {
+      return apiRequest("POST", `/api/resources/${id}/review`, { action, notes: notes || undefined });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline/overview"] });
@@ -147,40 +606,38 @@ export default function AdminReviewScreen() {
 
   const generateMutation = useMutation({
     mutationFn: async (quarterCode: string) => {
-      const url = new URL("/api/admin/pipeline/generate-quarter", getApiUrl());
-      return apiRequest(url.toString(), {
-        method: "POST",
-        body: JSON.stringify({ quarterCode }),
-      });
+      return apiRequest("POST", "/api/admin/pipeline/generate-quarter", { quarterCode });
     },
   });
 
-  const handleReview = useCallback((id: string, action: string, title: string) => {
-    const actionLabel = action === "approved" ? "Approve & Publish" : action === "rejected" ? "Reject" : "Request Revision";
-    if (Platform.OS === "web") {
-      if (confirm(`${actionLabel}: "${title}"?`)) {
-        reviewMutation.mutate({ id, action });
-      }
-    } else {
-      Alert.alert(actionLabel, `"${title}"`, [
-        { text: "Cancel", style: "cancel" },
-        { text: actionLabel, onPress: () => reviewMutation.mutate({ id, action }), style: action === "rejected" ? "destructive" : "default" },
-      ]);
-    }
-  }, [reviewMutation]);
+  const handleReviewStart = useCallback((id: string, action: string, title: string) => {
+    setReviewModal({ id, action, title });
+  }, []);
 
-  const handleGenerate = useCallback((quarterCode: string) => {
-    if (Platform.OS === "web") {
-      if (confirm(`Generate all companions for ${quarterCode}? This may take several minutes.`)) {
-        generateMutation.mutate(quarterCode);
+  const handleReviewSubmit = useCallback(
+    (notes: string) => {
+      if (!reviewModal) return;
+      reviewMutation.mutate({ id: reviewModal.id, action: reviewModal.action, notes });
+      setReviewModal(null);
+    },
+    [reviewModal, reviewMutation]
+  );
+
+  const handleGenerate = useCallback(
+    (quarterCode: string) => {
+      if (Platform.OS === "web") {
+        if (confirm(`Generate all companions for ${quarterCode}? This may take several minutes.`)) {
+          generateMutation.mutate(quarterCode);
+        }
+      } else {
+        Alert.alert("Generate Quarter", `Generate all companions for ${quarterCode}?`, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Generate", onPress: () => generateMutation.mutate(quarterCode) },
+        ]);
       }
-    } else {
-      Alert.alert("Generate Quarter", `Generate all companions for ${quarterCode}?`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Generate", onPress: () => generateMutation.mutate(quarterCode) },
-      ]);
-    }
-  }, [generateMutation]);
+    },
+    [generateMutation]
+  );
 
   if (!isEditor) {
     return (
@@ -197,6 +654,8 @@ export default function AdminReviewScreen() {
   }
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const promptVersions = Object.keys(overview?.promptVersionDistribution || {});
+  const pendingCount = overview?.companions?.byReviewStatus?.pending ?? 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -209,7 +668,16 @@ export default function AdminReviewScreen() {
         }}
       />
 
-      <View style={[styles.tabBar, { backgroundColor: theme.backgroundCard, borderBottomColor: theme.border, marginTop: Platform.OS === "web" ? webTopInset : 0 }]}>
+      <View
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: theme.backgroundCard,
+            borderBottomColor: theme.border,
+            marginTop: Platform.OS === "web" ? webTopInset : 0,
+          },
+        ]}
+      >
         {(["overview", "pending", "quarter"] as const).map((tab) => (
           <Pressable
             key={tab}
@@ -217,7 +685,11 @@ export default function AdminReviewScreen() {
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? theme.accent : theme.textSecondary }]}>
-              {tab === "overview" ? "Overview" : tab === "pending" ? `Review (${overview?.pendingReview?.length || 0})` : "Quarter"}
+              {tab === "overview"
+                ? "Overview"
+                : tab === "pending"
+                ? `Review (${pendingCount})`
+                : "Quarter"}
             </Text>
           </Pressable>
         ))}
@@ -226,25 +698,34 @@ export default function AdminReviewScreen() {
       <ScrollView
         style={styles.scrollContent}
         contentContainerStyle={{ paddingBottom: 40 + (Platform.OS === "web" ? 34 : insets.bottom) }}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => refetchOverview()} tintColor={theme.accent} />}
+        refreshControl={
+          <RefreshControl refreshing={false} onRefresh={() => refetchOverview()} tintColor={theme.accent} />
+        }
       >
         {activeTab === "overview" && (
-          <OverviewTab
-            overview={overview}
-            isLoading={overviewLoading}
-            theme={theme}
-          />
+          <OverviewTab overview={overview} isLoading={overviewLoading} theme={theme} />
         )}
 
         {activeTab === "pending" && (
-          <PendingTab
-            pending={overview?.pendingReview || []}
-            isLoading={overviewLoading}
-            isAdmin={isAdmin}
-            onReview={handleReview}
-            reviewLoading={reviewMutation.isPending}
-            theme={theme}
-          />
+          <>
+            <FilterBar
+              reviewStatus={filterReviewStatus}
+              promptVersion={filterPromptVersion}
+              promptVersions={promptVersions}
+              onChangeReviewStatus={setFilterReviewStatus}
+              onChangePromptVersion={setFilterPromptVersion}
+              theme={theme}
+            />
+            <PendingTab
+              items={overview?.filteredList || []}
+              isLoading={overviewLoading}
+              isAdmin={isAdmin}
+              onReview={handleReviewStart}
+              onPreview={setPreviewId}
+              reviewLoading={reviewMutation.isPending}
+              theme={theme}
+            />
+          </>
         )}
 
         {activeTab === "quarter" && (
@@ -259,22 +740,54 @@ export default function AdminReviewScreen() {
             onGenerate={handleGenerate}
             generateLoading={generateMutation.isPending}
             generateSuccess={generateMutation.isSuccess}
-            onReview={handleReview}
+            onReview={handleReviewStart}
             reviewLoading={reviewMutation.isPending}
             theme={theme}
           />
         )}
       </ScrollView>
+
+      <ReviewNotesModal
+        visible={!!reviewModal}
+        onClose={() => setReviewModal(null)}
+        onSubmit={handleReviewSubmit}
+        action={reviewModal?.action || ""}
+        title={reviewModal?.title || ""}
+        theme={theme}
+      />
+
+      <PreviewModal
+        visible={!!previewId}
+        resourceId={previewId}
+        onClose={() => setPreviewId(null)}
+        theme={theme}
+      />
     </View>
   );
 }
 
-function OverviewTab({ overview, isLoading, theme }: { overview?: PipelineOverview; isLoading: boolean; theme: any }) {
+function OverviewTab({
+  overview,
+  isLoading,
+  theme,
+}: {
+  overview?: PipelineOverview;
+  isLoading: boolean;
+  theme: any;
+}) {
   if (isLoading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color={theme.accent} /></View>;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
   }
   if (!overview) {
-    return <View style={styles.centered}><Text style={{ color: theme.textSecondary }}>No data available</Text></View>;
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.textSecondary }}>No data available</Text>
+      </View>
+    );
   }
 
   return (
@@ -289,14 +802,24 @@ function OverviewTab({ overview, isLoading, theme }: { overview?: PipelineOvervi
       <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Generation Status</Text>
       <View style={styles.statsRow}>
         {Object.entries(overview.companions.byGenerationStatus).map(([status, count]) => (
-          <StatCard key={status} label={status} value={count} color={status === "completed" ? "#10B981" : status === "failed" ? "#EF4444" : "#6B7280"} />
+          <StatCard
+            key={status}
+            label={status}
+            value={count}
+            color={status === "completed" ? "#10B981" : status === "failed" ? "#EF4444" : "#6B7280"}
+          />
         ))}
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Review Status</Text>
       <View style={styles.statsRow}>
         {Object.entries(overview.companions.byReviewStatus).map(([status, count]) => (
-          <StatCard key={status} label={status} value={count} color={status === "approved" ? "#10B981" : status === "pending" ? "#F59E0B" : "#EF4444"} />
+          <StatCard
+            key={status}
+            label={status}
+            value={count}
+            color={status === "approved" ? "#10B981" : status === "pending" ? "#F59E0B" : "#EF4444"}
+          />
         ))}
       </View>
 
@@ -311,7 +834,10 @@ function OverviewTab({ overview, isLoading, theme }: { overview?: PipelineOvervi
         <>
           <Text style={[styles.sectionTitle, { color: "#EF4444", marginTop: 20 }]}>Failed Generations</Text>
           {overview.failedGenerations.map((item) => (
-            <View key={item.id} style={[styles.listItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            <View
+              key={item.id}
+              style={[styles.listItem, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+            >
               <Text style={[styles.listTitle, { color: theme.text }]}>{item.title}</Text>
               <Text style={[styles.listSub, { color: theme.textMuted }]}>
                 {new Date(item.updatedAt).toLocaleDateString()}
@@ -325,74 +851,95 @@ function OverviewTab({ overview, isLoading, theme }: { overview?: PipelineOvervi
 }
 
 function PendingTab({
-  pending, isLoading, isAdmin, onReview, reviewLoading, theme
+  items,
+  isLoading,
+  isAdmin,
+  onReview,
+  onPreview,
+  reviewLoading,
+  theme,
 }: {
-  pending: PipelineOverview["pendingReview"];
+  items: FilteredItem[];
   isLoading: boolean;
   isAdmin: boolean;
   onReview: (id: string, action: string, title: string) => void;
+  onPreview: (id: string) => void;
   reviewLoading: boolean;
   theme: any;
 }) {
   if (isLoading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color={theme.accent} /></View>;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
   }
-  if (pending.length === 0) {
+  if (items.length === 0) {
     return (
       <View style={styles.centered}>
         <Ionicons name="checkmark-circle" size={48} color="#10B981" />
-        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No pending reviews</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No items matching filters</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        {pending.length} Pending Review
-      </Text>
-      {pending.map((item) => (
-        <View key={item.id} style={[styles.reviewCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={styles.reviewHeader}>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{items.length} Items</Text>
+      {items.map((item) => (
+        <View
+          key={item.id}
+          style={[styles.reviewCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+        >
+          <Pressable onPress={() => onPreview(item.id)} style={styles.reviewHeader}>
             <Text style={[styles.reviewTitle, { color: theme.text }]} numberOfLines={2}>
               {item.title}
             </Text>
-            <StatusBadge status={item.reviewStatus} type="review" />
-          </View>
+            <Ionicons name="eye-outline" size={18} color={theme.accent} />
+          </Pressable>
           <View style={styles.reviewMeta}>
-            <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>
-              {item.promptVersion}
-            </Text>
+            <StatusBadge status={item.reviewStatus} type="review" />
+            <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>{item.promptVersion}</Text>
             <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>
               {new Date(item.createdAt).toLocaleDateString()}
             </Text>
           </View>
-          <View style={styles.reviewActions}>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
-              onPress={() => onReview(item.id, "approved", item.title)}
-              disabled={reviewLoading}
-            >
-              <Ionicons name="checkmark" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Approve</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: "#F97316" }]}
-              onPress={() => onReview(item.id, "needs_revision", item.title)}
-              disabled={reviewLoading}
-            >
-              <Ionicons name="create" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Revise</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: "#EF4444" }]}
-              onPress={() => onReview(item.id, "rejected", item.title)}
-              disabled={reviewLoading}
-            >
-              <Ionicons name="close" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Reject</Text>
-            </Pressable>
-          </View>
+          {item.reviewNotes && (
+            <View style={[styles.notesPreview, { borderColor: "#F97316" + "40" }]}>
+              <Ionicons name="document-text-outline" size={12} color="#F97316" />
+              <Text style={[styles.notesPreviewText, { color: theme.textSecondary }]} numberOfLines={2}>
+                {item.reviewNotes}
+              </Text>
+            </View>
+          )}
+          {item.reviewStatus === "pending" && (
+            <View style={styles.reviewActions}>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
+                onPress={() => onReview(item.id, "approved", item.title)}
+                disabled={reviewLoading}
+              >
+                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Text style={styles.actionBtnText}>Approve</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: "#F97316" }]}
+                onPress={() => onReview(item.id, "needs_revision", item.title)}
+                disabled={reviewLoading}
+              >
+                <Ionicons name="create" size={16} color="#fff" />
+                <Text style={styles.actionBtnText}>Revise</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: "#EF4444" }]}
+                onPress={() => onReview(item.id, "rejected", item.title)}
+                disabled={reviewLoading}
+              >
+                <Ionicons name="close" size={16} color="#fff" />
+                <Text style={styles.actionBtnText}>Reject</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       ))}
     </View>
@@ -400,9 +947,19 @@ function PendingTab({
 }
 
 function QuarterTab({
-  quarters, selectedQuarter, quarterDetail, quartersLoading, quarterLoading,
-  isAdmin, onSelectQuarter, onGenerate, generateLoading, generateSuccess,
-  onReview, reviewLoading, theme
+  quarters,
+  selectedQuarter,
+  quarterDetail,
+  quartersLoading,
+  quarterLoading,
+  isAdmin,
+  onSelectQuarter,
+  onGenerate,
+  generateLoading,
+  generateSuccess,
+  onReview,
+  reviewLoading,
+  theme,
 }: {
   quarters: QuarterInfo[];
   selectedQuarter: string | null;
@@ -419,7 +976,11 @@ function QuarterTab({
   theme: any;
 }) {
   if (quartersLoading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color={theme.accent} /></View>;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
   }
 
   return (
@@ -430,7 +991,10 @@ function QuarterTab({
           key={q.quarterCode}
           style={[
             styles.quarterCard,
-            { backgroundColor: theme.backgroundCard, borderColor: selectedQuarter === q.quarterCode ? theme.accent : theme.border },
+            {
+              backgroundColor: theme.backgroundCard,
+              borderColor: selectedQuarter === q.quarterCode ? theme.accent : theme.border,
+            },
           ]}
           onPress={() => onSelectQuarter(q.quarterCode)}
         >
@@ -487,8 +1051,12 @@ function QuarterTab({
               style={[styles.lessonRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
             >
               <View style={styles.lessonHeader}>
-                <View style={[styles.lessonNum, { backgroundColor: lesson.companion ? "#10B981" : theme.border }]}>
-                  <Text style={[styles.lessonNumText, { color: lesson.companion ? "#fff" : theme.textMuted }]}>
+                <View
+                  style={[styles.lessonNum, { backgroundColor: lesson.companion ? "#10B981" : theme.border }]}
+                >
+                  <Text
+                    style={[styles.lessonNumText, { color: lesson.companion ? "#fff" : theme.textMuted }]}
+                  >
                     {lesson.lessonNumber}
                   </Text>
                 </View>
@@ -548,7 +1116,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingHorizontal: 16,
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
   tabText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   scrollContent: { flex: 1 },
   section: { padding: 16 },
@@ -571,9 +1145,13 @@ const styles = StyleSheet.create({
   listTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   listSub: { fontSize: 12, marginTop: 2 },
   reviewCard: { padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 10 },
-  reviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
   reviewTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", flex: 1, marginRight: 8 },
-  reviewMeta: { flexDirection: "row", gap: 12, marginTop: 6 },
+  reviewMeta: { flexDirection: "row", gap: 12, marginTop: 6, alignItems: "center" },
   reviewMetaText: { fontSize: 12 },
   reviewActions: { flexDirection: "row", gap: 8, marginTop: 10 },
   actionBtn: {
@@ -609,4 +1187,104 @@ const styles = StyleSheet.create({
   lessonTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   lessonBadges: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
   noCompanion: { fontSize: 11, fontStyle: "italic" },
+  filterBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  filterRow: { flexDirection: "row", gap: 6, alignItems: "center" },
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: { fontSize: 12, fontFamily: "Inter_500Medium", textTransform: "capitalize" },
+  filterDivider: { width: 1, height: 20, backgroundColor: "#333", marginHorizontal: 4 },
+  notesPreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderLeftWidth: 2,
+    borderRadius: 4,
+  },
+  notesPreviewText: { fontSize: 12, flex: 1 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 20,
+  },
+  previewModalContent: {
+    flex: 1,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  modalSubtitle: { fontSize: 14, marginBottom: 16 },
+  inputLabel: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 6 },
+  notesInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 100,
+    fontFamily: "Inter_400Regular",
+  },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  previewTitle: { fontSize: 20, fontFamily: "Inter_700Bold", marginTop: 8 },
+  previewDesc: { fontSize: 14, marginTop: 6, lineHeight: 20 },
+  previewBody: { fontSize: 14, lineHeight: 20 },
+  metaGrid: { marginTop: 16, gap: 4 },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  metaLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  metaValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  metaBlock: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
+  },
+  metaBlockTitle: { fontSize: 13, fontFamily: "Inter_700Bold", marginBottom: 4 },
+  sectionBlock: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  sectionBlockLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
+  sectionBlockPreview: { fontSize: 12 },
+  dayCard: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  dayTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
 });

@@ -404,7 +404,7 @@ router.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
 router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body;
+    const { action, notes } = req.body;
 
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
       return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
@@ -424,6 +424,7 @@ router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       reviewStatus: action,
       reviewedAt: new Date(),
       reviewedBy: req.authUserId,
+      reviewNotes: notes ? String(notes).slice(0, 2000) : null,
       updatedAt: new Date(),
     };
 

@@ -51,17 +51,19 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
   - **Frontend:** `app/resources.tsx` (library), `app/resource-detail.tsx` (reader with pro-gate). Featured card on Explore, colored accent strips, tier badges.
   - **Batch Generation:** `server/services/batch-generator.ts` — `generateQuarterCompanions(quarterCode, { force?, dryRun? })` generates all companions for a quarter. Builds source packets first, skips existing unless forced or content changed. Returns structured BatchResult with per-lesson details.
   - **Review Workflow:** Auto-generated companions → `status=draft`, `reviewStatus=pending`. Review actions: `approved` (publishes), `rejected` (stays draft), `needs_revision`. Only `published` resources appear in public API.
-  - **Admin Pipeline API:** `server/routes/admin-pipeline.ts` (isPro-gated):
-    - `GET /api/admin/pipeline/overview` — packet status counts, companion counts by generation/review status, coverage %, prompt version distribution, failed generations, pending review list.
+  - **Admin Pipeline API:** `server/routes/admin-pipeline.ts` (role-gated):
+    - `GET /api/admin/pipeline/overview` — packet status counts, companion counts by generation/review status, coverage %, prompt version distribution, failed generations, filtered companion list. Supports query params: `reviewStatus`, `generationStatus`, `quarterCode`, `promptVersion`.
+    - `GET /api/admin/pipeline/resource/:id/preview` (requireEditor) — full resource preview with contentJson, generation metadata (_generation block), source packet info, reviewer details, content section summaries.
     - `GET /api/admin/pipeline/quarter/:quarterCode` — per-lesson detail: packet status/hash, companion status/review/prompt version.
     - `POST /api/admin/pipeline/generate-quarter` — triggers batch generation (async, returns immediately).
     - `GET /api/admin/pipeline/quarters` — available quarters with lesson/companion counts.
-  - **Resource Review API:** `POST /api/resources/:id/review` (requireEditor: editor+admin). Actions: approved (publishes), rejected/needs_revision (unpublishes to draft).
+  - **Resource Review API:** `POST /api/resources/:id/review` (requireEditor: editor+admin). Actions: approved (publishes), rejected/needs_revision (unpublishes to draft). Accepts optional `notes` field (max 2000 chars) stored in `reviewNotes` column.
   - **Resource Publish API:** `POST /api/resources/:id/publish` (requireAdmin only).
+  - **Review Notes:** `resources.review_notes` text column stores editorial feedback on review decisions.
   - **Role System:** `users.role` column: "user" | "editor" | "admin". Middleware: `requireRole(...roles)`, `requireEditor` (editor+admin), `requireAdmin` (admin only). All auth endpoints (register/login/me) return `role` field. `POST /api/admin/users/:id/role` for admin role management. Self-demotion prevented.
   - **Admin Review UI:** `app/admin-review.tsx` — internal content management screen accessible from Profile (admin/editor only). Three tabs:
     - Overview: source packet counts, companion status by generation/review, coverage %, prompt version distribution, failed generations list.
-    - Review: pending companions with approve/revise/reject actions per item.
+    - Review: filterable companion list (by review status, prompt version) with approve/revise/reject actions, review notes modal, content preview modal (full content, generation metadata, source packet info, reviewer history).
     - Quarter: quarter selector with per-lesson detail (packet status, companion status, review badges), batch generation trigger.
   - **CLI:** `scripts/gen-companions.ts` — batch quarter generation. Args: `--quarter 2026-01`, `--force`, `--dry-run`, `--list`.
   - **Key files:** `server/services/source-packet-builder.ts`, `server/services/batch-generator.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/routes/admin-pipeline.ts`, `server/middleware/auth.ts` (role middleware), `app/admin-review.tsx`, `shared/schema.ts`.

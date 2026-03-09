@@ -12,8 +12,13 @@ import { requireAdmin, requireEditor } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
+router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
   try {
+    const filterReviewStatus = req.query.reviewStatus as string | undefined;
+    const filterGenStatus = req.query.generationStatus as string | undefined;
+    const filterPromptVersion = req.query.promptVersion as string | undefined;
+    const filterQuarterCode = req.query.quarterCode as string | undefined;
+
     const packetStatusCounts = await db
       .select({
         status: lessonSourcePackets.status,
@@ -77,7 +82,30 @@ router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
       .orderBy(desc(resources.updatedAt))
       .limit(20);
 
-    const pendingReview = await db
+    const listConditions: any[] = [
+      eq(resources.resourceType, "sabbath-school-companion"),
+    ];
+
+    const targetReviewStatus = filterReviewStatus || "pending";
+    listConditions.push(eq(resources.reviewStatus, targetReviewStatus));
+
+    if (filterGenStatus) {
+      listConditions.push(eq(resources.generationStatus, filterGenStatus));
+    }
+    if (filterPromptVersion) {
+      listConditions.push(eq(resources.promptVersion, filterPromptVersion));
+    }
+    if (filterQuarterCode) {
+      const qtr = await db.select({ id: sabbathSchoolQuarterlies.id })
+        .from(sabbathSchoolQuarterlies)
+        .where(eq(sabbathSchoolQuarterlies.quarterCode, filterQuarterCode))
+        .limit(1);
+      if (qtr.length > 0) {
+        listConditions.push(sql`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
+      }
+    }
+
+    const filteredList = await db
       .select({
         id: resources.id,
         title: resources.title,
@@ -85,15 +113,13 @@ router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
         generationStatus: resources.generationStatus,
         reviewStatus: resources.reviewStatus,
         promptVersion: resources.promptVersion,
+        sourceRef: resources.sourceRef,
+        reviewNotes: resources.reviewNotes,
+        reviewedAt: resources.reviewedAt,
         createdAt: resources.createdAt,
       })
       .from(resources)
-      .where(
-        and(
-          eq(resources.resourceType, "sabbath-school-companion"),
-          eq(resources.reviewStatus, "pending")
-        )
-      )
+      .where(and(...listConditions))
       .orderBy(desc(resources.createdAt))
       .limit(50);
 
@@ -116,7 +142,13 @@ router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
       },
       promptVersionDistribution: Object.fromEntries(promptVersionDist.map(r => [r.promptVersion || "unknown", r.count])),
       failedGenerations,
-      pendingReview,
+      filteredList,
+      filters: {
+        reviewStatus: targetReviewStatus,
+        generationStatus: filterGenStatus || null,
+        promptVersion: filterPromptVersion || null,
+        quarterCode: filterQuarterCode || null,
+      },
     });
   } catch (err) {
     console.error("Pipeline overview error:", err);
@@ -124,7 +156,130 @@ router.get("/api/admin/pipeline/overview", requireAdmin, async (_req, res) => {
   }
 });
 
-router.get("/api/admin/pipeline/quarter/:quarterCode", requireAdmin, async (req, res) => {
+router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [resource] = await db
+      .select({
+        id: resources.id,
+        title: resources.title,
+        slug: resources.slug,
+        description: resources.description,
+        resourceType: resources.resourceType,
+        category: resources.category,
+        tier: resources.tier,
+        contentJson: resources.contentJson,
+        sourceRef: resources.sourceRef,
+        sourcePacketId: resources.sourcePacketId,
+        promptVersion: resources.promptVersion,
+        generationStatus: resources.generationStatus,
+        reviewStatus: resources.reviewStatus,
+        reviewNotes: resources.reviewNotes,
+        reviewedAt: resources.reviewedAt,
+        reviewedBy: resources.reviewedBy,
+        status: resources.status,
+        generatedBy: resources.generatedBy,
+        createdAt: resources.createdAt,
+        updatedAt: resources.updatedAt,
+        publishedAt: resources.publishedAt,
+      })
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    let sourcePacket = null;
+    if (resource.sourcePacketId) {
+      const [packet] = await db
+        .select({
+          id: lessonSourcePackets.id,
+          title: lessonSourcePackets.title,
+          weekNumber: lessonSourcePackets.weekNumber,
+          status: lessonSourcePackets.status,
+          sourceHash: lessonSourcePackets.sourceHash,
+          sourceVersion: lessonSourcePackets.sourceVersion,
+          updatedAt: lessonSourcePackets.updatedAt,
+        })
+        .from(lessonSourcePackets)
+        .where(eq(lessonSourcePackets.id, resource.sourcePacketId))
+        .limit(1);
+      sourcePacket = packet || null;
+    }
+
+    let reviewer = null;
+    if (resource.reviewedBy) {
+      const [user] = await db
+        .select({ id: users.id, displayName: users.displayName, email: users.email })
+        .from(users)
+        .where(eq(users.id, resource.reviewedBy))
+        .limit(1);
+      reviewer = user || null;
+    }
+
+    const contentJson = resource.contentJson as any;
+    const generationMeta = contentJson?._generation || null;
+
+    const contentSections: Array<{ key: string; label: string; preview: string }> = [];
+    if (contentJson?.overview) {
+      contentSections.push({ key: "overview", label: "Overview", preview: String(contentJson.overview).substring(0, 300) });
+    }
+    if (contentJson?.dailyStudyPrompts) {
+      contentSections.push({ key: "dailyStudyPrompts", label: "Daily Study Prompts", preview: `${contentJson.dailyStudyPrompts.length} days` });
+    }
+    if (contentJson?.discussionQuestions) {
+      contentSections.push({ key: "discussionQuestions", label: "Discussion Questions", preview: `${contentJson.discussionQuestions.length} questions` });
+    }
+    if (contentJson?.memoryVerseGuide) {
+      contentSections.push({ key: "memoryVerseGuide", label: "Memory Verse Guide", preview: contentJson.memoryVerseGuide.reference || "" });
+    }
+    if (contentJson?.familyWorshipAdaptation) {
+      contentSections.push({ key: "familyWorshipAdaptation", label: "Family Worship", preview: String(contentJson.familyWorshipAdaptation.kidsVersion || "").substring(0, 150) });
+    }
+    if (contentJson?.egwConnections) {
+      contentSections.push({ key: "egwConnections", label: "EGW Connections", preview: `${contentJson.egwConnections.length} connections` });
+    }
+
+    return res.json({
+      resource: {
+        id: resource.id,
+        title: resource.title,
+        slug: resource.slug,
+        description: resource.description,
+        resourceType: resource.resourceType,
+        category: resource.category,
+        tier: resource.tier,
+        status: resource.status,
+        generationStatus: resource.generationStatus,
+        reviewStatus: resource.reviewStatus,
+        reviewNotes: resource.reviewNotes,
+        promptVersion: resource.promptVersion,
+        generatedBy: resource.generatedBy,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt,
+        publishedAt: resource.publishedAt,
+      },
+      generationMeta,
+      contentSections,
+      fullContent: contentJson,
+      sourcePacket,
+      reviewer: reviewer ? {
+        id: reviewer.id,
+        displayName: reviewer.displayName,
+        email: reviewer.email,
+        reviewedAt: resource.reviewedAt,
+      } : null,
+    });
+  } catch (err) {
+    console.error("Resource preview error:", err);
+    return res.status(500).json({ error: "Failed to fetch resource preview" });
+  }
+});
+
+router.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (req, res) => {
   try {
     const { quarterCode } = req.params;
 
@@ -273,7 +428,7 @@ router.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, re
   }
 });
 
-router.get("/api/admin/pipeline/quarters", requireAdmin, async (_req, res) => {
+router.get("/api/admin/pipeline/quarters", requireEditor, async (_req, res) => {
   try {
     const { getAvailableQuarters } = await import("../services/batch-generator");
     const quarters = await getAvailableQuarters();
