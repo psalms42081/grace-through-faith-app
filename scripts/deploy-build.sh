@@ -43,21 +43,42 @@ echo "=== Data seeding complete ==="
 
 echo "=== Running security regression gate ==="
 echo "Starting temporary server for security checks..."
-NODE_ENV=development node server_dist/index.js &
+SERVER_PID=""
+cleanup_server() {
+  if [ -n "$SERVER_PID" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+    echo "Temporary server stopped (pid $SERVER_PID)"
+    SERVER_PID=""
+  fi
+}
+trap cleanup_server EXIT
+
+RUN_STARTUP_SEEDS=false ALLOW_INSECURE_PASSWORD_RESET=false NODE_ENV=production node server_dist/index.js &
 SERVER_PID=$!
-sleep 5
+
+echo "Waiting for server (pid $SERVER_PID) to be ready..."
+for i in $(seq 1 15); do
+  if curl -s -o /dev/null -w "" http://localhost:5000/api/streams/active 2>/dev/null; then
+    echo "Server ready after ${i}s"
+    break
+  fi
+  if [ "$i" -eq 15 ]; then
+    echo "DEPLOY BLOCKED: Temporary server failed to start within 15s"
+    exit 1
+  fi
+  sleep 1
+done
 
 if bash scripts/security-regression.sh; then
   echo "Security regression: ALL PASSED"
 else
   echo "DEPLOY BLOCKED: Security regression failed"
-  kill $SERVER_PID 2>/dev/null || true
   exit 1
 fi
 
-kill $SERVER_PID 2>/dev/null || true
-wait $SERVER_PID 2>/dev/null || true
-echo "Temporary server stopped"
+cleanup_server
+trap - EXIT
 
 echo "=== Building Expo static ==="
 npm run expo:static:build
