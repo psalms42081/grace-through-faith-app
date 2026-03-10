@@ -188,6 +188,12 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      <View style={st.sectionPad}>
+        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Your Progress
+        </Text>
+      </View>
+
       <View style={st.statsRow}>
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="flame" size={22} color="#FF6B35" />
@@ -206,7 +212,7 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+      <View style={{ height: 8 }} />
 
       {weeklyData && (
         <View style={[st.weeklyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
@@ -302,16 +308,25 @@ export default function ProfileScreen() {
         revisitSubtitle={t("profile.revisitSubtitle")}
       />
 
+      <View style={{ marginHorizontal: 20, marginTop: 4, marginBottom: 12 }}>
+        <ListItem
+          icon="trending-up"
+          iconColor="#4ECCA3"
+          title="Growth Map"
+          onPress={() => router.push("/growth-map" as any)}
+          style={{ marginBottom: 0 }}
+        />
+      </View>
+
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Saved Content
+          Your Content
         </Text>
         {[
           { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
           { title: "Saved", icon: "bookmark" as const, color: "#C9933A", route: "/library" },
-          { title: "Growth Map", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
         ].map((link) => (
           <ListItem
             key={link.route}
