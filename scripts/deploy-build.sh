@@ -70,6 +70,9 @@ echo "=== Verifying flagship story ==="
 npx tsx scripts/verify-flagship.ts
 echo "Flagship verification: OK"
 
+echo "=== Promoting admin accounts ==="
+psql "$DATABASE_URL" -c "UPDATE users SET role = 'admin' WHERE email = 'joehuber0881@gmail.com' AND role != 'admin';" || true
+
 echo "=== Data seeding complete ==="
 
 echo "=== Running security regression gate ==="
