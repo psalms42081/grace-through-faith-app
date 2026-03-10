@@ -19,8 +19,8 @@ async function verify() {
 
   console.log(`[verify-flagship] Story ID: ${story.id}`);
 
-  if (story.imageUrl !== "/kids/david-goliath/scene-0-shepherd.png") {
-    console.error(`[FAIL] imageUrl: expected '/kids/david-goliath/scene-0-shepherd.png', got '${story.imageUrl}'`);
+  if (story.imageUrl !== "/assets/kids-scenes/david-scene-0.png") {
+    console.error(`[FAIL] imageUrl: expected '/assets/kids-scenes/david-scene-0.png', got '${story.imageUrl}'`);
     failures++;
   } else {
     console.log("[PASS] imageUrl correct");
@@ -54,12 +54,12 @@ async function verify() {
   }
 
   const expectedImages = [
-    "/kids/david-goliath/scene-0-shepherd.png",
-    "/kids/david-goliath/scene-1-giant.png",
-    "/kids/david-goliath/scene-2-trust.png",
-    "/kids/david-goliath/scene-3-stones.png",
-    "/kids/david-goliath/scene-4-sling.png",
-    "/kids/david-goliath/scene-5-victory.png",
+    "/assets/kids-scenes/david-scene-0.png",
+    "/assets/kids-scenes/david-scene-1.png",
+    "/assets/kids-scenes/david-scene-2.png",
+    "/assets/kids-scenes/david-scene-3.png",
+    "/assets/kids-scenes/david-scene-4.png",
+    "/assets/kids-scenes/david-scene-5.png",
   ];
 
   const expectedInteractions = [

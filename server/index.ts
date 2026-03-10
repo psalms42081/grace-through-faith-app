@@ -188,6 +188,8 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
+  app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
+
   if (isDev) {
     const { createProxyMiddleware } = require("http-proxy-middleware");
     const metroProxy = createProxyMiddleware({
@@ -234,7 +236,6 @@ function configureExpoAndLanding(app: express.Application) {
     next();
   });
 
-  app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
   log("Expo routing: Checking expo-platform header on / and /manifest");

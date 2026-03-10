@@ -31,7 +31,7 @@ async function seedDavidFlagship() {
         "How does God help you when you feel scared?",
       ],
       activitySuggestion: "Find 5 smooth stones outside and use them to retell the story of David and Goliath to a friend or family member!",
-      imageUrl: "/kids/david-goliath/scene-0-shepherd.png",
+      imageUrl: "/assets/kids-scenes/david-scene-0.png",
     }).where(eq(kidsStories.id, storyId));
     console.log("[david-flagship] Updated story metadata");
 
@@ -44,7 +44,7 @@ async function seedDavidFlagship() {
       sceneIndex: 0,
       narration: "One day, David walked out to the valley. He saw a giant far away and brave soldiers nearby.",
       illustrationPrompt: "David the shepherd boy standing in a valley with Goliath in the distance",
-      imageUrl: "/kids/david-goliath/scene-0-shepherd.png",
+      imageUrl: "/assets/kids-scenes/david-scene-0.png",
       mood: "PEACE" as const,
       interactionType: "tap_wiggle",
       interactionConfig: {
@@ -70,7 +70,7 @@ async function seedDavidFlagship() {
       sceneIndex: 1,
       narration: "A giant named Goliath shouted and scared the soldiers.",
       illustrationPrompt: "Goliath towering over David and soldiers in the valley",
-      imageUrl: "/kids/david-goliath/scene-1-giant.png",
+      imageUrl: "/assets/kids-scenes/david-scene-1.png",
       mood: "TENSION" as const,
       interactionType: "tap_compare",
       interactionConfig: {
@@ -93,7 +93,7 @@ async function seedDavidFlagship() {
       sceneIndex: 2,
       narration: "David was not brave because he was strong. David was brave because he trusted God.",
       illustrationPrompt: "David standing with hand on heart trusting God",
-      imageUrl: "/kids/david-goliath/scene-2-trust.png",
+      imageUrl: "/assets/kids-scenes/david-scene-2.png",
       mood: "AWE" as const,
       interactionType: "tap_glow",
       interactionConfig: {
@@ -118,7 +118,7 @@ async function seedDavidFlagship() {
       sceneIndex: 3,
       narration: "David picked up five smooth stones and took his sling.",
       illustrationPrompt: "David kneeling by stream collecting smooth stones",
-      imageUrl: "/kids/david-goliath/scene-3-stones.png",
+      imageUrl: "/assets/kids-scenes/david-scene-3.png",
       mood: "PEACE" as const,
       interactionType: "tap_collect",
       interactionConfig: {
@@ -152,7 +152,7 @@ async function seedDavidFlagship() {
       sceneIndex: 4,
       narration: "David ran forward. He swung his sling and trusted God.",
       illustrationPrompt: "David swinging his sling at Goliath across the battlefield",
-      imageUrl: "/kids/david-goliath/scene-4-sling.png",
+      imageUrl: "/assets/kids-scenes/david-scene-4.png",
       mood: "JOY" as const,
       interactionType: "drag_release",
       interactionConfig: {
@@ -178,7 +178,7 @@ async function seedDavidFlagship() {
       sceneIndex: 5,
       narration: "God helped David. Everyone saw that God is stronger than any giant.",
       illustrationPrompt: "David victorious with cheering crowd and waving banners",
-      imageUrl: "/kids/david-goliath/scene-5-victory.png",
+      imageUrl: "/assets/kids-scenes/david-scene-5.png",
       mood: "JOY" as const,
       interactionType: "tap_cheer",
       interactionConfig: {
