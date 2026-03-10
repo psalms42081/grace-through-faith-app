@@ -2056,6 +2056,15 @@ export default function SceneStoryScreen() {
     startNarration(currentScene);
   }, [currentScene, scenes, isSpeaking, startNarration, stopNarrationAudio]);
 
+  const handleReplayNarration = useCallback(() => {
+    stopNarrationAudio();
+    setIsSpeaking(false);
+    setCurrentWordIndex(0);
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+    narrationActiveRef.current = true;
+    setTimeout(() => startNarration(currentScene), 100);
+  }, [currentScene, startNarration, stopNarrationAudio]);
+
   const handleAutoPlay = useCallback(() => {
     if (autoPlayMode) {
       stopNarrationAudio();
@@ -2548,74 +2557,119 @@ export default function SceneStoryScreen() {
         />
       )}
 
-      <View style={[styles.topHeader, { paddingTop: topPad + 8 }]}>
-        {autoPlayMode && (
-          <Animated.View
-            entering={FadeIn.duration(300)}
-            style={styles.autoPlayBadge}
-          >
-            <Ionicons name="play-forward" size={12} color="#A78BFA" />
-            <Text style={styles.autoPlayBadgeText}>Auto-Read</Text>
-          </Animated.View>
-        )}
-      </View>
+      {!isLittleLambs && (
+        <View style={[styles.topHeader, { paddingTop: topPad + 8 }]}>
+          {autoPlayMode && (
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              style={styles.autoPlayBadge}
+            >
+              <Ionicons name="play-forward" size={12} color="#A78BFA" />
+              <Text style={styles.autoPlayBadgeText}>Auto-Read</Text>
+            </Animated.View>
+          )}
+        </View>
+      )}
 
-      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          testID="scene-back"
-        >
-          <Ionicons name="close" size={22} color="rgba(255,255,255,0.8)" />
-        </Pressable>
-
-        <View style={styles.navCenter}>
-          <View style={styles.sceneInfo}>
-            <Text style={[styles.storyTitleText, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-              {storyTitle}
-            </Text>
+      {isLittleLambs ? (
+        <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
+          <View style={styles.cinematicSlot}>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.cinematicIconBtn}
+              testID="scene-back"
+            >
+              <Ionicons name="close" size={18} color="rgba(255,255,255,0.5)" />
+            </Pressable>
           </View>
-          <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
-        </View>
 
-        <View style={styles.audioControls}>
-          <Pressable
-            onPress={() => setShowVoicePicker(true)}
-            style={[styles.voicePickerBtn, { backgroundColor: "rgba(255,255,255,0.15)" }]}
-            testID="voice-picker"
-          >
-            <Ionicons name="mic" size={14} color="#fff" />
-            <Text style={styles.voicePickerLabel}>
-              {NARRATOR_VOICES.find(v => v.id === narratorVoice)?.label || "George"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={handleAutoPlay}
-            style={[
-              styles.autoPlayBtn,
-              { backgroundColor: autoPlayMode ? "#A78BFA" : "rgba(255,255,255,0.15)" },
-            ]}
-            testID="auto-play"
-          >
-            <Ionicons
-              name={autoPlayMode ? "pause" : "play-forward"}
-              size={16}
-              color="#fff"
-            />
-          </Pressable>
-          <Pressable
-            onPress={handleReadToMe}
-            style={[styles.readToMeBtn, { backgroundColor: isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.2)" }]}
-            testID="read-to-me"
-          >
-            <Ionicons
-              name={isSpeaking ? "stop" : "volume-high"}
-              size={20}
-              color="#fff"
-            />
-          </Pressable>
+          <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
+
+          <View style={[styles.cinematicSlot, { alignItems: "flex-end" as const }]}>
+            <View style={styles.cinematicAudioRow}>
+              <Pressable
+                onPress={handleReplayNarration}
+                style={[styles.cinematicIconBtn, isSpeaking && { backgroundColor: "rgba(255,107,53,0.25)" }]}
+                testID="read-to-me"
+              >
+                <Ionicons
+                  name={isSpeaking ? "stop" : "refresh"}
+                  size={16}
+                  color={isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.5)"}
+                />
+              </Pressable>
+              <Pressable
+                onPress={handleAutoPlay}
+                style={[styles.cinematicIconBtn, autoPlayMode && { backgroundColor: "rgba(167,139,250,0.25)" }]}
+                testID="auto-play"
+              >
+                <Ionicons
+                  name={autoPlayMode ? "pause" : "play-forward"}
+                  size={16}
+                  color={autoPlayMode ? "#A78BFA" : "rgba(255,255,255,0.5)"}
+                />
+              </Pressable>
+            </View>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            testID="scene-back"
+          >
+            <Ionicons name="close" size={22} color="rgba(255,255,255,0.8)" />
+          </Pressable>
+
+          <View style={styles.navCenter}>
+            <View style={styles.sceneInfo}>
+              <Text style={[styles.storyTitleText, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                {storyTitle}
+              </Text>
+            </View>
+            <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
+          </View>
+
+          <View style={styles.audioControls}>
+            <Pressable
+              onPress={() => setShowVoicePicker(true)}
+              style={[styles.voicePickerBtn, { backgroundColor: "rgba(255,255,255,0.15)" }]}
+              testID="voice-picker"
+            >
+              <Ionicons name="mic" size={14} color="#fff" />
+              <Text style={styles.voicePickerLabel}>
+                {NARRATOR_VOICES.find(v => v.id === narratorVoice)?.label || "George"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleAutoPlay}
+              style={[
+                styles.autoPlayBtn,
+                { backgroundColor: autoPlayMode ? "#A78BFA" : "rgba(255,255,255,0.15)" },
+              ]}
+              testID="auto-play"
+            >
+              <Ionicons
+                name={autoPlayMode ? "pause" : "play-forward"}
+                size={16}
+                color="#fff"
+              />
+            </Pressable>
+            <Pressable
+              onPress={handleReadToMe}
+              style={[styles.readToMeBtn, { backgroundColor: isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.2)" }]}
+              testID="read-to-me"
+            >
+              <Ionicons
+                name={isSpeaking ? "stop" : "volume-high"}
+                size={20}
+                color="#fff"
+              />
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {currentScene > 0 && (
         <Pressable
@@ -2864,6 +2918,35 @@ const styles = StyleSheet.create({
   completeSubtitle: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 15,
+  },
+  cinematicBottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  cinematicSlot: {
+    width: 76,
+    alignItems: "flex-start" as const,
+  },
+  cinematicIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  cinematicAudioRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
   },
   bottomBar: {
     position: "absolute",
