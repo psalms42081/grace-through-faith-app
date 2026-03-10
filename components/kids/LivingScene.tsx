@@ -597,13 +597,16 @@ export default function LivingScene({
   theme,
 }: LivingSceneProps) {
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const kenBurnsProgress = useSharedValue(0);
   const instructionOpacity = useSharedValue(0);
   const instruction = interactionConfig?.instruction || "";
   const instructionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const showInteractions = imageLoaded || imageError || !imageUrl;
+
   useEffect(() => {
-    if (isActive) {
+    if (isActive && showInteractions) {
       kenBurnsProgress.value = 0;
       kenBurnsProgress.value = withRepeat(
         withTiming(1, { duration: 20000, easing: Easing.inOut(Easing.ease) }),
@@ -617,7 +620,7 @@ export default function LivingScene({
           instructionOpacity.value = withTiming(0, { duration: 800 });
         }, 6000);
       }
-    } else {
+    } else if (!isActive) {
       kenBurnsProgress.value = withTiming(0, { duration: 500 });
       instructionOpacity.value = 0;
       if (instructionTimerRef.current) {
@@ -628,7 +631,7 @@ export default function LivingScene({
     return () => {
       if (instructionTimerRef.current) clearTimeout(instructionTimerRef.current);
     };
-  }, [isActive]);
+  }, [isActive, showInteractions]);
 
   const patterns = [
     { fromScale: 1.0, toScale: 1.08, fromX: 0, toX: -8, fromY: 0, toY: -5 },
@@ -669,16 +672,27 @@ export default function LivingScene({
               source={{ uri: imageUrl }}
               style={ls.fullImage}
               resizeMode="cover"
+              onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
             />
           )}
         </Animated.View>
 
-        <InteractionLayer type={interactionType} config={interactionConfig} isActive={isActive} />
+        {!showInteractions && isActive && (
+          <View style={ls.loadingOverlay}>
+            <Animated.View entering={FadeIn.duration(400)} style={ls.loadingPill}>
+              <Text style={ls.loadingText}>Loading scene...</Text>
+            </Animated.View>
+          </View>
+        )}
 
-        {instruction !== "" && (
+        {showInteractions && (
+          <InteractionLayer type={interactionType} config={interactionConfig} isActive={isActive} />
+        )}
+
+        {showInteractions && instruction !== "" && (
           <Animated.View style={[ls.instructionWrap, instructionStyle]}>
-            <Text style={ls.instructionText}>{instruction}</Text>
+            <Text style={ls.instructionText} numberOfLines={2}>{instruction}</Text>
           </Animated.View>
         )}
       </View>
@@ -888,22 +902,45 @@ const ls = StyleSheet.create({
     borderColor: "rgba(255,215,0,0.7)",
     zIndex: 17,
   },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 25,
+  },
+  loadingPill: {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.2)",
+  },
+  loadingText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
+  },
   instructionWrap: {
     position: "absolute",
     top: SCENE_HEIGHT * 0.15,
-    alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.75)",
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    left: 24,
+    right: 24,
+    alignItems: "center",
     zIndex: 30,
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
   },
   instructionText: {
     color: "#fff",
     fontSize: 20,
     fontFamily: "Inter_700Bold",
     textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.3)",
+    overflow: "hidden",
   },
 });
