@@ -1,0 +1,59 @@
+This is the next step. Move from local validation to actual production deployment and production verification.
+
+Current status:
+- scripts/deploy-build.sh has been updated
+- admin promotion now uses a dedicated TypeScript script instead of fragile inline psql
+- silent failure behavior was removed
+- scripts/verify-production.ts exists and passes locally
+- local verification is not enough
+
+Now I need you to do the real production step.
+
+Your task:
+1. Run the actual deploy/publish flow to the Replit production environment
+2. Verify the deployed production state, not just local state
+3. Confirm whether the production mobile path now reflects the intended changes
+4. Report only concrete verified results
+
+Rules:
+- Do not treat local checks as proof of production
+- Do not stop at “ready for deploy”
+- Do not give me theory
+- Execute the deploy path and verify the production outcome
+- If deployment cannot be triggered directly from your environment, say that explicitly and then perform every production-side verification you can from the available environment
+- If any verification depends on a manual step from me, isolate that exact step clearly and keep it minimal
+
+Required production verification:
+A. Admin role
+- Confirm my production account role is now admin in the production database
+- Show the exact verification result
+- Confirm whether this should expose the Content Pipeline in production
+
+B. David flagship image chain
+- Confirm production DB still has the updated `?v=2` URLs for the relevant David scenes
+- Confirm production assets are present
+- Confirm the production server path for `/assets/...` is correct
+- Confirm there is no remaining production-side blocker for the new images
+
+C. Deploy pipeline
+- Confirm the actual production deploy used the updated deploy-build.sh
+- Confirm the admin promotion script ran during that deploy
+- Confirm the verification script ran during that deploy
+- Confirm whether any step failed, warned, or was skipped
+
+D. Final production status
+Tell me clearly:
+- what is definitely fixed in production
+- what is still uncertain
+- what I need to test in Expo Go against production
+
+Deliverables:
+1. Production deployment result
+2. Exact production verification evidence
+3. Any remaining gap between “code changed” and “verified live”
+4. A minimal phone test checklist for me in Expo Go production only
+
+If you cannot directly press the Replit deploy/publish button from your environment, say:
+- exactly what you can verify without that step
+- exactly what I must do manually
+- exactly what you want me to check immediately after publish in Expo Go
