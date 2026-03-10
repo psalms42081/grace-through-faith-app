@@ -202,11 +202,11 @@ function KidsHomeScreen() {
   const progressUserId = activeChildProfileId || "guest";
 
   const { data: streak } = useQuery<{ currentStreak: number; longestStreak: number }>({
-    queryKey: [`/api/kids/streak/${progressUserId}`],
+    queryKey: [`/api/kids/streak?_uid=${progressUserId}`],
   });
 
   const { data: progress } = useQuery<{ completed: boolean; quizScore: number | null; memoryVerseMemorized: boolean }[]>({
-    queryKey: [`/api/kids/progress/${progressUserId}`],
+    queryKey: [`/api/kids/progress?_uid=${progressUserId}`],
   });
 
   const { data: kidsSS } = useQuery<{ lesson: { title: string; memoryVerse: string; memoryVerseRef: string; linkedStory: { id: string; title: string } | null } }>({
@@ -215,7 +215,7 @@ function KidsHomeScreen() {
   });
 
   const { data: badges } = useQuery<{ id: string }[]>({
-    queryKey: [`/api/kids/badges/${progressUserId}`],
+    queryKey: [`/api/kids/badges/earned?_uid=${progressUserId}`],
   });
 
   const completedCount = progress?.filter(p => p.completed).length ?? 0;

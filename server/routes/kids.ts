@@ -17,6 +17,7 @@ import { Router } from "express";
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
+  import { aiGenerationLimiter } from "../middleware/rate-limit";
   import {
     generatePauseAndWonder,
     generateStoryScenes,
@@ -320,7 +321,15 @@ router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
       result = progress;
     }
 
-    triggerParentBridge(storyId, score, childProfileId).catch((err) =>
+    let verifiedChildProfileId: string | undefined;
+    if (childProfileId) {
+      const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles)
+        .where(and(eq(childProfiles.id, childProfileId), eq(childProfiles.parentId, userId)))
+        .limit(1);
+      if (owned) verifiedChildProfileId = childProfileId;
+    }
+
+    triggerParentBridge(storyId, score, verifiedChildProfileId).catch((err) =>
       console.error("Parent Bridge background error:", err)
     );
 
@@ -367,7 +376,7 @@ router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
   }
 });
 
-router.get("/api/kids/progress/:userId", optionalAuth, async (req, res) => {
+router.get("/api/kids/progress", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const progressRows = await db
@@ -391,7 +400,7 @@ router.get("/api/kids/badges", async (_req, res) => {
   }
 });
 
-router.get("/api/kids/badges/:userId", optionalAuth, async (req, res) => {
+router.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const userBadges = await db
@@ -413,7 +422,7 @@ router.get("/api/kids/badges/:userId", optionalAuth, async (req, res) => {
   }
 });
 
-router.get("/api/kids/streak/:userId", optionalAuth, async (req, res) => {
+router.get("/api/kids/streak", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const streak = await db
@@ -576,13 +585,18 @@ router.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
     }
 
     if (isNewAnswer && childProfileId) {
-      await db
-        .update(childProfiles)
-        .set({
-          totalPoints: sql`${childProfiles.totalPoints} + 10`,
-          currentLevel: sql`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`,
-        })
-        .where(eq(childProfiles.id, childProfileId));
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles)
+        .where(and(eq(childProfiles.id, childProfileId), eq(childProfiles.parentId, userId)))
+        .limit(1);
+      if (ownedProfile) {
+        await db
+          .update(childProfiles)
+          .set({
+            totalPoints: sql`${childProfiles.totalPoints} + 10`,
+            currentLevel: sql`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`,
+          })
+          .where(eq(childProfiles.id, childProfileId));
+      }
     }
 
     return res.json({ success: true, pointsAwarded: isNewAnswer ? 10 : 0, wonderAnswers: currentAnswers });
@@ -609,7 +623,7 @@ router.get("/api/kids/story/:id/scenes", async (req, res) => {
   }
 });
 
-router.post("/api/kids/story/:id/generate", async (req, res) => {
+router.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -664,7 +678,7 @@ router.post("/api/kids/story/:id/generate", async (req, res) => {
   }
 });
 
-router.post("/api/kids/scene/:id/generate-image", async (req, res) => {
+router.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const scene = await db
@@ -775,6 +789,16 @@ router.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
     const { storyId, childProfileId: providedProfileId, points = 25 } = req.body;
 
     let profileId = providedProfileId;
+
+    if (profileId) {
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles)
+        .where(and(eq(childProfiles.id, profileId), eq(childProfiles.parentId, userId)))
+        .limit(1);
+      if (!ownedProfile) {
+        profileId = null;
+      }
+    }
+
     if (!profileId && userId !== "guest") {
       const [directProfile] = await db
         .select({ id: childProfiles.id })
@@ -827,7 +851,7 @@ router.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
   }
 });
 
-router.get("/api/kids/profile/:userId/stats", optionalAuth, async (req, res) => {
+router.get("/api/kids/profile/stats", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const [profile] = await db

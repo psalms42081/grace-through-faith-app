@@ -13,7 +13,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Color Scheme:** A deep dark mode (`#050507`) with a warm gold accent (`#C9933A`), distinct palettes for Kids Mode, and a specific Sabbath theme.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
-- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer.
+- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer. Age groups: Little Lambs, Young Disciples, Teens (internally `young_disciples_plus`). All kids progress/badge/streak routes use auth-derived identity (no userId in URL paths). AI generation endpoints are rate-limited. childProfileId ownership is validated server-side before points/parent-bridge writes.
 
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels.

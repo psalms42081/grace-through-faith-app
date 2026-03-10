@@ -344,7 +344,7 @@ export default function KidsLearnScreen() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress?_uid=${progressUserId}`] });
     },
   });
 
@@ -357,7 +357,7 @@ export default function KidsLearnScreen() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress/${progressUserId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/kids/progress?_uid=${progressUserId}`] });
     },
   });
 

@@ -390,7 +390,7 @@ export default function KidsStarsScreen() {
   const progressUserId = activeChildProfileId || "guest";
 
   const { data: progress, isLoading: loadingProgress } = useQuery<ProgressItem[]>({
-    queryKey: [`/api/kids/progress/${progressUserId}`],
+    queryKey: [`/api/kids/progress?_uid=${progressUserId}`],
   });
 
   const { data: allBadges } = useQuery<Badge[]>({
@@ -399,15 +399,15 @@ export default function KidsStarsScreen() {
   });
 
   const { data: earnedBadges } = useQuery<EarnedBadge[]>({
-    queryKey: [`/api/kids/badges/${progressUserId}`],
+    queryKey: [`/api/kids/badges/earned?_uid=${progressUserId}`],
   });
 
   const { data: streak } = useQuery<StreakInfo>({
-    queryKey: [`/api/kids/streak/${progressUserId}`],
+    queryKey: [`/api/kids/streak?_uid=${progressUserId}`],
   });
 
   const { data: profileStats } = useQuery<ProfileStats>({
-    queryKey: [`/api/kids/profile/${progressUserId}/stats`],
+    queryKey: [`/api/kids/profile/stats?_uid=${progressUserId}`],
     enabled: progressUserId !== "guest",
   });
 

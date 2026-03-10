@@ -295,7 +295,7 @@ export default function KidsStoriesScreen() {
   });
 
   const { data: progress } = useQuery<ProgressItem[]>({
-    queryKey: [`/api/kids/progress/${progressUserId}`],
+    queryKey: [`/api/kids/progress?_uid=${progressUserId}`],
   });
 
   const completedStoryIds = React.useMemo(() => {
@@ -362,7 +362,7 @@ export default function KidsStoriesScreen() {
             ]}
           >
             <Text style={[styles.ageBtnText, { color: ageGroup === "young_disciples_plus" ? "#fff" : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-              Young Adults
+              Teens
             </Text>
           </Pressable>
         </View>
