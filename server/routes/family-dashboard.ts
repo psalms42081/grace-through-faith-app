@@ -25,7 +25,7 @@ import { Router, Request } from "express";
 
   const router = Router();
 
-  router.get("/api/family/children", optionalAuth, async (req, res) => {
+  router.get("/api/family/children", requireAuth, async (req, res) => {
   try {
     const parentId = getEffectiveUserId(req);
     const children = await db
