@@ -1226,9 +1226,16 @@ export default function ProphecyExplorerScreen() {
             onPress={() => {
               const firstSectionY = sectionYPositions.current[PROPHECY_SECTIONS[0].id];
               if (firstSectionY !== undefined && scrollRef.current) {
-                scrollRef.current.scrollTo({ y: firstSectionY - 10, animated: true });
+                scrollRef.current.scrollTo({ y: firstSectionY - 20, animated: true });
               } else {
-                scrollRef.current?.scrollTo({ y: 600, animated: true });
+                setTimeout(() => {
+                  const retryY = sectionYPositions.current[PROPHECY_SECTIONS[0].id];
+                  if (retryY !== undefined && scrollRef.current) {
+                    scrollRef.current.scrollTo({ y: retryY - 20, animated: true });
+                  } else {
+                    scrollRef.current?.scrollTo({ y: 800, animated: true });
+                  }
+                }, 300);
               }
             }}
             style={({ pressed }) => [

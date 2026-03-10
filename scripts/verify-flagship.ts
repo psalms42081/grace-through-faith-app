@@ -94,7 +94,7 @@ async function verify() {
     "/assets/kids-scenes/david-scene-1.png",
     "/assets/kids-scenes/david-scene-2.png",
     "/assets/kids-scenes/david-scene-3.png",
-    "/assets/kids-scenes/david-scene-4.png",
+    "/assets/kids-scenes/david-scene-4.png?v=2",
     "/assets/kids-scenes/david-scene-5.png",
   ];
 

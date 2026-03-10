@@ -152,7 +152,7 @@ async function seedDavidFlagship() {
       sceneIndex: 4,
       narration: "David ran forward. He swung his sling and trusted God.",
       illustrationPrompt: "David swinging his sling at Goliath across the battlefield",
-      imageUrl: "/assets/kids-scenes/david-scene-4.png",
+      imageUrl: "/assets/kids-scenes/david-scene-4.png?v=2",
       mood: "JOY" as const,
       interactionType: "drag_release",
       interactionConfig: {

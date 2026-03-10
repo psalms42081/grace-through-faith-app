@@ -16,16 +16,32 @@ import { Router } from "express";
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
     }
+    const chapterNum = Number(chapter);
+    if (isNaN(chapterNum) || chapterNum < 1) {
+      return res.status(400).json({ error: "chapter must be a positive number" });
+    }
 
-    const bookRecord = await db
-      .select()
-      .from(bibleBooks)
-      .where(eq(bibleBooks.id, Number(book)))
-      .limit(1);
+    let bookRecord;
+    const bookNum = Number(book);
+    if (!isNaN(bookNum)) {
+      bookRecord = await db
+        .select()
+        .from(bibleBooks)
+        .where(eq(bibleBooks.id, bookNum))
+        .limit(1);
+    } else {
+      bookRecord = await db
+        .select()
+        .from(bibleBooks)
+        .where(ilike(bibleBooks.name, String(book)))
+        .limit(1);
+    }
 
-    if (!bookRecord.length) {
+    if (!bookRecord || !bookRecord.length) {
       return res.status(404).json({ error: "Book not found" });
     }
+
+    const bookId = bookRecord[0].id;
 
     const translationRecord = await db
       .select()
@@ -42,14 +58,14 @@ import { Router } from "express";
       .from(bibleVerses)
       .where(
         and(
-          eq(bibleVerses.bookId, Number(book)),
-          eq(bibleVerses.chapter, Number(chapter)),
+          eq(bibleVerses.bookId, bookId),
+          eq(bibleVerses.chapter, chapterNum),
           eq(bibleVerses.translationId, translationRecord[0].id)
         )
       )
       .orderBy(bibleVerses.verse);
 
-    return res.json({ book: bookRecord[0], chapter: Number(chapter), verses });
+    return res.json({ book: bookRecord[0], chapter: chapterNum, verses });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -93,7 +109,7 @@ router.get("/api/verse", async (req, res) => {
       .where(
         and(
           eq(bibleVerses.bookId, Number(book)),
-          eq(bibleVerses.chapter, Number(chapter)),
+          eq(bibleVerses.chapter, chapterNum),
           eq(bibleVerses.verse, Number(verse)),
           eq(bibleVerses.translationId, translationRecord[0].id)
         )

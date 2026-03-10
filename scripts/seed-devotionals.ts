@@ -568,7 +568,8 @@ async function seed() {
 
     if (existingPlan.length) {
       planId = existingPlan[0].id;
-      console.log(`  Plan "${plan.title}" already exists (id=${planId}), skipping insert.`);
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}), skipping.`);
+      continue;
     } else {
       const inserted = await db
         .insert(devotionalPlans)

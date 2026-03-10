@@ -71,14 +71,20 @@ The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
 1. **Server build** (`npm run server:build` via esbuild)
 2. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
 3. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
-4. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
-5. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata
-6. **Security regression gate** (41 tests via temp server)
-7. **Expo static build** (`npm run expo:static:build`)
+4. **Devotional day dedup** (`scripts/dedup-devotional-days.ts`) — removes duplicate `(plan_id, day_number)` rows, remaps `user_plan_progress` before deleting
+5. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
+6. **Bible verse seed** (`scripts/seed-verses-prod.ts`) — KJV, ASV, WEB translations — failures **block deploy**
+7. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata, checksums, sling coords
+8. **Security regression gate** (41 tests via temp server)
+9. **i18n content translations** (`scripts/seed-i18n-content.ts`) — translates formation modules/lessons/sections into es/fr/pt/fil/zh via OpenAI
+10. **Expo static build** (`npm run expo:static:build`)
 
 Key scripts:
 - `scripts/seed-david-flagship.ts` — Idempotent: looks up story by title, deletes old scenes, inserts 6 cinematic scenes with `interactionConfig.isLivingScene` and `cinematicConfig`, self-verifies
-- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence
+- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence, MD5 checksums
+- `scripts/dedup-devotional-days.ts` — Removes duplicate devotional days, remaps user progress, conflict-safe
+- `scripts/seed-i18n-content.ts` — OpenAI-powered formation content translation (5 languages), idempotent per module/language
 - `scripts/ensure-tables.ts` — SQL fallback for critical tables (resources, user_feedback)
+- All devotional seed scripts (`seed-devotionals.ts`, `seed-sda-devotionals.ts`, `seed-more-devotionals.ts`, `server/seed-plans.ts`) are idempotent — skip plans that already exist
 
 Production runtime: `NODE_ENV=production node server_dist/index.js`

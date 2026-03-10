@@ -17,8 +17,8 @@ npx tsx scripts/ensure-tables.ts
 
 echo "=== Seeding production data ==="
 
-echo "Seeding Bible verses..."
-npx tsx scripts/seed-verses-prod.ts || true
+echo "Seeding Bible verses (CRITICAL)..."
+npx tsx scripts/seed-verses-prod.ts
 
 echo "Seeding context cards & commentators..."
 npx tsx scripts/seed-context.ts || true
@@ -49,6 +49,9 @@ npx tsx scripts/seed-startup-data.ts || true
 
 echo "Seeding global churches..."
 npx tsx scripts/seed-global-churches.ts || true
+
+echo "=== Deduplicating devotional days ==="
+npx tsx scripts/dedup-devotional-days.ts
 
 echo "=== Seeding CRITICAL content (failures block deploy) ==="
 
@@ -104,6 +107,9 @@ fi
 
 cleanup_server
 trap - EXIT
+
+echo "=== Seeding i18n content translations (non-blocking) ==="
+npx tsx scripts/seed-i18n-content.ts || echo "i18n seeding failed (non-critical), continuing..."
 
 echo "=== Building Expo static ==="
 npm run expo:static:build
