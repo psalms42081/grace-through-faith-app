@@ -262,8 +262,8 @@ function SlingAnimation({ imageFrame, onComplete, slingPos, targetPos }: {
   const impactOpacity = useSharedValue(0);
   const [phase, setPhase] = useState<"ready" | "flying" | "hit">("ready");
 
-  const sling = slingPos || { x: 0.57, y: 0.38 };
-  const target = targetPos || { x: 0.05, y: 0.28 };
+  const sling = slingPos || { x: 0.62, y: 0.30 };
+  const target = targetPos || { x: 0.18, y: 0.28 };
   const slingScreenX = imageFrame.offsetX + sling.x * imageFrame.width;
   const slingScreenY = imageFrame.offsetY + sling.y * imageFrame.height;
   const targetScreenX = imageFrame.offsetX + target.x * imageFrame.width;
@@ -478,8 +478,8 @@ const DAVID_SCENE_DEFAULTS: Record<number, CinematicConfig> = {
   },
   4: {
     effects: [{ type: "sling" }],
-    slingArea: { x: 0.57, y: 0.38 },
-    targetArea: { x: 0.05, y: 0.28 },
+    slingArea: { x: 0.62, y: 0.30 },
+    targetArea: { x: 0.18, y: 0.28 },
     revealText: "The stone flew true!",
   },
   5: {

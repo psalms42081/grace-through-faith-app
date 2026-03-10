@@ -158,13 +158,13 @@ async function seedDavidFlagship() {
       interactionConfig: {
         isLivingScene: true,
         instruction: "Swirl the sling, then let go!",
-        slingArea: { x: 0.57, y: 0.38 },
-        targetArea: { x: 0.05, y: 0.28 },
+        slingArea: { x: 0.62, y: 0.30 },
+        targetArea: { x: 0.18, y: 0.28 },
         resultText: "The stone flew true!",
         cinematicConfig: {
           effects: [{ type: "sling" }],
-          slingArea: { x: 0.57, y: 0.38 },
-          targetArea: { x: 0.05, y: 0.28 },
+          slingArea: { x: 0.62, y: 0.30 },
+          targetArea: { x: 0.18, y: 0.28 },
           revealText: "The stone flew true!",
         },
       },

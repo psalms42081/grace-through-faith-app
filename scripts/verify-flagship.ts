@@ -10,7 +10,7 @@ const CANONICAL_CHECKSUMS: Record<string, string> = {
   "david-scene-1.png": "72f3509f904ee67618a08daaa6989d7f",
   "david-scene-2.png": "5f335eca2cf433ffb72037b627d502dd",
   "david-scene-3.png": "b1f051f0d220acfca6ee52bad2623fd4",
-  "david-scene-4.png": "d6a79c39abc372604407c64f0c79a62a",
+  "david-scene-4.png": "415c571cabf084d7c21332770ccecb80",
   "david-scene-5.png": "e0a2ac3c721c128910f2b27b91f93a0a",
 };
 
@@ -133,21 +133,41 @@ async function verify() {
   }
 
   console.log("\n--- Scene 4 sling calibration ---");
+  const EXPECTED_SLING = { x: 0.62, y: 0.30 };
+  const EXPECTED_TARGET = { x: 0.18, y: 0.28 };
   const scene4 = scenes[4];
   if (scene4) {
     const config = scene4.interactionConfig as any;
-    const sling = config?.cinematicConfig?.slingArea || config?.slingArea;
-    const target = config?.cinematicConfig?.targetArea || config?.targetArea;
-    if (sling && target) {
-      const goesLeftward = target.x < sling.x;
-      console.log(`  slingArea: (${sling.x}, ${sling.y})`);
-      console.log(`  targetArea: (${target.x}, ${target.y})`);
-      console.log(`  Direction: ${goesLeftward ? "RIGHT-TO-LEFT (correct)" : "LEFT-TO-RIGHT (WRONG)"}`);
-      if (!goesLeftward) {
-        console.error("[FAIL] Scene 4 stone direction is wrong — must travel from David toward Goliath (left)");
+    const sling = config?.cinematicConfig?.slingArea;
+    const target = config?.cinematicConfig?.targetArea;
+    const slingTop = config?.slingArea;
+    const targetTop = config?.targetArea;
+    if (!sling || !target) {
+      console.error("[FAIL] Scene 4: cinematicConfig slingArea/targetArea missing");
+      failures++;
+    } else {
+      console.log(`  cinematicConfig.slingArea: (${sling.x}, ${sling.y})`);
+      console.log(`  cinematicConfig.targetArea: (${target.x}, ${target.y})`);
+      if (sling.x !== EXPECTED_SLING.x || sling.y !== EXPECTED_SLING.y) {
+        console.error(`[FAIL] Scene 4 slingArea mismatch: expected (${EXPECTED_SLING.x}, ${EXPECTED_SLING.y})`);
         failures++;
       } else {
-        console.log("[PASS] Scene 4 stone direction verified");
+        console.log("[PASS] Scene 4 slingArea exact match");
+      }
+      if (target.x !== EXPECTED_TARGET.x || target.y !== EXPECTED_TARGET.y) {
+        console.error(`[FAIL] Scene 4 targetArea mismatch: expected (${EXPECTED_TARGET.x}, ${EXPECTED_TARGET.y})`);
+        failures++;
+      } else {
+        console.log("[PASS] Scene 4 targetArea exact match");
+      }
+    }
+    if (slingTop && targetTop) {
+      if (slingTop.x !== EXPECTED_SLING.x || slingTop.y !== EXPECTED_SLING.y ||
+          targetTop.x !== EXPECTED_TARGET.x || targetTop.y !== EXPECTED_TARGET.y) {
+        console.error("[FAIL] Scene 4 top-level slingArea/targetArea don't match cinematicConfig");
+        failures++;
+      } else {
+        console.log("[PASS] Scene 4 top-level coordinates match cinematicConfig");
       }
     }
   }
