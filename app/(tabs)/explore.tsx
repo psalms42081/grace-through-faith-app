@@ -128,24 +128,6 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
-        <ListItem
-          icon="chatbubbles"
-          iconColor="#8B5CF6"
-          title="Guided Study"
-          subtitle="Socratic AI-guided inductive Bible study"
-          onPress={() => router.push("/study-guide" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <ListItem
-          icon="trail-sign"
-          iconColor="#2E7D32"
-          title="Study Paths"
-          subtitle="Structured paths through Scripture"
-          onPress={() => router.push("/study-paths" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
         <Pressable
           onPress={() => router.push("/resources" as any)}
           style={({ pressed }) => [
@@ -227,13 +209,39 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            Study Tools
+          </Text>
+        </View>
+
+        <ListItem
+          icon="chatbubbles"
+          iconColor="#8B5CF6"
+          title="Guided Study"
+          subtitle="Socratic AI-guided inductive Bible study"
+          onPress={() => router.push("/study-guide" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
+        <ListItem
+          icon="trail-sign"
+          iconColor="#2E7D32"
+          title="Study Paths"
+          subtitle="Structured paths through Scripture"
+          onPress={() => router.push("/study-paths" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
         <EnrolledTracksPreview theme={theme} />
 
         <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Wisdom & Insight
+            Reference & Discovery
           </Text>
         </View>
 
@@ -245,14 +253,6 @@ export default function StudyScreen() {
           onPress={() => router.push("/(tabs)/study?tab=voices")}
           style={{ marginBottom: 8 }}
         />
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Discovery Tools
-          </Text>
-        </View>
 
         <View style={styles.toolsRow}>
           <Pressable
