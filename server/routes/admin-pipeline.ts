@@ -324,6 +324,24 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
       contentSections.push({ key: "egwConnections", label: "EGW Connections", preview: `${contentJson.egwConnections.length} connections` });
     }
 
+    let predecessorData = null;
+    if (resource.supersedesResourceId) {
+      const [pred] = await db
+        .select({
+          id: resources.id,
+          title: resources.title,
+          promptVersion: resources.promptVersion,
+          status: resources.status,
+          createdAt: resources.createdAt,
+        })
+        .from(resources)
+        .where(eq(resources.id, resource.supersedesResourceId))
+        .limit(1);
+      if (pred) {
+        predecessorData = pred;
+      }
+    }
+
     return res.json({
       resource: {
         id: resource.id,
@@ -342,6 +360,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
         createdAt: resource.createdAt,
         updatedAt: resource.updatedAt,
         publishedAt: resource.publishedAt,
+        supersedesResourceId: resource.supersedesResourceId,
       },
       generationMeta,
       contentSections,
@@ -355,6 +374,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
       } : null,
       supersedesResourceId: resource.supersedesResourceId || null,
       hasPreviousVersion: !!(resource.previousContentJson || resource.supersedesResourceId),
+      predecessor: predecessorData,
     });
   } catch (err) {
     console.error("Resource preview error:", err);

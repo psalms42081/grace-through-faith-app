@@ -134,6 +134,7 @@ interface ResourcePreview {
     createdAt: string;
     updatedAt: string;
     publishedAt: string | null;
+    supersedesResourceId: string | null;
   };
   generationMeta: {
     model?: string;
@@ -157,6 +158,15 @@ interface ResourcePreview {
     displayName: string;
     email: string;
     reviewedAt: string;
+  } | null;
+  supersedesResourceId: string | null;
+  hasPreviousVersion: boolean;
+  predecessor: {
+    id: string;
+    title: string;
+    promptVersion: string;
+    status: string;
+    createdAt: string;
   } | null;
 }
 
@@ -428,11 +438,15 @@ function PreviewModal({
   visible,
   resourceId,
   onClose,
+  onRollback,
+  isAdmin,
   theme,
 }: {
   visible: boolean;
   resourceId: string | null;
   onClose: () => void;
+  onRollback?: (resource: ResourcePreview) => void;
+  isAdmin?: boolean;
   theme: any;
 }) {
   const insets = useSafeAreaInsets();
@@ -462,9 +476,21 @@ function PreviewModal({
         >
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Content Preview</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Ionicons name="close" size={22} color={theme.textSecondary} />
-            </Pressable>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              {isAdmin && preview?.resource.status === "published" && preview?.resource.supersedesResourceId && (
+                <Pressable
+                  onPress={() => onRollback?.(preview)}
+                  hitSlop={8}
+                  style={[styles.rollbackBtn, { borderColor: "#EF4444" + "60" }]}
+                >
+                  <Ionicons name="arrow-undo-outline" size={14} color="#EF4444" />
+                  <Text style={styles.rollbackBtnText}>Rollback</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={onClose} hitSlop={12}>
+                <Ionicons name="close" size={22} color={theme.textSecondary} />
+              </Pressable>
+            </View>
           </View>
 
           {isLoading ? (
@@ -904,6 +930,13 @@ export default function AdminReviewScreen() {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [diffId, setDiffId] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ id: string; action: string; title: string } | null>(null);
+  const [rollbackConfirm, setRollbackConfirm] = useState<{
+    id: string;
+    title: string;
+    promptVersion: string;
+    predecessorTitle?: string;
+    predecessorPromptVersion?: string;
+  } | null>(null);
 
   const isAdmin = user?.role === "admin";
   const isEditor = user?.role === "editor" || isAdmin;
@@ -944,6 +977,24 @@ export default function AdminReviewScreen() {
   const generateMutation = useMutation({
     mutationFn: async (quarterCode: string) => {
       return apiRequest("POST", "/api/admin/pipeline/generate-quarter", { quarterCode });
+    },
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/resources/${id}/rollback`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
+      if (selectedQuarter) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline/quarter", selectedQuarter] });
+      }
+      setRollbackConfirm(null);
+      setPreviewId(null);
+      Alert.alert("Rollback Complete", "The previous version has been restored.");
+    },
+    onError: (err: any) => {
+      Alert.alert("Rollback Failed", err?.message || "Could not complete rollback.");
     },
   });
 
@@ -1106,6 +1157,16 @@ export default function AdminReviewScreen() {
         visible={!!previewId}
         resourceId={previewId}
         onClose={() => setPreviewId(null)}
+        isAdmin={isAdmin}
+        onRollback={(preview) => {
+          setRollbackConfirm({
+            id: preview.resource.id,
+            title: preview.resource.title,
+            promptVersion: preview.resource.promptVersion,
+            predecessorTitle: preview.predecessor?.title,
+            predecessorPromptVersion: preview.predecessor?.promptVersion,
+          });
+        }}
         theme={theme}
       />
 
@@ -1115,6 +1176,81 @@ export default function AdminReviewScreen() {
         onClose={() => setDiffId(null)}
         theme={theme}
       />
+
+      <Modal visible={!!rollbackConfirm} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.rollbackModalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Confirm Rollback</Text>
+              <Pressable onPress={() => setRollbackConfirm(null)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={{ gap: 12, paddingVertical: 16 }}>
+              <View style={[styles.rollbackWarning, { backgroundColor: "#EF4444" + "15", borderColor: "#EF4444" + "40" }]}>
+                <Ionicons name="warning-outline" size={18} color="#EF4444" />
+                <Text style={[styles.rollbackWarningText, { color: "#EF4444" }]}>
+                  This will archive the current published version and restore its predecessor.
+                </Text>
+              </View>
+
+              <View style={{ gap: 6 }}>
+                <Text style={[styles.rollbackLabel, { color: theme.textMuted }]}>Current (will be archived)</Text>
+                <Text style={[styles.rollbackValue, { color: theme.text }]} numberOfLines={2}>
+                  {rollbackConfirm?.title}
+                </Text>
+                <Text style={[styles.rollbackMeta, { color: theme.textSecondary }]}>
+                  Prompt {rollbackConfirm?.promptVersion}
+                </Text>
+              </View>
+
+              <View style={{ gap: 6 }}>
+                <Text style={[styles.rollbackLabel, { color: theme.textMuted }]}>Predecessor (will be restored)</Text>
+                {rollbackConfirm?.predecessorTitle ? (
+                  <>
+                    <Text style={[styles.rollbackValue, { color: theme.text }]} numberOfLines={2}>
+                      {rollbackConfirm.predecessorTitle}
+                    </Text>
+                    <Text style={[styles.rollbackMeta, { color: theme.textSecondary }]}>
+                      Prompt {rollbackConfirm.predecessorPromptVersion}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={[styles.rollbackMeta, { color: theme.textSecondary }]}>
+                    The archived version this resource superseded will be republished.
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 10, justifyContent: "flex-end" }}>
+              <Pressable
+                onPress={() => setRollbackConfirm(null)}
+                style={[styles.rollbackCancelBtn, { borderColor: theme.border }]}
+              >
+                <Text style={{ color: theme.textSecondary, fontFamily: "Inter_500Medium", fontSize: 14 }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (rollbackConfirm) rollbackMutation.mutate(rollbackConfirm.id);
+                }}
+                disabled={rollbackMutation.isPending}
+                style={[styles.rollbackConfirmBtn, { opacity: rollbackMutation.isPending ? 0.6 : 1 }]}
+              >
+                {rollbackMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="arrow-undo-outline" size={16} color="#fff" />
+                    <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Rollback</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1583,6 +1719,50 @@ const styles = StyleSheet.create({
   sortRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
   sortChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 1 },
   sortChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  rollbackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  rollbackBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#EF4444" },
+  rollbackModalContent: {
+    width: "90%",
+    maxWidth: 400,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+  },
+  rollbackWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  rollbackWarningText: { fontSize: 13, fontFamily: "Inter_500Medium", flex: 1 },
+  rollbackLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  rollbackValue: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  rollbackMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  rollbackCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  rollbackConfirmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#EF4444",
+  },
   notesPreview: {
     flexDirection: "row",
     alignItems: "flex-start",

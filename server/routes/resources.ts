@@ -463,4 +463,87 @@ router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   }
 });
 
+router.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [current] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.id, id))
+      .limit(1);
+
+    if (!current) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+    if (current.status !== "published") {
+      return res.status(400).json({ error: "Only published resources can be rolled back" });
+    }
+    if (!current.supersedesResourceId) {
+      return res.status(400).json({ error: "No predecessor version to roll back to" });
+    }
+
+    const [predecessor] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.id, current.supersedesResourceId))
+      .limit(1);
+
+    if (!predecessor) {
+      return res.status(404).json({ error: "Predecessor resource not found" });
+    }
+    if (predecessor.status !== "archived") {
+      return res.status(400).json({ error: "Predecessor is not archived — cannot restore" });
+    }
+
+    const now = new Date();
+    const rollbackNote = `Rolled back: "${current.title}" (${current.promptVersion}) archived, restored predecessor (${predecessor.promptVersion})`;
+
+    const result = await db.transaction(async (tx) => {
+      await tx.update(resources)
+        .set({
+          status: "archived",
+          reviewStatus: "archived",
+          reviewNotes: rollbackNote,
+          reviewedAt: now,
+          reviewedBy: req.authUserId,
+          updatedAt: now,
+        })
+        .where(eq(resources.id, current.id));
+
+      const [restored] = await tx.update(resources)
+        .set({
+          status: "published",
+          reviewStatus: "approved",
+          publishedAt: now,
+          reviewNotes: rollbackNote,
+          reviewedAt: now,
+          reviewedBy: req.authUserId,
+          updatedAt: now,
+        })
+        .where(eq(resources.id, predecessor.id))
+        .returning();
+
+      return restored;
+    });
+
+    console.log(`[rollback] Admin ${req.authUserId} rolled back ${current.id} → ${predecessor.id}`);
+    return res.json({
+      restored: result,
+      archivedId: current.id,
+      restoredId: predecessor.id,
+      predecessor: {
+        id: predecessor.id,
+        title: predecessor.title,
+        promptVersion: predecessor.promptVersion,
+        createdAt: predecessor.createdAt,
+      },
+      note: rollbackNote,
+    });
+  } catch (err) {
+    console.error("Rollback error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

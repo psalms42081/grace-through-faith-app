@@ -14,6 +14,7 @@ export const aiGenerationLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: safeKeyGenerator,
+  validate: { ipKeyGenerator: false },
 });
 
 export const ttsLimiter = rateLimit({
@@ -23,6 +24,7 @@ export const ttsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: safeKeyGenerator,
+  validate: { ipKeyGenerator: false },
 });
 
 export const authLimiter = rateLimit({
@@ -32,4 +34,5 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: any) => req.ip || "unknown",
+  validate: { ipKeyGenerator: false },
 });
