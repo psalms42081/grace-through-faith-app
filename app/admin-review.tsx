@@ -31,6 +31,7 @@ interface FilteredItem {
   reviewNotes: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  supersedesResourceId: string | null;
   hasPreviousVersion: boolean;
 }
 
@@ -1163,6 +1164,12 @@ function PendingTab({
           </View>
           <View style={styles.reviewMeta}>
             <StatusBadge status={item.reviewStatus} type="review" />
+            {item.supersedesResourceId && (
+              <View style={[styles.versionBadge, { backgroundColor: "#F59E0B" + "20", borderColor: "#F59E0B" + "40" }]}>
+                <Ionicons name="git-compare-outline" size={10} color="#F59E0B" />
+                <Text style={[styles.versionBadgeText, { color: "#F59E0B" }]}>Regenerated</Text>
+              </View>
+            )}
             <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>{item.promptVersion}</Text>
             <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>
               {new Date(item.createdAt).toLocaleDateString()}
@@ -1552,6 +1559,8 @@ const styles = StyleSheet.create({
   },
   dayTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
   reviewTitleArea: { flex: 1, marginRight: 8 },
+  versionBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
+  versionBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   reviewHeaderIcons: { flexDirection: "row", gap: 10, alignItems: "center" },
   diffSummary: {
     padding: 10,

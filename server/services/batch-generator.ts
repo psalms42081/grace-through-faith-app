@@ -5,7 +5,7 @@ import {
   lessonSourcePackets,
   resources,
 } from "../../shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { buildAllSourcePackets, buildSourcePacket } from "./source-packet-builder";
 import { generateSabbathSchoolCompanion } from "./content-engine";
 
@@ -96,17 +96,21 @@ export async function generateQuarterCompanions(
     const packetId = packetInfo?.id;
     const contentChanged = packetInfo?.changed ?? false;
 
-    const existing = await db
-      .select({ id: resources.id, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson })
+    const lessonSourceCondition = sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`;
+
+    const activeCompanions = await db
+      .select({ id: resources.id, status: resources.status, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson, supersedesResourceId: resources.supersedesResourceId })
       .from(resources)
-      .where(
-        sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`
-      )
-      .limit(1);
+      .where(and(lessonSourceCondition, sql`${resources.status} != 'archived'`))
+      .orderBy(desc(resources.createdAt));
+
+    const publishedCompanion = activeCompanions.find(r => r.status === "published");
+    const pendingDraft = activeCompanions.find(r => r.status === "draft" && r.supersedesResourceId);
+    const existing = publishedCompanion || activeCompanions[0];
 
     const shouldRegenerate = force || contentChanged;
 
-    if (existing.length > 0 && !shouldRegenerate) {
+    if (existing && !shouldRegenerate) {
       console.log(`[batch] Skipping lesson ${lesson.lessonNumber}: "${lesson.title}" (companion exists, no changes)`);
       details.push({
         lessonId: lesson.id,
@@ -114,13 +118,13 @@ export async function generateQuarterCompanions(
         weekNumber: lesson.lessonNumber,
         action: "skipped",
         reason: "companion exists, content unchanged",
-        resourceId: existing[0].id,
+        resourceId: existing.id,
       });
       skipped++;
       continue;
     }
 
-    const actionReason = existing.length > 0
+    const actionReason = existing
       ? (contentChanged ? "content changed, regenerating" : "forced regeneration")
       : "new companion";
 
@@ -137,12 +141,14 @@ export async function generateQuarterCompanions(
       continue;
     }
 
-    const previousContentJson = existing.length > 0 ? existing[0].contentJson : null;
-
-    if (existing.length > 0) {
-      await db.delete(resources).where(eq(resources.id, existing[0].id));
-      console.log(`[batch] Removed old companion ${existing[0].id} for lesson ${lesson.lessonNumber} (${actionReason})`);
+    if (pendingDraft) {
+      await db.delete(resources).where(eq(resources.id, pendingDraft.id));
+      console.log(`[batch] Removed stale pending draft ${pendingDraft.id} for lesson ${lesson.lessonNumber}`);
     }
+
+    const supersedesTarget = publishedCompanion || activeCompanions.find(r => r.id !== pendingDraft?.id);
+    const previousContentJson = supersedesTarget ? supersedesTarget.contentJson : null;
+    const supersedesId = supersedesTarget ? supersedesTarget.id : null;
 
     try {
       console.log(`[batch] Generating companion for lesson ${lesson.lessonNumber}: "${lesson.title}" (${actionReason})...`);
@@ -150,11 +156,18 @@ export async function generateQuarterCompanions(
         sourcePacketId: packetId,
       });
 
+      const updateData: Record<string, any> = {};
       if (previousContentJson) {
+        updateData.previousContentJson = previousContentJson;
+      }
+      if (supersedesId) {
+        updateData.supersedesResourceId = supersedesId;
+      }
+      if (Object.keys(updateData).length > 0) {
         await db.update(resources)
-          .set({ previousContentJson })
+          .set(updateData)
           .where(eq(resources.id, resourceId));
-        console.log(`[batch] Preserved previous content for diff review`);
+        console.log(`[batch] Linked new draft to superseded resource ${supersedesId}, preserved previous content for diff`);
       }
 
       console.log(`[batch] Companion created: ${resourceId}`);

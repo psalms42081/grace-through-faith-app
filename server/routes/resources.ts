@@ -394,6 +394,13 @@ router.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
       .where(eq(resources.id, id))
       .returning();
 
+    if (resource.supersedesResourceId) {
+      await db.update(resources)
+        .set({ status: "archived", reviewStatus: "archived", updatedAt: new Date() })
+        .where(eq(resources.id, resource.supersedesResourceId));
+      console.log(`[publish] Archived superseded resource ${resource.supersedesResourceId}`);
+    }
+
     return res.json(updated);
   } catch (err) {
     console.error("Publish resource error:", err);
@@ -441,6 +448,13 @@ router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       .set(updateData)
       .where(eq(resources.id, id))
       .returning();
+
+    if (action === "approved" && resource.supersedesResourceId) {
+      await db.update(resources)
+        .set({ status: "archived", reviewStatus: "archived", updatedAt: new Date() })
+        .where(eq(resources.id, resource.supersedesResourceId));
+      console.log(`[review] Archived superseded resource ${resource.supersedesResourceId}`);
+    }
 
     return res.json(updated);
   } catch (err) {

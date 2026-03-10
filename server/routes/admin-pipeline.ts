@@ -27,13 +27,18 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       .from(lessonSourcePackets)
       .groupBy(lessonSourcePackets.status);
 
+    const activeCompanionCondition = and(
+      eq(resources.resourceType, "sabbath-school-companion"),
+      sql`${resources.status} != 'archived'`
+    );
+
     const genStatusCounts = await db
       .select({
         generationStatus: resources.generationStatus,
         count: sql<number>`count(*)::int`,
       })
       .from(resources)
-      .where(eq(resources.resourceType, "sabbath-school-companion"))
+      .where(activeCompanionCondition)
       .groupBy(resources.generationStatus);
 
     const reviewStatusCounts = await db
@@ -42,7 +47,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
         count: sql<number>`count(*)::int`,
       })
       .from(resources)
-      .where(eq(resources.resourceType, "sabbath-school-companion"))
+      .where(activeCompanionCondition)
       .groupBy(resources.reviewStatus);
 
     const promptVersionDist = await db
@@ -51,7 +56,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
         count: sql<number>`count(*)::int`,
       })
       .from(resources)
-      .where(eq(resources.resourceType, "sabbath-school-companion"))
+      .where(activeCompanionCondition)
       .groupBy(resources.promptVersion);
 
     const totalLessons = await db
@@ -62,7 +67,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       .select({ count: sql<number>`count(distinct ${resources.sourceRef}->>'lessonId')::int` })
       .from(resources)
       .where(
-        sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school'`
+        sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.status} != 'archived'`
       );
 
     const failedGenerations = await db
@@ -76,7 +81,8 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       .where(
         and(
           eq(resources.resourceType, "sabbath-school-companion"),
-          eq(resources.generationStatus, "failed")
+          eq(resources.generationStatus, "failed"),
+          sql`${resources.status} != 'archived'`
         )
       )
       .orderBy(desc(resources.updatedAt))
@@ -84,6 +90,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
 
     const listConditions: any[] = [
       eq(resources.resourceType, "sabbath-school-companion"),
+      sql`${resources.status} != 'archived'`,
     ];
 
     const targetReviewStatus = filterReviewStatus || "pending";
@@ -117,7 +124,8 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
         reviewNotes: resources.reviewNotes,
         reviewedAt: resources.reviewedAt,
         createdAt: resources.createdAt,
-        hasPreviousVersion: sql<boolean>`(${resources.previousContentJson} IS NOT NULL)`.as("has_previous_version"),
+        supersedesResourceId: resources.supersedesResourceId,
+        hasPreviousVersion: sql<boolean>`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version"),
       })
       .from(resources)
       .where(and(...listConditions))
@@ -185,6 +193,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
         updatedAt: resources.updatedAt,
         publishedAt: resources.publishedAt,
         previousContentJson: resources.previousContentJson,
+        supersedesResourceId: resources.supersedesResourceId,
       })
       .from(resources)
       .where(eq(resources.id, id))
@@ -274,7 +283,8 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
         email: reviewer.email,
         reviewedAt: resource.reviewedAt,
       } : null,
-      hasPreviousVersion: !!resource.previousContentJson,
+      supersedesResourceId: resource.supersedesResourceId || null,
+      hasPreviousVersion: !!(resource.previousContentJson || resource.supersedesResourceId),
     });
   } catch (err) {
     console.error("Resource preview error:", err);
@@ -292,6 +302,7 @@ router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, r
         title: resources.title,
         contentJson: resources.contentJson,
         previousContentJson: resources.previousContentJson,
+        supersedesResourceId: resources.supersedesResourceId,
         promptVersion: resources.promptVersion,
         generationStatus: resources.generationStatus,
         reviewStatus: resources.reviewStatus,
@@ -305,7 +316,19 @@ router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, r
       return res.status(404).json({ error: "Resource not found" });
     }
 
-    if (!resource.previousContentJson) {
+    let previousContent = resource.previousContentJson as any;
+    if (!previousContent && resource.supersedesResourceId) {
+      const [superseded] = await db
+        .select({ contentJson: resources.contentJson })
+        .from(resources)
+        .where(eq(resources.id, resource.supersedesResourceId))
+        .limit(1);
+      if (superseded) {
+        previousContent = superseded.contentJson;
+      }
+    }
+
+    if (!previousContent) {
       return res.json({
         hasPrevious: false,
         resource: { id: resource.id, title: resource.title },
@@ -314,7 +337,7 @@ router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, r
     }
 
     const current = resource.contentJson as any;
-    const previous = resource.previousContentJson as any;
+    const previous = previousContent;
 
     const diffableSections = [
       { key: "overview", label: "Overview", type: "text" as const },
