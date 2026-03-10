@@ -39092,7 +39092,10 @@ function configureExpoAndLanding(app2) {
   const appName = getAppName();
   const isDev = process.env.NODE_ENV === "development";
   log("Serving static Expo files with dynamic manifest routing");
-  app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets")));
+  app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets"), {
+    maxAge: "1h",
+    etag: true
+  }));
   if (isDev) {
     const { createProxyMiddleware } = __require("http-proxy-middleware");
     const metroProxy = createProxyMiddleware({

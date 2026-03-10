@@ -188,7 +188,10 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
-  app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
+  app.use("/assets", express.static(path.resolve(process.cwd(), "assets"), {
+    maxAge: "1h",
+    etag: true,
+  }));
 
   if (isDev) {
     const { createProxyMiddleware } = require("http-proxy-middleware");
