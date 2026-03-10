@@ -4,7 +4,7 @@ import { getAuthUserId } from "./auth";
 function safeKeyGenerator(req: any): string {
   const userId = getAuthUserId(req);
   if (userId) return `user:${userId}`;
-  return "anon";
+  return req.ip || "unknown";
 }
 
 export const aiGenerationLimiter = rateLimit({
@@ -31,4 +31,5 @@ export const authLimiter = rateLimit({
   message: { error: "Too many authentication attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: any) => req.ip || "unknown",
 });

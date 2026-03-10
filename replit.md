@@ -97,6 +97,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **jsonwebtoken:** JWT token generation and verification.
 - **LiveKit Cloud:** Real-time video/audio conferencing.
 - **react-native-webview:** Loads LiveKit room HTML on native.
+- **Trust Proxy:** `app.set("trust proxy", 1)` — Express trusts the first proxy hop (Replit's reverse proxy) so `req.ip` returns the real client IP. Without this, all rate-limit buckets collapse to the proxy IP.
+- **Rate Limiting:** `server/middleware/rate-limit.ts` — per-route limiters: `aiGenerationLimiter` (10/min, by user or IP), `ttsLimiter` (15/min, by user or IP), `authLimiter` (20/15min, by IP). All use real client IP via trust proxy.
 
 **Maps & Location:**
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
