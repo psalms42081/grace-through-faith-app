@@ -5,7 +5,8 @@ echo "=== Building server ==="
 npm run server:build
 
 echo "=== Pushing schema ==="
-npx drizzle-kit push --force || true
+npx drizzle-kit push --force
+echo "Schema push complete"
 
 echo "=== Seeding production data ==="
 

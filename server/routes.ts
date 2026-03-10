@@ -101,15 +101,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       await db.execute(sql`SELECT 1`);
-      const counts = await db.execute(sql`
-        SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
-      `);
-      for (const row of counts.rows as any[]) {
-        if (row.status === "published") resourceStats.published = row.count;
-        else if (row.status === "draft") resourceStats.draft = row.count;
-      }
     } catch {
       dbStatus = "unreachable";
+    }
+
+    if (dbStatus === "ok") {
+      try {
+        const counts = await db.execute(sql`
+          SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
+        `);
+        for (const row of counts.rows as any[]) {
+          if (row.status === "published") resourceStats.published = row.count;
+          else if (row.status === "draft") resourceStats.draft = row.count;
+        }
+      } catch {
+      }
     }
 
     const status = dbStatus === "ok" ? "ok" : "degraded";
