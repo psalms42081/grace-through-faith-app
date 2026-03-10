@@ -306,8 +306,37 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          {t("profile.quickLinks")}
+          Saved Content
         </Text>
+        {[
+          { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
+          { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
+          { title: "Growth Map", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
+        ].map((link) => (
+          <ListItem
+            key={link.route}
+            icon={link.icon}
+            iconColor={link.color}
+            title={link.title}
+            onPress={() => router.push(link.route as any)}
+            style={{ marginBottom: 6 }}
+          />
+        ))}
+      </View>
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
+      <View style={st.sectionPad}>
+        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Family & Settings
+        </Text>
+        <ListItem
+          icon="shield-checkmark"
+          iconColor="#E65100"
+          title={t("profile.parentControls")}
+          onPress={() => router.push("/parent-controls" as any)}
+          style={{ marginBottom: 6 }}
+        />
 
         <LanguageSettings
           theme={theme}
@@ -327,16 +356,18 @@ export default function ProfileScreen() {
           useDeviceLanguageLabel={t("profile.useDeviceLanguage")}
           sameAsAppLabel={t("profile.sameAsApp")}
         />
+      </View>
 
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
+      <View style={st.sectionPad}>
+        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Help
+        </Text>
         {[
           ...(user?.role === "admin" || user?.role === "editor" ? [
             { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
-          { title: "Growth Map", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
-          { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
-          { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
-          { title: t("profile.prayerGroups"), icon: "people-circle" as const, color: "#10B981", route: "/groups" },
-          { title: t("profile.parentControls"), icon: "shield-checkmark" as const, color: "#E65100", route: "/parent-controls" },
           { title: t("profile.howItWorks"), icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
         ].map((link) => (
           <ListItem
@@ -348,7 +379,6 @@ export default function ProfileScreen() {
             style={{ marginBottom: 6 }}
           />
         ))}
-
         <ListItem
           icon="refresh"
           iconColor="#C9933A"
