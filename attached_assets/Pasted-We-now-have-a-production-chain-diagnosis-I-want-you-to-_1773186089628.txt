@@ -1,0 +1,98 @@
+We now have a production-chain diagnosis. I want you to move from diagnosis to execution and verification.
+
+Confirmed findings so far:
+- Expo Go dev uses Metro and is not proof of deployment
+- Browser hitting the Replit URL gets the landing page, which is expected
+- Production mobile path uses deployed static bundles/manifests
+- David scene image updates are already present in production DB with ?v=2 URLs
+- David image assets are deployed and served by Express from /assets
+- The main real issue discovered is that my production user role is still "user" instead of "admin"
+- The previous deploy-time admin promotion approach using psql was fragile and likely failed silently
+- scripts/deploy-build.sh has been changed to use a Node/tsx-based promotion path instead
+
+Your task now:
+Complete the fix and verify it end-to-end. Do not stop at “code changed.” A task is only complete if the published production mobile pathway reflects the intended result.
+
+Goals:
+1. Ensure admin promotion works reliably in production
+2. Redeploy using the corrected promotion path
+3. Verify my production account is now admin
+4. Verify the Content Pipeline appears in the correct location in the production app
+5. Reconfirm David image URLs and asset serving in production
+6. Provide hard proof of what changed and what is now verified
+
+Rules:
+- Do not treat Metro/dev as proof
+- Do not give me a theoretical answer
+- Do not stop after editing files
+- Perform the full production chain verification
+- If something fails, identify the exact failing step and fix it
+- Prefer deterministic, non-silent failure over fragile scripts with swallowed errors
+- Remove or reduce silent failure behavior where appropriate
+
+Required work:
+
+A. Audit the admin promotion implementation
+- Inspect the current scripts/deploy-build.sh changes
+- Inspect the new Node/tsx-based admin promotion logic
+- Ensure it targets the same production DB connection used successfully by the seeds
+- Ensure it logs success/failure clearly
+- Ensure it does not silently pass if the promotion fails
+- If needed, move promotion into a dedicated script with explicit output
+
+B. Execute and verify deployment chain
+Trace and confirm:
+1. source code updated
+2. deploy/build script uses the corrected admin promotion path
+3. deployment completed successfully
+4. promotion script actually ran during deploy
+5. production database now shows my account role as admin
+6. production API/app behavior exposes the Content Pipeline for admin users
+
+C. Reconfirm image production path
+Even though diagnosis says images are correct, verify again after deploy:
+- production DB still contains the `?v=2` URLs for the relevant David scenes
+- image files exist in deployed assets path
+- Express still serves them correctly from `/assets`
+- app is constructing the correct production URLs using getApiUrl()
+
+D. Make deployment verification explicit
+I want a reliable verification checklist for future deploys.
+Add or document a repeatable verification flow that covers:
+- admin role status
+- critical seed/data status
+- important asset URL freshness
+- production mobile bundle correctness
+- any cache-sensitive content paths
+
+If useful, create a small internal verification script or command that checks critical post-deploy state.
+
+Deliverables:
+1. Short execution summary
+- what you changed
+- what was deployed
+- what was verified
+
+2. Files changed
+List every file touched and why
+
+3. Verification evidence
+I want explicit confirmation of:
+- my production user role after deploy
+- whether Content Pipeline is now accessible
+- relevant David scene image URLs in production DB
+- whether deployed assets are being served correctly
+
+4. Any remaining uncertainty
+If anything still cannot be directly proven from within Replit, say exactly what is not provable and why
+
+5. Final user-side test instructions
+Give me a minimal exact checklist for testing on my phone in production:
+- what to open
+- what should appear
+- what to do if old images still show
+- how to distinguish cache from deployment failure
+
+Important:
+Do not tell me simply that “it should now work.”
+Verify the actual production path and report concrete results.

@@ -71,13 +71,10 @@ npx tsx scripts/verify-flagship.ts
 echo "Flagship verification: OK"
 
 echo "=== Promoting admin accounts ==="
-npx tsx -e "
-const { Pool } = require('pg');
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-pool.query(\"UPDATE users SET role = 'admin' WHERE email = 'joehuber0881@gmail.com' AND role != 'admin'\")
-  .then(r => { console.log('Admin promotion: ' + r.rowCount + ' row(s) updated'); return pool.end(); })
-  .catch(e => { console.error('Admin promotion failed:', e.message); return pool.end(); });
-" || true
+npx tsx scripts/promote-admins.ts
+
+echo "=== Post-seed verification ==="
+npx tsx scripts/verify-production.ts
 
 echo "=== Data seeding complete ==="
 

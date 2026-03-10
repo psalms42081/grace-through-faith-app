@@ -69,15 +69,16 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
 
 1. **Server build** (`npm run server:build` via esbuild)
-2. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
-3. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
-4. **Devotional day dedup** (`scripts/dedup-devotional-days.ts`) — removes duplicate `(plan_id, day_number)` rows, remaps `user_plan_progress` before deleting
-5. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
-6. **Bible verse seed** (`scripts/seed-verses-prod.ts`) — KJV, ASV, WEB translations — failures **block deploy**
+2. **Schema reconciliation** (`scripts/reconcile-constraints.ts`) — converts indexes to constraints, renames `_key` → `_unique`
+3. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
+4. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
+5. **Devotional day dedup** (`scripts/dedup-devotional-days.ts`) — removes duplicate `(plan_id, day_number)` rows
+6. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
 7. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata, checksums, sling coords
-8. **Security regression gate** (41 tests via temp server)
-9. **i18n content translations** (`scripts/seed-i18n-content.ts`) — translates formation modules/lessons/sections into es/fr/pt/fil/zh via OpenAI
-10. **Expo static build** (`npm run expo:static:build`)
+8. **Admin promotion** (`scripts/promote-admins.ts`) — promotes designated emails to admin role, fails loudly if DB connection fails
+9. **Post-seed verification** (`scripts/verify-production.ts`) — checks admin roles, David scene URLs, critical table counts, asset files — failures **block deploy**
+10. **Security regression gate** (41 tests via temp server on port 5099, `export DEPLOY_TEST_PORT`)
+11. **Expo static build** (`npm run expo:static:build`)
 
 Key scripts:
 - `scripts/seed-david-flagship.ts` — Idempotent: looks up story by title, deletes old scenes, inserts 6 cinematic scenes with `interactionConfig.isLivingScene` and `cinematicConfig`, self-verifies
@@ -85,6 +86,9 @@ Key scripts:
 - `scripts/dedup-devotional-days.ts` — Removes duplicate devotional days, remaps user progress, conflict-safe
 - `scripts/seed-i18n-content.ts` — OpenAI-powered formation content translation (5 languages), idempotent per module/language
 - `scripts/ensure-tables.ts` — SQL fallback for critical tables (resources, user_feedback)
+- `scripts/promote-admins.ts` — Promotes designated emails to admin role with explicit pass/fail logging
+- `scripts/verify-production.ts` — Post-deploy verification: admin roles, scene URLs, critical tables, asset files
+- `scripts/reconcile-constraints.ts` — Converts unique indexes to constraints, renames `_key` → `_unique` suffixes
 - All devotional seed scripts (`seed-devotionals.ts`, `seed-sda-devotionals.ts`, `seed-more-devotionals.ts`, `server/seed-plans.ts`) are idempotent — skip plans that already exist
 
-Production runtime: `NODE_ENV=production node server_dist/index.js`
+Production runtime: `PORT=8081 NODE_ENV=production node server_dist/index.js` (port 8081 maps to external port 80 via `.replit` port forwarding)
