@@ -44,8 +44,17 @@ npx tsx scripts/seed-application.ts || true
 echo "Seeding kids content..."
 npx tsx scripts/seed-kids-content.ts || true
 
+echo "Seeding David flagship story..."
+npx tsx scripts/seed-david-flagship.ts || true
+
 echo "Seeding Strong's concordance..."
 npx tsx scripts/seed-strongs-from-json.ts || true
+
+echo "Seeding startup data (formation, beliefs, resources)..."
+npx tsx scripts/seed-startup-data.ts || true
+
+echo "Seeding global churches..."
+npx tsx scripts/seed-global-churches.ts || true
 
 echo "=== Data seeding complete ==="
 
