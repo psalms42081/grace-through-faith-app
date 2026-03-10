@@ -1,42 +1,46 @@
 import { db } from "../server/db";
 import { kidsStoryScenes, kidsStories } from "../shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 async function seedDavidFlagship() {
-  console.log("Seeding David and the Giant flagship story (living scenes)...");
+  console.log("[david-flagship] Starting flagship story seed...");
 
   const [davidStory] = await db
-    .select({ id: kidsStories.id })
+    .select({ id: kidsStories.id, title: kidsStories.title, imageUrl: kidsStories.imageUrl })
     .from(kidsStories)
     .where(eq(kidsStories.title, "David and the Giant"))
     .limit(1);
 
   if (!davidStory) {
-    console.log("David and the Giant story not found — skipping flagship seed (run seed-kids-content first)");
-    return;
+    console.error("[david-flagship] FATAL: 'David and the Giant' story not found in kids_story table.");
+    console.error("[david-flagship] Ensure seed-kids-content.ts runs before this script.");
+    process.exit(1);
   }
 
-  const DAVID_STORY_ID = davidStory.id;
-  console.log(`  Found David story with ID: ${DAVID_STORY_ID}`);
+  const storyId = davidStory.id;
+  console.log(`[david-flagship] Found story ID: ${storyId}`);
 
-  await db.update(kidsStories).set({
-    memoryVerse: "The battle is the Lord's.",
-    memoryVerseRef: "1 Samuel 17:47",
-    prayerPrompt: "Dear God, please help me be brave when I feel scared. Thank You for being with me. Amen.",
-    thinkQuestions: [
-      "Who helped David be brave?",
-      "What did David use to fight the giant?",
-      "How does God help you when you feel scared?",
-    ],
-    activitySuggestion: "Find 5 smooth stones outside and use them to retell the story of David and Goliath to a friend or family member!",
-    imageUrl: "/kids/david-goliath/scene-0-shepherd.png",
-  }).where(eq(kidsStories.id, DAVID_STORY_ID));
+  await db.transaction(async (tx) => {
+    await tx.update(kidsStories).set({
+      memoryVerse: "The battle is the Lord's.",
+      memoryVerseRef: "1 Samuel 17:47",
+      prayerPrompt: "Dear God, please help me be brave when I feel scared. Thank You for being with me. Amen.",
+      thinkQuestions: [
+        "Who helped David be brave?",
+        "What did David use to fight the giant?",
+        "How does God help you when you feel scared?",
+      ],
+      activitySuggestion: "Find 5 smooth stones outside and use them to retell the story of David and Goliath to a friend or family member!",
+      imageUrl: "/kids/david-goliath/scene-0-shepherd.png",
+    }).where(eq(kidsStories.id, storyId));
+    console.log("[david-flagship] Updated story metadata");
 
-  await db.delete(kidsStoryScenes).where(eq(kidsStoryScenes.storyId, DAVID_STORY_ID));
+    await tx.delete(kidsStoryScenes).where(eq(kidsStoryScenes.storyId, storyId));
+    console.log("[david-flagship] Cleared existing scenes");
 
-  const scenes = [
+    const scenes = [
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 0,
       narration: "One day, David walked out to the valley. He saw a giant far away and brave soldiers nearby.",
       illustrationPrompt: "David the shepherd boy standing in a valley with Goliath in the distance",
@@ -62,7 +66,7 @@ async function seedDavidFlagship() {
       ],
     },
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 1,
       narration: "A giant named Goliath shouted and scared the soldiers.",
       illustrationPrompt: "Goliath towering over David and soldiers in the valley",
@@ -85,7 +89,7 @@ async function seedDavidFlagship() {
       ],
     },
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 2,
       narration: "David was not brave because he was strong. David was brave because he trusted God.",
       illustrationPrompt: "David standing with hand on heart trusting God",
@@ -110,7 +114,7 @@ async function seedDavidFlagship() {
       ],
     },
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 3,
       narration: "David picked up five smooth stones and took his sling.",
       illustrationPrompt: "David kneeling by stream collecting smooth stones",
@@ -144,7 +148,7 @@ async function seedDavidFlagship() {
       ],
     },
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 4,
       narration: "David ran forward. He swung his sling and trusted God.",
       illustrationPrompt: "David swinging his sling at Goliath across the battlefield",
@@ -170,7 +174,7 @@ async function seedDavidFlagship() {
       ],
     },
     {
-      storyId: DAVID_STORY_ID,
+      storyId,
       sceneIndex: 5,
       narration: "God helped David. Everyone saw that God is stronger than any giant.",
       illustrationPrompt: "David victorious with cheering crowd and waving banners",
@@ -200,17 +204,36 @@ async function seedDavidFlagship() {
     },
   ];
 
-  for (const scene of scenes) {
-    await db.insert(kidsStoryScenes).values(scene);
-    console.log(`  Scene ${scene.sceneIndex}: ${scene.interactionType} (living)`);
-  }
+    for (const scene of scenes) {
+      await tx.insert(kidsStoryScenes).values(scene);
+      console.log(`[david-flagship]   Scene ${scene.sceneIndex}: ${scene.interactionType}`);
+    }
 
-  console.log("David and the Giant flagship story seeded (living scenes)!");
+    const verifyCount = await tx
+      .select({ id: kidsStoryScenes.id })
+      .from(kidsStoryScenes)
+      .where(eq(kidsStoryScenes.storyId, storyId));
+
+    if (verifyCount.length !== 6) {
+      throw new Error(`VERIFY FAILED: Expected 6 scenes, found ${verifyCount.length}`);
+    }
+
+    const [updatedStory] = await tx
+      .select({ imageUrl: kidsStories.imageUrl, memoryVerse: kidsStories.memoryVerse })
+      .from(kidsStories)
+      .where(eq(kidsStories.id, storyId));
+
+    if (!updatedStory.imageUrl || !updatedStory.memoryVerse) {
+      throw new Error("VERIFY FAILED: Story metadata not updated");
+    }
+  });
+
+  console.log("[david-flagship] SUCCESS: 6 cinematic scenes + metadata verified (transaction committed)");
 }
 
 seedDavidFlagship()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error("Seed error:", err);
+    console.error("[david-flagship] FATAL:", err);
     process.exit(1);
   });

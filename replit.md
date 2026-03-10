@@ -63,3 +63,22 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **react-native-webview:** Loads LiveKit room HTML on native.
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
 - **OpenStreetMap:** Embedded tile maps on the web platform.
+
+## Deployment Pipeline
+
+The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
+
+1. **Server build** (`npm run server:build` via esbuild)
+2. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
+3. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
+4. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
+5. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata
+6. **Security regression gate** (41 tests via temp server)
+7. **Expo static build** (`npm run expo:static:build`)
+
+Key scripts:
+- `scripts/seed-david-flagship.ts` — Idempotent: looks up story by title, deletes old scenes, inserts 6 cinematic scenes with `interactionConfig.isLivingScene` and `cinematicConfig`, self-verifies
+- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence
+- `scripts/ensure-tables.ts` — SQL fallback for critical tables (resources, user_feedback)
+
+Production runtime: `NODE_ENV=production node server_dist/index.js`

@@ -41,12 +41,6 @@ npx tsx scripts/seed-locations.ts || true
 echo "Seeding application templates..."
 npx tsx scripts/seed-application.ts || true
 
-echo "Seeding kids content..."
-npx tsx scripts/seed-kids-content.ts || true
-
-echo "Seeding David flagship story..."
-npx tsx scripts/seed-david-flagship.ts || true
-
 echo "Seeding Strong's concordance..."
 npx tsx scripts/seed-strongs-from-json.ts || true
 
@@ -55,6 +49,20 @@ npx tsx scripts/seed-startup-data.ts || true
 
 echo "Seeding global churches..."
 npx tsx scripts/seed-global-churches.ts || true
+
+echo "=== Seeding CRITICAL content (failures block deploy) ==="
+
+echo "Seeding kids content..."
+npx tsx scripts/seed-kids-content.ts
+echo "Kids content seed: OK"
+
+echo "Seeding David flagship story..."
+npx tsx scripts/seed-david-flagship.ts
+echo "David flagship seed: OK"
+
+echo "=== Verifying flagship story ==="
+npx tsx scripts/verify-flagship.ts
+echo "Flagship verification: OK"
 
 echo "=== Data seeding complete ==="
 
