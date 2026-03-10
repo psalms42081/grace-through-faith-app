@@ -93,7 +93,7 @@ async function seedDavidFlagship() {
       sceneIndex: 2,
       narration: "David was not brave because he was strong. David was brave because he trusted God.",
       illustrationPrompt: "David standing with hand on heart trusting God",
-      imageUrl: "/assets/kids-scenes/david-scene-2.png?v=2",
+      imageUrl: "/assets/kids-scenes/david-scene-2.png",
       mood: "AWE" as const,
       interactionType: "tap_glow",
       interactionConfig: {
@@ -152,7 +152,7 @@ async function seedDavidFlagship() {
       sceneIndex: 4,
       narration: "David ran forward. He swung his sling and trusted God.",
       illustrationPrompt: "David swinging his sling at Goliath across the battlefield",
-      imageUrl: "/assets/kids-scenes/david-scene-4.png?v=2",
+      imageUrl: "/assets/kids-scenes/david-scene-4.png",
       mood: "JOY" as const,
       interactionType: "drag_release",
       interactionConfig: {
@@ -178,7 +178,7 @@ async function seedDavidFlagship() {
       sceneIndex: 5,
       narration: "God helped David. Everyone saw that God is stronger than any giant.",
       illustrationPrompt: "David victorious with cheering crowd and waving banners",
-      imageUrl: "/assets/kids-scenes/david-scene-5.png?v=2",
+      imageUrl: "/assets/kids-scenes/david-scene-5.png",
       mood: "JOY" as const,
       interactionType: "tap_cheer",
       interactionConfig: {

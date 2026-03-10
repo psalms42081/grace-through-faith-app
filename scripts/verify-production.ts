@@ -51,11 +51,12 @@ async function verify() {
     }
   }
 
-  const v2Scenes = scenes.rows.filter((r: any) => r.image_url?.includes("?v=2"));
-  if (v2Scenes.length >= 2) {
-    pass("Cache-busted scenes", `${v2Scenes.length} scene(s) have ?v=2`);
+  const cleanUrls = scenes.rows.every((r: any) => !r.image_url?.includes("?"));
+  if (cleanUrls) {
+    pass("Clean URLs", "No query parameters on any scene URL");
   } else {
-    fail("Cache-busted scenes", `Expected >=2 with ?v=2, got ${v2Scenes.length}`);
+    const dirty = scenes.rows.filter((r: any) => r.image_url?.includes("?"));
+    fail("Clean URLs", `${dirty.length} scene(s) still have query parameters`);
   }
 
   console.log("\n--- 3. Critical tables ---");
