@@ -16,7 +16,7 @@ import { Router, Request } from "express";
   } from "../../shared/schema";
   import { CONTENT_LANGUAGES } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { requireAuth, checkProStatus } from "../middleware/auth";
+  import { requireAuth, optionalAuth, getEffectiveUserId, checkProStatus } from "../middleware/auth";
   import {
     generateConversationStarter,
     generateDinnerTableTopic,
@@ -25,9 +25,9 @@ import { Router, Request } from "express";
 
   const router = Router();
 
-  router.get("/api/family/children", requireAuth, async (req, res) => {
+  router.get("/api/family/children", optionalAuth, async (req, res) => {
   try {
-    const parentId = req.authUserId!;
+    const parentId = getEffectiveUserId(req);
     const children = await db
       .select()
       .from(childProfiles)
@@ -40,9 +40,9 @@ import { Router, Request } from "express";
   }
 });
 
-router.post("/api/family/children", requireAuth, async (req, res) => {
+router.post("/api/family/children", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId!;
+    const userId = getEffectiveUserId(req);
     const { name, avatarUrl, ageGroup } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Child name is required" });

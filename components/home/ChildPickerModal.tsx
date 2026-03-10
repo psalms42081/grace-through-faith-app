@@ -20,7 +20,7 @@ import type { AgeGroup } from "@/context/KidsModeContext";
 const AGE_TIERS: { value: AgeGroup; label: string; ages: string }[] = [
   { value: "little_lambs", label: "Little Lambs", ages: "Ages 3-6" },
   { value: "young_disciples", label: "Young Disciples", ages: "Ages 7-9" },
-  { value: "young_disciples_plus", label: "Young Disciples+", ages: "Ages 10-12" },
+  { value: "young_disciples_plus", label: "Teens", ages: "Ages 10-12" },
 ];
 
 export interface ChildProfile {
