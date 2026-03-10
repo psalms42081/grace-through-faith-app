@@ -1585,6 +1585,23 @@ export const resources = pgTable("resources", {
   generationStatusIdx: index("resources_generation_status_idx").on(table.generationStatus),
 }));
 
+export const resourceReviewNotes = pgTable("resource_review_notes", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  resourceId: varchar("resource_id").notNull(),
+  action: varchar("action", { length: 30 }).notNull(),
+  statusFrom: varchar("status_from", { length: 20 }),
+  statusTo: varchar("status_to", { length: 20 }),
+  notes: text("notes"),
+  createdBy: varchar("created_by").notNull(),
+  isSystem: boolean("is_system").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  resourceIdx: index("review_notes_resource_idx").on(table.resourceId),
+  createdAtIdx: index("review_notes_created_at_idx").on(table.createdAt),
+}));
+
 export const resourceProgress = pgTable("resource_progress", {
   id: varchar("id")
     .primaryKey()

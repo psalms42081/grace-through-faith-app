@@ -170,6 +170,121 @@ interface ResourcePreview {
   } | null;
 }
 
+interface ReviewHistoryEntry {
+  id: string;
+  resourceId: string;
+  action: string;
+  statusFrom: string | null;
+  statusTo: string | null;
+  notes: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  author: {
+    displayName: string | null;
+    email: string;
+    role: string | null;
+  };
+}
+
+function ReviewHistoryFeed({ resourceId, theme }: { resourceId: string; theme: any }) {
+  const historyPath = `/api/admin/pipeline/resource/${resourceId}/review-history`;
+  const { data, isLoading } = useQuery<{ history: ReviewHistoryEntry[] }>({
+    queryKey: [historyPath],
+    enabled: !!resourceId,
+  });
+
+  const actionLabel = (action: string) => {
+    const labels: Record<string, string> = {
+      approved: "Approved",
+      rejected: "Rejected",
+      needs_revision: "Revision Requested",
+      rollback_archived: "Rolled Back (archived)",
+      rollback_restored: "Rolled Back (restored)",
+      archived: "Archived",
+    };
+    return labels[action] || action;
+  };
+
+  const actionColor = (action: string) => {
+    const colors: Record<string, string> = {
+      approved: "#10B981",
+      rejected: "#EF4444",
+      needs_revision: "#F97316",
+      rollback_archived: "#8B5CF6",
+      rollback_restored: "#8B5CF6",
+      archived: "#6B7280",
+    };
+    return colors[action] || "#6B7280";
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <Text style={[styles.metaBlockTitle, { color: "#F97316" }]}>Review History</Text>
+        <ActivityIndicator size="small" color={theme.accent} />
+      </View>
+    );
+  }
+
+  const history = data?.history || [];
+
+  if (history.length === 0) {
+    return (
+      <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <Text style={[styles.metaBlockTitle, { color: "#F97316" }]}>Review History</Text>
+        <Text style={[styles.previewBody, { color: theme.textMuted }]}>No review actions yet</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+      <Text style={[styles.metaBlockTitle, { color: "#F97316" }]}>Review History ({history.length})</Text>
+      {history.map((entry, idx) => {
+        const color = actionColor(entry.action);
+        const authorName = entry.author.displayName || entry.author.email;
+        const dateStr = new Date(entry.createdAt).toLocaleString();
+        return (
+          <View
+            key={entry.id}
+            style={[
+              styles.historyEntry,
+              { borderLeftColor: color },
+              idx < history.length - 1 && { marginBottom: 12 },
+            ]}
+          >
+            <View style={styles.historyHeader}>
+              <View style={[styles.historyActionBadge, { backgroundColor: color + "20" }]}>
+                <Ionicons
+                  name={entry.isSystem ? "cog-outline" : "person-outline"}
+                  size={12}
+                  color={color}
+                />
+                <Text style={[styles.historyActionText, { color }]}>{actionLabel(entry.action)}</Text>
+              </View>
+              {entry.statusFrom && entry.statusTo && entry.statusFrom !== entry.statusTo && (
+                <Text style={[styles.historyTransition, { color: theme.textMuted }]}>
+                  {entry.statusFrom} → {entry.statusTo}
+                </Text>
+              )}
+            </View>
+            <View style={styles.historyMeta}>
+              <Ionicons name={entry.isSystem ? "hardware-chip-outline" : "person-circle-outline"} size={14} color={theme.textMuted} />
+              <Text style={[styles.historyAuthor, { color: theme.textSecondary }]}>
+                {entry.isSystem ? "System" : authorName}
+              </Text>
+              <Text style={[styles.historyDate, { color: theme.textMuted }]}>{dateStr}</Text>
+            </View>
+            {entry.notes && (
+              <Text style={[styles.historyNotes, { color: theme.text }]}>{entry.notes}</Text>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   const { theme } = useTheme();
   return (
@@ -682,12 +797,7 @@ function PreviewModal({
                 </View>
               )}
 
-              {preview.resource.reviewNotes && (
-                <View style={[styles.metaBlock, { backgroundColor: "#F97316" + "10", borderColor: "#F97316" + "40" }]}>
-                  <Text style={[styles.metaBlockTitle, { color: "#F97316" }]}>Review Notes</Text>
-                  <Text style={[styles.previewBody, { color: theme.text }]}>{preview.resource.reviewNotes}</Text>
-                </View>
-              )}
+              <ReviewHistoryFeed resourceId={preview.resource.id} theme={theme} />
 
               <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Content Sections</Text>
               {preview.contentSections.map((section) => (
@@ -1080,6 +1190,7 @@ export default function AdminReviewScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline/overview"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes("/review-history") });
       if (selectedQuarter) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline/quarter", selectedQuarter] });
       }
@@ -1098,6 +1209,7 @@ export default function AdminReviewScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline"] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes("/review-history") });
       if (selectedQuarter) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/pipeline/quarter", selectedQuarter] });
       }
@@ -2052,4 +2164,51 @@ const styles = StyleSheet.create({
   diffMetaValues: { flexDirection: "row", alignItems: "center", gap: 6 },
   diffOldValue: { fontSize: 12, fontFamily: "Inter_500Medium", textDecorationLine: "line-through" },
   diffNewValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  historyEntry: {
+    borderLeftWidth: 3,
+    paddingLeft: 10,
+    paddingVertical: 6,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  historyActionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  historyActionText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  historyTransition: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  historyMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  historyAuthor: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  historyDate: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  historyNotes: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 6,
+    fontFamily: "Inter_400Regular",
+  },
 });

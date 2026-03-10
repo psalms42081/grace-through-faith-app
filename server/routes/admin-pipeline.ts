@@ -3,6 +3,7 @@ import { db } from "../db";
 import {
   users,
   resources,
+  resourceReviewNotes,
   lessonSourcePackets,
   sabbathSchoolLessons,
   sabbathSchoolQuarterlies,
@@ -713,6 +714,52 @@ router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("Set user role error:", err);
     return res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
+router.get("/api/admin/pipeline/resource/:id/review-history", requireEditor, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const notes = await db
+      .select({
+        id: resourceReviewNotes.id,
+        resourceId: resourceReviewNotes.resourceId,
+        action: resourceReviewNotes.action,
+        statusFrom: resourceReviewNotes.statusFrom,
+        statusTo: resourceReviewNotes.statusTo,
+        notes: resourceReviewNotes.notes,
+        createdBy: resourceReviewNotes.createdBy,
+        isSystem: resourceReviewNotes.isSystem,
+        createdAt: resourceReviewNotes.createdAt,
+      })
+      .from(resourceReviewNotes)
+      .where(eq(resourceReviewNotes.resourceId, id))
+      .orderBy(desc(resourceReviewNotes.createdAt));
+
+    const userIds = [...new Set(notes.map(n => n.createdBy))];
+    const userMap: Record<string, { displayName: string | null; email: string; role: string | null }> = {};
+
+    if (userIds.length > 0) {
+      for (const uid of userIds) {
+        const [u] = await db
+          .select({ displayName: users.displayName, email: users.email, role: users.role })
+          .from(users)
+          .where(eq(users.id, uid))
+          .limit(1);
+        if (u) userMap[uid] = u;
+      }
+    }
+
+    const enriched = notes.map(n => ({
+      ...n,
+      author: userMap[n.createdBy] || { displayName: null, email: n.createdBy, role: null },
+    }));
+
+    return res.json({ history: enriched });
+  } catch (err) {
+    console.error("Review history error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

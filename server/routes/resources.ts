@@ -4,6 +4,7 @@ import {
   resources,
   resourceProgress,
   resourceBookmarks,
+  resourceReviewNotes,
   users,
 } from "../../shared/schema";
 import { eq, and, ilike, sql, desc, asc, or } from "drizzle-orm";
@@ -449,10 +450,37 @@ router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       .where(eq(resources.id, id))
       .returning();
 
+    await db.insert(resourceReviewNotes).values({
+      resourceId: id,
+      action,
+      statusFrom: resource.reviewStatus,
+      statusTo: action,
+      notes: notes ? String(notes).slice(0, 2000) : null,
+      createdBy: req.authUserId!,
+      isSystem: false,
+    });
+
     if (action === "approved" && resource.supersedesResourceId) {
+      const [predecessorRow] = await db
+        .select({ reviewStatus: resources.reviewStatus })
+        .from(resources)
+        .where(eq(resources.id, resource.supersedesResourceId))
+        .limit(1);
+
       await db.update(resources)
         .set({ status: "archived", reviewStatus: "archived", updatedAt: new Date() })
         .where(eq(resources.id, resource.supersedesResourceId));
+
+      await db.insert(resourceReviewNotes).values({
+        resourceId: resource.supersedesResourceId,
+        action: "archived",
+        statusFrom: predecessorRow?.reviewStatus || "unknown",
+        statusTo: "archived",
+        notes: `Superseded by new version "${resource.title}" (${resource.promptVersion})`,
+        createdBy: req.authUserId!,
+        isSystem: true,
+      });
+
       console.log(`[review] Archived superseded resource ${resource.supersedesResourceId}`);
     }
 
@@ -511,6 +539,16 @@ router.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         })
         .where(eq(resources.id, current.id));
 
+      await tx.insert(resourceReviewNotes).values({
+        resourceId: current.id,
+        action: "rollback_archived",
+        statusFrom: current.reviewStatus,
+        statusTo: "archived",
+        notes: rollbackNote,
+        createdBy: req.authUserId!,
+        isSystem: true,
+      });
+
       const [restored] = await tx.update(resources)
         .set({
           status: "published",
@@ -523,6 +561,16 @@ router.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         })
         .where(eq(resources.id, predecessor.id))
         .returning();
+
+      await tx.insert(resourceReviewNotes).values({
+        resourceId: predecessor.id,
+        action: "rollback_restored",
+        statusFrom: predecessor.reviewStatus,
+        statusTo: "approved",
+        notes: rollbackNote,
+        createdBy: req.authUserId!,
+        isSystem: true,
+      });
 
       return restored;
     });
