@@ -83,7 +83,7 @@ interface LivingSceneProps {
   theme: any;
 }
 
-function PulsingHotspot({
+function SoftHotspot({
   x,
   y,
   size,
@@ -91,7 +91,6 @@ function PulsingHotspot({
   onPress,
   collected,
   label,
-  isFirst,
 }: {
   x: number;
   y: number;
@@ -100,64 +99,49 @@ function PulsingHotspot({
   onPress: () => void;
   collected?: boolean;
   label?: string;
-  isFirst?: boolean;
 }) {
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0.5);
+  const glowOpacity = useSharedValue(0.3);
+  const glowScale = useSharedValue(1);
   const [showLabel, setShowLabel] = useState(false);
   const tapScale = useSharedValue(1);
-  const hintScale = useSharedValue(1);
   const labelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (collected) return;
-    pulseScale.value = withDelay(
+    glowOpacity.value = withDelay(
       d,
       withRepeat(
         withSequence(
-          withTiming(1.6, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })
+          withTiming(0.7, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.25, { duration: 1200, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         true
       )
     );
-    pulseOpacity.value = withDelay(
+    glowScale.value = withDelay(
       d,
       withRepeat(
         withSequence(
-          withTiming(0.9, { duration: 900 }),
-          withTiming(0.35, { duration: 900 })
+          withTiming(1.15, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         true
       )
     );
-    if (isFirst) {
-      hintScale.value = withDelay(
-        d + 500,
-        withRepeat(
-          withSequence(
-            withSpring(1.3, { damping: 4, stiffness: 120 }),
-            withSpring(1, { damping: 8 })
-          ),
-          3,
-          false
-        )
-      );
-    }
     return () => {
       if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
     };
   }, [collected]);
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowScale.value }],
+    opacity: glowOpacity.value,
   }));
 
   const tapStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: tapScale.value * hintScale.value }],
+    transform: [{ scale: tapScale.value }],
   }));
 
   if (collected) return null;
@@ -165,50 +149,48 @@ function PulsingHotspot({
   const handlePress = () => {
     haptic("light");
     tapScale.value = withSequence(
-      withSpring(1.6, { damping: 5 }),
-      withSpring(1, { damping: 8 })
+      withSpring(1.4, { damping: 6 }),
+      withSpring(1, { damping: 10 })
     );
     setShowLabel(true);
     if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
-    labelTimerRef.current = setTimeout(() => setShowLabel(false), 1500);
+    labelTimerRef.current = setTimeout(() => setShowLabel(false), 1800);
     onPress();
   };
 
-  const outerSize = size * 1.3;
-
   return (
     <Animated.View
-      entering={FadeIn.delay(d).duration(400)}
+      entering={FadeIn.delay(d).duration(600)}
       style={[
         ls.hotspot,
         {
-          left: x * SW - outerSize / 2,
-          top: y * SCENE_HEIGHT - outerSize / 2,
-          width: outerSize,
-          height: outerSize,
-          borderRadius: outerSize / 2,
+          left: x * SW - size / 2,
+          top: y * SCENE_HEIGHT - size / 2,
+          width: size,
+          height: size,
+          borderRadius: size / 2,
         },
       ]}
     >
       <Animated.View
         style={[
-          ls.hotspotPulse,
-          { width: outerSize, height: outerSize, borderRadius: outerSize / 2 },
-          pulseStyle,
+          ls.hotspotGlow,
+          { width: size, height: size, borderRadius: size / 2 },
+          glowStyle,
         ]}
       />
       <Animated.View style={tapStyle}>
         <Pressable
           onPress={handlePress}
-          hitSlop={16}
+          hitSlop={20}
           style={[
-            ls.hotspotInner,
-            { width: size * 0.55, height: size * 0.55, borderRadius: size * 0.275 },
+            ls.hotspotCenter,
+            { width: size * 0.4, height: size * 0.4, borderRadius: size * 0.2 },
           ]}
         />
       </Animated.View>
       {showLabel && label && (
-        <Animated.View entering={FadeInUp.duration(200)} style={ls.hotspotLabel}>
+        <Animated.View entering={FadeInUp.duration(250)} style={ls.hotspotLabel}>
           <Text style={ls.hotspotLabelText}>{label}</Text>
         </Animated.View>
       )}
@@ -218,28 +200,33 @@ function PulsingHotspot({
 
 function TapWiggleScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
   const hotspots = config.hotspots || [];
+  const sequential = !!config.sequential;
   const [tapped, setTapped] = useState<Set<number>>(new Set());
 
   const handleTap = (i: number) => {
+    if (tapped.has(i)) return;
     playSound("pop");
     setTapped(prev => new Set([...prev, i]));
   };
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {isActive && hotspots.map((h: any, i: number) => (
-        <PulsingHotspot
-          key={i}
-          x={h.x}
-          y={h.y}
-          size={h.size || 60}
-          delay={i * 250}
-          label={h.label}
-          collected={tapped.has(i)}
-          isFirst={i === 0}
-          onPress={() => handleTap(i)}
-        />
-      ))}
+      {isActive && hotspots.map((h: any, i: number) => {
+        if (tapped.has(i)) return null;
+        if (sequential && i > tapped.size) return null;
+        return (
+          <SoftHotspot
+            key={i}
+            x={h.x}
+            y={h.y}
+            size={h.size || 44}
+            delay={sequential ? 400 : i * 300}
+            label={h.label}
+            collected={tapped.has(i)}
+            onPress={() => handleTap(i)}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -257,10 +244,8 @@ function TapCompareScene({ config, isActive }: { config: Record<string, any>; is
     playSound("thud");
     setCompared(true);
     shakeX.value = withSequence(
-      withTiming(-6, { duration: 50 }),
-      withTiming(6, { duration: 50 }),
-      withTiming(-5, { duration: 40 }),
-      withTiming(5, { duration: 40 }),
+      withTiming(-4, { duration: 50 }),
+      withTiming(4, { duration: 50 }),
       withTiming(-3, { duration: 40 }),
       withTiming(3, { duration: 40 }),
       withTiming(0, { duration: 50 })
@@ -272,18 +257,17 @@ function TapCompareScene({ config, isActive }: { config: Record<string, any>; is
   return (
     <Animated.View style={[StyleSheet.absoluteFill, shakeStyle]} pointerEvents="box-none">
       {isActive && !compared && (
-        <PulsingHotspot
+        <SoftHotspot
           x={h.x}
           y={h.y}
-          size={h.size || 75}
-          delay={300}
+          size={h.size || 50}
+          delay={400}
           label="Tap to see!"
-          isFirst
           onPress={handleTap}
         />
       )}
       {compared && (
-        <Animated.View entering={FadeIn.duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.25, alignSelf: "center" }]}>
+        <Animated.View entering={FadeIn.duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.22, alignSelf: "center" }]}>
           <Text style={ls.revealText}>{config.resultText || "He is SO tall!"}</Text>
         </Animated.View>
       )}
@@ -309,14 +293,14 @@ function TapGlowScene({ config, isActive }: { config: Record<string, any>; isAct
     haptic("success");
     playSound("chime");
     setGlowing(true);
-    glowRadius.value = withSpring(260, { damping: 8, stiffness: 50 });
-    glowOpacity.value = withTiming(0.5, { duration: 800 });
+    glowRadius.value = withSpring(200, { damping: 10, stiffness: 50 });
+    glowOpacity.value = withTiming(0.4, { duration: 800 });
   };
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isActive && !glowing && (
-        <PulsingHotspot x={h.x} y={h.y} size={68} delay={400} label="Tap David's heart" isFirst onPress={handleGlow} />
+        <SoftHotspot x={h.x} y={h.y} size={44} delay={400} label="Tap David's heart" onPress={handleGlow} />
       )}
       {glowing && (
         <>
@@ -325,14 +309,14 @@ function TapGlowScene({ config, isActive }: { config: Record<string, any>; isAct
               ls.glowCircle,
               glowStyle,
               {
-                left: h.x * SW - 130,
-                top: h.y * SCENE_HEIGHT - 130,
-                backgroundColor: config.glowColor || "rgba(255,215,0,0.35)",
+                left: h.x * SW - 100,
+                top: h.y * SCENE_HEIGHT - 100,
+                backgroundColor: config.glowColor || "rgba(255,215,0,0.3)",
               },
             ]}
           />
-          <Animated.View entering={FadeIn.delay(600).duration(600)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.28, alignSelf: "center" }]}>
-            <Text style={[ls.revealText, { color: "#FFD700", fontSize: 24 }]}>{config.revealText || "God is with me."}</Text>
+          <Animated.View entering={FadeIn.delay(600).duration(600)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.25, alignSelf: "center" }]}>
+            <Text style={[ls.revealText, { color: "#FFD700", fontSize: 22 }]}>{config.revealText || "God is with me."}</Text>
           </Animated.View>
         </>
       )}
@@ -344,6 +328,7 @@ function TapCollectScene({ config, isActive }: { config: Record<string, any>; is
   const [collected, setCollected] = useState<Set<number>>(new Set());
   const total = config.totalItems || 5;
   const hotspots = config.hotspots || [];
+  const sequential = !!config.sequential;
   const allDone = collected.size >= total;
 
   const handleCollect = (idx: number) => {
@@ -362,24 +347,27 @@ function TapCollectScene({ config, isActive }: { config: Record<string, any>; is
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {isActive && hotspots.map((h: any, i: number) => (
-        <PulsingHotspot
-          key={i}
-          x={h.x}
-          y={h.y}
-          size={h.size || 52}
-          delay={i * 200 + 300}
-          label={`Stone ${i + 1}!`}
-          collected={collected.has(i)}
-          isFirst={i === 0 && collected.size === 0}
-          onPress={() => handleCollect(i)}
-        />
-      ))}
+      {isActive && hotspots.map((h: any, i: number) => {
+        if (collected.has(i)) return null;
+        if (sequential && i > collected.size) return null;
+        return (
+          <SoftHotspot
+            key={i}
+            x={h.x}
+            y={h.y}
+            size={h.size || 34}
+            delay={sequential ? 400 : i * 200 + 300}
+            label={h.label || `Stone ${i + 1}!`}
+            collected={collected.has(i)}
+            onPress={() => handleCollect(i)}
+          />
+        );
+      })}
       {isActive && (
         <View style={ls.collectCounter}>
           <Text style={ls.collectCountText}>
             {allDone
-              ? config.completeText || "All 5 stones collected!"
+              ? config.completeText || "All stones collected!"
               : `${collected.size} of ${total} stones`}
           </Text>
         </View>
@@ -398,8 +386,8 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
   const impactScale = useSharedValue(0);
   const impactOpacity = useSharedValue(0);
 
-  const sling = config.slingArea || { x: 0.72, y: 0.55 };
-  const target = config.targetArea || { x: 0.25, y: 0.4 };
+  const sling = config.slingArea || { x: 0.70, y: 0.38 };
+  const target = config.targetArea || { x: 0.22, y: 0.40 };
 
   const slingAnim = useAnimatedStyle(() => ({
     transform: [{ rotate: `${slingRotation.value}deg` }],
@@ -457,7 +445,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
         withTiming(2, { duration: 400 }),
       );
       impactOpacity.value = withSequence(
-        withTiming(0.9, { duration: 100 }),
+        withTiming(0.8, { duration: 100 }),
         withTiming(0, { duration: 600 })
       );
     }, 500);
@@ -466,31 +454,20 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isActive && (phase === "ready" || phase === "dragging") && (
-        <>
-          <View
-            {...panRef.panHandlers}
-            style={[ls.dragZone, { left: sling.x * SW - 55, top: sling.y * SCENE_HEIGHT - 55, width: 110, height: 110 }]}
-          >
-            <Animated.View style={slingAnim}>
-              <View style={ls.dragIndicator} />
-            </Animated.View>
-          </View>
-          <PulsingHotspot
-            x={sling.x}
-            y={sling.y}
-            size={75}
-            delay={200}
-            label="Touch and swirl!"
-            isFirst
-            onPress={() => {}}
-          />
-        </>
+        <View
+          {...panRef.panHandlers}
+          style={[ls.dragZone, { left: sling.x * SW - 50, top: sling.y * SCENE_HEIGHT - 50, width: 100, height: 100 }]}
+        >
+          <Animated.View style={slingAnim}>
+            <View style={ls.dragIndicator} />
+          </Animated.View>
+        </View>
       )}
 
       {isActive && phase === "dragging" && (
         <Animated.View entering={FadeIn.duration(300)} style={ls.releaseButtonWrap}>
           <Pressable onPress={handleRelease} style={ls.releaseButton}>
-            <Text style={ls.releaseButtonText}>Release the stone!</Text>
+            <Text style={ls.releaseButtonText}>Let go!</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -499,7 +476,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
         style={[
           ls.projectile,
           stoneAnim,
-          { left: sling.x * SW - 12, top: sling.y * SCENE_HEIGHT - 12 },
+          { left: sling.x * SW - 10, top: sling.y * SCENE_HEIGHT - 10 },
         ]}
       >
         <View style={ls.stoneVisual} />
@@ -509,13 +486,13 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
         style={[
           ls.impactBurst,
           impactAnim,
-          { left: target.x * SW - 45, top: target.y * SCENE_HEIGHT - 45 },
+          { left: target.x * SW - 35, top: target.y * SCENE_HEIGHT - 35 },
         ]}
       />
 
       {phase === "hit" && (
-        <Animated.View entering={FadeIn.delay(300).duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.2, alignSelf: "center" }]}>
-          <Text style={[ls.revealText, { fontSize: 22 }]}>{config.resultText || "The stone flew true!"}</Text>
+        <Animated.View entering={FadeIn.delay(300).duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.18, alignSelf: "center" }]}>
+          <Text style={[ls.revealText, { fontSize: 20 }]}>{config.resultText || "The stone flew true!"}</Text>
         </Animated.View>
       )}
     </View>
@@ -524,6 +501,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
 
 function TapCheerScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
   const hotspots = config.hotspots || [];
+  const sequential = !!config.sequential;
   const [tapped, setTapped] = useState<Set<number>>(new Set());
 
   const handleTap = (idx: number) => {
@@ -542,22 +520,25 @@ function TapCheerScene({ config, isActive }: { config: Record<string, any>; isAc
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {isActive && hotspots.map((h: any, i: number) => (
-        <PulsingHotspot
-          key={i}
-          x={h.x}
-          y={h.y}
-          size={h.size || 55}
-          delay={i * 150}
-          label={h.label || "Hooray!"}
-          collected={tapped.has(i)}
-          isFirst={i === 0 && tapped.size === 0}
-          onPress={() => handleTap(i)}
-        />
-      ))}
+      {isActive && hotspots.map((h: any, i: number) => {
+        if (tapped.has(i)) return null;
+        if (sequential && i > tapped.size) return null;
+        return (
+          <SoftHotspot
+            key={i}
+            x={h.x}
+            y={h.y}
+            size={h.size || 40}
+            delay={sequential ? 400 : i * 200}
+            label={h.label || "Hooray!"}
+            collected={tapped.has(i)}
+            onPress={() => handleTap(i)}
+          />
+        );
+      })}
       {tapped.size >= hotspots.length && (
         <Animated.View entering={FadeIn.delay(200).duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.15, alignSelf: "center" }]}>
-          <Text style={[ls.revealText, { color: "#FFD700", fontSize: 22 }]}>God is stronger than any giant!</Text>
+          <Text style={[ls.revealText, { color: "#FFD700", fontSize: 20 }]}>God is stronger than any giant!</Text>
         </Animated.View>
       )}
     </View>
@@ -634,12 +615,12 @@ export default function LivingScene({
   }, [isActive, showInteractions]);
 
   const patterns = [
-    { fromScale: 1.0, toScale: 1.08, fromX: 0, toX: -8, fromY: 0, toY: -5 },
-    { fromScale: 1.02, toScale: 1.1, fromX: -5, toX: 5, fromY: -3, toY: 3 },
-    { fromScale: 1.0, toScale: 1.06, fromX: 5, toX: -5, fromY: 3, toY: -4 },
-    { fromScale: 1.03, toScale: 1.1, fromX: 3, toX: -6, fromY: -4, toY: 3 },
-    { fromScale: 1.0, toScale: 1.07, fromX: -4, toX: 4, fromY: 4, toY: -3 },
-    { fromScale: 1.02, toScale: 1.09, fromX: 6, toX: -3, fromY: -2, toY: 5 },
+    { fromScale: 1.0, toScale: 1.06, fromX: 0, toX: -5, fromY: 0, toY: -3 },
+    { fromScale: 1.01, toScale: 1.07, fromX: -3, toX: 3, fromY: -2, toY: 2 },
+    { fromScale: 1.0, toScale: 1.05, fromX: 3, toX: -3, fromY: 2, toY: -3 },
+    { fromScale: 1.02, toScale: 1.07, fromX: 2, toX: -4, fromY: -3, toY: 2 },
+    { fromScale: 1.0, toScale: 1.06, fromX: -2, toX: 3, fromY: 3, toY: -2 },
+    { fromScale: 1.01, toScale: 1.06, fromX: 4, toX: -2, fromY: -1, toY: 3 },
   ];
   const p = patterns[sceneIndex % patterns.length];
 
@@ -772,47 +753,47 @@ const ls = StyleSheet.create({
     justifyContent: "center",
     zIndex: 10,
   },
-  hotspotPulse: {
+  hotspotGlow: {
     position: "absolute",
-    backgroundColor: "rgba(255,215,0,0.2)",
-    borderWidth: 2.5,
-    borderColor: "rgba(255,215,0,0.5)",
+    backgroundColor: "rgba(255,248,220,0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,215,0,0.3)",
   },
-  hotspotInner: {
-    backgroundColor: "rgba(255,215,0,0.35)",
-    borderWidth: 2.5,
-    borderColor: "rgba(255,215,0,0.8)",
+  hotspotCenter: {
+    backgroundColor: "rgba(255,215,0,0.2)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,215,0,0.5)",
   },
   hotspotLabel: {
     position: "absolute",
-    bottom: -30,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    minWidth: 70,
+    bottom: -28,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    minWidth: 60,
     alignItems: "center",
   },
   hotspotLabelText: {
     color: "#FFD700",
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
     textAlign: "center",
   },
   revealBadge: {
     position: "absolute",
-    backgroundColor: "rgba(0,0,0,0.85)",
-    borderRadius: 18,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    backgroundColor: "rgba(0,0,0,0.82)",
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     marginHorizontal: 32,
     zIndex: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
+    borderColor: "rgba(255,215,0,0.25)",
   },
   revealText: {
     color: "#fff",
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "Lora_700Bold",
     textAlign: "center",
   },
@@ -824,18 +805,18 @@ const ls = StyleSheet.create({
     position: "absolute",
     top: 80,
     right: 16,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     zIndex: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
+    borderColor: "rgba(255,215,0,0.2)",
   },
   collectCountText: {
     color: "#FFD700",
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
   },
   dragZone: {
     position: "absolute",
@@ -844,12 +825,12 @@ const ls = StyleSheet.create({
     zIndex: 15,
   },
   dragIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,215,0,0.35)",
-    borderWidth: 2.5,
-    borderColor: "rgba(255,215,0,0.7)",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,215,0,0.2)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,215,0,0.4)",
   },
   releaseButtonWrap: {
     position: "absolute",
@@ -859,20 +840,20 @@ const ls = StyleSheet.create({
   },
   releaseButton: {
     backgroundColor: "#C9933A",
-    borderRadius: 28,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    borderRadius: 24,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.2)",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.15)",
   },
   releaseButtonText: {
     color: "#fff",
-    fontSize: 19,
+    fontSize: 18,
     fontFamily: "Inter_700Bold",
   },
   projectile: {
@@ -880,26 +861,26 @@ const ls = StyleSheet.create({
     zIndex: 18,
   },
   stoneVisual: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: "#8B7355",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#6B5B45",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 4,
   },
   impactBurst: {
     position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "rgba(255,215,0,0.45)",
-    borderWidth: 2.5,
-    borderColor: "rgba(255,215,0,0.7)",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255,215,0,0.35)",
+    borderWidth: 2,
+    borderColor: "rgba(255,215,0,0.5)",
     zIndex: 17,
   },
   loadingOverlay: {
@@ -909,16 +890,16 @@ const ls = StyleSheet.create({
     zIndex: 25,
   },
   loadingPill: {
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.2)",
+    borderColor: "rgba(255,215,0,0.15)",
   },
   loadingText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 15,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
     textAlign: "center",
   },
@@ -932,15 +913,15 @@ const ls = StyleSheet.create({
   },
   instructionText: {
     color: "#fff",
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
+    fontSize: 19,
+    fontFamily: "Inter_600SemiBold",
     textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.85)",
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    borderRadius: 18,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
     borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.3)",
+    borderColor: "rgba(255,215,0,0.2)",
     overflow: "hidden",
   },
 });

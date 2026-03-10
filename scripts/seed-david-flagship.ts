@@ -26,18 +26,18 @@ async function seedDavidFlagship() {
     {
       storyId: DAVID_STORY_ID,
       sceneIndex: 0,
-      narration: "David was a young shepherd boy. He loved God and cared for his sheep.",
+      narration: "One day, David walked out to the valley. He saw a giant far away and brave soldiers nearby.",
       illustrationPrompt: "David the shepherd boy standing in a valley with Goliath in the distance",
       imageUrl: "/kids/david-goliath/scene-0-shepherd.png",
       mood: "PEACE" as const,
       interactionType: "tap_wiggle",
       interactionConfig: {
         isLivingScene: true,
-        instruction: "Tap on David and the giant!",
+        instruction: "Can you find David?",
+        sequential: true,
         hotspots: [
-          { x: 0.62, y: 0.48, size: 60, label: "Hi David!" },
-          { x: 0.25, y: 0.42, size: 55, label: "That's Goliath!" },
-          { x: 0.85, y: 0.6, size: 45, label: "The camp!" },
+          { x: 0.68, y: 0.52, size: 44, label: "Hi David!" },
+          { x: 0.22, y: 0.42, size: 44, label: "That's the giant!" },
         ],
       },
       soundEffects: [
@@ -54,8 +54,8 @@ async function seedDavidFlagship() {
       interactionType: "tap_compare",
       interactionConfig: {
         isLivingScene: true,
-        instruction: "Tap on the giant!",
-        hotspot: { x: 0.22, y: 0.42, size: 75 },
+        instruction: "Tap the giant!",
+        hotspot: { x: 0.20, y: 0.40, size: 50 },
         resultText: "He is SO tall! But God is bigger.",
       },
       soundEffects: [
@@ -73,9 +73,9 @@ async function seedDavidFlagship() {
       interactionConfig: {
         isLivingScene: true,
         instruction: "Tap David's heart!",
-        hotspot: { x: 0.52, y: 0.48 },
+        hotspot: { x: 0.48, y: 0.48 },
         revealText: "God is with me.",
-        glowColor: "rgba(255,215,0,0.35)",
+        glowColor: "rgba(255,215,0,0.3)",
       },
       soundEffects: [
         { key: "soft_chime", trigger: "tap" },
@@ -91,15 +91,16 @@ async function seedDavidFlagship() {
       interactionType: "tap_collect",
       interactionConfig: {
         isLivingScene: true,
-        instruction: "Collect all 5 stones!",
+        instruction: "Pick up each stone!",
         totalItems: 5,
+        sequential: true,
         completeText: "You found all 5 stones!",
         hotspots: [
-          { x: 0.28, y: 0.72, size: 44 },
-          { x: 0.35, y: 0.78, size: 42 },
-          { x: 0.42, y: 0.74, size: 44 },
-          { x: 0.30, y: 0.82, size: 40 },
-          { x: 0.38, y: 0.68, size: 42 },
+          { x: 0.35, y: 0.80, size: 34, label: "Stone 1!" },
+          { x: 0.40, y: 0.84, size: 34, label: "Stone 2!" },
+          { x: 0.45, y: 0.80, size: 34, label: "Stone 3!" },
+          { x: 0.50, y: 0.84, size: 34, label: "Stone 4!" },
+          { x: 0.43, y: 0.76, size: 34, label: "Stone 5!" },
         ],
       },
       soundEffects: [
@@ -116,9 +117,9 @@ async function seedDavidFlagship() {
       interactionType: "drag_release",
       interactionConfig: {
         isLivingScene: true,
-        instruction: "Swirl your finger on the sling, then release!",
-        slingArea: { x: 0.72, y: 0.52 },
-        targetArea: { x: 0.22, y: 0.38 },
+        instruction: "Swirl the sling, then let go!",
+        slingArea: { x: 0.70, y: 0.38 },
+        targetArea: { x: 0.22, y: 0.40 },
         resultText: "The stone flew true!",
       },
       soundEffects: [
@@ -136,14 +137,13 @@ async function seedDavidFlagship() {
       interactionType: "tap_cheer",
       interactionConfig: {
         isLivingScene: true,
-        instruction: "Tap everyone to celebrate!",
+        instruction: "Tap David to celebrate!",
+        sequential: true,
         hotspots: [
-          { x: 0.15, y: 0.55, size: 50, label: "Hooray!" },
-          { x: 0.35, y: 0.62, size: 48, label: "Praise God!" },
-          { x: 0.55, y: 0.42, size: 55, label: "We won!" },
-          { x: 0.78, y: 0.55, size: 50, label: "Thank God!" },
-          { x: 0.18, y: 0.3, size: 42, label: "Wave!" },
-          { x: 0.82, y: 0.32, size: 42, label: "Wave!" },
+          { x: 0.55, y: 0.42, size: 40, label: "Hooray David!" },
+          { x: 0.15, y: 0.55, size: 36, label: "Praise God!" },
+          { x: 0.85, y: 0.50, size: 36, label: "Thank God!" },
+          { x: 0.35, y: 0.60, size: 36, label: "We won!" },
         ],
       },
       soundEffects: [
