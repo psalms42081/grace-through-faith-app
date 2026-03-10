@@ -24,15 +24,21 @@ interface FilteredItem {
   id: string;
   title: string;
   slug: string;
+  status: string;
   generationStatus: string;
   reviewStatus: string;
   promptVersion: string;
   sourceRef: any;
+  sourcePacketId: string | null;
   reviewNotes: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  updatedAt: string;
   supersedesResourceId: string | null;
   hasPreviousVersion: boolean;
+  sourceChanged: boolean;
+  isRegenerated: boolean;
+  hasNotes: boolean;
 }
 
 interface DiffData {
@@ -189,18 +195,39 @@ function FilterBar({
   reviewStatus,
   promptVersion,
   promptVersions,
+  hasNotes,
+  isRegenerated,
+  sortBy,
+  sortOrder,
   onChangeReviewStatus,
   onChangePromptVersion,
+  onToggleHasNotes,
+  onToggleIsRegenerated,
+  onChangeSortBy,
+  onToggleSortOrder,
   theme,
 }: {
   reviewStatus: string;
   promptVersion: string;
   promptVersions: string[];
+  hasNotes: boolean;
+  isRegenerated: boolean;
+  sortBy: string;
+  sortOrder: string;
   onChangeReviewStatus: (v: string) => void;
   onChangePromptVersion: (v: string) => void;
+  onToggleHasNotes: () => void;
+  onToggleIsRegenerated: () => void;
+  onChangeSortBy: (v: "createdAt" | "updatedAt" | "title") => void;
+  onToggleSortOrder: () => void;
   theme: any;
 }) {
   const statusOptions = ["pending", "approved", "rejected", "needs_revision"];
+  const sortOptions: Array<{ key: "createdAt" | "updatedAt" | "title"; label: string }> = [
+    { key: "createdAt", label: "Created" },
+    { key: "updatedAt", label: "Updated" },
+    { key: "title", label: "Title" },
+  ];
 
   return (
     <View style={styles.filterBar}>
@@ -227,6 +254,37 @@ function FilterBar({
             </Text>
           </Pressable>
         ))}
+        <View style={styles.filterDivider} />
+        <Pressable
+          style={[
+            styles.filterChip,
+            {
+              backgroundColor: isRegenerated ? "#F59E0B" + "30" : theme.backgroundCard,
+              borderColor: isRegenerated ? "#F59E0B" : theme.border,
+            },
+          ]}
+          onPress={onToggleIsRegenerated}
+        >
+          <Ionicons name="git-compare-outline" size={12} color={isRegenerated ? "#F59E0B" : theme.textSecondary} />
+          <Text style={[styles.filterChipText, { color: isRegenerated ? "#F59E0B" : theme.textSecondary, marginLeft: 4 }]}>
+            Regenerated
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.filterChip,
+            {
+              backgroundColor: hasNotes ? "#F97316" + "30" : theme.backgroundCard,
+              borderColor: hasNotes ? "#F97316" : theme.border,
+            },
+          ]}
+          onPress={onToggleHasNotes}
+        >
+          <Ionicons name="document-text-outline" size={12} color={hasNotes ? "#F97316" : theme.textSecondary} />
+          <Text style={[styles.filterChipText, { color: hasNotes ? "#F97316" : theme.textSecondary, marginLeft: 4 }]}>
+            Has Notes
+          </Text>
+        </Pressable>
         {promptVersions.length > 0 && (
           <View style={styles.filterDivider} />
         )}
@@ -253,6 +311,33 @@ function FilterBar({
           </Pressable>
         ))}
       </ScrollView>
+      <View style={styles.sortRow}>
+        <Ionicons name="swap-vertical" size={14} color={theme.textMuted} />
+        {sortOptions.map((opt) => (
+          <Pressable
+            key={opt.key}
+            style={[
+              styles.sortChip,
+              {
+                backgroundColor: sortBy === opt.key ? theme.accent + "20" : "transparent",
+                borderColor: sortBy === opt.key ? theme.accent + "60" : "transparent",
+              },
+            ]}
+            onPress={() => onChangeSortBy(opt.key)}
+          >
+            <Text style={[styles.sortChipText, { color: sortBy === opt.key ? theme.accent : theme.textMuted }]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        ))}
+        <Pressable onPress={onToggleSortOrder} hitSlop={8} style={{ marginLeft: 4 }}>
+          <Ionicons
+            name={sortOrder === "desc" ? "arrow-down" : "arrow-up"}
+            size={14}
+            color={theme.textMuted}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -812,6 +897,10 @@ export default function AdminReviewScreen() {
   const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending">("overview");
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
+  const [filterHasNotes, setFilterHasNotes] = useState(false);
+  const [filterIsRegenerated, setFilterIsRegenerated] = useState(false);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | "title">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [diffId, setDiffId] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ id: string; action: string; title: string } | null>(null);
@@ -819,7 +908,11 @@ export default function AdminReviewScreen() {
   const isAdmin = user?.role === "admin";
   const isEditor = user?.role === "editor" || isAdmin;
 
-  const overviewPath = `/api/admin/pipeline/overview?reviewStatus=${filterReviewStatus}${filterPromptVersion ? `&promptVersion=${filterPromptVersion}` : ""}`;
+  const overviewParams = new URLSearchParams({ reviewStatus: filterReviewStatus, sortBy, sortOrder });
+  if (filterPromptVersion) overviewParams.set("promptVersion", filterPromptVersion);
+  if (filterHasNotes) overviewParams.set("hasNotes", "true");
+  if (filterIsRegenerated) overviewParams.set("isRegenerated", "true");
+  const overviewPath = `/api/admin/pipeline/overview?${overviewParams.toString()}`;
 
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<PipelineOverview>({
     queryKey: [overviewPath],
@@ -956,8 +1049,16 @@ export default function AdminReviewScreen() {
               reviewStatus={filterReviewStatus}
               promptVersion={filterPromptVersion}
               promptVersions={promptVersions}
+              hasNotes={filterHasNotes}
+              isRegenerated={filterIsRegenerated}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
               onChangeReviewStatus={setFilterReviewStatus}
               onChangePromptVersion={setFilterPromptVersion}
+              onToggleHasNotes={() => setFilterHasNotes(v => !v)}
+              onToggleIsRegenerated={() => setFilterIsRegenerated(v => !v)}
+              onChangeSortBy={setSortBy}
+              onToggleSortOrder={() => setSortOrder(v => v === "desc" ? "asc" : "desc")}
               theme={theme}
             />
             <PendingTab
@@ -1143,7 +1244,11 @@ function PendingTab({
       {items.map((item) => (
         <View
           key={item.id}
-          style={[styles.reviewCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+          style={[
+            styles.reviewCard,
+            { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+            item.isRegenerated && styles.reviewCardRegenerated,
+          ]}
         >
           <View style={styles.reviewHeader}>
             <Pressable onPress={() => onPreview(item.id)} style={styles.reviewTitleArea}>
@@ -1164,10 +1269,16 @@ function PendingTab({
           </View>
           <View style={styles.reviewMeta}>
             <StatusBadge status={item.reviewStatus} type="review" />
-            {item.supersedesResourceId && (
+            {item.isRegenerated && (
               <View style={[styles.versionBadge, { backgroundColor: "#F59E0B" + "20", borderColor: "#F59E0B" + "40" }]}>
                 <Ionicons name="git-compare-outline" size={10} color="#F59E0B" />
                 <Text style={[styles.versionBadgeText, { color: "#F59E0B" }]}>Regenerated</Text>
+              </View>
+            )}
+            {item.sourceChanged && (
+              <View style={[styles.versionBadge, { backgroundColor: "#3B82F6" + "20", borderColor: "#3B82F6" + "40" }]}>
+                <Ionicons name="sync-outline" size={10} color="#3B82F6" />
+                <Text style={[styles.versionBadgeText, { color: "#3B82F6" }]}>Source Changed</Text>
               </View>
             )}
             <Text style={[styles.reviewMetaText, { color: theme.textMuted }]}>{item.promptVersion}</Text>
@@ -1416,6 +1527,7 @@ const styles = StyleSheet.create({
   listTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   listSub: { fontSize: 12, marginTop: 2 },
   reviewCard: { padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 10 },
+  reviewCardRegenerated: { borderLeftWidth: 3, borderLeftColor: "#F59E0B" },
   reviewHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1468,6 +1580,9 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 12, fontFamily: "Inter_500Medium", textTransform: "capitalize" },
   filterDivider: { width: 1, height: 20, backgroundColor: "#333", marginHorizontal: 4 },
+  sortRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
+  sortChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 1 },
+  sortChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   notesPreview: {
     flexDirection: "row",
     alignItems: "flex-start",

@@ -7,7 +7,7 @@ import {
   sabbathSchoolLessons,
   sabbathSchoolQuarterlies,
 } from "../../shared/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, asc } from "drizzle-orm";
 import { requireAdmin, requireEditor } from "../middleware/auth";
 
 const router = Router();
@@ -18,6 +18,10 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
     const filterGenStatus = req.query.generationStatus as string | undefined;
     const filterPromptVersion = req.query.promptVersion as string | undefined;
     const filterQuarterCode = req.query.quarterCode as string | undefined;
+    const filterHasNotes = req.query.hasNotes === "true";
+    const filterIsRegenerated = req.query.isRegenerated === "true";
+    const sortByParam = (req.query.sortBy as string) || "createdAt";
+    const sortOrderParam = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
 
     const packetStatusCounts = await db
       .select({
@@ -111,26 +115,86 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
         listConditions.push(sql`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
       }
     }
+    if (filterHasNotes) {
+      listConditions.push(sql`${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != ''`);
+    }
+    if (filterIsRegenerated) {
+      listConditions.push(sql`(${resources.supersedesResourceId} IS NOT NULL)`);
+    }
+
+    const sortColumn = sortByParam === "title" ? resources.title
+      : sortByParam === "updatedAt" ? resources.updatedAt
+      : resources.createdAt;
+    const sortFn = sortOrderParam === "asc" ? asc : desc;
 
     const filteredList = await db
       .select({
         id: resources.id,
         title: resources.title,
         slug: resources.slug,
+        status: resources.status,
         generationStatus: resources.generationStatus,
         reviewStatus: resources.reviewStatus,
         promptVersion: resources.promptVersion,
         sourceRef: resources.sourceRef,
+        sourcePacketId: resources.sourcePacketId,
         reviewNotes: resources.reviewNotes,
         reviewedAt: resources.reviewedAt,
         createdAt: resources.createdAt,
+        updatedAt: resources.updatedAt,
         supersedesResourceId: resources.supersedesResourceId,
         hasPreviousVersion: sql<boolean>`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version"),
       })
       .from(resources)
       .where(and(...listConditions))
-      .orderBy(desc(resources.createdAt))
+      .orderBy(sortFn(sortColumn))
       .limit(50);
+
+    const lessonIds = filteredList
+      .map(r => (r.sourceRef as any)?.lessonId)
+      .filter(Boolean) as string[];
+    const latestPacketByLesson = new Map<string, string>();
+    const resourcePacketHashes = new Map<string, string>();
+    if (lessonIds.length > 0) {
+      const latestPackets = await db
+        .select({
+          lessonId: lessonSourcePackets.lessonId,
+          sourceHash: lessonSourcePackets.sourceHash,
+        })
+        .from(lessonSourcePackets)
+        .where(sql`${lessonSourcePackets.lessonId} IN (${sql.join(lessonIds.map(id => sql`${id}`), sql`, `)})`);
+      for (const p of latestPackets) {
+        latestPacketByLesson.set(p.lessonId, p.sourceHash);
+      }
+    }
+    const packetIds = filteredList.map(r => r.sourcePacketId).filter(Boolean) as string[];
+    if (packetIds.length > 0) {
+      const usedPackets = await db
+        .select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash })
+        .from(lessonSourcePackets)
+        .where(sql`${lessonSourcePackets.id} IN (${sql.join(packetIds.map(id => sql`${id}`), sql`, `)})`);
+      for (const p of usedPackets) {
+        resourcePacketHashes.set(p.id, p.sourceHash);
+      }
+    }
+
+    const enrichedList = filteredList.map(item => {
+      const sourceRef = item.sourceRef as any;
+      let sourceChanged = false;
+      if (sourceRef?.lessonId && item.sourcePacketId) {
+        const latestHash = latestPacketByLesson.get(sourceRef.lessonId);
+        const usedHash = resourcePacketHashes.get(item.sourcePacketId);
+        if (latestHash && usedHash && latestHash !== usedHash) {
+          sourceChanged = true;
+        }
+      }
+      return {
+        ...item,
+        sourceChanged,
+        isRegenerated: !!item.supersedesResourceId,
+        hasNotes: !!(item.reviewNotes && item.reviewNotes.trim()),
+      };
+    });
 
     return res.json({
       sourcePackets: {
@@ -151,12 +215,18 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       },
       promptVersionDistribution: Object.fromEntries(promptVersionDist.map(r => [r.promptVersion || "unknown", r.count])),
       failedGenerations,
-      filteredList,
+      filteredList: enrichedList,
       filters: {
         reviewStatus: targetReviewStatus,
         generationStatus: filterGenStatus || null,
         promptVersion: filterPromptVersion || null,
         quarterCode: filterQuarterCode || null,
+        hasNotes: filterHasNotes,
+        isRegenerated: filterIsRegenerated,
+      },
+      sort: {
+        sortBy: sortByParam,
+        sortOrder: sortOrderParam,
       },
     });
   } catch (err) {

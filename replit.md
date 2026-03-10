@@ -66,7 +66,12 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
   - **Role System:** `users.role` column: "user" | "editor" | "admin". Middleware: `requireRole(...roles)`, `requireEditor` (editor+admin), `requireAdmin` (admin only). All auth endpoints (register/login/me) return `role` field. `POST /api/admin/users/:id/role` for admin role management. Self-demotion prevented.
   - **Admin Review UI:** `app/admin-review.tsx` — internal content management screen accessible from Profile (admin/editor only). Three tabs:
     - Overview: source packet counts, companion status by generation/review, coverage %, prompt version distribution, failed generations list.
-    - Review: filterable companion list (by review status, prompt version) with approve/revise/reject actions, review notes modal, content preview modal (full content, generation metadata, source packet info, reviewer history).
+    - Review: filterable companion list with smart queue intelligence:
+      - **Filters**: review status chips, "Regenerated" toggle (amber), "Has Notes" toggle (orange), prompt version chips
+      - **Sorting**: by Created/Updated/Title with asc/desc toggle
+      - **Badges**: "Regenerated" (amber, git-compare icon), "Source Changed" (blue, sync icon), review status badges
+      - **Visual priority**: regenerated items get amber left border accent
+      - Approve/revise/reject actions, review notes modal, content preview modal, diff modal
     - Quarter: quarter selector with per-lesson detail (packet status, companion status, review badges), batch generation trigger.
   - **CLI:** `scripts/gen-companions.ts` — batch quarter generation. Args: `--quarter 2026-01`, `--force`, `--dry-run`, `--list`.
   - **Key files:** `server/services/source-packet-builder.ts`, `server/services/batch-generator.ts`, `server/services/content-engine.ts`, `server/routes/resources.ts`, `server/routes/admin-pipeline.ts`, `server/middleware/auth.ts` (role middleware), `app/admin-review.tsx`, `shared/schema.ts`.
