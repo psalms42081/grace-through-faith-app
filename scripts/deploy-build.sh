@@ -4,11 +4,14 @@ set -e
 echo "=== Building server ==="
 npm run server:build
 
+echo "=== Reconciling constraint names ==="
+npx tsx scripts/reconcile-constraints.ts || true
+
 echo "=== Pushing schema ==="
-if npx drizzle-kit push --force; then
+if npx drizzle-kit push --force 2>&1; then
   echo "Schema push complete via drizzle-kit"
 else
-  echo "drizzle-kit push failed, applying fallback SQL migrations..."
+  echo "drizzle-kit push failed (exit $?), applying fallback SQL migrations..."
   npx tsx scripts/ensure-tables.ts
 fi
 

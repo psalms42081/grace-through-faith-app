@@ -8,19 +8,26 @@ import { sql, eq } from "drizzle-orm";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
-interface VerseEntry {
-  verse: string;
+interface NestedVerseEntry {
+  verse: string | number;
   text: string;
 }
 
-interface ChapterEntry {
-  chapter: string;
-  verses: VerseEntry[];
+interface NestedChapterEntry {
+  chapter: string | number;
+  verses: NestedVerseEntry[];
 }
 
-interface BookEntry {
+interface NestedBookEntry {
   book: string;
-  chapters: ChapterEntry[];
+  chapters: NestedChapterEntry[];
+}
+
+interface FlatVerseEntry {
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
 }
 
 const TRANSLATIONS = [
@@ -48,7 +55,7 @@ async function seedTranslation(translationId: string, dataFile: string, bookMap:
 
   console.log(`${translationId}: Seeding verses from ${dataFile}...`);
   const raw = fs.readFileSync(dataPath, "utf-8");
-  const data: BookEntry[] = JSON.parse(raw);
+  const data: any[] = JSON.parse(raw);
 
   let totalVerses = 0;
   const BATCH_SIZE = 500;
@@ -61,23 +68,40 @@ async function seedTranslation(translationId: string, dataFile: string, bookMap:
     batch = [];
   }
 
-  for (const bookEntry of data) {
-    const bookName = bookEntry.book;
-    const bookId = bookMap.get(bookName.toLowerCase());
-    if (!bookId) continue;
+  const isNested = data.length > 0 && Array.isArray(data[0]?.chapters);
 
-    for (const chapterEntry of bookEntry.chapters) {
-      const chapterNum = parseInt(chapterEntry.chapter, 10);
-      for (const verseEntry of chapterEntry.verses) {
-        batch.push({
-          translationId,
-          bookId,
-          chapter: chapterNum,
-          verse: parseInt(verseEntry.verse, 10),
-          text: verseEntry.text,
-        });
-        if (batch.length >= BATCH_SIZE) await flushBatch();
+  if (isNested) {
+    for (const bookEntry of data as NestedBookEntry[]) {
+      const bookId = bookMap.get(bookEntry.book.toLowerCase());
+      if (!bookId) continue;
+
+      for (const chapterEntry of bookEntry.chapters) {
+        const chapterNum = Number(chapterEntry.chapter);
+        for (const verseEntry of chapterEntry.verses) {
+          batch.push({
+            translationId,
+            bookId,
+            chapter: chapterNum,
+            verse: Number(verseEntry.verse),
+            text: verseEntry.text,
+          });
+          if (batch.length >= BATCH_SIZE) await flushBatch();
+        }
       }
+    }
+  } else {
+    for (const entry of data as FlatVerseEntry[]) {
+      const bookId = bookMap.get(entry.book.toLowerCase());
+      if (!bookId) continue;
+
+      batch.push({
+        translationId,
+        bookId,
+        chapter: Number(entry.chapter),
+        verse: Number(entry.verse),
+        text: entry.text,
+      });
+      if (batch.length >= BATCH_SIZE) await flushBatch();
     }
   }
 
