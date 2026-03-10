@@ -39,6 +39,11 @@ async function seedDavidFlagship() {
           { x: 0.657, y: 0.469, size: 44, label: "Hi David!" },
           { x: 0.221, y: 0.383, size: 44, label: "That's the giant!" },
         ],
+        cinematicConfig: {
+          effects: [
+            { type: "particles", count: 6, color: "rgba(255,248,220,0.5)", speed: "slow" },
+          ],
+        },
       },
       soundEffects: [
         { key: "gentle_breeze", trigger: "ambient" },
@@ -57,6 +62,11 @@ async function seedDavidFlagship() {
         instruction: "Tap the giant!",
         hotspot: { x: 0.205, y: 0.366, size: 50 },
         resultText: "He is SO tall! But God is bigger.",
+        cinematicConfig: {
+          effects: [
+            { type: "glow", x: 0.205, y: 0.25, color: "rgba(180,60,30,0.12)", size: 160, delay: 800, duration: 4000 },
+          ],
+        },
       },
       soundEffects: [
         { key: "drum_thump", trigger: "tap" },
@@ -76,6 +86,12 @@ async function seedDavidFlagship() {
         hotspot: { x: 0.456, y: 0.434 },
         revealText: "God is with me.",
         glowColor: "rgba(255,215,0,0.3)",
+        cinematicConfig: {
+          effects: [
+            { type: "glow", x: 0.456, y: 0.434, color: "rgba(255,215,0,0.18)", size: 120, delay: 1200, duration: 5000 },
+            { type: "particles", count: 5, color: "rgba(255,215,0,0.4)", speed: "slow" },
+          ],
+        },
       },
       soundEffects: [
         { key: "soft_chime", trigger: "tap" },
@@ -102,6 +118,14 @@ async function seedDavidFlagship() {
           { x: 0.436, y: 0.781, size: 34, label: "Stone 4!" },
           { x: 0.475, y: 0.756, size: 34, label: "Stone 5!" },
         ],
+        cinematicConfig: {
+          effects: [
+            { type: "shimmer", y: 0.68, width: 0.5, delay: 0 },
+            { type: "shimmer", y: 0.72, width: 0.4, delay: 800 },
+            { type: "shimmer", y: 0.65, width: 0.35, delay: 1600 },
+            { type: "particles", count: 4, color: "rgba(200,220,255,0.4)", speed: "slow" },
+          ],
+        },
       },
       soundEffects: [
         { key: "water_plop", trigger: "collect" },
@@ -121,6 +145,12 @@ async function seedDavidFlagship() {
         slingArea: { x: 0.703, y: 0.273 },
         targetArea: { x: 0.215, y: 0.361 },
         resultText: "The stone flew true!",
+        cinematicConfig: {
+          effects: [{ type: "sling" }],
+          slingArea: { x: 0.703, y: 0.273 },
+          targetArea: { x: 0.215, y: 0.361 },
+          revealText: "The stone flew true!",
+        },
       },
       soundEffects: [
         { key: "sling_whoosh", trigger: "drag" },
@@ -145,6 +175,12 @@ async function seedDavidFlagship() {
           { x: 0.833, y: 0.498, size: 36, label: "Thank God!" },
           { x: 0.124, y: 0.516, size: 36, label: "We won!" },
         ],
+        cinematicConfig: {
+          effects: [{ type: "celebration" }],
+          revealText: "God is stronger than any giant!",
+          revealColor: "#FFD700",
+          revealDelay: 1000,
+        },
       },
       soundEffects: [
         { key: "crowd_cheer", trigger: "tap" },

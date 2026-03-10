@@ -44,6 +44,7 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 import SceneInteraction from "@/components/kids/SceneInteraction";
 import StoryCompletionFlow from "@/components/kids/StoryCompletionFlow";
 import LivingScene from "@/components/kids/LivingScene";
+import CinematicScene from "@/components/kids/CinematicScene";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -2257,19 +2258,35 @@ export default function SceneStoryScreen() {
             </View>
           ) : item.interactionConfig?.isLivingScene ? (
           <View style={{ flex: 1 }}>
-            <LivingScene
-              imageUrl={item.imageUrl ? (item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`) : ""}
-              narration={item.narration}
-              interactionType={item.interactionType || ""}
-              interactionConfig={item.interactionConfig || {}}
-              mood={item.mood || "PEACE"}
-              isActive={index === currentScene}
-              sceneIndex={index}
-              isLittleLambs={isLittleLambs}
-              currentWordIndex={currentWordIndex}
-              isSpeaking={isSpeaking}
-              theme={theme}
-            />
+            {isLittleLambs ? (
+              <CinematicScene
+                imageUrl={item.imageUrl ? (item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`) : ""}
+                narration={item.narration}
+                interactionType={item.interactionType || ""}
+                interactionConfig={item.interactionConfig || {}}
+                mood={item.mood || "PEACE"}
+                isActive={index === currentScene}
+                sceneIndex={index}
+                isLittleLambs={isLittleLambs}
+                currentWordIndex={currentWordIndex}
+                isSpeaking={isSpeaking}
+                theme={theme}
+              />
+            ) : (
+              <LivingScene
+                imageUrl={item.imageUrl ? (item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`) : ""}
+                narration={item.narration}
+                interactionType={item.interactionType || ""}
+                interactionConfig={item.interactionConfig || {}}
+                mood={item.mood || "PEACE"}
+                isActive={index === currentScene}
+                sceneIndex={index}
+                isLittleLambs={isLittleLambs}
+                currentWordIndex={currentWordIndex}
+                isSpeaking={isSpeaking}
+                theme={theme}
+              />
+            )}
 
             {isLastScene && !storyComplete && index === currentScene && (
               <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.livingSceneCompleteWrap}>
