@@ -158,7 +158,7 @@ export default function StudyScreen() {
           ]}
           testID="resources-featured-card"
           accessibilityRole="button"
-          accessibilityLabel="Open Resources Library: Sabbath School companions, topical studies, family worship"
+          accessibilityLabel="Open Study Resources: Sabbath School companions, topical studies, family worship"
         >
           <LinearGradient
             colors={["#1A237E", "#0D1442"]}
@@ -177,7 +177,7 @@ export default function StudyScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: "#FFFFFF", fontFamily: "Lora_700Bold", fontSize: 17 }}>
-                  Resources Library
+                  Study Resources
                 </Text>
                 <Text style={{ color: "#FFFFFFAA", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
                   Sabbath School companions, topical studies, family worship

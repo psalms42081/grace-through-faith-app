@@ -70,7 +70,6 @@ function ResourceCard({
 }) {
   const typeLabel = TYPE_LABELS[item.resourceType] || item.resourceType;
   const typeColor = TYPE_COLORS[item.resourceType] || "#C9933A";
-  const isPro = item.tier === "pro";
 
   const TYPE_ICONS: Record<string, string> = {
     "sabbath-school-companion": "book",
@@ -88,13 +87,13 @@ function ResourceCard({
         styles.resourceCard,
         {
           backgroundColor: theme.backgroundCard,
-          borderColor: isPro ? "#C9933A30" : theme.border,
+          borderColor: theme.border,
           opacity: pressed ? 0.85 : 1,
         },
       ]}
       testID={`resource-card-${item.slug}`}
       accessibilityRole="button"
-      accessibilityLabel={`${item.title}, ${typeLabel}, ${isPro ? "supporter content" : "free"}`}
+      accessibilityLabel={`${item.title}, ${typeLabel}`}
     >
       <View style={[styles.cardAccent, { backgroundColor: typeColor }]} />
       <View style={styles.cardIconContainer}>
@@ -111,21 +110,6 @@ function ResourceCard({
               {typeLabel}
             </Text>
           </View>
-          {isPro ? (
-            <View style={[styles.tierBadge, { backgroundColor: "#C9933A18", borderColor: "#C9933A30" }]}>
-              <Ionicons name="lock-closed" size={10} color="#C9933A" />
-              <Text style={[styles.tierBadgeText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
-                Supporter
-              </Text>
-            </View>
-          ) : (
-            <View style={[styles.tierBadge, { backgroundColor: "#2E7D3218", borderColor: "#2E7D3230" }]}>
-              <Ionicons name="lock-open-outline" size={10} color="#2E7D32" />
-              <Text style={[styles.tierBadgeText, { color: "#2E7D32", fontFamily: "Inter_600SemiBold" }]}>
-                Free
-              </Text>
-            </View>
-          )}
         </View>
         <Text
           style={[styles.cardTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
@@ -201,7 +185,7 @@ export default function ResourcesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenHeader title="Resources" testID="resources-header" />
+      <ScreenHeader title="Study Resources" testID="resources-header" />
 
       <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
         <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
@@ -390,21 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-  },
-  tierBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    marginLeft: "auto",
-  },
-  tierBadgeText: {
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
   cardTitle: {
     fontSize: 16,

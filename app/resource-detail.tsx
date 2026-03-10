@@ -14,7 +14,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
-import { useProStatus } from "@/contexts/ProContext";
 import ScreenHeader from "@/components/ScreenHeader";
 
 interface ResourceDetail {
@@ -649,7 +648,6 @@ export default function ResourceDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { isPro, showProGate } = useProStatus();
   const qc = useQueryClient();
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
 
@@ -731,76 +729,6 @@ export default function ResourceDetailScreen() {
     );
   }
 
-  if (resource.requiresPro && !isPro) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScreenHeader title={resource.title} testID="resource-detail-header" />
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.heroCard, { backgroundColor: theme.primary }]}>
-            <Ionicons name="lock-closed" size={32} color="#C9933A" />
-            <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>
-              {resource.title}
-            </Text>
-            {resource.description && (
-              <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]}>
-                {resource.description}
-              </Text>
-            )}
-          </View>
-
-          {resource.isTeaser && resource.contentJson && (
-            <View style={[sStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                {typeof resource.contentJson === "string"
-                  ? resource.contentJson
-                  : resource.contentJson.overview || resource.contentJson.introduction || "Preview content available after supporting the mission."}
-              </Text>
-            </View>
-          )}
-
-          <View style={[styles.proGateCard, { backgroundColor: "#C9933A" + "0A", borderColor: "#C9933A" + "25" }]}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#C9933A15", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
-              <Ionicons name="heart" size={22} color="#C9933A" />
-            </View>
-            <Text style={[styles.proGateTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              Supporter Resource
-            </Text>
-            <Text style={[styles.proGateText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              This study is available to those who support the mission of keeping Grace through Faith free for everyone.
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, marginBottom: 4 }}>
-              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-              <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
-                Full structured content
-              </Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-              <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
-                Progress tracking and bookmarks
-              </Text>
-            </View>
-            <Pressable
-              onPress={showProGate}
-              style={[styles.proGateBtn, { backgroundColor: "#C9933A" }]}
-              testID="resource-pro-gate-btn"
-              accessibilityRole="button"
-              accessibilityLabel="Become a supporter to unlock this resource"
-            >
-              <Ionicons name="heart-outline" size={16} color="#050507" style={{ marginRight: 6 }} />
-              <Text style={[styles.proGateBtnText, { fontFamily: "Inter_700Bold" }]}>
-                Become a Supporter
-              </Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
-
   const content = resource.contentJson;
   const bookmarkIcon = resource.isBookmarked ? "bookmark" : "bookmark-outline";
 
@@ -848,9 +776,9 @@ export default function ResourceDetailScreen() {
               </View>
             )}
             <View style={styles.heroMetaItem}>
-              <Ionicons name="pricetag-outline" size={14} color="rgba(237,229,213,0.65)" />
+              <Ionicons name="heart-outline" size={14} color="rgba(237,229,213,0.65)" />
               <Text style={[styles.heroMetaText, { fontFamily: "Inter_400Regular" }]}>
-                {resource.tier === "pro" ? "Supporter" : "Free"}
+                Free
               </Text>
             </View>
           </View>
@@ -1017,34 +945,6 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 12,
-  },
-  proGateCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
-    alignItems: "center",
-    gap: 10,
-  },
-  proGateTitle: {
-    fontSize: 18,
-  },
-  proGateText: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  proGateBtn: {
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    marginTop: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  proGateBtnText: {
-    color: "#050507",
-    fontSize: 15,
   },
 });
 

@@ -310,7 +310,7 @@ export default function ProfileScreen() {
         </Text>
         {[
           { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
-          { title: "My Library", icon: "library" as const, color: "#C9933A", route: "/library" },
+          { title: "Saved", icon: "bookmark" as const, color: "#C9933A", route: "/library" },
           { title: "Growth Map", icon: "trending-up" as const, color: "#4ECCA3", route: "/growth-map" },
         ].map((link) => (
           <ListItem

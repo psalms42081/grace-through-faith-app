@@ -5,7 +5,6 @@ import {
   resourceProgress,
   resourceBookmarks,
   resourceReviewNotes,
-  users,
 } from "../../shared/schema";
 import { eq, and, ilike, sql, desc, asc, or } from "drizzle-orm";
 import { requireAuth, optionalAuth, getEffectiveUserId, getAuthUserId, requireEditor, requireAdmin } from "../middleware/auth";
@@ -182,15 +181,7 @@ router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
       return res.status(404).json({ error: "Resource not found" });
     }
 
-    let isPro = false;
     if (userId !== "guest") {
-      const [user] = await db
-        .select({ isPro: users.isPro })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      isPro = user?.isPro ?? false;
-
       await db
         .insert(resourceProgress)
         .values({
@@ -204,30 +195,6 @@ router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
           target: [resourceProgress.userId, resourceProgress.resourceId],
           set: { lastAccessedAt: new Date() },
         });
-    }
-
-    if (resource.tier === "pro" && !isPro) {
-      const contentJson = resource.contentJson as any;
-      let teaser: any = null;
-      if (contentJson && typeof contentJson === "object") {
-        if (Array.isArray(contentJson.sections) && contentJson.sections.length > 0) {
-          teaser = { ...contentJson, sections: [contentJson.sections[0]] };
-        } else if (contentJson.overview) {
-          teaser = { overview: contentJson.overview };
-        } else {
-          const keys = Object.keys(contentJson);
-          if (keys.length > 0) {
-            teaser = { [keys[0]]: contentJson[keys[0]] };
-          }
-        }
-      }
-
-      return res.json({
-        ...resource,
-        contentJson: teaser,
-        isTeaser: true,
-        requiresPro: true,
-      });
     }
 
     return res.json({

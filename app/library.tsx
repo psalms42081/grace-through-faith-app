@@ -333,7 +333,7 @@ export default function LibraryScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "My Library",
+          title: "Saved",
           headerStyle: { backgroundColor: theme.background },
           headerTintColor: theme.text,
           headerTitleStyle: { fontFamily: "Lora_700Bold" },
