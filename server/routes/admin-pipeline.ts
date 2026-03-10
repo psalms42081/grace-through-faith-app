@@ -94,6 +94,63 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       .orderBy(desc(resources.updatedAt))
       .limit(20);
 
+    const [presetCounts] = await db
+      .select({
+        pendingReview: sql<number>`count(*) FILTER (WHERE ${resources.reviewStatus} = 'pending')::int`,
+        needsAttention: sql<number>`count(*) FILTER (WHERE ${resources.reviewStatus} = 'needs_revision')::int`,
+        regenerated: sql<number>`count(*) FILTER (WHERE ${resources.supersedesResourceId} IS NOT NULL AND ${resources.reviewStatus} = 'pending')::int`,
+        hasNotes: sql<number>`count(*) FILTER (WHERE ${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != '')::int`,
+      })
+      .from(resources)
+      .where(and(
+        eq(resources.resourceType, "sabbath-school-companion"),
+        sql`${resources.status} != 'archived'`
+      ));
+
+    let sourceChangedCount = 0;
+    const allCompanions = await db
+      .select({
+        sourcePacketId: resources.sourcePacketId,
+        sourceRef: resources.sourceRef,
+      })
+      .from(resources)
+      .where(and(
+        eq(resources.resourceType, "sabbath-school-companion"),
+        sql`${resources.status} != 'archived'`,
+        sql`${resources.sourcePacketId} IS NOT NULL`
+      ));
+
+    if (allCompanions.length > 0) {
+      const packetIds = [...new Set(allCompanions.map(c => c.sourcePacketId).filter(Boolean))] as string[];
+      const lessonIds = [...new Set(allCompanions.map(c => (c.sourceRef as any)?.lessonId).filter(Boolean))] as string[];
+
+      if (packetIds.length > 0 && lessonIds.length > 0) {
+        const usedPackets = await db
+          .select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash })
+          .from(lessonSourcePackets)
+          .where(sql`${lessonSourcePackets.id} IN (${sql.join(packetIds.map(p => sql`${p}`), sql`, `)})`);
+
+        const latestPackets = await db
+          .select({ lessonId: lessonSourcePackets.lessonId, sourceHash: lessonSourcePackets.sourceHash })
+          .from(lessonSourcePackets)
+          .where(sql`${lessonSourcePackets.lessonId} IN (${sql.join(lessonIds.map(l => sql`${l}`), sql`, `)})`)
+          .orderBy(desc(lessonSourcePackets.updatedAt));
+
+        const usedHashMap = Object.fromEntries(usedPackets.map(p => [p.id, p.sourceHash]));
+        const latestHashMap: Record<string, string> = {};
+        for (const p of latestPackets) {
+          if (p.lessonId && !latestHashMap[p.lessonId]) latestHashMap[p.lessonId] = p.sourceHash;
+        }
+
+        for (const c of allCompanions) {
+          const usedHash = c.sourcePacketId ? usedHashMap[c.sourcePacketId] : null;
+          const lessonId = (c.sourceRef as any)?.lessonId;
+          const latestHash = lessonId ? latestHashMap[lessonId] : null;
+          if (usedHash && latestHash && usedHash !== latestHash) sourceChangedCount++;
+        }
+      }
+    }
+
     const listConditions: any[] = [
       eq(resources.resourceType, "sabbath-school-companion"),
       sql`${resources.status} != 'archived'`,
@@ -224,6 +281,13 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       },
       promptVersionDistribution: Object.fromEntries(promptVersionDist.map(r => [r.promptVersion || "unknown", r.count])),
       failedGenerations,
+      presetCounts: {
+        pendingReview: presetCounts?.pendingReview ?? 0,
+        needsAttention: presetCounts?.needsAttention ?? 0,
+        regenerated: presetCounts?.regenerated ?? 0,
+        sourceChanged: sourceChangedCount,
+        hasNotes: presetCounts?.hasNotes ?? 0,
+      },
       filteredList: finalList,
       filters: {
         reviewStatus: filterReviewStatus || "pending",

@@ -71,6 +71,13 @@ interface PipelineOverview {
   coverage: { totalLessons: number; lessonsWithCompanions: number; coveragePercent: number };
   promptVersionDistribution: Record<string, number>;
   failedGenerations: Array<{ id: string; title: string; updatedAt: string }>;
+  presetCounts?: {
+    pendingReview: number;
+    needsAttention: number;
+    regenerated: number;
+    sourceChanged: number;
+    hasNotes: number;
+  };
   filteredList: FilteredItem[];
   filters: {
     reviewStatus: string;
@@ -407,6 +414,7 @@ function FilterBar({
   sortBy,
   sortOrder,
   activePreset,
+  presetCounts,
   onChangeReviewStatus,
   onChangePromptVersion,
   onToggleHasNotes,
@@ -424,6 +432,7 @@ function FilterBar({
   sortBy: string;
   sortOrder: string;
   activePreset: string | null;
+  presetCounts?: Record<string, number>;
   onChangeReviewStatus: (v: string) => void;
   onChangePromptVersion: (v: string) => void;
   onToggleHasNotes: () => void;
@@ -440,11 +449,21 @@ function FilterBar({
     { key: "title", label: "Title" },
   ];
 
+  const presetCountMap: Record<string, string> = {
+    pending_review: "pendingReview",
+    needs_attention: "needsAttention",
+    regenerated: "regenerated",
+    source_changed: "sourceChanged",
+    has_notes: "hasNotes",
+  };
+
   return (
     <View style={styles.filterBar}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetRow}>
         {QUEUE_PRESETS.map((preset) => {
           const isActive = activePreset === preset.key;
+          const countKey = presetCountMap[preset.key];
+          const count = countKey && presetCounts ? presetCounts[countKey] : undefined;
           return (
             <Pressable
               key={preset.key}
@@ -461,6 +480,11 @@ function FilterBar({
               <Text style={[styles.presetChipText, { color: isActive ? preset.color : theme.textSecondary }]}>
                 {preset.label}
               </Text>
+              {count !== undefined && count > 0 && (
+                <View style={[styles.presetCountBadge, { backgroundColor: isActive ? preset.color : theme.textMuted }]}>
+                  <Text style={styles.presetCountText}>{count > 99 ? "99+" : count}</Text>
+                </View>
+              )}
             </Pressable>
           );
         })}
@@ -1355,6 +1379,7 @@ export default function AdminReviewScreen() {
               sortBy={sortBy}
               sortOrder={sortOrder}
               activePreset={activePreset}
+              presetCounts={overview?.presetCounts}
               onChangeReviewStatus={(v) => { clearPreset(); setFilterReviewStatus(v); }}
               onChangePromptVersion={(v) => { clearPreset(); setFilterPromptVersion(v); }}
               onToggleHasNotes={() => { clearPreset(); setFilterHasNotes(v => !v); }}
@@ -1979,6 +2004,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   presetChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  presetCountBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingHorizontal: 5,
+    marginLeft: 2,
+  },
+  presetCountText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
   sortRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
   sortChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 1 },
   sortChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
