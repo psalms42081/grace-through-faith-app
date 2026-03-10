@@ -363,51 +363,59 @@ async function triggerCompanionGeneration(
   const { generateSabbathSchoolCompanion } = await import("./content-engine");
 
   for (const { lessonId, packetId, changed } of packets) {
-    const existing = await db
-      .select({ id: resources.id, sourcePacketId: resources.sourcePacketId })
-      .from(resources)
-      .where(
-        sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`
-      )
-      .limit(1);
+    const lessonSourceCondition = sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
 
-    if (existing.length > 0 && !changed) {
+    const activeCompanions = await db
+      .select({
+        id: resources.id,
+        status: resources.status,
+        sourcePacketId: resources.sourcePacketId,
+        contentJson: resources.contentJson,
+        supersedesResourceId: resources.supersedesResourceId,
+      })
+      .from(resources)
+      .where(and(lessonSourceCondition, sql`${resources.status} != 'archived'`))
+      .orderBy(desc(resources.createdAt));
+
+    const publishedCompanion = activeCompanions.find(r => r.status === "published");
+    const pendingDraft = activeCompanions.find(r => r.status === "draft" && r.supersedesResourceId);
+    const existing = publishedCompanion || activeCompanions[0];
+
+    if (existing && !changed) {
       continue;
     }
 
-    if (existing.length > 0 && changed) {
-      console.log(`[content:regenerate] Source content changed for lesson ${lessonId}, regenerating companion`);
-      try {
-        await db.update(resources).set({
-          generationStatus: "regenerating",
-          updatedAt: new Date(),
-        }).where(eq(resources.id, existing[0].id));
-      } catch {}
+    if (pendingDraft) {
+      await db.delete(resources).where(eq(resources.id, pendingDraft.id));
+      console.log(`[content:sync] Removed stale pending draft ${pendingDraft.id} for lesson ${lessonId}`);
     }
 
+    const supersedesTarget = publishedCompanion || activeCompanions.find(r => r.id !== pendingDraft?.id);
+    const previousContentJson = supersedesTarget ? supersedesTarget.contentJson : null;
+    const supersedesId = supersedesTarget ? supersedesTarget.id : null;
+    const reason = existing ? "source_changed" : "new";
+
     try {
-      console.log(`[content:generate] Generating companion for lesson ${lessonId} (packet: ${packetId})`);
-      await generateSabbathSchoolCompanion(lessonId, { sourcePacketId: packetId });
+      console.log(`[content:sync] Auto-generating companion for lesson ${lessonId} (${reason}, packet: ${packetId})`);
+      const resourceId = await generateSabbathSchoolCompanion(lessonId, { sourcePacketId: packetId });
 
-      if (existing.length > 0) {
-        await db.update(resources).set({
-          status: "draft",
-          generationStatus: "completed",
-          reviewStatus: "pending",
-          updatedAt: new Date(),
-        }).where(eq(resources.id, existing[0].id));
-        console.log(`[content:regenerate] Old companion ${existing[0].id} marked as draft (superseded)`);
+      const updateData: Record<string, any> = {};
+      if (previousContentJson) {
+        updateData.previousContentJson = previousContentJson;
+      }
+      if (supersedesId) {
+        updateData.supersedesResourceId = supersedesId;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await db.update(resources)
+          .set(updateData)
+          .where(eq(resources.id, resourceId));
+        console.log(`[content:sync] Linked new draft to superseded resource ${supersedesId}`);
       }
 
-      console.log(`[content:ready] Companion for lesson ${lessonId} created`);
+      console.log(`[content:sync] Companion created: ${resourceId} (${reason})`);
     } catch (err) {
-      console.error(`[content:generate] Failed for lesson ${lessonId}:`, err);
-      if (existing.length > 0) {
-        await db.update(resources).set({
-          generationStatus: "failed",
-          updatedAt: new Date(),
-        }).where(eq(resources.id, existing[0].id)).catch(() => {});
-      }
+      console.error(`[content:sync] Failed for lesson ${lessonId}:`, err);
     }
   }
 }
