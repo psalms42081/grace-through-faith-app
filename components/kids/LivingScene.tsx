@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,14 +21,21 @@ import Animated, {
   FadeInUp,
   Easing,
   interpolate,
-  cancelAnimation,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer } from "expo-audio";
 
 const { width: SW, height: SH } = Dimensions.get("window");
-const SCENE_HEIGHT = SH * 0.68;
+
+const IMAGE_ASPECT_RATIO = 1536 / 1024;
+const RENDERED_W = SW;
+const RENDERED_H = SW / IMAGE_ASPECT_RATIO;
+
+const PAGE_BG = "#0B0910";
+const PAGE_BG_WARM = "#0F0D14";
+
+const IMAGE_TOP_PADDING = 12;
 
 function haptic(s: "light" | "medium" | "success" = "light") {
   if (Platform.OS === "web") return;
@@ -69,6 +76,13 @@ function playSound(key: string) {
   } catch {}
 }
 
+interface ImageFrame {
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
+}
+
 interface LivingSceneProps {
   imageUrl: string;
   narration: string;
@@ -83,6 +97,13 @@ interface LivingSceneProps {
   theme: any;
 }
 
+function toScreen(normalizedX: number, normalizedY: number, frame: ImageFrame) {
+  return {
+    screenX: frame.offsetX + normalizedX * frame.width,
+    screenY: frame.offsetY + normalizedY * frame.height,
+  };
+}
+
 function SoftHotspot({
   x,
   y,
@@ -91,6 +112,7 @@ function SoftHotspot({
   onPress,
   collected,
   label,
+  imageFrame,
 }: {
   x: number;
   y: number;
@@ -99,6 +121,7 @@ function SoftHotspot({
   onPress: () => void;
   collected?: boolean;
   label?: string;
+  imageFrame: ImageFrame;
 }) {
   const glowOpacity = useSharedValue(0.3);
   const glowScale = useSharedValue(1);
@@ -146,6 +169,8 @@ function SoftHotspot({
 
   if (collected) return null;
 
+  const { screenX, screenY } = toScreen(x, y, imageFrame);
+
   const handlePress = () => {
     haptic("light");
     tapScale.value = withSequence(
@@ -164,8 +189,8 @@ function SoftHotspot({
       style={[
         ls.hotspot,
         {
-          left: x * SW - size / 2,
-          top: y * SCENE_HEIGHT - size / 2,
+          left: screenX - size / 2,
+          top: screenY - size / 2,
           width: size,
           height: size,
           borderRadius: size / 2,
@@ -198,7 +223,7 @@ function SoftHotspot({
   );
 }
 
-function TapWiggleScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function TapWiggleScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const hotspots = config.hotspots || [];
   const sequential = !!config.sequential;
   const [tapped, setTapped] = useState<Set<number>>(new Set());
@@ -224,6 +249,7 @@ function TapWiggleScene({ config, isActive }: { config: Record<string, any>; isA
             label={h.label}
             collected={tapped.has(i)}
             onPress={() => handleTap(i)}
+            imageFrame={imageFrame}
           />
         );
       })}
@@ -231,7 +257,7 @@ function TapWiggleScene({ config, isActive }: { config: Record<string, any>; isA
   );
 }
 
-function TapCompareScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function TapCompareScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const [compared, setCompared] = useState(false);
   const shakeX = useSharedValue(0);
 
@@ -264,10 +290,11 @@ function TapCompareScene({ config, isActive }: { config: Record<string, any>; is
           delay={400}
           label="Tap to see!"
           onPress={handleTap}
+          imageFrame={imageFrame}
         />
       )}
       {compared && (
-        <Animated.View entering={FadeIn.duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.22, alignSelf: "center" }]}>
+        <Animated.View entering={FadeIn.duration(500)} style={[ls.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.2, alignSelf: "center" }]}>
           <Text style={ls.revealText}>{config.resultText || "He is SO tall!"}</Text>
         </Animated.View>
       )}
@@ -275,12 +302,13 @@ function TapCompareScene({ config, isActive }: { config: Record<string, any>; is
   );
 }
 
-function TapGlowScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function TapGlowScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const [glowing, setGlowing] = useState(false);
   const glowRadius = useSharedValue(0);
   const glowOpacity = useSharedValue(0);
 
   const h = config.hotspot || { x: 0.5, y: 0.5 };
+  const { screenX, screenY } = toScreen(h.x, h.y, imageFrame);
 
   const glowStyle = useAnimatedStyle(() => ({
     width: glowRadius.value,
@@ -293,14 +321,14 @@ function TapGlowScene({ config, isActive }: { config: Record<string, any>; isAct
     haptic("success");
     playSound("chime");
     setGlowing(true);
-    glowRadius.value = withSpring(200, { damping: 10, stiffness: 50 });
+    glowRadius.value = withSpring(180, { damping: 10, stiffness: 50 });
     glowOpacity.value = withTiming(0.4, { duration: 800 });
   };
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isActive && !glowing && (
-        <SoftHotspot x={h.x} y={h.y} size={44} delay={400} label="Tap David's heart" onPress={handleGlow} />
+        <SoftHotspot x={h.x} y={h.y} size={44} delay={400} label="Tap David's heart" onPress={handleGlow} imageFrame={imageFrame} />
       )}
       {glowing && (
         <>
@@ -309,13 +337,13 @@ function TapGlowScene({ config, isActive }: { config: Record<string, any>; isAct
               ls.glowCircle,
               glowStyle,
               {
-                left: h.x * SW - 100,
-                top: h.y * SCENE_HEIGHT - 100,
+                left: screenX - 90,
+                top: screenY - 90,
                 backgroundColor: config.glowColor || "rgba(255,215,0,0.3)",
               },
             ]}
           />
-          <Animated.View entering={FadeIn.delay(600).duration(600)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.25, alignSelf: "center" }]}>
+          <Animated.View entering={FadeIn.delay(600).duration(600)} style={[ls.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.15, alignSelf: "center" }]}>
             <Text style={[ls.revealText, { color: "#FFD700", fontSize: 22 }]}>{config.revealText || "God is with me."}</Text>
           </Animated.View>
         </>
@@ -324,7 +352,7 @@ function TapGlowScene({ config, isActive }: { config: Record<string, any>; isAct
   );
 }
 
-function TapCollectScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function TapCollectScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const [collected, setCollected] = useState<Set<number>>(new Set());
   const total = config.totalItems || 5;
   const hotspots = config.hotspots || [];
@@ -360,11 +388,12 @@ function TapCollectScene({ config, isActive }: { config: Record<string, any>; is
             label={h.label || `Stone ${i + 1}!`}
             collected={collected.has(i)}
             onPress={() => handleCollect(i)}
+            imageFrame={imageFrame}
           />
         );
       })}
       {isActive && (
-        <View style={ls.collectCounter}>
+        <View style={[ls.collectCounter, { top: imageFrame.offsetY + 8 }]}>
           <Text style={ls.collectCountText}>
             {allDone
               ? config.completeText || "All stones collected!"
@@ -376,7 +405,7 @@ function TapCollectScene({ config, isActive }: { config: Record<string, any>; is
   );
 }
 
-function DragReleaseScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function DragReleaseScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const [phase, setPhase] = useState<"ready" | "dragging" | "released" | "hit">("ready");
   const slingRotation = useSharedValue(0);
   const stoneX = useSharedValue(0);
@@ -388,6 +417,8 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
 
   const sling = config.slingArea || { x: 0.70, y: 0.38 };
   const target = config.targetArea || { x: 0.22, y: 0.40 };
+  const slingScreen = toScreen(sling.x, sling.y, imageFrame);
+  const targetScreen = toScreen(target.x, target.y, imageFrame);
 
   const slingAnim = useAnimatedStyle(() => ({
     transform: [{ rotate: `${slingRotation.value}deg` }],
@@ -425,12 +456,12 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
     playSound("whoosh");
     setPhase("released");
 
-    const dx = (target.x - sling.x) * SW;
-    const dy = (target.y - sling.y) * SCENE_HEIGHT;
+    const dx = targetScreen.screenX - slingScreen.screenX;
+    const dy = targetScreen.screenY - slingScreen.screenY;
 
     stoneOpacity.value = 1;
     stoneX.value = withTiming(dx, { duration: 450, easing: Easing.out(Easing.quad) });
-    stoneY.value = withTiming(dy - 30, { duration: 450, easing: Easing.out(Easing.quad) });
+    stoneY.value = withTiming(dy - 20, { duration: 450, easing: Easing.out(Easing.quad) });
     stoneScale.value = withSequence(
       withTiming(1.3, { duration: 200 }),
       withTiming(0.6, { duration: 250 })
@@ -456,7 +487,12 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
       {isActive && (phase === "ready" || phase === "dragging") && (
         <View
           {...panRef.panHandlers}
-          style={[ls.dragZone, { left: sling.x * SW - 50, top: sling.y * SCENE_HEIGHT - 50, width: 100, height: 100 }]}
+          style={[ls.dragZone, {
+            left: slingScreen.screenX - 50,
+            top: slingScreen.screenY - 50,
+            width: 100,
+            height: 100,
+          }]}
         >
           <Animated.View style={slingAnim}>
             <View style={ls.dragIndicator} />
@@ -465,7 +501,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
       )}
 
       {isActive && phase === "dragging" && (
-        <Animated.View entering={FadeIn.duration(300)} style={ls.releaseButtonWrap}>
+        <Animated.View entering={FadeIn.duration(300)} style={[ls.releaseButtonWrap, { top: imageFrame.offsetY + imageFrame.height * 0.85 }]}>
           <Pressable onPress={handleRelease} style={ls.releaseButton}>
             <Text style={ls.releaseButtonText}>Let go!</Text>
           </Pressable>
@@ -476,7 +512,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
         style={[
           ls.projectile,
           stoneAnim,
-          { left: sling.x * SW - 10, top: sling.y * SCENE_HEIGHT - 10 },
+          { left: slingScreen.screenX - 10, top: slingScreen.screenY - 10 },
         ]}
       >
         <View style={ls.stoneVisual} />
@@ -486,12 +522,12 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
         style={[
           ls.impactBurst,
           impactAnim,
-          { left: target.x * SW - 35, top: target.y * SCENE_HEIGHT - 35 },
+          { left: targetScreen.screenX - 35, top: targetScreen.screenY - 35 },
         ]}
       />
 
       {phase === "hit" && (
-        <Animated.View entering={FadeIn.delay(300).duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.18, alignSelf: "center" }]}>
+        <Animated.View entering={FadeIn.delay(300).duration(500)} style={[ls.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.12, alignSelf: "center" }]}>
           <Text style={[ls.revealText, { fontSize: 20 }]}>{config.resultText || "The stone flew true!"}</Text>
         </Animated.View>
       )}
@@ -499,7 +535,7 @@ function DragReleaseScene({ config, isActive }: { config: Record<string, any>; i
   );
 }
 
-function TapCheerScene({ config, isActive }: { config: Record<string, any>; isActive: boolean }) {
+function TapCheerScene({ config, isActive, imageFrame }: { config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   const hotspots = config.hotspots || [];
   const sequential = !!config.sequential;
   const [tapped, setTapped] = useState<Set<number>>(new Set());
@@ -533,11 +569,12 @@ function TapCheerScene({ config, isActive }: { config: Record<string, any>; isAc
             label={h.label || "Hooray!"}
             collected={tapped.has(i)}
             onPress={() => handleTap(i)}
+            imageFrame={imageFrame}
           />
         );
       })}
       {tapped.size >= hotspots.length && (
-        <Animated.View entering={FadeIn.delay(200).duration(500)} style={[ls.revealBadge, { top: SCENE_HEIGHT * 0.15, alignSelf: "center" }]}>
+        <Animated.View entering={FadeIn.delay(200).duration(500)} style={[ls.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.1, alignSelf: "center" }]}>
           <Text style={[ls.revealText, { color: "#FFD700", fontSize: 20 }]}>God is stronger than any giant!</Text>
         </Animated.View>
       )}
@@ -545,20 +582,20 @@ function TapCheerScene({ config, isActive }: { config: Record<string, any>; isAc
   );
 }
 
-function InteractionLayer({ type, config, isActive }: { type: string; config: Record<string, any>; isActive: boolean }) {
+function InteractionLayer({ type, config, isActive, imageFrame }: { type: string; config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
   switch (type) {
     case "tap_wiggle":
-      return <TapWiggleScene config={config} isActive={isActive} />;
+      return <TapWiggleScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     case "tap_compare":
-      return <TapCompareScene config={config} isActive={isActive} />;
+      return <TapCompareScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     case "tap_glow":
-      return <TapGlowScene config={config} isActive={isActive} />;
+      return <TapGlowScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     case "tap_collect":
-      return <TapCollectScene config={config} isActive={isActive} />;
+      return <TapCollectScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     case "drag_release":
-      return <DragReleaseScene config={config} isActive={isActive} />;
+      return <DragReleaseScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     case "tap_cheer":
-      return <TapCheerScene config={config} isActive={isActive} />;
+      return <TapCheerScene config={config} isActive={isActive} imageFrame={imageFrame} />;
     default:
       return null;
   }
@@ -586,11 +623,22 @@ export default function LivingScene({
 
   const showInteractions = imageLoaded || imageError || !imageUrl;
 
+  const imageFrame = useMemo<ImageFrame>(() => {
+    return {
+      offsetX: 0,
+      offsetY: IMAGE_TOP_PADDING,
+      width: RENDERED_W,
+      height: RENDERED_H,
+    };
+  }, []);
+
+  const narrationTop = imageFrame.offsetY + imageFrame.height;
+
   useEffect(() => {
     if (isActive && showInteractions) {
       kenBurnsProgress.value = 0;
       kenBurnsProgress.value = withRepeat(
-        withTiming(1, { duration: 20000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 25000, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       );
@@ -615,12 +663,12 @@ export default function LivingScene({
   }, [isActive, showInteractions]);
 
   const patterns = [
-    { fromScale: 1.0, toScale: 1.06, fromX: 0, toX: -5, fromY: 0, toY: -3 },
-    { fromScale: 1.01, toScale: 1.07, fromX: -3, toX: 3, fromY: -2, toY: 2 },
-    { fromScale: 1.0, toScale: 1.05, fromX: 3, toX: -3, fromY: 2, toY: -3 },
-    { fromScale: 1.02, toScale: 1.07, fromX: 2, toX: -4, fromY: -3, toY: 2 },
-    { fromScale: 1.0, toScale: 1.06, fromX: -2, toX: 3, fromY: 3, toY: -2 },
-    { fromScale: 1.01, toScale: 1.06, fromX: 4, toX: -2, fromY: -1, toY: 3 },
+    { fromScale: 1.0, toScale: 1.03, fromX: 0, toX: -3, fromY: 0, toY: -2 },
+    { fromScale: 1.0, toScale: 1.03, fromX: -2, toX: 2, fromY: -1, toY: 1 },
+    { fromScale: 1.0, toScale: 1.03, fromX: 2, toX: -2, fromY: 1, toY: -1 },
+    { fromScale: 1.0, toScale: 1.03, fromX: 1, toX: -2, fromY: -1, toY: 1 },
+    { fromScale: 1.0, toScale: 1.03, fromX: -1, toX: 2, fromY: 1, toY: -1 },
+    { fromScale: 1.0, toScale: 1.03, fromX: 2, toX: -1, fromY: 0, toY: 1 },
   ];
   const p = patterns[sceneIndex % patterns.length];
 
@@ -640,59 +688,59 @@ export default function LivingScene({
   const words = narration.split(/\s+/);
 
   return (
-    <View style={ls.container}>
-      <View style={ls.sceneCanvas}>
-        <Animated.View style={[ls.imageWrap, imageStyle]}>
+    <View style={ls.page}>
+      <View style={ls.illustrationArea}>
+        <Animated.View style={[ls.imageKenBurnsWrap, imageStyle]}>
           {imageError || !imageUrl ? (
             <LinearGradient
               colors={["#1a1520", "#0d0b12", "#050507"]}
-              style={ls.fullImage}
+              style={ls.containedImage}
             />
           ) : (
             <Image
               source={{ uri: imageUrl }}
-              style={ls.fullImage}
-              resizeMode="cover"
+              style={ls.containedImage}
+              resizeMode="contain"
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
             />
           )}
         </Animated.View>
-
-        {!showInteractions && isActive && (
-          <View style={ls.loadingOverlay}>
-            <Animated.View entering={FadeIn.duration(400)} style={ls.loadingPill}>
-              <Text style={ls.loadingText}>Loading scene...</Text>
-            </Animated.View>
-          </View>
-        )}
-
-        {showInteractions && (
-          <InteractionLayer type={interactionType} config={interactionConfig} isActive={isActive} />
-        )}
-
-        {showInteractions && instruction !== "" && (
-          <Animated.View style={[ls.instructionWrap, instructionStyle]}>
-            <Text style={ls.instructionText} numberOfLines={2}>{instruction}</Text>
-          </Animated.View>
-        )}
       </View>
 
+      {!showInteractions && isActive && (
+        <View style={[ls.loadingOverlay, { top: imageFrame.offsetY, height: imageFrame.height }]}>
+          <Animated.View entering={FadeIn.duration(400)} style={ls.loadingPill}>
+            <Text style={ls.loadingText}>Loading scene...</Text>
+          </Animated.View>
+        </View>
+      )}
+
+      {showInteractions && (
+        <InteractionLayer type={interactionType} config={interactionConfig} isActive={isActive} imageFrame={imageFrame} />
+      )}
+
+      {showInteractions && instruction !== "" && (
+        <Animated.View style={[ls.instructionWrap, instructionStyle, { top: imageFrame.offsetY + 10 }]}>
+          <Text style={ls.instructionText} numberOfLines={2}>{instruction}</Text>
+        </Animated.View>
+      )}
+
       <LinearGradient
-        colors={["transparent", "rgba(5,5,7,0.6)", "rgba(5,5,7,0.95)"]}
-        locations={[0, 0.25, 1]}
-        style={ls.textGradient}
+        colors={["transparent", "rgba(11,9,16,0.7)", PAGE_BG]}
+        locations={[0, 0.4, 1]}
+        style={[ls.narrationGradient, { top: narrationTop - 40 }]}
         pointerEvents="none"
       />
 
-      <View style={ls.narrationWrap} pointerEvents="none">
-        <Text style={[ls.narrationText, { fontFamily: "Lora_400Regular" }]}>
+      <View style={[ls.narrationWrap, { top: narrationTop + 8 }]} pointerEvents="none">
+        <Text style={ls.narrationText}>
           {isActive && isSpeaking
             ? words.map((word, i) => (
                 <Text
                   key={i}
                   style={{
-                    color: i === currentWordIndex ? "#FFD700" : "rgba(255,255,255,0.95)",
+                    color: i === currentWordIndex ? "#FFD700" : "rgba(255,255,255,0.92)",
                     fontFamily: i === currentWordIndex ? "Lora_700Bold" : "Lora_400Regular",
                   }}
                 >
@@ -707,45 +755,44 @@ export default function LivingScene({
 }
 
 const ls = StyleSheet.create({
-  container: {
+  page: {
     flex: 1,
     width: SW,
+    backgroundColor: PAGE_BG,
   },
-  sceneCanvas: {
+  illustrationArea: {
     width: SW,
-    height: SCENE_HEIGHT,
+    height: RENDERED_H + IMAGE_TOP_PADDING,
     overflow: "hidden",
   },
-  imageWrap: {
-    width: SW,
-    height: SCENE_HEIGHT,
+  imageKenBurnsWrap: {
+    position: "absolute",
+    top: IMAGE_TOP_PADDING,
+    left: 0,
+    width: RENDERED_W,
+    height: RENDERED_H,
   },
-  fullImage: {
+  containedImage: {
     width: "100%",
     height: "100%",
   },
-  textGradient: {
+  narrationGradient: {
     position: "absolute",
-    bottom: 0,
     left: 0,
     right: 0,
-    height: SCENE_HEIGHT * 0.45,
+    height: 60,
   },
   narrationWrap: {
     position: "absolute",
-    bottom: 120,
     left: 20,
     right: 20,
-    alignItems: "center",
   },
   narrationText: {
-    color: "rgba(255,255,255,0.95)",
-    fontSize: 22,
-    lineHeight: 33,
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 21,
+    lineHeight: 32,
     textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
+    fontFamily: "Lora_400Regular",
   },
   hotspot: {
     position: "absolute",
@@ -803,7 +850,6 @@ const ls = StyleSheet.create({
   },
   collectCounter: {
     position: "absolute",
-    top: 80,
     right: 16,
     backgroundColor: "rgba(0,0,0,0.75)",
     borderRadius: 14,
@@ -834,7 +880,6 @@ const ls = StyleSheet.create({
   },
   releaseButtonWrap: {
     position: "absolute",
-    bottom: SCENE_HEIGHT * 0.1,
     alignSelf: "center",
     zIndex: 25,
   },
@@ -843,11 +888,6 @@ const ls = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 28,
     paddingVertical: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.15)",
   },
@@ -867,11 +907,6 @@ const ls = StyleSheet.create({
     backgroundColor: "#8B7355",
     borderWidth: 1.5,
     borderColor: "#6B5B45",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 4,
   },
   impactBurst: {
     position: "absolute",
@@ -884,7 +919,9 @@ const ls = StyleSheet.create({
     zIndex: 17,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    left: 0,
+    right: 0,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 25,
@@ -905,7 +942,6 @@ const ls = StyleSheet.create({
   },
   instructionWrap: {
     position: "absolute",
-    top: SCENE_HEIGHT * 0.15,
     left: 24,
     right: 24,
     alignItems: "center",
@@ -916,7 +952,7 @@ const ls = StyleSheet.create({
     fontSize: 19,
     fontFamily: "Inter_600SemiBold",
     textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: "rgba(0,0,0,0.75)",
     borderRadius: 18,
     paddingHorizontal: 22,
     paddingVertical: 11,
