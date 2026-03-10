@@ -7,7 +7,7 @@ channel = "stable-24_05"
 [deployment]
 deploymentTarget = "autoscale"
 build = ["bash", "scripts/deploy-build.sh"]
-run = ["npm", "run", "server:prod"]
+run = ["bash", "-c", "PORT=8081 npm run server:prod"]
 
 [[ports]]
 localPort = 5000

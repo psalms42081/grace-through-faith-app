@@ -85,12 +85,13 @@ cleanup_server() {
 }
 trap cleanup_server EXIT
 
-RUN_STARTUP_SEEDS=false ALLOW_INSECURE_PASSWORD_RESET=false NODE_ENV=production node server_dist/index.js &
+DEPLOY_TEST_PORT=5099
+RUN_STARTUP_SEEDS=false ALLOW_INSECURE_PASSWORD_RESET=false NODE_ENV=production PORT=$DEPLOY_TEST_PORT node server_dist/index.js &
 SERVER_PID=$!
 
-echo "Waiting for server (pid $SERVER_PID) to be ready..."
+echo "Waiting for server (pid $SERVER_PID) to be ready on port $DEPLOY_TEST_PORT..."
 for i in $(seq 1 30); do
-  if curl -s -o /dev/null -w "" http://localhost:5000/api/health 2>/dev/null; then
+  if curl -s -o /dev/null -w "" http://localhost:$DEPLOY_TEST_PORT/api/health 2>/dev/null; then
     echo "Server ready after ${i}s"
     break
   fi
@@ -111,8 +112,8 @@ fi
 cleanup_server
 trap - EXIT
 
-echo "=== Seeding i18n content translations (non-blocking) ==="
-npx tsx scripts/seed-i18n-content.ts || echo "i18n seeding failed (non-critical), continuing..."
+echo "=== Seeding i18n content translations (non-blocking, 2min timeout) ==="
+timeout 120 npx tsx scripts/seed-i18n-content.ts || echo "i18n seeding timed out or failed (non-critical), continuing..."
 
 echo "=== Building Expo static ==="
 npm run expo:static:build

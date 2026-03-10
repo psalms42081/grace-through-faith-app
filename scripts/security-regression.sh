@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-BASE="http://localhost:5000"
+BASE="http://localhost:${DEPLOY_TEST_PORT:-5000}"
 PASS=0
 FAIL=0
 TOTAL=0
