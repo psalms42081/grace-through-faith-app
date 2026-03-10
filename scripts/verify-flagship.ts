@@ -8,10 +8,10 @@ import * as path from "path";
 const CANONICAL_CHECKSUMS: Record<string, string> = {
   "david-scene-0.png": "f095e9c64b9fc25f4842df51d5f39b4d",
   "david-scene-1.png": "72f3509f904ee67618a08daaa6989d7f",
-  "david-scene-2.png": "5f335eca2cf433ffb72037b627d502dd",
+  "david-scene-2.png": "783522481d2a2843748daaca23c0f32b",
   "david-scene-3.png": "b1f051f0d220acfca6ee52bad2623fd4",
   "david-scene-4.png": "415c571cabf084d7c21332770ccecb80",
-  "david-scene-5.png": "e0a2ac3c721c128910f2b27b91f93a0a",
+  "david-scene-5.png": "f2b3a26613a1a10f029d1629bf8de0cf",
 };
 
 function md5File(filePath: string): string {
