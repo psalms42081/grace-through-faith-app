@@ -96,3 +96,6 @@ JWT_SECRET = "yZ2FBZ2rNdnXhatJYysQ5D3TcVMun+Vlad9POu1a2STUEWCS+y4qP3hs9nXYwA+v"
 
 [userenv.development]
 RUN_STARTUP_SEEDS = "true"
+
+[userenv.production]
+PORT = "8081"

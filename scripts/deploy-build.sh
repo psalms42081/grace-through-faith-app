@@ -112,8 +112,7 @@ fi
 cleanup_server
 trap - EXIT
 
-echo "=== Seeding i18n content translations (non-blocking, 2min timeout) ==="
-timeout 120 npx tsx scripts/seed-i18n-content.ts || echo "i18n seeding timed out or failed (non-critical), continuing..."
-
 echo "=== Building Expo static ==="
 npm run expo:static:build
+
+echo "=== Build complete ==="
