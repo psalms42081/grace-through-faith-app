@@ -20,6 +20,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
     const filterQuarterCode = req.query.quarterCode as string | undefined;
     const filterHasNotes = req.query.hasNotes === "true";
     const filterIsRegenerated = req.query.isRegenerated === "true";
+    const filterSourceChanged = req.query.sourceChanged === "true";
     const sortByParam = (req.query.sortBy as string) || "createdAt";
     const sortOrderParam = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
 
@@ -97,8 +98,11 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       sql`${resources.status} != 'archived'`,
     ];
 
-    const targetReviewStatus = filterReviewStatus || "pending";
-    listConditions.push(eq(resources.reviewStatus, targetReviewStatus));
+    if (filterReviewStatus && filterReviewStatus !== "all") {
+      listConditions.push(eq(resources.reviewStatus, filterReviewStatus));
+    } else if (!filterReviewStatus) {
+      listConditions.push(eq(resources.reviewStatus, "pending"));
+    }
 
     if (filterGenStatus) {
       listConditions.push(eq(resources.generationStatus, filterGenStatus));
@@ -196,6 +200,10 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       };
     });
 
+    const finalList = filterSourceChanged
+      ? enrichedList.filter(item => item.sourceChanged)
+      : enrichedList;
+
     return res.json({
       sourcePackets: {
         byStatus: Object.fromEntries(packetStatusCounts.map(r => [r.status, r.count])),
@@ -215,13 +223,14 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
       },
       promptVersionDistribution: Object.fromEntries(promptVersionDist.map(r => [r.promptVersion || "unknown", r.count])),
       failedGenerations,
-      filteredList: enrichedList,
+      filteredList: finalList,
       filters: {
-        reviewStatus: targetReviewStatus,
+        reviewStatus: filterReviewStatus || "pending",
         generationStatus: filterGenStatus || null,
         promptVersion: filterPromptVersion || null,
         quarterCode: filterQuarterCode || null,
         hasNotes: filterHasNotes,
+        sourceChanged: filterSourceChanged,
         isRegenerated: filterIsRegenerated,
       },
       sort: {

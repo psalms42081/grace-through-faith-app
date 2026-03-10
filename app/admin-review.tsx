@@ -201,6 +201,88 @@ function StatusBadge({ status, type }: { status: string; type: "generation" | "r
   );
 }
 
+interface QueuePreset {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  reviewStatus: string;
+  hasNotes: boolean;
+  isRegenerated: boolean;
+  sourceChanged: boolean;
+  sortBy: "createdAt" | "updatedAt" | "title";
+  sortOrder: "asc" | "desc";
+  promptVersion: string;
+}
+
+const QUEUE_PRESETS: QueuePreset[] = [
+  {
+    key: "pending_review",
+    label: "Pending Review",
+    icon: "time-outline",
+    color: "#F59E0B",
+    reviewStatus: "pending",
+    hasNotes: false,
+    isRegenerated: false,
+    sourceChanged: false,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    promptVersion: "",
+  },
+  {
+    key: "needs_attention",
+    label: "Needs Attention",
+    icon: "alert-circle-outline",
+    color: "#EF4444",
+    reviewStatus: "needs_revision",
+    hasNotes: false,
+    isRegenerated: false,
+    sourceChanged: false,
+    sortBy: "updatedAt",
+    sortOrder: "desc",
+    promptVersion: "",
+  },
+  {
+    key: "regenerated",
+    label: "Regenerated Drafts",
+    icon: "git-compare-outline",
+    color: "#F59E0B",
+    reviewStatus: "pending",
+    hasNotes: false,
+    isRegenerated: true,
+    sourceChanged: false,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    promptVersion: "",
+  },
+  {
+    key: "source_changed",
+    label: "Source Changed",
+    icon: "sync-outline",
+    color: "#3B82F6",
+    reviewStatus: "all",
+    hasNotes: false,
+    isRegenerated: false,
+    sourceChanged: true,
+    sortBy: "updatedAt",
+    sortOrder: "desc",
+    promptVersion: "",
+  },
+  {
+    key: "has_notes",
+    label: "Has Notes",
+    icon: "document-text-outline",
+    color: "#F97316",
+    reviewStatus: "all",
+    hasNotes: true,
+    isRegenerated: false,
+    sourceChanged: false,
+    sortBy: "updatedAt",
+    sortOrder: "desc",
+    promptVersion: "",
+  },
+];
+
 function FilterBar({
   reviewStatus,
   promptVersion,
@@ -209,12 +291,14 @@ function FilterBar({
   isRegenerated,
   sortBy,
   sortOrder,
+  activePreset,
   onChangeReviewStatus,
   onChangePromptVersion,
   onToggleHasNotes,
   onToggleIsRegenerated,
   onChangeSortBy,
   onToggleSortOrder,
+  onApplyPreset,
   theme,
 }: {
   reviewStatus: string;
@@ -224,12 +308,14 @@ function FilterBar({
   isRegenerated: boolean;
   sortBy: string;
   sortOrder: string;
+  activePreset: string | null;
   onChangeReviewStatus: (v: string) => void;
   onChangePromptVersion: (v: string) => void;
   onToggleHasNotes: () => void;
   onToggleIsRegenerated: () => void;
   onChangeSortBy: (v: "createdAt" | "updatedAt" | "title") => void;
   onToggleSortOrder: () => void;
+  onApplyPreset: (preset: QueuePreset | null) => void;
   theme: any;
 }) {
   const statusOptions = ["pending", "approved", "rejected", "needs_revision"];
@@ -241,6 +327,29 @@ function FilterBar({
 
   return (
     <View style={styles.filterBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetRow}>
+        {QUEUE_PRESETS.map((preset) => {
+          const isActive = activePreset === preset.key;
+          return (
+            <Pressable
+              key={preset.key}
+              style={[
+                styles.presetChip,
+                {
+                  backgroundColor: isActive ? preset.color + "20" : theme.backgroundCard,
+                  borderColor: isActive ? preset.color : theme.border,
+                },
+              ]}
+              onPress={() => onApplyPreset(isActive ? null : preset)}
+            >
+              <Ionicons name={preset.icon as any} size={13} color={isActive ? preset.color : theme.textMuted} />
+              <Text style={[styles.presetChipText, { color: isActive ? preset.color : theme.textSecondary }]}>
+                {preset.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {statusOptions.map((s) => (
           <Pressable
@@ -925,8 +1034,10 @@ export default function AdminReviewScreen() {
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [filterHasNotes, setFilterHasNotes] = useState(false);
   const [filterIsRegenerated, setFilterIsRegenerated] = useState(false);
+  const [filterSourceChanged, setFilterSourceChanged] = useState(false);
   const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | "title">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [diffId, setDiffId] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ id: string; action: string; title: string } | null>(null);
@@ -945,6 +1056,7 @@ export default function AdminReviewScreen() {
   if (filterPromptVersion) overviewParams.set("promptVersion", filterPromptVersion);
   if (filterHasNotes) overviewParams.set("hasNotes", "true");
   if (filterIsRegenerated) overviewParams.set("isRegenerated", "true");
+  if (filterSourceChanged) overviewParams.set("sourceChanged", "true");
   const overviewPath = `/api/admin/pipeline/overview?${overviewParams.toString()}`;
 
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<PipelineOverview>({
@@ -997,6 +1109,32 @@ export default function AdminReviewScreen() {
       Alert.alert("Rollback Failed", err?.message || "Could not complete rollback.");
     },
   });
+
+  const handleApplyPreset = useCallback((preset: QueuePreset | null) => {
+    if (!preset) {
+      setActivePreset(null);
+      setFilterReviewStatus("pending");
+      setFilterHasNotes(false);
+      setFilterIsRegenerated(false);
+      setFilterSourceChanged(false);
+      setSortBy("createdAt");
+      setSortOrder("desc");
+      setFilterPromptVersion("");
+      return;
+    }
+    setActivePreset(preset.key);
+    setFilterReviewStatus(preset.reviewStatus);
+    setFilterHasNotes(preset.hasNotes);
+    setFilterIsRegenerated(preset.isRegenerated);
+    setFilterSourceChanged(preset.sourceChanged);
+    setSortBy(preset.sortBy);
+    setSortOrder(preset.sortOrder);
+    setFilterPromptVersion(preset.promptVersion);
+  }, []);
+
+  const clearPreset = useCallback(() => {
+    setActivePreset(null);
+  }, []);
 
   const handleReviewStart = useCallback((id: string, action: string, title: string) => {
     setReviewModal({ id, action, title });
@@ -1104,12 +1242,14 @@ export default function AdminReviewScreen() {
               isRegenerated={filterIsRegenerated}
               sortBy={sortBy}
               sortOrder={sortOrder}
-              onChangeReviewStatus={setFilterReviewStatus}
-              onChangePromptVersion={setFilterPromptVersion}
-              onToggleHasNotes={() => setFilterHasNotes(v => !v)}
-              onToggleIsRegenerated={() => setFilterIsRegenerated(v => !v)}
-              onChangeSortBy={setSortBy}
-              onToggleSortOrder={() => setSortOrder(v => v === "desc" ? "asc" : "desc")}
+              activePreset={activePreset}
+              onChangeReviewStatus={(v) => { clearPreset(); setFilterReviewStatus(v); }}
+              onChangePromptVersion={(v) => { clearPreset(); setFilterPromptVersion(v); }}
+              onToggleHasNotes={() => { clearPreset(); setFilterHasNotes(v => !v); }}
+              onToggleIsRegenerated={() => { clearPreset(); setFilterIsRegenerated(v => !v); }}
+              onChangeSortBy={(v) => { clearPreset(); setSortBy(v); }}
+              onToggleSortOrder={() => { clearPreset(); setSortOrder(v => v === "desc" ? "asc" : "desc"); }}
+              onApplyPreset={handleApplyPreset}
               theme={theme}
             />
             <PendingTab
@@ -1716,6 +1856,17 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 12, fontFamily: "Inter_500Medium", textTransform: "capitalize" },
   filterDivider: { width: 1, height: 20, backgroundColor: "#333", marginHorizontal: 4 },
+  presetRow: { flexDirection: "row", gap: 6, alignItems: "center", paddingBottom: 8 },
+  presetChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  presetChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   sortRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
   sortChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 1 },
   sortChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },

@@ -41,7 +41,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Great Controversy Timeline Engine:** An immersive vertical timeline tracing the cosmic conflict.
 - **Content Engine & Resources Library:** A two-stage content pipeline (Source Packets and Generation) with a review workflow for AI-generated companions. Includes version-safe regeneration, rollback capabilities, and an Admin Pipeline API for content management.
 - **Role System:** Supports "user," "editor," and "admin" roles with role-gated middleware for secure access.
-- **Admin Review UI:** Internal content management screen for editors and admins, providing overviews, review queues with filtering and sorting, and quarter-specific batch generation.
+- **Admin Review UI:** Internal content management screen for editors and admins. Review tab features queue presets ("Pending Review", "Needs Attention", "Regenerated Drafts", "Source Changed", "Has Notes") for one-tap filter combinations, smart filter chips (review status, regenerated toggle, has notes toggle, prompt version), sorting (Created/Updated/Title with asc/desc), priority badges (Regenerated amber, Source Changed blue), regenerated card accent, rollback button for published items with predecessors. Overview tab with pipeline stats, quarter tab with batch generation.
 
 ## External Dependencies
 
