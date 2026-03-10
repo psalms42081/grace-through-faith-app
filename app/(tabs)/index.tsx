@@ -195,7 +195,7 @@ function KidsHomeScreen() {
     return KIDS_VERSES[dayOfYear % KIDS_VERSES.length];
   }, []);
 
-  const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number; imageUrl: string | null }>({
+  const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number; imageUrl: string | null; memoryVerse: string | null; memoryVerseRef: string | null; prayerPrompt: string | null }>({
     queryKey: [`/api/kids/daily?ageGroup=${ageGroup}`],
   });
 
@@ -431,15 +431,20 @@ function KidsHomeScreen() {
               <Text style={[kidsStyles.heroTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                 {dailyStory.title}
               </Text>
-              {dailyStory.scriptureRef && (
+              {dailyStory.memoryVerse && (
+                <Text style={[kidsStyles.heroThemeLine, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                  {dailyStory.memoryVerse}
+                </Text>
+              )}
+              {dailyStory.scriptureRef && !dailyStory.memoryVerse && (
                 <Text style={[kidsStyles.heroRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                   {dailyStory.scriptureRef}
                 </Text>
               )}
               <View style={[kidsStyles.heroCta, { backgroundColor: theme.accent }]}>
-                <Ionicons name="play" size={14} color="#fff" />
+                <Ionicons name={dailyStory.prayerPrompt ? "sparkles" : "play"} size={14} color="#fff" />
                 <Text style={[kidsStyles.heroCtaText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Continue Story
+                  {dailyStory.prayerPrompt ? "Start Adventure" : "Continue Story"}
                 </Text>
               </View>
             </View>
@@ -683,6 +688,11 @@ const kidsStyles = StyleSheet.create({
   heroRef: {
     fontSize: 13,
     marginBottom: 4,
+  },
+  heroThemeLine: {
+    fontSize: 13,
+    marginBottom: 4,
+    fontStyle: "italic" as const,
   },
   heroCta: {
     flexDirection: "row" as const,

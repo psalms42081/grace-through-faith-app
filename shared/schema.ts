@@ -749,6 +749,9 @@ export const kidsStoryScenes = pgTable(
       options: { emoji: string; label: string }[];
       correctIndex: number;
     } | null>(),
+    interactionType: varchar("interaction_type", { length: 30 }),
+    interactionConfig: jsonb("interaction_config").$type<Record<string, any> | null>(),
+    soundEffects: jsonb("sound_effects").$type<{ key: string; url?: string; trigger: string }[] | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

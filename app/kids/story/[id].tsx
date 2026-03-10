@@ -41,6 +41,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
+import SceneInteraction from "@/components/kids/SceneInteraction";
+import StoryCompletionFlow from "@/components/kids/StoryCompletionFlow";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -113,6 +115,9 @@ interface StoryScene {
     options: { emoji: string; label: string }[];
     correctIndex: number;
   } | null;
+  interactionType?: string | null;
+  interactionConfig?: Record<string, any> | null;
+  soundEffects?: { key: string; url?: string; trigger: string }[] | null;
 }
 
 interface AudioAsset {
@@ -1746,6 +1751,10 @@ export default function SceneStoryScreen() {
   const [showStreak, setShowStreak] = useState(false);
   const [streakDays, setStreakDays] = useState(0);
   const [storyTitle, setStoryTitle] = useState("");
+  const [storyMemoryVerse, setStoryMemoryVerse] = useState("");
+  const [storyMemoryVerseRef, setStoryMemoryVerseRef] = useState("");
+  const [storyPrayerPrompt, setStoryPrayerPrompt] = useState("");
+  const [showCompletionFlow, setShowCompletionFlow] = useState(false);
   const [quietMode, setQuietMode] = useState(false);
   const [quietModeLoaded, setQuietModeLoaded] = useState(false);
   const [autoPlayMode, setAutoPlayMode] = useState(false);
@@ -1818,6 +1827,9 @@ export default function SceneStoryScreen() {
         const storyRes = await apiRequest("GET", `/api/kids/stories/${id}`);
         const storyData = await storyRes.json();
         setStoryTitle(storyData.title || "");
+        if (storyData.memoryVerse) setStoryMemoryVerse(storyData.memoryVerse);
+        if (storyData.memoryVerseRef) setStoryMemoryVerseRef(storyData.memoryVerseRef);
+        if (storyData.prayerPrompt) setStoryPrayerPrompt(storyData.prayerPrompt);
       } catch {}
 
       const genRes = await apiRequest("POST", `/api/kids/story/${id}/generate`);
@@ -2160,15 +2172,22 @@ export default function SceneStoryScreen() {
     });
   }, []);
 
+  const hasCompletionFlow = !!(storyMemoryVerse && storyPrayerPrompt);
+
   const handleComplete = useCallback(() => {
-    setStoryComplete(true);
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
-    completeMutation.mutate();
-  }, []);
+
+    if (hasCompletionFlow) {
+      setShowCompletionFlow(true);
+    } else {
+      setStoryComplete(true);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2000);
+      completeMutation.mutate();
+    }
+  }, [hasCompletionFlow]);
 
   const prevSceneRef = useRef(0);
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -2205,10 +2224,12 @@ export default function SceneStoryScreen() {
             end={{ x: 1, y: 1 }}
           />
 
-          <MoodParticleOverlay
-            mood={item.mood || "PEACE"}
-            isActive={index === currentScene && !quietMode}
-          />
+          {!item.interactionType && (
+            <MoodParticleOverlay
+              mood={item.mood || "PEACE"}
+              isActive={index === currentScene && !quietMode}
+            />
+          )}
 
           {hasVideo ? (
             <View style={[styles.sceneContent, { paddingTop: topPad }]}>
@@ -2250,7 +2271,7 @@ export default function SceneStoryScreen() {
                   }}
                 />
               )}
-              {index === currentScene && (
+              {index === currentScene && !item.interactionType && (
                 <TapReactionOverlay
                   mood={item.mood || "PEACE"}
                   onTapZone={(x, y) => {
@@ -2258,6 +2279,14 @@ export default function SceneStoryScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }
                   }}
+                />
+              )}
+              {index === currentScene && item.interactionType && item.interactionConfig && (
+                <SceneInteraction
+                  type={item.interactionType}
+                  config={item.interactionConfig}
+                  containerWidth={SCREEN_WIDTH - 32}
+                  containerHeight={SCREEN_WIDTH * 0.65}
                 />
               )}
             </View>
@@ -2411,6 +2440,29 @@ export default function SceneStoryScreen() {
       />
 
       <ConfettiBurst visible={showConfetti} />
+
+      {showCompletionFlow && (
+        <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+            colors={["#0D0D2B", "#1A1A3E", "#0D0D2B"]}
+            style={StyleSheet.absoluteFill}
+          />
+          <StoryCompletionFlow
+            memoryVerse={storyMemoryVerse}
+            memoryVerseRef={storyMemoryVerseRef}
+            prayerPrompt={storyPrayerPrompt}
+            storyTitle={storyTitle}
+            onComplete={() => {
+              setShowCompletionFlow(false);
+              setStoryComplete(true);
+              setShowConfetti(true);
+              setTimeout(() => setShowConfetti(false), 2000);
+              completeMutation.mutate();
+            }}
+            theme={theme}
+          />
+        </View>
+      )}
 
       {showWonder !== null && (
         <PauseAndWonderOverlay
