@@ -85,7 +85,7 @@ cleanup_server() {
 }
 trap cleanup_server EXIT
 
-DEPLOY_TEST_PORT=5099
+export DEPLOY_TEST_PORT=5099
 RUN_STARTUP_SEEDS=false ALLOW_INSECURE_PASSWORD_RESET=false NODE_ENV=production PORT=$DEPLOY_TEST_PORT node server_dist/index.js &
 SERVER_PID=$!
 
