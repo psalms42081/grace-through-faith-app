@@ -76,6 +76,15 @@ function MemoryVerseStep({
       <Text style={[cStyles.stepTitle, { fontFamily: "Lora_700Bold" }]}>Memory Verse</Text>
       <Text style={[cStyles.verseRef, { fontFamily: "Inter_500Medium" }]}>{verseRef}</Text>
 
+      {!allTapped && (
+        <View style={cStyles.verseHintWrap}>
+          <Ionicons name="hand-left-outline" size={18} color="#FFD700" />
+          <Text style={[cStyles.verseHintText, { fontFamily: "Inter_600SemiBold" }]}>
+            Tap each word in order
+          </Text>
+        </View>
+      )}
+
       <View style={cStyles.wordGrid}>
         {words.map((word, i) => {
           const isTapped = tappedWords.has(i);
@@ -90,14 +99,20 @@ function MemoryVerseStep({
                     backgroundColor: isTapped
                       ? "rgba(255,215,0,0.25)"
                       : isNext
-                      ? "rgba(255,255,255,0.15)"
+                      ? "rgba(255,215,0,0.12)"
                       : "rgba(255,255,255,0.06)",
                     borderColor: isTapped
                       ? "#FFD700"
                       : isNext
-                      ? "rgba(255,215,0,0.5)"
+                      ? "rgba(255,215,0,0.7)"
                       : "rgba(255,255,255,0.1)",
-                    transform: [{ scale: isNext ? 1.05 : 1 }],
+                    borderWidth: isNext ? 2 : 1.5,
+                    transform: [{ scale: isNext ? 1.1 : 1 }],
+                    shadowColor: isNext ? "#FFD700" : "transparent",
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: isNext ? 0.5 : 0,
+                    shadowRadius: isNext ? 8 : 0,
+                    elevation: isNext ? 4 : 0,
                   },
                 ]}
               >
@@ -105,8 +120,8 @@ function MemoryVerseStep({
                   style={[
                     cStyles.wordText,
                     {
-                      color: isTapped ? "#FFD700" : isNext ? "#fff" : "rgba(255,255,255,0.5)",
-                      fontFamily: isTapped ? "Inter_700Bold" : "Inter_500Medium",
+                      color: isTapped ? "#FFD700" : isNext ? "#fff" : "rgba(255,255,255,0.45)",
+                      fontFamily: isTapped || isNext ? "Inter_700Bold" : "Inter_500Medium",
                     },
                   ]}
                 >
@@ -119,8 +134,8 @@ function MemoryVerseStep({
       </View>
 
       {!allTapped && (
-        <Text style={[cStyles.hintText, { fontFamily: "Inter_400Regular" }]}>
-          Tap each word in order
+        <Text style={[cStyles.progressCounter, { fontFamily: "Inter_500Medium" }]}>
+          {nextExpected} of {words.length} words
         </Text>
       )}
 
@@ -374,6 +389,27 @@ const cStyles = StyleSheet.create({
   },
   wordText: {
     fontSize: 18,
+  },
+  verseHintWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,215,0,0.1)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.25)",
+    marginBottom: 4,
+  },
+  verseHintText: {
+    fontSize: 16,
+    color: "#FFD700",
+  },
+  progressCounter: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.5)",
+    marginTop: 6,
   },
   hintText: {
     fontSize: 13,
