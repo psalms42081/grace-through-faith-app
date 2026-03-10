@@ -43,6 +43,7 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import SceneInteraction from "@/components/kids/SceneInteraction";
 import StoryCompletionFlow from "@/components/kids/StoryCompletionFlow";
+import LivingScene from "@/components/kids/LivingScene";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -2215,16 +2216,20 @@ export default function SceneStoryScreen() {
 
       const hasVideo = !!item.videoUrl;
 
-      return (
-        <View style={[styles.scenePage, { width: SCREEN_WIDTH }]}>
-          <LinearGradient
-            colors={palette as [string, string, string]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+      const isLivingScene = !!item.interactionConfig?.isLivingScene;
 
-          {!item.interactionType && (
+      return (
+        <View style={[styles.scenePage, { width: SCREEN_WIDTH, backgroundColor: isLivingScene ? "#050507" : undefined }]}>
+          {!isLivingScene && (
+            <LinearGradient
+              colors={palette as [string, string, string]}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+          )}
+
+          {!item.interactionType && !isLivingScene && (
             <MoodParticleOverlay
               mood={item.mood || "PEACE"}
               isActive={index === currentScene && !quietMode}
@@ -2250,6 +2255,58 @@ export default function SceneStoryScreen() {
                 }}
               />
             </View>
+          ) : item.interactionConfig?.isLivingScene ? (
+          <View style={{ flex: 1 }}>
+            <LivingScene
+              imageUrl={item.imageUrl ? (item.imageUrl.startsWith("http") ? item.imageUrl : `${baseUrl}${item.imageUrl}`) : ""}
+              narration={item.narration}
+              interactionType={item.interactionType || ""}
+              interactionConfig={item.interactionConfig || {}}
+              mood={item.mood || "PEACE"}
+              isActive={index === currentScene}
+              sceneIndex={index}
+              isLittleLambs={isLittleLambs}
+              currentWordIndex={currentWordIndex}
+              isSpeaking={isSpeaking}
+              theme={theme}
+            />
+
+            {isLastScene && !storyComplete && index === currentScene && (
+              <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.livingSceneCompleteWrap}>
+                <Pressable
+                  onPress={handleComplete}
+                  style={[styles.completeBtn, { backgroundColor: theme.starGold || "#F5A623" }]}
+                  testID="complete-story"
+                >
+                  <Ionicons name="star" size={20} color="#fff" />
+                  <Text style={[styles.completeBtnText, { fontFamily: "Inter_700Bold" }]}>
+                    I Finished This Story!
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            )}
+
+            {storyComplete && isLastScene && (
+              <Animated.View entering={FadeInDown.springify().damping(10).stiffness(120)} style={[styles.completeMessage, styles.livingSceneCompleteMsg]}>
+                <View style={{ alignItems: "center", justifyContent: "center" }}>
+                  <Animated.View entering={FadeIn.delay(200).duration(300)}>
+                    <Ionicons name="star" size={44} color={theme.starGold || "#F5A623"} />
+                  </Animated.View>
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
+                  ))}
+                </View>
+                <Text style={[styles.completeTitle, { fontFamily: "Lora_700Bold" }]}>
+                  Story Complete!
+                </Text>
+                <Animated.View entering={FadeInUp.delay(400).springify()}>
+                  <Text style={[styles.completeSubtitle, { fontFamily: "Inter_500Medium" }]}>
+                    +25 Seed Points earned
+                  </Text>
+                </Animated.View>
+              </Animated.View>
+            )}
+          </View>
           ) : (
           <View style={[styles.sceneContent, { paddingTop: topPad + 16 }]}>
             <View style={styles.illustrationArea}>
@@ -2767,6 +2824,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 16,
+  },
+  livingSceneCompleteWrap: {
+    position: "absolute",
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 20,
+  },
+  livingSceneCompleteMsg: {
+    position: "absolute",
+    bottom: 100,
+    left: 0,
+    right: 0,
+    zIndex: 20,
   },
   completeTitle: {
     color: "#fff",
