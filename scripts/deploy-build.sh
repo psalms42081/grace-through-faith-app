@@ -5,8 +5,15 @@ echo "=== Building server ==="
 npm run server:build
 
 echo "=== Pushing schema ==="
-npx drizzle-kit push --force
-echo "Schema push complete"
+if npx drizzle-kit push --force; then
+  echo "Schema push complete via drizzle-kit"
+else
+  echo "drizzle-kit push failed, applying fallback SQL migrations..."
+  npx tsx scripts/ensure-tables.ts
+fi
+
+echo "=== Verifying critical tables ==="
+npx tsx scripts/ensure-tables.ts
 
 echo "=== Seeding production data ==="
 
@@ -59,13 +66,13 @@ RUN_STARTUP_SEEDS=false ALLOW_INSECURE_PASSWORD_RESET=false NODE_ENV=production 
 SERVER_PID=$!
 
 echo "Waiting for server (pid $SERVER_PID) to be ready..."
-for i in $(seq 1 15); do
-  if curl -s -o /dev/null -w "" http://localhost:5000/api/streams/active 2>/dev/null; then
+for i in $(seq 1 30); do
+  if curl -s -o /dev/null -w "" http://localhost:5000/api/health 2>/dev/null; then
     echo "Server ready after ${i}s"
     break
   fi
-  if [ "$i" -eq 15 ]; then
-    echo "DEPLOY BLOCKED: Temporary server failed to start within 15s"
+  if [ "$i" -eq 30 ]; then
+    echo "DEPLOY BLOCKED: Temporary server failed to start within 30s"
     exit 1
   fi
   sleep 1
