@@ -1,11 +1,47 @@
 import { db } from "../server/db";
 import { kidsStoryScenes, kidsStories } from "../shared/schema";
 import { eq } from "drizzle-orm";
+import * as fs from "fs";
+import * as crypto from "crypto";
+import * as path from "path";
+
+const CANONICAL_CHECKSUMS: Record<string, string> = {
+  "david-scene-0.png": "f095e9c64b9fc25f4842df51d5f39b4d",
+  "david-scene-1.png": "72f3509f904ee67618a08daaa6989d7f",
+  "david-scene-2.png": "5f335eca2cf433ffb72037b627d502dd",
+  "david-scene-3.png": "b1f051f0d220acfca6ee52bad2623fd4",
+  "david-scene-4.png": "d6a79c39abc372604407c64f0c79a62a",
+  "david-scene-5.png": "e0a2ac3c721c128910f2b27b91f93a0a",
+};
+
+function md5File(filePath: string): string {
+  const data = fs.readFileSync(filePath);
+  return crypto.createHash("md5").update(data).digest("hex");
+}
 
 async function verify() {
   console.log("[verify-flagship] Checking David and the Giant flagship story...");
   let failures = 0;
 
+  console.log("\n--- Asset file verification ---");
+  const assetsDir = path.resolve(process.cwd(), "assets", "kids-scenes");
+  for (const [filename, expectedMd5] of Object.entries(CANONICAL_CHECKSUMS)) {
+    const filePath = path.join(assetsDir, filename);
+    if (!fs.existsSync(filePath)) {
+      console.error(`[FAIL] Asset missing: ${filename}`);
+      failures++;
+      continue;
+    }
+    const actualMd5 = md5File(filePath);
+    if (actualMd5 !== expectedMd5) {
+      console.error(`[FAIL] Asset changed: ${filename} (expected ${expectedMd5}, got ${actualMd5})`);
+      failures++;
+    } else {
+      console.log(`[PASS] ${filename} checksum verified`);
+    }
+  }
+
+  console.log("\n--- Database verification ---");
   const [story] = await db
     .select()
     .from(kidsStories)
@@ -96,10 +132,30 @@ async function verify() {
     }
   }
 
+  console.log("\n--- Scene 4 sling calibration ---");
+  const scene4 = scenes[4];
+  if (scene4) {
+    const config = scene4.interactionConfig as any;
+    const sling = config?.cinematicConfig?.slingArea || config?.slingArea;
+    const target = config?.cinematicConfig?.targetArea || config?.targetArea;
+    if (sling && target) {
+      const goesLeftward = target.x < sling.x;
+      console.log(`  slingArea: (${sling.x}, ${sling.y})`);
+      console.log(`  targetArea: (${target.x}, ${target.y})`);
+      console.log(`  Direction: ${goesLeftward ? "RIGHT-TO-LEFT (correct)" : "LEFT-TO-RIGHT (WRONG)"}`);
+      if (!goesLeftward) {
+        console.error("[FAIL] Scene 4 stone direction is wrong — must travel from David toward Goliath (left)");
+        failures++;
+      } else {
+        console.log("[PASS] Scene 4 stone direction verified");
+      }
+    }
+  }
+
   if (failures === 0) {
-    console.log("[verify-flagship] ALL CHECKS PASSED");
+    console.log("\n[verify-flagship] ALL CHECKS PASSED");
   } else {
-    console.error(`[verify-flagship] ${failures} CHECK(S) FAILED`);
+    console.error(`\n[verify-flagship] ${failures} CHECK(S) FAILED`);
     process.exit(1);
   }
 }
