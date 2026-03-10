@@ -775,12 +775,6 @@ export default function ResourceDetailScreen() {
                 </Text>
               </View>
             )}
-            <View style={styles.heroMetaItem}>
-              <Ionicons name="heart-outline" size={14} color="rgba(237,229,213,0.65)" />
-              <Text style={[styles.heroMetaText, { fontFamily: "Inter_400Regular" }]}>
-                Free
-              </Text>
-            </View>
           </View>
         </View>
 
