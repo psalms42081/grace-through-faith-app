@@ -582,7 +582,193 @@ function TapCheerScene({ config, isActive, imageFrame }: { config: Record<string
   );
 }
 
+function CalibrationDot({
+  id,
+  initialX,
+  initialY,
+  label,
+  imageFrame,
+  color,
+}: {
+  id: string;
+  initialX: number;
+  initialY: number;
+  label: string;
+  imageFrame: ImageFrame;
+  color: string;
+}) {
+  const [pos, setPos] = useState({ x: initialX, y: initialY });
+  const posRef = useRef({ x: initialX, y: initialY });
+  const dragStartRef = useRef({ x: initialX, y: initialY });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        dragStartRef.current = { ...posRef.current };
+      },
+      onPanResponderMove: (_, gs) => {
+        const newX = Math.max(0, Math.min(1, dragStartRef.current.x + gs.dx / imageFrame.width));
+        const newY = Math.max(0, Math.min(1, dragStartRef.current.y + gs.dy / imageFrame.height));
+        posRef.current = { x: newX, y: newY };
+        setPos({ x: newX, y: newY });
+      },
+      onPanResponderRelease: (_, gs) => {
+        const finalX = Math.max(0, Math.min(1, dragStartRef.current.x + gs.dx / imageFrame.width));
+        const finalY = Math.max(0, Math.min(1, dragStartRef.current.y + gs.dy / imageFrame.height));
+        posRef.current = { x: finalX, y: finalY };
+        setPos({ x: finalX, y: finalY });
+        console.log(`[CALIBRATE] ${id} "${label}": { x: ${finalX.toFixed(3)}, y: ${finalY.toFixed(3)} }`);
+      },
+    })
+  ).current;
+
+  const { screenX, screenY } = toScreen(pos.x, pos.y, imageFrame);
+  const crossSize = 30;
+
+  return (
+    <View
+      {...panResponder.panHandlers}
+      style={{
+        position: "absolute",
+        left: screenX - crossSize,
+        top: screenY - crossSize,
+        width: crossSize * 2,
+        height: crossSize * 2,
+        zIndex: 100,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <View style={{ position: "absolute", width: crossSize * 2, height: 2, backgroundColor: color }} />
+      <View style={{ position: "absolute", width: 2, height: crossSize * 2, backgroundColor: color }} />
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+      <View
+        style={{
+          position: "absolute",
+          top: -22,
+          backgroundColor: "rgba(0,0,0,0.9)",
+          borderRadius: 4,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderWidth: 1,
+          borderColor: color,
+        }}
+      >
+        <Text style={{ color, fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
+          {label} ({pos.x.toFixed(3)}, {pos.y.toFixed(3)})
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function CalibrationOverlay({
+  config,
+  interactionType,
+  imageFrame,
+}: {
+  config: Record<string, any>;
+  interactionType: string;
+  imageFrame: ImageFrame;
+}) {
+  const dots: { id: string; x: number; y: number; label: string; color: string }[] = [];
+
+  if (interactionType === "tap_wiggle" || interactionType === "tap_collect" || interactionType === "tap_cheer") {
+    const hotspots = config.hotspots || [];
+    hotspots.forEach((h: any, i: number) => {
+      dots.push({ id: `hs${i}`, x: h.x, y: h.y, label: h.label || `Hotspot ${i}`, color: ["#FF0000", "#00FF00", "#00AAFF", "#FF00FF", "#FFAA00"][i % 5] });
+    });
+  } else if (interactionType === "tap_compare" || interactionType === "tap_glow") {
+    const h = config.hotspot || { x: 0.5, y: 0.5 };
+    dots.push({ id: "hotspot", x: h.x, y: h.y, label: "Target", color: "#FF0000" });
+  } else if (interactionType === "drag_release") {
+    const sling = config.slingArea || { x: 0.5, y: 0.5 };
+    const target = config.targetArea || { x: 0.5, y: 0.5 };
+    dots.push({ id: "sling", x: sling.x, y: sling.y, label: "Sling", color: "#00FF00" });
+    dots.push({ id: "target", x: target.x, y: target.y, label: "Target", color: "#FF0000" });
+  }
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <View
+        style={{
+          position: "absolute",
+          left: imageFrame.offsetX,
+          top: imageFrame.offsetY,
+          width: imageFrame.width,
+          height: imageFrame.height,
+          borderWidth: 2,
+          borderColor: "rgba(255,0,0,0.6)",
+          borderStyle: "dashed",
+        }}
+        pointerEvents="none"
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: imageFrame.offsetX + imageFrame.width / 2 - 1,
+          top: imageFrame.offsetY,
+          width: 1,
+          height: imageFrame.height,
+          backgroundColor: "rgba(255,0,0,0.2)",
+        }}
+        pointerEvents="none"
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: imageFrame.offsetX,
+          top: imageFrame.offsetY + imageFrame.height / 2 - 1,
+          width: imageFrame.width,
+          height: 1,
+          backgroundColor: "rgba(255,0,0,0.2)",
+        }}
+        pointerEvents="none"
+      />
+      {dots.map((d) => (
+        <CalibrationDot
+          key={d.id}
+          id={d.id}
+          initialX={d.x}
+          initialY={d.y}
+          label={d.label}
+          imageFrame={imageFrame}
+          color={d.color}
+        />
+      ))}
+      <View
+        style={{
+          position: "absolute",
+          bottom: 20,
+          left: 10,
+          right: 10,
+          backgroundColor: "rgba(0,0,0,0.85)",
+          borderRadius: 8,
+          padding: 8,
+          borderWidth: 1,
+          borderColor: "#FF0000",
+        }}
+      >
+        <Text style={{ color: "#FF4444", fontSize: 11, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+          CALIBRATION MODE - Drag crosshairs to exact positions
+        </Text>
+        <Text style={{ color: "#AAA", fontSize: 10, fontFamily: "Inter_500Medium", textAlign: "center", marginTop: 2 }}>
+          Coordinates logged to console on release
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const CALIBRATION_MODE = __DEV__ && false;
+
 function InteractionLayer({ type, config, isActive, imageFrame }: { type: string; config: Record<string, any>; isActive: boolean; imageFrame: ImageFrame }) {
+  if (CALIBRATION_MODE) {
+    return <CalibrationOverlay config={config} interactionType={type} imageFrame={imageFrame} />;
+  }
+
   switch (type) {
     case "tap_wiggle":
       return <TapWiggleScene config={config} isActive={isActive} imageFrame={imageFrame} />;

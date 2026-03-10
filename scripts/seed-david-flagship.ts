@@ -36,8 +36,8 @@ async function seedDavidFlagship() {
         instruction: "Can you find David?",
         sequential: true,
         hotspots: [
-          { x: 0.68, y: 0.52, size: 44, label: "Hi David!" },
-          { x: 0.22, y: 0.42, size: 44, label: "That's the giant!" },
+          { x: 0.657, y: 0.469, size: 44, label: "Hi David!" },
+          { x: 0.221, y: 0.383, size: 44, label: "That's the giant!" },
         ],
       },
       soundEffects: [
@@ -55,7 +55,7 @@ async function seedDavidFlagship() {
       interactionConfig: {
         isLivingScene: true,
         instruction: "Tap the giant!",
-        hotspot: { x: 0.20, y: 0.40, size: 50 },
+        hotspot: { x: 0.205, y: 0.366, size: 50 },
         resultText: "He is SO tall! But God is bigger.",
       },
       soundEffects: [
@@ -73,7 +73,7 @@ async function seedDavidFlagship() {
       interactionConfig: {
         isLivingScene: true,
         instruction: "Tap David's heart!",
-        hotspot: { x: 0.48, y: 0.48 },
+        hotspot: { x: 0.456, y: 0.434 },
         revealText: "God is with me.",
         glowColor: "rgba(255,215,0,0.3)",
       },
@@ -96,11 +96,11 @@ async function seedDavidFlagship() {
         sequential: true,
         completeText: "You found all 5 stones!",
         hotspots: [
-          { x: 0.35, y: 0.80, size: 34, label: "Stone 1!" },
-          { x: 0.40, y: 0.84, size: 34, label: "Stone 2!" },
-          { x: 0.45, y: 0.80, size: 34, label: "Stone 3!" },
-          { x: 0.50, y: 0.84, size: 34, label: "Stone 4!" },
-          { x: 0.43, y: 0.76, size: 34, label: "Stone 5!" },
+          { x: 0.306, y: 0.742, size: 34, label: "Stone 1!" },
+          { x: 0.352, y: 0.773, size: 34, label: "Stone 2!" },
+          { x: 0.397, y: 0.752, size: 34, label: "Stone 3!" },
+          { x: 0.436, y: 0.781, size: 34, label: "Stone 4!" },
+          { x: 0.475, y: 0.756, size: 34, label: "Stone 5!" },
         ],
       },
       soundEffects: [
@@ -118,8 +118,8 @@ async function seedDavidFlagship() {
       interactionConfig: {
         isLivingScene: true,
         instruction: "Swirl the sling, then let go!",
-        slingArea: { x: 0.70, y: 0.38 },
-        targetArea: { x: 0.22, y: 0.40 },
+        slingArea: { x: 0.703, y: 0.273 },
+        targetArea: { x: 0.215, y: 0.361 },
         resultText: "The stone flew true!",
       },
       soundEffects: [
@@ -140,10 +140,10 @@ async function seedDavidFlagship() {
         instruction: "Tap David to celebrate!",
         sequential: true,
         hotspots: [
-          { x: 0.55, y: 0.42, size: 40, label: "Hooray David!" },
-          { x: 0.15, y: 0.55, size: 36, label: "Praise God!" },
-          { x: 0.85, y: 0.50, size: 36, label: "Thank God!" },
-          { x: 0.35, y: 0.60, size: 36, label: "We won!" },
+          { x: 0.540, y: 0.410, size: 40, label: "Hooray David!" },
+          { x: 0.215, y: 0.555, size: 36, label: "Praise God!" },
+          { x: 0.833, y: 0.498, size: 36, label: "Thank God!" },
+          { x: 0.124, y: 0.516, size: 36, label: "We won!" },
         ],
       },
       soundEffects: [
