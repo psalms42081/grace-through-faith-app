@@ -2,10 +2,22 @@ import { db } from "../server/db";
 import { kidsStoryScenes, kidsStories } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 
-const DAVID_STORY_ID = "843ef817-62c3-45f3-9cad-07a8af601de7";
-
 async function seedDavidFlagship() {
   console.log("Seeding David and the Giant flagship story (living scenes)...");
+
+  const [davidStory] = await db
+    .select({ id: kidsStories.id })
+    .from(kidsStories)
+    .where(eq(kidsStories.title, "David and the Giant"))
+    .limit(1);
+
+  if (!davidStory) {
+    console.log("David and the Giant story not found — skipping flagship seed (run seed-kids-content first)");
+    return;
+  }
+
+  const DAVID_STORY_ID = davidStory.id;
+  console.log(`  Found David story with ID: ${DAVID_STORY_ID}`);
 
   await db.update(kidsStories).set({
     memoryVerse: "The battle is the Lord's.",
