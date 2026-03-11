@@ -12,6 +12,7 @@ import {
   Animated,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -645,7 +646,7 @@ export default function LessonScreen() {
       } else if (data.trackCompleted) {
         setShowTrackCompletion(true);
       } else {
-        router.back();
+        safeGoBack(router);
       }
     },
   });

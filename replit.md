@@ -60,3 +60,20 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **react-native-webview:** Loads LiveKit room HTML on native.
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
 - **OpenStreetMap:** Embedded tile maps on the web platform.
+
+## Production Hardening
+
+### Pass 1 (Completed)
+- **C1:** `POST /api/devotionals/reflect` requires auth (blocks API credit abuse).
+- **C2:** `GET /api/devotionals/plans/:planId/days` uses `optionalAuth`.
+- **H5:** Password minimum raised 4→8 chars (registration only; existing users unaffected).
+- **H1:** Analytics routes wrapped in try-catch with 50-event cap.
+- **H3:** `kids_progress` unique index `(userId, storyId)` was already in place.
+
+### Pass 2 (Completed)
+- **H3-upsert:** All `kids_progress` inserts (completion, quiz, memory verse, wonder answers) now use `onConflictDoUpdate` for race-condition safety.
+- **C3:** TTS in-memory cache capped at 100 entries / 50MB with LRU eviction (prevents OOM under load).
+- **H4:** `router.back()` calls in mutation callbacks replaced with `safeGoBack(router)` — falls back to `/(tabs)` when no history exists. Applied to: `stream/[id]`, `group/[id]`, `lesson/[id]`, `devotionals`, `devotional-day`, `verse-actions`.
+
+### Navigation Safety
+- `lib/safe-back.ts` exports `safeGoBack(router)` — use it instead of `router.back()` in programmatic navigation (mutation callbacks, timeouts).

@@ -228,22 +228,17 @@ router.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
         )
       )
       .limit(1);
-    if (existing.length) {
-      const alreadyCompleted = existing[0].completed === true;
-      const updated = await db
-        .update(kidsProgress)
-        .set({ completed: true, completedAt: new Date() })
-        .where(eq(kidsProgress.id, existing[0].id))
-        .returning();
-      const badgesAwarded = await checkAndAwardBadges(userId);
-      return res.json({ ...updated[0], firstCompletion: !alreadyCompleted, badgesAwarded });
-    }
-    const progress = await db
+    const alreadyCompleted = existing.length > 0 && existing[0].completed === true;
+    const [progress] = await db
       .insert(kidsProgress)
       .values({ userId, storyId, completed: true, completedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [kidsProgress.userId, kidsProgress.storyId],
+        set: { completed: true, completedAt: new Date() },
+      })
       .returning();
     const badgesAwarded = await checkAndAwardBadges(userId);
-    return res.json({ ...progress[0], firstCompletion: true, badgesAwarded });
+    return res.json({ ...progress, firstCompletion: !alreadyCompleted, badgesAwarded });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -306,20 +301,15 @@ router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
       )
       .limit(1);
     let result;
-    if (existing.length) {
-      const updated = await db
-        .update(kidsProgress)
-        .set({ quizScore: score })
-        .where(eq(kidsProgress.id, existing[0].id))
-        .returning();
-      result = updated[0];
-    } else {
-      const [progress] = await db
-        .insert(kidsProgress)
-        .values({ userId, storyId, quizScore: score })
-        .returning();
-      result = progress;
-    }
+    const [upserted] = await db
+      .insert(kidsProgress)
+      .values({ userId, storyId, quizScore: score })
+      .onConflictDoUpdate({
+        target: [kidsProgress.userId, kidsProgress.storyId],
+        set: { quizScore: score },
+      })
+      .returning();
+    result = upserted;
 
     let verifiedChildProfileId: string | undefined;
     if (childProfileId) {
@@ -357,19 +347,15 @@ router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
         )
       )
       .limit(1);
-    if (existing.length) {
-      const updated = await db
-        .update(kidsProgress)
-        .set({ memoryVerseMemorized: true })
-        .where(eq(kidsProgress.id, existing[0].id))
-        .returning();
-      return res.json(updated[0]);
-    }
-    const progress = await db
+    const [upserted] = await db
       .insert(kidsProgress)
       .values({ userId, storyId, memoryVerseMemorized: true })
+      .onConflictDoUpdate({
+        target: [kidsProgress.userId, kidsProgress.storyId],
+        set: { memoryVerseMemorized: true },
+      })
       .returning();
-    return res.json(progress[0]);
+    return res.json(upserted);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -581,6 +567,9 @@ router.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
         userId,
         storyId,
         wonderAnswers: currentAnswers,
+      }).onConflictDoUpdate({
+        target: [kidsProgress.userId, kidsProgress.storyId],
+        set: { wonderAnswers: currentAnswers },
       });
     }
 

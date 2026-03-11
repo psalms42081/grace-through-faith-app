@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -38,7 +39,7 @@ export default function VerseActionsSheet() {
 
   const navigateTo = useCallback((pathname: string, params?: Record<string, string>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.back();
+    safeGoBack(router);
     setTimeout(() => {
       if (params) {
         router.push({ pathname: pathname as any, params });
@@ -50,7 +51,7 @@ export default function VerseActionsSheet() {
 
   const handleCopy = useCallback(async () => {
     await Clipboard.setStringAsync(`${text}\n\u2014 ${reference} (${txLabel})`);
-    router.back();
+    safeGoBack(router);
   }, [text, reference, txLabel]);
 
   const handleStudy = useCallback(() => {
@@ -118,7 +119,7 @@ export default function VerseActionsSheet() {
       });
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       setFeedbackMsg("Highlighted!");
-      setTimeout(() => router.back(), 600);
+      setTimeout(() => safeGoBack(router), 600);
     } catch (err) {
       console.error("Highlight failed:", err);
       setFeedbackMsg("Failed to highlight");
@@ -140,7 +141,7 @@ export default function VerseActionsSheet() {
       });
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       setFeedbackMsg("Bookmarked!");
-      setTimeout(() => router.back(), 600);
+      setTimeout(() => safeGoBack(router), 600);
     } catch (err) {
       console.error("Bookmark failed:", err);
       setFeedbackMsg("Failed to bookmark");

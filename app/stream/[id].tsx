@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -93,7 +94,7 @@ export default function StreamScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/streams/active"] });
       queryClient.invalidateQueries({ queryKey: [`/api/streams/${id}`] });
-      router.back();
+      safeGoBack(router);
     },
     onError: (err: any) => {
       const msg = err?.message || "Failed to end session";
@@ -129,7 +130,7 @@ export default function StreamScreen() {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === "call_ended") {
-        router.back();
+        safeGoBack(router);
       }
     } catch {}
   }, []);

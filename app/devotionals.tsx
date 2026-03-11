@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router, Stack } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -71,7 +72,7 @@ export default function DevotionalsScreen() {
       });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}&planId=${planId}`] });
-      router.back();
+      safeGoBack(router);
       setTimeout(() => {
         router.push(`/devotional-day?planId=${planId}`);
       }, 300);

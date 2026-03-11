@@ -13,6 +13,7 @@ import {
   Share,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import { safeGoBack } from "@/lib/safe-back";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -176,7 +177,7 @@ export default function GroupDetailScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
-      router.back();
+      safeGoBack(router);
     },
   });
 

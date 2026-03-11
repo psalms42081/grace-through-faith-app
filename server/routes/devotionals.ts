@@ -35,7 +35,7 @@ import { Router } from "express";
   }
 });
 
-router.get("/api/devotionals/plans/:planId/days", async (req, res) => {
+router.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
   try {
     const days = await db
       .select()
@@ -195,7 +195,11 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/devotionals/reflect", async (req, res) => {
+router.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
+  const userId = getEffectiveUserId(req);
+  if (userId === "guest") {
+    return res.status(401).json({ error: "Authentication required for AI reflections" });
+  }
   try {
     const { question, userAnswer, passageLabel, dayTitle, previousExchanges } = req.body;
     if (!question || !userAnswer) {

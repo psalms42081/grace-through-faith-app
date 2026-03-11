@@ -12,6 +12,7 @@ import {
   Animated,
 } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -398,7 +399,7 @@ export default function DevotionalDayScreen() {
             </Text>
             <Pressable
               onPress={() => {
-                router.back();
+                safeGoBack(router);
                 setTimeout(() => router.push("/devotionals"), 300);
               }}
               style={[styles.browseBtn, { backgroundColor: theme.accent }]}
