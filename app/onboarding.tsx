@@ -8,7 +8,6 @@ import {
   Platform,
   FlatList,
   ViewToken,
-  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,8 +31,6 @@ const GOLD = "#C9933A";
 const NAVY = "#1A1F3C";
 const DEEP_NAVY = "#0D1025";
 const PARCHMENT = "#F5EFE0";
-const PARCHMENT_DIM = "rgba(245, 239, 224, 0.08)";
-const GOLD_DIM = "rgba(201, 147, 58, 0.15)";
 
 interface PageData {
   key: string;
@@ -41,8 +38,6 @@ interface PageData {
 
 const PAGES: PageData[] = [
   { key: "welcome" },
-  { key: "study-model" },
-  { key: "features" },
   { key: "get-started" },
 ];
 
@@ -70,112 +65,6 @@ function WelcomePage() {
       </Animated.View>
       <View style={pageStyles.bottomSpacer} />
     </View>
-  );
-}
-
-function StudyModelPage() {
-  const pillars = [
-    {
-      icon: "book-outline" as const,
-      title: "Study Deeply",
-      desc: "Study the Bible with multiple translations, Strong's concordance, and original languages",
-    },
-    {
-      icon: "shield-checkmark-outline" as const,
-      title: "Understand Doctrine",
-      desc: "Explore Adventist doctrine through the 28 Fundamental Beliefs",
-    },
-    {
-      icon: "trending-up-outline" as const,
-      title: "Grow Daily",
-      desc: "Build daily habits with guided devotionals, study paths, and formation rings",
-    },
-  ];
-
-  return (
-    <ScrollView style={pageStyles.scrollContainer} showsVerticalScrollIndicator={false}>
-      <View style={pageStyles.container}>
-        <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
-          <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-            YOUR GROWTH
-          </Text>
-          <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-            Study. Understand.{"\n"}Grow.
-          </Text>
-        </Animated.View>
-        <View style={pageStyles.layersContainer}>
-          {pillars.map((pillar, i) => (
-            <Animated.View
-              key={pillar.title}
-              entering={FadeIn.delay(400 + i * 150).duration(600)}
-              style={pageStyles.layerCard}
-            >
-              <View style={pageStyles.layerIconWrap}>
-                <Ionicons name={pillar.icon} size={24} color={GOLD} />
-              </View>
-              <View style={pageStyles.layerTextWrap}>
-                <Text style={[pageStyles.layerTitle, { fontFamily: "Lora_600SemiBold" }]}>
-                  {pillar.title}
-                </Text>
-                <Text style={[pageStyles.layerDesc, { fontFamily: "Inter_400Regular" }]}>
-                  {pillar.desc}
-                </Text>
-              </View>
-              <View style={pageStyles.layerNumber}>
-                <Text style={[pageStyles.layerNum, { fontFamily: "Inter_700Bold" }]}>
-                  {i + 1}
-                </Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
-        <View style={pageStyles.bottomPadding} />
-      </View>
-    </ScrollView>
-  );
-}
-
-function ExperiencePage() {
-  const experiences = [
-    { icon: "sunny-outline" as const, label: "Sabbath Experience", sub: "Embrace the rhythm of rest and renewal each week" },
-    { icon: "journal-outline" as const, label: "Prayer Journaling", sub: "Record your prayers and see God's faithfulness over time" },
-    { icon: "analytics-outline" as const, label: "Growth Tracking", sub: "Track your growth with daily rings and reading streaks" },
-    { icon: "people-outline" as const, label: "Community", sub: "Connect with your church and study groups" },
-  ];
-
-  return (
-    <ScrollView style={pageStyles.scrollContainer} showsVerticalScrollIndicator={false}>
-      <View style={pageStyles.container}>
-        <Animated.View entering={FadeIn.delay(200).duration(600)} style={pageStyles.modelHeader}>
-          <Text style={[pageStyles.sectionLabel, { fontFamily: "Inter_600SemiBold" }]}>
-            YOUR DAILY RHYTHM
-          </Text>
-          <Text style={[pageStyles.sectionTitle, { fontFamily: "Lora_700Bold" }]}>
-            Experience.{"\n"}Reflect. Grow.
-          </Text>
-        </Animated.View>
-        <View style={pageStyles.featuresGrid}>
-          {experiences.map((f, i) => (
-            <Animated.View
-              key={f.label}
-              entering={FadeIn.delay(350 + i * 100).duration(500)}
-              style={pageStyles.featureItem}
-            >
-              <View style={pageStyles.featureIconWrap}>
-                <Ionicons name={f.icon} size={22} color={GOLD} />
-              </View>
-              <Text style={[pageStyles.featureLabel, { fontFamily: "Inter_600SemiBold" }]}>
-                {f.label}
-              </Text>
-              <Text style={[pageStyles.featureSub, { fontFamily: "Inter_400Regular" }]}>
-                {f.sub}
-              </Text>
-            </Animated.View>
-          ))}
-        </View>
-        <View style={pageStyles.bottomPadding} />
-      </View>
-    </ScrollView>
   );
 }
 
@@ -273,10 +162,6 @@ export default function OnboardingScreen() {
         switch (item.key) {
           case "welcome":
             return <WelcomePage />;
-          case "study-model":
-            return <StudyModelPage />;
-          case "features":
-            return <ExperiencePage />;
           case "get-started":
             return <GetStartedPage onGetStarted={handleGetStarted} />;
           default:
@@ -381,10 +266,6 @@ const dotStyles = StyleSheet.create({
 });
 
 const pageStyles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    width: SCREEN_WIDTH,
-  },
   container: {
     flex: 1,
     width: SCREEN_WIDTH,
@@ -451,101 +332,6 @@ const pageStyles = StyleSheet.create({
     textTransform: "uppercase",
   },
   bottomSpacer: { height: 80 },
-  modelHeader: {
-    marginBottom: 28,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    color: GOLD,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 32,
-    color: PARCHMENT,
-    lineHeight: 40,
-  },
-  layersContainer: {
-    gap: 12,
-  },
-  layerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: PARCHMENT_DIM,
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: "rgba(201, 147, 58, 0.12)",
-  },
-  layerIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: GOLD_DIM,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  layerTextWrap: {
-    flex: 1,
-  },
-  layerTitle: {
-    fontSize: 16,
-    color: PARCHMENT,
-    marginBottom: 2,
-  },
-  layerDesc: {
-    fontSize: 12,
-    color: "rgba(237, 229, 213, 0.55)",
-    lineHeight: 17,
-  },
-  layerNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "rgba(201, 147, 58, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  layerNum: {
-    fontSize: 13,
-    color: GOLD,
-  },
-  featuresGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  featureItem: {
-    width: "46%",
-    flexGrow: 1,
-    backgroundColor: PARCHMENT_DIM,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(201, 147, 58, 0.12)",
-    gap: 6,
-  },
-  featureIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: GOLD_DIM,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  featureLabel: {
-    fontSize: 14,
-    color: PARCHMENT,
-  },
-  featureSub: {
-    fontSize: 11,
-    color: "rgba(237, 229, 213, 0.5)",
-    lineHeight: 15,
-  },
   startCenter: {
     alignItems: "center",
   },
@@ -601,8 +387,5 @@ const pageStyles = StyleSheet.create({
   startNote: {
     fontSize: 12,
     color: "rgba(237, 229, 213, 0.35)",
-  },
-  bottomPadding: {
-    height: 40,
   },
 });

@@ -16,8 +16,6 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
-import FeatureTutorial from "@/components/FeatureTutorial";
-import { PROFILE_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTutorial } from "@/contexts/TutorialContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
@@ -145,7 +143,6 @@ export default function ProfileScreen() {
 
   return (
     <>
-    <FeatureTutorial tutorialId="profile" steps={PROFILE_TUTORIAL_STEPS} />
     <ScrollView
       style={[st.container, { backgroundColor: theme.background }]}
       contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: bottomPad + 120 }}

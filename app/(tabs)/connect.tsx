@@ -12,8 +12,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import FeatureTutorial from "@/components/FeatureTutorial";
-import { CONNECT_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
 import ListItem from "@/components/ui/ListItem";
 import Badge from "@/components/ui/Badge";
 
@@ -33,7 +31,6 @@ export default function ConnectScreen() {
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
-      <FeatureTutorial tutorialId="connect" steps={CONNECT_TUTORIAL_STEPS} />
       <View style={[st.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
         <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           {t("connect.title")}

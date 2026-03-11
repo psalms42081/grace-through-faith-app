@@ -77,3 +77,11 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 
 ### Navigation Safety
 - `lib/safe-back.ts` exports `safeGoBack(router)` — use it instead of `router.back()` in programmatic navigation (mutation callbacks, timeouts).
+
+### Onboarding/Tutorial Friction Reduction (Completed)
+- **Onboarding slideshow:** Reduced from 4 pages to 2 (Welcome + Get Started). Removed Study Model and Experience pages.
+- **Tutorial system:** Reduced from 9 tutorials (34 cards) to 4 tutorials (4 cards total):
+  - **Kept (1 card each):** home, bible-reader, spiritual-rings, prayer-journal
+  - **Removed entirely:** four-layer-study (6 cards), connect (3), explore (3), profile (3), family-dashboard (4)
+- **First-run experience:** Was 4 onboarding + 8 home cards = 12 overlays before using app. Now 2 onboarding + 2 home cards = 4 total (67% reduction).
+- Tutorial infrastructure (`TutorialContext`, `FeatureTutorial`, profile "Reset Tutorials") preserved for future use.
