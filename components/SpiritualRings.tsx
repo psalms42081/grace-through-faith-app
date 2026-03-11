@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Colors from "@/constants/colors";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { SPIRITUAL_RINGS_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
+import { useTutorial } from "@/contexts/TutorialContext";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -141,6 +142,15 @@ export default function SpiritualRings({
   isDark: boolean;
 }) {
   const { userId } = useAuth();
+  const { hasSeenTutorial, isLoaded: tutorialLoaded } = useTutorial();
+  const [tutorialActivated, setTutorialActivated] = useState(false);
+
+  const handleCardPress = () => {
+    if (tutorialLoaded && !hasSeenTutorial("spiritual-rings") && !tutorialActivated) {
+      setTutorialActivated(true);
+    }
+  };
+
   const { data } = useQuery<SpiritualRingsData>({
     queryKey: [`/api/spiritual-rings?userId=${userId}`],
     staleTime: 30_000,
@@ -163,8 +173,10 @@ export default function SpiritualRings({
 
   return (
     <>
-    <FeatureTutorial tutorialId="spiritual-rings" steps={SPIRITUAL_RINGS_TUTORIAL_STEPS} />
-    <View style={[styles.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+    {tutorialActivated && (
+      <FeatureTutorial tutorialId="spiritual-rings" steps={SPIRITUAL_RINGS_TUTORIAL_STEPS} />
+    )}
+    <Pressable onPress={handleCardPress} style={[styles.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Daily Formation
@@ -233,7 +245,7 @@ export default function SpiritualRings({
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
     </>
   );
 }

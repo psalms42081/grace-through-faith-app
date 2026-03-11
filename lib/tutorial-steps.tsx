@@ -33,16 +33,6 @@ const composedStyles = StyleSheet.create({
   },
 });
 
-export const HOME_TUTORIAL_STEPS: TutorialStep[] = [
-  {
-    illustration: <IconBadge name="home" size={46} />,
-    label: "WELCOME",
-    title: "Your Spiritual\nDashboard",
-    description:
-      "Your daily home base. Find today's verse, track your streak, jump into study tools, and explore every feature from here.",
-  },
-];
-
 export const BIBLE_READER_STEPS: TutorialStep[] = [
   {
     illustration: <IconBadge name="book" size={46} />,

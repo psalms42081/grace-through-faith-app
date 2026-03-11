@@ -32,9 +32,6 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath } from "@/lib/sabbath";
-import FeatureTutorial from "@/components/FeatureTutorial";
-import { HOME_TUTORIAL_STEPS } from "@/lib/tutorial-steps";
-import { useTutorial } from "@/contexts/TutorialContext";
 import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
@@ -878,9 +875,7 @@ function AdultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
-  const { hasSeenTutorial, isLoaded: tutorialLoaded } = useTutorial();
-  const homeTourDone = tutorialLoaded && hasSeenTutorial("home");
-  const sabbath = useSabbath(homeTourDone);
+  const sabbath = useSabbath();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -991,7 +986,6 @@ function AdultHomeScreen() {
 
   return (
     <>
-    <FeatureTutorial tutorialId="home" steps={HOME_TUTORIAL_STEPS} />
     <ScrollView
       style={[s.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[

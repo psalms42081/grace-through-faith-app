@@ -80,8 +80,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 
 ### Onboarding/Tutorial Friction Reduction (Completed)
 - **Onboarding slideshow:** Reduced from 4 pages to 2 (Welcome + Get Started). Removed Study Model and Experience pages.
-- **Tutorial system:** Reduced from 9 tutorials (34 cards) to 4 tutorials (4 cards total):
-  - **Kept (1 card each):** home, bible-reader, spiritual-rings, prayer-journal
-  - **Removed entirely:** four-layer-study (6 cards), connect (3), explore (3), profile (3), family-dashboard (4)
-- **First-run experience:** Was 4 onboarding + 8 home cards = 12 overlays before using app. Now 2 onboarding + 2 home cards = 4 total (67% reduction).
+- **Tutorial system:** Reduced from 9 tutorials (34 cards) to 3 contextual tutorials (1 card each):
+  - **Kept (contextual, 1 card each):** bible-reader (on first Read tab visit), spiritual-rings (on first tap of rings card), prayer-journal (on first prayer journal visit)
+  - **Removed entirely:** home (1), four-layer-study (6), connect (3), explore (3), profile (3), family-dashboard (4)
+- **First-run experience:** Zero automatic interruptions after onboarding. User goes from 2-page onboarding straight to a fully usable home screen.
 - Tutorial infrastructure (`TutorialContext`, `FeatureTutorial`, profile "Reset Tutorials") preserved for future use.
