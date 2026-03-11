@@ -614,6 +614,14 @@ export default function CinematicScene({
 
   const choreography = CAMERA_CHOREOGRAPHY[sceneIndex % CAMERA_CHOREOGRAPHY.length];
 
+  const wasSpeakingRef = useRef(false);
+  useEffect(() => {
+    if (sceneIndex === 5 && isActive && wasSpeakingRef.current && !isSpeaking) {
+      setTimeout(() => playSound("cheer"), 300);
+    }
+    wasSpeakingRef.current = isSpeaking;
+  }, [isSpeaking, isActive, sceneIndex]);
+
   useEffect(() => {
     if (isActive) {
       cameraProgress.value = 0;
@@ -621,10 +629,6 @@ export default function CinematicScene({
         withTiming(1, { duration: choreography.duration, easing: Easing.inOut(Easing.ease) }),
         -1, true
       );
-
-      if (sceneIndex === 5) {
-        setTimeout(() => playSound("cheer"), 1000);
-      }
     } else {
       cameraProgress.value = withTiming(0, { duration: 500 });
     }
