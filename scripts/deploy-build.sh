@@ -56,9 +56,6 @@ npx tsx scripts/seed-global-churches.ts || true
 echo "=== Deduplicating devotional days ==="
 npx tsx scripts/dedup-devotional-days.ts
 
-echo "=== Deduplicating kids content ==="
-npx tsx scripts/dedup-kids-content.ts
-
 echo "=== Seeding CRITICAL content (failures block deploy) ==="
 
 echo "Seeding kids content..."
@@ -68,6 +65,9 @@ echo "Kids content seed: OK"
 echo "Seeding David flagship story..."
 npx tsx scripts/seed-david-flagship.ts
 echo "David flagship seed: OK"
+
+echo "=== Deduplicating kids content (post-seed) ==="
+npx tsx scripts/dedup-kids-content.ts
 
 echo "=== Verifying flagship story ==="
 npx tsx scripts/verify-flagship.ts
