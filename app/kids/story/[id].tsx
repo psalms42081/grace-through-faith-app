@@ -2603,41 +2603,41 @@ export default function SceneStoryScreen() {
         </View>
       )}
 
-      <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
-        {storyComplete && currentScene === scenes.length - 1 ? (
-          <Animated.View entering={FadeInUp.delay(600).springify()}>
+      {currentScene === scenes.length - 1 ? (
+        <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
+          {storyComplete ? (
+            <Animated.View entering={FadeInUp.delay(600).springify()}>
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.backToStoriesBtn}
+                testID="back-to-stories"
+              >
+                <Ionicons name="arrow-back" size={18} color="#fff" />
+                <Text style={[styles.backToStoriesBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Back to Stories
+                </Text>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+        </View>
+      ) : (
+        <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
+          <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
+          <View style={styles.cleanControlRow}>
             <Pressable
-              onPress={() => router.back()}
-              style={styles.backToStoriesBtn}
-              testID="back-to-stories"
+              onPress={handleReadToMe}
+              style={[styles.cleanPlayBtn, { backgroundColor: isSpeaking ? "rgba(255,107,53,0.2)" : "rgba(255,255,255,0.12)" }]}
+              testID="read-to-me"
             >
-              <Ionicons name="arrow-back" size={18} color="rgba(255,255,255,0.9)" />
-              <Text style={[styles.backToStoriesBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                Back to Stories
-              </Text>
+              <Ionicons
+                name={isSpeaking ? "pause" : "play"}
+                size={22}
+                color={isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.85)"}
+              />
             </Pressable>
-          </Animated.View>
-        ) : (
-          <>
-            <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
-            {!(currentScene === scenes.length - 1 && !storyComplete) && (
-              <View style={styles.cleanControlRow}>
-                <Pressable
-                  onPress={handleReadToMe}
-                  style={[styles.cleanPlayBtn, { backgroundColor: isSpeaking ? "rgba(255,107,53,0.2)" : "rgba(255,255,255,0.12)" }]}
-                  testID="read-to-me"
-                >
-                  <Ionicons
-                    name={isSpeaking ? "pause" : "play"}
-                    size={22}
-                    color={isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.85)"}
-                  />
-                </Pressable>
-              </View>
-            )}
-          </>
-        )}
-      </View>
+          </View>
+        </View>
+      )}
 
       {currentScene > 0 && (
         <Pressable
@@ -2866,7 +2866,7 @@ const styles = StyleSheet.create({
   },
   livingSceneCompleteWrap: {
     position: "absolute",
-    bottom: 60,
+    bottom: 40,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -2924,15 +2924,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 28,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    marginTop: 8,
+    borderRadius: 28,
+    backgroundColor: "#F5A623",
   },
   backToStoriesBtnText: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 15,
+    color: "#fff",
+    fontSize: 16,
   },
   cleanCloseBtn: {
     width: 36,
