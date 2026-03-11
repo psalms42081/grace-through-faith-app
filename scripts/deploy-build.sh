@@ -66,6 +66,10 @@ echo "Seeding David flagship story..."
 npx tsx scripts/seed-david-flagship.ts
 echo "David flagship seed: OK"
 
+echo "Seeding remaining flagship stories..."
+npx tsx scripts/seed-flagship-stories.ts
+echo "Flagship stories seed: OK"
+
 echo "=== Deduplicating kids content (post-seed) ==="
 npx tsx scripts/dedup-kids-content.ts
 

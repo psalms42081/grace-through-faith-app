@@ -172,6 +172,93 @@ async function verify() {
     }
   }
 
+  console.log("\n--- Verifying additional flagship stories ---");
+  const flagshipStories = [
+    { title: "Noah Trusts God", prefix: "noah", verse: "Noah did everything just as God commanded him." },
+    { title: "Daniel and the Lions", prefix: "daniel", verse: "My God sent His angel and shut the lions' mouths." },
+    { title: "Miriam Watches Over Baby Moses", prefix: "miriam", verse: "The Lord is my helper; I will not be afraid." },
+    { title: "Esther the Brave Queen", prefix: "esther", verse: "Who knows? Maybe you were made queen for such a time as this." },
+  ];
+
+  for (const fs2 of flagshipStories) {
+    console.log(`\n  --- ${fs2.title} ---`);
+    const [s] = await db
+      .select()
+      .from(kidsStories)
+      .where(eq(kidsStories.title, fs2.title))
+      .limit(1);
+
+    if (!s) {
+      console.error(`[FAIL] Story '${fs2.title}' not found`);
+      failures++;
+      continue;
+    }
+
+    if (s.imageUrl !== `/assets/kids-scenes/${fs2.prefix}-scene-0.png`) {
+      console.error(`[FAIL] ${fs2.title} imageUrl: got '${s.imageUrl}'`);
+      failures++;
+    } else {
+      console.log(`  [PASS] imageUrl correct`);
+    }
+
+    if (s.memoryVerse !== fs2.verse) {
+      console.error(`[FAIL] ${fs2.title} memoryVerse mismatch`);
+      failures++;
+    } else {
+      console.log(`  [PASS] memoryVerse correct`);
+    }
+
+    if (!s.prayerPrompt || !s.thinkQuestions || !s.activitySuggestion) {
+      console.error(`[FAIL] ${fs2.title} missing metadata (prayer/think/activity)`);
+      failures++;
+    } else {
+      console.log(`  [PASS] metadata complete`);
+    }
+
+    const fScenes = await db
+      .select()
+      .from(kidsStoryScenes)
+      .where(eq(kidsStoryScenes.storyId, s.id))
+      .orderBy(kidsStoryScenes.sceneIndex);
+
+    if (fScenes.length !== 6) {
+      console.error(`[FAIL] ${fs2.title} scene count: expected 6, got ${fScenes.length}`);
+      failures++;
+    } else {
+      console.log(`  [PASS] scene count: 6`);
+    }
+
+    const fExpectedInteractions = [
+      "tap_wiggle", "tap_compare", "tap_glow", "tap_collect", "drag_release", "tap_cheer",
+    ];
+    for (let i = 0; i < Math.min(fScenes.length, 6); i++) {
+      const sc = fScenes[i];
+      if (sc.interactionType !== fExpectedInteractions[i]) {
+        console.error(`[FAIL] ${fs2.title} scene ${i}: expected '${fExpectedInteractions[i]}', got '${sc.interactionType}'`);
+        failures++;
+      }
+      const cfg = sc.interactionConfig as any;
+      if (!cfg?.isLivingScene || !cfg?.cinematicConfig) {
+        console.error(`[FAIL] ${fs2.title} scene ${i}: missing isLivingScene or cinematicConfig`);
+        failures++;
+      }
+      if (!sc.imageUrl?.includes(`${fs2.prefix}-scene-${i}`)) {
+        console.error(`[FAIL] ${fs2.title} scene ${i}: imageUrl doesn't contain '${fs2.prefix}-scene-${i}'`);
+        failures++;
+      }
+    }
+
+    const assetDir = path.resolve(process.cwd(), "assets", "kids-scenes");
+    for (let i = 0; i < 6; i++) {
+      const assetPath = path.join(assetDir, `${fs2.prefix}-scene-${i}.png`);
+      if (!fs.existsSync(assetPath)) {
+        console.error(`[FAIL] Asset missing: ${fs2.prefix}-scene-${i}.png`);
+        failures++;
+      }
+    }
+    console.log(`  [PASS] all 6 scene assets exist`);
+  }
+
   if (failures === 0) {
     console.log("\n[verify-flagship] ALL CHECKS PASSED");
   } else {

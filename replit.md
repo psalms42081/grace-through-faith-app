@@ -73,7 +73,7 @@ The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
 3. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
 4. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
 5. **Devotional day dedup** (`scripts/dedup-devotional-days.ts`) — removes duplicate `(plan_id, day_number)` rows
-6. **Critical seeds** (kids-content, david-flagship) — failures **block deploy**
+6. **Critical seeds** (kids-content, david-flagship, flagship-stories) — failures **block deploy**
 7. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata, checksums, sling coords
 8. **Admin promotion** (`scripts/promote-admins.ts`) — promotes designated emails to admin role, fails loudly if DB connection fails
 9. **Post-seed verification** (`scripts/verify-production.ts`) — checks admin roles, David scene URLs, critical table counts, asset files — failures **block deploy**
@@ -82,7 +82,8 @@ The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
 
 Key scripts:
 - `scripts/seed-david-flagship.ts` — Idempotent: looks up story by title, deletes old scenes, inserts 6 cinematic scenes with `interactionConfig.isLivingScene` and `cinematicConfig`, self-verifies
-- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence, MD5 checksums
+- `scripts/seed-flagship-stories.ts` — Replicates David flagship pattern for Noah, Daniel, Miriam, Esther: 6 cinematic scenes each with full interactionConfig, cinematicConfig, soundEffects, and metadata (memoryVerse, prayerPrompt, thinkQuestions, activitySuggestion). Fail-fast if any story missing.
+- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence, MD5 checksums for David + metadata/scene/asset verification for Noah, Daniel, Miriam, Esther
 - `scripts/dedup-devotional-days.ts` — Removes duplicate devotional days, remaps user progress, conflict-safe
 - `scripts/seed-i18n-content.ts` — OpenAI-powered formation content translation (5 languages), idempotent per module/language
 - `scripts/ensure-tables.ts` — SQL fallback for critical tables (resources, user_feedback)
