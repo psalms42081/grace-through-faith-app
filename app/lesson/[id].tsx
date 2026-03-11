@@ -1259,7 +1259,7 @@ export default function LessonScreen() {
                 if (trackCompletionData) {
                   setShowTrackCompletion(true);
                 } else {
-                  router.back();
+                  safeGoBack(router);
                 }
               }}
               style={({ pressed }) => [
@@ -1338,7 +1338,7 @@ export default function LessonScreen() {
             <Pressable
               onPress={() => {
                 setShowTrackCompletion(false);
-                router.back();
+                safeGoBack(router);
               }}
               style={({ pressed }) => [
                 tcStyles.doneBtn,

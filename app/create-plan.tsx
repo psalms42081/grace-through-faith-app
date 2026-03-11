@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { router, Stack } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { apiRequest, queryClient } from "@/lib/query-client";
@@ -99,7 +100,7 @@ export default function CreatePlanScreen() {
         planId: result.plan.id,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
-      router.back();
+      safeGoBack(router);
       setTimeout(() => {
         router.push(`/devotional-day?planId=${result.plan.id}`);
       }, 300);

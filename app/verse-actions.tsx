@@ -122,7 +122,7 @@ export default function VerseActionsSheet() {
       setTimeout(() => safeGoBack(router), 600);
     } catch (err) {
       console.error("Highlight failed:", err);
-      setFeedbackMsg("Failed to highlight");
+      setFeedbackMsg(userId ? "Failed to highlight" : "Sign in to highlight");
       setTimeout(() => setFeedbackMsg(null), 1500);
     }
   }, [userId, canonicalVerseId]);
@@ -144,7 +144,7 @@ export default function VerseActionsSheet() {
       setTimeout(() => safeGoBack(router), 600);
     } catch (err) {
       console.error("Bookmark failed:", err);
-      setFeedbackMsg("Failed to bookmark");
+      setFeedbackMsg(userId ? "Failed to bookmark" : "Sign in to bookmark");
       setTimeout(() => setFeedbackMsg(null), 1500);
     }
   }, [userId, canonicalVerseId, reference]);
