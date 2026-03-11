@@ -13,17 +13,16 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Color Scheme:** A deep dark mode (`#050507`) with a warm gold accent (`#C9933A`), distinct palettes for Kids Mode, and a specific Sabbath theme.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
-- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer. Age groups: Little Lambs, Young Disciples, Teens (internally `young_disciples_plus`). All kids progress/badge/streak routes use auth-derived identity (no userId in URL paths). AI generation endpoints are rate-limited. childProfileId ownership is validated server-side before points/parent-bridge writes. Flagship interactive stories support per-scene interactions (`interactionType`, `interactionConfig`, `soundEffects` columns on `kids_story_scene`) via `SceneInteraction` component and a post-story learning loop (`StoryCompletionFlow`: memory verse tap → prayer → reward). David and the Giant is the template flagship story with 6 interaction types (tap_wiggle, tap_compare, tap_glow, tap_collect, drag_release, tap_cheer). Flagship stories use two presentation modes based on age group: **Cinematic Mode** (Little Lambs, `components/kids/CinematicScene.tsx`) and **Interactive Mode** (older groups, `components/kids/LivingScene.tsx`). Both use contain-fit layout on a warm dark page background (#0B0910) with 1536x1024 (3:2) images at full screen width. **Cinematic Mode** (Little Lambs): Art-first animated storybook — no hotspots or tap targets. Each scene has choreographed camera movement (enhanced Ken Burns with per-scene direction/speed), scene-specific animation overlays (floating particles, glows, water shimmers, auto-animated sling stone flight, celebration bursts), and reveal text. Effects are data-driven via `cinematicConfig` in interactionConfig (stored in DB), with fallback defaults in `DAVID_SCENE_DEFAULTS`. The child watches, listens to narration, and taps "next" — the art is the hero. Bottom controls are minimal: a tiny close button (left), progress dots (center), and two small icon buttons — replay narration and auto-play (right). No voice picker pill, no story title, no background bar. Older age groups keep the full bottom bar with voice picker ("George"), auto-play toggle, and read-to-me button. **Interactive Mode** (older groups): Hotspot-based interactions with SoftHotspot, sequential reveal, calibrated coordinates. **Calibration Mode**: A dev-only tool (`CALIBRATION_MODE = __DEV__ && false`) renders draggable crosshairs for pixel-precise hotspot positioning. Scene routing: when `interactionConfig.isLivingScene === true`, the story viewer renders `LivingScene` instead of the old card+SceneInteraction layout. Static illustration assets are in `public/kids/david-goliath/scene-N-*.png`. Hotspots: `SoftHotspot` component with gentle glow pulse (scale 1→1.15, 1200ms), opacity 0.25→0.7, inner dot 40% of container, no ring reticle — designed to feel like soft storybook sparkles anchored to characters/objects. Sequential reveal: `config.sequential: true` shows one hotspot at a time (next appears only after child taps current). Instruction text: 19px Inter_600SemiBold, dark pill at 15% scene height, 6-second visibility. Sound feedback: `playSound()` via `expo-audio` `createAudioPlayer` with per-sound duration cleanup (pop/chime/whoosh/thud/cheer/collect/fanfare from Pixabay CDN). Memory verse step: next-word golden glow (shadowColor #FFD700, scale 1.1, bold border), hand-icon hint, "N of M words" progress counter. Image loading gate: `imageLoaded` state defers interaction layer until illustration `onLoad` fires.
+- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer. It supports two presentation modes based on age group: **Cinematic Mode** (art-first animated storybook) and **Interactive Mode** (hotspot-based interactions). All kids progress/badge/streak routes use auth-derived identity, with server-side validation for data ownership.
 
 **Technical Implementations & Feature Specifications:**
 - **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels.
 - **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation, including a Socratic AI Study Guide and Dynamic AI Reading Plans.
-- **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech` device voices for offline use.
+- **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech` device voices.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
-- **User Features:** Includes notes, highlights, bookmarks, a prayer journal, reading history, and a unified "Saved" screen (previously "My Library").
+- **User Features:** Includes notes, highlights, bookmarks, a prayer journal, reading history, and a unified "Saved" screen.
 - **Semantic Search:** AI-powered natural language Bible search.
-- **Formation System:** A curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle.
-- **Sabbath Experience Mode:** Time-phased Sabbath environment with four distinct phases.
+- **Formation System:** A curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle with four distinct phases.
 - **Church Connect:** A global SDA church finder.
 - **Spiritual Rings:** Apple Watch-style concentric SVG rings on the home screen tracking daily spiritual disciplines.
 - **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next`.
@@ -39,11 +38,9 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
 - **28 Fundamental Beliefs UX:** Belief cards with animated chevrons, scripture navigation, and authority hierarchy.
 - **Great Controversy Timeline Engine:** An immersive vertical timeline tracing the cosmic conflict.
-- **Content Engine & Study Resources:** A two-stage content pipeline (Source Packets and Generation) with a review workflow for AI-generated companions. Includes version-safe regeneration, rollback capabilities, and an Admin Pipeline API for content management. Public-facing label is "Study Resources" (in Study tab). Personal saved content is "Saved" (in You tab). All resources are currently fully accessible (no supporter gating). The tier field is preserved in the schema for future use but does not restrict access.
+- **Content Engine & Study Resources:** A two-stage content pipeline (Source Packets and Generation) with a review workflow for AI-generated companions. Includes version-safe regeneration, rollback capabilities, and an Admin Pipeline API for content management.
 - **Role System:** Supports "user," "editor," and "admin" roles with role-gated middleware for secure access.
-- **Admin Review UI:** Internal content management screen for editors and admins. Review tab features queue presets ("Pending Review", "Needs Attention", "Regenerated Drafts", "Source Changed", "Has Notes") for one-tap filter combinations, smart filter chips (review status, regenerated toggle, has notes toggle, prompt version), sorting (Created/Updated/Title with asc/desc), priority badges (Regenerated amber, Source Changed blue), regenerated card accent, rollback button for published items with predecessors. Review history feed shows chronological timeline of all review actions (approve/reject/revision/rollback) with author attribution, status transitions, and notes. Overview tab with pipeline stats, quarter tab with batch generation.
-- **Review Notes History:** `resource_review_notes` table tracks every review action with `action`, `statusFrom`/`statusTo`, `notes`, `createdBy`, `isSystem` flag. Entries created on review actions (human) and rollback/archive events (system). History endpoint at `GET /api/admin/pipeline/resource/:id/review-history` returns enriched entries with author info. PreviewModal displays chronological feed with color-coded action badges and status transitions.
-- **Preset Counts/Badges:** The overview endpoint returns `presetCounts` object with counts for each queue preset (pendingReview, needsAttention, regenerated, sourceChanged, hasNotes). Counts are computed via SQL FILTER clauses for simple predicates; sourceChanged count uses batch hash comparison. Preset chips display count badges (pill-shaped, white text on matching preset color).
+- **Admin Review UI:** Internal content management screen for editors and admins with queue presets, smart filter chips, sorting, priority badges, and a review history feed.
 
 ## External Dependencies
 
@@ -63,33 +60,3 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **react-native-webview:** Loads LiveKit room HTML on native.
 - **react-native-maps@1.18.0:** Interactive maps on native platforms.
 - **OpenStreetMap:** Embedded tile maps on the web platform.
-
-## Deployment Pipeline
-
-The deploy build script (`scripts/deploy-build.sh`) runs these stages in order:
-
-1. **Server build** (`npm run server:build` via esbuild)
-2. **Schema reconciliation** (`scripts/reconcile-constraints.ts`) — converts indexes to constraints, renames `_key` → `_unique`
-3. **Schema push** (`drizzle-kit push --force`, fallback to `scripts/ensure-tables.ts`)
-4. **Non-critical seeds** (verses, context, devotionals, timeline, locations, strongs, startup-data, churches) — failures tolerated with `|| true`
-5. **Devotional day dedup** (`scripts/dedup-devotional-days.ts`) — removes duplicate `(plan_id, day_number)` rows
-6. **Critical seeds** (kids-content, david-flagship, flagship-stories) — failures **block deploy**
-7. **Flagship verification** (`scripts/verify-flagship.ts`) — confirms 6 cinematic scenes with correct metadata, checksums, sling coords
-8. **Admin promotion** (`scripts/promote-admins.ts`) — promotes designated emails to admin role, fails loudly if DB connection fails
-9. **Post-seed verification** (`scripts/verify-production.ts`) — checks admin roles, David scene URLs, critical table counts, asset files — failures **block deploy**
-10. **Security regression gate** (41 tests via temp server on port 5099, `export DEPLOY_TEST_PORT`)
-11. **Expo static build** (`npm run expo:static:build`)
-
-Key scripts:
-- `scripts/seed-david-flagship.ts` — Idempotent: looks up story by title, deletes old scenes, inserts 6 cinematic scenes with `interactionConfig.isLivingScene` and `cinematicConfig`, self-verifies
-- `scripts/seed-flagship-stories.ts` — Replicates David flagship pattern for Noah, Daniel, Miriam, Esther: 6 cinematic scenes each with full interactionConfig, cinematicConfig, soundEffects, and metadata (memoryVerse, prayerPrompt, thinkQuestions, activitySuggestion). Fail-fast if any story missing.
-- `scripts/verify-flagship.ts` — Post-seed gate: checks scene count, imageUrls, interactionTypes, cinematicConfig presence, MD5 checksums for David + metadata/scene/asset verification for Noah, Daniel, Miriam, Esther
-- `scripts/dedup-devotional-days.ts` — Removes duplicate devotional days, remaps user progress, conflict-safe
-- `scripts/seed-i18n-content.ts` — OpenAI-powered formation content translation (5 languages), idempotent per module/language
-- `scripts/ensure-tables.ts` — SQL fallback for critical tables (resources, user_feedback)
-- `scripts/promote-admins.ts` — Promotes designated emails to admin role with explicit pass/fail logging
-- `scripts/verify-production.ts` — Post-deploy verification: admin roles, scene URLs, critical tables, asset files
-- `scripts/reconcile-constraints.ts` — Converts unique indexes to constraints, renames `_key` → `_unique` suffixes
-- All devotional seed scripts (`seed-devotionals.ts`, `seed-sda-devotionals.ts`, `seed-more-devotionals.ts`, `server/seed-plans.ts`) are idempotent — skip plans that already exist
-
-Production runtime: `PORT=8081 NODE_ENV=production node server_dist/index.js` (port 8081 maps to external port 80 via `.replit` port forwarding)

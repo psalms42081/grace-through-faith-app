@@ -485,7 +485,7 @@ const DAVID_SCENE_DEFAULTS: Record<number, CinematicConfig> = {
   5: {
     effects: [{ type: "celebration" }],
     revealText: "You can trust God too!",
-    revealColor: "#FFD700",
+    revealColor: "#F5C451",
     revealDelay: 1000,
   },
 };
@@ -564,9 +564,11 @@ function SceneAnimationLayer({ sceneIndex, imageFrame, isActive, config }: {
       {slingDone && cinematic.revealText && (
         <Animated.View
           entering={FadeIn.delay(200).duration(500)}
-          style={[cs.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.12, alignSelf: "center" }]}
+          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height - 32 }]}
         >
-          <Text style={[cs.revealText, { fontSize: 20, color: cinematic.revealColor || "#fff" }]}>
+          <Text style={cs.revealStar}>&#9733;</Text>
+          <Text style={[cs.revealLabel, { color: cinematic.revealColor || "#F5C451" }]}>Lesson</Text>
+          <Text style={[cs.revealText, { fontSize: 19, color: cinematic.revealColor || "#F5C451" }]}>
             {cinematic.revealText}
           </Text>
         </Animated.View>
@@ -575,9 +577,11 @@ function SceneAnimationLayer({ sceneIndex, imageFrame, isActive, config }: {
       {!effects.some(e => e.type === "sling") && cinematic.revealText && (
         <Animated.View
           entering={FadeIn.delay(cinematic.revealDelay || 1000).duration(800)}
-          style={[cs.revealBadge, { top: imageFrame.offsetY + imageFrame.height * 0.08, alignSelf: "center" }]}
+          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height - 32 }]}
         >
-          <Text style={[cs.revealText, { color: cinematic.revealColor || "#fff", fontSize: 20 }]}>
+          <Text style={cs.revealStar}>&#9733;</Text>
+          <Text style={[cs.revealLabel, { color: cinematic.revealColor || "#F5C451" }]}>Lesson</Text>
+          <Text style={[cs.revealText, { fontSize: 19, color: cinematic.revealColor || "#F5C451" }]}>
             {cinematic.revealText}
           </Text>
         </Animated.View>
@@ -687,7 +691,7 @@ export default function CinematicScene({
                 <Text
                   key={i}
                   style={{
-                    color: i === currentWordIndex ? "#FFD700" : "rgba(255,255,255,0.92)",
+                    color: i === currentWordIndex ? "#F5C451" : "rgba(255,255,255,0.92)",
                     fontFamily: i === currentWordIndex ? "Lora_700Bold" : "Lora_400Regular",
                   }}
                 >
@@ -741,19 +745,28 @@ const cs = StyleSheet.create({
     textAlign: "center",
     fontFamily: "Lora_400Regular",
   },
-  revealBadge: {
+  revealCaption: {
     position: "absolute",
-    backgroundColor: "rgba(0,0,0,0.82)",
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginHorizontal: 32,
+    left: 24,
+    right: 24,
+    alignItems: "center",
     zIndex: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.25)",
+  },
+  revealStar: {
+    color: "#F5C451",
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  revealLabel: {
+    color: "#F5C451",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 2,
   },
   revealText: {
-    color: "#fff",
+    color: "#F5C451",
     fontSize: 18,
     fontFamily: "Lora_700Bold",
     textAlign: "center",

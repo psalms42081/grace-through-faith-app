@@ -194,7 +194,7 @@ async function seedDavidFlagship() {
         cinematicConfig: {
           effects: [{ type: "celebration" }],
           revealText: "You can trust God too!",
-          revealColor: "#FFD700",
+          revealColor: "#F5C451",
           revealDelay: 1000,
         },
       },

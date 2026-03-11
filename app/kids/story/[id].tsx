@@ -437,7 +437,7 @@ function WordHighlightText({
               fontFamily: "Lora_400Regular",
               fontSize: isActive ? fontSize + 2 : fontSize,
               color: isActive
-                ? "#FFD700"
+                ? "#F5C451"
                 : isInCurrentSentence
                 ? "rgba(255,255,255,0.95)"
                 : isInPastSentence
@@ -447,7 +447,7 @@ function WordHighlightText({
                 : "rgba(255,255,255,0.9)",
               fontWeight: isActive ? ("700" as const) : ("400" as const),
               backgroundColor: isActive
-                ? "rgba(255,215,0,0.15)"
+                ? "rgba(245,196,81,0.15)"
                 : "transparent",
               borderRadius: isActive ? 4 : 0,
             }}
@@ -1328,7 +1328,7 @@ function VideoStoryPlayer({
                     fontSize,
                     lineHeight: fontSize * 1.7,
                     color: isCurrentSegment
-                      ? "#FFD700"
+                      ? "#F5C451"
                       : isPastSegment
                       ? "rgba(255,255,255,0.55)"
                       : isPlaying
@@ -1619,6 +1619,7 @@ const dotStyles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingVertical: 12,
+    marginTop: 8,
   },
   dot: {
     height: 8,
@@ -2343,6 +2344,11 @@ export default function SceneStoryScreen() {
                     <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
                   ))}
                 </View>
+                <Animated.View entering={FadeInUp.delay(200).springify()}>
+                  <Text style={[styles.completeCelebration, { fontFamily: "Inter_600SemiBold" }]}>
+                    Great job! You finished the story!
+                  </Text>
+                </Animated.View>
                 <Text style={[styles.completeTitle, { fontFamily: "Lora_700Bold" }]}>
                   Story Complete!
                 </Text>
@@ -2468,6 +2474,11 @@ export default function SceneStoryScreen() {
                     <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
                   ))}
                 </View>
+                <Animated.View entering={FadeInUp.delay(200).springify()}>
+                  <Text style={[styles.completeCelebration, { fontFamily: "Inter_600SemiBold" }]}>
+                    Great job! You finished the story!
+                  </Text>
+                </Animated.View>
                 <Text style={[styles.completeTitle, { fontFamily: "Lora_700Bold" }]}>
                   Story Complete!
                 </Text>
@@ -2864,6 +2875,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 26,
   },
+  completeCelebration: {
+    color: "#F5C451",
+    fontSize: 16,
+    textAlign: "center" as const,
+    marginBottom: 4,
+  },
   completeSubtitle: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 15,
@@ -2985,20 +3002,21 @@ const styles = StyleSheet.create({
   },
   navArrow: {
     position: "absolute",
-    top: "50%",
+    top: "35%",
     marginTop: -24,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 30,
   },
   navLeft: {
-    left: 4,
+    left: 2,
   },
   navRight: {
-    right: 4,
+    right: 2,
   },
   voicePickerBtn: {
     flexDirection: "row" as const,

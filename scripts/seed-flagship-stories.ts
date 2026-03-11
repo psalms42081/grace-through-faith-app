@@ -161,7 +161,7 @@ const FLAGSHIP_STORIES: StoryFlagshipData[] = [
           cinematicConfig: {
             effects: [{ type: "celebration" }],
             revealText: "God always keeps His promises!",
-            revealColor: "#FFD700",
+            revealColor: "#F5C451",
             revealDelay: 1000,
           },
         },
@@ -310,7 +310,7 @@ const FLAGSHIP_STORIES: StoryFlagshipData[] = [
           cinematicConfig: {
             effects: [{ type: "celebration" }],
             revealText: "You can always pray to God!",
-            revealColor: "#FFD700",
+            revealColor: "#F5C451",
             revealDelay: 1000,
           },
         },
@@ -456,7 +456,7 @@ const FLAGSHIP_STORIES: StoryFlagshipData[] = [
           cinematicConfig: {
             effects: [{ type: "celebration" }],
             revealText: "God uses brave kids like you!",
-            revealColor: "#FFD700",
+            revealColor: "#F5C451",
             revealDelay: 1000,
           },
         },
@@ -602,7 +602,7 @@ const FLAGSHIP_STORIES: StoryFlagshipData[] = [
           cinematicConfig: {
             effects: [{ type: "celebration" }],
             revealText: "God has a plan for you too!",
-            revealColor: "#FFD700",
+            revealColor: "#F5C451",
             revealDelay: 1000,
           },
         },
