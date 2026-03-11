@@ -564,11 +564,9 @@ function SceneAnimationLayer({ sceneIndex, imageFrame, isActive, config }: {
       {slingDone && cinematic.revealText && (
         <Animated.View
           entering={FadeIn.delay(200).duration(500)}
-          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height - 32 }]}
+          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height * 0.72 }]}
         >
-          <Text style={cs.revealStar}>&#9733;</Text>
-          <Text style={[cs.revealLabel, { color: cinematic.revealColor || "#F5C451" }]}>Lesson</Text>
-          <Text style={[cs.revealText, { fontSize: 19, color: cinematic.revealColor || "#F5C451" }]}>
+          <Text style={[cs.revealText, { fontSize: 17, color: cinematic.revealColor || "#F5C451" }]}>
             {cinematic.revealText}
           </Text>
         </Animated.View>
@@ -577,11 +575,9 @@ function SceneAnimationLayer({ sceneIndex, imageFrame, isActive, config }: {
       {!effects.some(e => e.type === "sling") && cinematic.revealText && (
         <Animated.View
           entering={FadeIn.delay(cinematic.revealDelay || 1000).duration(800)}
-          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height - 32 }]}
+          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height * 0.72 }]}
         >
-          <Text style={cs.revealStar}>&#9733;</Text>
-          <Text style={[cs.revealLabel, { color: cinematic.revealColor || "#F5C451" }]}>Lesson</Text>
-          <Text style={[cs.revealText, { fontSize: 19, color: cinematic.revealColor || "#F5C451" }]}>
+          <Text style={[cs.revealText, { fontSize: 17, color: cinematic.revealColor || "#F5C451" }]}>
             {cinematic.revealText}
           </Text>
         </Animated.View>
@@ -747,23 +743,14 @@ const cs = StyleSheet.create({
   },
   revealCaption: {
     position: "absolute",
-    left: 24,
-    right: 24,
+    left: 32,
+    right: 32,
     alignItems: "center",
     zIndex: 20,
-  },
-  revealStar: {
-    color: "#F5C451",
-    fontSize: 20,
-    marginBottom: 2,
-  },
-  revealLabel: {
-    color: "#F5C451",
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
-    marginBottom: 2,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   revealText: {
     color: "#F5C451",
