@@ -1036,11 +1036,14 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
   }, [isVisible, sceneId]);
 
   if (imageUrl && !imageLoadError) {
+    const ExpoImage = require("expo-image").Image;
     return (
-      <Image
-        source={{ uri: imageUrl }}
+      <ExpoImage
+        source={imageUrl}
         style={illustrationStyles.image}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="disk"
+        transition={200}
         onError={() => setImageLoadError(true)}
       />
     );
@@ -1895,12 +1898,22 @@ export default function SceneStoryScreen() {
       setScenes(data);
 
       const base = getApiUrl();
-      data.forEach((scene: StoryScene) => {
-        if (scene.imageUrl) {
-          const uri = scene.imageUrl.startsWith("http") ? scene.imageUrl : `${base}${scene.imageUrl}`;
-          Image.prefetch(uri).catch(() => {});
-        }
-      });
+      const { prefetch } = require("expo-image").Image;
+      const sceneUris = data
+        .map((scene: StoryScene) =>
+          scene.imageUrl
+            ? scene.imageUrl.startsWith("http") ? scene.imageUrl : `${base}${scene.imageUrl}`
+            : null
+        )
+        .filter(Boolean) as string[];
+
+      sceneUris.slice(0, 2).forEach((uri) => prefetch(uri).catch(() => {}));
+
+      if (sceneUris.length > 2) {
+        setTimeout(() => {
+          sceneUris.slice(2).forEach((uri) => prefetch(uri).catch(() => {}));
+        }, 3000);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load story");
     } finally {

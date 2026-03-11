@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import {
   View,
   Text,
-  Image,
   Pressable,
   StyleSheet,
   Dimensions,
   Platform,
   PanResponder,
 } from "react-native";
+import { Image } from "expo-image";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -884,9 +884,12 @@ export default function LivingScene({
             />
           ) : (
             <Image
-              source={{ uri: imageUrl }}
+              source={imageUrl}
               style={ls.containedImage}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="disk"
+              recyclingKey={imageUrl}
+              transition={200}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
             />

@@ -188,6 +188,12 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
+  app.use("/assets/kids-scenes", express.static(path.resolve(process.cwd(), "assets", "kids-scenes"), {
+    maxAge: "7d",
+    immutable: true,
+    etag: true,
+  }));
+
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets"), {
     maxAge: "1h",
     etag: true,
