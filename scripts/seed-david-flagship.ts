@@ -193,7 +193,7 @@ async function seedDavidFlagship() {
         ],
         cinematicConfig: {
           effects: [{ type: "celebration" }],
-          revealText: "God is stronger than any giant!",
+          revealText: "You can trust God too!",
           revealColor: "#FFD700",
           revealDelay: 1000,
         },

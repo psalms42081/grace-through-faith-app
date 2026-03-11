@@ -205,12 +205,14 @@ function AnimatedStoryCard({
   idx,
   theme,
   baseUrl,
+  isCompleted,
   onPress,
 }: {
   story: Story;
   idx: number;
   theme: any;
   baseUrl: string;
+  isCompleted: boolean;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -246,10 +248,8 @@ function AnimatedStoryCard({
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.storyNumber, { backgroundColor: theme.accent }]}>
-            <Text style={[styles.storyNumberText, { fontFamily: "Inter_700Bold" }]}>
-              {story.orderInCollection}
-            </Text>
+          <View style={[styles.storyIconFallback, { backgroundColor: theme.accent + "18" }]}>
+            <Ionicons name="book" size={22} color={theme.accent} />
           </View>
         )}
         <View style={styles.storyInfo}>
@@ -266,6 +266,14 @@ function AnimatedStoryCard({
             <Text style={[styles.storyMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               ~{story.estimatedMinutes} min
             </Text>
+            {isCompleted && (
+              <>
+                <Ionicons name="checkmark-circle" size={12} color={theme.success || "#4CAF50"} style={{ marginLeft: 6 }} />
+                <Text style={[styles.storyMetaText, { color: theme.success || "#4CAF50", fontFamily: "Inter_500Medium" }]}>
+                  Done
+                </Text>
+              </>
+            )}
           </View>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -436,6 +444,7 @@ export default function KidsStoriesScreen() {
                   idx={idx}
                   theme={theme}
                   baseUrl={baseUrl}
+                  isCompleted={completedStoryIds.has(story.id)}
                   onPress={() => router.push(`/kids/story/${story.id}`)}
                 />
               ))
@@ -541,7 +550,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginRight: 12,
   },
-  storyNumber: {
+  storyIconFallback: {
     width: 48,
     height: 48,
     borderRadius: 14,
@@ -549,7 +558,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  storyNumberText: { color: "#fff", fontSize: 14 },
   storyInfo: { flex: 1 },
   storyTitle: { fontSize: 15, marginBottom: 2 },
   storyRef: { fontSize: 12, marginBottom: 4 },

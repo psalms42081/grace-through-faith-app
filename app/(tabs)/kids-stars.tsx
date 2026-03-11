@@ -413,9 +413,16 @@ export default function KidsStarsScreen() {
 
   const completedCount = progress?.filter(p => p.completed).length ?? 0;
   const quizCount = progress?.filter(p => p.quizScore !== null).length ?? 0;
+  const totalQuizStars = progress?.reduce((sum, p) => {
+    if (p.quizScore === null) return sum;
+    if (p.quizScore >= 100) return sum + 3;
+    if (p.quizScore >= 66) return sum + 2;
+    if (p.quizScore > 0) return sum + 1;
+    return sum;
+  }, 0) ?? 0;
   const memorizedCount = progress?.filter(p => p.memoryVerseMemorized).length ?? 0;
   const seedPoints = profileStats?.totalPoints ?? 0;
-  const totalStars = completedCount + quizCount + (memorizedCount * 2);
+  const totalStars = completedCount + totalQuizStars + (memorizedCount * 2);
   const earnedNames = useMemo(() => new Set(earnedBadges?.map(b => b.name) ?? []), [earnedBadges]);
   const earnedIds = useMemo(() => new Set(earnedBadges?.map(b => b.id) ?? []), [earnedBadges]);
 

@@ -484,7 +484,7 @@ const DAVID_SCENE_DEFAULTS: Record<number, CinematicConfig> = {
   },
   5: {
     effects: [{ type: "celebration" }],
-    revealText: "God is stronger than any giant!",
+    revealText: "You can trust God too!",
     revealColor: "#FFD700",
     revealDelay: 1000,
   },

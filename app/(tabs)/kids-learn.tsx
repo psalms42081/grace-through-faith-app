@@ -135,11 +135,15 @@ function BouncyStoryItem({
   story,
   idx,
   theme,
+  quizScore,
+  isMemorized,
   onPress,
 }: {
   story: Story;
   idx: number;
   theme: any;
+  quizScore?: number;
+  isMemorized?: boolean;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -172,6 +176,26 @@ function BouncyStoryItem({
           <Text style={[styles.storyItemRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {story.scriptureRef}
           </Text>
+        )}
+        {(quizScore !== undefined || isMemorized) && (
+          <View style={styles.storyItemBadges}>
+            {quizScore !== undefined && (
+              <View style={styles.storyItemBadge}>
+                <Ionicons name="star" size={11} color={(theme as any).starGold || "#FFD700"} />
+                <Text style={[styles.storyItemBadgeText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  {quizScore >= 100 ? 3 : quizScore >= 66 ? 2 : quizScore > 0 ? 1 : 0}/3
+                </Text>
+              </View>
+            )}
+            {isMemorized && (
+              <View style={styles.storyItemBadge}>
+                <Ionicons name="checkmark-circle" size={11} color={theme.success || "#4CAF50"} />
+                <Text style={[styles.storyItemBadgeText, { color: theme.success || "#4CAF50", fontFamily: "Inter_500Medium" }]}>
+                  Verse
+                </Text>
+              </View>
+            )}
+          </View>
         )}
       </View>
       <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -334,6 +358,22 @@ export default function KidsLearnScreen() {
 
   const progressUserId = activeChildProfileId || "guest";
 
+  const { data: progressData } = useQuery<{ storyId: string; quizScore: number | null; memoryVerseMemorized: boolean }[]>({
+    queryKey: [`/api/kids/progress?_uid=${progressUserId}`],
+  });
+
+  const memorizedSet = React.useMemo(() => {
+    const s = new Set<string>();
+    progressData?.forEach(p => { if (p.memoryVerseMemorized) s.add(p.storyId); });
+    return s;
+  }, [progressData]);
+
+  const quizScoreMap = React.useMemo(() => {
+    const m = new Map<string, number>();
+    progressData?.forEach(p => { if (p.quizScore !== null) m.set(p.storyId, p.quizScore); });
+    return m;
+  }, [progressData]);
+
   const submitQuiz = useMutation({
     mutationFn: async (score: number) => {
       await apiRequest("POST", "/api/kids/progress/quiz", {
@@ -370,9 +410,9 @@ export default function KidsLearnScreen() {
     const nextQ = quizState.currentQ + 1;
     if (nextQ >= quizQuestions.length) {
       const correct = newAnswers.filter((a, i) => a === quizQuestions[i].correctIndex).length;
-      const score = Math.round((correct / quizQuestions.length) * 100);
+      const pct = Math.round((correct / quizQuestions.length) * 100);
       setQuizState({ currentQ: quizState.currentQ, answers: newAnswers, done: true });
-      submitQuiz.mutate(score);
+      submitQuiz.mutate(pct);
     } else {
       setQuizState({ currentQ: nextQ, answers: newAnswers, done: false });
     }
@@ -431,6 +471,8 @@ export default function KidsLearnScreen() {
                   story={s}
                   idx={idx}
                   theme={theme}
+                  quizScore={quizScoreMap.has(s.id) ? quizScoreMap.get(s.id) : undefined}
+                  isMemorized={memorizedSet.has(s.id)}
                   onPress={() => { setSelectedStory(s); setQuizState({ currentQ: 0, answers: [], done: false }); }}
                 />
               </Animated.View>
@@ -444,6 +486,14 @@ export default function KidsLearnScreen() {
               <Ionicons name="chevron-back" size={16} color={theme.accent} />
               <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Back</Text>
             </Pressable>
+            <Text style={[styles.storyContextTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              {selectedStory.title}
+            </Text>
+            {selectedStory.scriptureRef && (
+              <Text style={[styles.storyContextRef, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                {selectedStory.scriptureRef}
+              </Text>
+            )}
             <Text style={[styles.quizProgress, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
               Question {quizState.currentQ + 1} of {quizQuestions?.length}
             </Text>
@@ -463,79 +513,119 @@ export default function KidsLearnScreen() {
           </View>
         )}
 
-        {activeTab === "quiz" && quizState.done && quizQuestions && (
-          <Animated.View
-            entering={FadeInDown.springify().damping(10).stiffness(120)}
-            style={styles.quizResult}
-          >
-            {isPerfectScore && <StarBurst theme={theme} />}
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
-              <Ionicons
-                name={quizScore === quizQuestions.length ? "trophy" : quizScore > 0 ? "star" : "refresh"}
-                size={56}
-                color={(theme as any).starGold || theme.accent}
-              />
-              {quizScore > 0 && (
-                <>
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <QuizResultSparkle
-                      key={i}
-                      delay={i * 60}
-                      x={(Math.cos((i * 60) * Math.PI / 180)) * 45}
-                      y={(Math.sin((i * 60) * Math.PI / 180)) * 45}
-                      color={i % 2 === 0 ? ((theme as any).starGold || "#F5A623") : theme.accent}
-                    />
-                  ))}
-                </>
-              )}
-            </View>
-            <Text style={[styles.resultTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              {quizScore === quizQuestions.length ? "Perfect Score!" : quizScore > 0 ? "Great Job!" : "Keep Trying!"}
-            </Text>
-            <Text style={[styles.resultScore, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-              You got {quizScore} out of {quizQuestions.length} correct
-            </Text>
-            <Pressable
-              onPress={resetQuiz}
-              style={[styles.resultBtn, { backgroundColor: theme.accent }]}
-              testID="try-another"
+        {activeTab === "quiz" && quizState.done && quizQuestions && (() => {
+          const totalQ = quizQuestions.length;
+          const starsEarned = quizScore === totalQ ? 3 : quizScore > 0 ? (quizScore >= totalQ * 0.66 ? 2 : 1) : 0;
+          const starGold = (theme as any).starGold || "#F5A623";
+          const resultMessage = quizScore === totalQ
+            ? "Amazing! You know this story well!"
+            : quizScore > 0
+            ? "Great work! You're learning!"
+            : "Let's try again \u2014 you'll get it!";
+
+          return (
+            <Animated.View
+              entering={FadeInDown.springify().damping(10).stiffness(120)}
+              style={styles.quizResult}
             >
-              <Text style={[styles.resultBtnText, { fontFamily: "Inter_600SemiBold" }]}>Try Another</Text>
-            </Pressable>
-          </Animated.View>
-        )}
+              {isPerfectScore && <StarBurst theme={theme} />}
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <Ionicons
+                  name={quizScore === totalQ ? "trophy" : quizScore > 0 ? "star" : "refresh"}
+                  size={56}
+                  color={starGold}
+                />
+                {quizScore > 0 && (
+                  <>
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <QuizResultSparkle
+                        key={i}
+                        delay={i * 60}
+                        x={(Math.cos((i * 60) * Math.PI / 180)) * 45}
+                        y={(Math.sin((i * 60) * Math.PI / 180)) * 45}
+                        color={i % 2 === 0 ? starGold : theme.accent}
+                      />
+                    ))}
+                  </>
+                )}
+              </View>
+              <Text style={[styles.resultTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                {quizScore === totalQ ? "Perfect Score!" : quizScore > 0 ? "Great Job!" : "Keep Trying!"}
+              </Text>
+              <Text style={[styles.resultMessage, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                {resultMessage}
+              </Text>
+              <View style={styles.starRow}>
+                {[0, 1, 2].map((i) => (
+                  <Animated.View key={i} entering={FadeInDown.delay(200 + i * 120).springify()}>
+                    <Ionicons
+                      name={i < starsEarned ? "star" : "star-outline"}
+                      size={36}
+                      color={i < starsEarned ? starGold : theme.textMuted}
+                    />
+                  </Animated.View>
+                ))}
+              </View>
+              <Text style={[styles.starsEarnedText, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                {starsEarned > 0 ? `You earned ${starsEarned} star${starsEarned > 1 ? "s" : ""}!` : "No stars this time"}
+              </Text>
+              <Text style={[styles.resultScore, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {quizScore} out of {totalQ} correct
+              </Text>
+              <Pressable
+                onPress={resetQuiz}
+                style={[styles.resultBtn, { backgroundColor: theme.accent }]}
+                testID="try-another"
+              >
+                <Text style={[styles.resultBtnText, { fontFamily: "Inter_600SemiBold" }]}>Try Another</Text>
+              </Pressable>
+            </Animated.View>
+          );
+        })()}
 
         {activeTab === "memory" && (
           <>
             <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
               Memory Verses
             </Text>
-            {stories?.filter(s => s.memoryVerse).map((s, idx) => (
-              <Animated.View key={s.id} entering={FadeInDown.delay(idx * 60).springify()}>
-                <View
-                  style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                >
-                  <View style={[styles.verseAccentBorder, { backgroundColor: theme.accent }]} />
-                  <View style={styles.verseContent}>
-                    <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                      "{s.memoryVerse}"
-                    </Text>
-                    <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {s.memoryVerseRef}
-                    </Text>
-                    <Text style={[styles.verseStory, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      From: {s.title}
-                    </Text>
-                    <BouncyMemorizeBtn
-                      storyId={s.id}
-                      theme={theme}
-                      idx={idx}
-                      onPress={() => memorizeMutation.mutate(s.id)}
-                    />
+            {stories?.filter(s => s.memoryVerse).map((s, idx) => {
+              const isMemorized = memorizedSet.has(s.id);
+              return (
+                <Animated.View key={s.id} entering={FadeInDown.delay(idx * 60).springify()}>
+                  <View
+                    style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: isMemorized ? (theme.success || "#4CAF50") + "50" : theme.border }]}
+                  >
+                    <View style={[styles.verseAccentBorder, { backgroundColor: isMemorized ? (theme.success || "#4CAF50") : theme.accent }]} />
+                    <View style={styles.verseContent}>
+                      <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                        "{s.memoryVerse}"
+                      </Text>
+                      <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {s.memoryVerseRef}
+                      </Text>
+                      <Text style={[styles.verseStory, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        From: {s.title}
+                      </Text>
+                      {isMemorized ? (
+                        <View style={[styles.memorizeBtn, { borderColor: (theme.success || "#4CAF50") + "40", backgroundColor: (theme.success || "#4CAF50") + "10" }]}>
+                          <Ionicons name="checkmark-circle" size={16} color={theme.success || "#4CAF50"} />
+                          <Text style={[styles.memorizeBtnText, { color: theme.success || "#4CAF50", fontFamily: "Inter_600SemiBold" }]}>
+                            Memorized!
+                          </Text>
+                        </View>
+                      ) : (
+                        <BouncyMemorizeBtn
+                          storyId={s.id}
+                          theme={theme}
+                          idx={idx}
+                          onPress={() => memorizeMutation.mutate(s.id)}
+                        />
+                      )}
+                    </View>
                   </View>
-                </View>
-              </Animated.View>
-            ))}
+                </Animated.View>
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -572,9 +662,14 @@ const styles = StyleSheet.create({
   storyItemInfo: { flex: 1 },
   storyItemTitle: { fontSize: 15 },
   storyItemRef: { fontSize: 12, marginTop: 2 },
+  storyItemBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
+  storyItemBadge: { flexDirection: "row", alignItems: "center", gap: 3 },
+  storyItemBadgeText: { fontSize: 11 },
   quizContainer: {},
   backRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 },
   backText: { fontSize: 14 },
+  storyContextTitle: { fontSize: 20, marginBottom: 2 },
+  storyContextRef: { fontSize: 13, marginBottom: 10 },
   quizProgress: { fontSize: 13, marginBottom: 8 },
   quizQuestion: { fontSize: 22, lineHeight: 30, marginBottom: 20 },
   quizOption: {
@@ -597,7 +692,10 @@ const styles = StyleSheet.create({
   optionText: { flex: 1, fontSize: 15, lineHeight: 21 },
   quizResult: { alignItems: "center", paddingTop: 40, gap: 12 },
   resultTitle: { fontSize: 24, marginTop: 8 },
-  resultScore: { fontSize: 16 },
+  resultMessage: { fontSize: 16, textAlign: "center", marginTop: 4, paddingHorizontal: 20, lineHeight: 22 },
+  starRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  starsEarnedText: { fontSize: 16, marginTop: 4 },
+  resultScore: { fontSize: 14 },
   resultBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, marginTop: 16 },
   resultBtnText: { color: "#fff", fontSize: 15 },
   starBurstContainer: {
