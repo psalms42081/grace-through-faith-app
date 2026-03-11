@@ -561,27 +561,7 @@ function SceneAnimationLayer({ sceneIndex, imageFrame, isActive, config }: {
         }
       })}
 
-      {slingDone && cinematic.revealText && (
-        <Animated.View
-          entering={FadeIn.delay(200).duration(500)}
-          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height * 0.72 }]}
-        >
-          <Text style={[cs.revealText, { fontSize: 17, color: cinematic.revealColor || "#F5C451" }]}>
-            {cinematic.revealText}
-          </Text>
-        </Animated.View>
-      )}
-
-      {!effects.some(e => e.type === "sling") && cinematic.revealText && (
-        <Animated.View
-          entering={FadeIn.delay(cinematic.revealDelay || 1000).duration(800)}
-          style={[cs.revealCaption, { top: imageFrame.offsetY + imageFrame.height * 0.72 }]}
-        >
-          <Text style={[cs.revealText, { fontSize: 17, color: cinematic.revealColor || "#F5C451" }]}>
-            {cinematic.revealText}
-          </Text>
-        </Animated.View>
-      )}
+      
     </View>
   );
 }
@@ -645,6 +625,10 @@ export default function CinematicScene({
 
   const words = narration.split(/\s+/);
 
+  const cinematic: CinematicConfig = (interactionConfig as any)?.cinematicConfig || DAVID_SCENE_DEFAULTS[sceneIndex] || {};
+  const revealText = cinematic.revealText;
+  const revealColor = cinematic.revealColor || "#F5C451";
+
   return (
     <View style={cs.page}>
       <View style={cs.illustrationArea}>
@@ -681,6 +665,13 @@ export default function CinematicScene({
       />
 
       <View style={[cs.narrationWrap, { top: narrationTop + 8 }]} pointerEvents="none">
+        {revealText && (
+          <Animated.View entering={FadeIn.delay(cinematic.revealDelay || 800).duration(600)} style={cs.revealRow}>
+            <Text style={[cs.revealText, { color: revealColor }]}>
+              {revealText}
+            </Text>
+          </Animated.View>
+        )}
         <Text style={cs.narrationText}>
           {isActive && isSpeaking
             ? words.map((word, i) => (
@@ -741,16 +732,9 @@ const cs = StyleSheet.create({
     textAlign: "center",
     fontFamily: "Lora_400Regular",
   },
-  revealCaption: {
-    position: "absolute",
-    left: 32,
-    right: 32,
+  revealRow: {
     alignItems: "center",
-    zIndex: 20,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginBottom: 6,
   },
   revealText: {
     color: "#F5C451",
