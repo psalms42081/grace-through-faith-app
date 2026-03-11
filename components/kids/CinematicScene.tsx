@@ -722,15 +722,18 @@ const cs = StyleSheet.create({
   },
   narrationWrap: {
     position: "absolute",
-    left: 20,
-    right: 20,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 28,
+    alignItems: "center",
   },
   narrationText: {
     color: "rgba(255,255,255,0.92)",
-    fontSize: 21,
+    fontSize: 18,
     lineHeight: 32,
     textAlign: "center",
     fontFamily: "Lora_400Regular",
+    maxWidth: 520,
   },
   revealRow: {
     alignItems: "center",

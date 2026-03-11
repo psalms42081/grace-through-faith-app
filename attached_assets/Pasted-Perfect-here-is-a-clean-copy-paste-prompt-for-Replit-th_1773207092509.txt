@@ -1,0 +1,339 @@
+Perfect — here is a **clean, copy-paste prompt for Replit** that covers **the full polish pass** *including the scroll arrows fix* and ensures the agent **does not change the working story engine**.
+
+You can paste this directly into Replit.
+
+---
+
+# Replit Prompt — Kids Story Final Polish Pass
+
+We are performing a **final polish pass** on the Kids Story experience.
+The story system itself is **already working perfectly** and **must not be rewritten**.
+
+Do **NOT change the story engine, narration system, animation system, or database structure.**
+
+This task is **UI/UX polish only**.
+
+Focus on **readability, spacing, and navigation improvements**.
+
+---
+
+# 1. Fix the Story Navigation Arrows (Left / Right)
+
+Currently the **left and right navigation arrows** appear on the sides of the story scenes.
+
+Issues:
+• They visually overlap the story image
+• They feel slightly intrusive on smaller screens
+• They can block parts of the illustration
+
+Goal:
+Make navigation **cleaner and less intrusive**.
+
+Implement the following changes:
+
+### A. Reduce arrow opacity
+
+Idle state:
+
+```
+opacity: 0.35
+```
+
+When user taps screen or scrolls:
+
+```
+opacity: 1
+```
+
+---
+
+### B. Move arrows slightly inward
+
+Add spacing so arrows do not hug the screen edge.
+
+Example:
+
+```
+left arrow: left: 12px
+right arrow: right: 12px
+```
+
+---
+
+### C. Use soft circular background
+
+Instead of arrows floating directly on the image, place them in a subtle circle:
+
+```
+backgroundColor: rgba(0,0,0,0.35)
+borderRadius: 28
+padding: 10
+```
+
+This improves visibility on bright images.
+
+---
+
+### D. Hide arrows on first and last scenes
+
+If scene index is 0:
+
+```
+hide left arrow
+```
+
+If last scene:
+
+```
+hide right arrow
+```
+
+This prevents useless navigation indicators.
+
+---
+
+### E. Allow swipe navigation
+
+Ensure users can still swipe:
+
+```
+swipe left → next scene
+swipe right → previous scene
+```
+
+Arrows should **support but not replace swipe navigation**.
+
+---
+
+# 2. Improve Story Text Readability
+
+The story narration text is good but slightly wide.
+
+Limit line width so text reads more like a **storybook page**.
+
+Update the text container:
+
+```
+maxWidth: 520
+paddingHorizontal: 28
+lineHeight: 32
+fontSize: 18
+textAlign: center
+```
+
+Goal:
+• easier reading for children
+• more balanced layout
+
+---
+
+# 3. Improve Scene Layout Spacing
+
+Current structure:
+
+```
+image
+text
+dots
+audio button
+```
+
+Improve vertical rhythm:
+
+```
+image
+marginBottom: 20
+
+text
+marginBottom: 20
+
+scene dots
+marginBottom: 12
+
+audio button
+```
+
+This prevents the screen from feeling cramped.
+
+---
+
+# 4. Improve Scene Progress Dots
+
+Make dots slightly more polished.
+
+Current:
+
+• small grey dots
+
+Improve to:
+
+```
+inactive dot: opacity 0.4
+active dot: scale 1.3
+active dot color: gold
+```
+
+Example:
+
+```
+width: 8
+height: 8
+borderRadius: 4
+marginHorizontal: 4
+```
+
+---
+
+# 5. Add Gentle Pulse to Audio Play Button
+
+When narration is **not playing**, the play button should gently pulse to encourage interaction.
+
+Animation:
+
+```
+scale: 1 → 1.08 → 1
+duration: 1.6s
+loop
+```
+
+Stop animation when audio is playing.
+
+This makes the interaction clearer for kids.
+
+---
+
+# 6. Improve Final Story Lesson Screen
+
+The final lesson screen is good but we want stronger visual hierarchy.
+
+Current:
+
+```
+lesson text
+star
+great job
+story complete
+```
+
+Update layout:
+
+```
+⭐ large star
+
+Great job!
+
+Story Complete!
+
+lesson message
+
+Back to Stories button
+```
+
+Make **Story Complete** the main headline.
+
+Example styles:
+
+```
+Great job!
+fontSize: 20
+
+Story Complete
+fontSize: 30
+fontWeight: bold
+```
+
+---
+
+# 7. Improve Reward Screen
+
+The reward screen already shows:
+
+```
+Brave Heart Star
++25 Seed Points
+```
+
+Make this more celebratory.
+
+Add:
+
+```
+scale animation on star
+```
+
+Animation:
+
+```
+scale: 0.9 → 1.15 → 1
+duration: 600ms
+```
+
+---
+
+# 8. Improve Prayer Screen Button Size
+
+The **Amen button** should be slightly larger for kids.
+
+Update button style:
+
+```
+height: 60
+borderRadius: 18
+fontSize: 18
+paddingHorizontal: 24
+```
+
+---
+
+# 9. Improve Story List Completion Indicator
+
+Currently shows:
+
+```
+Done
+```
+
+Update to:
+
+```
+✔ Completed
+```
+
+Style:
+
+```
+color: green
+fontWeight: 600
+```
+
+---
+
+# 10. Do NOT Change These Systems
+
+Do not modify:
+
+• story scene engine
+• narration playback
+• animation timing
+• quiz system
+• memory verse system
+• reward system
+• database structure
+
+This is **UI polish only**.
+
+---
+
+# Expected Result
+
+After this polish pass:
+
+• navigation arrows feel clean and modern
+• text is easier for children to read
+• scene flow feels smoother
+• reward screens feel more celebratory
+• overall kids experience feels **premium quality**
+
+---
+
+If you want, I can also write the **next Replit prompt** that will make your Kids mode **feel like a real children’s app** (it involves **one small animation change that dramatically improves perceived quality**).

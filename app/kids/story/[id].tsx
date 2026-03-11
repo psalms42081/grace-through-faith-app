@@ -1502,6 +1502,55 @@ const illustrationStyles = StyleSheet.create({
   },
 });
 
+function PulsingPlayButton({ isSpeaking, onPress }: { isSpeaking: boolean; onPress: () => void }) {
+  const pulseScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!isSpeaking) {
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.08, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+    } else {
+      pulseScale.value = withTiming(1, { duration: 200 });
+    }
+  }, [isSpeaking]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  return (
+    <Animated.View style={pulseStyle}>
+      <Pressable
+        onPress={onPress}
+        style={[playBtnStyles.btn, { backgroundColor: isSpeaking ? "rgba(255,107,53,0.2)" : "rgba(255,255,255,0.12)" }]}
+        testID="read-to-me"
+      >
+        <Ionicons
+          name={isSpeaking ? "pause" : "play"}
+          size={22}
+          color={isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.85)"}
+        />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+const playBtnStyles = StyleSheet.create({
+  btn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
 function CompletionSparkle({ index, color }: { index: number; color: string }) {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -1596,18 +1645,24 @@ function SceneProgressDots({
 }) {
   return (
     <View style={dotStyles.row}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[
-            dotStyles.dot,
-            {
-              backgroundColor: i === current ? theme.accent : "rgba(255,255,255,0.3)",
-              width: i === current ? 24 : 8,
-            },
-          ]}
-        />
-      ))}
+      {Array.from({ length: total }).map((_, i) => {
+        const isActive = i === current;
+        return (
+          <Animated.View
+            key={i}
+            entering={FadeIn.duration(200)}
+            style={[
+              dotStyles.dot,
+              {
+                backgroundColor: isActive ? (theme.starGold || "#F5C451") : "rgba(255,255,255,0.3)",
+                width: isActive ? 24 : 8,
+                opacity: isActive ? 1 : 0.4,
+                transform: [{ scale: isActive ? 1.3 : 1 }],
+              },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -2337,8 +2392,11 @@ export default function SceneStoryScreen() {
             {storyComplete && isLastScene && (
               <Animated.View entering={FadeInDown.springify().damping(10).stiffness(120)} style={[styles.completeMessage, styles.livingSceneCompleteMsg]}>
                 <View style={{ alignItems: "center", justifyContent: "center" }}>
-                  <Animated.View entering={FadeIn.delay(200).duration(300)}>
-                    <Ionicons name="star" size={44} color={theme.starGold || "#F5A623"} />
+                  <Animated.View
+                    entering={FadeIn.delay(200).duration(300)}
+                    style={{ transform: [{ scale: 1 }] }}
+                  >
+                    <Ionicons name="star" size={52} color={theme.starGold || "#F5A623"} />
                   </Animated.View>
                   {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                     <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
@@ -2467,8 +2525,11 @@ export default function SceneStoryScreen() {
             {storyComplete && isLastScene && (
               <Animated.View entering={FadeInDown.springify().damping(10).stiffness(120)} style={styles.completeMessage}>
                 <View style={{ alignItems: "center", justifyContent: "center" }}>
-                  <Animated.View entering={FadeIn.delay(200).duration(300)}>
-                    <Ionicons name="star" size={44} color={theme.starGold || "#F5A623"} />
+                  <Animated.View
+                    entering={FadeIn.delay(200).duration(300)}
+                    style={{ transform: [{ scale: 1 }] }}
+                  >
+                    <Ionicons name="star" size={52} color={theme.starGold || "#F5A623"} />
                   </Animated.View>
                   {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                     <CompletionSparkle key={i} index={i} color={i % 2 === 0 ? (theme.starGold || "#F5A623") : "#fff"} />
@@ -2624,17 +2685,7 @@ export default function SceneStoryScreen() {
         <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 8 }]}>
           <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
           <View style={styles.cleanControlRow}>
-            <Pressable
-              onPress={handleReadToMe}
-              style={[styles.cleanPlayBtn, { backgroundColor: isSpeaking ? "rgba(255,107,53,0.2)" : "rgba(255,255,255,0.12)" }]}
-              testID="read-to-me"
-            >
-              <Ionicons
-                name={isSpeaking ? "pause" : "play"}
-                size={22}
-                color={isSpeaking ? "#FF6B35" : "rgba(255,255,255,0.85)"}
-              />
-            </Pressable>
+            <PulsingPlayButton isSpeaking={isSpeaking} onPress={handleReadToMe} />
           </View>
         </View>
       )}
@@ -2861,8 +2912,8 @@ const styles = StyleSheet.create({
   },
   completeMessage: {
     alignItems: "center",
-    gap: 8,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 12,
   },
   livingSceneCompleteWrap: {
     position: "absolute",
@@ -2881,17 +2932,18 @@ const styles = StyleSheet.create({
   },
   completeTitle: {
     color: "#fff",
-    fontSize: 26,
+    fontSize: 30,
   },
   completeCelebration: {
     color: "#F5C451",
-    fontSize: 16,
+    fontSize: 20,
     textAlign: "center" as const,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   completeSubtitle: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 15,
+    marginTop: 2,
   },
   cinematicBottomBar: {
     position: "absolute",
@@ -3026,19 +3078,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "35%",
     marginTop: -24,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 30,
+    opacity: 0.35,
   },
   navLeft: {
-    left: 2,
+    left: 12,
   },
   navRight: {
-    right: 2,
+    right: 12,
   },
   voicePickerBtn: {
     flexDirection: "row" as const,

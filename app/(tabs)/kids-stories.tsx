@@ -269,8 +269,8 @@ function AnimatedStoryCard({
             {isCompleted && (
               <>
                 <Ionicons name="checkmark-circle" size={12} color={theme.success || "#4CAF50"} style={{ marginLeft: 6 }} />
-                <Text style={[styles.storyMetaText, { color: theme.success || "#4CAF50", fontFamily: "Inter_500Medium" }]}>
-                  Done
+                <Text style={[styles.storyMetaText, { color: theme.success || "#4CAF50", fontFamily: "Inter_600SemiBold" }]}>
+                  Completed
                 </Text>
               </>
             )}
