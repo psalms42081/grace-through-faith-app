@@ -86,8 +86,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      gcTime: TWENTY_FOUR_HOURS * 30,
+      staleTime: TWENTY_FOUR_HOURS,
+      gcTime: TWENTY_FOUR_HOURS * 7,
       retry: false,
       networkMode: "offlineFirst",
     },
@@ -98,7 +98,10 @@ export const queryClient = new QueryClient({
 });
 
 const CACHE_KEY = "grace-through-faith-cache-v2";
+const OLD_CACHE_KEYS = ["grace-through-faith-cache"];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+
+AsyncStorage.multiRemove(OLD_CACHE_KEYS).catch(() => {});
 
 export const asyncStoragePersister: Persister = {
   persistClient: async (client) => {
