@@ -97,7 +97,7 @@ export const queryClient = new QueryClient({
   },
 });
 
-const CACHE_KEY = "grace-through-faith-cache";
+const CACHE_KEY = "grace-through-faith-cache-v2";
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const asyncStoragePersister: Persister = {
