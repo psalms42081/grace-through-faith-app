@@ -32245,7 +32245,7 @@ function validate(schema) {
 }
 var authRegisterSchema = z2.object({
   email: z2.string().email("Invalid email address"),
-  password: z2.string().min(4, "Password must be at least 4 characters"),
+  password: z2.string().min(8, "Password must be at least 8 characters"),
   displayName: z2.string().min(1, "Display name is required").max(100)
 });
 var authLoginSchema = z2.object({
@@ -34429,7 +34429,7 @@ router5.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.get("/api/devotionals/plans/:planId/days", async (req, res) => {
+router5.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
   try {
     const days = await db.select().from(devotionalDays).where(eq6(devotionalDays.planId, String(req.params.planId))).orderBy(devotionalDays.dayNumber);
     return res.json(days);
@@ -34525,7 +34525,11 @@ router5.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.post("/api/devotionals/reflect", async (req, res) => {
+router5.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
+  const userId = getEffectiveUserId(req);
+  if (userId === "guest") {
+    return res.status(401).json({ error: "Authentication required for AI reflections" });
+  }
   try {
     const { question, userAnswer, passageLabel, dayTitle, previousExchanges } = req.body;
     if (!question || !userAnswer) {
@@ -34659,11 +34663,32 @@ async function textToSpeech(text2, voice = "george", format = "mp3") {
 
 // server/routes/tts.ts
 var router6 = Router6();
+var MAX_CACHE_ENTRIES = 100;
+var MAX_CACHE_BYTES = 50 * 1024 * 1024;
+var cacheTotalBytes = 0;
 var ttsCache = /* @__PURE__ */ new Map();
+function evictOldest() {
+  let oldest = null;
+  let oldestTime = Infinity;
+  for (const [key, val] of ttsCache) {
+    if (val.createdAt < oldestTime) {
+      oldestTime = val.createdAt;
+      oldest = key;
+    }
+  }
+  if (oldest) {
+    const entry = ttsCache.get(oldest);
+    if (entry) cacheTotalBytes -= entry.buffer.length;
+    ttsCache.delete(oldest);
+  }
+}
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of ttsCache) {
-    if (now - val.createdAt > 10 * 60 * 1e3) ttsCache.delete(key);
+    if (now - val.createdAt > 10 * 60 * 1e3) {
+      cacheTotalBytes -= val.buffer.length;
+      ttsCache.delete(key);
+    }
   }
 }, 60 * 1e3);
 router6.post("/api/tts", ttsLimiter, async (req, res) => {
@@ -34672,6 +34697,9 @@ router6.post("/api/tts", ttsLimiter, async (req, res) => {
     if (!text2 || typeof text2 !== "string") {
       return res.status(400).json({ error: "text is required" });
     }
+    if (text2.length > 5e3) {
+      return res.status(400).json({ error: "text too long (max 5000 chars)" });
+    }
     const selectedVoice = isValidVoice(voice) ? voice : "george";
     console.log(`[TTS Route] voice param="${voice}" \u2192 selected="${selectedVoice}"`);
     const cacheKey = crypto2.createHash("md5").update(`${selectedVoice}:${text2}`).digest("hex");
@@ -34679,10 +34707,18 @@ router6.post("/api/tts", ttsLimiter, async (req, res) => {
     const cached = ttsCache.get(cacheKey);
     if (cached) {
       audioBuffer = cached.buffer;
+      cached.createdAt = Date.now();
       console.log(`[TTS Route] Cache hit for key=${cacheKey.slice(0, 8)}`);
     } else {
       audioBuffer = await textToSpeech(text2, selectedVoice, "mp3");
-      ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now() });
+      if (audioBuffer.length <= MAX_CACHE_BYTES) {
+        while (ttsCache.size >= MAX_CACHE_ENTRIES || cacheTotalBytes + audioBuffer.length > MAX_CACHE_BYTES) {
+          if (ttsCache.size === 0) break;
+          evictOldest();
+        }
+        ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now() });
+        cacheTotalBytes += audioBuffer.length;
+      }
     }
     res.set({
       "Content-Type": "audio/mpeg",
@@ -34706,11 +34742,20 @@ router6.post("/api/tts/prepare", ttsLimiter, async (req, res) => {
     }
     const selectedVoice = isValidVoice(voice) ? voice : "george";
     const cacheKey = crypto2.createHash("md5").update(`${selectedVoice}:${text2}`).digest("hex");
-    if (!ttsCache.has(cacheKey)) {
+    const existingPrepare = ttsCache.get(cacheKey);
+    if (!existingPrepare) {
       console.log(`[TTS Prepare] Generating voice="${selectedVoice}", text=${text2.length} chars`);
       const audioBuffer = await textToSpeech(text2, selectedVoice, "mp3");
-      ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now() });
+      if (audioBuffer.length <= MAX_CACHE_BYTES) {
+        while (ttsCache.size >= MAX_CACHE_ENTRIES || cacheTotalBytes + audioBuffer.length > MAX_CACHE_BYTES) {
+          if (ttsCache.size === 0) break;
+          evictOldest();
+        }
+        ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now() });
+        cacheTotalBytes += audioBuffer.length;
+      }
     } else {
+      existingPrepare.createdAt = Date.now();
       console.log(`[TTS Prepare] Cache hit key=${cacheKey.slice(0, 8)}`);
     }
     return res.json({ audioId: cacheKey });
@@ -34724,6 +34769,7 @@ router6.get("/api/tts/audio/:id", (req, res) => {
   if (!cached) {
     return res.status(404).json({ error: "Audio not found or expired" });
   }
+  cached.createdAt = Date.now();
   res.set({
     "Content-Type": "audio/mpeg",
     "Content-Length": String(cached.buffer.length),
@@ -34890,15 +34936,13 @@ router7.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
         eq7(kidsProgress.storyId, storyId)
       )
     ).limit(1);
-    if (existing.length) {
-      const alreadyCompleted = existing[0].completed === true;
-      const updated = await db.update(kidsProgress).set({ completed: true, completedAt: /* @__PURE__ */ new Date() }).where(eq7(kidsProgress.id, existing[0].id)).returning();
-      const badgesAwarded2 = await checkAndAwardBadges(userId);
-      return res.json({ ...updated[0], firstCompletion: !alreadyCompleted, badgesAwarded: badgesAwarded2 });
-    }
-    const progress = await db.insert(kidsProgress).values({ userId, storyId, completed: true, completedAt: /* @__PURE__ */ new Date() }).returning();
+    const alreadyCompleted = existing.length > 0 && existing[0].completed === true;
+    const [progress] = await db.insert(kidsProgress).values({ userId, storyId, completed: true, completedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+      target: [kidsProgress.userId, kidsProgress.storyId],
+      set: { completed: true, completedAt: /* @__PURE__ */ new Date() }
+    }).returning();
     const badgesAwarded = await checkAndAwardBadges(userId);
-    return res.json({ ...progress[0], firstCompletion: true, badgesAwarded });
+    return res.json({ ...progress, firstCompletion: !alreadyCompleted, badgesAwarded });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -34948,13 +34992,11 @@ router7.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
       )
     ).limit(1);
     let result;
-    if (existing.length) {
-      const updated = await db.update(kidsProgress).set({ quizScore: score }).where(eq7(kidsProgress.id, existing[0].id)).returning();
-      result = updated[0];
-    } else {
-      const [progress] = await db.insert(kidsProgress).values({ userId, storyId, quizScore: score }).returning();
-      result = progress;
-    }
+    const [upserted] = await db.insert(kidsProgress).values({ userId, storyId, quizScore: score }).onConflictDoUpdate({
+      target: [kidsProgress.userId, kidsProgress.storyId],
+      set: { quizScore: score }
+    }).returning();
+    result = upserted;
     let verifiedChildProfileId;
     if (childProfileId) {
       const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and5(eq7(childProfiles.id, childProfileId), eq7(childProfiles.parentId, userId))).limit(1);
@@ -34982,12 +35024,11 @@ router7.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
         eq7(kidsProgress.storyId, storyId)
       )
     ).limit(1);
-    if (existing.length) {
-      const updated = await db.update(kidsProgress).set({ memoryVerseMemorized: true }).where(eq7(kidsProgress.id, existing[0].id)).returning();
-      return res.json(updated[0]);
-    }
-    const progress = await db.insert(kidsProgress).values({ userId, storyId, memoryVerseMemorized: true }).returning();
-    return res.json(progress[0]);
+    const [upserted] = await db.insert(kidsProgress).values({ userId, storyId, memoryVerseMemorized: true }).onConflictDoUpdate({
+      target: [kidsProgress.userId, kidsProgress.storyId],
+      set: { memoryVerseMemorized: true }
+    }).returning();
+    return res.json(upserted);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -35139,6 +35180,9 @@ router7.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
         userId,
         storyId,
         wonderAnswers: currentAnswers
+      }).onConflictDoUpdate({
+        target: [kidsProgress.userId, kidsProgress.storyId],
+        set: { wonderAnswers: currentAnswers }
       });
     }
     if (isNewAnswer && childProfileId) {
@@ -37738,23 +37782,34 @@ var sabbath_school_default = router12;
 import { Router as Router13 } from "express";
 var router13 = Router13();
 router13.post("/events", (req, res) => {
-  const { events } = req.body;
-  if (!Array.isArray(events)) {
-    return res.status(400).json({ error: "events must be an array" });
+  try {
+    const { events } = req.body;
+    if (!Array.isArray(events)) {
+      return res.status(400).json({ error: "events must be an array" });
+    }
+    const capped = events.slice(0, 50);
+    for (const evt of capped) {
+      const props = evt.properties ? ` ${JSON.stringify(evt.properties)}` : "";
+      console.log(`[Analytics] ${evt.event}${props} (${evt.platform || "unknown"}, ${new Date(evt.timestamp).toISOString()})`);
+    }
+    res.json({ received: capped.length });
+  } catch (err) {
+    console.error("Analytics events error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
-  for (const evt of events) {
-    const props = evt.properties ? ` ${JSON.stringify(evt.properties)}` : "";
-    console.log(`[Analytics] ${evt.event}${props} (${evt.platform || "unknown"}, ${new Date(evt.timestamp).toISOString()})`);
-  }
-  res.json({ received: events.length });
 });
 router13.post("/error", (req, res) => {
-  const { error, componentStack, timestamp: timestamp2, platform } = req.body;
-  console.error(`[CrashReport] ${error} (${platform || "unknown"}, ${new Date(timestamp2).toISOString()})`);
-  if (componentStack) {
-    console.error(`[CrashReport] Stack: ${componentStack.substring(0, 500)}`);
+  try {
+    const { error, componentStack, timestamp: timestamp2, platform } = req.body;
+    console.error(`[CrashReport] ${error} (${platform || "unknown"}, ${new Date(timestamp2).toISOString()})`);
+    if (componentStack) {
+      console.error(`[CrashReport] Stack: ${String(componentStack).substring(0, 500)}`);
+    }
+    res.json({ reported: true });
+  } catch (err) {
+    console.error("Analytics error report error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
-  res.json({ reported: true });
 });
 var analytics_default = router13;
 
