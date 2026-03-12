@@ -548,6 +548,7 @@ export default function LessonScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [completedSections, setCompletedSections] = useState<string[]>([]);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
   const [reflectionText, setReflectionText] = useState("");
   const [assessmentAnswers, setAssessmentAnswers] = useState<Record<number, number>>({});
@@ -690,6 +691,10 @@ export default function LessonScreen() {
     );
   }, []);
 
+  const toggleExpanded = useCallback((sectionId: string) => {
+    setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  }, []);
+
   const lesson = lessonQuery.data;
   const allSections = lesson?.sections || [];
   const assessment = lesson?.assessment;
@@ -703,6 +708,8 @@ export default function LessonScreen() {
 
   const allSectionsCompleted = sections.length > 0 && sections.every((s) => completedSections.includes(s.id));
   const showAssessment = depth !== "quick";
+  const firstIncompleteIndex = sections.findIndex((s) => !completedSections.includes(s.id));
+  const completedCount = sections.filter((s) => completedSections.includes(s.id)).length;
 
   if (lessonQuery.isLoading || !sabbathModeLoaded) {
     return (
@@ -755,19 +762,36 @@ export default function LessonScreen() {
         <SabbathPillToggle isSabbath={sabbathMode} onToggle={toggleSabbathMode} theme={theme} />
       </View>
 
-      {!sabbathMode && (
-        <View style={styles.progressDotsRow}>
-          {sections.map((s) => (
-            <View
-              key={s.id}
-              style={[
-                styles.progressDot,
-                completedSections.includes(s.id)
-                  ? { backgroundColor: theme.accent }
-                  : { backgroundColor: theme.border, borderWidth: 1, borderColor: theme.textMuted + "40" },
-              ]}
-            />
-          ))}
+      {!sabbathMode && sections.length > 0 && (
+        <View style={styles.progressRow}>
+          <View style={styles.progressSteps}>
+            {sections.map((s, i) => {
+              const done = completedSections.includes(s.id);
+              const isCurrent = i === firstIncompleteIndex;
+              return (
+                <View key={s.id} style={styles.progressStepWrap}>
+                  <View
+                    style={[
+                      styles.progressStep,
+                      done
+                        ? { backgroundColor: theme.accent }
+                        : isCurrent
+                          ? { backgroundColor: theme.accent + "40", borderWidth: 2, borderColor: theme.accent }
+                          : { backgroundColor: theme.border },
+                    ]}
+                  >
+                    {done && <Ionicons name="checkmark" size={10} color="#fff" />}
+                  </View>
+                  {i < sections.length - 1 && (
+                    <View style={[styles.progressLine, { backgroundColor: done ? theme.accent : theme.border }]} />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+          <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
+            {allSectionsCompleted ? "All complete" : `Step ${completedCount + 1} of ${sections.length}`}
+          </Text>
         </View>
       )}
 
@@ -805,6 +829,10 @@ export default function LessonScreen() {
 
         {sections.map((section, sectionIndex) => {
           const isCompleted = completedSections.includes(section.id);
+          const isCurrent = sectionIndex === firstIncompleteIndex;
+          const isExplicitlySet = expandedSections[section.id] !== undefined;
+          const isExpanded = sabbathMode || (isExplicitlySet ? expandedSections[section.id] : isCurrent || (firstIncompleteIndex === -1 && sectionIndex === sections.length - 1));
+
           return (
             <View
               key={section.id}
@@ -813,84 +841,121 @@ export default function LessonScreen() {
                 styles.sectionCard,
                 {
                   backgroundColor: theme.backgroundCard,
-                  borderColor: (isCompleted && !sabbathMode) ? theme.accent + "40" : theme.border,
+                  borderColor: isCurrent && !sabbathMode
+                    ? theme.accent + "60"
+                    : (isCompleted && !sabbathMode)
+                      ? theme.accent + "40"
+                      : theme.border,
                 },
+                isCurrent && !sabbathMode && { borderWidth: 1.5 },
                 sabbathMode && { paddingHorizontal: 24, paddingVertical: 24 },
               ]}
             >
-              <SectionHeader type={section.sectionType} title={section.title} isCompleted={isCompleted} isSabbath={sabbathMode} />
-
-              <Text style={[
-                styles.sectionContent,
-                { color: theme.text },
-                sabbathMode && { fontSize: 17, lineHeight: 28 },
-              ]}>{section.content}</Text>
-
-              {section.sectionType === "anchor" && (() => {
-                const refs = extractReferences(section.content);
-                if (refs.length === 0 && lesson.anchorText) {
-                  const fallbackRefs = lesson.anchorText.split(";").map((r: string) => r.trim()).filter(Boolean);
-                  return fallbackRefs.length > 0 ? (
-                    <View style={evStyles.sectionWrapper}>
-                      <View style={evStyles.dividerRow}>
-                        <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                        <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          Explain a Passage
-                        </Text>
-                        <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                      </View>
-                      {fallbackRefs.map((ref: string) => (
-                        <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
-                      ))}
-                    </View>
-                  ) : null;
-                }
-                return refs.length > 0 ? (
-                  <View style={evStyles.sectionWrapper}>
-                    <View style={evStyles.dividerRow}>
-                      <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                      <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                        Explain a Passage
-                      </Text>
-                      <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                    </View>
-                    {refs.map((ref) => (
-                      <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
-                    ))}
+              <Pressable
+                onPress={sabbathMode ? undefined : () => toggleExpanded(section.id)}
+                style={styles.sectionHeaderRow}
+              >
+                <SectionHeader type={section.sectionType} title={section.title} isCompleted={isCompleted} isSabbath={sabbathMode} />
+                {!sabbathMode && (
+                  <View style={styles.sectionStepRow}>
+                    <Text style={[styles.sectionStep, { color: theme.textMuted }]}>
+                      {sectionIndex + 1}/{sections.length}
+                    </Text>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={theme.textMuted}
+                    />
                   </View>
-                ) : null;
-              })()}
+                )}
+              </Pressable>
 
-              {section.sectionType === "reflection" && (
-                <TextInput
-                  style={[
-                    styles.reflectionInput,
-                    {
-                      color: theme.text,
-                      backgroundColor: theme.backgroundElevated,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                  placeholder="Write your reflection here..."
-                  placeholderTextColor={theme.textMuted}
-                  multiline
-                  value={reflectionText}
-                  onChangeText={setReflectionText}
-                  textAlignVertical="top"
-                />
+              {!isExpanded && !sabbathMode && (
+                <Text style={[styles.sectionPreview, { color: theme.textMuted }]} numberOfLines={2}>
+                  {section.content}
+                </Text>
               )}
 
-              {!isCompleted && !sabbathMode && (
-                <Pressable
-                  onPress={() => toggleSection(section.id)}
-                  style={({ pressed }) => [
-                    styles.markCompleteBtn,
-                    { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
-                  ]}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
-                  <Text style={[styles.markCompleteText, { color: theme.accent }]}>Mark Complete</Text>
-                </Pressable>
+              {isExpanded && (
+                <>
+                  <Text style={[
+                    styles.sectionContent,
+                    { color: theme.text },
+                    sabbathMode && { fontSize: 17, lineHeight: 28 },
+                  ]}>{section.content}</Text>
+
+                  {section.sectionType === "anchor" && (() => {
+                    const refs = extractReferences(section.content);
+                    if (refs.length === 0 && lesson.anchorText) {
+                      const fallbackRefs = lesson.anchorText.split(";").map((r: string) => r.trim()).filter(Boolean);
+                      return fallbackRefs.length > 0 ? (
+                        <View style={evStyles.sectionWrapper}>
+                          <View style={evStyles.dividerRow}>
+                            <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                            <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                              Explain a Passage
+                            </Text>
+                            <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                          </View>
+                          {fallbackRefs.map((ref: string) => (
+                            <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
+                          ))}
+                        </View>
+                      ) : null;
+                    }
+                    return refs.length > 0 ? (
+                      <View style={evStyles.sectionWrapper}>
+                        <View style={evStyles.dividerRow}>
+                          <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                          <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                            Explain a Passage
+                          </Text>
+                          <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                        </View>
+                        {refs.map((ref) => (
+                          <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
+                        ))}
+                      </View>
+                    ) : null;
+                  })()}
+
+                  {section.sectionType === "reflection" && (
+                    <TextInput
+                      style={[
+                        styles.reflectionInput,
+                        {
+                          color: theme.text,
+                          backgroundColor: theme.backgroundElevated,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                      placeholder="Write your reflection here..."
+                      placeholderTextColor={theme.textMuted}
+                      multiline
+                      value={reflectionText}
+                      onChangeText={setReflectionText}
+                      textAlignVertical="top"
+                    />
+                  )}
+
+                  {!isCompleted && !sabbathMode && (
+                    <Pressable
+                      onPress={() => {
+                        toggleSection(section.id);
+                        setExpandedSections((prev) => ({ ...prev, [section.id]: false }));
+                      }}
+                      style={({ pressed }) => [
+                        styles.markCompleteBtn,
+                        { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
+                      <Text style={[styles.markCompleteText, { color: theme.accent }]}>
+                        {sectionIndex < sections.length - 1 ? "Complete & Continue" : "Mark Complete"}
+                      </Text>
+                    </Pressable>
+                  )}
+                </>
               )}
             </View>
           );
@@ -1574,7 +1639,8 @@ const sectionStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 8,
+    flex: 1,
   },
   iconCircle: {
     width: 40,
@@ -1666,18 +1732,58 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
-  progressDotsRow: {
+  progressRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
     paddingHorizontal: 20,
     paddingBottom: 12,
+    gap: 10,
   },
-  progressDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  progressSteps: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  progressStepWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  progressStep: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  progressLine: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 2,
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+  },
+  sectionStepRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingTop: 2,
+  },
+  sectionStep: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  sectionPreview: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+    marginTop: 4,
   },
   scrollView: {
     flex: 1,
