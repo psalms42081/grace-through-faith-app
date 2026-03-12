@@ -149,14 +149,22 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           previewText={content.overview}
           isCurrent={firstIncompleteKey === "overview"}
         >
-          <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {content.overview}
-          </Text>
+          <View style={sStyles.guidanceBlock}>
+            <View style={sStyles.guidanceHeader}>
+              <Ionicons name="reader-outline" size={14} color={theme.accent} />
+              <Text style={[sStyles.guidanceLabel, { color: theme.accent }]}>Read through this week's theme</Text>
+            </View>
+            <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              {content.overview}
+            </Text>
+          </View>
         </SectionCard>
       )}
 
       {content.dailyStudyPrompts?.map((day: any, i: number) => {
         const key = `day-${i}`;
+        const reading = day.focusText || day.reading;
+        const prompt = day.studyPrompt || day.prompt;
         return (
         <SectionCard
           key={key}
@@ -169,23 +177,42 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           isExpanded={isSectionExpanded(key)}
           onToggleExpand={() => toggleExpand(key)}
           stepLabel={getSectionStepLabel(key)}
-          previewText={day.focusText || day.reading || day.studyPrompt || day.prompt || ""}
+          previewText={reading || prompt || ""}
           isCurrent={firstIncompleteKey === key}
         >
-          {(day.focusText || day.reading) && (
-            <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {day.focusText || day.reading}
-            </Text>
+          {reading && (
+            <View style={sStyles.guidanceBlock}>
+              <View style={sStyles.guidanceHeader}>
+                <Ionicons name="book-outline" size={14} color="#1565C0" />
+                <Text style={[sStyles.guidanceLabel, { color: "#1565C0" }]}>Open your Bible and read</Text>
+              </View>
+              <View style={sStyles.scriptureChip}>
+                <Ionicons name="document-text-outline" size={13} color={theme.accent} />
+                <Text style={[sStyles.scriptureRef, { color: theme.accent }]}>{reading}</Text>
+              </View>
+            </View>
           )}
-          {(day.studyPrompt || day.prompt) && (
-            <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-              {day.studyPrompt || day.prompt}
-            </Text>
+          {prompt && (
+            <View style={sStyles.guidanceBlock}>
+              <View style={sStyles.guidanceHeader}>
+                <Ionicons name="chatbubble-ellipses-outline" size={14} color="#8B5CF6" />
+                <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Reflect on this</Text>
+              </View>
+              <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {prompt}
+              </Text>
+            </View>
           )}
           {day.keyInsight && (
-            <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_400Regular_Italic", marginTop: 8 }]}>
-              {day.keyInsight}
-            </Text>
+            <View style={sStyles.guidanceBlock}>
+              <View style={sStyles.guidanceHeader}>
+                <Ionicons name="bulb-outline" size={14} color="#C9933A" />
+                <Text style={[sStyles.guidanceLabel, { color: "#C9933A" }]}>Key Insight</Text>
+              </View>
+              <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_400Regular_Italic" }]}>
+                {day.keyInsight}
+              </Text>
+            </View>
           )}
         </SectionCard>
         );
@@ -205,24 +232,43 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           previewText={content.discussionQuestions?.[0]?.question || content.discussionQuestions?.[0] || ""}
           isCurrent={firstIncompleteKey === "discussion"}
         >
+          <View style={sStyles.guidanceBlock}>
+            <View style={sStyles.guidanceHeader}>
+              <Ionicons name="people-outline" size={14} color="#8B5CF6" />
+              <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Discuss together or reflect personally</Text>
+            </View>
+            <Text style={[sStyles.guidanceHint, { color: theme.textMuted }]}>
+              Work through these questions with your study group. Allow 5-10 minutes per question.
+            </Text>
+          </View>
           {content.discussionQuestions.map((q: any, i: number) => {
             const questionText = typeof q === "string" ? q : q.question || "";
             const contextText = typeof q === "object" && q.context ? q.context : null;
+            const depth = typeof q === "object" && q.depth ? q.depth : null;
             return (
-              <View key={i} style={sStyles.listItem}>
-                <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {i + 1}.
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {questionText}
+              <View key={i} style={sStyles.questionBlock}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                  <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    {i + 1}.
                   </Text>
-                  {contextText && (
-                    <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular_Italic", fontSize: 13, marginTop: 4, opacity: 0.7 }]}>
-                      {contextText}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {questionText}
                     </Text>
-                  )}
+                    {contextText && (
+                      <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular_Italic", fontSize: 13, marginTop: 4, opacity: 0.7 }]}>
+                        {contextText}
+                      </Text>
+                    )}
+                  </View>
                 </View>
+                {depth && (
+                  <View style={[sStyles.depthBadge, { backgroundColor: depth === "deep" ? "rgba(139,92,246,0.15)" : depth === "intermediate" ? "rgba(30,136,229,0.15)" : "rgba(201,147,58,0.15)" }]}>
+                    <Text style={[sStyles.depthText, { color: depth === "deep" ? "#8B5CF6" : depth === "intermediate" ? "#1E88E5" : "#C9933A" }]}>
+                      {depth === "deep" ? "Deep dive" : depth === "intermediate" ? "Going deeper" : "Getting started"}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -246,30 +292,61 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
             isCurrent={firstIncompleteKey === "memoryVerse"}
           >
             {typeof mv === "string" ? (
-              <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]}>
-                {mv}
-              </Text>
+              <View style={sStyles.guidanceBlock}>
+                <View style={sStyles.guidanceHeader}>
+                  <Ionicons name="sparkles-outline" size={14} color="#E65100" />
+                  <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>Memorize and meditate</Text>
+                </View>
+                <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]}>
+                  {mv}
+                </Text>
+              </View>
             ) : (
               <>
                 {mv.reference && mv.verse && (
-                  <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_600SemiBold", marginBottom: 8 }]}>
-                    "{mv.verse}" — {mv.reference}
-                  </Text>
+                  <View style={sStyles.guidanceBlock}>
+                    <View style={sStyles.guidanceHeader}>
+                      <Ionicons name="heart-outline" size={14} color="#E65100" />
+                      <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>This week's verse to memorize</Text>
+                    </View>
+                    <View style={sStyles.verseCard}>
+                      <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_600SemiBold", textAlign: "center" }]}>
+                        "{mv.verse}"
+                      </Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, textAlign: "center", marginTop: 4 }}>
+                        {mv.reference}
+                      </Text>
+                    </View>
+                  </View>
                 )}
-                {mv.meditationSteps?.map((step: string, i: number) => (
-                  <View key={i} style={sStyles.listItem}>
-                    <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {i + 1}.
-                    </Text>
-                    <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
-                      {step}
+                {mv.meditationSteps?.length > 0 && (
+                  <View style={sStyles.guidanceBlock}>
+                    <View style={sStyles.guidanceHeader}>
+                      <Ionicons name="walk-outline" size={14} color="#8B5CF6" />
+                      <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Follow these meditation steps</Text>
+                    </View>
+                    {mv.meditationSteps.map((step: string, i: number) => (
+                      <View key={i} style={sStyles.numberedStep}>
+                        <View style={[sStyles.stepCircle, { borderColor: theme.accent }]}>
+                          <Text style={[sStyles.stepCircleNum, { color: theme.accent }]}>{i + 1}</Text>
+                        </View>
+                        <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
+                          {step}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {mv.applicationPrompt && (
+                  <View style={sStyles.guidanceBlock}>
+                    <View style={sStyles.guidanceHeader}>
+                      <Ionicons name="hand-right-outline" size={14} color="#2E7D32" />
+                      <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>Put it into practice</Text>
+                    </View>
+                    <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                      {mv.applicationPrompt}
                     </Text>
                   </View>
-                ))}
-                {mv.applicationPrompt && (
-                  <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular", marginTop: 8 }]}>
-                    {mv.applicationPrompt}
-                  </Text>
                 )}
               </>
             )}
@@ -292,38 +369,67 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           isCurrent={firstIncompleteKey === "familyWorship"}
         >
           {typeof content.familyWorshipAdaptation === "string" ? (
-            <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {content.familyWorshipAdaptation}
-            </Text>
+            <View style={sStyles.guidanceBlock}>
+              <View style={sStyles.guidanceHeader}>
+                <Ionicons name="people-outline" size={14} color="#2E7D32" />
+                <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>Share with your family</Text>
+              </View>
+              <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                {content.familyWorshipAdaptation}
+              </Text>
+            </View>
           ) : (
             <>
               {content.familyWorshipAdaptation.kidsVersion && (
-                <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", marginBottom: 8 }]}>
-                  {content.familyWorshipAdaptation.kidsVersion}
-                </Text>
+                <View style={sStyles.guidanceBlock}>
+                  <View style={sStyles.guidanceHeader}>
+                    <Ionicons name="book-outline" size={14} color="#2E7D32" />
+                    <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>Read this story to the children</Text>
+                  </View>
+                  <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {content.familyWorshipAdaptation.kidsVersion}
+                  </Text>
+                </View>
               )}
               {content.familyWorshipAdaptation.activityIdea && (
-                <View style={sStyles.listItem}>
-                  <Ionicons name="bulb-outline" size={14} color="#C9933A" />
-                  <Text style={[sStyles.bodyText, { color: theme.text, fontFamily: "Inter_500Medium", flex: 1, marginLeft: 6 }]}>
+                <View style={sStyles.guidanceBlock}>
+                  <View style={sStyles.guidanceHeader}>
+                    <Ionicons name="color-palette-outline" size={14} color="#E65100" />
+                    <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>Do this activity together</Text>
+                  </View>
+                  <Text style={[sStyles.bodyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                     {content.familyWorshipAdaptation.activityIdea}
                   </Text>
                 </View>
               )}
-              {content.familyWorshipAdaptation.discussionForKids?.map((q: string, i: number) => (
-                <View key={i} style={sStyles.listItem}>
-                  <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    {i + 1}.
-                  </Text>
-                  <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
-                    {q}
+              {content.familyWorshipAdaptation.discussionForKids?.length > 0 && (
+                <View style={sStyles.guidanceBlock}>
+                  <View style={sStyles.guidanceHeader}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={14} color="#1565C0" />
+                    <Text style={[sStyles.guidanceLabel, { color: "#1565C0" }]}>Ask the kids</Text>
+                  </View>
+                  {content.familyWorshipAdaptation.discussionForKids.map((q: string, i: number) => (
+                    <View key={i} style={sStyles.listItem}>
+                      <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {i + 1}.
+                      </Text>
+                      <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
+                        {q}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {content.familyWorshipAdaptation.prayer && (
+                <View style={sStyles.guidanceBlock}>
+                  <View style={sStyles.guidanceHeader}>
+                    <Ionicons name="hand-left-outline" size={14} color="#6A1B9A" />
+                    <Text style={[sStyles.guidanceLabel, { color: "#6A1B9A" }]}>Close with this prayer</Text>
+                  </View>
+                  <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
+                    {content.familyWorshipAdaptation.prayer}
                   </Text>
                 </View>
-              ))}
-              {content.familyWorshipAdaptation.prayer && (
-                <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular_Italic", marginTop: 8 }]}>
-                  {content.familyWorshipAdaptation.prayer}
-                </Text>
               )}
             </>
           )}
@@ -344,15 +450,27 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           previewText={Array.isArray(content.egwConnections) && content.egwConnections[0]?.topic ? content.egwConnections[0].topic : ""}
           isCurrent={firstIncompleteKey === "egw"}
         >
+          <View style={sStyles.guidanceBlock}>
+            <View style={sStyles.guidanceHeader}>
+              <Ionicons name="library-outline" size={14} color="#6A1B9A" />
+              <Text style={[sStyles.guidanceLabel, { color: "#6A1B9A" }]}>Explore these Spirit of Prophecy connections</Text>
+            </View>
+            <Text style={[sStyles.guidanceHint, { color: theme.textMuted }]}>
+              Read the referenced passages alongside your Bible study for deeper understanding.
+            </Text>
+          </View>
           {Array.isArray(content.egwConnections) ? (
             content.egwConnections.map((conn: any, i: number) => (
-              <View key={i} style={{ marginBottom: i < content.egwConnections.length - 1 ? 12 : 0 }}>
+              <View key={i} style={sStyles.egwItem}>
                 <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
                   {conn.topic}
                 </Text>
-                <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }]}>
-                  {conn.bookReference}
-                </Text>
+                <View style={sStyles.scriptureChip}>
+                  <Ionicons name="bookmark-outline" size={12} color={theme.accent} />
+                  <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                    {conn.bookReference}
+                  </Text>
+                </View>
                 <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular", marginTop: 4 }]}>
                   {conn.relevance}
                 </Text>
@@ -1246,5 +1364,94 @@ const sStyles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.3,
     textTransform: "uppercase",
+  },
+  guidanceBlock: {
+    gap: 6,
+    paddingTop: 2,
+  },
+  guidanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
+  guidanceLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  guidanceHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  scriptureChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.3)",
+    backgroundColor: "rgba(201,147,58,0.08)",
+  },
+  scriptureRef: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  verseCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.25)",
+    backgroundColor: "rgba(201,147,58,0.06)",
+  },
+  numberedStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 4,
+  },
+  stepCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepCircleNum: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  questionBlock: {
+    gap: 6,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.06)",
+  },
+  depthBadge: {
+    alignSelf: "flex-start",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginLeft: 28,
+  },
+  depthText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  egwItem: {
+    gap: 4,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.06)",
   },
 });
