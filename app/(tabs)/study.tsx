@@ -2407,6 +2407,7 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
           {passageQuery.isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading verses...</Text>
             </View>
           )}
 
@@ -2704,6 +2705,7 @@ function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: {
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading historical context...</Text>
             </View>
           )}
 
@@ -3031,6 +3033,7 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading commentaries...</Text>
             </View>
           )}
 
@@ -3332,6 +3335,7 @@ function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName 
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Preparing application guide...</Text>
             </View>
           )}
 

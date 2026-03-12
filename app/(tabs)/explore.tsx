@@ -127,6 +127,8 @@ export default function StudyScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.accent} />
         </Pressable>
 
+        <EnrolledTracksPreview theme={theme} />
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Adventist Formation
@@ -258,13 +260,11 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
-        <EnrolledTracksPreview theme={theme} />
-
         <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Reference & Discovery
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Reference
           </Text>
         </View>
 
@@ -277,39 +277,19 @@ export default function StudyScreen() {
           style={{ marginBottom: 8 }}
         />
 
-        <View style={styles.toolsRow}>
-          <Pressable
-            onPress={() => router.push("/maps-timeline?tab=maps")}
-            style={({ pressed }) => [
-              styles.toolCard,
-              { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[styles.toolIcon, { backgroundColor: "rgba(26,31,60,0.10)" }]}>
-              <Ionicons name="map" size={24} color={isDark ? "#8B9FD4" : "#1A1F3C"} />
-            </View>
-            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Bible Maps</Text>
-            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Ancient locations</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/maps-timeline?tab=timeline")}
-            style={({ pressed }) => [
-              styles.toolCard,
-              { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[styles.toolIcon, { backgroundColor: "rgba(46,125,50,0.10)" }]}>
-              <Ionicons name="time" size={24} color={isDark ? "#66BB6A" : "#2E7D32"} />
-            </View>
-            <Text style={[styles.toolTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Timeline</Text>
-            <Text style={[styles.toolSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Biblical history</Text>
-          </Pressable>
-        </View>
+        <ListItem
+          icon="map"
+          iconColor={isDark ? "#8B9FD4" : "#1A1F3C"}
+          title="Bible Maps & Timeline"
+          subtitle="Ancient locations and biblical history"
+          onPress={() => router.push("/maps-timeline?tab=maps")}
+          style={{ marginBottom: 8 }}
+        />
 
         <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Beloved Passages
           </Text>
         </View>
@@ -338,7 +318,7 @@ export default function StudyScreen() {
         <SectionDivider theme={theme} />
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Spiritual Themes
           </Text>
         </View>
@@ -391,6 +371,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: { fontSize: 22 },
+  sectionSubhead: { fontSize: 16, letterSpacing: 0.3 },
   inspirationScroll: {
     gap: 12,
     paddingBottom: 4,

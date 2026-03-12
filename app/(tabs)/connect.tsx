@@ -42,7 +42,7 @@ export default function ConnectScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <SectionHeaderShared title={t("connect.findAChurch")} color={theme.text} />
+        <SectionHeaderShared title={t("connect.findAndConnect")} color={theme.text} />
 
         <ListItem
           icon="location"
@@ -53,9 +53,27 @@ export default function ConnectScreen() {
           style={{ marginBottom: 10 }}
         />
 
+        <ListItem
+          icon="people-circle"
+          iconColor="#10B981"
+          title={t("connect.smallGroups")}
+          subtitle={t("connect.smallGroupsSub")}
+          onPress={() => router.push("/groups" as any)}
+          style={{ marginBottom: 10 }}
+        />
+
+        <ListItem
+          icon="home"
+          iconColor="#5B86E5"
+          title={t("connect.familyDashboard")}
+          subtitle={t("connect.familyDashboardSub")}
+          onPress={() => router.push("/(tabs)/family" as any)}
+          style={{ marginBottom: 10 }}
+        />
+
         <SectionDivider theme={theme} />
 
-        <SectionHeaderShared title="Watch & Listen" color={theme.text} />
+        <SectionHeaderShared title={t("connect.watchAndListen")} color={theme.text} />
 
         <ListItem
           icon="tv"
@@ -63,16 +81,6 @@ export default function ConnectScreen() {
           title={t("connect.broadcasts")}
           subtitle={t("connect.broadcastsSub")}
           onPress={() => router.push("/broadcasts" as any)}
-          style={{ marginBottom: 10 }}
-        />
-
-        <ListItem
-          icon="videocam"
-          iconColor="#E8456B"
-          title={t("connect.liveStreams")}
-          subtitle={t("connect.liveStreamsSub")}
-          showChevron={false}
-          rightElement={<Badge label={t("connect.soon")} variant="filled" />}
           style={{ marginBottom: 10 }}
         />
 
@@ -85,29 +93,13 @@ export default function ConnectScreen() {
           style={{ marginBottom: 10 }}
         />
 
-        <SectionDivider theme={theme} />
-
-        <SectionHeaderShared title={t("connect.community")} color={theme.text} />
-
         <ListItem
-          icon="people-circle"
-          iconColor="#10B981"
-          title={t("connect.smallGroups")}
-          subtitle={t("connect.smallGroupsSub")}
-          onPress={() => router.push("/groups" as any)}
-          style={{ marginBottom: 10 }}
-        />
-
-        <SectionDivider theme={theme} />
-
-        <SectionHeaderShared title={t("connect.family")} color={theme.text} />
-
-        <ListItem
-          icon="home"
-          iconColor="#5B86E5"
-          title={t("connect.familyDashboard")}
-          subtitle={t("connect.familyDashboardSub")}
-          onPress={() => router.push("/(tabs)/family" as any)}
+          icon="videocam"
+          iconColor="#E8456B"
+          title={t("connect.liveStreams")}
+          subtitle={t("connect.liveStreamsSub")}
+          showChevron={false}
+          rightElement={<Badge label={t("connect.soon")} variant="filled" />}
           style={{ marginBottom: 10 }}
         />
       </ScrollView>

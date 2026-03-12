@@ -1055,18 +1055,16 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
-          <AnimatedSection index={3}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={4}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={5}>
+          <AnimatedSection index={3}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={6}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={4}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={7}>
+            <AnimatedSection index={5}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1076,6 +1074,8 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
+          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={7}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       ) : (
@@ -1097,10 +1097,9 @@ function AdultHomeScreen() {
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={3}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={4}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={3}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={5}>
+            <AnimatedSection index={4}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1110,7 +1109,8 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
-          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={5}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={6}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={7}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}

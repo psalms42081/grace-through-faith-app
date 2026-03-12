@@ -114,8 +114,13 @@ export default function ReadScreen() {
       </Modal>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.accent} />
+        <View style={styles.skeletonList}>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <View key={i} style={[styles.skeletonRow, { backgroundColor: theme.backgroundCard, opacity: 0.5 + (i % 2) * 0.15 }]}>
+              <View style={[styles.skeletonBlock, { width: 40 + (i % 3) * 20, backgroundColor: theme.divider }]} />
+              <View style={[styles.skeletonBlock, { flex: 1, marginLeft: 12, backgroundColor: theme.divider }]} />
+            </View>
+          ))}
         </View>
       ) : error ? (
         <View style={styles.loadingContainer}>
@@ -312,5 +317,21 @@ const styles = StyleSheet.create({
   pickerOptionYear: {
     fontSize: 12,
     marginTop: 1,
+  },
+  skeletonList: {
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    gap: 12,
+  },
+  skeletonRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  skeletonBlock: {
+    height: 14,
+    borderRadius: 6,
   },
 });

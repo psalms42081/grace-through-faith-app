@@ -96,6 +96,13 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Kids story art dominance:** Illustration aspect ratio increased (0.65 → 0.85) for art-first presentation. Placeholder icon sizes enlarged (48→56 loading, 56→64 failed). Interaction container uses shared `ILLUSTRATION_HEIGHT` constant.
 - **Home/Study primary action hierarchy:** TodaysPath Daily Rhythm shows Read → Study → Pray; Study links to 4-layer study with passage params when available, falls back to explore tab. Explore tab has a prominent "4-Layer Bible Study" CTA card at the top routing to study with intro. Removed misplaced "Pick a passage" banner from study.tsx.
 
+### Beta Hardening Pass 2 — Hierarchy + Clarity (Completed)
+- **Home hierarchy:** Reordered sections: TodaysPath → Verse → ContinueCard → GuidedTools → Divider → SpiritualRings → Feedback. Rings moved to secondary position below gold divider in both regular and Sabbath layouts.
+- **Study hierarchy:** Enrolled tracks moved up (right after 4-Layer CTA). Reference section, Beloved Passages, and Spiritual Themes given smaller `sectionSubhead` styling. Bible Maps and Timeline consolidated into single ListItem.
+- **Connect consolidation:** Four sections merged to two: "Find & Connect" (Church, Groups, Family) and "Watch & Listen" (Broadcasts, Radio, Live Streams). Live Streams moved last. i18n keys added for new section headers.
+- **Read loading skeleton:** Replaced bare centered ActivityIndicator with 10-row skeleton placeholder during book list loading.
+- **Study loading text:** Added descriptive labels to all bare spinner states in 4-layer study tabs (verses, historical context, commentaries, application guide).
+
 ### Story Art Performance Pass (Completed)
 - **expo-image migration:** `CinematicScene.tsx` and `LivingScene.tsx` switched from RN `Image` to `expo-image` with `cachePolicy="disk"`, `recyclingKey`, and 200ms `transition` for smooth reveal.
 - **SceneIllustration** in `story/[id].tsx` also uses `expo-image` with disk caching.
