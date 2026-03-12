@@ -93,6 +93,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Family dashboard gate:** Changed from "Available to Supporters" / "Support the Mission" to "Free During Beta" / "Unlock Free Preview" with lock-open icon.
 - **Server-side pro gate message:** Updated `checkProStatus` middleware message to "This feature requires an active account. All features are free during beta."
 - **Live features de-emphasized:** Removed LiveNowSection from home screen (both Sabbath and weekday layouts). Removed Go Live button and related dead code from group pages. Live Streams in Connect tab already had "Soon" badge and non-clickable state.
+- **Kids story art dominance:** Illustration aspect ratio increased (0.65 → 0.85) for art-first presentation. Placeholder icon sizes enlarged (48→56 loading, 56→64 failed). Interaction container uses shared `ILLUSTRATION_HEIGHT` constant.
+- **Home/Study primary action hierarchy:** TodaysPath Daily Rhythm shows Read → Study → Pray; Study links to 4-layer study with passage params when available, falls back to explore tab. Explore tab has a prominent "4-Layer Bible Study" CTA card at the top routing to study with intro. Removed misplaced "Pick a passage" banner from study.tsx.
 
 ### Story Art Performance Pass (Completed)
 - **expo-image migration:** `CinematicScene.tsx` and `LivingScene.tsx` switched from RN `Image` to `expo-image` with `cachePolicy="disk"`, `recyclingKey`, and 200ms `transition` for smooth reveal.

@@ -988,7 +988,7 @@ function SceneIllustrationPlaceholder({ mood, loading }: { mood: SceneMood; load
       <Animated.View style={iconAnimStyle}>
         <Ionicons
           name={moodIcon.name as any}
-          size={loading ? 48 : 56}
+          size={loading ? 56 : 64}
           color={moodIcon.color}
         />
       </Animated.View>
@@ -1053,7 +1053,7 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
 }
 
 const ILLUSTRATION_WIDTH = SCREEN_WIDTH - 48;
-const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.65;
+const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.85;
 
 const KEN_BURNS_PATTERNS = [
   { fromScale: 1.0, toScale: 1.18, fromX: 0, toX: -15, fromY: 0, toY: -10 },
@@ -2467,7 +2467,7 @@ export default function SceneStoryScreen() {
                   type={item.interactionType}
                   config={item.interactionConfig}
                   containerWidth={SCREEN_WIDTH - 32}
-                  containerHeight={SCREEN_WIDTH * 0.65}
+                  containerHeight={ILLUSTRATION_HEIGHT}
                 />
               )}
             </View>

@@ -69,6 +69,19 @@ export default function TodaysPath({
       },
     },
     {
+      icon: "layers-outline",
+      label: "Study",
+      subtitle: "Go deeper with 4-layer study",
+      completed: false,
+      onPress: () => {
+        if (parsed) {
+          router.push({ pathname: "/(tabs)/study", params: { bookId: String(parsed.bookId), chapter: String(parsed.chapter), bookName: dailyVerseRef?.replace(/\s+\d+.*$/, "") || "" } } as any);
+        } else {
+          router.push("/(tabs)/explore" as any);
+        }
+      },
+    },
+    {
       icon: "hand-left-outline",
       label: "Pray",
       completed: prayerDone,
@@ -103,18 +116,25 @@ export default function TodaysPath({
               color={item.completed ? theme.accent : (isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)")}
             />
           </View>
-          <Text
-            style={[
-              s.label,
-              {
-                color: item.completed ? theme.textMuted : theme.text,
-                fontFamily: "Inter_500Medium",
-                textDecorationLine: item.completed ? "line-through" : "none",
-              },
-            ]}
-          >
-            {item.label}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                s.label,
+                {
+                  color: item.completed ? theme.textMuted : theme.text,
+                  fontFamily: "Inter_500Medium",
+                  textDecorationLine: item.completed ? "line-through" : "none",
+                },
+              ]}
+            >
+              {item.label}
+            </Text>
+            {item.subtitle && !item.completed && (
+              <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                {item.subtitle}
+              </Text>
+            )}
+          </View>
           <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         </Pressable>
       ))}
@@ -151,7 +171,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    flex: 1,
     fontSize: 14,
   },
 });

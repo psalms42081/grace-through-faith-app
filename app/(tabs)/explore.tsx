@@ -101,6 +101,32 @@ export default function StudyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Pressable
+          onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } } as any)}
+          style={({ pressed }) => [
+            styles.primaryCta,
+            {
+              backgroundColor: isDark ? "#1A1A2E" : "#FFFDF6",
+              borderColor: theme.accent + "30",
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+          testID="study-primary-cta"
+        >
+          <View style={[styles.primaryCtaIcon, { backgroundColor: theme.accent + "18" }]}>
+            <Ionicons name="layers" size={22} color={theme.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.primaryCtaTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              4-Layer Bible Study
+            </Text>
+            <Text style={[styles.primaryCtaSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Open a passage and study it in depth
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.accent} />
+        </Pressable>
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Adventist Formation
@@ -455,4 +481,22 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   enrolledPercent: { fontSize: 11 },
+  primaryCta: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 14,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
+  primaryCtaIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  primaryCtaTitle: { fontSize: 16 },
+  primaryCtaSub: { fontSize: 13, marginTop: 2 },
 });
