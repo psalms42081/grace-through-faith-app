@@ -2324,6 +2324,9 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
 
       {studyMode === "verse" && !selectedBook && (
         <>
+          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 19 }]}>
+            Look up the original Hebrew and Greek behind any verse — Strong's numbers, transliterations, and KJV usage.
+          </Text>
           <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Old Testament
           </Text>
@@ -2525,17 +2528,25 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <Ionicons name="reload-outline" size={24} color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Generation Failed
+                Could Not Load Words
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Could not generate word analysis for {selectedBook.name} {selectedChapter}:{selectedVerse}. Tap below to try again.
+                The lexical data for {selectedBook.name} {selectedChapter}:{selectedVerse} is temporarily unavailable.
               </Text>
               <Pressable
                 onPress={() => generateWordsMutation.mutate()}
                 style={[styles.generateBtn, { backgroundColor: theme.accent }]}
               >
                 <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Retry
+                  Try Again
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push({ pathname: "/study-guide", params: { bookId: String(selectedBook.id), chapter: String(selectedChapter), verse: String(selectedVerse) } } as any)}
+                style={{ marginTop: 10, paddingVertical: 8 }}
+              >
+                <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" as const }}>
+                  Or explore this verse with Guided Study
                 </Text>
               </Pressable>
             </View>

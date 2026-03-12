@@ -121,7 +121,7 @@ export default function StudyScreen() {
               4-Layer Bible Study
             </Text>
             <Text style={[styles.primaryCtaSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Open a passage and study it in depth
+              Original languages, context, commentaries, and application
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.accent} />
@@ -246,7 +246,7 @@ export default function StudyScreen() {
           icon="chatbubbles"
           iconColor="#8B5CF6"
           title="Guided Study"
-          subtitle="Socratic AI-guided inductive Bible study"
+          subtitle="AI tutor walks you through a passage step by step"
           onPress={() => router.push("/study-guide" as any)}
           style={{ marginBottom: 8 }}
         />

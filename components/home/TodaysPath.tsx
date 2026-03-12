@@ -89,6 +89,8 @@ export default function TodaysPath({
     },
   ];
 
+  const firstIncompleteIdx = items.findIndex(item => !item.completed);
+
   return (
     <View style={[s.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
       <View style={s.header}>
@@ -97,47 +99,57 @@ export default function TodaysPath({
           Your Daily Rhythm
         </Text>
       </View>
-      {items.map((item, i) => (
-        <Pressable
-          key={item.label}
-          onPress={item.onPress}
-          accessibilityRole="button"
-          accessibilityLabel={item.label}
-          style={({ pressed }) => [
-            s.row,
-            i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border },
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <View style={[s.iconWrap, { backgroundColor: item.completed ? theme.accent + "20" : (isDark ? "#1E1E38" : "#EBE5D8") }]}>
-            <Ionicons
-              name={item.completed ? "checkmark" : item.icon}
-              size={18}
-              color={item.completed ? theme.accent : (isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)")}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                s.label,
-                {
-                  color: item.completed ? theme.textMuted : theme.text,
-                  fontFamily: "Inter_500Medium",
-                  textDecorationLine: item.completed ? "line-through" : "none",
-                },
-              ]}
-            >
-              {item.label}
-            </Text>
-            {item.subtitle && !item.completed && (
-              <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-                {item.subtitle}
+      {items.map((item, i) => {
+        const isNextStep = i === firstIncompleteIdx;
+        return (
+          <Pressable
+            key={item.label}
+            onPress={item.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            style={({ pressed }) => [
+              s.row,
+              i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border },
+              isNextStep && { backgroundColor: theme.accent + "08", marginHorizontal: -12, paddingHorizontal: 12, borderRadius: 12 },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <View style={[s.iconWrap, {
+              backgroundColor: item.completed
+                ? theme.accent + "20"
+                : isNextStep
+                  ? theme.accent + "18"
+                  : (isDark ? "#1E1E38" : "#EBE5D8"),
+            }]}>
+              <Ionicons
+                name={item.completed ? "checkmark" : item.icon}
+                size={18}
+                color={item.completed ? theme.accent : isNextStep ? theme.accent : (isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)")}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  s.label,
+                  {
+                    color: item.completed ? theme.textMuted : theme.text,
+                    fontFamily: isNextStep ? "Inter_600SemiBold" : "Inter_500Medium",
+                    textDecorationLine: item.completed ? "line-through" : "none",
+                  },
+                ]}
+              >
+                {item.label}
               </Text>
-            )}
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-        </Pressable>
-      ))}
+              {item.subtitle && !item.completed && (
+                <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                  {item.subtitle}
+                </Text>
+              )}
+            </View>
+            <Ionicons name={isNextStep ? "arrow-forward" : "chevron-forward"} size={16} color={isNextStep ? theme.accent : theme.textMuted} />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

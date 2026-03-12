@@ -42,6 +42,10 @@ export default function ConnectScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={[st.tabPurpose, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          {t("connect.purpose")}
+        </Text>
+
         <SectionHeaderShared title={t("connect.findAndConnect")} color={theme.text} />
 
         <ListItem
@@ -116,6 +120,11 @@ const st = StyleSheet.create({
   title: { fontSize: 24 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
+  tabPurpose: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginVertical: 24,
