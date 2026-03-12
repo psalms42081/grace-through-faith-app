@@ -16,7 +16,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer. It supports two presentation modes based on age group: **Cinematic Mode** (art-first animated storybook) and **Interactive Mode** (hotspot-based interactions). All kids progress/badge/streak routes use auth-derived identity, with server-side validation for data ownership.
 
 **Technical Implementations & Feature Specifications:**
-- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels.
+- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels. Passage state (book/chapter) is lifted to the StudyScreen parent and shared across all four layer tabs via props/callbacks, ensuring continuity when switching between Text, Context, Insight, and Transform layers. ScrollView resets to top on tab change.
 - **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation, including a Socratic AI Study Guide and Dynamic AI Reading Plans.
 - **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech` device voices.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.

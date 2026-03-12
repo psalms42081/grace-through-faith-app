@@ -1473,9 +1473,45 @@ export default function StudyScreen() {
     }
   }, [params.tab]);
 
-  const bookId = params.bookId ? parseInt(params.bookId) : null;
-  const chapter = params.chapter ? parseInt(params.chapter) : null;
+  const paramBookId = params.bookId ? parseInt(params.bookId) : null;
+  const paramChapter = params.chapter ? parseInt(params.chapter) : null;
+
+  const { data: allBooks } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
+
+  const [sharedBook, setSharedBook] = useState<BibleBook | null>(null);
+  const [sharedChapter, setSharedChapter] = useState<number | null>(paramChapter);
+  const [sharedBookInit, setSharedBookInit] = useState(false);
+
+  useEffect(() => {
+    if (allBooks && paramBookId && !sharedBookInit) {
+      const found = allBooks.find(b => b.id === paramBookId);
+      if (found) {
+        setSharedBook(found);
+        setSharedBookInit(true);
+      }
+    }
+  }, [allBooks, paramBookId, sharedBookInit]);
+
+  const handleSharedBookChange = useCallback((book: BibleBook | null) => {
+    setSharedBook(book);
+    if (!book) setSharedChapter(null);
+  }, []);
+
+  const handleSharedChapterChange = useCallback((ch: number | null) => {
+    setSharedChapter(ch);
+  }, []);
+
+  const bookId = sharedBook?.id ?? null;
+  const chapter = sharedChapter;
   const canTrack = bookId !== null && chapter !== null;
+
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [activeTab]);
 
   const completionKey = `/api/layer-completions?userId=${userId}&bookId=${bookId}&chapter=${chapter}`;
   const { data: completions } = useQuery<LayerCompletionEntry[]>({
@@ -1536,6 +1572,7 @@ export default function StudyScreen() {
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
 
   useEffect(() => {
+    if (bookId === null && paramBookId !== null) return;
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(DEEP_SESSION_KEY);
@@ -1555,7 +1592,7 @@ export default function StudyScreen() {
         }
       } catch {}
     })();
-  }, [bookId, chapter]);
+  }, [bookId, chapter, paramBookId]);
 
   const persistSession = useCallback(async (state: DeepSessionState, remove?: boolean) => {
     setDeepSession(state);
@@ -1748,8 +1785,8 @@ export default function StudyScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
         <DeepStudyIntro
-          reference={params.bookName && chapter ? `${params.bookName} ${chapter}` : "Scripture"}
-          bookId={params.bookId ? Number(params.bookId) : null}
+          reference={(params.bookName || sharedBook?.name) && chapter ? `${params.bookName || sharedBook?.name} ${chapter}` : "Scripture"}
+          bookId={bookId}
           chapter={chapter ? Number(chapter) : null}
           onBegin={beginDeepSessionFromIntro}
           onCancel={() => setShowDeepIntro(false)}
@@ -1772,7 +1809,7 @@ export default function StudyScreen() {
           onSavePrayer={handleSavePrayerFromSummary}
           hasPrayerContent={prayerContent.length > 0}
           theme={theme}
-          reference={params.bookName && chapter ? `${params.bookName} ${chapter}` : "Study Session"}
+          reference={(params.bookName || sharedBook?.name) && chapter ? `${params.bookName || sharedBook?.name} ${chapter}` : "Study Session"}
           depthLabel={studyDepthLabel}
         />
       </View>
@@ -1863,14 +1900,15 @@ export default function StudyScreen() {
       )}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "word" && <WordStudyTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} initialBookName={params.bookName} isDeepSession={deepSession.active} />}
-        {activeTab === "context" && <ContextTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
-        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
-        {activeTab === "application" && <ApplicationTab theme={theme} initialBookId={params.bookId} initialChapter={params.chapter} initialBookName={params.bookName} />}
+        {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} isDeepSession={deepSession.active} allBooks={allBooks} />}
+        {activeTab === "context" && <ContextTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
+        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
+        {activeTab === "application" && <ApplicationTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
 
         {deepSession.active ? (
           <DeepSessionAdvanceButton
@@ -1907,30 +1945,19 @@ interface BibleBook {
   chapterCount: number;
 }
 
-function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, initialVerseId, initialVerseText, initialBookName, isDeepSession }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialBookName?: string; isDeepSession?: boolean }) {
+function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, initialVerse, initialVerseId, initialVerseText, isDeepSession, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; isDeepSession?: boolean; allBooks?: BibleBook[] }) {
   const [studyMode, setStudyMode] = useState<"verse" | "concordance">("verse");
   const [lexicalExpanded, setLexicalExpanded] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
+  const selectedBook = sharedBook;
+  const selectedChapter = sharedChapter;
+  const setSelectedBook = onBookChange;
+  const setSelectedChapter = onChapterChange;
   const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse ? parseInt(initialVerse) : null);
-  const [didInit, setDidInit] = useState(false);
   const [concordanceSearch, setConcordanceSearch] = useState("");
   const [concordanceLang, setConcordanceLang] = useState<"all" | "he" | "gr">("all");
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
-  const { data: books } = useQuery<BibleBook[]>({
-    queryKey: ["/api/books"],
-  });
-
-  useEffect(() => {
-    if (books && initialBookId && !didInit) {
-      const book = books.find(b => b.id === parseInt(initialBookId));
-      if (book) {
-        setSelectedBook(book);
-        setDidInit(true);
-      }
-    }
-  }, [books, initialBookId, didInit]);
+  const books = allBooks;
 
   const passageQuery = useQuery<{ book: any; chapter: number; verses: { id: string; verse: number; text: string }[] }>({
     queryKey: [`/api/passage?book=${selectedBook?.id}&chapter=${selectedChapter}&translation=KJV`],
@@ -2557,25 +2584,14 @@ function WordStudyTab({ theme, initialBookId, initialChapter, initialVerse, init
   );
 }
 
-function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
+function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
   const { depth } = useStudyDepth();
-  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
-  const [didInit, setDidInit] = useState(false);
+  const selectedBook = sharedBook;
+  const selectedChapter = sharedChapter;
+  const setSelectedBook = onBookChange;
+  const setSelectedChapter = onChapterChange;
 
-  const { data: books } = useQuery<BibleBook[]>({
-    queryKey: ["/api/books"],
-  });
-
-  useEffect(() => {
-    if (books && initialBookId && !didInit) {
-      const book = books.find(b => b.id === parseInt(initialBookId));
-      if (book) {
-        setSelectedBook(book);
-        setDidInit(true);
-      }
-    }
-  }, [books, initialBookId, didInit]);
+  const books = allBooks;
 
   const qc = useQueryClient();
 
@@ -2850,10 +2866,11 @@ function ContextTab({ theme, initialBookId, initialChapter, initialBookName }: {
   );
 }
 
-function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; commentators: Commentator[]; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
-  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
-  const [didInit, setDidInit] = useState(false);
+function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; commentators: Commentator[]; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
+  const selectedBook = sharedBook;
+  const selectedChapter = sharedChapter;
+  const setSelectedBook = onBookChange;
+  const setSelectedChapter = onChapterChange;
   const [activeCommentator, setActiveCommentator] = useState<string | null>(null);
   const { userId } = useAuth();
   const bookId = selectedBook?.id ?? null;
@@ -2861,19 +2878,7 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
     userId, bookId, selectedChapter, "voices"
   );
 
-  const { data: books } = useQuery<BibleBook[]>({
-    queryKey: ["/api/books"],
-  });
-
-  useEffect(() => {
-    if (books && initialBookId && !didInit) {
-      const book = books.find(b => b.id === parseInt(initialBookId));
-      if (book) {
-        setSelectedBook(book);
-        setDidInit(true);
-      }
-    }
-  }, [books, initialBookId, didInit]);
+  const books = allBooks;
 
   const queryClient = useQueryClient();
   const commentaryQueryKey = `/api/commentary?book=${selectedBook?.id}&chapter=${selectedChapter}`;
@@ -3184,30 +3189,19 @@ function HistoricVoicesTab({ theme, commentators, initialBookId, initialChapter,
   );
 }
 
-function ApplicationTab({ theme, initialBookId, initialChapter, initialBookName }: { theme: typeof Colors.light; initialBookId?: string; initialChapter?: string; initialBookName?: string }) {
+function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
   const { depth } = useStudyDepth();
-  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(initialChapter ? parseInt(initialChapter) : null);
-  const [didInit, setDidInit] = useState(false);
+  const selectedBook = sharedBook;
+  const selectedChapter = sharedChapter;
+  const setSelectedBook = onBookChange;
+  const setSelectedChapter = onChapterChange;
   const { userId } = useAuth();
   const appBookId = selectedBook?.id ?? null;
   const { journalMap, handleSave: handleJournalSave, isSaving: isJournalSaving } = useJournalEntries(
     userId, appBookId, selectedChapter, "application"
   );
 
-  const { data: books } = useQuery<BibleBook[]>({
-    queryKey: ["/api/books"],
-  });
-
-  useEffect(() => {
-    if (books && initialBookId && !didInit) {
-      const book = books.find(b => b.id === parseInt(initialBookId));
-      if (book) {
-        setSelectedBook(book);
-        setDidInit(true);
-      }
-    }
-  }, [books, initialBookId, didInit]);
+  const books = allBooks;
 
   const queryClient = useQueryClient();
   const appQueryKey = `/api/application?book=${selectedBook?.id}&chapter=${selectedChapter}`;
