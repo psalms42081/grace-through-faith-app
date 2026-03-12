@@ -17,7 +17,7 @@ declare module "http" {
 
 function setupCacheControl(app: express.Application) {
   app.use((_req, res, next) => {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && !_req.path.startsWith("/assets/")) {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
