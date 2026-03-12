@@ -35,6 +35,20 @@ interface ProphecySymbol {
   dateRange?: string;
   icon: string;
   color: string;
+  observation?: {
+    prompt: string;
+    clues: string[];
+  };
+  interpretationClues?: {
+    selfInterpreting?: string;
+    crossRefs?: { ref: string; insight: string }[];
+    reasoning: string;
+  };
+  adventistConclusion?: {
+    summary: string;
+    whyThisFits: string;
+  };
+  reflection?: string;
 }
 
 interface ProphecySection {
@@ -64,6 +78,28 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         dateRange: "605\u2013539 BC",
         icon: "trophy-outline",
         color: "#D4A245",
+        observation: {
+          prompt: "Read Daniel 2:32 and 37-38. What do you notice about the head of the statue?",
+          clues: [
+            "The head is made of gold \u2014 the most precious metal in the image",
+            "It is the first part listed, starting from the top",
+            "Daniel speaks directly to the king: 'Thou art this head of gold'",
+            "Gold suggests supreme glory and wealth",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "This symbol is explicitly interpreted in the text itself. Daniel 2:38 says directly to Nebuchadnezzar: 'Thou art this head of gold.' No guesswork is needed \u2014 God told the king exactly what the head represents.",
+          crossRefs: [
+            { ref: "Daniel 2:37", insight: "God gave Nebuchadnezzar his 'kingdom, power, strength, and glory' \u2014 the gold represents God-given authority, not just wealth." },
+            { ref: "Jeremiah 51:7", insight: "Babylon is called a 'golden cup in the Lord's hand' \u2014 other prophets also associate Babylon with gold." },
+          ],
+          reasoning: "This is one of the clearest examples of a self-interpreting prophecy. The Bible does not leave you guessing: it names the kingdom directly. The study method here is simple \u2014 let Scripture interpret Scripture. When the text itself gives the meaning, start there.",
+        },
+        adventistConclusion: {
+          summary: "The head of gold represents the Babylonian Empire under Nebuchadnezzar (605\u2013539 BC).",
+          whyThisFits: "This is not an Adventist-specific interpretation \u2014 virtually all Bible scholars agree on this identification because the text states it explicitly. The gold matches Babylon's legendary wealth. Herodotus described Babylon's golden temples, golden altars, and golden furnishings. The position at the top of the image matches Babylon's position as the first empire in this prophetic sequence.",
+        },
+        reflection: "God revealed the identity of this symbol directly in the text. What does it tell you about God's approach to prophecy that He begins with something this clear and unmistakable?",
       },
       {
         id: "d2-chest",
@@ -75,6 +111,28 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         dateRange: "539\u2013331 BC",
         icon: "shield-outline",
         color: "#A0A0B0",
+        observation: {
+          prompt: "Read Daniel 2:32 and 39. What does the text tell you about this kingdom compared to the first?",
+          clues: [
+            "Silver is less valuable than gold \u2014 a step down in glory",
+            "Two arms \u2014 the body part itself suggests a dual power",
+            "The text says 'another kingdom inferior to thee' \u2014 it comes after Babylon",
+            "The prophecy follows a downward sequence of metals",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "Daniel 2:39 says 'after thee shall arise another kingdom inferior to thee.' The text tells you three things: (1) it comes after Babylon, (2) it is a kingdom, (3) it is 'inferior' \u2014 matching the lesser metal.",
+          crossRefs: [
+            { ref: "Daniel 5:28, 31", insight: "Later in Daniel, we learn that Babylon fell to 'the Medes and Persians' \u2014 Daniel itself names the next empire." },
+            { ref: "Daniel 8:20", insight: "In Daniel 8, the angel Gabriel explicitly says 'the ram which thou sawest having two horns are the kings of Media and Persia.'" },
+          ],
+          reasoning: "You don't have to guess which empire came after Babylon. Daniel's own book names it later. The two arms match the dual nature of the Medo-Persian alliance. The silver matches the lesser glory but greater extent of Persia compared to Babylon. This is the study method: let later chapters in the same book clarify earlier symbols.",
+        },
+        adventistConclusion: {
+          summary: "The chest and arms of silver represent the Medo-Persian Empire (539\u2013331 BC).",
+          whyThisFits: "Daniel's own later chapters (5 and 8) explicitly name Medo-Persia as the kingdom that conquered Babylon. The two arms match the two-nation alliance. Silver's lesser value matches the text's own description: 'inferior to thee.' Persia was vaster than Babylon but lacked its concentrated splendor.",
+        },
+        reflection: "Notice how the Bible interprets itself \u2014 Daniel 8:20 names this empire by name. How does this 'Scripture interprets Scripture' principle change the way you approach other prophetic symbols?",
       },
       {
         id: "d2-thighs",
@@ -86,6 +144,28 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         dateRange: "331\u2013168 BC",
         icon: "flash-outline",
         color: "#CD7F32",
+        observation: {
+          prompt: "Read Daniel 2:32 and 39. What distinguishing detail does the text give about this third kingdom?",
+          clues: [
+            "Bronze (brass) \u2014 continues the pattern of descending metal value",
+            "It 'shall bear rule over all the earth' \u2014 emphasizing global reach",
+            "Third in the sequence \u2014 it follows the kingdom that followed Babylon",
+            "The text gives fewer details than the first two, suggesting the focus is on the sequence pattern",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "The text identifies this as 'a third kingdom' that 'shall bear rule over all the earth.' It comes after Medo-Persia in the sequence and is distinguished by unprecedented geographic reach.",
+          crossRefs: [
+            { ref: "Daniel 8:21", insight: "The angel Gabriel says directly: 'the rough goat is the king of Grecia: and the great horn between his eyes is the first king.' Daniel names Greece explicitly." },
+            { ref: "Daniel 11:2-3", insight: "'A mighty king shall stand up, that shall rule with great dominion' \u2014 widely understood as Alexander the Great." },
+          ],
+          reasoning: "Once again, Daniel interprets Daniel. Chapter 8 names Greece by name and describes its rapid conquest. The bronze matches Greek military culture \u2014 bronze armor, shields, and weapons were distinctive of Greek warfare. The phrase 'rule over all the earth' matches Alexander's historically unprecedented conquest from Greece to India in just 10 years.",
+        },
+        adventistConclusion: {
+          summary: "The belly and thighs of bronze represent the Greek Empire under Alexander the Great (331\u2013168 BC).",
+          whyThisFits: "Daniel 8:21 names Greece by name. The phrase 'bear rule over all the earth' matches Alexander's historically unique achievement of conquering the known world by age 30. Greek soldiers were famously bronze-clad. The sequence (after Medo-Persia) aligns perfectly with the historical order of empires.",
+        },
+        reflection: "Three empires are now identified, and all three are named somewhere in Daniel itself. What does this pattern suggest about how to approach the fourth kingdom, which the text does not name?",
       },
       {
         id: "d2-legs",
@@ -97,6 +177,28 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         dateRange: "168 BC\u2013AD 476",
         icon: "hammer-outline",
         color: "#6B6B6B",
+        observation: {
+          prompt: "Read Daniel 2:33 and 40. What details does the text emphasize about this fourth kingdom?",
+          clues: [
+            "Iron \u2014 the strongest metal in the image, but least valuable",
+            "'Strong as iron' \u2014 the text stresses crushing military power",
+            "'Breaketh in pieces and subdueth all things' \u2014 total domination",
+            "Two legs \u2014 the body part suggests an eventual division into two",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "Unlike the first three, the text does not name this kingdom elsewhere in Daniel. Instead, it gives detailed characteristics: iron strength, crushing power, and the ability to subdue 'all things.' You must now use the sequence and the description to identify it.",
+          crossRefs: [
+            { ref: "Daniel 7:7", insight: "The fourth beast is 'dreadful and terrible, and strong exceedingly; and it had great iron teeth: it devoured and brake in pieces.' Iron again \u2014 connecting the two visions." },
+            { ref: "Luke 2:1", insight: "The New Testament confirms which empire ruled the world at Christ's birth: 'a decree from Caesar Augustus, that all the world should be taxed.' Rome." },
+          ],
+          reasoning: "This is where the study method shifts from 'read the name' to 'reason from the evidence.' The text does not name this kingdom, but it gives you tools: (1) the sequence \u2014 it must come after Greece, (2) the characteristics \u2014 iron strength and crushing power, (3) the cross-reference in Daniel 7 repeats the iron imagery. Only one empire in history conquered Greece and matched this description: Rome. The iron legions of Rome were proverbial even in the ancient world.",
+        },
+        adventistConclusion: {
+          summary: "The legs of iron represent the Roman Empire (168 BC\u2013AD 476).",
+          whyThisFits: "Rome is the only empire that (1) conquered Greece, (2) was known for iron-like military power, (3) dominated 'all things' in the ancient world, and (4) eventually split into two administrative halves (Eastern and Western Rome \u2014 matching the two legs). The New Testament confirms Rome's rule at the time of Christ. This identification is held by virtually all historicist interpreters.",
+        },
+        reflection: "The first three kingdoms are named directly in Daniel. The fourth is identified by evidence and sequence. What does this teach you about studying prophecy when the text gives characteristics instead of names?",
       },
       {
         id: "d2-feet",
@@ -108,6 +210,28 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         dateRange: "AD 476\u2013Present",
         icon: "git-branch-outline",
         color: "#8B7355",
+        observation: {
+          prompt: "Read Daniel 2:33 and 41-43. What is unusual about this part of the image compared to the rest?",
+          clues: [
+            "Mixed materials \u2014 iron and clay together, unlike the pure metals above",
+            "'Partly strong, and partly broken' \u2014 no longer one unified power",
+            "Toes (ten) \u2014 multiple divisions, not a single empire",
+            "'They shall not cleave one to another' \u2014 a specific prediction about failed reunification",
+            "The mixture gets weaker, not stronger \u2014 the downward pattern continues",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "The text interprets the mixture itself in verses 41-43: the kingdom 'shall be divided,' it will be 'partly strong, and partly broken,' and 'they shall not cleave one to another.' This is not a new empire \u2014 it is the fragmentation of the iron empire.",
+          crossRefs: [
+            { ref: "Daniel 7:24", insight: "'The ten horns out of this kingdom are ten kings that shall arise' \u2014 Daniel 7 confirms the fourth kingdom divides into multiple kingdoms, not one successor." },
+          ],
+          reasoning: "The prophecy makes a testable prediction: after Rome, there will be no fifth universal empire. The nations will be 'divided' and 'shall not cleave one to another.' This is remarkable because the text is predicting what will NOT happen \u2014 and for over 1,500 years, every attempt to reunify Europe by force has failed. Charlemagne, Charles V, Napoleon, Kaiser Wilhelm, Hitler \u2014 all tried, all failed. The prophecy's accuracy is in its negative prediction.",
+        },
+        adventistConclusion: {
+          summary: "The feet of iron and clay represent the divided nations of Europe from AD 476 to the present day.",
+          whyThisFits: "After Rome fell, Europe never reunified into a single empire. The iron-clay mixture matches the reality of strong and weak nations coexisting. The specific prediction \u2014 'they shall not cleave one to another' \u2014 has been confirmed for over 1,500 years of European history. This is a prophecy you can test against recorded history.",
+        },
+        reflection: "This prophecy predicts what will NOT happen. After more than 1,500 years of failed reunification attempts, what does this tell you about the reliability of Bible prophecy? How does a testable, falsifiable prediction strengthen your confidence in Scripture?",
       },
       {
         id: "d2-stone",
@@ -118,6 +242,29 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         historicalFulfillment: "Yet future. Adventists understand this as the Second Coming of Christ, when God will establish His eternal kingdom that shall never be destroyed.",
         icon: "diamond-outline",
         color: "#22C55E",
+        observation: {
+          prompt: "Read Daniel 2:34-35 and 44-45. How is the stone different from every other part of the image?",
+          clues: [
+            "'Cut out without hands' \u2014 not human-made, unlike the metals which represent human empires",
+            "It strikes the feet \u2014 it arrives during the time of the divided kingdoms, not before",
+            "It destroys the entire image at once \u2014 all traces of human empire are removed",
+            "It becomes a 'great mountain' that fills 'the whole earth' \u2014 total replacement, not partial reform",
+            "The text says 'the God of heaven shall set up a kingdom' \u2014 divine origin",
+          ],
+        },
+        interpretationClues: {
+          selfInterpreting: "Daniel 2:44-45 interprets the stone directly: 'The God of heaven shall set up a kingdom, which shall never be destroyed.' The stone is God's kingdom. It is 'cut out without hands' \u2014 divine, not human in origin.",
+          crossRefs: [
+            { ref: "Revelation 11:15", insight: "'The kingdoms of this world are become the kingdoms of our Lord, and of his Christ; and he shall reign for ever and ever.' The same concept \u2014 God's kingdom replacing all earthly kingdoms." },
+            { ref: "Matthew 21:44", insight: "Jesus references a stone that falls and grinds to powder \u2014 possibly alluding to Daniel 2." },
+          ],
+          reasoning: "Notice the timing: the stone strikes the feet, not the head or the legs. This means God's kingdom arrives during the time of the divided nations (the iron and clay period), not during Babylon or Rome. Since we are living in the period of the divided nations right now, this prophecy places God's kingdom as still future \u2014 the next event in the sequence.",
+        },
+        adventistConclusion: {
+          summary: "The stone represents the kingdom of God, established at the Second Coming of Christ.",
+          whyThisFits: "Adventists emphasize the timing clue: the stone strikes the feet (the divided-nations era), which means it has not yet come. It cannot refer to Christ's first coming (during the legs/Rome era) or to the church gradually transforming the world (the stone destroys instantly, not gradually). The 'without hands' detail means it is entirely God's doing, not a human political movement.",
+        },
+        reflection: "The prophecy traces a sequence from Babylon to your own time period \u2014 the divided nations. The next event is the stone. If the prophecy has been accurate through five stages of history, what does that suggest about the sixth?",
       },
     ],
   },
@@ -426,7 +573,160 @@ function SymbolCard({
         />
       </View>
 
-      {isExpanded && (
+      {isExpanded && symbol.observation ? (
+        <View style={scStyles.expanded}>
+          <View style={scStyles.studyStep}>
+            <View style={[scStyles.stepBullet, { backgroundColor: symbol.color + "25" }]}>
+              <Text style={[scStyles.stepNum, { color: symbol.color }]}>1</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="eye-outline" size={12} color={symbol.color} />
+                <Text style={[scStyles.detailLabel, { color: symbol.color }]}>
+                  Observation
+                </Text>
+              </View>
+              <View style={[scStyles.refChip, { borderColor: symbol.color + "30", backgroundColor: symbol.color + "0A" }]}>
+                <Ionicons name="document-text-outline" size={12} color={symbol.color} />
+                <Text style={[scStyles.refChipText, { color: symbol.color }]}>{symbol.bibleRef}</Text>
+              </View>
+              <Text style={[scStyles.observationPrompt, { color: theme.text }]}>
+                {symbol.observation.prompt}
+              </Text>
+              <View style={scStyles.cluesList}>
+                {symbol.observation.clues.map((clue, i) => (
+                  <View key={i} style={scStyles.clueRow}>
+                    <View style={[scStyles.clueDot, { backgroundColor: symbol.color + "50" }]} />
+                    <Text style={[scStyles.clueText, { color: theme.textSecondary }]}>{clue}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {symbol.interpretationClues && (
+            <View style={scStyles.studyStep}>
+              <View style={[scStyles.stepBullet, { backgroundColor: "rgba(147, 51, 234, 0.15)" }]}>
+                <Text style={[scStyles.stepNum, { color: "#9333EA" }]}>2</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={scStyles.detailHeader}>
+                  <Ionicons name="search-outline" size={12} color="#9333EA" />
+                  <Text style={[scStyles.detailLabel, { color: "#9333EA" }]}>
+                    Interpretation clues
+                  </Text>
+                </View>
+                {symbol.interpretationClues.selfInterpreting && (
+                  <View style={[scStyles.selfInterpBlock, { backgroundColor: "#9333EA" + "0A", borderColor: "#9333EA" + "20" }]}>
+                    <View style={scStyles.detailHeader}>
+                      <Ionicons name="key-outline" size={11} color="#9333EA" />
+                      <Text style={[scStyles.subLabel, { color: "#9333EA" }]}>What the text itself says</Text>
+                    </View>
+                    <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
+                      {symbol.interpretationClues.selfInterpreting}
+                    </Text>
+                  </View>
+                )}
+                {symbol.interpretationClues.crossRefs && symbol.interpretationClues.crossRefs.length > 0 && (
+                  <View style={scStyles.crossRefsList}>
+                    <View style={scStyles.detailHeader}>
+                      <Ionicons name="link-outline" size={11} color="#9333EA" />
+                      <Text style={[scStyles.subLabel, { color: "#9333EA" }]}>Scripture cross-references</Text>
+                    </View>
+                    {symbol.interpretationClues.crossRefs.map((cr, i) => (
+                      <View key={i} style={[scStyles.crossRefItem, { borderColor: "#9333EA" + "15" }]}>
+                        <Text style={[scStyles.crossRefRef, { color: "#9333EA" }]}>{cr.ref}</Text>
+                        <Text style={[scStyles.crossRefInsight, { color: theme.textSecondary }]}>{cr.insight}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <Text style={[scStyles.reasoningText, { color: theme.textSecondary }]}>
+                  {symbol.interpretationClues.reasoning}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View style={scStyles.studyStep}>
+            <View style={[scStyles.stepBullet, { backgroundColor: "rgba(59,130,246,0.15)" }]}>
+              <Text style={[scStyles.stepNum, { color: "#3B82F6" }]}>3</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="time-outline" size={12} color="#3B82F6" />
+                <Text style={[scStyles.detailLabel, { color: "#3B82F6" }]}>
+                  Historical fit
+                </Text>
+                {symbol.dateRange && (
+                  <View style={[scStyles.fulfilledBadge, { backgroundColor: "#3B82F6" + "18" }]}>
+                    <Text style={[scStyles.fulfilledDate, { color: "#3B82F6" }]}>{symbol.dateRange}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
+                {symbol.historicalFulfillment}
+              </Text>
+            </View>
+          </View>
+
+          {symbol.adventistConclusion && (
+            <View style={scStyles.studyStep}>
+              <View style={[scStyles.stepBullet, { backgroundColor: "rgba(34,197,94,0.15)" }]}>
+                <Text style={[scStyles.stepNum, { color: "#22C55E" }]}>4</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={scStyles.detailHeader}>
+                  <Ionicons name="checkmark-done-outline" size={12} color="#22C55E" />
+                  <Text style={[scStyles.detailLabel, { color: "#22C55E" }]}>
+                    Conclusion
+                  </Text>
+                </View>
+                <View style={[scStyles.conclusionBlock, { backgroundColor: "#22C55E" + "0A", borderColor: "#22C55E" + "20" }]}>
+                  <Text style={[scStyles.conclusionSummary, { color: theme.text }]}>
+                    {symbol.adventistConclusion.summary}
+                  </Text>
+                </View>
+                <View style={scStyles.detailHeader}>
+                  <Ionicons name="help-circle-outline" size={11} color="#22C55E" />
+                  <Text style={[scStyles.subLabel, { color: "#22C55E" }]}>Why this fits</Text>
+                </View>
+                <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
+                  {symbol.adventistConclusion.whyThisFits}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {symbol.reflection && (
+            <View style={[scStyles.reflectionBlock, { backgroundColor: "rgba(201,147,58,0.06)", borderColor: "rgba(201,147,58,0.15)" }]}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="heart-outline" size={12} color={theme.accent} />
+                <Text style={[scStyles.detailLabel, { color: theme.accent }]}>
+                  Reflect
+                </Text>
+              </View>
+              <Text style={[scStyles.reflectionText, { color: theme.textSecondary }]}>
+                {symbol.reflection}
+              </Text>
+            </View>
+          )}
+
+          {symbol.keyVerse && (
+            <View style={[scStyles.detailBlock, scStyles.keyVerseBlock, { backgroundColor: symbol.color + "0A", borderColor: symbol.color + "20" }]}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="bookmark-outline" size={12} color={symbol.color} />
+                <Text style={[scStyles.detailLabel, { color: symbol.color }]}>
+                  Key Verse
+                </Text>
+              </View>
+              <Text style={[scStyles.keyVerseText, { color: theme.text }]}>
+                {symbol.keyVerse}
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : isExpanded ? (
         <View style={scStyles.expanded}>
           <View style={scStyles.studyStep}>
             <View style={[scStyles.stepBullet, { backgroundColor: symbol.color + "25" }]}>
@@ -499,7 +799,7 @@ function SymbolCard({
             </View>
           </View>
         </View>
-      )}
+      ) : null}
     </Pressable>
   );
 }
@@ -625,6 +925,96 @@ const scStyles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
   },
+  observationPrompt: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    fontStyle: "italic" as const,
+  },
+  cluesList: {
+    marginTop: 8,
+    gap: 6,
+  },
+  clueRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 8,
+  },
+  clueDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 7,
+  },
+  clueText: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  subLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  selfInterpBlock: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 6,
+    gap: 6,
+  },
+  crossRefsList: {
+    marginTop: 8,
+    gap: 6,
+  },
+  crossRefItem: {
+    paddingLeft: 10,
+    borderLeftWidth: 2,
+    marginTop: 4,
+  },
+  crossRefRef: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  crossRefInsight: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  reasoningText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  conclusionBlock: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  conclusionSummary: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  reflectionBlock: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  reflectionText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+    fontStyle: "italic" as const,
+  },
 });
 
 function SectionCard({
@@ -702,7 +1092,9 @@ function SectionCard({
           <View style={secStyles.studyGuide}>
             <Ionicons name="compass-outline" size={13} color={theme.accent} />
             <Text style={[secStyles.studyGuideText, { color: theme.textMuted }]}>
-              Tap each symbol below. Read the passage, study the interpretation, then see how history confirmed the prophecy.
+              {section.symbols.some((s) => s.observation)
+                ? "Tap each symbol below. Each one walks you through: what the text says, why it points to this interpretation, how history confirms it, and what it means for you."
+                : "Tap each symbol below. Read the passage, study the interpretation, then see how history confirmed the prophecy."}
             </Text>
           </View>
 
