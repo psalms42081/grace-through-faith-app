@@ -1915,7 +1915,7 @@ export default function SceneStoryScreen() {
         }, 3000);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load story");
+      setError("Could not load the story. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }

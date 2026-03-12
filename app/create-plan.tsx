@@ -85,7 +85,7 @@ export default function CreatePlanScreen() {
         setResult(data);
       }
     } catch (err: any) {
-      Alert.alert("Error", "Failed to generate plan. Please try again.");
+      Alert.alert("Something went wrong", "Could not generate your reading plan. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -105,7 +105,7 @@ export default function CreatePlanScreen() {
         router.push(`/devotional-day?planId=${result.plan.id}`);
       }, 300);
     } catch {
-      Alert.alert("Error", "Failed to enroll in plan.");
+      Alert.alert("Something went wrong", "Could not start this plan. Please try again.");
       setEnrolling(false);
     }
   };

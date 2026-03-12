@@ -92,7 +92,7 @@ export async function checkProStatus(
     }
     const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
     if (!user || !user.isPro) {
-      return res.status(403).json({ error: "This feature is available to supporters. Support the mission to access Deep Study layers." });
+      return res.status(403).json({ error: "This feature requires an active account. All features are free during beta." });
     }
     req.authUserId = userId;
     next();

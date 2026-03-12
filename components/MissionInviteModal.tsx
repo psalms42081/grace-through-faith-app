@@ -156,7 +156,7 @@ export default function MissionInviteModal({
             </Text>
 
             <Text style={[ms.body, { color: theme.textSecondary, marginTop: 10 }]}>
-              This app stays free because people choose to support it. Your support helps bring Scripture, study tools, and discipleship resources to families around the world.
+              Everything is free during beta. When donations open, your support will help bring Scripture, study tools, and discipleship resources to families around the world.
             </Text>
 
             <View style={[ms.impactRow, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0" }]}>
@@ -167,13 +167,13 @@ export default function MissionInviteModal({
             </View>
 
             <Text style={[ms.closingLine, { color: theme.textMuted }]}>
-              If you'd like to be part of that mission, you can contribute any amount.
+              We'll let you know when donation support is available.
             </Text>
 
             <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
               <Ionicons name="time-outline" size={20} color={theme.accent} />
               <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center" }}>
-                Donations will be available soon. For now, enjoy the full experience on us.
+                Everything is free during beta. Donation support is coming soon.
               </Text>
             </View>
 

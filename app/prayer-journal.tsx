@@ -87,8 +87,8 @@ export default function PrayerJournalScreen() {
       setNewCategory("personal");
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Failed to add prayer. Please try again."); }
-      else { Alert.alert("Error", "Failed to add prayer. Please try again."); }
+      if (Platform.OS === "web") { window.alert("Could not save your prayer. Please try again."); }
+      else { Alert.alert("Something went wrong", "Could not save your prayer. Please try again."); }
     },
   });
 
@@ -103,8 +103,8 @@ export default function PrayerJournalScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Failed to update prayer."); }
-      else { Alert.alert("Error", "Failed to update prayer."); }
+      if (Platform.OS === "web") { window.alert("Could not update prayer. Please try again."); }
+      else { Alert.alert("Something went wrong", "Could not update prayer. Please try again."); }
     },
   });
 
@@ -116,8 +116,8 @@ export default function PrayerJournalScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Failed to delete prayer."); }
-      else { Alert.alert("Error", "Failed to delete prayer."); }
+      if (Platform.OS === "web") { window.alert("Could not remove prayer. Please try again."); }
+      else { Alert.alert("Something went wrong", "Could not remove prayer. Please try again."); }
     },
   });
 

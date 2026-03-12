@@ -54,10 +54,10 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
           </View>
 
           <Text style={[ms.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Supporter Features
+            Beta Preview
           </Text>
           <Text style={[ms.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            These features are available to those who support the mission of making deep Bible study accessible to every home.
+            These features are currently in beta and available free to all users. We're working to make deep Bible study accessible to every home.
           </Text>
 
           <View style={ms.benefitsList}>
@@ -81,7 +81,7 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
           <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
             <Ionicons name="time-outline" size={18} color={theme.accent} />
             <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center", flex: 1 }}>
-              Donations will be available soon. For now, enjoy the full experience on us.
+              Everything is free during beta. Donation support is coming soon.
             </Text>
           </View>
 

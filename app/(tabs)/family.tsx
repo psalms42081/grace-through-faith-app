@@ -283,7 +283,7 @@ export default function FamilyDashboard() {
           <Ionicons name="people" size={64} color={theme.accent} />
           <Text style={[styles.proGateTitle, { color: theme.text }]}>Family Dashboard</Text>
           <Text style={[styles.proGateSubtitle, { color: theme.textSecondary }]}>
-            Available to Supporters
+            Free During Beta
           </Text>
           <Text style={[styles.proGateSubtitle, { color: theme.textSecondary, marginTop: 4 }]}>
             Track your children's progress, see their growth, and get AI-powered conversation starters.
@@ -293,8 +293,8 @@ export default function FamilyDashboard() {
             onPress={showProGate}
             testID="family-upgrade-btn"
           >
-            <Ionicons name="heart" size={18} color="#FFFFFF" />
-            <Text style={styles.proGateButtonText}>Support the Mission</Text>
+            <Ionicons name="lock-open" size={18} color="#FFFFFF" />
+            <Text style={styles.proGateButtonText}>Unlock Free Preview</Text>
           </Pressable>
         </View>
       </View>

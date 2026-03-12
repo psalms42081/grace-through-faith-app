@@ -97,7 +97,7 @@ export default function StreamScreen() {
       safeGoBack(router);
     },
     onError: (err: any) => {
-      const msg = err?.message || "Failed to end session";
+      const msg = "Could not end the session. Please try again.";
       if (Platform.OS === "web") {
         alert(msg);
       } else {

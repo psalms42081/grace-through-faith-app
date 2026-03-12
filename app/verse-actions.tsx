@@ -107,8 +107,8 @@ export default function VerseActionsSheet() {
 
   const handleHighlight = useCallback(async () => {
     if (!userId) {
-      setFeedbackMsg("Sign in to highlight");
-      setTimeout(() => setFeedbackMsg(null), 1500);
+      setFeedbackMsg("Sign in to save highlights");
+      setTimeout(() => setFeedbackMsg(null), 2500);
       return;
     }
     try {
@@ -120,17 +120,18 @@ export default function VerseActionsSheet() {
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       setFeedbackMsg("Highlighted!");
       setTimeout(() => safeGoBack(router), 600);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Highlight failed:", err);
-      setFeedbackMsg(userId ? "Failed to highlight" : "Sign in to highlight");
-      setTimeout(() => setFeedbackMsg(null), 1500);
+      const isAuth = !userId || err?.message?.includes("401") || err?.message?.includes("Unauthorized");
+      setFeedbackMsg(isAuth ? "Sign in to save highlights" : "Could not save highlight. Please try again.");
+      setTimeout(() => setFeedbackMsg(null), 2500);
     }
   }, [userId, canonicalVerseId]);
 
   const handleBookmark = useCallback(async () => {
     if (!userId) {
-      setFeedbackMsg("Sign in to bookmark");
-      setTimeout(() => setFeedbackMsg(null), 1500);
+      setFeedbackMsg("Sign in to save bookmarks");
+      setTimeout(() => setFeedbackMsg(null), 2500);
       return;
     }
     try {
@@ -142,10 +143,11 @@ export default function VerseActionsSheet() {
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       setFeedbackMsg("Bookmarked!");
       setTimeout(() => safeGoBack(router), 600);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Bookmark failed:", err);
-      setFeedbackMsg(userId ? "Failed to bookmark" : "Sign in to bookmark");
-      setTimeout(() => setFeedbackMsg(null), 1500);
+      const isAuth = !userId || err?.message?.includes("401") || err?.message?.includes("Unauthorized");
+      setFeedbackMsg(isAuth ? "Sign in to save bookmarks" : "Could not save bookmark. Please try again.");
+      setTimeout(() => setFeedbackMsg(null), 2500);
     }
   }, [userId, canonicalVerseId, reference]);
 
@@ -178,16 +180,16 @@ export default function VerseActionsSheet() {
 
         {feedbackMsg && (
           <View style={[styles.feedbackBanner, {
-            backgroundColor: feedbackMsg.startsWith("Failed") ? theme.error + "20" : theme.success + "20",
-            borderColor: feedbackMsg.startsWith("Failed") ? theme.error + "40" : theme.success + "40",
+            backgroundColor: (feedbackMsg.startsWith("Sign in") || feedbackMsg.startsWith("Could not")) ? theme.error + "20" : theme.success + "20",
+            borderColor: (feedbackMsg.startsWith("Sign in") || feedbackMsg.startsWith("Could not")) ? theme.error + "40" : theme.success + "40",
           }]}>
             <Ionicons
-              name={feedbackMsg.startsWith("Failed") ? "alert-circle" : "checkmark-circle"}
+              name={(feedbackMsg.startsWith("Sign in") || feedbackMsg.startsWith("Could not")) ? "alert-circle" : "checkmark-circle"}
               size={18}
-              color={feedbackMsg.startsWith("Failed") ? theme.error : theme.success}
+              color={(feedbackMsg.startsWith("Sign in") || feedbackMsg.startsWith("Could not")) ? theme.error : theme.success}
             />
             <Text style={[styles.feedbackText, {
-              color: feedbackMsg.startsWith("Failed") ? theme.error : theme.success,
+              color: (feedbackMsg.startsWith("Sign in") || feedbackMsg.startsWith("Could not")) ? theme.error : theme.success,
               fontFamily: "Inter_600SemiBold",
             }]}>
               {feedbackMsg}

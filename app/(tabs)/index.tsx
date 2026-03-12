@@ -42,7 +42,6 @@ import { useResumeJourney } from "@/hooks/useResumeJourney";
 import GuidedToolsRow from "@/components/home/GuidedToolsRow";
 import DevotionalCard from "@/components/home/DevotionalCard";
 import SabbathBanner from "@/components/home/SabbathBanner";
-import LiveNowSection from "@/components/home/LiveNowSection";
 import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
@@ -1056,19 +1055,18 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
-          <AnimatedSection index={3}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={4}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={5}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={6}>
+          <AnimatedSection index={3}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={4}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={5}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={7}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={6}><GuidedToolsRow theme={theme} isDark={isDark} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={8}>
+            <AnimatedSection index={7}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1078,7 +1076,7 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
-          <AnimatedSection index={9}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       ) : (
         <>
@@ -1113,8 +1111,7 @@ function AdultHomeScreen() {
             </AnimatedSection>
           )}
           <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={7}><LiveNowSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={7}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}
 

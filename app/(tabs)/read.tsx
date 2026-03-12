@@ -124,7 +124,7 @@ export default function ReadScreen() {
             Unable to load books
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
-            {(error as Error).message}
+            Please check your connection and try again.
           </Text>
         </View>
       ) : (

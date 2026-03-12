@@ -86,6 +86,14 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **First-run experience:** Zero automatic interruptions after onboarding. User goes from 2-page onboarding straight to a fully usable home screen.
 - Tutorial infrastructure (`TutorialContext`, `FeatureTutorial`, profile "Reset Tutorials") preserved for future use.
 
+### Beta Hardening Pass 1 (Completed)
+- **Error messaging:** Replaced all "Failed to..." user-facing error messages with human-friendly language ("Could not save...", "Please try again"). Removed raw `error.message` display from read.tsx.
+- **Auth error guidance:** Verse bookmark/highlight errors now detect auth failures and show "Sign in to save..." guidance.
+- **Supporter wording consistency:** ProGateModal title changed from "Supporter Features" to "Beta Preview". All "enjoy the full experience on us" and "contribute any amount" copy replaced with clear "Everything is free during beta. Donation support is coming soon." messaging across ProGateModal, MissionInviteModal, and family.tsx gate.
+- **Family dashboard gate:** Changed from "Available to Supporters" / "Support the Mission" to "Free During Beta" / "Unlock Free Preview" with lock-open icon.
+- **Server-side pro gate message:** Updated `checkProStatus` middleware message to "This feature requires an active account. All features are free during beta."
+- **Live features de-emphasized:** Removed LiveNowSection from home screen (both Sabbath and weekday layouts). Removed Go Live button and related dead code from group pages. Live Streams in Connect tab already had "Soon" badge and non-clickable state.
+
 ### Story Art Performance Pass (Completed)
 - **expo-image migration:** `CinematicScene.tsx` and `LivingScene.tsx` switched from RN `Image` to `expo-image` with `cachePolicy="disk"`, `recyclingKey`, and 200ms `transition` for smooth reveal.
 - **SceneIllustration** in `story/[id].tsx` also uses `expo-image` with disk caching.

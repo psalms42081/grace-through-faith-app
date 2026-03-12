@@ -90,7 +90,7 @@ export default function GroupsScreen() {
       setIsPublic(false);
       setError("");
     },
-    onError: (err: any) => setError(err.message || "Failed to create group"),
+    onError: () => setError("Could not create the group. Please try again."),
   });
 
   const joinMutation = useMutation({
@@ -103,7 +103,7 @@ export default function GroupsScreen() {
       setJoinCode("");
       setError("");
     },
-    onError: (err: any) => setError(err.message || "Failed to join group"),
+    onError: () => setError("Could not join the group. Please try again."),
   });
 
   const joinPublicMutation = useMutation({
