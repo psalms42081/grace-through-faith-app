@@ -8,9 +8,6 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
-  Animated,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -372,331 +369,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
   },
 ];
 
-const TIMELINE_MARKERS = [
-  {
-    year: "605 BC", label: "Babylon", color: "#D4A245",
-    sectionId: "daniel2", symbolId: "d2-head",
-    tooltip: "The golden kingdom in Daniel 2 and the lion in Daniel 7 represent Nebuchadnezzar's Babylon.",
-    scriptureRef: "Daniel 2:37-38",
-  },
-  {
-    year: "539 BC", label: "Medo-Persia", color: "#A0A0B0",
-    sectionId: "daniel2", symbolId: "d2-chest",
-    tooltip: "The silver kingdom in Daniel 2 and the ram in Daniel 8 represent the Medo-Persian Empire.",
-    scriptureRef: "Daniel 2:39, Daniel 8:20",
-  },
-  {
-    year: "331 BC", label: "Greece", color: "#CD7F32",
-    sectionId: "daniel2", symbolId: "d2-thighs",
-    tooltip: "The bronze kingdom in Daniel 2 and the swift leopard in Daniel 7 represent Alexander's Greece.",
-    scriptureRef: "Daniel 2:39, Daniel 8:21",
-  },
-  {
-    year: "168 BC", label: "Rome", color: "#6B6B6B",
-    sectionId: "daniel7", symbolId: "d7-beast",
-    tooltip: "The iron legs in Daniel 2 and the dreadful beast in Daniel 7 represent the Roman Empire.",
-    scriptureRef: "Daniel 2:40, Daniel 7:7",
-  },
-  {
-    year: "AD 476", label: "Divided Rome", color: "#8B7355",
-    sectionId: "daniel2", symbolId: "d2-feet",
-    tooltip: "The iron-and-clay feet represent the divided nations of Europe after Rome's fall.",
-    scriptureRef: "Daniel 2:41-43",
-  },
-  {
-    year: "AD 1798", label: "1260 Years End", color: "#9333EA",
-    sectionId: "revelation", symbolId: "rev-littlehorn",
-    tooltip: "The end of the 1,260-year prophecy when papal political authority received its 'deadly wound.'",
-    scriptureRef: "Daniel 7:25, Revelation 13:3",
-  },
-  {
-    year: "AD 1844", label: "Judgment", color: "#C9933A",
-    sectionId: "daniel89", symbolId: "d89-2300",
-    tooltip: "The 2,300-day prophecy culminates in the cleansing of the heavenly sanctuary and the investigative judgment.",
-    scriptureRef: "Daniel 8:14",
-  },
-  {
-    year: "Future", label: "God's Kingdom", color: "#22C55E",
-    sectionId: "revelation", symbolId: "rev-secondcoming",
-    tooltip: "The stone cut without hands destroys all earthly kingdoms. Christ returns and establishes an eternal kingdom.",
-    scriptureRef: "Daniel 2:44, Revelation 19:11-16",
-  },
-];
 
-const TIMELINE_LEGEND = [
-  { label: "Scripture", color: "#C9933A" },
-  { label: "History", color: "#3B82F6" },
-  { label: "Prophecy", color: "#7C3AED" },
-  { label: "Belief", color: "#2E7D32" },
-  { label: "Hope", color: "#22C55E" },
-];
-
-function TimelineTooltip({
-  marker,
-  visible,
-  theme,
-}: {
-  marker: typeof TIMELINE_MARKERS[0] | null;
-  visible: boolean;
-  theme: any;
-}) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(6)).current;
-  const prevVisibleRef = useRef(false);
-
-  useEffect(() => {
-    if (visible && marker) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      ]).start();
-    } else if (prevVisibleRef.current) {
-      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-      slideAnim.setValue(6);
-    }
-    prevVisibleRef.current = visible;
-  }, [visible, marker, fadeAnim, slideAnim]);
-
-  if (!marker) return null;
-
-  return (
-    <Animated.View
-      pointerEvents={visible ? "auto" : "none"}
-      style={[
-        tooltipStyles.container,
-        {
-          backgroundColor: theme.backgroundCard,
-          borderColor: marker.color + "40",
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      <View style={tooltipStyles.header}>
-        <View style={[tooltipStyles.dot, { backgroundColor: marker.color }]} />
-        <Text style={[tooltipStyles.title, { color: theme.text }]}>{marker.label}</Text>
-        <Text style={[tooltipStyles.year, { color: marker.color }]}>{marker.year}</Text>
-      </View>
-      <Text style={[tooltipStyles.desc, { color: theme.textSecondary }]} numberOfLines={3}>
-        {marker.tooltip}
-      </Text>
-      <Text style={[tooltipStyles.ref, { color: marker.color }]}>{marker.scriptureRef}</Text>
-    </Animated.View>
-  );
-}
-
-const tooltipStyles = StyleSheet.create({
-  container: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  header: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    marginBottom: 4,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  title: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    flex: 1,
-  },
-  year: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
-  desc: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  ref: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    letterSpacing: 0.2,
-  },
-});
-
-function TimelineBar({
-  theme,
-  activeMarkerId,
-  onMarkerPress,
-}: {
-  theme: any;
-  activeMarkerId: string | null;
-  onMarkerPress: (marker: typeof TIMELINE_MARKERS[0]) => void;
-}) {
-  const timelineScrollRef = useRef<ScrollView>(null);
-  const markerPositions = useRef<Record<string, number>>({});
-
-  useEffect(() => {
-    if (activeMarkerId && timelineScrollRef.current) {
-      const x = markerPositions.current[activeMarkerId];
-      if (x !== undefined) {
-        timelineScrollRef.current.scrollTo({ x: Math.max(0, x - 120), animated: true });
-      }
-    }
-  }, [activeMarkerId]);
-
-  return (
-    <View style={tbStyles.outerWrap}>
-      <ScrollView
-        ref={timelineScrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={tbStyles.scrollContent}
-      >
-        <View style={tbStyles.container}>
-          <View style={[tbStyles.line, { backgroundColor: "rgba(201, 147, 58, 0.25)" }]} />
-          <View style={tbStyles.markers}>
-            {TIMELINE_MARKERS.map((marker) => {
-              const isActive = activeMarkerId === marker.symbolId;
-              return (
-                <Pressable
-                  key={marker.symbolId}
-                  onLayout={(e) => {
-                    markerPositions.current[marker.symbolId] = e.nativeEvent.layout.x;
-                  }}
-                  style={tbStyles.markerWrap}
-                  onPress={() => onMarkerPress(marker)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${marker.year} — ${marker.label}. Tap to explore prophecy fulfillment.`}
-                >
-                  <View
-                    style={[
-                      tbStyles.dot,
-                      {
-                        backgroundColor: marker.color,
-                        width: isActive ? 16 : 12,
-                        height: isActive ? 16 : 12,
-                        borderRadius: isActive ? 8 : 6,
-                        borderWidth: isActive ? 2 : 0,
-                        borderColor: isActive ? marker.color + "60" : "transparent",
-                      },
-                      isActive && {
-                        shadowColor: marker.color,
-                        shadowOpacity: 0.5,
-                        shadowRadius: 6,
-                        shadowOffset: { width: 0, height: 0 },
-                        elevation: 4,
-                      },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      tbStyles.year,
-                      {
-                        color: marker.color,
-                        fontFamily: isActive ? "Inter_700Bold" : "Inter_600SemiBold",
-                        opacity: isActive ? 1 : 0.7,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {marker.year}
-                  </Text>
-                  <Text
-                    style={[
-                      tbStyles.label,
-                      {
-                        color: isActive ? marker.color : theme.textMuted,
-                        fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
-                        opacity: isActive ? 1 : 0.6,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {marker.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </ScrollView>
-      <View style={tbStyles.legendRow}>
-        {TIMELINE_LEGEND.map((item) => (
-          <View key={item.label} style={tbStyles.legendItem}>
-            <View style={[tbStyles.legendDot, { backgroundColor: item.color }]} />
-            <Text style={[tbStyles.legendLabel, { color: theme.textMuted }]}>{item.label}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const tbStyles = StyleSheet.create({
-  outerWrap: {
-    marginBottom: 20,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-  },
-  container: {
-    position: "relative" as const,
-    minWidth: 520,
-  },
-  line: {
-    position: "absolute" as const,
-    top: 7,
-    left: 20,
-    right: 20,
-    height: 2,
-  },
-  markers: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-  },
-  markerWrap: {
-    alignItems: "center" as const,
-    width: 60,
-    paddingTop: 0,
-  },
-  dot: {
-    marginBottom: 5,
-  },
-  year: {
-    fontSize: 9,
-    letterSpacing: 0.3,
-  },
-  label: {
-    fontSize: 9,
-    marginTop: 1,
-    textAlign: "center" as const,
-  },
-  legendRow: {
-    flexDirection: "row" as const,
-    justifyContent: "center" as const,
-    gap: 12,
-    marginTop: 10,
-    paddingHorizontal: 16,
-  },
-  legendItem: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-  },
-  legendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  legendLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 10,
-  },
-});
 
 function SymbolCard({
   symbol,
@@ -1115,13 +788,8 @@ export default function ProphecyExplorerScreen() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [viewedSymbols, setViewedSymbols] = useState<Set<string>>(new Set());
-  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
-  const [tooltipMarker, setTooltipMarker] = useState<typeof TIMELINE_MARKERS[0] | null>(null);
-  const [tooltipVisible, setTooltipVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const sectionYPositions = useRef<Record<string, number>>({});
-  const scrollDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isUserTapScroll = useRef(false);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -1166,67 +834,6 @@ export default function ProphecyExplorerScreen() {
     });
   }, [markSymbolViewed]);
 
-  const handleTimelineMarkerPress = useCallback((marker: typeof TIMELINE_MARKERS[0]) => {
-    isUserTapScroll.current = true;
-    setTooltipMarker(marker);
-    setTooltipVisible(true);
-    setActiveMarkerId(marker.symbolId);
-
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      next.add(marker.sectionId);
-      return next;
-    });
-    setExpandedSymbol(marker.symbolId);
-    markSymbolViewed(marker.symbolId);
-
-    setTimeout(() => {
-      const y = sectionYPositions.current[marker.sectionId];
-      if (y !== undefined && scrollRef.current) {
-        scrollRef.current.scrollTo({ y: y - 10, animated: true });
-      }
-      setTimeout(() => {
-        isUserTapScroll.current = false;
-      }, 400);
-    }, 150);
-  }, [markSymbolViewed]);
-
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (isUserTapScroll.current) return;
-
-    const scrollY = event.nativeEvent.contentOffset.y + 150;
-
-    if (tooltipVisible) {
-      setTooltipVisible(false);
-    }
-
-    if (scrollDebounceRef.current) {
-      clearTimeout(scrollDebounceRef.current);
-    }
-    scrollDebounceRef.current = setTimeout(() => {
-
-      let bestSection: string | null = null;
-      for (const section of PROPHECY_SECTIONS) {
-        const sectionY = sectionYPositions.current[section.id];
-        if (sectionY !== undefined && scrollY >= sectionY) {
-          bestSection = section.id;
-        }
-      }
-
-      if (bestSection) {
-        const matchingMarker = TIMELINE_MARKERS.find((m) => m.sectionId === bestSection);
-        if (matchingMarker) {
-          setActiveMarkerId((prev) =>
-            prev !== matchingMarker.symbolId ? matchingMarker.symbolId : prev
-          );
-        }
-      } else {
-        setActiveMarkerId(null);
-      }
-    }, 80);
-  }, [tooltipVisible]);
-
   const handleSectionLayout = useCallback((sectionId: string, y: number) => {
     sectionYPositions.current[sectionId] = y;
   }, []);
@@ -1243,8 +850,6 @@ export default function ProphecyExplorerScreen() {
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={100}
       >
         <View style={styles.introBlock}>
           <Text style={[styles.introText, { color: theme.textSecondary }]}>
@@ -1331,9 +936,6 @@ export default function ProphecyExplorerScreen() {
             <Ionicons name="chevron-forward" size={16} color="#FFF" />
           </Pressable>
         </View>
-
-        <TimelineTooltip marker={tooltipMarker} visible={tooltipVisible} theme={theme} />
-        <TimelineBar theme={theme} activeMarkerId={activeMarkerId} onMarkerPress={handleTimelineMarkerPress} />
 
         {PROPHECY_SECTIONS.map((section) => (
           <View
