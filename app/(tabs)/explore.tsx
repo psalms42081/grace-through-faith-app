@@ -130,8 +130,8 @@ export default function StudyScreen() {
         <EnrolledTracksPreview theme={theme} />
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Adventist Formation
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Adventist Reference & Formation
           </Text>
         </View>
 
@@ -139,7 +139,7 @@ export default function StudyScreen() {
           icon="school"
           iconColor="#7C3AED"
           title="28 Fundamental Beliefs"
-          subtitle="Core doctrines of the Adventist faith"
+          subtitle="Browse and explore core Adventist doctrines"
           onPress={() => router.push("/sda-studies" as any)}
           style={{ marginBottom: 8 }}
         />
@@ -220,7 +220,7 @@ export default function StudyScreen() {
           icon="telescope"
           iconColor="#C9933A"
           title="Prophecy Explorer"
-          subtitle="Interactive Daniel & Revelation timelines"
+          subtitle="Reference guide to Daniel & Revelation timelines"
           onPress={() => router.push("/prophecy-explorer" as any)}
           style={{ marginBottom: 8 }}
         />
@@ -229,7 +229,7 @@ export default function StudyScreen() {
           icon="git-merge"
           iconColor="#8B5CF6"
           title="Great Controversy Timeline"
-          subtitle="Trace the cosmic conflict from Creation to the New Earth"
+          subtitle="Visual guide from Creation to the New Earth"
           onPress={() => router.push("/great-controversy" as any)}
           style={{ marginBottom: 8 }}
         />

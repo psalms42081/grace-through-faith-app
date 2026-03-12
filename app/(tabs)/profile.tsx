@@ -187,7 +187,7 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Your Progress
+          Your Journey
         </Text>
       </View>
 
@@ -245,6 +245,12 @@ export default function ProfileScreen() {
       )}
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
+      <View style={st.sectionPad}>
+        <Text style={[st.sectionSubLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+          Growth & Depth
+        </Text>
+      </View>
 
       <GrowthAnalytics
         studyMinutes={studyMinutes}
@@ -512,6 +518,7 @@ const st = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: { fontSize: 22, marginBottom: 14 },
+  sectionSubLabel: { fontSize: 13, letterSpacing: 0.3, textTransform: "uppercase" as const },
   authBtn: {
     flexDirection: "row",
     alignItems: "center",

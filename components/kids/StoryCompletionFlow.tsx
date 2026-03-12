@@ -292,19 +292,34 @@ export default function StoryCompletionFlow({
 
   return (
     <View style={cStyles.container}>
-      <View style={cStyles.progressDots}>
-        {(["verse", "prayer", "reward"] as FlowStep[]).map((s) => (
-          <View
-            key={s}
-            style={[
-              cStyles.dot,
-              {
-                backgroundColor: s === step ? "#FFD700" : "rgba(255,255,255,0.2)",
-                width: s === step ? 24 : 8,
-              },
-            ]}
-          />
-        ))}
+      <View style={cStyles.progressBar}>
+        {(["verse", "prayer", "reward"] as FlowStep[]).map((s, i) => {
+          const stepLabels = { verse: "Learn", prayer: "Pray", reward: "Celebrate" };
+          const isCurrent = s === step;
+          const stepIdx = ["verse", "prayer", "reward"].indexOf(step);
+          const isPast = i < stepIdx;
+          return (
+            <View key={s} style={cStyles.progressStep}>
+              <View
+                style={[
+                  cStyles.dot,
+                  {
+                    backgroundColor: isCurrent ? "#FFD700" : isPast ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.2)",
+                    width: isCurrent ? 24 : 8,
+                  },
+                ]}
+              />
+              {isCurrent && (
+                <Animated.Text
+                  entering={FadeIn.duration(400)}
+                  style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, fontFamily: "Inter_500Medium", marginTop: 4 }}
+                >
+                  {stepLabels[s]}
+                </Animated.Text>
+              )}
+            </View>
+          );
+        })}
       </View>
 
       {step === "verse" && (
@@ -340,11 +355,14 @@ const cStyles = StyleSheet.create({
     alignItems: "center",
     padding: 24,
   },
-  progressDots: {
+  progressBar: {
     flexDirection: "row",
-    gap: 8,
+    gap: 16,
     position: "absolute",
     top: 60,
+    alignItems: "flex-start",
+  },
+  progressStep: {
     alignItems: "center",
   },
   dot: {

@@ -113,14 +113,11 @@ function IllustrationContainer({ children }: { children: React.ReactNode }) {
   return (
     <View style={illStyles.container}>
       <PulsingRing delay={0} size={140} />
-      <PulsingRing delay={800} size={140} />
-      <PulsingRing delay={1600} size={140} />
+      <PulsingRing delay={900} size={140} />
       <FloatingParticle delay={0} x={-60} y={-20} />
-      <FloatingParticle delay={400} x={50} y={-40} />
-      <FloatingParticle delay={800} x={-40} y={30} />
-      <FloatingParticle delay={1200} x={60} y={10} />
-      <FloatingParticle delay={1600} x={-20} y={-50} />
-      <FloatingParticle delay={2000} x={30} y={40} />
+      <FloatingParticle delay={600} x={50} y={-40} />
+      <FloatingParticle delay={1200} x={-40} y={30} />
+      <FloatingParticle delay={1800} x={60} y={10} />
       <View style={illStyles.innerCircle}>
         <LinearGradient
           colors={["rgba(201, 147, 58, 0.18)", "rgba(201, 147, 58, 0.04)"]}
@@ -330,7 +327,7 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={handleSkip}>
       <View style={[modalStyles.root, { paddingTop: topPad, paddingBottom: bottomPad }]}>
         <LinearGradient
-          colors={[DEEP_NAVY, "rgba(13, 16, 37, 0.98)", DEEP_NAVY]}
+          colors={[DEEP_NAVY, "rgba(13, 16, 37, 0.94)", DEEP_NAVY]}
           style={StyleSheet.absoluteFill}
         />
         <Animated.View
@@ -436,10 +433,10 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(237, 229, 213, 0.15)",
+    borderColor: "rgba(237, 229, 213, 0.25)",
   },
   skipText: {
-    color: "rgba(237, 229, 213, 0.45)",
+    color: "rgba(237, 229, 213, 0.6)",
     fontSize: 13,
   },
   list: {
