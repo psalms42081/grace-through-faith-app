@@ -487,6 +487,11 @@ function SymbolCard({
                 <Text style={[scStyles.detailLabel, { color: "#3B82F6" }]}>
                   See the fulfillment in history
                 </Text>
+                {symbol.dateRange && (
+                  <View style={[scStyles.fulfilledBadge, { backgroundColor: "#3B82F6" + "18" }]}>
+                    <Text style={[scStyles.fulfilledDate, { color: "#3B82F6" }]}>{symbol.dateRange}</Text>
+                  </View>
+                )}
               </View>
               <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
                 {symbol.historicalFulfillment}
@@ -605,6 +610,17 @@ const scStyles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 4,
   },
+  fulfilledBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    marginLeft: "auto" as any,
+  },
+  fulfilledDate: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
   refChipText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
@@ -689,6 +705,65 @@ function SectionCard({
               Tap each symbol below. Read the passage, study the interpretation, then see how history confirmed the prophecy.
             </Text>
           </View>
+
+          {section.symbols.some((s) => s.dateRange) && (
+            <View style={secStyles.timelineStrip}>
+              <View style={secStyles.timelineHeader}>
+                <Ionicons name="time-outline" size={12} color={theme.accent} />
+                <Text style={[secStyles.timelineTitle, { color: theme.accent }]}>
+                  Historical Timeline
+                </Text>
+              </View>
+              <View style={secStyles.timelineFlow}>
+                {section.symbols
+                  .filter((s) => s.dateRange)
+                  .map((symbol, idx, arr) => (
+                    <View key={symbol.id} style={secStyles.timelineItem}>
+                      <View style={secStyles.timelineRow}>
+                        <View
+                          style={[
+                            secStyles.timelineDot,
+                            {
+                              backgroundColor: symbol.color,
+                              borderColor: expandedSymbolId === symbol.id ? symbol.color + "60" : "transparent",
+                              borderWidth: expandedSymbolId === symbol.id ? 2 : 0,
+                            },
+                          ]}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              secStyles.timelineDate,
+                              {
+                                color: symbol.color,
+                                fontFamily: expandedSymbolId === symbol.id ? "Inter_700Bold" : "Inter_600SemiBold",
+                              },
+                            ]}
+                          >
+                            {symbol.dateRange}
+                          </Text>
+                          <Text
+                            style={[
+                              secStyles.timelineLabel,
+                              {
+                                color: expandedSymbolId === symbol.id ? theme.text : theme.textMuted,
+                                fontFamily: expandedSymbolId === symbol.id ? "Inter_600SemiBold" : "Inter_400Regular",
+                              },
+                            ]}
+                          >
+                            {symbol.title}
+                          </Text>
+                        </View>
+                      </View>
+                      {idx < arr.length - 1 && (
+                        <View style={[secStyles.timelineConnector, { backgroundColor: theme.border }]} />
+                      )}
+                    </View>
+                  ))}
+              </View>
+            </View>
+          )}
+
           {section.symbols.map((symbol, idx) => (
             <SymbolCard
               key={symbol.id}
@@ -779,6 +854,55 @@ const secStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     lineHeight: 17,
+  },
+  timelineStrip: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "rgba(201, 147, 58, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(201, 147, 58, 0.12)",
+  },
+  timelineHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    marginBottom: 10,
+  },
+  timelineTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+  },
+  timelineFlow: {
+    paddingLeft: 4,
+  },
+  timelineItem: {},
+  timelineRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  timelineDate: {
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  timelineLabel: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  timelineConnector: {
+    width: 1.5,
+    height: 10,
+    marginLeft: 4,
+    marginVertical: 2,
+    borderRadius: 1,
   },
 });
 
