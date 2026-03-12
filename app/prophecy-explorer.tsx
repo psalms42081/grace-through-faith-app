@@ -755,6 +755,24 @@ function SymbolCard({
 
       {isExpanded && (
         <View style={scStyles.expanded}>
+          <View style={scStyles.studyStep}>
+            <View style={[scStyles.stepBullet, { backgroundColor: symbol.color + "25" }]}>
+              <Text style={[scStyles.stepNum, { color: symbol.color }]}>1</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="book-outline" size={12} color={symbol.color} />
+                <Text style={[scStyles.detailLabel, { color: symbol.color }]}>
+                  Read the passage
+                </Text>
+              </View>
+              <View style={[scStyles.refChip, { borderColor: symbol.color + "30", backgroundColor: symbol.color + "0A" }]}>
+                <Ionicons name="document-text-outline" size={12} color={symbol.color} />
+                <Text style={[scStyles.refChipText, { color: symbol.color }]}>{symbol.bibleRef}</Text>
+              </View>
+            </View>
+          </View>
+
           {symbol.keyVerse && (
             <View style={[scStyles.detailBlock, scStyles.keyVerseBlock, { backgroundColor: symbol.color + "0A", borderColor: symbol.color + "20" }]}>
               <View style={scStyles.detailHeader}>
@@ -769,28 +787,38 @@ function SymbolCard({
             </View>
           )}
 
-          <View style={scStyles.detailBlock}>
-            <View style={scStyles.detailHeader}>
-              <Ionicons name="book-outline" size={12} color={theme.accent} />
-              <Text style={[scStyles.detailLabel, { color: theme.accent }]}>
-                SDA Interpretation
+          <View style={scStyles.studyStep}>
+            <View style={[scStyles.stepBullet, { backgroundColor: "rgba(201,147,58,0.15)" }]}>
+              <Text style={[scStyles.stepNum, { color: theme.accent }]}>2</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="school-outline" size={12} color={theme.accent} />
+                <Text style={[scStyles.detailLabel, { color: theme.accent }]}>
+                  Understand the prophecy
+                </Text>
+              </View>
+              <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
+                {symbol.interpretation}
               </Text>
             </View>
-            <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
-              {symbol.interpretation}
-            </Text>
           </View>
 
-          <View style={scStyles.detailBlock}>
-            <View style={scStyles.detailHeader}>
-              <Ionicons name="time-outline" size={12} color="#3B82F6" />
-              <Text style={[scStyles.detailLabel, { color: "#3B82F6" }]}>
-                Historical Fulfillment
+          <View style={scStyles.studyStep}>
+            <View style={[scStyles.stepBullet, { backgroundColor: "rgba(59,130,246,0.15)" }]}>
+              <Text style={[scStyles.stepNum, { color: "#3B82F6" }]}>3</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={scStyles.detailHeader}>
+                <Ionicons name="time-outline" size={12} color="#3B82F6" />
+                <Text style={[scStyles.detailLabel, { color: "#3B82F6" }]}>
+                  See the fulfillment in history
+                </Text>
+              </View>
+              <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
+                {symbol.historicalFulfillment}
               </Text>
             </View>
-            <Text style={[scStyles.detailText, { color: theme.textSecondary }]}>
-              {symbol.historicalFulfillment}
-            </Text>
           </View>
         </View>
       )}
@@ -876,6 +904,38 @@ const scStyles = StyleSheet.create({
     fontStyle: "italic" as const,
     marginTop: 4,
   },
+  studyStep: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 10,
+  },
+  stepBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginTop: 1,
+  },
+  stepNum: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+  },
+  refChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    alignSelf: "flex-start" as const,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 7,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  refChipText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+  },
 });
 
 function SectionCard({
@@ -950,7 +1010,13 @@ function SectionCard({
 
       {isSectionExpanded && (
         <View style={secStyles.symbolsList}>
-          {section.symbols.map((symbol) => (
+          <View style={secStyles.studyGuide}>
+            <Ionicons name="compass-outline" size={13} color={theme.accent} />
+            <Text style={[secStyles.studyGuideText, { color: theme.textMuted }]}>
+              Tap each symbol below. Read the passage, study the interpretation, then see how history confirmed the prophecy.
+            </Text>
+          </View>
+          {section.symbols.map((symbol, idx) => (
             <SymbolCard
               key={symbol.id}
               symbol={symbol}
@@ -1026,6 +1092,20 @@ const secStyles = StyleSheet.create({
   symbolsList: {
     paddingHorizontal: 8,
     paddingTop: 10,
+  },
+  studyGuide: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+    marginBottom: 4,
+  },
+  studyGuideText: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
   },
 });
 
@@ -1224,19 +1304,22 @@ export default function ProphecyExplorerScreen() {
 
           <Pressable
             onPress={() => {
-              const firstSectionY = sectionYPositions.current[PROPHECY_SECTIONS[0].id];
-              if (firstSectionY !== undefined && scrollRef.current) {
-                scrollRef.current.scrollTo({ y: firstSectionY - 20, animated: true });
-              } else {
-                setTimeout(() => {
-                  const retryY = sectionYPositions.current[PROPHECY_SECTIONS[0].id];
-                  if (retryY !== undefined && scrollRef.current) {
-                    scrollRef.current.scrollTo({ y: retryY - 20, animated: true });
-                  } else {
-                    scrollRef.current?.scrollTo({ y: 800, animated: true });
-                  }
-                }, 300);
-              }
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              const firstSection = PROPHECY_SECTIONS[0];
+              setExpandedSections((prev) => {
+                const next = new Set(prev);
+                next.add(firstSection.id);
+                return next;
+              });
+              const firstSymbol = firstSection.symbols[0];
+              setExpandedSymbol(firstSymbol.id);
+              markSymbolViewed(firstSymbol.id);
+              setTimeout(() => {
+                const y = sectionYPositions.current[firstSection.id];
+                if (y !== undefined && scrollRef.current) {
+                  scrollRef.current.scrollTo({ y: y - 20, animated: true });
+                }
+              }, 200);
             }}
             style={({ pressed }) => [
               styles.beginButton,
@@ -1244,8 +1327,8 @@ export default function ProphecyExplorerScreen() {
             ]}
           >
             <Ionicons name="compass-outline" size={18} color="#FFF" />
-            <Text style={styles.beginButtonText}>Begin Prophecy Study</Text>
-            <Ionicons name="arrow-down" size={16} color="#FFF" />
+            <Text style={styles.beginButtonText}>Begin with Daniel 2</Text>
+            <Ionicons name="chevron-forward" size={16} color="#FFF" />
           </Pressable>
         </View>
 
