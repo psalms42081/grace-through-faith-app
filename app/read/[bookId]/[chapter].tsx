@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,8 @@ import { useTranslation } from "@/context/TranslationContext";
 import RelatedContent from "@/components/reader/RelatedContent";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import useBibleAudio from "@/hooks/useBibleAudio";
+
+const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 
 const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
 type Translation = (typeof TRANSLATIONS)[number];
@@ -62,6 +65,18 @@ export default function VerseReaderScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [highlightedFromNav, setHighlightedFromNav] = useState<number | null>(null);
   const [navHighlightAlpha, setNavHighlightAlpha] = useState(0);
+  const [showVerseTapHint, setShowVerseTapHint] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(VERSE_TAP_HINT_KEY).then((val) => {
+      if (!val) setShowVerseTapHint(true);
+    });
+  }, []);
+
+  const dismissVerseTapHint = useCallback(() => {
+    setShowVerseTapHint(false);
+    AsyncStorage.setItem(VERSE_TAP_HINT_KEY, "1");
+  }, []);
 
   useEffect(() => {
     if (verseParam) {
@@ -212,6 +227,7 @@ export default function VerseReaderScreen() {
 
   const handleVerseTap = useCallback((item: Verse) => {
     Haptics.selectionAsync();
+    if (showVerseTapHint) dismissVerseTapHint();
     setFocusedVerse(item.verse);
     focusedVerseRef.current = item.verse;
     router.push({
@@ -226,7 +242,7 @@ export default function VerseReaderScreen() {
         translation,
       },
     });
-  }, [bookId, chapter, bookName, translation]);
+  }, [bookId, chapter, bookName, translation, showVerseTapHint, dismissVerseTapHint]);
 
   return (
     <>
@@ -335,6 +351,30 @@ export default function VerseReaderScreen() {
                   {chapter}
                 </Text>
               </View>
+
+              {showVerseTapHint && verses.length > 0 && (
+                <Pressable
+                  onPress={dismissVerseTapHint}
+                  style={{
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    gap: 8,
+                    backgroundColor: theme.accent + "12",
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    marginHorizontal: 20,
+                    marginBottom: 12,
+                  }}
+                  testID="verse-tap-hint"
+                >
+                  <Ionicons name="hand-left-outline" size={16} color={theme.accent} />
+                  <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
+                    Tap any verse to study deeper, highlight, or bookmark
+                  </Text>
+                  <Ionicons name="close" size={14} color={theme.textMuted} />
+                </Pressable>
+              )}
 
               <View style={styles.proseContainer}>
                 <Text style={[styles.proseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>

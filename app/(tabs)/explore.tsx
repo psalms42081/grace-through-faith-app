@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,13 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { TOPICS_LIST as TOPICS } from "@/data/topics";
 import ListItem from "@/components/ui/ListItem";
+
+interface LayerCompletionEntry {
+  layer: string;
+  completedAt: string;
+}
+
+const LAYER_ORDER = ["word", "context", "voices", "application"];
 
 const INSPIRATIONS = [
   { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5 },
@@ -81,9 +88,37 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
 export default function StudyScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
+    queryKey: [`/api/reading-history/recent?userId=${userId}`],
+  });
+
+  const lastRead = recentReads?.[0] ?? null;
+
+  const { data: layerCompletions } = useQuery<LayerCompletionEntry[]>({
+    queryKey: [`/api/layer-completions?userId=${userId}&bookId=${lastRead?.bookId}&chapter=${lastRead?.chapter}`],
+    enabled: !!userId && !!lastRead,
+  });
+
+  const ctaState = useMemo(() => {
+    if (!lastRead) {
+      return { title: "4-Layer Bible Study", sub: "Pick a passage to begin", icon: "layers" as const, routeParams: { showIntro: "true" } };
+    }
+    const completedSet = new Set(layerCompletions?.map((c) => c.layer) ?? []);
+    const count = LAYER_ORDER.filter((l) => completedSet.has(l)).length;
+    const ref = `${lastRead.bookName} ${lastRead.chapter}`;
+    if (count === 4) {
+      return { title: ref, sub: "All 4 layers complete -- view summary", icon: "ribbon" as const, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+    }
+    if (count > 0) {
+      return { title: ref, sub: `${count} of 4 layers complete -- continue studying`, icon: "layers" as const, routeParams: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+    }
+    return { title: ref, sub: "Begin your 4-layer study", icon: "layers" as const, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+  }, [lastRead, layerCompletions]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -102,7 +137,7 @@ export default function StudyScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable
-          onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } } as any)}
+          onPress={() => router.push({ pathname: "/(tabs)/study", params: ctaState.routeParams } as any)}
           style={({ pressed }) => [
             styles.primaryCta,
             {
@@ -114,14 +149,14 @@ export default function StudyScreen() {
           testID="study-primary-cta"
         >
           <View style={[styles.primaryCtaIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="layers" size={22} color={theme.accent} />
+            <Ionicons name={ctaState.icon} size={22} color={theme.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.primaryCtaTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              4-Layer Bible Study
+              {ctaState.title}
             </Text>
             <Text style={[styles.primaryCtaSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Original languages, context, commentaries, and application
+              {ctaState.sub}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.accent} />

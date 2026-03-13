@@ -197,27 +197,17 @@ export default function VerseActionsSheet() {
           </View>
         )}
 
+        <View style={styles.quickRow}>
+          <QuickAction icon="copy-outline" label="Copy" theme={theme} onPress={handleCopy} />
+          <QuickAction icon="color-fill-outline" label="Highlight" theme={theme} onPress={handleHighlight} color={theme.highlightYellow.replace("0.35", "1")} />
+          <QuickAction icon="bookmark-outline" label="Bookmark" theme={theme} onPress={handleBookmark} color={theme.bookmarkBlue} />
+        </View>
+
+        <Text style={[styles.studySectionLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+          STUDY DEEPER
+        </Text>
+
         <View style={styles.actionsGrid}>
-          <ActionButton
-            icon="copy-outline"
-            label="Copy"
-            theme={theme}
-            onPress={handleCopy}
-          />
-          <ActionButton
-            icon="color-fill-outline"
-            label="Highlight"
-            theme={theme}
-            onPress={handleHighlight}
-            color={theme.highlightYellow.replace("0.35", "1")}
-          />
-          <ActionButton
-            icon="bookmark-outline"
-            label="Bookmark"
-            theme={theme}
-            onPress={handleBookmark}
-            color={theme.bookmarkBlue}
-          />
           <ActionButton
             icon="language-outline"
             label="Words"
@@ -295,6 +285,40 @@ function ActionButton({
   );
 }
 
+function QuickAction({
+  icon,
+  label,
+  theme,
+  onPress,
+  color,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  theme: typeof Colors.light;
+  onPress: () => void;
+  color?: string;
+}) {
+  const iconColor = color ?? theme.text;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.quickBtn,
+        {
+          backgroundColor: theme.backgroundCard,
+          borderColor: theme.border,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={iconColor} />
+      <Text style={[styles.quickLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 20 },
@@ -314,6 +338,27 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   translationText: { fontSize: 10, letterSpacing: 0.5 },
+  quickRow: {
+    flexDirection: "row" as const,
+    gap: 10,
+    marginBottom: 20,
+  },
+  quickBtn: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  quickLabel: { fontSize: 13 },
+  studySectionLabel: {
+    fontSize: 11,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
   actionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

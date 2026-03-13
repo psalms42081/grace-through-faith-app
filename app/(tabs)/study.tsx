@@ -254,7 +254,9 @@ function StudyCompletionScreen({
   onStudyAnother,
   onReview,
   onSavePrayer,
+  onNextChapter,
   hasPrayerContent,
+  hasNextChapter,
   theme,
 }: {
   reference: string;
@@ -265,7 +267,9 @@ function StudyCompletionScreen({
   onStudyAnother: () => void;
   onReview: () => void;
   onSavePrayer: () => void;
+  onNextChapter: () => void;
   hasPrayerContent: boolean;
+  hasNextChapter: boolean;
   theme: typeof Colors.light;
 }) {
   const [summaryExpanded, setSummaryExpanded] = useState(false);
@@ -450,13 +454,26 @@ function StudyCompletionScreen({
         </Pressable>
       )}
 
+      {hasNextChapter && (
+        <Pressable
+          onPress={onNextChapter}
+          style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+          testID="study-next-chapter"
+        >
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+          <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+            Study the Next Chapter
+          </Text>
+        </Pressable>
+      )}
+
       <Pressable
         onPress={onStudyAnother}
-        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: hasNextChapter ? theme.accent + "12" : theme.accent, borderRadius: 14, paddingVertical: hasNextChapter ? 14 : 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
         testID="study-another-passage"
       >
-        <Ionicons name="book-outline" size={18} color="#fff" />
-        <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+        <Ionicons name="book-outline" size={hasNextChapter ? 16 : 18} color={hasNextChapter ? theme.accent : "#fff"} />
+        <Text style={{ fontSize: hasNextChapter ? 14 : 16, fontFamily: hasNextChapter ? "Inter_500Medium" : "Inter_600SemiBold", color: hasNextChapter ? theme.accent : "#fff" }}>
           Study Another Passage
         </Text>
       </Pressable>
@@ -2101,6 +2118,7 @@ export default function StudyScreen() {
   }
 
   if (showStudyComplete) {
+    const nextChapterAvailable = !!(sharedBook && chapter && chapter < sharedBook.chapterCount);
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
         <StudyCompletionScreen
@@ -2118,8 +2136,17 @@ export default function StudyScreen() {
           onReview={() => {
             setShowStudyComplete(false);
           }}
+          onNextChapter={() => {
+            if (sharedBook && chapter) {
+              setShowStudyComplete(false);
+              setSharedChapter(chapter + 1);
+              setActiveTab("word");
+              setAutoCompletionShown(false);
+            }
+          }}
           onSavePrayer={handleSavePrayerFromSummary}
           hasPrayerContent={prayerContent.length > 0}
+          hasNextChapter={nextChapterAvailable}
           theme={theme}
         />
       </View>
