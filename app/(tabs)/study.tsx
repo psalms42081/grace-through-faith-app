@@ -248,38 +248,85 @@ function NextLayerCTA({
 function StudyCompletionScreen({
   reference,
   completedLayers,
+  depthLabel,
+  insightJournalMap,
+  transformJournalMap,
   onStudyAnother,
   onReview,
+  onSavePrayer,
+  hasPrayerContent,
   theme,
 }: {
   reference: string;
   completedLayers: Set<string>;
+  depthLabel: string | null;
+  insightJournalMap: Map<string, string>;
+  transformJournalMap: Map<string, string>;
   onStudyAnother: () => void;
   onReview: () => void;
+  onSavePrayer: () => void;
+  hasPrayerContent: boolean;
   theme: typeof Colors.light;
 }) {
-  const completedCount = LAYER_ORDER.filter((l) => completedLayers.has(l)).length;
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const depthColor = depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted;
+
+  const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
+  const transformFilled = TRANSFORMATION_SECTIONS.filter((s) => transformJournalMap.has(s.key));
+  const allEntries = [
+    ...insightFilled.map((s) => ({ ...s, content: insightJournalMap.get(s.key) ?? "", layerLabel: "Insight" })),
+    ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Respond" })),
+  ];
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+
+  const summaryText = useMemo(
+    () => formatStudySummary(reference, completedLayers, insightJournalMap, transformJournalMap, depthLabel),
+    [reference, completedLayers, insightJournalMap, transformJournalMap, depthLabel]
+  );
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await Clipboard.setStringAsync(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [summaryText]);
+
+  const handleShare = useCallback(async () => {
+    if (Platform.OS === "web") return;
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) return;
+      const fileUri = FileSystem.cacheDirectory + "study-summary.txt";
+      await FileSystem.writeAsStringAsync(fileUri, summaryText, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: "text/plain", dialogTitle: "Share Study Summary" });
+    } catch {}
+  }, [summaryText]);
 
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{ padding: 24, paddingBottom: 120, alignItems: "center" as const }}
+      contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 16, marginTop: 12 }}>
-        <Ionicons name="ribbon" size={32} color={theme.accent} />
+      <View style={{ alignItems: "center" as const, marginBottom: 24 }}>
+        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 16, marginTop: 12 }}>
+          <Ionicons name="ribbon" size={32} color={theme.accent} />
+        </View>
+        <Text style={{ fontSize: 22, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 6 }}>
+          Study Complete
+        </Text>
+        <Text style={{ fontSize: 16, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 8 }}>
+          {reference}
+        </Text>
+        <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300 }}>
+          You studied this passage through all four layers -- from observation to personal response.
+        </Text>
       </View>
-      <Text style={{ fontSize: 22, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 6 }}>
-        Study Complete
-      </Text>
-      <Text style={{ fontSize: 16, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 8 }}>
-        {reference}
-      </Text>
-      <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300, marginBottom: 28 }}>
-        You studied this passage through all four layers -- from observation to personal response.
-      </Text>
 
-      <View style={{ width: "100%" as const, backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 20 }}>
+      <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 16 }}>
         <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 14 }}>
           LAYERS COMPLETED
         </Text>
@@ -301,10 +348,107 @@ function StudyCompletionScreen({
             </View>
           );
         })}
-        <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" as const, marginTop: 14 }}>
-          {completedCount} of 4 layers completed
-        </Text>
+        {depthLabel && (
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+            <Ionicons
+              name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+              size={14}
+              color={depthColor}
+            />
+            <Text style={{ fontSize: 13, color: depthColor, fontFamily: "Inter_500Medium" }}>
+              Study Depth: {depthLabel}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {allEntries.length > 0 && (
+        <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 16 }}>
+          <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 12 }}>
+            YOUR REFLECTIONS ({allEntries.length})
+          </Text>
+          {allEntries.map((entry) => (
+            <Pressable
+              key={entry.key}
+              onPress={() => setExpandedEntry(expandedEntry === entry.key ? null : entry.key)}
+              style={{ paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}
+            >
+              <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
+                <Ionicons name={(entry.icon ?? "create-outline") as any} size={14} color={(entry.color ?? theme.accent) as string} />
+                <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: "Inter_500Medium" }} numberOfLines={1}>
+                  {entry.title}
+                </Text>
+                <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
+                  {entry.layerLabel}
+                </Text>
+                <Ionicons name={expandedEntry === entry.key ? "chevron-up" : "chevron-down"} size={14} color={theme.textMuted} />
+              </View>
+              {expandedEntry === entry.key && (
+                <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 20, marginTop: 8, marginLeft: 22 }}>
+                  {entry.content}
+                </Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 20, overflow: "hidden" as const }}>
+        <Pressable
+          onPress={() => setSummaryExpanded(!summaryExpanded)}
+          style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, padding: 16 }}
+        >
+          <Ionicons name="document-text-outline" size={16} color={theme.accent} />
+          <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: "Inter_600SemiBold" }}>
+            Study Summary
+          </Text>
+          <Ionicons name={summaryExpanded ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
+        </Pressable>
+        {summaryExpanded && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 20 }} selectable>
+              {summaryText}
+            </Text>
+            <View style={{ flexDirection: "row" as const, gap: 8, marginTop: 12 }}>
+              <Pressable
+                onPress={handleCopy}
+                style={({ pressed }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.border, opacity: pressed ? 0.85 : 1 })}
+                testID="copy-study-summary"
+              >
+                <Ionicons name={copied ? "checkmark" : "copy-outline"} size={15} color={copied ? "#2E7D32" : theme.accent} />
+                <Text style={{ fontSize: 13, color: copied ? "#2E7D32" : theme.accent, fontFamily: "Inter_500Medium" }}>
+                  {copied ? "Copied" : "Copy"}
+                </Text>
+              </Pressable>
+              {Platform.OS !== "web" && (
+                <Pressable
+                  onPress={handleShare}
+                  style={({ pressed }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.border, opacity: pressed ? 0.85 : 1 })}
+                  testID="share-study-summary"
+                >
+                  <Ionicons name="share-outline" size={15} color={theme.accent} />
+                  <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_500Medium" }}>
+                    Share
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {hasPrayerContent && (
+        <Pressable
+          onPress={onSavePrayer}
+          style={({ pressed }) => ({ width: "100%" as const, borderWidth: 1, borderColor: theme.accent, borderRadius: 14, paddingVertical: 14, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+          testID="save-prayer-from-completion"
+        >
+          <Ionicons name="bookmark-outline" size={16} color={theme.accent} />
+          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.accent }}>
+            Save Prayer Response
+          </Text>
+        </Pressable>
+      )}
 
       <Pressable
         onPress={onStudyAnother}
@@ -385,10 +529,10 @@ function DeepStudyEntryButton({
         <Ionicons name={isPaused ? "play-circle-outline" : "compass-outline"} size={20} color="#fff" />
         <View style={dsStyles.entryBtnTextWrap}>
           <Text style={[dsStyles.entryBtnTitle, { fontFamily: "Inter_600SemiBold" }]}>
-            {isPaused ? "Resume Deep Study" : "Start Deep Study"}
+            {isPaused ? "Resume Guided Mode" : "Start Guided Mode"}
           </Text>
           <Text style={[dsStyles.entryBtnSub, { fontFamily: "Inter_400Regular" }]}>
-            {isPaused ? "Continue where you left off" : `Guided 4-layer session  ${timeEst}`}
+            {isPaused ? "Continue where you left off" : `Step-by-step walkthrough  ${timeEst}`}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
@@ -642,13 +786,13 @@ function DeepStudyIntro({
           <Ionicons name="compass" size={28} color={theme.accent} />
         </View>
         <Text style={[introStyles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Guided Deep Study
+          Guided Mode
         </Text>
         <Text style={[introStyles.reference, { color: theme.accent, fontFamily: "Lora_600SemiBold" }]}>
           {reference}
         </Text>
         <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19, maxWidth: 300, marginTop: 6 }}>
-          A structured session that walks you through each layer in order, with reflection prompts and journaling at each step.
+          Walk through the same 4 layers in order, with reflection prompts and journaling at each step.
         </Text>
       </View>
 
@@ -918,7 +1062,7 @@ function DeepSessionBar({
         <View style={[dsStyles.sessionBadge, { backgroundColor: theme.accent + "18" }]}>
           <Ionicons name="compass" size={12} color={theme.accent} />
           <Text style={[dsStyles.sessionBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            DEEP STUDY
+            GUIDED MODE
           </Text>
         </View>
         <View style={dsStyles.sessionDots}>
@@ -1012,7 +1156,7 @@ function formatStudySummary(
   depthLabel: string | null,
 ): string {
   const lines: string[] = [];
-  lines.push("DEEP STUDY SUMMARY");
+  lines.push("STUDY SUMMARY");
   lines.push(`Reference: ${reference}`);
   lines.push("");
 
@@ -1135,10 +1279,10 @@ function DeepSessionSummary({
       <View style={dsStyles.summaryHeader}>
         <Ionicons name="compass" size={28} color={theme.accent} />
         <Text style={[dsStyles.summaryTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Guided Study Complete
+          Guided Mode Complete
         </Text>
         <Text style={[dsStyles.summarySubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Deep study session finished"}
+          {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Guided session finished"}
         </Text>
         {reference ? (
           <Text style={[dsStyles.summaryRef, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
@@ -1594,6 +1738,7 @@ export default function StudyScreen() {
   const [sharedBook, setSharedBook] = useState<BibleBook | null>(null);
   const [sharedChapter, setSharedChapter] = useState<number | null>(paramChapter);
   const [sharedBookInit, setSharedBookInit] = useState(false);
+  const [autoCompletionShown, setAutoCompletionShown] = useState(false);
 
   useEffect(() => {
     if (allBooks && paramBookId && !sharedBookInit) {
@@ -1608,10 +1753,12 @@ export default function StudyScreen() {
   const handleSharedBookChange = useCallback((book: BibleBook | null) => {
     setSharedBook(book);
     if (!book) setSharedChapter(null);
+    setAutoCompletionShown(false);
   }, []);
 
   const handleSharedChapterChange = useCallback((ch: number | null) => {
     setSharedChapter(ch);
+    setAutoCompletionShown(false);
   }, []);
 
   const bookId = sharedBook?.id ?? null;
@@ -1875,10 +2022,34 @@ export default function StudyScreen() {
     router.push("/prayer-journal");
   }, [userId, prayerContent]);
 
+  useEffect(() => {
+    if (!canTrack || !completions) return;
+    const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
+    if (showLayerIntro && completedLayers.size > 0 && !allDone) {
+      setShowLayerIntro(false);
+    }
+    if (showLayerIntro && allDone) {
+      setShowLayerIntro(false);
+      setShowStudyComplete(true);
+      setAutoCompletionShown(true);
+    }
+    if (!showLayerIntro && allDone && !autoCompletionShown && !showStudyComplete && !showSummary && !deepSession.active) {
+      setShowStudyComplete(true);
+      setAutoCompletionShown(true);
+    }
+  }, [canTrack, completions, completedLayers, showLayerIntro, autoCompletionShown, showStudyComplete, showSummary, deepSession.active]);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   if (showLayerIntro) {
+    if (paramBookId && (!canTrack || !completions)) {
+      return (
+        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16, alignItems: "center" as const, justifyContent: "center" as const }]}>
+          <ActivityIndicator size="small" color={theme.accent} />
+        </View>
+      );
+    }
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
         <FourLayerIntro
@@ -1935,6 +2106,9 @@ export default function StudyScreen() {
         <StudyCompletionScreen
           reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "This Passage"}
           completedLayers={completedLayers}
+          depthLabel={studyDepthLabel}
+          insightJournalMap={insightJournalMap}
+          transformJournalMap={transformJournalMap}
           onStudyAnother={() => {
             setShowStudyComplete(false);
             setSharedBook(null);
@@ -1944,6 +2118,8 @@ export default function StudyScreen() {
           onReview={() => {
             setShowStudyComplete(false);
           }}
+          onSavePrayer={handleSavePrayerFromSummary}
+          hasPrayerContent={prayerContent.length > 0}
           theme={theme}
         />
       </View>
@@ -1992,16 +2168,16 @@ export default function StudyScreen() {
             <Pressable
               onPress={() => { setShowDepthPicker(false); startDeepSession(); }}
               testID="start-guided-session"
-              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Deep Study" : "Start Guided Deep Study"}
+              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Mode" : "Start Guided Mode"}
               style={{ flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 10, paddingHorizontal: 16, marginHorizontal: 16, marginTop: 6, marginBottom: 4, borderRadius: 10, borderWidth: 1, borderColor: theme.accent + "40", gap: 10 }}
             >
               <Ionicons name="compass-outline" size={18} color={theme.accent} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                  {pausedLayerIndex !== null ? "Resume Guided Deep Study" : "Start Guided Deep Study"}
+                  {pausedLayerIndex !== null ? "Resume Guided Mode" : "Start Guided Mode"}
                 </Text>
                 <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-                  {pausedLayerIndex !== null ? "Continue your structured session" : "Structured session with prompts and journaling"}
+                  {pausedLayerIndex !== null ? "Continue your structured session" : "Step-by-step walkthrough with prompts"}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={14} color={theme.accent + "80"} />
@@ -2026,7 +2202,7 @@ export default function StudyScreen() {
         >
           <Ionicons name="play-circle" size={18} color={theme.accent} />
           <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
-            Resume Guided Deep Study
+            Resume Guided Mode
           </Text>
           <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
             Layer {(pausedLayerIndex ?? 0) + 1} of 4
