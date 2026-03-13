@@ -173,6 +173,7 @@ function NextLayerCTA({
   completedLayers,
   onMarkComplete,
   onNextLayer,
+  onAllComplete,
   isCompleted,
   canComplete,
   hasEntries,
@@ -182,6 +183,7 @@ function NextLayerCTA({
   completedLayers: Set<string>;
   onMarkComplete: () => void;
   onNextLayer: () => void;
+  onAllComplete: () => void;
   isCompleted: boolean;
   canComplete: boolean;
   hasEntries: boolean;
@@ -191,12 +193,22 @@ function NextLayerCTA({
   const hasNext = currentIndex < LAYER_ORDER.length - 1;
   const nextLabel = hasNext ? LAYER_LABELS[LAYER_ORDER[currentIndex + 1]] : null;
   const isReflectiveLayer = activeTab === "voices" || activeTab === "application";
+  const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
   if (!canComplete) return null;
 
   return (
     <View style={ctaStyles.container}>
-      {!isCompleted ? (
+      {allDone ? (
+        <Pressable
+          onPress={onAllComplete}
+          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+          testID="view-study-complete"
+        >
+          <Ionicons name="ribbon-outline" size={18} color="#fff" />
+          <Text style={ctaStyles.btnText}>View Study Summary</Text>
+        </Pressable>
+      ) : !isCompleted ? (
         <>
           {isReflectiveLayer && !hasEntries && (
             <Text style={[ctaStyles.gentleNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -206,6 +218,7 @@ function NextLayerCTA({
           <Pressable
             onPress={onMarkComplete}
             style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+            testID="mark-layer-complete"
           >
             <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
             <Text style={ctaStyles.btnText}>Mark Layer Complete</Text>
@@ -215,6 +228,7 @@ function NextLayerCTA({
         <Pressable
           onPress={onNextLayer}
           style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+          testID="next-layer"
         >
           <Text style={ctaStyles.btnText}>Next Layer: {nextLabel}</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" />
@@ -223,11 +237,97 @@ function NextLayerCTA({
         <View style={[ctaStyles.completeBanner, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
           <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
           <Text style={[ctaStyles.completeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            All layers complete for this chapter
+            Layer complete
           </Text>
         </View>
       )}
     </View>
+  );
+}
+
+function StudyCompletionScreen({
+  reference,
+  completedLayers,
+  onStudyAnother,
+  onReview,
+  theme,
+}: {
+  reference: string;
+  completedLayers: Set<string>;
+  onStudyAnother: () => void;
+  onReview: () => void;
+  theme: typeof Colors.light;
+}) {
+  const completedCount = LAYER_ORDER.filter((l) => completedLayers.has(l)).length;
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 24, paddingBottom: 120, alignItems: "center" as const }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 16, marginTop: 12 }}>
+        <Ionicons name="ribbon" size={32} color={theme.accent} />
+      </View>
+      <Text style={{ fontSize: 22, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 6 }}>
+        Study Complete
+      </Text>
+      <Text style={{ fontSize: 16, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 8 }}>
+        {reference}
+      </Text>
+      <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300, marginBottom: 28 }}>
+        You studied this passage through all four layers -- from observation to personal response.
+      </Text>
+
+      <View style={{ width: "100%" as const, backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 20 }}>
+        <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 14 }}>
+          LAYERS COMPLETED
+        </Text>
+        {LAYER_ORDER.map((layer, i) => {
+          const done = completedLayers.has(layer);
+          return (
+            <View key={layer} style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, paddingVertical: 8, borderTopWidth: i > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: theme.border }}>
+              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: done ? theme.accent : theme.backgroundSecondary, alignItems: "center" as const, justifyContent: "center" as const }}>
+                {done ? (
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>{i + 1}</Text>
+                )}
+              </View>
+              <Text style={{ flex: 1, fontSize: 15, color: done ? theme.text : theme.textMuted, fontFamily: done ? "Inter_600SemiBold" : "Inter_400Regular" }}>
+                {LAYER_LABELS[layer]}
+              </Text>
+              {done && <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_500Medium" }}>Done</Text>}
+            </View>
+          );
+        })}
+        <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" as const, marginTop: 14 }}>
+          {completedCount} of 4 layers completed
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={onStudyAnother}
+        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+        testID="study-another-passage"
+      >
+        <Ionicons name="book-outline" size={18} color="#fff" />
+        <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+          Study Another Passage
+        </Text>
+      </Pressable>
+
+      <Pressable
+        onPress={onReview}
+        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accent + "12", borderRadius: 14, paddingVertical: 14, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.7 : 1 })}
+        testID="review-study"
+      >
+        <Ionicons name="arrow-back" size={16} color={theme.accent} />
+        <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accent }}>
+          Review This Study
+        </Text>
+      </Pressable>
+    </ScrollView>
   );
 }
 
@@ -386,8 +486,8 @@ function FourLayerIntro({
             maxWidth: 320,
           }}
         >
-          Go beyond surface reading. Each passage is studied through four
-          progressive layers for deeper understanding and personal growth.
+
+          Study any passage through four progressive layers at your own pace. Explore freely, mark layers complete as you go, and return anytime.
         </Text>
       </View>
 
@@ -542,10 +642,13 @@ function DeepStudyIntro({
           <Ionicons name="compass" size={28} color={theme.accent} />
         </View>
         <Text style={[introStyles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Deep Study
+          Guided Deep Study
         </Text>
         <Text style={[introStyles.reference, { color: theme.accent, fontFamily: "Lora_600SemiBold" }]}>
           {reference}
+        </Text>
+        <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19, maxWidth: 300, marginTop: 6 }}>
+          A structured session that walks you through each layer in order, with reflection prompts and journaling at each step.
         </Text>
       </View>
 
@@ -1032,7 +1135,7 @@ function DeepSessionSummary({
       <View style={dsStyles.summaryHeader}>
         <Ionicons name="compass" size={28} color={theme.accent} />
         <Text style={[dsStyles.summaryTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Session Complete
+          Guided Study Complete
         </Text>
         <Text style={[dsStyles.summarySubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Deep study session finished"}
@@ -1576,6 +1679,7 @@ export default function StudyScreen() {
   const [showSummary, setShowSummary] = useState(false);
   const [showDeepIntro, setShowDeepIntro] = useState(false);
   const [showLayerIntro, setShowLayerIntro] = useState(params.showIntro === "true");
+  const [showStudyComplete, setShowStudyComplete] = useState(false);
 
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
 
@@ -1596,6 +1700,7 @@ export default function StudyScreen() {
             }
           } else {
             await AsyncStorage.removeItem(DEEP_SESSION_KEY);
+            setPausedLayerIndex(null);
           }
         }
       } catch {}
@@ -1612,7 +1717,7 @@ export default function StudyScreen() {
   }, []);
 
   const startDeepSession = useCallback(() => {
-    if (pausedLayerIndex !== null && pausedLayerIndex > 0) {
+    if (pausedLayerIndex !== null && pausedLayerIndex >= 0) {
       const ds = deepSessionRef.current;
       const resumeIdx = Math.min(pausedLayerIndex, LAYER_ORDER.length - 1);
       const resumed: DeepSessionState = {
@@ -1824,6 +1929,27 @@ export default function StudyScreen() {
     );
   }
 
+  if (showStudyComplete) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
+        <StudyCompletionScreen
+          reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "This Passage"}
+          completedLayers={completedLayers}
+          onStudyAnother={() => {
+            setShowStudyComplete(false);
+            setSharedBook(null);
+            setSharedChapter(null);
+            setActiveTab("word");
+          }}
+          onReview={() => {
+            setShowStudyComplete(false);
+          }}
+          theme={theme}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: canTrack ? "transparent" : theme.border }]}>
@@ -1866,13 +1992,19 @@ export default function StudyScreen() {
             <Pressable
               onPress={() => { setShowDepthPicker(false); startDeepSession(); }}
               testID="start-guided-session"
-              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Session" : "Start Guided Session"}
-              style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, paddingVertical: 10, paddingHorizontal: 16, marginHorizontal: 16, marginTop: 6, marginBottom: 4, borderRadius: 8, borderWidth: 1, borderColor: theme.accent + "40" }}
+              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Deep Study" : "Start Guided Deep Study"}
+              style={{ flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 10, paddingHorizontal: 16, marginHorizontal: 16, marginTop: 6, marginBottom: 4, borderRadius: 10, borderWidth: 1, borderColor: theme.accent + "40", gap: 10 }}
             >
-              <Ionicons name="compass-outline" size={16} color={theme.accent} style={{ marginRight: 6 }} />
-              <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                {pausedLayerIndex !== null ? "Resume Guided Session" : "Start Guided Session"}
-              </Text>
+              <Ionicons name="compass-outline" size={18} color={theme.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                  {pausedLayerIndex !== null ? "Resume Guided Deep Study" : "Start Guided Deep Study"}
+                </Text>
+                <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                  {pausedLayerIndex !== null ? "Continue your structured session" : "Structured session with prompts and journaling"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color={theme.accent + "80"} />
             </Pressable>
           )}
         </View>
@@ -1884,6 +2016,23 @@ export default function StudyScreen() {
           onExit={exitDeepSession}
           theme={theme}
         />
+      )}
+
+      {!deepSession.active && pausedLayerIndex !== null && canTrack && (
+        <Pressable
+          onPress={() => startDeepSession()}
+          style={{ flexDirection: "row" as const, alignItems: "center" as const, marginHorizontal: 16, marginTop: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: theme.accent + "12", gap: 8 }}
+          testID="resume-guided-bar"
+        >
+          <Ionicons name="play-circle" size={18} color={theme.accent} />
+          <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+            Resume Guided Deep Study
+          </Text>
+          <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
+            Layer {(pausedLayerIndex ?? 0) + 1} of 4
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={theme.accent + "80"} />
+        </Pressable>
       )}
 
       {canTrack && !deepSession.active && (
@@ -1937,9 +2086,18 @@ export default function StudyScreen() {
             })}
           </View>
           <View style={{ paddingTop: 10, paddingBottom: 2, paddingHorizontal: 2 }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, fontStyle: "italic" as const }}>
-              {LAYER_GUIDANCE[activeTab]}
-            </Text>
+            {LAYER_ORDER.every((l) => completedLayers.has(l)) ? (
+              <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6 }}>
+                <Ionicons name="checkmark-done-circle" size={14} color={theme.accent} />
+                <Text style={{ color: theme.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  All four layers complete. Scroll down to view your summary.
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, fontStyle: "italic" as const }}>
+                {LAYER_GUIDANCE[activeTab]}
+              </Text>
+            )}
           </View>
         </View>
       )}
@@ -1971,6 +2129,7 @@ export default function StudyScreen() {
             completedLayers={completedLayers}
             onMarkComplete={handleMarkComplete}
             onNextLayer={handleNextLayer}
+            onAllComplete={() => setShowStudyComplete(true)}
             isCompleted={completedLayers.has(activeTab)}
             canComplete={canTrack}
             hasEntries={activeLayerHasEntries}
