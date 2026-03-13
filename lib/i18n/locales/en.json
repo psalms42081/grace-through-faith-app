@@ -11,7 +11,7 @@
     "continueReading": "Continue Reading",
     "worshipPathways": "Worship Pathways",
     "sdaHub": "SDA Hub",
-    "guidedStudy": "Guided Study",
+    "studyGuide": "Study Guide",
     "prayerJournal": "Prayer Journal",
     "devotionalPlans": "Devotional Plans",
     "studyPaths": "Study Paths"
@@ -84,7 +84,7 @@
   "study": {
     "studyPaths": "Study Paths",
     "devotionalPlans": "Devotional Plans",
-    "guidedStudy": "Guided Study"
+    "studyGuide": "Study Guide"
   },
   "common": {
     "back": "Back",

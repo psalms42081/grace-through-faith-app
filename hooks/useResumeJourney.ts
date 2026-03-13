@@ -30,7 +30,7 @@ export interface ResumeItem {
 }
 
 const TYPE_META: Record<ResumeType, { icon: string; gradientColors: [string, string]; typeBadge: string }> = {
-  guided_study: { icon: "flask", gradientColors: ["#7C3AED", "#5B21B6"], typeBadge: "Guided Study" },
+  guided_study: { icon: "flask", gradientColors: ["#7C3AED", "#5B21B6"], typeBadge: "Study Guide" },
   devotional: { icon: "sunny", gradientColors: ["#E8A838", "#C98A20"], typeBadge: "Devotional" },
   study_path: { icon: "compass", gradientColors: ["#4ECCA3", "#2EAD84"], typeBadge: "Study Path" },
   great_controversy: { icon: "git-merge", gradientColors: ["#8B5CF6", "#6D28D9"], typeBadge: "Timeline" },
@@ -147,7 +147,7 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
       ...TYPE_META.guided_study,
       type: "guided_study",
       id: activeSession.id,
-      title: `Guided Study`,
+      title: `Study Guide`,
       subtitle: `Stage: ${stage}`,
       progressLabel: `Continue Study`,
       route: "/study-guide",

@@ -129,18 +129,20 @@ export default function StudyScreen() {
 
         <EnrolledTracksPreview theme={theme} />
 
+        <SectionDivider theme={theme} />
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Adventist Reference & Formation
+            Study with Guidance
           </Text>
         </View>
 
         <ListItem
-          icon="school"
-          iconColor="#7C3AED"
-          title="28 Fundamental Beliefs"
-          subtitle="Browse and explore core Adventist doctrines"
-          onPress={() => router.push("/sda-studies" as any)}
+          icon="chatbubbles"
+          iconColor="#8B5CF6"
+          title="Study Guide"
+          subtitle="AI tutor walks you through a passage step by step"
+          onPress={() => router.push("/study-guide" as any)}
           style={{ marginBottom: 8 }}
         />
 
@@ -150,6 +152,32 @@ export default function StudyScreen() {
           title="Devotional Plans"
           subtitle="Guided daily reading & SDA study plans"
           onPress={() => router.push("/devotionals" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Learning Paths
+          </Text>
+        </View>
+
+        <ListItem
+          icon="trail-sign"
+          iconColor="#2E7D32"
+          title="Study Paths"
+          subtitle="Structured paths through Scripture"
+          onPress={() => router.push("/study-paths" as any)}
+          style={{ marginBottom: 8 }}
+        />
+
+        <ListItem
+          icon="school"
+          iconColor="#7C3AED"
+          title="28 Fundamental Beliefs"
+          subtitle="Browse and explore core Adventist doctrines"
+          onPress={() => router.push("/sda-studies" as any)}
           style={{ marginBottom: 8 }}
         />
 
@@ -216,11 +244,19 @@ export default function StudyScreen() {
           </LinearGradient>
         </Pressable>
 
+        <SectionDivider theme={theme} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+            Prophecy & End Times
+          </Text>
+        </View>
+
         <ListItem
           icon="telescope"
           iconColor="#C9933A"
           title="Prophecy Explorer"
-          subtitle="Reference guide to Daniel & Revelation timelines"
+          subtitle="Daniel & Revelation symbols, beasts, and timelines"
           onPress={() => router.push("/prophecy-explorer" as any)}
           style={{ marginBottom: 8 }}
         />
@@ -229,34 +265,8 @@ export default function StudyScreen() {
           icon="git-merge"
           iconColor="#8B5CF6"
           title="Great Controversy Timeline"
-          subtitle="Visual guide from Creation to the New Earth"
+          subtitle="The cosmic conflict from Creation to the New Earth"
           onPress={() => router.push("/great-controversy" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Study Tools
-          </Text>
-        </View>
-
-        <ListItem
-          icon="chatbubbles"
-          iconColor="#8B5CF6"
-          title="Guided Study"
-          subtitle="AI tutor walks you through a passage step by step"
-          onPress={() => router.push("/study-guide" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <ListItem
-          icon="trail-sign"
-          iconColor="#2E7D32"
-          title="Study Paths"
-          subtitle="Structured paths through Scripture"
-          onPress={() => router.push("/study-paths" as any)}
           style={{ marginBottom: 8 }}
         />
 
@@ -370,7 +380,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 22 },
   sectionSubhead: { fontSize: 16, letterSpacing: 0.3 },
   inspirationScroll: {
     gap: 12,

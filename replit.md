@@ -117,3 +117,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **CTA priority fix:** "View Study Summary" button appears on ALL tabs when all layers done (not just the last tab).
 - **Resume bar:** Persistent "Resume Guided Mode" bar appears below session bar when guided session is paused. Resume at layer 0 now works correctly.
 - **Layer naming:** Internal codes word/context/voices/application display as Observe/Context/Insight/Respond. Summary text header changed from "DEEP STUDY SUMMARY" to "STUDY SUMMARY".
+
+### Study Screen Architecture (Completed)
+- **Explore (Study tab) reorganized:** Sections restructured from flat "Adventist Reference & Formation" + "Study Tools" into clear semantic groups: "Study with Guidance" (Study Guide, Devotionals), "Learning Paths" (Study Paths, 28 Beliefs, Resources), "Prophecy & End Times" (Explorer, Great Controversy), "Reference" (Historic Voices, Maps).
+- **Product naming clarity:** "Guided Study" renamed to "Study Guide" everywhere it refers to the AI Socratic tutor at `/study-guide` (explore.tsx, verse-actions.tsx, study-guide.tsx header, ProGateModal, useResumeJourney hook, all i18n locale files). This prevents confusion with "Guided Mode" (the structured session inside 4-Layer Study).
+- **Prophecy section clarity:** Prophecy Explorer and Great Controversy Timeline grouped under dedicated "Prophecy & End Times" section with more descriptive subtitles.

@@ -11,7 +11,7 @@
     "continueReading": "Continuer la lecture",
     "worshipPathways": "Chemins d'adoration",
     "sdaHub": "Centre AJ",
-    "guidedStudy": "Étude guidée",
+    "studyGuide": "Étude guidée",
     "prayerJournal": "Journal de prière",
     "devotionalPlans": "Plans de dévotion",
     "studyPaths": "Parcours d'étude"
@@ -81,7 +81,7 @@
   "study": {
     "studyPaths": "Parcours d'étude",
     "devotionalPlans": "Plans de dévotion",
-    "guidedStudy": "Étude guidée"
+    "studyGuide": "Étude guidée"
   },
   "common": {
     "back": "Retour",

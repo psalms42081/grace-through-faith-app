@@ -282,7 +282,7 @@ export default function StudyGuideScreen() {
           </Pressable>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Guided Study
+              Study Guide
             </Text>
           </View>
           <View style={{ width: 34 }} />
@@ -295,7 +295,7 @@ export default function StudyGuideScreen() {
               Start a New Study
             </Text>
             <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Open a passage in the Bible reader, select a verse, and choose "Guided Study" to begin an inductive study session.
+              Open a passage in the Bible reader, select a verse, and choose "Study Guide" to begin an inductive study session.
             </Text>
             <Pressable
               style={[styles.hubOpenReaderBtn, { backgroundColor: theme.accent }]}

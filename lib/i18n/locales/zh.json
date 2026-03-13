@@ -11,7 +11,7 @@
     "continueReading": "继续阅读",
     "worshipPathways": "敬拜之路",
     "sdaHub": "基督复临安息日会中心",
-    "guidedStudy": "引导学习",
+    "studyGuide": "引导学习",
     "prayerJournal": "祷告日记",
     "devotionalPlans": "灵修计划",
     "studyPaths": "学习路径"
@@ -81,7 +81,7 @@
   "study": {
     "studyPaths": "学习路径",
     "devotionalPlans": "灵修计划",
-    "guidedStudy": "引导学习"
+    "studyGuide": "引导学习"
   },
   "common": {
     "back": "返回",

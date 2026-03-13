@@ -248,7 +248,7 @@ export default function VerseActionsSheet() {
           />
           <ActionButton
             icon="school-outline"
-            label="Guided Study"
+            label="Study Guide"
             theme={theme}
             onPress={handleSocraticStudy}
             color="#C9933A"

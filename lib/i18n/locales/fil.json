@@ -11,7 +11,7 @@
     "continueReading": "Ipagpatuloy ang pagbasa",
     "worshipPathways": "Mga daan ng pagsamba",
     "sdaHub": "SDA Hub",
-    "guidedStudy": "Gabay na pag-aaral",
+    "studyGuide": "Gabay na pag-aaral",
     "prayerJournal": "Talaarawan ng panalangin",
     "devotionalPlans": "Mga plano ng debosyon",
     "studyPaths": "Mga landas ng pag-aaral"
@@ -81,7 +81,7 @@
   "study": {
     "studyPaths": "Mga landas ng pag-aaral",
     "devotionalPlans": "Mga plano ng debosyon",
-    "guidedStudy": "Gabay na pag-aaral"
+    "studyGuide": "Gabay na pag-aaral"
   },
   "common": {
     "back": "Bumalik",

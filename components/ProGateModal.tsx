@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 const SUPPORTER_BENEFITS = [
   { icon: "people-outline" as const, title: "Family Dashboard", desc: "Track your family's spiritual growth" },
-  { icon: "school-outline" as const, title: "Guided Study", desc: "AI-guided inductive Bible study" },
+  { icon: "school-outline" as const, title: "Study Guide", desc: "AI-guided inductive Bible study" },
   { icon: "layers-outline" as const, title: "Chapter Insights", desc: "Locations, timeline, figures & culture" },
   { icon: "map-outline" as const, title: "Visual Verse Mapper", desc: "Cross-references & original language" },
   { icon: "language-outline" as const, title: "Greek & Hebrew Deep Dive", desc: "Full Strong's word analysis" },
