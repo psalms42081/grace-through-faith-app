@@ -30,10 +30,17 @@ type Tab = "word" | "context" | "voices" | "application";
 
 const LAYER_ORDER: Tab[] = ["word", "context", "voices", "application"];
 const LAYER_LABELS: Record<Tab, string> = {
-  word: "Text",
+  word: "Observe",
   context: "Context",
   voices: "Insight",
-  application: "Transform",
+  application: "Respond",
+};
+
+const LAYER_GUIDANCE: Record<Tab, string> = {
+  word: "Read the passage carefully. Notice what stands out.",
+  context: "Discover when, where, and why this was written.",
+  voices: "Hear from voices across church history.",
+  application: "Let Scripture shape your life today.",
 };
 
 interface LayerCompletionEntry {
@@ -302,9 +309,9 @@ interface ChapterSummaryData {
 
 const FOUR_LAYERS = [
   {
-    icon: "language-outline" as const,
-    title: "Text",
-    desc: "Study the original Greek and Hebrew words behind the English translation.",
+    icon: "book-outline" as const,
+    title: "Observe",
+    desc: "Read the passage carefully. Notice repeated words, themes, and what stands out.",
     color: "#C9933A",
   },
   {
@@ -316,12 +323,12 @@ const FOUR_LAYERS = [
   {
     icon: "chatbubble-ellipses-outline" as const,
     title: "Insight",
-    desc: "Read commentary from historic voices like Matthew Henry and Ellen White.",
+    desc: "Hear from theologians and historic voices across church history.",
     color: "#7C3AED",
   },
   {
     icon: "heart-outline" as const,
-    title: "Transform",
+    title: "Respond",
     desc: "Apply Scripture to your life through guided reflection and prayer.",
     color: "#E8456B",
   },
@@ -518,10 +525,10 @@ function DeepStudyIntro({
   });
 
   const layers = [
-    { icon: "book-outline" as const, title: "Text", desc: "Read the passage and explore original language word studies" },
+    { icon: "book-outline" as const, title: "Observe", desc: "Read the passage carefully and notice what stands out" },
     { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
     { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from theologians and historic voices" },
-    { icon: "heart-outline" as const, title: "Transformation", desc: "Apply the passage through reflection and prayer" },
+    { icon: "heart-outline" as const, title: "Respond", desc: "Apply the passage through reflection and prayer" },
   ];
 
   return (
@@ -632,7 +639,7 @@ function DeepStudyIntro({
       >
         <Ionicons name="book-outline" size={18} color="#fff" />
         <Text style={[introStyles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-          Begin with Text
+          Begin with Observe
         </Text>
       </Pressable>
 
@@ -888,10 +895,10 @@ function DeepSessionAdvanceButton({
 }
 
 const LAYER_FULL_NAMES: Record<Tab, string> = {
-  word: "Text",
+  word: "Observe",
   context: "Context",
   voices: "Insight",
-  application: "Transformation",
+  application: "Respond",
 };
 
 function formatStudySummary(
@@ -933,7 +940,7 @@ function formatStudySummary(
     (s) => s.key !== "prayer_response" && transformJournalMap.has(s.key)
   );
   if (filledTransform.length > 0) {
-    lines.push("TRANSFORMATION");
+    lines.push("RESPOND");
     for (const section of filledTransform) {
       const content = transformJournalMap.get(section.key) ?? "";
       lines.push(`  ${section.title}:`);
@@ -1373,10 +1380,10 @@ function useJournalEntries(userId: string, bookId: number | null, chapter: numbe
 }
 
 const TABS: { id: Tab; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
-  { id: "word", label: "Text", icon: "language-outline" },
+  { id: "word", label: "Observe", icon: "book-outline" },
   { id: "context", label: "Context", icon: "time-outline" },
   { id: "voices", label: "Insight", icon: "chatbubble-ellipses-outline" },
-  { id: "application", label: "Transform", icon: "heart-outline" },
+  { id: "application", label: "Respond", icon: "heart-outline" },
 ];
 
 interface Commentator {
@@ -1466,6 +1473,7 @@ export default function StudyScreen() {
   const [activeTab, setActiveTab] = useState<Tab>(
     params.tab && validTabs.includes(params.tab as Tab) ? (params.tab as Tab) : "word"
   );
+  const [showDepthPicker, setShowDepthPicker] = useState(false);
 
   useEffect(() => {
     if (params.tab && ["word", "context", "voices", "application"].includes(params.tab)) {
@@ -1818,16 +1826,57 @@ export default function StudyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: theme.border }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Deepen Your Faith
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Continue your study
-        </Text>
+      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: canTrack ? "transparent" : theme.border }]}>
+        {canTrack ? (
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                {sharedBook?.name} {chapter}
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                4-Layer Study
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setShowDepthPicker(p => !p)}
+              hitSlop={8}
+              testID="study-options-btn"
+              accessibilityLabel="Study options"
+              style={{ padding: 8, borderRadius: 8, backgroundColor: showDepthPicker ? theme.accent + "18" : "transparent" }}
+            >
+              <Ionicons name="options-outline" size={20} color={showDepthPicker ? theme.accent : theme.textMuted} />
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+              4-Layer Study
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Choose a passage to begin
+            </Text>
+          </>
+        )}
       </View>
 
-      <StudyDepthSelector compact />
+      {showDepthPicker && (
+        <View>
+          <StudyDepthSelector compact />
+          {canTrack && !deepSession.active && (
+            <Pressable
+              onPress={() => { setShowDepthPicker(false); startDeepSession(); }}
+              testID="start-guided-session"
+              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Session" : "Start Guided Session"}
+              style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, paddingVertical: 10, paddingHorizontal: 16, marginHorizontal: 16, marginTop: 6, marginBottom: 4, borderRadius: 8, borderWidth: 1, borderColor: theme.accent + "40" }}
+            >
+              <Ionicons name="compass-outline" size={16} color={theme.accent} style={{ marginRight: 6 }} />
+              <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                {pausedLayerIndex !== null ? "Resume Guided Session" : "Start Guided Session"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {deepSession.active && (
         <DeepSessionBar
@@ -1838,64 +1887,60 @@ export default function StudyScreen() {
       )}
 
       {canTrack && !deepSession.active && (
-        <LayerProgressBar
-          activeTab={activeTab}
-          completedLayers={completedLayers}
-          onTabPress={setActiveTab}
-          theme={theme}
-          nextStepText={nextStepText}
-          depthLabel={studyDepthLabel}
-        />
-      )}
-
-      {canTrack && !deepSession.active && (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
-          <DeepStudyEntryButton
-            completedLayers={completedLayers}
-            onStart={startDeepSession}
-            theme={theme}
-            isPaused={pausedLayerIndex !== null}
-          />
-        </View>
-      )}
-
-      {!deepSession.active && (
-        <View
-          style={[styles.tabRow, { backgroundColor: theme.background }]}
-        >
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <Pressable
-                key={tab.id}
-                onPress={() => setActiveTab(tab.id)}
-                style={[
-                  styles.tabPillFixed,
-                  {
-                    backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
-                    borderColor: isActive ? theme.accent : theme.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={tab.icon}
-                  size={14}
-                  color={isActive ? "#fff" : theme.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    {
-                      color: isActive ? "#fff" : theme.textSecondary,
-                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_500Medium",
-                    },
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 2 }}>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const }}>
+            {LAYER_ORDER.map((layer, i) => {
+              const isActive = activeTab === layer;
+              const isCompleted = completedLayers.has(layer);
+              return (
+                <React.Fragment key={layer}>
+                  {i > 0 && (
+                    <View style={{ flex: 1, height: 2, backgroundColor: completedLayers.has(LAYER_ORDER[i - 1]) ? theme.accent + "50" : theme.border, marginHorizontal: -1 }} />
+                  )}
+                  <Pressable
+                    onPress={() => setActiveTab(layer)}
+                    style={{ alignItems: "center" as const, width: 68 }}
+                    testID={`step-${layer}`}
+                  >
+                    <View style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                      borderWidth: 2,
+                      borderColor: isActive ? theme.accent : isCompleted ? theme.accent : theme.border,
+                      backgroundColor: isActive ? theme.accent : "transparent",
+                      alignItems: "center" as const,
+                      justifyContent: "center" as const,
+                      marginBottom: 5,
+                    }}>
+                      {isCompleted && !isActive ? (
+                        <Ionicons name="checkmark" size={14} color={theme.accent} />
+                      ) : (
+                        <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isActive ? "#fff" : theme.textMuted }}>
+                          {i + 1}
+                        </Text>
+                      )}
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: isActive ? theme.accent : theme.textSecondary,
+                        fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                      }}
+                      numberOfLines={1}
+                    >
+                      {LAYER_LABELS[layer]}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              );
+            })}
+          </View>
+          <View style={{ paddingTop: 10, paddingBottom: 2, paddingHorizontal: 2 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, fontStyle: "italic" as const }}>
+              {LAYER_GUIDANCE[activeTab]}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -2188,172 +2233,339 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     );
   }
 
-  return (
-    <View style={styles.tabContent}>
-      <View style={styles.studyModeToggle}>
-        <Pressable
-          onPress={() => setStudyMode("verse")}
-          style={[styles.studyModeBtn, { backgroundColor: studyMode === "verse" ? theme.accent : theme.backgroundCard }]}
-          testID="mode-verse-study"
-        >
-          <Ionicons name="book-outline" size={14} color={studyMode === "verse" ? "#fff" : theme.textSecondary} />
-          <Text style={[styles.studyModeBtnText, { color: studyMode === "verse" ? "#fff" : theme.textSecondary, fontFamily: studyMode === "verse" ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-            Verse Study
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setStudyMode("concordance")}
-          style={[styles.studyModeBtn, { backgroundColor: studyMode === "concordance" ? theme.accent : theme.backgroundCard }]}
-          testID="mode-concordance"
-        >
-          <Ionicons name="search-outline" size={14} color={studyMode === "concordance" ? "#fff" : theme.textSecondary} />
-          <Text style={[styles.studyModeBtnText, { color: studyMode === "concordance" ? "#fff" : theme.textSecondary, fontFamily: studyMode === "concordance" ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-            Concordance
-          </Text>
-        </Pressable>
-      </View>
-
-      {studyMode === "concordance" && (
-        <>
-          <View style={[styles.concordanceSearchBox, { backgroundColor: theme.backgroundCard }]}>
-            <Ionicons name="search" size={18} color={theme.textMuted} />
-            <TextInput
-              style={[styles.concordanceInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-              placeholder="Search Strong's (e.g. love, agape, H430)"
-              placeholderTextColor={theme.textMuted}
-              value={concordanceSearch}
-              onChangeText={setConcordanceSearch}
-              testID="concordance-search-input"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {concordanceSearch.length > 0 && (
-              <Pressable onPress={() => setConcordanceSearch("")}>
-                <Ionicons name="close-circle" size={18} color={theme.textMuted} />
-              </Pressable>
-            )}
+  if (selectedBook && selectedChapter) {
+    const allVerses = passageQuery.data?.verses ?? [];
+    return (
+      <View style={styles.tabContent}>
+        <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
+          <View style={styles.verseRefRow}>
+            <Ionicons name="book-outline" size={14} color={theme.accent} />
+            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedBook.name} {selectedChapter}
+            </Text>
           </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.concordanceLangRow} contentContainerStyle={{ gap: 8 }}>
-            {([["all", "All"], ["he", "Hebrew (OT)"], ["gr", "Greek (NT)"]] as const).map(([val, label]) => (
-              <Pressable
-                key={val}
-                onPress={() => setConcordanceLang(val)}
-                style={[styles.commentatorChip, { backgroundColor: concordanceLang === val ? theme.accent : theme.backgroundCard }]}
-              >
-                <Text style={[styles.commentatorChipText, { color: concordanceLang === val ? "#fff" : theme.textSecondary, fontFamily: concordanceLang === val ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {concordanceQuery.isLoading && (
-            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />
-          )}
-
-          {concordanceSearch.trim().length < 2 && (
-            <View style={styles.concordanceEmpty}>
-              <Ionicons name="library-outline" size={40} color={theme.textMuted} />
-              <Text style={[styles.concordanceEmptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Strong's Concordance
-              </Text>
-              <Text style={[styles.concordanceEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Search 14,000+ Hebrew and Greek word definitions from Strong's Exhaustive Concordance
-              </Text>
-            </View>
-          )}
-
-          {concordanceQuery.data && concordanceQuery.data.length === 0 && concordanceSearch.trim().length >= 2 && (
-            <View style={styles.concordanceEmpty}>
-              <Ionicons name="search-outline" size={32} color={theme.textMuted} />
-              <Text style={[styles.concordanceEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No entries found for "{concordanceSearch}"
-              </Text>
-            </View>
-          )}
-
-          {concordanceQuery.data?.map((entry) => {
-            const isExpanded = expandedEntry === entry.id;
-            const langColor = entry.language === "he" ? "#2E7D32" : "#1565C0";
-            const langLabel = entry.language === "he" ? "Hebrew" : "Greek";
-            return (
-              <Pressable
-                key={entry.id}
-                onPress={() => setExpandedEntry(isExpanded ? null : entry.id)}
-                style={[styles.concordanceCard, { backgroundColor: theme.backgroundCard }]}
-                testID={`concordance-${entry.id}`}
-              >
-                <View style={styles.concordanceCardHeader}>
-                  <Text style={[styles.concordanceLemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                    {entry.lemma}
+          {passageQuery.isLoading ? (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
+          ) : (
+            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular", lineHeight: 26 }]}>
+              {allVerses.map((v) => (
+                <React.Fragment key={v.id}>
+                  <Text style={{ color: theme.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                    {v.verse}{" "}
                   </Text>
-                  <View style={[styles.concordanceLangBadge, { backgroundColor: langColor + "18" }]}>
-                    <Text style={[styles.concordanceLangText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
-                      {langLabel}
-                    </Text>
-                  </View>
-                  <View style={[styles.concordanceIdBadge, { backgroundColor: theme.accent + "18" }]}>
-                    <Text style={[styles.concordanceIdText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {entry.id}
-                    </Text>
-                  </View>
+                  {v.text}{"  "}
+                </React.Fragment>
+              ))}
+            </Text>
+          )}
+        </View>
+
+        <Pressable
+          onPress={() => setLexicalExpanded(!lexicalExpanded)}
+          style={[lexicalStyles.toggleRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+        >
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, flex: 1 }}>
+            <Ionicons name="language-outline" size={16} color={theme.accent} />
+            <Text style={[lexicalStyles.toggleLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Original Language & Word Study
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4 }}>
+            <Text style={[lexicalStyles.optionalTag, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Optional
+            </Text>
+            <Ionicons
+              name={lexicalExpanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={theme.textMuted}
+            />
+          </View>
+        </Pressable>
+
+        {lexicalExpanded && (
+          <View style={lexicalStyles.expandedSection}>
+            {!selectedVerse && (
+              <>
+                <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 8 }]}>
+                  Select a verse to explore its original language words
+                </Text>
+                <View style={styles.chapterGrid}>
+                  {allVerses.map((v) => (
+                    <Pressable
+                      key={v.verse}
+                      onPress={() => setSelectedVerse(v.verse)}
+                      style={[styles.chapterCell, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {v.verse}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
-                {entry.transliteration && (
-                  <Text style={[styles.concordanceTranslit, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                    {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+              </>
+            )}
+
+            {selectedVerse && (
+              <>
+                <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
+                  <Ionicons name="chevron-back" size={16} color={theme.accent} />
+                  <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    All Verses
                   </Text>
+                </Pressable>
+
+                {targetVerse && (
+                  <View style={[styles.verseCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+                    <View style={styles.verseRefRow}>
+                      <Ionicons name="book-outline" size={14} color={theme.accent} />
+                      <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {selectedBook.name} {selectedChapter}:{selectedVerse}
+                      </Text>
+                    </View>
+                    <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                      {targetVerse.text}
+                    </Text>
+                  </View>
                 )}
-                <Text style={[styles.concordanceDef, { color: theme.text, fontFamily: "Inter_400Regular" }]} numberOfLines={isExpanded ? undefined : 2}>
-                  {entry.definition}
-                </Text>
-                {isExpanded && (
+
+                {(wordQuery.isLoading || generateWordsMutation.isPending) && targetVerse && (
+                  <View style={styles.loadingBox}>
+                    <ActivityIndicator size="small" color={theme.accent} />
+                    <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
+                    </Text>
+                  </View>
+                )}
+
+                {hasWords && (
                   <>
-                    {entry.derivation && (
-                      <View style={{ marginTop: 10 }}>
-                        <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          Derivation
-                        </Text>
-                        <Text style={[styles.concordanceSubText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                          {entry.derivation}
-                        </Text>
-                      </View>
-                    )}
-                    {entry.kjvUsage && (
-                      <View style={{ marginTop: 10 }}>
-                        <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          KJV Usage
-                        </Text>
-                        <View style={styles.kjvUsagePills}>
-                          {entry.kjvUsage.split(",").map((u, i) => (
-                            <View key={i} style={[styles.kjvUsagePill, { backgroundColor: theme.accent + "10" }]}>
-                              <Text style={[styles.kjvUsagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                                {u.trim()}
+                    <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                      Original Language Words
+                    </Text>
+                    {wordQuery.data!.map((wm, i) => {
+                      const entry = wm.entry;
+                      if (!entry) return null;
+                      const langColor = entry.language === "he" ? "#4A6741" : "#3B5998";
+                      return (
+                        <View
+                          key={wm.map.id || i}
+                          style={[styles.wordCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                        >
+                          <View style={styles.wordHeader}>
+                            <Text style={[styles.lemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                              {entry.lemma}
+                            </Text>
+                            <View style={[styles.langBadge, { backgroundColor: langColor + "22" }]}>
+                              <Text style={[styles.langText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
+                                {entry.language === "he" ? "Hebrew" : "Greek"}
                               </Text>
                             </View>
-                          ))}
+                            <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
+                              <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                                {entry.id}
+                              </Text>
+                            </View>
+                          </View>
+                          {wm.map.translatedWord && (
+                            <View style={styles.translationRow}>
+                              <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
+                              <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                                "{wm.map.translatedWord}"
+                              </Text>
+                            </View>
+                          )}
+                          {entry.transliteration && (
+                            <Text style={[styles.transliteration, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                              {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                            </Text>
+                          )}
+                          <Text style={[styles.definition, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                            {entry.definition}
+                          </Text>
+                          {entry.kjvUsage && (
+                            <View style={styles.usagePills}>
+                              {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
+                                <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
+                                  <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                    {u.trim()}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
                         </View>
-                      </View>
-                    )}
+                      );
+                    })}
                   </>
                 )}
-                <Ionicons
-                  name={isExpanded ? "chevron-up" : "chevron-down"}
-                  size={14}
-                  color={theme.textMuted}
-                  style={{ alignSelf: "center", marginTop: 6 }}
-                />
-              </Pressable>
-            );
-          })}
-        </>
-      )}
 
-      {studyMode === "verse" && !selectedBook && (
+                {targetVerse && !wordQuery.isLoading && !hasWords && !generateWordsMutation.isPending && generateWordsMutation.isError && (
+                  <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                    <Ionicons name="reload-outline" size={24} color={theme.accent} />
+                    <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                      Could Not Load Words
+                    </Text>
+                    <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      The lexical data for {selectedBook.name} {selectedChapter}:{selectedVerse} is temporarily unavailable.
+                    </Text>
+                    <Pressable
+                      onPress={() => generateWordsMutation.mutate()}
+                      style={[styles.generateBtn, { backgroundColor: theme.accent }]}
+                    >
+                      <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                        Try Again
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        {studyMode === "concordance" ? (
+          <>
+            <View style={[styles.concordanceSearchBox, { backgroundColor: theme.backgroundCard }]}>
+              <Ionicons name="search" size={18} color={theme.textMuted} />
+              <TextInput
+                style={[styles.concordanceInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
+                placeholder="Search Strong's (e.g. love, agape, H430)"
+                placeholderTextColor={theme.textMuted}
+                value={concordanceSearch}
+                onChangeText={setConcordanceSearch}
+                testID="concordance-search-input"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {concordanceSearch.length > 0 && (
+                <Pressable onPress={() => { setConcordanceSearch(""); setStudyMode("verse"); }}>
+                  <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+                </Pressable>
+              )}
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.concordanceLangRow} contentContainerStyle={{ gap: 8 }}>
+              {([["all", "All"], ["he", "Hebrew (OT)"], ["gr", "Greek (NT)"]] as const).map(([val, label]) => (
+                <Pressable
+                  key={val}
+                  onPress={() => setConcordanceLang(val)}
+                  style={[styles.commentatorChip, { backgroundColor: concordanceLang === val ? theme.accent : theme.backgroundCard }]}
+                >
+                  <Text style={[styles.commentatorChipText, { color: concordanceLang === val ? "#fff" : theme.textSecondary, fontFamily: concordanceLang === val ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {concordanceQuery.isLoading && (
+              <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />
+            )}
+
+            {concordanceQuery.data && concordanceQuery.data.length === 0 && concordanceSearch.trim().length >= 2 && (
+              <Text style={[styles.concordanceEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" as const, marginTop: 16 }]}>
+                No entries found for "{concordanceSearch}"
+              </Text>
+            )}
+
+            {concordanceQuery.data?.map((entry) => {
+              const isExpanded = expandedEntry === entry.id;
+              const langColor = entry.language === "he" ? "#2E7D32" : "#1565C0";
+              const langLabel = entry.language === "he" ? "Hebrew" : "Greek";
+              return (
+                <Pressable
+                  key={entry.id}
+                  onPress={() => setExpandedEntry(isExpanded ? null : entry.id)}
+                  style={[styles.concordanceCard, { backgroundColor: theme.backgroundCard }]}
+                  testID={`concordance-${entry.id}`}
+                >
+                  <View style={styles.concordanceCardHeader}>
+                    <Text style={[styles.concordanceLemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                      {entry.lemma}
+                    </Text>
+                    <View style={[styles.concordanceLangBadge, { backgroundColor: langColor + "18" }]}>
+                      <Text style={[styles.concordanceLangText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
+                        {langLabel}
+                      </Text>
+                    </View>
+                    <View style={[styles.concordanceIdBadge, { backgroundColor: theme.accent + "18" }]}>
+                      <Text style={[styles.concordanceIdText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {entry.id}
+                      </Text>
+                    </View>
+                  </View>
+                  {entry.transliteration && (
+                    <Text style={[styles.concordanceTranslit, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                      {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                    </Text>
+                  )}
+                  <Text style={[styles.concordanceDef, { color: theme.text, fontFamily: "Inter_400Regular" }]} numberOfLines={isExpanded ? undefined : 2}>
+                    {entry.definition}
+                  </Text>
+                  {isExpanded && (
+                    <>
+                      {entry.derivation && (
+                        <View style={{ marginTop: 10 }}>
+                          <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                            Derivation
+                          </Text>
+                          <Text style={[styles.concordanceSubText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                            {entry.derivation}
+                          </Text>
+                        </View>
+                      )}
+                      {entry.kjvUsage && (
+                        <View style={{ marginTop: 10 }}>
+                          <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                            KJV Usage
+                          </Text>
+                          <View style={styles.kjvUsagePills}>
+                            {entry.kjvUsage.split(",").map((u, ui) => (
+                              <View key={ui} style={[styles.kjvUsagePill, { backgroundColor: theme.accent + "10" }]}>
+                                <Text style={[styles.kjvUsagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                  {u.trim()}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  )}
+                  <Ionicons
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={14}
+                    color={theme.textMuted}
+                    style={{ alignSelf: "center" as const, marginTop: 6 }}
+                  />
+                </Pressable>
+              );
+            })}
+
+            <Pressable onPress={() => setStudyMode("verse")} style={{ paddingVertical: 12, alignItems: "center" as const }}>
+              <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 13 }}>Close Concordance</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable
+            onPress={() => setStudyMode("concordance")}
+            style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 6, paddingVertical: 12, marginTop: 4, borderRadius: 10, backgroundColor: theme.backgroundSecondary }}
+            testID="mode-concordance"
+          >
+            <Ionicons name="search-outline" size={14} color={theme.textMuted} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+              Search Strong's Concordance
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.tabContent}>
+      {!selectedBook && (
         <>
-          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 19 }]}>
-            Look up the original Hebrew and Greek behind any verse — Strong's numbers, transliterations, and KJV usage.
-          </Text>
           <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Old Testament
           </Text>
@@ -2416,168 +2628,6 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               </Pressable>
             ))}
           </View>
-        </>
-      )}
-
-      {selectedBook && selectedChapter && !selectedVerse && (
-        <>
-          <Pressable onPress={() => { setSelectedChapter(null); setSelectedVerse(null); }} style={styles.backRow}>
-            <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedBook.name}
-            </Text>
-          </Pressable>
-          <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            {selectedBook.name} {selectedChapter}
-          </Text>
-          <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Select a verse for word study
-          </Text>
-
-          {passageQuery.isLoading && (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading verses...</Text>
-            </View>
-          )}
-
-          <View style={styles.chapterGrid}>
-            {verses.map((v) => (
-              <Pressable
-                key={v.verse}
-                onPress={() => setSelectedVerse(v.verse)}
-                style={[styles.chapterCell, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-              >
-                <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                  {v.verse}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
-
-      {selectedBook && selectedChapter && selectedVerse && (
-        <>
-          <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
-            <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedBook.name} {selectedChapter}
-            </Text>
-          </Pressable>
-
-          {targetVerse && (
-            <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <View style={styles.verseRefRow}>
-                <Ionicons name="book-outline" size={14} color={theme.accent} />
-                <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  {selectedBook.name} {selectedChapter}:{selectedVerse}
-                </Text>
-              </View>
-              <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                {targetVerse.text}
-              </Text>
-            </View>
-          )}
-
-          {(wordQuery.isLoading || generateWordsMutation.isPending) && targetVerse && (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
-              </Text>
-            </View>
-          )}
-
-          {hasWords && (
-            <>
-              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-                Original Language Words
-              </Text>
-              {wordQuery.data!.map((wm, i) => {
-                const entry = wm.entry;
-                if (!entry) return null;
-                const langColor = entry.language === "he" ? "#4A6741" : "#3B5998";
-                return (
-                  <View
-                    key={wm.map.id || i}
-                    style={[styles.wordCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
-                  >
-                    <View style={styles.wordHeader}>
-                      <Text style={[styles.lemma, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                        {entry.lemma}
-                      </Text>
-                      <View style={[styles.langBadge, { backgroundColor: langColor + "22" }]}>
-                        <Text style={[styles.langText, { color: langColor, fontFamily: "Inter_600SemiBold" }]}>
-                          {entry.language === "he" ? "Hebrew" : "Greek"}
-                        </Text>
-                      </View>
-                      <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                        <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          {entry.id}
-                        </Text>
-                      </View>
-                    </View>
-                    {wm.map.translatedWord && (
-                      <View style={styles.translationRow}>
-                        <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
-                        <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                          "{wm.map.translatedWord}"
-                        </Text>
-                      </View>
-                    )}
-                    {entry.transliteration && (
-                      <Text style={[styles.transliteration, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                        {entry.transliteration}{entry.pronunciation ? ` (${entry.pronunciation})` : ""}
-                      </Text>
-                    )}
-                    <Text style={[styles.definition, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                      {entry.definition}
-                    </Text>
-                    {entry.kjvUsage && (
-                      <View style={styles.usagePills}>
-                        {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
-                          <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
-                            <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                              {u.trim()}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </>
-          )}
-
-          {targetVerse && !wordQuery.isLoading && !hasWords && !generateWordsMutation.isPending && generateWordsMutation.isError && (
-            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <Ionicons name="reload-outline" size={24} color={theme.accent} />
-              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Could Not Load Words
-              </Text>
-              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                The lexical data for {selectedBook.name} {selectedChapter}:{selectedVerse} is temporarily unavailable.
-              </Text>
-              <Pressable
-                onPress={() => generateWordsMutation.mutate()}
-                style={[styles.generateBtn, { backgroundColor: theme.accent }]}
-              >
-                <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Try Again
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => router.push({ pathname: "/study-guide", params: { bookId: String(selectedBook.id), chapter: String(selectedChapter), verse: String(selectedVerse) } } as any)}
-                style={{ marginTop: 10, paddingVertical: 8 }}
-              >
-                <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" as const }}>
-                  Or explore this verse with Guided Study
-                </Text>
-              </Pressable>
-            </View>
-          )}
         </>
       )}
     </View>
