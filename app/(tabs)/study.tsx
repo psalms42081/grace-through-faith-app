@@ -1793,7 +1793,7 @@ export default function StudyScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
         <DeepStudyIntro
-          reference={(params.bookName || sharedBook?.name) && chapter ? `${params.bookName || sharedBook?.name} ${chapter}` : "Scripture"}
+          reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "Scripture"}
           bookId={bookId}
           chapter={chapter ? Number(chapter) : null}
           onBegin={beginDeepSessionFromIntro}
@@ -1817,7 +1817,7 @@ export default function StudyScreen() {
           onSavePrayer={handleSavePrayerFromSummary}
           hasPrayerContent={prayerContent.length > 0}
           theme={theme}
-          reference={(params.bookName || sharedBook?.name) && chapter ? `${params.bookName || sharedBook?.name} ${chapter}` : "Study Session"}
+          reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "Study Session"}
           depthLabel={studyDepthLabel}
         />
       </View>
@@ -2064,6 +2064,9 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
+        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 10 }}>
+          Read the passage slowly. What words, phrases, or patterns stand out to you?
+        </Text>
         <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
           <View style={styles.verseRefRow}>
             <Ionicons name="book-outline" size={14} color={theme.accent} />
@@ -2114,7 +2117,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             {!selectedVerse && (
               <>
                 <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 8 }]}>
-                  Select a verse to explore its original language words
+                  Tap a verse number to see its original language words
                 </Text>
                 <View style={styles.chapterGrid}>
                   {allVerses.map((v) => (
@@ -2237,6 +2240,9 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
+        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 10 }}>
+          Read the passage slowly. What words, phrases, or patterns stand out to you?
+        </Text>
         <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
           <View style={styles.verseRefRow}>
             <Ionicons name="book-outline" size={14} color={theme.accent} />
@@ -2287,7 +2293,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             {!selectedVerse && (
               <>
                 <Text style={[styles.pickerMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 8 }]}>
-                  Select a verse to explore its original language words
+                  Tap a verse number to see its original language words
                 </Text>
                 <View style={styles.chapterGrid}>
                   {allVerses.map((v) => (
