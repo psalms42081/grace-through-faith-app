@@ -3007,6 +3007,19 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
   );
 }
 
+function ContextParagraphs({ text, theme }: { text: string; theme: typeof Colors.light }) {
+  const paragraphs = text.split(/\n\n+/).filter(Boolean);
+  return (
+    <View style={{ gap: 10 }}>
+      {paragraphs.map((p, i) => (
+        <Text key={i} style={{ fontSize: 14, lineHeight: 22, color: theme.textSecondary, fontFamily: "Inter_400Regular" }}>
+          {p.trim()}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
   const { depth } = useStudyDepth();
   const selectedBook = sharedBook;
@@ -3164,9 +3177,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
               <Text style={[styles.contextTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
                 {card.title}
               </Text>
-              <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                {card.content}
-              </Text>
+              <ContextParagraphs text={card.content} theme={theme} />
 
               {card.historicalBackground && (
                 <View style={{ marginTop: 16 }}>
@@ -3176,9 +3187,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                       Historical Background
                     </Text>
                   </View>
-                  <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {card.historicalBackground}
-                  </Text>
+                  <ContextParagraphs text={card.historicalBackground} theme={theme} />
                 </View>
               )}
 
@@ -3190,9 +3199,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                       Cultural Notes
                     </Text>
                   </View>
-                  <Text style={[styles.contextContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {card.culturalNotes}
-                  </Text>
+                  <ContextParagraphs text={card.culturalNotes} theme={theme} />
                 </View>
               )}
 
@@ -3532,9 +3539,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                   {cr.entry.title}
                 </Text>
               )}
-              <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                {cr.entry.content}
-              </Text>
+              <ContextParagraphs text={cr.entry.content} theme={theme} />
             </View>
           ))}
 
@@ -3784,9 +3789,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
                     Then (Historical Context)
                   </Text>
                 </View>
-                <Text style={[styles.appCardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {template.thenContext}
-                </Text>
+                <ContextParagraphs text={template.thenContext} theme={theme} />
               </View>
 
               <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -3796,9 +3799,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
                     Now (Modern Application)
                   </Text>
                 </View>
-                <Text style={[styles.appCardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {template.nowApplication}
-                </Text>
+                <ContextParagraphs text={template.nowApplication} theme={theme} />
               </View>
 
               {template.reflectionQuestions && template.reflectionQuestions.length > 0 && (
