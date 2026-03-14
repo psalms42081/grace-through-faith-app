@@ -2443,23 +2443,17 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
-        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 10 }}>
+        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 16 }}>
           Read the passage slowly. What words, phrases, or patterns stand out to you?
         </Text>
-        <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
-          <View style={styles.verseRefRow}>
-            <Ionicons name="book-outline" size={14} color={theme.accent} />
-            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedBook.name} {selectedChapter}
-            </Text>
-          </View>
+        <View style={{ marginBottom: 24 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
           ) : (
-            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular", lineHeight: 26 }]}>
+            <Text style={{ fontSize: 17, lineHeight: 30, color: theme.text, fontFamily: "Lora_400Regular" }}>
               {allVerses.map((v) => (
                 <React.Fragment key={v.id}>
-                  <Text style={{ color: theme.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={{ color: theme.accent + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
                     {v.verse}{" "}
                   </Text>
                   {v.text}{"  "}
@@ -2619,23 +2613,17 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
-        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 10 }}>
+        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 16 }}>
           Read the passage slowly. What words, phrases, or patterns stand out to you?
         </Text>
-        <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 16 }]}>
-          <View style={styles.verseRefRow}>
-            <Ionicons name="book-outline" size={14} color={theme.accent} />
-            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedBook.name} {selectedChapter}
-            </Text>
-          </View>
+        <View style={{ marginBottom: 24 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
           ) : (
-            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular", lineHeight: 26 }]}>
+            <Text style={{ fontSize: 17, lineHeight: 30, color: theme.text, fontFamily: "Lora_400Regular" }}>
               {allVerses.map((v) => (
                 <React.Fragment key={v.id}>
-                  <Text style={{ color: theme.accent, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={{ color: theme.accent + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
                     {v.verse}{" "}
                   </Text>
                   {v.text}{"  "}
