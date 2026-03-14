@@ -2079,7 +2079,9 @@ export default function StudyScreen() {
           theme={theme}
           hasPassage={canTrack}
           onPickPassage={() => {
-            router.push("/(tabs)/read");
+            setShowLayerIntro(false);
+            setSharedBook(null);
+            setSharedChapter(null);
           }}
           onContinue={() => setShowLayerIntro(false)}
         />
