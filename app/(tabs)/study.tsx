@@ -2348,11 +2348,11 @@ export default function StudyScreen() {
                   All four layers complete. Scroll down to view your summary.
                 </Text>
               </View>
-            ) : (
+            ) : activeTab !== "word" ? (
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, fontStyle: "italic" as const }}>
                 {LAYER_GUIDANCE[activeTab]}
               </Text>
-            )}
+            ) : null}
           </View>
         </View>
       )}
@@ -2478,10 +2478,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
-        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 16 }}>
-          Read the passage slowly. What words, phrases, or patterns stand out to you?
-        </Text>
-        <View style={{ marginBottom: 24 }}>
+        <View style={{ marginBottom: 20 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
           ) : (
@@ -2496,6 +2493,11 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               ))}
             </Text>
           )}
+        </View>
+        <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border, paddingTop: 14, marginBottom: 20 }}>
+          <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", fontStyle: "italic" as const }}>
+            Read the passage slowly. What words, phrases, or patterns stand out to you?
+          </Text>
         </View>
 
         <Pressable
@@ -2648,10 +2650,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
-        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium", fontStyle: "italic" as const, marginBottom: 16 }}>
-          Read the passage slowly. What words, phrases, or patterns stand out to you?
-        </Text>
-        <View style={{ marginBottom: 24 }}>
+        <View style={{ marginBottom: 20 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
           ) : (
@@ -2666,6 +2665,11 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               ))}
             </Text>
           )}
+        </View>
+        <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border, paddingTop: 14, marginBottom: 20 }}>
+          <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", fontStyle: "italic" as const }}>
+            Read the passage slowly. What words, phrases, or patterns stand out to you?
+          </Text>
         </View>
 
         <Pressable
