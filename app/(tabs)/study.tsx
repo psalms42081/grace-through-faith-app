@@ -43,6 +43,14 @@ const LAYER_GUIDANCE: Record<Tab, string> = {
   application: "Let Scripture shape your life today.",
 };
 
+const DEPTH_INFO: Record<string, { encouragement: string; description: string }> = {
+  Emerging: { encouragement: "You've begun reflecting on this passage.\nContinue responding to deepen your study.", description: "First steps into the Word" },
+  Developing: { encouragement: "Your study is gaining depth.\nKeep engaging with Insight and Respond layers.", description: "Building understanding" },
+  Established: { encouragement: "Deep, transformative study achieved.\nScripture is shaping your thinking.", description: "Rooted in the Word" },
+};
+
+const DEPTH_LEVELS = ["Emerging", "Developing", "Established"];
+
 interface LayerCompletionEntry {
   bookId: number;
   chapter: number;
@@ -106,9 +114,14 @@ function LayerProgressBar({
             size={13}
             color={depthColor}
           />
-          <Text style={[lpStyles.depthLabel, { color: depthColor, fontFamily: "Inter_500Medium" }]}>
-            Study Depth: {depthLabel}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[lpStyles.depthLabel, { color: depthColor, fontFamily: "Inter_500Medium" }]}>
+              Study Depth: {depthLabel}
+            </Text>
+            <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+              {DEPTH_INFO[depthLabel]?.encouragement.split("\n")[0]}
+            </Text>
+          </View>
         </View>
       )}
       <View style={lpStyles.bar}>
@@ -325,9 +338,14 @@ function StudyCompletionScreen({
         <Text style={{ fontSize: 16, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 8 }}>
           {reference}
         </Text>
-        <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300 }}>
+        <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300, marginBottom: 12 }}>
           You studied this passage through all four layers -- from observation to personal response.
         </Text>
+        <View style={{ backgroundColor: theme.accent + "10", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}>
+          <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, fontStyle: "italic" as const, lineHeight: 20 }}>
+            Well done. Scripture has shaped your thinking today.
+          </Text>
+        </View>
       </View>
 
       <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 16 }}>
@@ -353,15 +371,33 @@ function StudyCompletionScreen({
           );
         })}
         {depthLabel && (
-          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
-            <Ionicons
-              name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
-              size={14}
-              color={depthColor}
-            />
-            <Text style={{ fontSize: 13, color: depthColor, fontFamily: "Inter_500Medium" }}>
-              Study Depth: {depthLabel}
+          <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+            <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 8 }}>
+              <Ionicons
+                name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+                size={14}
+                color={depthColor}
+              />
+              <Text style={{ fontSize: 13, color: depthColor, fontFamily: "Inter_600SemiBold" }}>
+                Study Depth: {depthLabel}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 10 }}>
+              {DEPTH_INFO[depthLabel]?.encouragement}
             </Text>
+            <View style={{ flexDirection: "row" as const, gap: 6 }}>
+              {DEPTH_LEVELS.map((level) => {
+                const isReached = DEPTH_LEVELS.indexOf(depthLabel) >= DEPTH_LEVELS.indexOf(level);
+                return (
+                  <View key={level} style={{ flex: 1, alignItems: "center" as const, gap: 4 }}>
+                    <View style={{ height: 3, borderRadius: 2, width: "100%", backgroundColor: isReached ? depthColor : theme.border }} />
+                    <Text style={{ fontSize: 9, color: isReached ? depthColor : theme.textMuted, fontFamily: isReached ? "Inter_600SemiBold" : "Inter_400Regular" }}>
+                      {level}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
       </View>
@@ -1179,7 +1215,7 @@ function formatStudySummary(
 
   lines.push("LAYERS COMPLETED");
   for (const layer of LAYER_ORDER) {
-    const status = allCompletedLayers.has(layer) ? "[x]" : "[ ]";
+    const status = allCompletedLayers.has(layer) ? "\u2713" : "\u2022";
     lines.push(`  ${status} ${LAYER_FULL_NAMES[layer]}`);
   }
   lines.push("");
@@ -1219,9 +1255,6 @@ function formatStudySummary(
     lines.push(`  ${prayer.trim()}`);
     lines.push("");
   }
-
-  lines.push("---");
-  lines.push("Generated by Grace through Faith");
 
   return lines.join("\n");
 }
