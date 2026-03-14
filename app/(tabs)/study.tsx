@@ -1748,6 +1748,7 @@ interface CommentaryResult {
     id: string;
     name: string;
     tradition: string | null;
+    dates: string | null;
   };
 }
 
@@ -3345,6 +3346,106 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
   );
 }
 
+const COMMENTATOR_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  "Matthew Henry": { icon: "book", color: "#6366F1" },
+  "Jamieson, Fausset & Brown": { icon: "library", color: "#0891B2" },
+  "Adam Clarke": { icon: "school", color: "#059669" },
+  "John Gill": { icon: "document-text", color: "#D97706" },
+  "Ellen G. White": { icon: "sparkles", color: "#C9933A" },
+};
+
+function extractLeadInsight(content: string): { lead: string; rest: string } {
+  const paragraphs = content.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  if (paragraphs.length <= 1) {
+    const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+    if (sentences && sentences.length > 3) {
+      const lead = sentences.slice(0, 2).join("").trim();
+      const rest = sentences.slice(2).join("").trim();
+      return { lead, rest };
+    }
+    return { lead: content.trim(), rest: "" };
+  }
+  const lead = paragraphs[0];
+  const rest = paragraphs.slice(1).join("\n\n");
+  return { lead, rest };
+}
+
+function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Colors.light }) {
+  const [expanded, setExpanded] = useState(false);
+  const { lead, rest } = useMemo(() => extractLeadInsight(cr.entry.content), [cr.entry.content]);
+  const hasMore = rest.length > 0;
+  const meta = COMMENTATOR_META[cr.commentator?.name] || { icon: "person" as const, color: theme.accent };
+  const commentatorDates = cr.commentator?.dates || COMMENTATORS.find(c => c.name === cr.commentator?.name)?.dates;
+  const commentatorTradition = cr.commentator?.tradition || COMMENTATORS.find(c => c.name === cr.commentator?.name)?.tradition;
+
+  return (
+    <View style={{
+      backgroundColor: theme.backgroundCard,
+      borderRadius: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
+      marginBottom: 16,
+      overflow: "hidden" as const,
+    }}>
+      <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, padding: 16, paddingBottom: 12 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: meta.color + "18", alignItems: "center" as const, justifyContent: "center" as const }}>
+          <Ionicons name={meta.icon} size={18} color={meta.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, color: theme.text, fontFamily: "Lora_600SemiBold" }}>
+            {cr.commentator?.name ?? "Unknown"}
+          </Text>
+          <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+            {[commentatorDates, commentatorTradition].filter(Boolean).join(" \u00B7 ")}
+          </Text>
+        </View>
+        {cr.entry.verseStart && (
+          <View style={{ backgroundColor: theme.accent + "14", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+              vv. {cr.entry.verseStart}{cr.entry.verseEnd && cr.entry.verseEnd !== cr.entry.verseStart ? `\u2013${cr.entry.verseEnd}` : ""}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={{ paddingHorizontal: 16, paddingBottom: hasMore && !expanded ? 0 : 16 }}>
+        <Text style={{ fontSize: 15, lineHeight: 24, color: theme.text, fontFamily: "Lora_400Regular" }}>
+          {lead}
+        </Text>
+      </View>
+
+      {hasMore && expanded && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginVertical: 12 }} />
+          <ContextParagraphs text={rest} theme={theme} />
+        </View>
+      )}
+
+      {hasMore && (
+        <Pressable
+          onPress={() => setExpanded(!expanded)}
+          style={({ pressed }) => [{
+            flexDirection: "row" as const,
+            alignItems: "center" as const,
+            justifyContent: "center" as const,
+            gap: 4,
+            paddingVertical: 10,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: theme.border,
+            backgroundColor: theme.backgroundCard,
+            opacity: pressed ? 0.7 : 1,
+          }]}
+        >
+          <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+            {expanded ? "Show Less" : "Continue Reading"}
+          </Text>
+          <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={theme.accent} />
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; commentators: Commentator[]; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
   const selectedBook = sharedBook;
   const selectedChapter = sharedChapter;
@@ -3437,52 +3538,55 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
           <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
             Featured Commentators
           </Text>
-          {commentators.map((c) => (
-            <Pressable
-              key={c.name}
-              onPress={() => {
-                if (c.externalUrl) {
-                  Linking.openURL(c.externalUrl);
-                }
-              }}
-              style={({ pressed }) => [
-                styles.commentatorCard,
-                {
-                  backgroundColor: theme.backgroundCard,
-                  borderColor: theme.border,
-                  opacity: pressed && c.externalUrl ? 0.75 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-                <Ionicons name="person" size={20} color={Colors.light.accent} />
-              </View>
-              <View style={styles.commentatorInfo}>
-                <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  {c.name}
-                </Text>
-                <Text style={[styles.commentatorMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {c.dates} · {c.tradition}
-                </Text>
-              </View>
-              {c.isPublicDomain ? (
-                <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
-                  <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-                    Public Domain
+          {commentators.map((c) => {
+            const meta = COMMENTATOR_META[c.name] || { icon: "person" as const, color: theme.accent };
+            return (
+              <Pressable
+                key={c.name}
+                onPress={() => {
+                  if (c.externalUrl) {
+                    Linking.openURL(c.externalUrl);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.commentatorCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    borderColor: theme.border,
+                    opacity: pressed && c.externalUrl ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.avatarCircle, { backgroundColor: meta.color + "18" }]}>
+                  <Ionicons name={meta.icon} size={20} color={meta.color} />
+                </View>
+                <View style={styles.commentatorInfo}>
+                  <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                    {c.name}
+                  </Text>
+                  <Text style={[styles.commentatorMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {c.dates} {"\u00B7"} {c.tradition}
                   </Text>
                 </View>
-              ) : (
-                <View style={styles.externalBadgeRow}>
-                  <View style={[styles.pdBadge, { backgroundColor: theme.bookmarkBlue + "22" }]}>
-                    <Text style={[styles.pdText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                      External
+                {c.isPublicDomain ? (
+                  <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
+                    <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                      Public Domain
                     </Text>
                   </View>
-                  <Ionicons name="open-outline" size={14} color={theme.bookmarkBlue} />
-                </View>
-              )}
-            </Pressable>
-          ))}
+                ) : (
+                  <View style={styles.externalBadgeRow}>
+                    <View style={[styles.pdBadge, { backgroundColor: theme.bookmarkBlue + "22" }]}>
+                      <Text style={[styles.pdText, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
+                        External
+                      </Text>
+                    </View>
+                    <Ionicons name="open-outline" size={14} color={theme.bookmarkBlue} />
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
         </>
       )}
 
@@ -3528,7 +3632,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading commentaries...</Text>
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Gathering historic voices...</Text>
             </View>
           )}
 
@@ -3567,29 +3671,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
           {hasCommentary && commentaryData!
             .filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator)
             .map((cr) => (
-            <View key={cr.entry.id} style={[styles.commentaryCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <View style={styles.commentaryHeader}>
-                <View style={[styles.avatarSmall, { backgroundColor: theme.primary }]}>
-                  <Ionicons name="person" size={14} color={Colors.light.accent} />
-                </View>
-                <Text style={[styles.commentaryAuthor, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {cr.commentator?.name ?? "Unknown"}
-                </Text>
-                {cr.entry.verseStart && (
-                  <View style={[styles.verseBadge, { backgroundColor: theme.accent + "18" }]}>
-                    <Text style={[styles.verseRange, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      vv. {cr.entry.verseStart}{cr.entry.verseEnd && cr.entry.verseEnd !== cr.entry.verseStart ? `-${cr.entry.verseEnd}` : ""}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {cr.entry.title && (
-                <Text style={[styles.commentaryTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                  {cr.entry.title}
-                </Text>
-              )}
-              <ContextParagraphs text={cr.entry.content} theme={theme} />
-            </View>
+            <CommentaryCard key={cr.entry.id} cr={cr} theme={theme} />
           ))}
 
           {generateCommentaryMutation.isPending && (
