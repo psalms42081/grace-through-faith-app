@@ -45,11 +45,12 @@ const LAYER_GUIDANCE: Record<Tab, string> = {
 
 const DEPTH_INFO: Record<string, { encouragement: string; description: string }> = {
   Emerging: { encouragement: "You've begun reflecting on this passage.\nContinue responding to deepen your study.", description: "First steps into the Word" },
-  Developing: { encouragement: "Your study is gaining depth.\nKeep engaging with Insight and Respond layers.", description: "Building understanding" },
-  Established: { encouragement: "Deep, transformative study achieved.\nScripture is shaping your thinking.", description: "Rooted in the Word" },
+  Growing: { encouragement: "Your study is gaining depth.\nKeep engaging with Insight and Respond layers.", description: "Building understanding" },
+  Deep: { encouragement: "You're dwelling richly in the Word.\nScripture is taking root in your thinking.", description: "Rooted in the Word" },
+  Transforming: { encouragement: "Scripture is shaping how you see and live.\nThis is the heart of discipleship.", description: "The Word at work in you" },
 };
 
-const DEPTH_LEVELS = ["Emerging", "Developing", "Established"];
+const DEPTH_LEVELS = ["Emerging", "Growing", "Deep", "Transforming"];
 
 interface LayerCompletionEntry {
   bookId: number;
@@ -103,14 +104,14 @@ function LayerProgressBar({
 }) {
   const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
-  const depthColor = depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted;
+  const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
 
   return (
     <View style={lpStyles.container}>
       {depthLabel && (
         <View style={lpStyles.depthRow}>
           <Ionicons
-            name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+            name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
             size={13}
             color={depthColor}
           />
@@ -288,7 +289,7 @@ function StudyCompletionScreen({
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const depthColor = depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted;
+  const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
 
   const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
   const transformFilled = TRANSFORMATION_SECTIONS.filter((s) => transformJournalMap.has(s.key));
@@ -374,7 +375,7 @@ function StudyCompletionScreen({
           <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
             <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 8 }}>
               <Ionicons
-                name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+                name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
                 size={14}
                 color={depthColor}
               />
@@ -1370,12 +1371,12 @@ function DeepSessionSummary({
         {depthLabel && (
           <View style={dsStyles.summaryDepthRow}>
             <Ionicons
-              name={depthLabel === "Established" ? "diamond" : depthLabel === "Developing" ? "trending-up" : "leaf-outline"}
+              name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
               size={14}
-              color={depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted}
+              color={depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted}
             />
             <Text style={[dsStyles.summaryDepthText, {
-              color: depthLabel === "Established" ? "#C9933A" : depthLabel === "Developing" ? "#3B6CB5" : theme.textMuted,
+              color: depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted,
               fontFamily: "Inter_500Medium",
             }]}>
               Study Depth: {depthLabel}
@@ -2053,8 +2054,9 @@ export default function StudyScreen() {
     const l3l4Done = completedLayers.has("voices") && completedLayers.has("application");
     const insightCount = insightJournalMap.size;
     const allPromptsCount = insightJournalMap.size + transformJournalMap.size;
-    if (l1l2Done && l3l4Done && allPromptsCount >= 8) return "Established";
-    if (l1l2Done && insightCount >= 2) return "Developing";
+    if (l1l2Done && l3l4Done && allPromptsCount >= 8) return "Transforming";
+    if (l1l2Done && l3l4Done && allPromptsCount >= 4) return "Deep";
+    if (l1l2Done && insightCount >= 2) return "Growing";
     if (completedLayers.size > 0 || allPromptsCount > 0) return "Emerging";
     return null;
   }, [completedLayers, insightJournalMap, transformJournalMap]);
