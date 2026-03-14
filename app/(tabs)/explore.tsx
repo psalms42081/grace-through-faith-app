@@ -137,7 +137,7 @@ export default function StudyScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Pressable
-          onPress={() => router.push({ pathname: "/(tabs)/study", params: ctaState.routeParams } as any)}
+          onPress={() => router.push({ pathname: "/(tabs)/study", params: { ...ctaState.routeParams, _t: String(Date.now()) } } as any)}
           style={({ pressed }) => [
             styles.primaryCta,
             {

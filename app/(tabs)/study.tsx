@@ -1843,6 +1843,12 @@ export default function StudyScreen() {
   const [showSummary, setShowSummary] = useState(false);
   const [showDeepIntro, setShowDeepIntro] = useState(false);
   const [showLayerIntro, setShowLayerIntro] = useState(params.showIntro === "true");
+
+  useEffect(() => {
+    if (params.showIntro === "true") {
+      setShowLayerIntro(true);
+    }
+  }, [params.showIntro, (params as any)._t]);
   const [showStudyComplete, setShowStudyComplete] = useState(false);
 
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
@@ -2073,7 +2079,6 @@ export default function StudyScreen() {
           theme={theme}
           hasPassage={canTrack}
           onPickPassage={() => {
-            setShowLayerIntro(false);
             router.push("/(tabs)/read");
           }}
           onContinue={() => setShowLayerIntro(false)}
@@ -2178,6 +2183,16 @@ export default function StudyScreen() {
           </View>
         ) : (
           <>
+            <Pressable
+              onPress={() => router.push("/(tabs)/explore")}
+              style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, marginBottom: 6 }}
+              hitSlop={8}
+            >
+              <Ionicons name="chevron-back" size={16} color={theme.accent} />
+              <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+                Back to Study
+              </Text>
+            </Pressable>
             <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               4-Layer Study
             </Text>
