@@ -6,14 +6,12 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
-import { getApiUrl } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,8 +33,14 @@ const INSPIRATIONS = [
   { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13 },
 ];
 
-function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
-  return <View style={[styles.divider, { backgroundColor: theme.divider }]} />;
+function SectionLabel({ label, theme }: { label: string; theme: typeof Colors.dark }) {
+  return (
+    <View style={st.sectionHeader}>
+      <Text style={[st.sectionLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+        {label}
+      </Text>
+    </View>
+  );
 }
 
 function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
@@ -49,31 +53,28 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
   if (enrolled.length === 0) return null;
 
   return (
-    <View style={{ marginTop: 4 }}>
-      <Text style={[styles.enrolledLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-        Your Active Paths
-      </Text>
+    <View>
       {enrolled.map((p: any) => (
         <Pressable
           key={p.id}
           onPress={() => router.push(`/study-path/${p.trackId}` as any)}
           style={({ pressed }) => [
-            styles.enrolledCard,
+            st.enrolledCard,
             { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          <View style={[styles.enrolledIcon, { backgroundColor: (p.track?.color || "#C9933A") + "18" }]}>
+          <View style={[st.enrolledIcon, { backgroundColor: (p.track?.color || "#C9933A") + "18" }]}>
             <Ionicons name={(p.track?.icon as any) || "school"} size={18} color={p.track?.color || "#C9933A"} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.enrolledTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+            <Text style={[st.enrolledTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
               {p.track?.title}
             </Text>
-            <View style={styles.enrolledProgress}>
-              <View style={[styles.enrolledBar, { backgroundColor: theme.divider }]}>
-                <View style={[styles.enrolledBarFill, { width: `${p.percentComplete || 0}%`, backgroundColor: "#C9933A" }]} />
+            <View style={st.enrolledProgress}>
+              <View style={[st.enrolledBar, { backgroundColor: theme.divider }]}>
+                <View style={[st.enrolledBarFill, { width: `${p.percentComplete || 0}%`, backgroundColor: "#C9933A" }]} />
               </View>
-              <Text style={[styles.enrolledPercent, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[st.enrolledPercent, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {p.percentComplete || 0}%
               </Text>
             </View>
@@ -82,6 +83,65 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
         </Pressable>
       ))}
     </View>
+  );
+}
+
+function StudyModeCard({
+  icon,
+  iconColor,
+  title,
+  subtitle,
+  badge,
+  onPress,
+  theme,
+  isDark,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  onPress: () => void;
+  theme: typeof Colors.dark;
+  isDark: boolean;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [
+        st.heroCard,
+        {
+          backgroundColor: isDark ? "#0E0E18" : "#FFFDF8",
+          borderColor: isDark ? iconColor + "28" : iconColor + "20",
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <View style={[st.heroIcon, { backgroundColor: iconColor + "14" }]}>
+        <Ionicons name={icon} size={24} color={iconColor} />
+      </View>
+      <View style={st.heroText}>
+        <View style={st.heroTitleRow}>
+          <Text style={[st.heroTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+            {title}
+          </Text>
+          {badge ? (
+            <View style={[st.heroBadge, { backgroundColor: iconColor + "18" }]}>
+              <Text style={[st.heroBadgeText, { color: iconColor, fontFamily: "Inter_600SemiBold" }]}>
+                {badge}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={[st.heroSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          {subtitle}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+    </Pressable>
   );
 }
 
@@ -104,376 +164,368 @@ export default function StudyScreen() {
     enabled: !!userId && !!lastRead,
   });
 
-  const ctaState = useMemo(() => {
+  const deepStudyState = useMemo(() => {
     if (!lastRead) {
-      return { title: "4-Layer Bible Study", sub: "Pick a passage to begin", icon: "layers" as const, routeParams: { showIntro: "true" } };
+      return { sub: "Observe \u00B7 Context \u00B7 Insight \u00B7 Respond", routeParams: { showIntro: "true" } };
     }
     const completedSet = new Set(layerCompletions?.map((c) => c.layer) ?? []);
     const count = LAYER_ORDER.filter((l) => completedSet.has(l)).length;
     const ref = `${lastRead.bookName} ${lastRead.chapter}`;
     if (count === 4) {
-      return { title: ref, sub: "All 4 layers complete -- view summary", icon: "ribbon" as const, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+      return { sub: `${ref} -- all 4 layers complete`, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
     }
     if (count > 0) {
-      return { title: ref, sub: `${count} of 4 layers complete -- continue studying`, icon: "layers" as const, routeParams: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+      return { sub: `Resume ${ref} -- ${count} of 4 layers`, routeParams: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
     }
-    return { title: ref, sub: "Begin your 4-layer study", icon: "layers" as const, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+    return { sub: `Begin ${ref} -- 4 layers`, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
+  }, [lastRead, layerCompletions]);
+
+  const hasActiveProgress = useMemo(() => {
+    if (lastRead) {
+      const completedSet = new Set(layerCompletions?.map((c) => c.layer) ?? []);
+      const count = LAYER_ORDER.filter((l) => completedSet.has(l)).length;
+      if (count > 0 && count < 4) return true;
+    }
+    return false;
   }, [lastRead, layerCompletions]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+    <View style={[st.container, { backgroundColor: theme.background }]}>
+      <View style={[st.header, { paddingTop: topPad + 16, backgroundColor: theme.background }]}>
+        <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Study
         </Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Deepen your faith
+        <Text style={[st.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          Start with Scripture, continue your journey, or explore trusted study tools.
         </Text>
       </View>
 
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
+        style={st.scrollView}
+        contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => router.push({ pathname: "/(tabs)/study", params: { ...ctaState.routeParams, _t: String(Date.now()) } } as any)}
-          style={({ pressed }) => [
-            styles.primaryCta,
-            {
-              backgroundColor: isDark ? "#1A1A2E" : "#FFFDF6",
-              borderColor: theme.accent + "30",
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-          testID="study-primary-cta"
-        >
-          <View style={[styles.primaryCtaIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name={ctaState.icon} size={22} color={theme.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.primaryCtaTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              {ctaState.title}
-            </Text>
-            <Text style={[styles.primaryCtaSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {ctaState.sub}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.accent} />
-        </Pressable>
-
-        <EnrolledTracksPreview theme={theme} />
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Study with Guidance
+        <View style={st.heroSection}>
+          <Text style={[st.heroSectionTitle, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+            STUDY SCRIPTURE
           </Text>
+
+          <View style={st.heroCards}>
+            <StudyModeCard
+              icon="book-outline"
+              iconColor="#3B82F6"
+              title="Quick Read"
+              subtitle="Read a passage without extra study layers"
+              onPress={() => router.push("/(tabs)/read" as any)}
+              theme={theme}
+              isDark={isDark}
+              testID="study-mode-quick_read"
+            />
+
+            <StudyModeCard
+              icon="chatbubbles-outline"
+              iconColor="#8B5CF6"
+              title="Guided Study"
+              subtitle="An AI tutor walks with you through observation, meaning, and response"
+              onPress={() => router.push("/study-guide" as any)}
+              theme={theme}
+              isDark={isDark}
+              testID="study-mode-guided_study"
+            />
+
+            <StudyModeCard
+              icon="layers-outline"
+              iconColor="#C9933A"
+              title="Deep Study"
+              subtitle={deepStudyState.sub}
+              badge="4-Layer"
+              onPress={() => router.push({ pathname: "/(tabs)/study", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
+              theme={theme}
+              isDark={isDark}
+              testID="study-mode-deep_study"
+            />
+          </View>
         </View>
 
-        <ListItem
-          icon="chatbubbles"
-          iconColor="#8B5CF6"
-          title="Guided Study"
-          subtitle="AI tutor walks you through a passage step by step"
-          onPress={() => router.push("/study/select-mode" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <ListItem
-          icon="flame"
-          iconColor="#C9933A"
-          title="Devotional Plans"
-          subtitle="Guided daily reading & SDA study plans"
-          onPress={() => router.push("/devotionals" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <SectionDivider theme={theme} />
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Learning Paths
-          </Text>
-        </View>
-
-        <ListItem
-          icon="trail-sign"
-          iconColor="#2E7D32"
-          title="Study Paths"
-          subtitle="Structured paths through Scripture"
-          onPress={() => router.push("/study-paths" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <ListItem
-          icon="school"
-          iconColor="#7C3AED"
-          title="28 Fundamental Beliefs"
-          subtitle="Browse and explore core Adventist doctrines"
-          onPress={() => router.push("/sda-studies" as any)}
-          style={{ marginBottom: 8 }}
-        />
-
-        <Pressable
-          onPress={() => router.push("/resources" as any)}
-          style={({ pressed }) => [
-            {
-              borderRadius: 16,
-              overflow: "hidden",
-              marginBottom: 12,
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
-          testID="resources-featured-card"
-          accessibilityRole="button"
-          accessibilityLabel="Open Study Resources: Sabbath School companions, topical studies, family worship"
-        >
-          <LinearGradient
-            colors={["#1A237E", "#0D1442"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              padding: 20,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: "#C9933A30",
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#C9933A20", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="library" size={20} color="#C9933A" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: "#FFFFFF", fontFamily: "Lora_700Bold", fontSize: 17 }}>
-                  Study Resources
-                </Text>
-                <Text style={{ color: "#FFFFFFAA", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                  Sabbath School companions, topical studies, family worship
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#C9933A" />
-            </View>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {[
-                { label: "Sabbath School", color: "#2E7D32" },
-                { label: "Topical", color: "#C9933A" },
-                { label: "Family", color: "#E65100" },
-              ].map((tag) => (
-                <View
-                  key={tag.label}
-                  style={{
-                    backgroundColor: tag.color + "25",
-                    borderRadius: 6,
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                  }}
-                >
-                  <Text style={{ color: tag.color, fontFamily: "Inter_600SemiBold", fontSize: 10, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
-                    {tag.label}
+        {(hasActiveProgress) ? (
+          <>
+            <View style={st.sectionSpacer} />
+            <SectionLabel label="Continue Your Journey" theme={theme} />
+            {hasActiveProgress && lastRead ? (
+              <Pressable
+                onPress={() => router.push({ pathname: "/(tabs)/study", params: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter), _t: String(Date.now()) } } as any)}
+                testID="study-resume-cta"
+                style={({ pressed }) => [
+                  st.resumeCard,
+                  {
+                    backgroundColor: isDark ? "#111118" : "#FFFDF8",
+                    borderColor: theme.accent + "25",
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View style={[st.resumeIcon, { backgroundColor: theme.accent + "14" }]}>
+                  <Ionicons name="layers" size={20} color={theme.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.resumeTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {lastRead.bookName} {lastRead.chapter}
+                  </Text>
+                  <Text style={[st.resumeSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    {LAYER_ORDER.filter((l) => new Set(layerCompletions?.map((c) => c.layer) ?? []).has(l)).length} of 4 layers complete
                   </Text>
                 </View>
-              ))}
-            </View>
-          </LinearGradient>
-        </Pressable>
+                <Ionicons name="chevron-forward" size={16} color={theme.accent} />
+              </Pressable>
+            ) : null}
+            <EnrolledTracksPreview theme={theme} />
+          </>
+        ) : (
+          <EnrolledTracksPreview theme={theme} />
+        )}
 
-        <SectionDivider theme={theme} />
+        <View style={st.secondaryZone}>
+          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Prophecy & End Times
-          </Text>
-        </View>
+          <SectionLabel label="Learning Paths" theme={theme} />
 
-        <ListItem
-          icon="telescope"
-          iconColor="#C9933A"
-          title="Prophecy Explorer"
-          subtitle="Daniel & Revelation symbols, beasts, and timelines"
-          onPress={() => router.push("/prophecy-explorer" as any)}
-          style={{ marginBottom: 8 }}
-        />
+          <ListItem
+            icon="trail-sign"
+            iconColor="#2E7D32"
+            title="Study Paths"
+            subtitle="Structured paths through Scripture"
+            onPress={() => router.push("/study-paths" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <ListItem
-          icon="git-merge"
-          iconColor="#8B5CF6"
-          title="Great Controversy Timeline"
-          subtitle="The cosmic conflict from Creation to the New Earth"
-          onPress={() => router.push("/great-controversy" as any)}
-          style={{ marginBottom: 8 }}
-        />
+          <ListItem
+            icon="school"
+            iconColor="#7C3AED"
+            title="28 Beliefs Deep Dive"
+            subtitle="A guided doctrinal learning path"
+            onPress={() => router.push("/study-paths" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <SectionDivider theme={theme} />
+          <ListItem
+            icon="flame"
+            iconColor="#C9933A"
+            title="Devotional Plans"
+            subtitle="Guided daily reading and SDA study plans"
+            onPress={() => router.push("/devotionals" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Reference
-          </Text>
-        </View>
+          <ListItem
+            icon="library"
+            iconColor="#1A237E"
+            title="Study Resources"
+            subtitle="Sabbath School companions, topical studies, family worship"
+            onPress={() => router.push("/resources" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <ListItem
-          icon="chatbubble-ellipses"
-          iconColor="#3B6CB5"
-          title="Historic Voices"
-          subtitle="Commentary from Matthew Henry, Adam Clarke, John Gill & more"
-          onPress={() => router.push("/(tabs)/study?tab=voices")}
-          style={{ marginBottom: 8 }}
-        />
+          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
 
-        <ListItem
-          icon="map"
-          iconColor={isDark ? "#8B9FD4" : "#1A1F3C"}
-          title="Bible Maps & Timeline"
-          subtitle="Ancient locations and biblical history"
-          onPress={() => router.push("/maps-timeline?tab=maps")}
-          style={{ marginBottom: 8 }}
-        />
+          <SectionLabel label="Prophecy & End Times" theme={theme} />
 
-        <SectionDivider theme={theme} />
+          <ListItem
+            icon="telescope"
+            iconColor="#C9933A"
+            title="Prophecy Explorer"
+            subtitle="Reference guide to Daniel & Revelation symbols and timelines"
+            onPress={() => router.push("/prophecy-explorer" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Beloved Passages
-          </Text>
-        </View>
+          <ListItem
+            icon="git-merge"
+            iconColor="#8B5CF6"
+            title="Great Controversy Timeline"
+            subtitle="Narrative guide from Creation to the New Earth"
+            onPress={() => router.push("/great-controversy" as any)}
+            style={{ marginBottom: 8 }}
+          />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inspirationScroll}>
-          {INSPIRATIONS.map((item, i) => (
-            <Pressable
-              key={i}
-              onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-            >
-              <LinearGradient
-                colors={item.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.inspirationCard}
+          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
+
+          <SectionLabel label="Reference" theme={theme} />
+
+          <ListItem
+            icon="chatbubble-ellipses"
+            iconColor="#3B6CB5"
+            title="Historic Voices"
+            subtitle="Commentary from Matthew Henry, Adam Clarke, John Gill & more"
+            onPress={() => router.push("/(tabs)/study?tab=voices")}
+            style={{ marginBottom: 8 }}
+          />
+
+          <ListItem
+            icon="book"
+            iconColor="#7C3AED"
+            title="Fundamental Beliefs Library"
+            subtitle="Browse all 28 Adventist doctrines"
+            onPress={() => router.push("/sda-studies" as any)}
+            style={{ marginBottom: 8 }}
+          />
+
+          <ListItem
+            icon="map"
+            iconColor={isDark ? "#8B9FD4" : "#1A1F3C"}
+            title="Bible Maps & Timeline"
+            subtitle="Ancient locations and biblical history"
+            onPress={() => router.push("/maps-timeline?tab=maps")}
+            style={{ marginBottom: 8 }}
+          />
+
+          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
+
+          <SectionLabel label="Beloved Passages" theme={theme} />
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.inspirationScroll}>
+            {INSPIRATIONS.map((item, i) => (
+              <Pressable
+                key={i}
+                onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
               >
-                <Ionicons name={item.icon} size={28} color="rgba(255,255,255,0.8)" />
-                <Text style={[styles.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
-                <Text style={[styles.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
-              </LinearGradient>
-            </Pressable>
-          ))}
-        </ScrollView>
+                <LinearGradient
+                  colors={item.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={st.inspirationCard}
+                >
+                  <Ionicons name={item.icon} size={24} color="rgba(255,255,255,0.75)" />
+                  <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
+                  <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
+                </LinearGradient>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-        <SectionDivider theme={theme} />
+          <View style={{ height: 20 }} />
 
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionSubhead, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-            Spiritual Themes
-          </Text>
-        </View>
+          <SectionLabel label="Spiritual Themes" theme={theme} />
 
-        <View style={styles.topicsGrid}>
-          {TOPICS.map((topic) => (
-            <Pressable
-              key={topic.id}
-              onPress={() => router.push(`/topic/${topic.id}`)}
-              style={({ pressed }) => [styles.topicCard, { opacity: pressed ? 0.8 : 1 }]}
-              testID={`topic-${topic.id}`}
-            >
-              <LinearGradient
-                colors={topic.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.topicGradient}
+          <View style={st.topicsGrid}>
+            {TOPICS.map((topic) => (
+              <Pressable
+                key={topic.id}
+                onPress={() => router.push(`/topic/${topic.id}`)}
+                style={({ pressed }) => [st.topicCard, { opacity: pressed ? 0.8 : 1 }]}
+                testID={`topic-${topic.id}`}
               >
-                <Ionicons name={topic.icon} size={22} color="rgba(255,255,255,0.9)" />
-                <Text style={[styles.topicTitle, { fontFamily: "Inter_600SemiBold" }]}>{topic.title}</Text>
-              </LinearGradient>
-            </Pressable>
-          ))}
+                <LinearGradient
+                  colors={topic.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={st.topicGradient}
+                >
+                  <Ionicons name={topic.icon} size={22} color="rgba(255,255,255,0.9)" />
+                  <Text style={[st.topicTitle, { fontFamily: "Inter_600SemiBold" }]}>{topic.title}</Text>
+                </LinearGradient>
+              </Pressable>
+            ))}
+          </View>
         </View>
-
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 22,
-    paddingBottom: 14,
+    paddingBottom: 18,
   },
   title: { fontSize: 24 },
-  subtitle: { fontSize: 14, marginTop: 4 },
+  subtitle: { fontSize: 14, marginTop: 4, lineHeight: 20 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 22 },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 24,
-    opacity: 0.6,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionSubhead: { fontSize: 16, letterSpacing: 0.3 },
-  inspirationScroll: {
-    gap: 12,
-    paddingBottom: 4,
-  },
-  inspirationCard: {
-    width: 200,
-    borderRadius: 20,
-    padding: 22,
-    gap: 10,
-  },
-  inspirationTitle: { color: "#fff", fontSize: 17 },
-  inspirationSub: { color: "rgba(255,255,255,0.65)", fontSize: 13 },
-  topicsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  topicCard: {
-    width: "31%" as any,
-    minWidth: 95,
-    flexGrow: 1,
-  },
-  topicGradient: {
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-    gap: 8,
-    minHeight: 90,
-    justifyContent: "center",
-  },
-  topicTitle: { color: "#fff", fontSize: 13 },
-  toolsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  toolCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 18,
-    alignItems: "center",
-    gap: 8,
-  },
-  toolIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  toolTitle: { fontSize: 15 },
-  toolSub: { fontSize: 12, lineHeight: 18 },
-  enrolledLabel: {
-    fontSize: 13,
+
+  heroSection: {
     marginBottom: 8,
-    marginTop: 4,
+  },
+  heroSectionTitle: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+    marginBottom: 14,
     paddingLeft: 2,
   },
+  heroCards: {
+    gap: 12,
+  },
+  heroCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 14,
+  },
+  heroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  heroText: { flex: 1 },
+  heroTitleRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 3,
+  },
+  heroTitle: { fontSize: 17 },
+  heroBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  heroBadgeText: { fontSize: 10 },
+  heroSub: { fontSize: 13, lineHeight: 18 },
+
+  sectionSpacer: { height: 20 },
+
+  sectionHeader: {
+    marginBottom: 12,
+    paddingLeft: 2,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+
+  resumeCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  resumeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  resumeTitle: { fontSize: 14, marginBottom: 2 },
+  resumeSub: { fontSize: 12 },
+
+  secondaryZone: {
+    marginTop: 12,
+  },
+  secondaryDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 22,
+    opacity: 0.5,
+  },
+
   enrolledCard: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
@@ -506,22 +558,37 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   enrolledPercent: { fontSize: 11 },
-  primaryCta: {
+
+  inspirationScroll: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  inspirationCard: {
+    width: 180,
+    borderRadius: 18,
+    padding: 18,
+    gap: 8,
+  },
+  inspirationTitle: { color: "#fff", fontSize: 15 },
+  inspirationSub: { color: "rgba(255,255,255,0.6)", fontSize: 12 },
+
+  topicsGrid: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 14,
+    flexWrap: "wrap" as const,
+    gap: 10,
+  },
+  topicCard: {
+    width: "31%" as any,
+    minWidth: 95,
+    flexGrow: 1,
+  },
+  topicGradient: {
     borderRadius: 16,
     padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-  },
-  primaryCtaIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
     alignItems: "center" as const,
+    gap: 8,
+    minHeight: 90,
     justifyContent: "center" as const,
   },
-  primaryCtaTitle: { fontSize: 16 },
-  primaryCtaSub: { fontSize: 13, marginTop: 2 },
+  topicTitle: { color: "#fff", fontSize: 13 },
 });
