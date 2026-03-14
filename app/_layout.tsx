@@ -79,6 +79,7 @@ function RootLayoutNav() {
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
       <Stack.Screen name="historic-voices" options={{ headerShown: true }} />
       <Stack.Screen name="verse-map" options={{ headerShown: false }} />
+      <Stack.Screen name="study/select-mode" options={{ headerShown: false }} />
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
       <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />

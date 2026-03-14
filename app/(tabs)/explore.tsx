@@ -175,9 +175,9 @@ export default function StudyScreen() {
         <ListItem
           icon="chatbubbles"
           iconColor="#8B5CF6"
-          title="Study Guide"
+          title="Guided Study"
           subtitle="AI tutor walks you through a passage step by step"
-          onPress={() => router.push("/study-guide" as any)}
+          onPress={() => router.push("/study/select-mode" as any)}
           style={{ marginBottom: 8 }}
         />
 

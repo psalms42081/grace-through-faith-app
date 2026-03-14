@@ -37,6 +37,7 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
 - **28 Fundamental Beliefs UX:** Belief cards with animated chevrons, scripture navigation, and authority hierarchy.
 - **Great Controversy Timeline Engine:** An immersive vertical timeline tracing the cosmic conflict.
+- **Study Mode Selector:** Unified study entry flow via `/study/select-mode`. Three modes: Quick Read (routes to reader), Guided Study (routes to AI Socratic tutor at `/study-guide`), and Deep Study (routes to 4-Layer study). Accessed from the "Guided Study" card on the Study tab.
 - **Study Screen Architecture:** Reorganized Study tab with state-aware 4-Layer CTA (contextual labels based on reading history + layer completions), next-chapter CTA in completion flow, dismissible verse-tap hint banner on the reader, grouped verse actions (Quick Actions row + "Study Deeper" grid), and clear Prophecy product structure (Explorer = symbol reference, Timeline = narrative history, Foundations = structured curriculum).
 - **Content Engine & Study Resources:** A two-stage content pipeline (Source Packets and Generation) with a review workflow, version-safe regeneration, and rollback capabilities.
 - **Role System:** Supports "user," "editor," and "admin" roles with role-gated middleware.
