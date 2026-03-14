@@ -3041,12 +3041,22 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
 }
 
 function ContextParagraphs({ text, theme }: { text: string; theme: typeof Colors.light }) {
-  const paragraphs = text.split(/\n\n+/).filter(Boolean);
+  const paragraphs = text.split(/\n\n+/).flatMap((block) => {
+    const trimmed = block.trim();
+    if (!trimmed) return [];
+    const sentences = trimmed.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+    if (!sentences || sentences.length <= 2) return [trimmed];
+    const chunks: string[] = [];
+    for (let i = 0; i < sentences.length; i += 2) {
+      chunks.push(sentences.slice(i, i + 2).join("").trim());
+    }
+    return chunks;
+  });
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 14 }}>
       {paragraphs.map((p, i) => (
         <Text key={i} style={{ fontSize: 14, lineHeight: 22, color: theme.textSecondary, fontFamily: "Inter_400Regular" }}>
-          {p.trim()}
+          {p}
         </Text>
       ))}
     </View>
