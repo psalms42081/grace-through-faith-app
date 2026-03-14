@@ -88,7 +88,7 @@ function RootLayoutNav() {
         name="(auth)"
         options={{ presentation: "modal", headerShown: false }}
       />
-      <Stack.Screen name="groups" options={{ headerShown: true, title: "Small Groups" }} />
+      <Stack.Screen name="groups" options={{ headerShown: true, title: "Live Fellowship" }} />
       <Stack.Screen name="group/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="church-connect" options={{ headerShown: false }} />
       <Stack.Screen name="church/[id]" options={{ headerShown: false }} />

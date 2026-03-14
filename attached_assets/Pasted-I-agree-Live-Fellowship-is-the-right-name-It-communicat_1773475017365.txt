@@ -1,0 +1,149 @@
+I agree — Live Fellowship is the right name. It communicates the purpose immediately and fits Adventist culture well. It also scales from 2 people praying together to thousands attending a conference without needing different terminology.
+
+Let’s define it clearly so the feature becomes structured and understandable in the app.
+
+
+---
+
+Live Fellowship Structure
+
+Instead of the feature feeling like a random “group chat”, structure it like this:
+
+Live Fellowship
+│
+├ Live Now
+│   Join active prayer rooms, studies, or conferences
+│
+├ Small Groups
+│   Private invite-based groups
+│
+├ Upcoming Events
+│   Scheduled Bible studies or conferences
+│
+└ My Groups
+    Groups you host or belong to
+
+This makes it obvious what the feature does.
+
+
+---
+
+Group Screen Layout (Your Current Screen Improved)
+
+Your screenshot already has a good base. I would adjust it slightly:
+
+Header
+
+Group name
+Host name
+Member count
+
+Invite code
+Copy / Share
+
+
+---
+
+Tabs
+
+Discussion
+Prayer
+Devotional
+Study
+Live
+
+The Live tab becomes where the LiveKit session starts.
+
+
+---
+
+Example Final Screen
+
+Live Fellowship
+
+Testing 123
+Host: Pastor Daniel
+Members: 12
+
+Invite Code
+DPWN-MCMM
+[Copy] [Share]
+
+Tabs
+Discussion | Prayer | Devotional | Study | Live
+
+Start the conversation
+
+
+---
+
+Public Events (Conferences)
+
+Public events should appear under Live Now.
+
+Example:
+
+Live Fellowship
+
+LIVE NOW
+Prophecy Conference
+Hosted by Amazing Facts
+
+[Join Live Session]
+
+Upcoming
+Global Sabbath School
+Saturday 9:00 AM
+
+This is how you allow large conferences to be attended worldwide.
+
+
+---
+
+Important Moderator Controls
+
+Since this allows global participation, hosts should be able to:
+
+• mute participants
+• remove users
+• control who can speak
+• end session
+
+LiveKit supports these.
+
+
+---
+
+Why This Feature Matters
+
+Most Bible apps are content platforms.
+
+Live Fellowship turns your app into:
+
+Scripture + Community + Teaching
+
+That combination is rare.
+
+
+---
+
+What I Recommend Next
+
+Before adding more complexity, finish polishing three things:
+
+1. Name the feature “Live Fellowship” everywhere
+
+
+2. Add a visible “Live” tab in groups
+
+
+3. Create a simple “Live Now” section
+
+
+
+Once those are clean, the feature will make much more sense to users.
+
+
+---
+
+If you want, I can also write the Replit prompt to convert the current group system into the Live Fellowship structure without breaking what’s already built.

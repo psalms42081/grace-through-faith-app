@@ -13,7 +13,6 @@ import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import ListItem from "@/components/ui/ListItem";
-import Badge from "@/components/ui/Badge";
 
 import SectionHeaderShared from "@/components/SectionHeader";
 
@@ -102,8 +101,7 @@ export default function ConnectScreen() {
           iconColor="#E8456B"
           title={t("connect.liveStreams")}
           subtitle={t("connect.liveStreamsSub")}
-          showChevron={false}
-          rightElement={<Badge label={t("connect.soon")} variant="filled" />}
+          onPress={() => router.push("/groups" as any)}
           style={{ marginBottom: 10 }}
         />
       </ScrollView>

@@ -67,6 +67,11 @@ export default function GroupsScreen() {
     enabled: !isGuest,
   });
 
+  const { data: activeStreams } = useQuery<any[]>({
+    queryKey: ["/api/streams/active"],
+    refetchInterval: 30000,
+  });
+
   const { data: publicGroups, isLoading: publicLoading } = useQuery<SmallGroup[]>({
     queryKey: [`/api/groups/public?type=${filterType}&search=${searchText}`],
     enabled: tab === "browse",
@@ -125,10 +130,10 @@ export default function GroupsScreen() {
       <View style={[s.emptyContainer, { backgroundColor: theme.background }]}>
         <Ionicons name="people" size={56} color={theme.textMuted} />
         <Text style={[s.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-          Small Groups
+          Live Fellowship
         </Text>
         <Text style={[s.emptyDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Create an account to join small groups and connect with your church community
+          Create an account to join groups, prayer rooms, and live Bible studies
         </Text>
         <Button
           variant="primary"
@@ -209,6 +214,43 @@ export default function GroupsScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>
+      {activeStreams && activeStreams.length > 0 && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 10 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" }} />
+            <Text style={{ color: "#FF3B30", fontSize: 12, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>
+              LIVE NOW
+            </Text>
+          </View>
+          {activeStreams.map((stream: any) => (
+            <Pressable
+              key={stream.id}
+              onPress={() => router.push(`/stream/${stream.id}` as any)}
+              style={({ pressed }) => [{
+                flexDirection: "row" as const, alignItems: "center" as const, borderRadius: 14, padding: 12, gap: 12, marginBottom: 8,
+                backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", borderWidth: StyleSheet.hairlineWidth, borderColor: "#FF3B3030",
+                opacity: pressed ? 0.85 : 1,
+              }]}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#FF3B3015", alignItems: "center" as const, justifyContent: "center" as const }}>
+                <Ionicons name="videocam" size={20} color="#FF3B30" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.text }} numberOfLines={1}>
+                  {stream.title}
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textMuted, marginTop: 1 }}>
+                  {stream.hostDisplayName || "Host"}{stream.groupName ? ` \u00B7 ${stream.groupName}` : ""}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: "#FF3B30", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
+                <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>JOIN</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <View style={s.tabRow}>
         <Pressable
           onPress={() => setTab("my")}

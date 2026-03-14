@@ -125,7 +125,7 @@ interface AvailableTrack {
   category: string;
 }
 
-type GroupTab = "discussion" | "prayer" | "study" | "devotional";
+type GroupTab = "discussion" | "prayer" | "study" | "devotional" | "live";
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -644,6 +644,7 @@ export default function GroupDetailScreen() {
             { key: "prayer" as const, icon: "heart" as const, label: "Prayer" },
             { key: "devotional" as const, icon: "flame" as const, label: "Devotional" },
             { key: "study" as const, icon: "book" as const, label: "Study" },
+            { key: "live" as const, icon: "videocam" as const, label: "Live" },
           ]).map((t) => (
             <Pressable
               key={t.key}
@@ -666,6 +667,63 @@ export default function GroupDetailScreen() {
         )}
         {activeTab === "devotional" && renderDevotionalTab()}
         {activeTab === "study" && renderStudyTab()}
+        {activeTab === "live" && (
+          <View style={s.tabContent}>
+            {groupStream ? (
+              <View style={{ alignItems: "center" as const, gap: 16, paddingVertical: 20 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#FF3B3015", alignItems: "center" as const, justifyContent: "center" as const }}>
+                  <Ionicons name="videocam" size={28} color="#FF3B30" />
+                </View>
+                <View style={{ alignItems: "center" as const, gap: 4 }}>
+                  <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" }} />
+                    <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_700Bold" }}>LIVE NOW</Text>
+                  </View>
+                  <Text style={{ color: theme.text, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                    {groupStream.title}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                    Hosted by {groupStream.hostDisplayName || "Group Leader"}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => router.push(`/stream/${groupStream.id}` as any)}
+                  style={({ pressed }) => [{ backgroundColor: "#FF3B30", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Join Live Session</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ alignItems: "center" as const, gap: 16, paddingVertical: 30 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: theme.accent + "15", alignItems: "center" as const, justifyContent: "center" as const }}>
+                  <Ionicons name="videocam-outline" size={28} color={theme.accent} />
+                </View>
+                <Text style={{ color: theme.text, fontSize: 15, fontFamily: "Inter_600SemiBold", textAlign: "center" as const }}>
+                  No active session
+                </Text>
+                <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" as const, maxWidth: 260, lineHeight: 19 }}>
+                  Group leaders can start a live session for prayer, Bible study, or worship.
+                </Text>
+                {isLeader && (
+                  <Pressable
+                    onPress={() => {
+                      apiRequest("POST", "/api/streams/start", {
+                        title: `${data?.group?.name || "Group"} Live Session`,
+                        groupId: id,
+                      }).then((res) => res.json()).then((stream) => {
+                        queryClient.invalidateQueries({ queryKey: ["/api/streams/active"] });
+                        router.push(`/stream/${stream.id}` as any);
+                      });
+                    }}
+                    style={({ pressed }) => [{ backgroundColor: theme.accent, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, opacity: pressed ? 0.85 : 1 }]}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Start Live Session</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         <Pressable onPress={handleLeave} style={s.leaveBtn}>
           <Ionicons name="exit-outline" size={18} color="#FF6B6B" />
