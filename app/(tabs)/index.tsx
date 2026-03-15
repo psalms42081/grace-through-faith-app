@@ -48,6 +48,7 @@ import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
 import TodaysPath from "@/components/home/TodaysPath";
 import FeedbackWidget from "@/components/home/FeedbackWidget";
+import { DAILY_QUEST_STAR_REWARD, DAILY_CHAMPION_BONUS } from "@/constants/kids-shop";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -215,9 +216,21 @@ function KidsHomeScreen() {
     queryKey: [`/api/kids/badges/earned?_uid=${progressUserId}`],
   });
 
+  const { data: questData } = useQuery<{
+    id: number;
+    readStory: boolean;
+    practiceVerse: boolean;
+    takeQuiz: boolean;
+    bonusClaimed: boolean;
+  }>({
+    queryKey: [`/api/kids/quests/today?childId=${activeChildProfileId || ""}`],
+  });
+
   const completedCount = progress?.filter(p => p.completed).length ?? 0;
   const memorizedCount = progress?.filter(p => p.memoryVerseMemorized).length ?? 0;
   const badgeCount = badges?.length ?? 0;
+  const questsDone = questData ? [questData.readStory, questData.practiceVerse, questData.takeQuiz].filter(Boolean).length : 0;
+  const allQuestsDone = questsDone === 3;
 
   return (
     <ScrollView
@@ -518,6 +531,95 @@ function KidsHomeScreen() {
       )}
 
       <AnimatedSection index={4}>
+        <View style={[kidsStyles.questsCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <View style={kidsStyles.questsHeader}>
+            <Ionicons name="compass" size={22} color="#FFD700" />
+            <Text style={[kidsStyles.questsTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Daily Quests
+            </Text>
+            <Text style={[kidsStyles.questsCount, { color: allQuestsDone ? "#4CAF50" : theme.textMuted, fontFamily: "Inter_700Bold" }]}>
+              {questsDone}/3
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => router.push("/(tabs)/kids-stories")}
+            style={[kidsStyles.questRow, questData?.readStory && kidsStyles.questRowDone]}
+          >
+            <Ionicons
+              name={questData?.readStory ? "checkmark-circle" : "ellipse-outline"}
+              size={22}
+              color={questData?.readStory ? "#4CAF50" : "#666"}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[kidsStyles.questLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                Read a Story
+              </Text>
+            </View>
+            <View style={kidsStyles.questReward}>
+              <Ionicons name="star" size={14} color="#FFD700" />
+              <Text style={[kidsStyles.questRewardText, { fontFamily: "Inter_600SemiBold" }]}>
+                +{DAILY_QUEST_STAR_REWARD}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/(tabs)/kids-learn")}
+            style={[kidsStyles.questRow, questData?.practiceVerse && kidsStyles.questRowDone]}
+          >
+            <Ionicons
+              name={questData?.practiceVerse ? "checkmark-circle" : "ellipse-outline"}
+              size={22}
+              color={questData?.practiceVerse ? "#4CAF50" : "#666"}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[kidsStyles.questLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                Practice a Verse
+              </Text>
+            </View>
+            <View style={kidsStyles.questReward}>
+              <Ionicons name="star" size={14} color="#FFD700" />
+              <Text style={[kidsStyles.questRewardText, { fontFamily: "Inter_600SemiBold" }]}>
+                +{DAILY_QUEST_STAR_REWARD}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/(tabs)/kids-learn")}
+            style={[kidsStyles.questRow, questData?.takeQuiz && kidsStyles.questRowDone]}
+          >
+            <Ionicons
+              name={questData?.takeQuiz ? "checkmark-circle" : "ellipse-outline"}
+              size={22}
+              color={questData?.takeQuiz ? "#4CAF50" : "#666"}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[kidsStyles.questLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                Take a Quiz
+              </Text>
+            </View>
+            <View style={kidsStyles.questReward}>
+              <Ionicons name="star" size={14} color="#FFD700" />
+              <Text style={[kidsStyles.questRewardText, { fontFamily: "Inter_600SemiBold" }]}>
+                +{DAILY_QUEST_STAR_REWARD}
+              </Text>
+            </View>
+          </Pressable>
+
+          {allQuestsDone && (
+            <View style={kidsStyles.questBonusBanner}>
+              <Ionicons name="trophy" size={18} color="#FFD700" />
+              <Text style={[kidsStyles.questBonusText, { fontFamily: "Inter_600SemiBold" }]}>
+                Daily Champion! +{DAILY_CHAMPION_BONUS} bonus stars
+              </Text>
+            </View>
+          )}
+        </View>
+      </AnimatedSection>
+
+      <AnimatedSection index={5}>
         <View style={kidsStyles.progressSummary}>
           <Text style={[kidsStyles.progressTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
             Adventure Progress
@@ -845,6 +947,67 @@ const kidsStyles = StyleSheet.create({
     fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  questsCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  questsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  questsTitle: {
+    fontSize: 16,
+    flex: 1,
+  },
+  questsCount: {
+    fontSize: 15,
+  },
+  questRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  questRowDone: {
+    opacity: 0.6,
+  },
+  questLabel: {
+    fontSize: 14,
+  },
+  questReward: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(255,215,0,0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  questRewardText: {
+    fontSize: 12,
+    color: "#FFD700",
+  },
+  questBonusBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,215,0,0.12)",
+  },
+  questBonusText: {
+    fontSize: 13,
+    color: "#FFD700",
   },
 });
 

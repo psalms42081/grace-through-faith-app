@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { router } from "expo-router";
 import {
   View,
   Text,
@@ -493,6 +494,20 @@ export default function KidsStarsScreen() {
           <PulsingStarCard totalStars={totalStars} seedPoints={seedPoints} theme={theme} />
         </AnimatedSection>
 
+        <AnimatedSection index={0} delayMultiplier={100}>
+          <Pressable
+            onPress={() => router.push("/kids/shop")}
+            style={[styles.shopBtn, { backgroundColor: theme.accent }]}
+            testID="star-shop-btn"
+          >
+            <Ionicons name="bag-handle" size={20} color="#fff" />
+            <Text style={[styles.shopBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+              Star Shop
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+          </Pressable>
+        </AnimatedSection>
+
         <AnimatedSection index={1} delayMultiplier={100}>
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -662,6 +677,20 @@ const styles = StyleSheet.create({
   starCount: { fontSize: 48, color: "#fff", marginTop: 6 },
   starLabel: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
   seedPointsLabel: { fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  shopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  shopBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    flex: 1,
+  },
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   statCard: {
     flex: 1,

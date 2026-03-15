@@ -14,9 +14,12 @@ import { Router } from "express";
     kidsStoryScenes,
     childProfiles,
     dinnerTableTopics,
+    kidsPurchases,
+    kidsDailyQuests,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
+  import { SHOP_ITEMS } from "../../constants/kids-shop";
   import { aiGenerationLimiter } from "../middleware/rate-limit";
   import {
     generatePauseAndWonder,
@@ -26,6 +29,48 @@ import { Router } from "express";
   } from "../services/ai-engine";
 
   const router = Router();
+
+  async function autoCompleteQuest(userId: string, childId: string | undefined, questType: "read_story" | "practice_verse" | "take_quiz") {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const conditions = [
+        eq(kidsDailyQuests.userId, userId),
+        eq(kidsDailyQuests.questDate, today),
+      ];
+      if (childId) conditions.push(eq(kidsDailyQuests.childProfileId, childId));
+
+      const existing = await db.select().from(kidsDailyQuests).where(and(...conditions));
+      let quest;
+      if (existing.length === 0) {
+        const [created] = await db.insert(kidsDailyQuests).values({
+          userId,
+          childProfileId: childId || null,
+          questDate: today,
+        }).returning();
+        quest = created;
+      } else {
+        quest = existing[0];
+      }
+
+      const updateField: Record<string, boolean> = {};
+      if (questType === "read_story") updateField.readStory = true;
+      else if (questType === "practice_verse") updateField.practiceVerse = true;
+      else if (questType === "take_quiz") updateField.takeQuiz = true;
+
+      const [updated] = await db.update(kidsDailyQuests)
+        .set(updateField)
+        .where(eq(kidsDailyQuests.id, quest.id))
+        .returning();
+
+      if (updated.readStory && updated.practiceVerse && updated.takeQuiz && !updated.bonusClaimed) {
+        await db.update(kidsDailyQuests)
+          .set({ bonusClaimed: true })
+          .where(eq(kidsDailyQuests.id, quest.id));
+      }
+    } catch (err) {
+      console.error("Auto-complete quest error:", err);
+    }
+  }
 
   router.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
   try {
@@ -238,6 +283,7 @@ router.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
       })
       .returning();
     const badgesAwarded = await checkAndAwardBadges(userId);
+    autoCompleteQuest(userId, req.body.childProfileId, "read_story");
     return res.json({ ...progress, firstCompletion: !alreadyCompleted, badgesAwarded });
   } catch (err) {
     console.error(err);
@@ -322,6 +368,7 @@ router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
     triggerParentBridge(storyId, score, verifiedChildProfileId).catch((err) =>
       console.error("Parent Bridge background error:", err)
     );
+    autoCompleteQuest(userId, childProfileId, "take_quiz");
 
     return res.json(result);
   } catch (err) {
@@ -355,6 +402,7 @@ router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
         set: { memoryVerseMemorized: true },
       })
       .returning();
+    autoCompleteQuest(userId, req.body.childProfileId, "practice_verse");
     return res.json(upserted);
   } catch (err) {
     console.error(err);
@@ -1025,6 +1073,207 @@ router.get("/api/kids/sabbath-school/current", async (req, res) => {
     res.json({ lesson: { ...lessonData, linkedStory }, weekNumber: weekOfYear + 1, ageGroup });
   } catch (err) {
     console.error("Kids SS error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── STAR SHOP ────────────────────────────────────────────────────────────
+
+router.get("/api/kids/shop/purchases", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const childId = req.query.childId as string;
+    const where = childId
+      ? and(eq(kidsPurchases.userId, userId), eq(kidsPurchases.childProfileId, childId))
+      : eq(kidsPurchases.userId, userId);
+    const purchases = await db.select().from(kidsPurchases).where(where);
+    res.json(purchases);
+  } catch (err) {
+    console.error("Shop purchases error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/kids/shop/purchase", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { itemId, childId } = req.body;
+    if (!itemId) {
+      return res.status(400).json({ error: "itemId is required" });
+    }
+
+    const catalogItem = SHOP_ITEMS.find(i => i.id === itemId);
+    if (!catalogItem) {
+      return res.status(400).json({ error: "Item not found in catalog" });
+    }
+
+    const existing = await db.select().from(kidsPurchases).where(
+      and(
+        eq(kidsPurchases.userId, userId),
+        eq(kidsPurchases.itemId, itemId),
+        ...(childId ? [eq(kidsPurchases.childProfileId, childId)] : [])
+      )
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "Already purchased" });
+    }
+
+    const progress = await db.select().from(kidsProgress).where(eq(kidsProgress.userId, userId));
+    let totalStars = 0;
+    for (const p of progress) {
+      if (p.completed) totalStars += 1;
+      if (p.quizScore != null && p.quizScore > 0) {
+        if (p.quizScore === 100) totalStars += 3;
+        else if (p.quizScore >= 66) totalStars += 2;
+        else totalStars += 1;
+      }
+      if (p.memoryVerseMemorized) totalStars += 2;
+    }
+
+    const allPurchases = await db.select().from(kidsPurchases).where(eq(kidsPurchases.userId, userId));
+    const spent = allPurchases.reduce((sum, p) => sum + p.starCost, 0);
+    const available = totalStars - spent;
+
+    if (available < catalogItem.starCost) {
+      return res.status(400).json({ error: "Not enough stars", available, needed: catalogItem.starCost });
+    }
+
+    const [purchase] = await db.insert(kidsPurchases).values({
+      userId,
+      childProfileId: childId || null,
+      itemId,
+      category: catalogItem.category,
+      starCost: catalogItem.starCost,
+      equipped: false,
+    }).returning();
+
+    res.json(purchase);
+  } catch (err) {
+    console.error("Shop purchase error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/kids/shop/equip", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { childId, itemId, category } = req.body;
+
+    await db.update(kidsPurchases)
+      .set({ equipped: false })
+      .where(
+        and(
+          eq(kidsPurchases.userId, userId),
+          eq(kidsPurchases.category, category),
+          ...(childId ? [eq(kidsPurchases.childProfileId, childId)] : [])
+        )
+      );
+
+    if (itemId) {
+      await db.update(kidsPurchases)
+        .set({ equipped: true })
+        .where(
+          and(
+            eq(kidsPurchases.userId, userId),
+            eq(kidsPurchases.itemId, itemId),
+            ...(childId ? [eq(kidsPurchases.childProfileId, childId)] : [])
+          )
+        );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Shop equip error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── DAILY QUESTS ─────────────────────────────────────────────────────────
+
+function getTodayDateStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+router.get("/api/kids/quests/today", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const childId = req.query.childId as string;
+    const today = getTodayDateStr();
+
+    const existing = await db.select().from(kidsDailyQuests).where(
+      and(
+        eq(kidsDailyQuests.userId, userId),
+        eq(kidsDailyQuests.questDate, today),
+        ...(childId ? [eq(kidsDailyQuests.childProfileId, childId)] : [])
+      )
+    );
+
+    if (existing.length > 0) {
+      return res.json(existing[0]);
+    }
+
+    const [quest] = await db.insert(kidsDailyQuests).values({
+      userId,
+      childProfileId: childId || null,
+      questDate: today,
+    }).returning();
+
+    res.json(quest);
+  } catch (err) {
+    console.error("Quest today error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/kids/quests/complete", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { childId, questType } = req.body;
+    const today = getTodayDateStr();
+
+    const existing = await db.select().from(kidsDailyQuests).where(
+      and(
+        eq(kidsDailyQuests.userId, userId),
+        eq(kidsDailyQuests.questDate, today),
+        ...(childId ? [eq(kidsDailyQuests.childProfileId, childId)] : [])
+      )
+    );
+
+    let quest;
+    if (existing.length === 0) {
+      const [created] = await db.insert(kidsDailyQuests).values({
+        userId,
+        childProfileId: childId || null,
+        questDate: today,
+      }).returning();
+      quest = created;
+    } else {
+      quest = existing[0];
+    }
+
+    const updateField: Record<string, boolean> = {};
+    if (questType === "read_story") updateField.readStory = true;
+    else if (questType === "practice_verse") updateField.practiceVerse = true;
+    else if (questType === "take_quiz") updateField.takeQuiz = true;
+    else return res.status(400).json({ error: "Invalid quest type" });
+
+    const [updated] = await db.update(kidsDailyQuests)
+      .set(updateField)
+      .where(eq(kidsDailyQuests.id, quest.id))
+      .returning();
+
+    const allDone = updated.readStory && updated.practiceVerse && updated.takeQuiz;
+    let bonusAwarded = false;
+    if (allDone && !updated.bonusClaimed) {
+      await db.update(kidsDailyQuests)
+        .set({ bonusClaimed: true })
+        .where(eq(kidsDailyQuests.id, quest.id));
+      bonusAwarded = true;
+    }
+
+    res.json({ ...updated, bonusClaimed: allDone, bonusAwarded });
+  } catch (err) {
+    console.error("Quest complete error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

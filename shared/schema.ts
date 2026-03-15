@@ -867,6 +867,53 @@ export const dinnerTableTopics = pgTable(
 
 export type DinnerTableTopic = typeof dinnerTableTopics.$inferSelect;
 
+// ─── KIDS STAR SHOP ─────────────────────────────────────────────────────────
+
+export const kidsPurchases = pgTable(
+  "kids_purchase",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    childProfileId: varchar("child_profile_id").references(() => childProfiles.id),
+    itemId: varchar("item_id", { length: 60 }).notNull(),
+    category: varchar("category", { length: 30 }).notNull(),
+    starCost: integer("star_cost").notNull(),
+    equipped: boolean("equipped").default(false),
+    purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userChildIdx: index("kids_purchase_user_child_idx").on(table.userId, table.childProfileId),
+  })
+);
+
+export type KidsPurchase = typeof kidsPurchases.$inferSelect;
+
+// ─── KIDS DAILY QUESTS ──────────────────────────────────────────────────────
+
+export const kidsDailyQuests = pgTable(
+  "kids_daily_quest",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    childProfileId: varchar("child_profile_id").references(() => childProfiles.id),
+    questDate: varchar("quest_date", { length: 10 }).notNull(),
+    readStory: boolean("read_story").default(false),
+    practiceVerse: boolean("practice_verse").default(false),
+    takeQuiz: boolean("take_quiz").default(false),
+    bonusClaimed: boolean("bonus_claimed").default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userDateIdx: index("kids_quest_user_date_idx").on(table.userId, table.childProfileId, table.questDate),
+  })
+);
+
+export type KidsDailyQuest = typeof kidsDailyQuests.$inferSelect;
+
 // ─── PRAYER JOURNAL ──────────────────────────────────────────────────────────
 
 export const prayerRequests = pgTable(
