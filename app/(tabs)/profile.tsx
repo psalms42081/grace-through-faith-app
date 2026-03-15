@@ -325,21 +325,30 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Spiritual Practices
+        </Text>
+        <ListItem
+          icon="journal"
+          iconColor="#8B5CF6"
+          title={t("profile.prayerJournal")}
+          onPress={() => router.push("/prayer-journal" as any)}
+          style={{ marginBottom: 6 }}
+        />
+      </View>
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
+      <View style={st.sectionPad}>
+        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Your Content
         </Text>
-        {[
-          { title: t("profile.prayerJournal"), icon: "journal" as const, color: "#8B5CF6", route: "/prayer-journal" },
-          { title: "Saved", icon: "bookmark" as const, color: "#C9933A", route: "/library" },
-        ].map((link) => (
-          <ListItem
-            key={link.route}
-            icon={link.icon}
-            iconColor={link.color}
-            title={link.title}
-            onPress={() => router.push(link.route as any)}
-            style={{ marginBottom: 6 }}
-          />
-        ))}
+        <ListItem
+          icon="bookmark"
+          iconColor="#C9933A"
+          title="Saved"
+          onPress={() => router.push("/library" as any)}
+          style={{ marginBottom: 6 }}
+        />
       </View>
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />

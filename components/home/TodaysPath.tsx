@@ -71,7 +71,7 @@ export default function TodaysPath({
     {
       icon: "layers-outline",
       label: "Study",
-      subtitle: "Go deeper with 4-layer study",
+      subtitle: "Reflect on today's passage",
       completed: false,
       onPress: () => {
         if (parsed) {
