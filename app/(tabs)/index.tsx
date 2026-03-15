@@ -37,6 +37,7 @@ import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
 import VerseOfTheDay from "@/components/home/VerseOfTheDay";
+import { getBookImage } from "@/constants/bible-books";
 import ContinueCard from "@/components/home/ContinueCard";
 import { useResumeJourney } from "@/hooks/useResumeJourney";
 
@@ -905,6 +906,11 @@ function AdultHomeScreen() {
     );
     return VERSE_BACKGROUNDS[dayOfYear % VERSE_BACKGROUNDS.length];
   }, []);
+  const verseBookImage = useMemo(() => {
+    const ref = verse.reference;
+    const bookName = ref.replace(/\s+\d+.*$/, "");
+    return getBookImage(bookName);
+  }, [verse.reference]);
 
   const { data: todayData } = useQuery<TodayResponse>({
     queryKey: [`/api/devotionals/today?userId=${userId}`],
@@ -1054,7 +1060,7 @@ function AdultHomeScreen() {
               dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
-          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} bookImage={verseBookImage} /></AnimatedSection>
           <AnimatedSection index={3}>
             <ContinueCard
               item={resumeItem}
@@ -1088,7 +1094,7 @@ function AdultHomeScreen() {
               dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
-          <AnimatedSection index={1}><VerseOfTheDay verse={verse} bgImage={bgImage} /></AnimatedSection>
+          <AnimatedSection index={1}><VerseOfTheDay verse={verse} bgImage={bgImage} bookImage={verseBookImage} /></AnimatedSection>
           <AnimatedSection index={2}>
             <ContinueCard
               item={resumeItem}

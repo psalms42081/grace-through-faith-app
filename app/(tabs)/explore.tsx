@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +18,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { TOPICS_LIST as TOPICS } from "@/data/topics";
 import ListItem from "@/components/ui/ListItem";
+import { getBookImage } from "@/constants/bible-books";
 
 interface LayerCompletionEntry {
   layer: string;
@@ -26,11 +28,11 @@ interface LayerCompletionEntry {
 const LAYER_ORDER = ["word", "context", "voices", "application"];
 
 const INSPIRATIONS = [
-  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5 },
-  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const, bookId: 49, chapter: 6 },
-  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const, bookId: 40, chapter: 6 },
-  { title: "The Beatitudes", subtitle: "Matthew 5:3-12", gradient: ["#8B5CF6", "#6D3BD4"] as [string, string], icon: "sparkles" as const, bookId: 40, chapter: 5 },
-  { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13 },
+  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5, bookName: "Galatians" },
+  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const, bookId: 49, chapter: 6, bookName: "Ephesians" },
+  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const, bookId: 40, chapter: 6, bookName: "Matthew" },
+  { title: "The Beatitudes", subtitle: "Matthew 5:3-12", gradient: ["#8B5CF6", "#6D3BD4"] as [string, string], icon: "sparkles" as const, bookId: 40, chapter: 5, bookName: "Matthew" },
+  { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13, bookName: "1 Corinthians" },
 ];
 
 function SectionLabel({ label, theme }: { label: string; theme: typeof Colors.dark }) {
@@ -367,24 +369,45 @@ export default function StudyScreen() {
           <SectionLabel label="Beloved Passages" theme={theme} />
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.inspirationScroll}>
-            {INSPIRATIONS.map((item, i) => (
-              <Pressable
-                key={i}
-                onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-              >
-                <LinearGradient
-                  colors={item.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={st.inspirationCard}
+            {INSPIRATIONS.map((item, i) => {
+              const bookImg = getBookImage(item.bookName);
+              return (
+                <Pressable
+                  key={i}
+                  onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
                 >
-                  <Ionicons name={item.icon} size={24} color="rgba(255,255,255,0.75)" />
-                  <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
-                  <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
-                </LinearGradient>
-              </Pressable>
-            ))}
+                  {bookImg ? (
+                    <ImageBackground
+                      source={bookImg}
+                      style={st.inspirationCard}
+                      imageStyle={{ borderRadius: 16 }}
+                      resizeMode="cover"
+                    >
+                      <LinearGradient
+                        colors={["transparent", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.9)"]}
+                        style={st.inspirationOverlay}
+                      >
+                        <Ionicons name={item.icon} size={22} color="rgba(255,255,255,0.85)" />
+                        <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
+                        <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
+                      </LinearGradient>
+                    </ImageBackground>
+                  ) : (
+                    <LinearGradient
+                      colors={item.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={st.inspirationCard}
+                    >
+                      <Ionicons name={item.icon} size={24} color="rgba(255,255,255,0.75)" />
+                      <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
+                      <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
+                    </LinearGradient>
+                  )}
+                </Pressable>
+              );
+            })}
           </ScrollView>
 
           <View style={{ height: 20 }} />
@@ -548,13 +571,23 @@ const st = StyleSheet.create({
     paddingBottom: 4,
   },
   inspirationCard: {
-    width: 190,
-    borderRadius: 20,
+    width: 200,
+    height: 240,
+    borderRadius: 16,
     padding: 20,
     gap: 10,
+    justifyContent: "flex-end" as const,
+    overflow: "hidden" as const,
   },
-  inspirationTitle: { color: "#fff", fontSize: 15, letterSpacing: 0.1 },
-  inspirationSub: { color: "rgba(255,255,255,0.55)", fontSize: 12 },
+  inspirationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+    padding: 20,
+    justifyContent: "flex-end" as const,
+    gap: 6,
+  },
+  inspirationTitle: { color: "#fff", fontSize: 16, letterSpacing: 0.1 },
+  inspirationSub: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
 
   topicsGrid: {
     flexDirection: "row" as const,

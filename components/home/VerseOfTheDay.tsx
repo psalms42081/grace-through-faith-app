@@ -1,17 +1,19 @@
 import React from "react";
-import { View, Text, StyleSheet, ImageBackground } from "react-native";
+import { View, Text, StyleSheet, ImageBackground, ImageSourcePropType } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface VerseOfTheDayProps {
   verse: { text: string; reference: string };
   bgImage: string;
+  bookImage?: ImageSourcePropType | null;
 }
 
-export default function VerseOfTheDay({ verse, bgImage }: VerseOfTheDayProps) {
+export default function VerseOfTheDay({ verse, bgImage, bookImage }: VerseOfTheDayProps) {
+  const imageSource = bookImage || { uri: bgImage };
   return (
     <View style={styles.verseCardWrap}>
       <ImageBackground
-        source={{ uri: bgImage }}
+        source={imageSource}
         style={styles.verseImageBg}
         imageStyle={styles.verseImageStyle}
         resizeMode="cover"

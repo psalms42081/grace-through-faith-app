@@ -79,6 +79,15 @@ export default function ConnectScreen() {
         <SectionHeaderShared title={t("connect.watchAndListen")} color={theme.text} />
 
         <ListItem
+          icon="mic"
+          iconColor="#C9933A"
+          title="SDA Speakers"
+          subtitle="Watch sermons from Adventist teachers"
+          onPress={() => router.push("/speakers" as any)}
+          style={{ marginBottom: 12 }}
+        />
+
+        <ListItem
           icon="tv"
           iconColor="#E8456B"
           title={t("connect.broadcasts")}

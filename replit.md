@@ -29,6 +29,8 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Contextual Tutorial System:** Full-screen walkthrough tutorials for major features.
 - **Supporter/Mission System:** Mission-driven donation model.
 - **Live Fellowship:** Community feature (formerly Small Groups) with structured group experience — Discussion, Prayer, Devotional, Study, and Live tabs. "Live Now" section surfaces active sessions at the top of the groups list. LiveKit Cloud powers real-time video/audio via WebView. Leaders can start sessions; members can join from the group's Live tab or the Live Now section.
+- **Bible Book Cover Art:** 66 AI-generated classical Renaissance-style paintings, one per Bible book (`assets/bible-books/`). Mapped via `constants/bible-books.ts` with `getBookImage(bookName)` lookup. Used in Verse of the Day, Beloved Passages carousel, and study cards.
+- **SDA Speakers Experience:** In-app browsing of 15 curated SDA speakers/ministries (`constants/sda-speakers.ts`). Speakers screen at `/speakers` with topic filtering. Speaker detail at `/speaker/[id]` with embedded YouTube playback via WebView. Replaces external YouTube link pattern. Accessed from Connect tab "Watch and Listen" section.
 - **Prophecy Explorer:** Interactive Daniel & Revelation study screen with a horizontal timeline.
 - **Spiritual Growth Map:** Visual spiritual journey screen tracking 5 dimensions with 4 levels each.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
