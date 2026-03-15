@@ -104,6 +104,7 @@ function RootLayoutNav() {
       <Stack.Screen name="sabbath-school-day" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school-discussion" options={{ headerShown: false }} />
       <Stack.Screen name="prophecy-explorer" options={{ headerShown: false }} />
+      <Stack.Screen name="prophecy-hub" options={{ headerShown: false }} />
       <Stack.Screen name="growth-map" options={{ headerShown: false }} />
       <Stack.Screen name="resources" options={{ headerShown: false }} />
       <Stack.Screen name="resource-detail" options={{ headerShown: false }} />

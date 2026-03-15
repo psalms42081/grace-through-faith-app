@@ -102,7 +102,7 @@ export default function SDAStudiesScreen() {
       />
 
       <Pressable
-        onPress={() => router.push("/study-paths" as any)}
+        onPress={() => router.push("/study-paths?filter=beliefs" as any)}
         style={({ pressed }) => [
           styles.deepDiveBanner,
           { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "25", opacity: pressed ? 0.85 : 1 },
@@ -113,10 +113,10 @@ export default function SDAStudiesScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.deepDiveTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            28 Beliefs Deep Dive
+            Deep Dive Study Path
           </Text>
           <Text style={[styles.deepDiveSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            A guided doctrinal learning path
+            Guided structured learning through the 28 doctrines
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={theme.accent} />

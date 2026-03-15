@@ -8,7 +8,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -53,7 +53,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   discipleship: "Discipleship",
 };
 
-const CATEGORY_ORDER = ["beliefs", "new-believer", "prophecy", "discipleship"];
+const CATEGORY_ORDER = ["new-believer", "discipleship", "beliefs", "prophecy"];
+
+const HUB_OWNED_CATEGORIES = new Set(["beliefs", "prophecy"]);
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: "#2E7D32",
@@ -78,10 +80,17 @@ function getIconName(icon: string): keyof typeof Ionicons.glyphMap {
   return map[icon] || "book";
 }
 
+const FILTER_TITLES: Record<string, string> = {
+  beliefs: "Adventist Beliefs Paths",
+  prophecy: "Prophecy Study Paths",
+};
+
 export default function StudyPathsScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const categoryFilter = params.filter || null;
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -117,10 +126,21 @@ export default function StudyPathsScreen() {
     groupedTracks.set(t.category, list);
   });
 
-  const sortedCategories = CATEGORY_ORDER.filter((c) => groupedTracks.has(c));
-  groupedTracks.forEach((_, key) => {
-    if (!sortedCategories.includes(key)) sortedCategories.push(key);
+  const visibleCategories = CATEGORY_ORDER.filter((c) => {
+    if (!groupedTracks.has(c)) return false;
+    if (categoryFilter) return c === categoryFilter;
+    return !HUB_OWNED_CATEGORIES.has(c);
   });
+  groupedTracks.forEach((_, key) => {
+    if (!visibleCategories.includes(key)) {
+      if (categoryFilter) {
+        if (key === categoryFilter) visibleCategories.push(key);
+      } else if (!HUB_OWNED_CATEGORIES.has(key)) {
+        visibleCategories.push(key);
+      }
+    }
+  });
+  const sortedCategories = visibleCategories;
 
   const handleEnroll = async (trackId: string) => {
     setEnrollingId(trackId);
@@ -138,42 +158,15 @@ export default function StudyPathsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Study Paths</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>
+          {categoryFilter && FILTER_TITLES[categoryFilter]
+            ? FILTER_TITLES[categoryFilter]
+            : "Study Paths"}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
       <StudyDepthSelector compact />
-
-      <Pressable
-        onPress={() => router.push("/great-controversy" as any)}
-        style={({ pressed }) => [
-          {
-            marginHorizontal: 20,
-            marginBottom: 16,
-            flexDirection: "row" as const,
-            alignItems: "center" as const,
-            gap: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            borderRadius: 14,
-            backgroundColor: "rgba(201, 147, 58, 0.08)",
-            borderWidth: 1,
-            borderColor: "rgba(201, 147, 58, 0.2)",
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
-      >
-        <Ionicons name="git-network" size={22} color="#C9933A" />
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
-            The Great Controversy Map
-          </Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
-            Trace the cosmic conflict from Creation to the New Earth
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-      </Pressable>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>

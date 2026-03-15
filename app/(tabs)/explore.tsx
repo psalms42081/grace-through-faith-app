@@ -43,13 +43,17 @@ function SectionLabel({ label, theme }: { label: string; theme: typeof Colors.da
   );
 }
 
+const HUB_OWNED_TRACK_CATEGORIES = new Set(["beliefs", "prophecy"]);
+
 function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
   const { userId } = useAuth();
   const { data: progressData } = useQuery<any[]>({
     queryKey: [`/api/tracks/progress?userId=${userId}`],
   });
 
-  const enrolled = progressData?.filter((p: any) => p.track) || [];
+  const enrolled = progressData?.filter(
+    (p: any) => p.track && !HUB_OWNED_TRACK_CATEGORIES.has(p.track?.category)
+  ) || [];
   if (enrolled.length === 0) return null;
 
   return (
@@ -318,23 +322,12 @@ export default function StudyScreen() {
 
           <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
 
-          <SectionLabel label="Prophecy & End Times" theme={theme} />
-
           <ListItem
             icon="telescope"
             iconColor="#C9933A"
-            title="Prophecy Explorer"
-            subtitle="Reference guide to Daniel & Revelation symbols and timelines"
-            onPress={() => router.push("/prophecy-explorer" as any)}
-            style={{ marginBottom: 8 }}
-          />
-
-          <ListItem
-            icon="git-merge"
-            iconColor="#8B5CF6"
-            title="Great Controversy Timeline"
-            subtitle="Narrative guide from Creation to the New Earth"
-            onPress={() => router.push("/great-controversy" as any)}
+            title="Prophecy & End Times"
+            subtitle="Daniel, Revelation, Great Controversy & guided prophecy study"
+            onPress={() => router.push("/prophecy-hub" as any)}
             style={{ marginBottom: 8 }}
           />
 
