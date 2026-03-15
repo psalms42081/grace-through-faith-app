@@ -101,6 +101,27 @@ export default function SDAStudiesScreen() {
         testID="sda-back"
       />
 
+      <Pressable
+        onPress={() => router.push("/study-paths" as any)}
+        style={({ pressed }) => [
+          styles.deepDiveBanner,
+          { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "25", opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        <View style={[styles.deepDiveIcon, { backgroundColor: theme.accent + "14" }]}>
+          <Ionicons name="school" size={18} color={theme.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.deepDiveTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            28 Beliefs Deep Dive
+          </Text>
+          <Text style={[styles.deepDiveSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            A guided doctrinal learning path
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.accent} />
+      </Pressable>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -295,4 +316,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   egwButtonText: { flex: 1, fontSize: 13 },
+  deepDiveBanner: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  deepDiveIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  deepDiveTitle: { fontSize: 14 },
+  deepDiveSub: { fontSize: 12, marginTop: 1 },
 });

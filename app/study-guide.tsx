@@ -16,7 +16,7 @@ import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -269,120 +269,231 @@ export default function StudyGuideScreen() {
     enabled: !hasVerseParams,
   });
 
+  const { data: allBooks } = useQuery<{ id: number; name: string; abbreviation: string; testament: string; chapterCount: number }[]>({
+    queryKey: ["/api/books"],
+    enabled: !hasVerseParams,
+  });
+
+  const [pickerStep, setPickerStep] = useState<"book" | "chapter">("book");
+  const [pickerBook, setPickerBook] = useState<{ id: number; name: string; chapterCount: number } | null>(null);
+  const [launchingPassage, setLaunchingPassage] = useState(false);
+
+  const handlePickChapter = async (chapterNum: number) => {
+    if (!pickerBook || launchingPassage) return;
+    setLaunchingPassage(true);
+    try {
+      const url = new URL("/api/passage", getApiUrl());
+      url.searchParams.set("book", String(pickerBook.id));
+      url.searchParams.set("chapter", String(chapterNum));
+      const res = await fetch(url.toString());
+      const data = await res.json();
+      const firstVerse = data.verses?.[0];
+      const verseText = firstVerse?.text || data.verses?.map((v: any) => v.text).join(" ").slice(0, 200) || "";
+      const verseReference = `${pickerBook.name} ${chapterNum}:1`;
+      router.replace({
+        pathname: "/study-guide" as any,
+        params: {
+          verseReference,
+          verseText: verseText.slice(0, 300),
+          bookName: pickerBook.name,
+          chapter: String(chapterNum),
+          verse: "1",
+        },
+      });
+    } catch {
+      setLaunchingPassage(false);
+    }
+  };
+
   if (!hasVerseParams) {
     const activeSessions = (recentSessions || []).filter((s: any) => !s.completedAt);
     const completedSessions = (recentSessions || []).filter((s: any) => !!s.completedAt);
+
+    const otBooks = allBooks?.filter((b) => b.testament === "OT") ?? [];
+    const ntBooks = allBooks?.filter((b) => b.testament === "NT") ?? [];
 
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => {
+            if (pickerStep === "chapter") { setPickerStep("book"); setPickerBook(null); }
+            else router.back();
+          }} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={theme.text} />
           </Pressable>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Study Guide
+              Guided Study
             </Text>
+            {pickerStep === "chapter" && pickerBook && (
+              <Text style={[styles.headerSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {pickerBook.name}
+              </Text>
+            )}
           </View>
           <View style={{ width: 34 }} />
         </View>
 
         <ScrollView contentContainerStyle={[styles.hubContent, { paddingBottom: bottomPadding + 40 }]} showsVerticalScrollIndicator={false}>
-          <View style={[styles.hubPromptCard, { backgroundColor: theme.backgroundCard }]}>
-            <Ionicons name="book-outline" size={32} color={theme.accent} />
-            <Text style={[styles.hubPromptTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-              Start a New Study
-            </Text>
-            <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Open a passage in the Bible reader, select a verse, and choose "Study Guide" to begin an inductive study session.
-            </Text>
-            <Pressable
-              style={[styles.hubOpenReaderBtn, { backgroundColor: theme.accent }]}
-              onPress={() => router.push("/(tabs)/read" as any)}
-            >
-              <Ionicons name="book" size={16} color="#fff" />
-              <Text style={[styles.hubOpenReaderText, { fontFamily: "Inter_600SemiBold" }]}>Open Bible Reader</Text>
-            </Pressable>
-          </View>
-
-          {sessionsLoading && (
-            <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 24 }} />
-          )}
-
-          {activeSessions.length > 0 && (
-            <View style={styles.hubSection}>
-              <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Active Sessions
+          {pickerStep === "chapter" && pickerBook ? (
+            <View>
+              <Text style={[styles.hubPromptTitle, { color: theme.text, fontFamily: "Lora_600SemiBold", textAlign: "center", marginBottom: 4 }]}>
+                Choose a Chapter
               </Text>
-              {activeSessions.map((s: any) => (
-                <Pressable
-                  key={s.id}
-                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#C9933A" }]}
-                  onPress={() => router.push({
-                    pathname: "/study-guide" as any,
-                    params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
-                  })}
-                >
-                  <View style={styles.hubSessionTop}>
-                    <Text style={[styles.hubSessionRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {s.verseReference}
-                    </Text>
-                    <View style={[styles.hubPhaseBadge, { backgroundColor: "#C9933A20" }]}>
-                      <Text style={[styles.hubPhaseText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
-                        Continue
+              <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 16 }]}>
+                Your AI tutor will guide you through this passage
+              </Text>
+              {launchingPassage ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={theme.accent} />
+                  <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Preparing your guided study...
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.chapterGrid}>
+                  {Array.from({ length: pickerBook.chapterCount }, (_, i) => i + 1).map((ch) => (
+                    <Pressable
+                      key={ch}
+                      onPress={() => handlePickChapter(ch)}
+                      style={({ pressed }) => [
+                        styles.chapterCell,
+                        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{ch}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+          ) : (
+            <>
+              <View style={[styles.hubPromptCard, { backgroundColor: theme.backgroundCard }]}>
+                <Ionicons name="chatbubbles-outline" size={32} color={theme.accent} />
+                <Text style={[styles.hubPromptTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  Start a Guided Study
+                </Text>
+                <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Choose a passage and your AI tutor will walk you through observation, meaning, and response.
+                </Text>
+              </View>
+
+              <View style={styles.hubSection}>
+                <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  New Testament
+                </Text>
+                <View style={styles.bookGrid}>
+                  {ntBooks.map((b) => (
+                    <Pressable
+                      key={b.id}
+                      onPress={() => { setPickerBook(b); setPickerStep("chapter"); }}
+                      style={({ pressed }) => [
+                        styles.bookChip,
+                        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.bookChipText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {b.abbreviation}
                       </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
-                    "{s.verseText}"
-                  </Text>
-                  <Text style={[styles.hubSessionPhaseLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Phase: {s.phase}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
-          {completedSessions.length > 0 && (
-            <View style={styles.hubSection}>
-              <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Completed Studies
-              </Text>
-              {completedSessions.slice(0, 10).map((s: any) => (
-                <Pressable
-                  key={s.id}
-                  style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#2E7D32" }]}
-                  onPress={() => router.push({
-                    pathname: "/study-guide" as any,
-                    params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
-                  })}
-                >
-                  <View style={styles.hubSessionTop}>
-                    <Text style={[styles.hubSessionRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                      {s.verseReference}
-                    </Text>
-                    <View style={styles.hubCompletedBadge}>
-                      <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-                      <Text style={[styles.hubCompletedText, { fontFamily: "Inter_600SemiBold" }]}>Completed</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
-                    "{s.verseText}"
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+              <View style={styles.hubSection}>
+                <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  Old Testament
+                </Text>
+                <View style={styles.bookGrid}>
+                  {otBooks.map((b) => (
+                    <Pressable
+                      key={b.id}
+                      onPress={() => { setPickerBook(b); setPickerStep("chapter"); }}
+                      style={({ pressed }) => [
+                        styles.bookChip,
+                        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.bookChipText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                        {b.abbreviation}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
-          {!sessionsLoading && activeSessions.length === 0 && completedSessions.length === 0 && (
-            <View style={styles.hubEmptyState}>
-              <Ionicons name="chatbubbles-outline" size={40} color={theme.textMuted} />
-              <Text style={[styles.hubEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No study sessions yet. Open a passage to begin your first inductive Bible study.
-              </Text>
-            </View>
+              {sessionsLoading && (
+                <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 24 }} />
+              )}
+
+              {activeSessions.length > 0 && (
+                <View style={styles.hubSection}>
+                  <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    Active Sessions
+                  </Text>
+                  {activeSessions.map((s: any) => (
+                    <Pressable
+                      key={s.id}
+                      style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#C9933A" }]}
+                      onPress={() => router.push({
+                        pathname: "/study-guide" as any,
+                        params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                      })}
+                    >
+                      <View style={styles.hubSessionTop}>
+                        <Text style={[styles.hubSessionRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          {s.verseReference}
+                        </Text>
+                        <View style={[styles.hubPhaseBadge, { backgroundColor: "#C9933A20" }]}>
+                          <Text style={[styles.hubPhaseText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                            Continue
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
+                        "{s.verseText}"
+                      </Text>
+                      <Text style={[styles.hubSessionPhaseLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        Phase: {s.phase}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {completedSessions.length > 0 && (
+                <View style={styles.hubSection}>
+                  <Text style={[styles.hubSectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    Completed Studies
+                  </Text>
+                  {completedSessions.slice(0, 10).map((s: any) => (
+                    <Pressable
+                      key={s.id}
+                      style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#2E7D32" }]}
+                      onPress={() => router.push({
+                        pathname: "/study-guide" as any,
+                        params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                      })}
+                    >
+                      <View style={styles.hubSessionTop}>
+                        <Text style={[styles.hubSessionRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                          {s.verseReference}
+                        </Text>
+                        <View style={styles.hubCompletedBadge}>
+                          <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                          <Text style={[styles.hubCompletedText, { fontFamily: "Inter_600SemiBold" }]}>Completed</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.hubSessionVerse, { color: theme.textSecondary, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
+                        "{s.verseText}"
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -1005,5 +1116,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center" as const,
+  },
+  bookGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 8,
+  },
+  bookChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 52,
+    alignItems: "center" as const,
+  },
+  bookChipText: {
+    fontSize: 13,
+  },
+  chapterGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 10,
+    justifyContent: "center" as const,
+  },
+  chapterCell: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  chapterNum: {
+    fontSize: 16,
   },
 });

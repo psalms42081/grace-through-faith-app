@@ -299,15 +299,6 @@ export default function StudyScreen() {
           />
 
           <ListItem
-            icon="school"
-            iconColor="#7C3AED"
-            title="28 Beliefs Deep Dive"
-            subtitle="A guided doctrinal learning path"
-            onPress={() => router.push("/study-paths" as any)}
-            style={{ marginBottom: 8 }}
-          />
-
-          <ListItem
             icon="flame"
             iconColor="#C9933A"
             title="Devotional Plans"
@@ -363,8 +354,8 @@ export default function StudyScreen() {
           <ListItem
             icon="book"
             iconColor="#7C3AED"
-            title="Fundamental Beliefs Library"
-            subtitle="Browse all 28 Adventist doctrines"
+            title="Fundamental Beliefs"
+            subtitle="Browse and study all 28 Adventist doctrines"
             onPress={() => router.push("/sda-studies" as any)}
             style={{ marginBottom: 8 }}
           />
