@@ -239,7 +239,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Daniel 2:34-35, 44-45",
         keyVerse: "\"The God of heaven shall set up a kingdom, which shall never be destroyed.\" \u2014 Daniel 2:44",
         interpretation: "God's Eternal Kingdom \u2014 the stone cut without hands represents Christ's coming kingdom that will destroy all earthly powers and fill the whole earth forever.",
-        historicalFulfillment: "Yet future. Adventists understand this as the Second Coming of Christ, when God will establish His eternal kingdom that shall never be destroyed.",
+        historicalFulfillment: "Yet future. This points to the Second Coming of Christ, when God will establish His eternal kingdom that shall never be destroyed.",
         icon: "diamond-outline",
         color: "#22C55E",
         observation: {
@@ -262,7 +262,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         },
         adventistConclusion: {
           summary: "The stone represents the kingdom of God, established at the Second Coming of Christ.",
-          whyThisFits: "Adventists emphasize the timing clue: the stone strikes the feet (the divided-nations era), which means it has not yet come. It cannot refer to Christ's first coming (during the legs/Rome era) or to the church gradually transforming the world (the stone destroys instantly, not gradually). The 'without hands' detail means it is entirely God's doing, not a human political movement.",
+          whyThisFits: "The timing clue is crucial: the stone strikes the feet (the divided-nations era), which means it has not yet come. It cannot refer to Christ's first coming (during the legs/Rome era) or to the church gradually transforming the world (the stone destroys instantly, not gradually). The 'without hands' detail means it is entirely God's doing, not a human political movement.",
         },
         reflection: "The prophecy traces a sequence from Babylon to your own time period \u2014 the divided nations. The next event is the stone. If the prophecy has been accurate through five stages of history, what does that suggest about the sixth?",
       },
@@ -325,7 +325,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Daniel 7:8, 24-25",
         keyVerse: "\"He shall speak great words against the most High, and shall wear out the saints.\" \u2014 Daniel 7:25",
         interpretation: "Papal Rome \u2014 arose among the ten horns, uprooted three, spoke 'great words against the Most High,' persecuted saints, and attempted to change God's times and law. Ruled for 'a time, times, and half a time' (1,260 years).",
-        historicalFulfillment: "Adventists identify this as the Papacy, which rose to political power after Rome's fall, persecuted dissenters during the medieval period, and exercised dominion from AD 538 to 1798.",
+        historicalFulfillment: "This power is identified as the Papacy, which rose to political power after Rome's fall, persecuted dissenters during the medieval period, and exercised dominion from AD 538 to 1798.",
         dateRange: "AD 538\u20131798",
         icon: "megaphone-outline",
         color: "#9333EA",
@@ -336,7 +336,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Daniel 7:9-10, 26-27",
         keyVerse: "\"The judgment was set, and the books were opened.\" \u2014 Daniel 7:10",
         interpretation: "The Pre-Advent Investigative Judgment \u2014 the Ancient of Days takes His seat, the books are opened. This judgment precedes Christ's return and vindicates God's people.",
-        historicalFulfillment: "Adventists believe this judgment began in 1844, corresponding to the cleansing of the sanctuary in Daniel 8:14, and continues until Christ's return.",
+        historicalFulfillment: "This judgment began in 1844, corresponding to the cleansing of the sanctuary in Daniel 8:14, and continues until Christ's return.",
         dateRange: "1844\u2013Present",
         icon: "scale-outline",
         color: "#C9933A",
@@ -399,7 +399,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Daniel 8:14",
         keyVerse: "\"Unto two thousand and three hundred days; then shall the sanctuary be cleansed.\" \u2014 Daniel 8:14",
         interpretation: "2,300 prophetic days (literal years) from 457 BC to 1844. 'Then shall the sanctuary be cleansed.' This marks the beginning of the pre-advent judgment in the heavenly sanctuary.",
-        historicalFulfillment: "Using the year-day principle, 2,300 years from 457 BC reaches 1844. Adventists understand this as the beginning of Christ's final ministry in the Most Holy Place of the heavenly sanctuary.",
+        historicalFulfillment: "Using the year-day principle, 2,300 years from 457 BC reaches 1844. This marks the beginning of Christ's final ministry in the Most Holy Place of the heavenly sanctuary.",
         dateRange: "457 BC\u2013AD 1844",
         icon: "hourglass-outline",
         color: "#C9933A",
@@ -410,7 +410,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Daniel 8:14; Hebrews 8:1-2; 9:23",
         keyVerse: "\"We have such an high priest, who is set on the right hand of the throne of the Majesty in the heavens.\" \u2014 Hebrews 8:1",
         interpretation: "The cleansing of the heavenly sanctuary corresponds to the Day of Atonement (Leviticus 16). Christ, our High Priest, entered the Most Holy Place to conduct the investigative judgment.",
-        historicalFulfillment: "Since 1844, Adventists believe Christ has been conducting the pre-advent judgment, reviewing the records of all who have professed faith, before His return.",
+        historicalFulfillment: "Since 1844, Christ has been conducting the pre-advent judgment, reviewing the records of all who have professed faith, before His return.",
         dateRange: "1844\u2013Present",
         icon: "home-outline",
         color: "#7C3AED",
@@ -462,8 +462,8 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         title: "Three Angels' Messages",
         bibleRef: "Revelation 14:6-12",
         keyVerse: "\"Fear God, and give glory to him; for the hour of his judgment is come.\" \u2014 Revelation 14:7",
-        interpretation: "God's final message to the world before Christ's return. The first angel calls to worship the Creator. The second announces Babylon's fall. The third warns against receiving the mark of the beast. These messages define the Adventist mission.",
-        historicalFulfillment: "Adventists believe these messages began going to the world in the 1840s and continue to the present, forming the core of Adventist identity and mission to prepare a people for Christ's return.",
+        interpretation: "God's final message to the world before Christ's return. The first angel calls to worship the Creator. The second announces Babylon's fall. The third warns against receiving the mark of the beast. These messages define the mission of the remnant church.",
+        historicalFulfillment: "These messages began going to the world in the 1840s and continue to the present, forming the heart of the remnant church's mission to prepare a people for Christ's return.",
         dateRange: "1844\u2013Second Coming",
         icon: "paper-plane-outline",
         color: "#C9933A",
@@ -484,7 +484,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         title: "The Little Horn / Antichrist",
         bibleRef: "Revelation 13:1-10; Daniel 7:8, 25; 2 Thessalonians 2:3-4",
         keyVerse: "\"Who opposeth and exalteth himself above all that is called God.\" \u2014 2 Thessalonians 2:4",
-        interpretation: "The sea beast of Revelation 13 parallels Daniel 7's Little Horn \u2014 a religio-political power that received authority from pagan Rome, ruled for 42 prophetic months (1,260 years), persecuted God's faithful, and demanded worship. Adventists identify this as the papal system, not individual Catholics.",
+        interpretation: "The sea beast of Revelation 13 parallels Daniel 7's Little Horn \u2014 a religio-political power that received authority from pagan Rome, ruled for 42 prophetic months (1,260 years), persecuted God's faithful, and demanded worship. This identifies the papal system as a power structure, not individual Catholics.",
         historicalFulfillment: "The Papacy rose to political supremacy by AD 538 and exercised civil-religious authority until 1798, when Napoleon's general Berthier took Pope Pius VI captive \u2014 the 'deadly wound' of Revelation 13:3.",
         dateRange: "AD 538\u20131798",
         icon: "warning-outline",
@@ -495,8 +495,8 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         title: "The Mark of the Beast",
         bibleRef: "Revelation 13:16-17; 14:9-12",
         keyVerse: "\"Here is the patience of the saints: here are they that keep the commandments of God, and the faith of Jesus.\" \u2014 Revelation 14:12",
-        interpretation: "The mark of the beast represents enforced false worship in opposition to God's commandments. Adventists understand the seal of God as Sabbath observance (Exodus 31:13, 17) and the mark as a future enforced counterfeit day of worship. This becomes a test of loyalty in the final crisis.",
-        historicalFulfillment: "Not yet fully realized. Adventists see the groundwork being laid as religious liberty erodes globally. The mark will be enforced when civil-religious legislation compels worship contrary to God's law.",
+        interpretation: "The mark of the beast represents enforced false worship in opposition to God's commandments. The seal of God is Sabbath observance (Exodus 31:13, 17) and the mark is a future enforced counterfeit day of worship. This becomes a test of loyalty in the final crisis.",
+        historicalFulfillment: "Not yet fully realized. The groundwork for these events is being laid as religious liberty erodes globally. The mark will be enforced when civil-religious legislation compels worship contrary to God's law.",
         dateRange: "End Times",
         icon: "alert-circle-outline",
         color: "#F59E0B",
@@ -507,7 +507,7 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
         bibleRef: "Revelation 19:11-16; 1 Thessalonians 4:16-17; Matthew 24:30-31",
         keyVerse: "\"Behold, he cometh with clouds; and every eye shall see him.\" \u2014 Revelation 1:7",
         interpretation: "The literal, visible, audible, glorious return of Jesus Christ. Not secret, not spiritual \u2014 every eye will see Him. The righteous dead are resurrected, the living righteous are translated, and together they meet the Lord in the air. This is the 'blessed hope' of the church.",
-        historicalFulfillment: "Yet future. Adventists believe this event is imminent but reject date-setting. The signs of the times (Matthew 24, Revelation 6) confirm we are living in the last days.",
+        historicalFulfillment: "Yet future. This event is imminent, though Scripture forbids date-setting. The signs of the times (Matthew 24, Revelation 6) confirm we are living in the last days.",
         dateRange: "Future",
         icon: "sunny-outline",
         color: "#22C55E",
@@ -1370,15 +1370,15 @@ export default function ProphecyExplorerScreen() {
         <View style={styles.introBlock}>
           <Text style={[styles.introText, { color: theme.textSecondary }]}>
             Explore the great prophetic timelines of Daniel and Revelation. Each
-            symbol is identified by Scripture, interpreted through Adventist
-            theology, and connected to its historical fulfillment.
+            symbol is identified by Scripture, interpreted through the
+            historicist method, and connected to its historical fulfillment.
           </Text>
         </View>
 
         <View style={[styles.methodBadge, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
           <Ionicons name="school-outline" size={14} color="#C9933A" />
           <Text style={[styles.methodText, { color: "#C9933A" }]}>
-            Historicist interpretation used by Seventh-day Adventists
+            Historicist interpretation of Bible prophecy
           </Text>
         </View>
 
@@ -1406,7 +1406,7 @@ export default function ProphecyExplorerScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.introCardTitle, { color: theme.text }]}>Historicist Method</Text>
               <Text style={[styles.introCardDesc, { color: theme.textSecondary }]}>
-                Adventists interpret prophecy as a continuous unfolding through history, from ancient empires to the present day. This approach connects biblical visions to real, verifiable historical events.
+                Prophecy unfolds continuously through history, from ancient empires to the present day. This approach connects biblical visions to real, verifiable historical events.
               </Text>
             </View>
           </View>
