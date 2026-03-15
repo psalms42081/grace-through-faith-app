@@ -84,6 +84,7 @@ export default function TodaysPath({
     {
       icon: "hand-left-outline",
       label: "Pray",
+      subtitle: "Respond in prayer",
       completed: prayerDone,
       onPress: () => router.push("/prayer-journal"),
     },
@@ -156,29 +157,29 @@ export default function TodaysPath({
 
 const s = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 20,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 11,
     gap: 12,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
   },
