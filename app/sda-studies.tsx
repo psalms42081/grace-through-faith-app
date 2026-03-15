@@ -116,7 +116,7 @@ export default function SDAStudiesScreen() {
             Deep Dive Study Path
           </Text>
           <Text style={[styles.deepDiveSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Guided structured learning through the 28 doctrines
+            A guided path through all 28 doctrines, week by week
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={theme.accent} />

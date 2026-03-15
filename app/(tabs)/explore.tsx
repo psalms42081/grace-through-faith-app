@@ -230,7 +230,7 @@ export default function StudyScreen() {
               icon="chatbubbles-outline"
               iconColor="#8B5CF6"
               title="Guided Study"
-              subtitle="An AI tutor walks with you through observation, meaning, and response"
+              subtitle="Choose a passage, then study it with an AI tutor"
               onPress={() => router.push("/study-guide" as any)}
               theme={theme}
               isDark={isDark}
@@ -306,7 +306,7 @@ export default function StudyScreen() {
             icon="flame"
             iconColor="#C9933A"
             title="Devotional Plans"
-            subtitle="Guided daily reading and SDA study plans"
+            subtitle="Daily reading plans for spiritual growth"
             onPress={() => router.push("/devotionals" as any)}
             style={{ marginBottom: 8 }}
           />
@@ -315,7 +315,7 @@ export default function StudyScreen() {
             icon="library"
             iconColor="#1A237E"
             title="Study Resources"
-            subtitle="Sabbath School companions, topical studies, family worship"
+            subtitle="Sabbath School companions, topical studies & family worship"
             onPress={() => router.push("/resources" as any)}
             style={{ marginBottom: 8 }}
           />
@@ -326,7 +326,7 @@ export default function StudyScreen() {
             icon="telescope"
             iconColor="#C9933A"
             title="Prophecy & End Times"
-            subtitle="Daniel, Revelation, Great Controversy & guided prophecy study"
+            subtitle="Explore Daniel, Revelation & the Great Controversy"
             onPress={() => router.push("/prophecy-hub" as any)}
             style={{ marginBottom: 8 }}
           />
@@ -348,7 +348,7 @@ export default function StudyScreen() {
             icon="book"
             iconColor="#7C3AED"
             title="Fundamental Beliefs"
-            subtitle="Browse and study all 28 Adventist doctrines"
+            subtitle="Browse and study the 28 Fundamental Beliefs"
             onPress={() => router.push("/sda-studies" as any)}
             style={{ marginBottom: 8 }}
           />

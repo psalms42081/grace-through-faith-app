@@ -32,7 +32,7 @@ const PROPHECY_MODES: HubCard[] = [
     title: "Prophecy Explorer",
     subtitle: "Reference",
     description:
-      "Study Daniel & Revelation symbols, beasts, kingdoms, and prophetic timelines with Adventist interpretation",
+      "A visual reference guide to Daniel and Revelation -- symbols, timelines, and historical fulfillment",
     route: "/prophecy-explorer",
   },
   {
@@ -42,7 +42,7 @@ const PROPHECY_MODES: HubCard[] = [
     title: "Guided Prophecy Study",
     subtitle: "Learning Path",
     description:
-      "A structured study path through Daniel and end-times prophecy with lesson-by-lesson progression",
+      "Step-by-step lessons through Daniel and end-times prophecy, with guided progression",
     route: "/study-paths?filter=prophecy",
   },
   {
