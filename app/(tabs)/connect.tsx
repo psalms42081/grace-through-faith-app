@@ -53,7 +53,7 @@ export default function ConnectScreen() {
           title={t("connect.churchConnect")}
           subtitle={t("connect.churchConnectSub")}
           onPress={() => router.push("/church-connect" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
 
         <ListItem
@@ -62,7 +62,7 @@ export default function ConnectScreen() {
           title={t("connect.smallGroups")}
           subtitle={t("connect.smallGroupsSub")}
           onPress={() => router.push("/groups" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
 
         <ListItem
@@ -71,7 +71,7 @@ export default function ConnectScreen() {
           title={t("connect.familyDashboard")}
           subtitle={t("connect.familyDashboardSub")}
           onPress={() => router.push("/(tabs)/family" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
 
         <SectionDivider theme={theme} />
@@ -84,7 +84,7 @@ export default function ConnectScreen() {
           title={t("connect.broadcasts")}
           subtitle={t("connect.broadcastsSub")}
           onPress={() => router.push("/broadcasts" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
 
         <ListItem
@@ -93,7 +93,7 @@ export default function ConnectScreen() {
           title="Christian Radio"
           subtitle="Live Adventist & gospel streams"
           onPress={() => router.push("/music" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
 
         <ListItem
@@ -102,7 +102,7 @@ export default function ConnectScreen() {
           title={t("connect.liveStreams")}
           subtitle={t("connect.liveStreamsSub")}
           onPress={() => router.push("/groups" as any)}
-          style={{ marginBottom: 10 }}
+          style={{ marginBottom: 12 }}
         />
       </ScrollView>
     </View>
@@ -112,20 +112,21 @@ export default function ConnectScreen() {
 const st = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 22,
-    paddingBottom: 14,
+    paddingHorizontal: 24,
+    paddingBottom: 18,
   },
-  title: { fontSize: 24 },
+  title: { fontSize: 28, letterSpacing: -0.3 },
   scrollView: { flex: 1 },
-  content: { paddingHorizontal: 22 },
+  content: { paddingHorizontal: 24 },
   tabPurpose: {
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
+    lineHeight: 21,
+    marginBottom: 24,
+    opacity: 0.85,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginVertical: 24,
-    opacity: 0.6,
+    marginVertical: 30,
+    opacity: 0.4,
   },
 });

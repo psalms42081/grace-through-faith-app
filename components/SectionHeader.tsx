@@ -19,9 +19,10 @@ export default function SectionHeader({ title, color, fontFamily = "Lora_700Bold
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
+    letterSpacing: 0.15,
   },
 });

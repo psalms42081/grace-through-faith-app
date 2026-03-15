@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
   },
   backBtn: {
     width: 36,
@@ -67,12 +67,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: "Lora_700Bold",
-    fontSize: 18,
+    fontSize: 19,
+    letterSpacing: -0.1,
   },
   headerSubtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
+    opacity: 0.8,
   },
   spacer: {
     width: 36,

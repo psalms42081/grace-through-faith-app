@@ -85,26 +85,27 @@ const s = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
+    padding: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 14,
+    gap: 16,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
   },
   textWrap: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
   },
   subtitle: {
     fontSize: 13,
+    lineHeight: 19,
   },
 });

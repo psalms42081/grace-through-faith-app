@@ -299,7 +299,7 @@ export default function StudyScreen() {
             title="Study Paths"
             subtitle="Structured paths through Scripture"
             onPress={() => router.push("/study-paths" as any)}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <ListItem
@@ -308,7 +308,7 @@ export default function StudyScreen() {
             title="Devotional Plans"
             subtitle="Daily reading plans for spiritual growth"
             onPress={() => router.push("/devotionals" as any)}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <ListItem
@@ -317,7 +317,7 @@ export default function StudyScreen() {
             title="Study Resources"
             subtitle="Sabbath School companions, topical studies & family worship"
             onPress={() => router.push("/resources" as any)}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
@@ -328,7 +328,7 @@ export default function StudyScreen() {
             title="Prophecy & End Times"
             subtitle="Explore Daniel, Revelation & the Great Controversy"
             onPress={() => router.push("/prophecy-hub" as any)}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
@@ -341,7 +341,7 @@ export default function StudyScreen() {
             title="Historic Voices"
             subtitle="Commentary from Matthew Henry, Adam Clarke, John Gill & more"
             onPress={() => router.push("/(tabs)/study?tab=voices")}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <ListItem
@@ -350,7 +350,7 @@ export default function StudyScreen() {
             title="Fundamental Beliefs"
             subtitle="Browse and study the 28 Fundamental Beliefs"
             onPress={() => router.push("/sda-studies" as any)}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <ListItem
@@ -359,7 +359,7 @@ export default function StudyScreen() {
             title="Bible Maps & Timeline"
             subtitle="Ancient locations and biblical history"
             onPress={() => router.push("/maps-timeline?tab=maps")}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 10 }}
           />
 
           <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
@@ -420,38 +420,38 @@ export default function StudyScreen() {
 const st = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 22,
-    paddingBottom: 18,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
   },
-  title: { fontSize: 24 },
-  subtitle: { fontSize: 14, marginTop: 4, lineHeight: 20 },
+  title: { fontSize: 28, letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, marginTop: 6, lineHeight: 21, opacity: 0.85 },
   scrollView: { flex: 1 },
-  content: { paddingHorizontal: 22 },
+  content: { paddingHorizontal: 24 },
 
   heroSection: {
-    marginBottom: 8,
+    marginBottom: 10,
   },
   heroSectionTitle: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-    marginBottom: 14,
+    fontSize: 10.5,
+    letterSpacing: 1.6,
+    marginBottom: 16,
     paddingLeft: 2,
   },
   heroCards: {
-    gap: 12,
+    gap: 14,
   },
   heroCard: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    padding: 18,
-    borderRadius: 18,
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
-    gap: 14,
+    gap: 16,
   },
   heroIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
@@ -460,68 +460,68 @@ const st = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-    marginBottom: 3,
+    marginBottom: 5,
   },
-  heroTitle: { fontSize: 17 },
+  heroTitle: { fontSize: 17, letterSpacing: 0.1 },
   heroBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 7,
   },
-  heroBadgeText: { fontSize: 10 },
-  heroSub: { fontSize: 13, lineHeight: 18 },
+  heroBadgeText: { fontSize: 10, letterSpacing: 0.3 },
+  heroSub: { fontSize: 13, lineHeight: 19 },
 
-  sectionSpacer: { height: 20 },
+  sectionSpacer: { height: 28 },
 
   sectionHeader: {
-    marginBottom: 12,
+    marginBottom: 14,
     paddingLeft: 2,
   },
   sectionLabel: {
-    fontSize: 13,
-    letterSpacing: 0.3,
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
 
   resumeCard: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 12,
-    borderRadius: 14,
-    padding: 14,
+    gap: 14,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   resumeIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
-  resumeTitle: { fontSize: 14, marginBottom: 2 },
-  resumeSub: { fontSize: 12 },
+  resumeTitle: { fontSize: 15, marginBottom: 3 },
+  resumeSub: { fontSize: 12, lineHeight: 17 },
 
   secondaryZone: {
-    marginTop: 12,
+    marginTop: 16,
   },
   secondaryDivider: {
     height: StyleSheet.hairlineWidth,
-    marginVertical: 22,
-    opacity: 0.5,
+    marginVertical: 28,
+    opacity: 0.4,
   },
 
   enrolledCard: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-    marginBottom: 6,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    marginBottom: 8,
   },
   enrolledIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
@@ -544,17 +544,17 @@ const st = StyleSheet.create({
   enrolledPercent: { fontSize: 11 },
 
   inspirationScroll: {
-    gap: 12,
+    gap: 14,
     paddingBottom: 4,
   },
   inspirationCard: {
-    width: 180,
-    borderRadius: 18,
-    padding: 18,
-    gap: 8,
+    width: 190,
+    borderRadius: 20,
+    padding: 20,
+    gap: 10,
   },
-  inspirationTitle: { color: "#fff", fontSize: 15 },
-  inspirationSub: { color: "rgba(255,255,255,0.6)", fontSize: 12 },
+  inspirationTitle: { color: "#fff", fontSize: 15, letterSpacing: 0.1 },
+  inspirationSub: { color: "rgba(255,255,255,0.55)", fontSize: 12 },
 
   topicsGrid: {
     flexDirection: "row" as const,
@@ -574,5 +574,5 @@ const st = StyleSheet.create({
     minHeight: 90,
     justifyContent: "center" as const,
   },
-  topicTitle: { color: "#fff", fontSize: 13 },
+  topicTitle: { color: "#fff", fontSize: 13, letterSpacing: 0.2 },
 });

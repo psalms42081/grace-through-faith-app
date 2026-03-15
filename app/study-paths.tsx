@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 16,
     gap: 8,
   },
   backBtn: {
@@ -358,6 +358,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 20,
     fontFamily: "Lora_700Bold",
+    letterSpacing: -0.1,
   },
   loadingContainer: {
     flex: 1,
@@ -365,28 +366,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scrollView: { flex: 1 },
-  content: { paddingHorizontal: 20 },
+  content: { paddingHorizontal: 22 },
   categorySection: {
-    marginBottom: 28,
+    marginBottom: 34,
   },
   categoryTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "Lora_700Bold",
-    marginBottom: 14,
+    marginBottom: 16,
+    letterSpacing: 0.1,
   },
   trackCard: {
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 14,
   },
   trackRow: {
     flexDirection: "row",
-    gap: 14,
+    gap: 16,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -396,24 +398,25 @@ const styles = StyleSheet.create({
   trackTitle: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    marginBottom: 3,
+    marginBottom: 4,
+    letterSpacing: 0.1,
   },
   trackDesc: {
     fontSize: 13,
     lineHeight: 19,
     fontFamily: "Inter_400Regular",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   trackMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     flexWrap: "wrap",
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
   },
   metaText: {
     fontSize: 12,
@@ -421,7 +424,7 @@ const styles = StyleSheet.create({
   },
   difficultyBadge: {
     borderRadius: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 3,
   },
   difficultyText: {
