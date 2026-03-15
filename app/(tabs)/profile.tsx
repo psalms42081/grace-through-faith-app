@@ -396,6 +396,7 @@ export default function ProfileScreen() {
             { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
           { title: t("profile.howItWorks"), icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
+          { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
         ].map((link) => (
           <ListItem
             key={link.route}

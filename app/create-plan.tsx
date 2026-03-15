@@ -254,6 +254,9 @@ export default function CreatePlanScreen() {
           <Text style={[styles.heroSub, { fontFamily: "Inter_400Regular" }]}>
             Enter a topic and let AI create a personalized Bible reading plan just for you.
           </Text>
+          <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", fontFamily: "Inter_400Regular", marginTop: 4 }}>
+            AI-generated content -- always compare with Scripture
+          </Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>

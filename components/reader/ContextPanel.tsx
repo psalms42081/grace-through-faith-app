@@ -118,6 +118,10 @@ export default function ContextPanel({
         <Text style={[contextStyles.panelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Chapter Insights
         </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 3, position: "absolute", top: 18, right: 40 }}>
+          <Ionicons name="sparkles" size={9} color={theme.accent} />
+          <Text style={{ fontSize: 9, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted</Text>
+        </View>
         <Pressable
           onPress={() => setExpanded(false)}
           hitSlop={8}

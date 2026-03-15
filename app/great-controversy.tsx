@@ -326,6 +326,10 @@ function NodeCard({
                   </Pressable>
                   {aiData && (
                     <View style={[styles.aiInsightBox, { backgroundColor: "rgba(201, 147, 58, 0.06)" }]}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                        <Ionicons name="sparkles" size={10} color="#C9933A" />
+                        <Text style={{ fontSize: 10, color: "#C9933A", fontFamily: "Inter_500Medium" }}>AI-assisted -- verify with Scripture</Text>
+                      </View>
                       <Text style={[styles.aiInsightText, { color: theme.textSecondary }]}>
                         {aiData.narrative}
                       </Text>

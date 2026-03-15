@@ -341,9 +341,13 @@ export default function StudyGuideScreen() {
               <Text style={[styles.hubPromptTitle, { color: theme.text, fontFamily: "Lora_600SemiBold", textAlign: "center", marginBottom: 4 }]}>
                 Choose a Chapter
               </Text>
-              <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 16 }]}>
+              <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 8 }]}>
                 Your AI tutor will guide you through this passage
               </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 12, backgroundColor: theme.accent + "10", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: "center" }}>
+                <Ionicons name="sparkles" size={11} color={theme.accent} />
+                <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted study aid -- always verify with Scripture</Text>
+              </View>
               {launchingPassage ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={theme.accent} />
@@ -378,6 +382,10 @@ export default function StudyGuideScreen() {
                 <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                   Choose a passage and your AI tutor will walk you through observation, meaning, and response.
                 </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, backgroundColor: theme.accent + "10", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" }}>
+                  <Ionicons name="sparkles" size={11} color={theme.accent} />
+                  <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted study aid</Text>
+                </View>
               </View>
 
               <View style={styles.hubSection}>

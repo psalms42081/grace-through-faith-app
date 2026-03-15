@@ -169,7 +169,7 @@ function ReflectionQuestion({
             <View style={rStyles.aiHeader}>
               <Ionicons name="sparkles" size={14} color="#8B5CF6" />
               <Text style={[rStyles.bubbleLabel, { color: "#8B5CF6", fontFamily: "Inter_600SemiBold" }]}>
-                Discussion
+                AI-assisted reflection
               </Text>
             </View>
             <Text style={[rStyles.bubbleText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
