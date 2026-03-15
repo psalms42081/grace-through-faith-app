@@ -140,9 +140,10 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
 
   const candidates: ResumeItem[] = [];
 
-  const activeSession = sessions?.find((s) => !s.completed);
+  const activeSession = sessions?.find((s: any) => !s.completedAt);
   if (activeSession) {
     const stage = getStageLabel(activeSession.progression);
+    const as = activeSession as any;
     candidates.push({
       ...TYPE_META.guided_study,
       type: "guided_study",
@@ -155,6 +156,9 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
         bookId: String(activeSession.bookId),
         chapter: String(activeSession.chapter),
         ...(activeSession.verse ? { verse: String(activeSession.verse) } : {}),
+        ...(as.verseReference ? { verseReference: as.verseReference } : {}),
+        ...(as.verseText ? { verseText: as.verseText } : {}),
+        ...(as.bookName ? { bookName: as.bookName } : {}),
       },
       updatedAt: activeSession.updatedAt || activeSession.createdAt,
     });

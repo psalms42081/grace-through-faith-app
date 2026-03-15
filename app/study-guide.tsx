@@ -437,7 +437,7 @@ export default function StudyGuideScreen() {
                     <Pressable
                       key={s.id}
                       style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#C9933A" }]}
-                      onPress={() => router.push({
+                      onPress={() => router.replace({
                         pathname: "/study-guide" as any,
                         params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
                       })}
@@ -472,7 +472,7 @@ export default function StudyGuideScreen() {
                     <Pressable
                       key={s.id}
                       style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#2E7D32" }]}
-                      onPress={() => router.push({
+                      onPress={() => router.replace({
                         pathname: "/study-guide" as any,
                         params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
                       })}
