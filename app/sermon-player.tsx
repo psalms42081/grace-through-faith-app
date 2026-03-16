@@ -140,15 +140,17 @@ export default function SermonPlayerScreen() {
           </Text>
         ) : null}
 
-        <Pressable
-          onPress={handleOpenInYouTube}
-          style={[st.youtubeBtn, { borderColor: theme.border }]}
-        >
-          <Ionicons name="logo-youtube" size={18} color="#FF0000" />
-          <Text style={[st.youtubeBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-            Open in YouTube
-          </Text>
-        </Pressable>
+        {Platform.OS !== "android" ? (
+          <Pressable
+            onPress={handleOpenInYouTube}
+            style={[st.youtubeBtn, { borderColor: theme.border }]}
+          >
+            <Ionicons name="logo-youtube" size={18} color="#FF0000" />
+            <Text style={[st.youtubeBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+              Open in YouTube
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
