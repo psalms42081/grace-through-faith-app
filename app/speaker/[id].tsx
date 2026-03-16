@@ -46,7 +46,8 @@ export default function SpeakerDetailScreen() {
 
   const handleWatchChannel = useCallback(() => {
     if (!speaker) return;
-    Linking.openURL(`https://www.youtube.com/channel/${speaker.youtubeChannelId}`);
+    const query = encodeURIComponent(`${speaker.name} ${speaker.ministry} sermon`);
+    Linking.openURL(`https://www.youtube.com/results?search_query=${query}`);
   }, [speaker]);
 
   const handleWatchVideo = useCallback((videoId: string) => {
