@@ -45,6 +45,8 @@ interface BibleMapProps {
   onKingdomPress?: (id: string) => void;
   tribeMarkers?: TribeMarkerData[];
   onTribePress?: (id: string) => void;
+  fitCoordinates?: { latitude: number; longitude: number }[];
+  isJourneySelected?: boolean;
 }
 
 export default function BibleMap({
@@ -52,18 +54,38 @@ export default function BibleMap({
   selectedLocation,
   defaultLat,
   defaultLon,
+  fitCoordinates,
 }: BibleMapProps) {
-  const lat = selectedLocation ? parseFloat(selectedLocation.latitude) : defaultLat;
-  const lon = selectedLocation ? parseFloat(selectedLocation.longitude) : defaultLon;
-  const spread = selectedLocation ? 1 : 15;
+  let lat = defaultLat;
+  let lon = defaultLon;
+  let spread = 15;
+
+  if (fitCoordinates && fitCoordinates.length > 0) {
+    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+    for (const c of fitCoordinates) {
+      if (c.latitude < minLat) minLat = c.latitude;
+      if (c.latitude > maxLat) maxLat = c.latitude;
+      if (c.longitude < minLon) minLon = c.longitude;
+      if (c.longitude > maxLon) maxLon = c.longitude;
+    }
+    lat = (minLat + maxLat) / 2;
+    lon = (minLon + maxLon) / 2;
+    const latSpan = maxLat - minLat;
+    const lonSpan = maxLon - minLon;
+    spread = Math.max(latSpan, lonSpan * 0.6, 2) * 0.65 + 1.5;
+  } else if (selectedLocation) {
+    lat = parseFloat(selectedLocation.latitude);
+    lon = parseFloat(selectedLocation.longitude);
+    spread = 1;
+  }
 
   const bbox = `${lon - spread},${lat - (spread * 0.6)},${lon + spread},${lat + (spread * 0.6)}`;
-  const markerParam = selectedLocation ? `&marker=${lat},${lon}` : "";
+  const markerParam = selectedLocation ? `&marker=${parseFloat(selectedLocation.latitude)},${parseFloat(selectedLocation.longitude)}` : "";
 
   return (
     <View style={mapStyles.container}>
       <iframe
-        key={`${lat}-${lon}-${spread}`}
+        key={`${lat.toFixed(3)}-${lon.toFixed(3)}-${spread.toFixed(2)}`}
         src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markerParam}`}
         style={{ width: "100%", height: "100%", border: "none", borderRadius: 16 } as any}
         title="Bible Map"

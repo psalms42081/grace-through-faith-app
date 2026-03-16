@@ -54,6 +54,8 @@ interface BibleMapProps {
   onKingdomPress?: (id: string) => void;
   tribeMarkers?: TribeMarkerData[];
   onTribePress?: (id: string) => void;
+  fitCoordinates?: { latitude: number; longitude: number }[];
+  isJourneySelected?: boolean;
 }
 
 export default function BibleMap({
@@ -67,6 +69,8 @@ export default function BibleMap({
   onKingdomPress,
   tribeMarkers,
   onTribePress,
+  fitCoordinates,
+  isJourneySelected,
 }: BibleMapProps) {
   const mapRef = useRef<MapView>(null);
   const didInitialFit = useRef(false);
@@ -75,44 +79,20 @@ export default function BibleMap({
     if (Platform.OS === "web") return;
     const timer = setTimeout(() => {
       if (!mapRef.current) return;
-      const coords: { latitude: number; longitude: number }[] = [];
-      if (routeLines && routeLines.length > 0) {
-        for (const route of routeLines) {
-          if (route.highlight || routeLines.length <= 4) {
-            coords.push(...route.coordinates);
-          }
-        }
-      }
-      if (kingdomMarkers && kingdomMarkers.length > 0) {
-        const selected = kingdomMarkers.find((k) => k.selected);
-        if (selected) {
-          coords.push({ latitude: selected.latitude, longitude: selected.longitude });
-        } else {
-          for (const km of kingdomMarkers) {
-            coords.push({ latitude: km.latitude, longitude: km.longitude });
-          }
-        }
-      }
-      if (tribeMarkers && tribeMarkers.length > 0) {
-        const selected = tribeMarkers.find((t) => t.selected);
-        if (selected) {
-          coords.push({ latitude: selected.latitude, longitude: selected.longitude });
-        } else {
-          for (const tm of tribeMarkers) {
-            coords.push({ latitude: tm.latitude, longitude: tm.longitude });
-          }
-        }
-      }
-      if (coords.length >= 2) {
-        mapRef.current.fitToCoordinates(coords, {
-          edgePadding: { top: 40, right: 40, bottom: 40, left: 40 },
+      if (!fitCoordinates || fitCoordinates.length === 0) return;
+      const padding = isJourneySelected
+        ? { top: 64, right: 44, bottom: 64, left: 44 }
+        : { top: 56, right: 40, bottom: 56, left: 40 };
+      if (fitCoordinates.length >= 2) {
+        mapRef.current.fitToCoordinates(fitCoordinates, {
+          edgePadding: padding,
           animated: didInitialFit.current,
         });
         didInitialFit.current = true;
-      } else if (coords.length === 1) {
+      } else if (fitCoordinates.length === 1) {
         mapRef.current.animateToRegion({
-          latitude: coords[0].latitude,
-          longitude: coords[0].longitude,
+          latitude: fitCoordinates[0].latitude,
+          longitude: fitCoordinates[0].longitude,
           latitudeDelta: 4,
           longitudeDelta: 4,
         }, didInitialFit.current ? 400 : 0);
@@ -120,7 +100,7 @@ export default function BibleMap({
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [routeLines, kingdomMarkers, tribeMarkers]);
+  }, [fitCoordinates, isJourneySelected]);
 
   const handleMarkerPress = useCallback(
     (loc: MapLocation) => {
@@ -154,6 +134,8 @@ export default function BibleMap({
         showsCompass={false}
         showsScale
         toolbarEnabled={false}
+        rotateEnabled={false}
+        pitchEnabled={false}
       >
         {routeLines && routeLines.map((route) => (
           <Polyline

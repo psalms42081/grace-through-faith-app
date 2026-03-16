@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationById, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
 import type { RouteLineData, KingdomMarkerData, TribeMarkerData } from "@/components/BibleMap";
 
 type Tab = "maps" | "timeline";
@@ -365,6 +365,54 @@ function MapsContent({
     setSelectedTribe(id);
   }, []);
 
+  const fitCoordinates = useMemo((): { latitude: number; longitude: number }[] => {
+    if (overlay === "journey-routes") {
+      const coords: { latitude: number; longitude: number }[] = [];
+      for (const route of routeLines) {
+        coords.push(...route.coordinates);
+      }
+      return coords;
+    }
+    if (overlay === "kingdoms") {
+      if (kingdomMarkers.length === 0) return [];
+      const selected = kingdomMarkers.find((k) => k.selected);
+      if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
+      return kingdomMarkers.map((k) => ({ latitude: k.latitude, longitude: k.longitude }));
+    }
+    if (overlay === "tribes") {
+      if (tribeMarkers.length === 0) return [];
+      const selected = tribeMarkers.find((t) => t.selected);
+      if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
+      return tribeMarkers.map((t) => ({ latitude: t.latitude, longitude: t.longitude }));
+    }
+    if (overlay === "people-groups") {
+      const coords: { latitude: number; longitude: number }[] = [];
+      for (const pg of BIBLICAL_PEOPLE_GROUPS) {
+        for (const locId of pg.relatedLocationIds) {
+          const loc = getLocationById(locId);
+          if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
+        }
+      }
+      return coords;
+    }
+    if (overlay === "prophecy") {
+      const coords: { latitude: number; longitude: number }[] = [];
+      for (const pl of BIBLICAL_PROPHECY_LINKS) {
+        for (const locId of pl.relatedLocationIds) {
+          const loc = getLocationById(locId);
+          if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
+        }
+      }
+      return coords;
+    }
+    return mappableLocations.map((l) => ({
+      latitude: parseFloat(l.latitude),
+      longitude: parseFloat(l.longitude),
+    }));
+  }, [overlay, routeLines, kingdomMarkers, tribeMarkers, mappableLocations]);
+
+  const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
+
   const overlayTypeMap: Record<OverlayType, SearchResultType | null> = {
     "none": null,
     "people-groups": "people-group",
@@ -706,7 +754,7 @@ function MapsContent({
         )}
       </View>
 
-      <View style={styles.mapContainer}>
+      <View style={[styles.mapContainer, isJourneySelected && { height: 280 }]}>
         <BibleMap
           locations={mappableLocations}
           selectedLocation={selectedLocation && selectedLocation.latitude && selectedLocation.longitude ? {
@@ -724,6 +772,8 @@ function MapsContent({
           onKingdomPress={handleKingdomPress}
           tribeMarkers={tribeMarkers}
           onTribePress={handleTribePress}
+          fitCoordinates={fitCoordinates}
+          isJourneySelected={isJourneySelected}
         />
 
         {selectedLocation && (
@@ -1414,11 +1464,11 @@ const styles = StyleSheet.create({
   content: { padding: 20 },
   tabContent: { gap: 12 },
   mapContainer: {
-    height: 280,
+    height: 260,
     borderRadius: 16,
     overflow: "hidden",
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   map: {
     width: "100%",
@@ -1475,7 +1525,7 @@ const styles = StyleSheet.create({
   },
   locationListContent: {
     paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingTop: 2,
   },
   detailSection: { gap: 12 },
   sectionTitle: {
@@ -1563,7 +1613,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     paddingTop: 2,
-    paddingBottom: 8,
+    paddingBottom: 6,
     zIndex: 10,
   },
   searchInputRow: {
