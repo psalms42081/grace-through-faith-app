@@ -9,12 +9,20 @@ interface MapLocation {
   locationType: string | null;
 }
 
+export interface RouteLineData {
+  id: string;
+  coordinates: { latitude: number; longitude: number }[];
+  color: string;
+  highlight?: boolean;
+}
+
 interface BibleMapProps {
   locations: MapLocation[];
   selectedLocation: MapLocation | null;
   defaultLat: number;
   defaultLon: number;
   onMarkerPress?: (loc: MapLocation) => void;
+  routeLines?: RouteLineData[];
 }
 
 export default function BibleMap({

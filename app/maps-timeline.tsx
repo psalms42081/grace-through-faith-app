@@ -16,7 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, type EraFilter, type OverlayType } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
+import type { RouteLineData } from "@/components/BibleMap";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -85,7 +86,7 @@ const HOLY_LAND_REGION = {
 };
 
 export default function MapsTimelineScreen() {
-  const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string }>();
+  const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam, journey: journeyParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string; journey?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -93,6 +94,7 @@ export default function MapsTimelineScreen() {
   const [mapMode, setMapMode] = useState<MapMode>((modeParam as MapMode) || "modern");
   const [selectedEra, setSelectedEra] = useState<EraFilter>((eraParam as EraFilter) || "All");
   const [overlay, setOverlay] = useState<OverlayType>((overlayParam as OverlayType) || "none");
+  const [selectedJourney, setSelectedJourney] = useState<JourneyFilter>((journeyParam as JourneyFilter) || "all");
 
   return (
     <>
@@ -138,7 +140,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} overlay={overlay} setOverlay={setOverlay} />
+          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} overlay={overlay} setOverlay={setOverlay} selectedJourney={selectedJourney} setSelectedJourney={setSelectedJourney} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -163,6 +165,8 @@ function MapsContent({
   setSelectedEra,
   overlay,
   setOverlay,
+  selectedJourney,
+  setSelectedJourney,
 }: {
   theme: typeof Colors.light;
   isDark: boolean;
@@ -173,6 +177,8 @@ function MapsContent({
   setSelectedEra: (e: EraFilter) => void;
   overlay: OverlayType;
   setOverlay: (o: OverlayType) => void;
+  selectedJourney: JourneyFilter;
+  setSelectedJourney: (j: JourneyFilter) => void;
 }) {
   const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -201,14 +207,27 @@ function MapsContent({
     return filtered;
   }, [locations, eraFilteredNames]);
 
+  const routeLines = useMemo((): RouteLineData[] => {
+    if (overlay !== "journey-routes") return [];
+    const routes = selectedJourney === "all"
+      ? BIBLICAL_JOURNEY_ROUTES
+      : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney);
+    return routes.map((route) => ({
+      id: route.id,
+      coordinates: getRouteCoordinates(route),
+      color: JOURNEY_ROUTE_COLORS[route.id] || "#C9933A",
+      highlight: selectedJourney !== "all",
+    }));
+  }, [overlay, selectedJourney]);
+
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
     if (enriched) {
-      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any);
+      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney } } as any);
     } else {
       setSelectedLocation(loc);
     }
-  }, [mapMode, selectedEra, overlay]);
+  }, [mapMode, selectedEra, overlay, selectedJourney]);
 
   const handleMarkerPress = useCallback(
     (loc: any) => {
@@ -358,6 +377,45 @@ function MapsContent({
         </View>
       </View>
 
+      {overlay === "journey-routes" && (
+        <View style={styles.journeySelectorRow}>
+          <Text style={[styles.overlayLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+            Journey
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.journeySelectorScroll}>
+            {JOURNEY_FILTER_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.value}
+                onPress={() => setSelectedJourney(opt.value)}
+                style={[
+                  styles.journeyChip,
+                  {
+                    backgroundColor: selectedJourney === opt.value
+                      ? (opt.value !== "all" ? JOURNEY_ROUTE_COLORS[opt.value] || theme.accent : theme.accent)
+                      : theme.backgroundCard,
+                    borderColor: selectedJourney === opt.value
+                      ? "transparent"
+                      : theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.journeyChipText,
+                    {
+                      color: selectedJourney === opt.value ? "#fff" : theme.textSecondary,
+                      fontFamily: selectedJourney === opt.value ? "Inter_600SemiBold" : "Inter_400Regular",
+                    },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={styles.mapContainer}>
         <BibleMap
           locations={mappableLocations}
@@ -371,6 +429,7 @@ function MapsContent({
           defaultLat={HOLY_LAND_REGION.latitude}
           defaultLon={HOLY_LAND_REGION.longitude}
           onMarkerPress={handleMarkerPress}
+          routeLines={routeLines}
         />
 
         {selectedLocation && (
@@ -532,7 +591,7 @@ function MapsContent({
             {BIBLICAL_PROPHECY_LINKS.map((pl) => (
               <Pressable
                 key={pl.id}
-                onPress={() => router.push({ pathname: `/prophecy-link/${pl.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any)}
+                onPress={() => router.push({ pathname: `/prophecy-link/${pl.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney } } as any)}
                 style={({ pressed }) => [
                   styles.regionCard,
                   {
@@ -566,6 +625,59 @@ function MapsContent({
                     numberOfLines={2}
                   >
                     {pl.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : overlay === "journey-routes" ? (
+          <View style={styles.tabContent}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {selectedJourney === "all"
+                ? `${BIBLICAL_JOURNEY_ROUTES.length} Journey Routes`
+                : BIBLICAL_JOURNEY_ROUTES.find((r) => r.id === selectedJourney)?.title || "Journey Route"}
+            </Text>
+            {(selectedJourney === "all"
+              ? BIBLICAL_JOURNEY_ROUTES
+              : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney)
+            ).map((jr) => (
+              <Pressable
+                key={jr.id}
+                onPress={() => router.push({ pathname: `/journey-route/${jr.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney } } as any)}
+                style={({ pressed }) => [
+                  styles.regionCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.regionIcon,
+                    { backgroundColor: (JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A") + "18" },
+                  ]}
+                >
+                  <Ionicons name="trail-sign-outline" size={22} color={JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A"} />
+                </View>
+                <View style={[styles.regionInfo, { flex: 1 }]}>
+                  <Text
+                    style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                  >
+                    {jr.title}
+                  </Text>
+                  <Text
+                    style={[styles.regionPlaces, { color: JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A", fontFamily: "Inter_500Medium" }]}
+                    numberOfLines={1}
+                  >
+                    {jr.category} -- {jr.stopLocationIds.length} stops
+                  </Text>
+                  <Text
+                    style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                    numberOfLines={2}
+                  >
+                    {jr.shortDescription}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
@@ -839,6 +951,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 4,
+  },
+  journeySelectorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  journeySelectorScroll: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  journeyChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  journeyChipText: {
+    fontSize: 12,
   },
   headerRow: {
     paddingHorizontal: 22,

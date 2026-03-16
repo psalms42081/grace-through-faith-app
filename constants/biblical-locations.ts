@@ -31,6 +31,7 @@ export interface BiblicalLocation {
   timelineEvents: LocationTimelineEvent[];
   relatedPeopleGroupIds: string[];
   prophecyLinkIds: string[];
+  relatedJourneyRouteIds: string[];
 }
 
 export const ERA_OPTIONS = [
@@ -55,12 +56,30 @@ export interface BiblicalProphecyLink {
   eras: string[];
 }
 
-export type OverlayType = "none" | "people-groups" | "prophecy";
+export interface RouteSegment {
+  fromLocationId: string;
+  toLocationId: string;
+  label?: string;
+}
+
+export interface BiblicalJourneyRoute {
+  id: string;
+  title: string;
+  category: string;
+  shortDescription: string;
+  eras: string[];
+  keyPassages: string[];
+  stopLocationIds: string[];
+  routeSegments: RouteSegment[];
+}
+
+export type OverlayType = "none" | "people-groups" | "prophecy" | "journey-routes";
 
 export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
   { value: "none", label: "None" },
   { value: "people-groups", label: "People Groups" },
   { value: "prophecy", label: "Prophecy" },
+  { value: "journey-routes", label: "Journey Routes" },
 ];
 
 export const BIBLICAL_PEOPLE_GROUPS: BiblicalPeopleGroup[] = [
@@ -208,6 +227,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
+    relatedJourneyRouteIds: [],
   },
   {
     id: "bethlehem",
@@ -253,6 +273,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: ["moabites"],
     prophecyLinkIds: [],
+    relatedJourneyRouteIds: [],
   },
   {
     id: "jerusalem",
@@ -320,6 +341,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: ["canaanites", "hittites", "philistines", "amorites"],
     prophecyLinkIds: ["prophecy-jerusalem"],
+    relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
   },
   {
     id: "capernaum",
@@ -359,6 +381,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
+    relatedJourneyRouteIds: [],
   },
   {
     id: "babylon",
@@ -407,6 +430,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: [],
     prophecyLinkIds: ["prophecy-babylon"],
+    relatedJourneyRouteIds: [],
   },
   {
     id: "damascus",
@@ -451,6 +475,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: ["hittites"],
     prophecyLinkIds: [],
+    relatedJourneyRouteIds: [],
   },
   {
     id: "jordan-river",
@@ -502,6 +527,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: ["moabites", "canaanites", "amorites"],
     prophecyLinkIds: ["prophecy-jordan-river"],
+    relatedJourneyRouteIds: ["exodus-route"],
   },
   {
     id: "sea-of-galilee",
@@ -541,6 +567,251 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     ],
     relatedPeopleGroupIds: [],
     prophecyLinkIds: ["prophecy-sea-of-galilee"],
+    relatedJourneyRouteIds: [],
+  },
+  {
+    id: "egypt-goshen",
+    name: "Goshen (Egypt)",
+    modernLocation: "Eastern Nile Delta",
+    modernCountry: "Egypt",
+    ancientRegion: "Goshen / Land of Egypt",
+    latitude: 30.78,
+    longitude: 31.82,
+    description:
+      "The fertile region in the eastern Nile Delta where Jacob's family settled during the famine. Goshen became the home of the Israelites during their centuries in Egypt and the departure point of the Exodus under Moses.",
+    keyEvents: [
+      "Jacob and his family settle in Goshen at Joseph's invitation (Genesis 47:1-6)",
+      "The Israelites multiply greatly in the land (Exodus 1:7)",
+      "The first Passover observed before the Exodus (Exodus 12:1-28)",
+      "Israel departs Egypt (Exodus 12:37-42)",
+    ],
+    keyPeople: ["Moses", "Aaron", "Jacob", "Joseph", "Pharaoh"],
+    passages: ["Genesis 47:1-6", "Exodus 1:7", "Exodus 12:1-28", "Exodus 12:37-42"],
+    nearbyLocations: [],
+    eras: ["Patriarchs", "Exodus"],
+    timelineEvents: [
+      {
+        title: "Israel in Egypt",
+        dateLabel: "c. 1876\u20131446 BC",
+        shortDescription: "The Israelites lived in Goshen for over 400 years before the Exodus.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["exodus-route"],
+  },
+  {
+    id: "mount-sinai",
+    name: "Mount Sinai",
+    modernLocation: "Jebel Musa (traditional)",
+    modernCountry: "Egypt (Sinai Peninsula)",
+    ancientRegion: "Wilderness of Sinai",
+    latitude: 28.5392,
+    longitude: 33.9757,
+    description:
+      "The sacred mountain where God revealed Himself to Moses in the burning bush and later gave the Ten Commandments and the covenant law to Israel. Mount Sinai represents the defining moment of Israel's identity as God's covenant people.",
+    keyEvents: [
+      "Moses encounters the burning bush (Exodus 3:1-6)",
+      "God gives the Ten Commandments (Exodus 20:1-17)",
+      "Moses receives the covenant law (Exodus 19\u201324)",
+      "The golden calf incident (Exodus 32)",
+      "Elijah flees to Horeb / Sinai and hears the still small voice (1 Kings 19:8-12)",
+    ],
+    keyPeople: ["Moses", "Aaron", "Elijah"],
+    passages: ["Exodus 3:1-6", "Exodus 19:16-20", "Exodus 20:1-17", "Exodus 32", "1 Kings 19:8-12"],
+    nearbyLocations: [],
+    eras: ["Exodus"],
+    timelineEvents: [
+      {
+        title: "The giving of the Law",
+        dateLabel: "c. 1446 BC",
+        shortDescription: "Israel received the Ten Commandments and the covenant at Sinai.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["exodus-route"],
+  },
+  {
+    id: "antioch",
+    name: "Antioch",
+    modernLocation: "Antakya",
+    modernCountry: "Turkey",
+    ancientRegion: "Syria",
+    latitude: 36.2028,
+    longitude: 36.1596,
+    description:
+      "The great city of Antioch on the Orontes was the third-largest city of the Roman Empire. It became the first major center of Gentile Christianity and the launching point for Paul's missionary journeys. Believers were first called 'Christians' here.",
+    keyEvents: [
+      "Believers first called Christians in Antioch (Acts 11:26)",
+      "Barnabas and Saul minister in Antioch (Acts 11:25-26)",
+      "The church commissions Paul and Barnabas for mission (Acts 13:1-3)",
+      "The Jerusalem Council decision delivered to Antioch (Acts 15:30-35)",
+    ],
+    keyPeople: ["Paul", "Barnabas", "Peter", "Luke"],
+    passages: ["Acts 11:26", "Acts 13:1-3", "Acts 14:26-28", "Acts 15:30-35"],
+    nearbyLocations: ["damascus"],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Antioch church established",
+        dateLabel: "c. AD 40\u201347",
+        shortDescription: "Antioch became the mission hub of the early Gentile church.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-1", "paul-journey-2", "paul-journey-3"],
+  },
+  {
+    id: "cyprus",
+    name: "Cyprus",
+    modernLocation: "Paphos / Salamis",
+    modernCountry: "Cyprus",
+    ancientRegion: "Cyprus",
+    latitude: 34.7720,
+    longitude: 32.4297,
+    description:
+      "A large Mediterranean island and the homeland of Barnabas. Paul and Barnabas began their first missionary journey here, preaching in the synagogues of Salamis and confronting the sorcerer Bar-Jesus before the proconsul Sergius Paulus at Paphos.",
+    keyEvents: [
+      "Paul and Barnabas preach in the synagogues of Salamis (Acts 13:5)",
+      "Paul confronts Elymas the sorcerer before Sergius Paulus (Acts 13:6-12)",
+    ],
+    keyPeople: ["Paul", "Barnabas", "Sergius Paulus"],
+    passages: ["Acts 13:4-12"],
+    nearbyLocations: ["antioch"],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Paul's first missionary stop",
+        dateLabel: "c. AD 47",
+        shortDescription: "Cyprus was the first destination of Paul and Barnabas on their mission.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-1"],
+  },
+  {
+    id: "ephesus",
+    name: "Ephesus",
+    modernLocation: "Near Sel\u00E7uk",
+    modernCountry: "Turkey",
+    ancientRegion: "Asia Minor (Ionia)",
+    latitude: 37.9395,
+    longitude: 27.3417,
+    description:
+      "One of the greatest cities of the ancient world and capital of the Roman province of Asia. Paul spent over two years ministering here during his third journey. Ephesus was home to the Temple of Artemis, one of the Seven Wonders of the Ancient World, and later received one of the letters to the seven churches in Revelation.",
+    keyEvents: [
+      "Paul establishes a church during a brief visit (Acts 18:19-21)",
+      "Paul ministers extensively for over two years (Acts 19:8-10)",
+      "The riot of the silversmiths in the theater (Acts 19:23-41)",
+      "Paul's farewell to the Ephesian elders at Miletus (Acts 20:17-38)",
+    ],
+    keyPeople: ["Paul", "Apollos", "Priscilla", "Aquila", "Timothy"],
+    passages: ["Acts 19:1-41", "Acts 20:17-38", "Ephesians 1:1", "Revelation 2:1-7"],
+    nearbyLocations: [],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Paul's extended Ephesian ministry",
+        dateLabel: "c. AD 52\u201355",
+        shortDescription: "Paul spent over two years teaching in Ephesus, the gospel spreading throughout Asia.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+  },
+  {
+    id: "corinth",
+    name: "Corinth",
+    modernLocation: "Ancient Corinth ruins",
+    modernCountry: "Greece",
+    ancientRegion: "Achaia (Greece)",
+    latitude: 37.9059,
+    longitude: 22.8826,
+    description:
+      "A prosperous and cosmopolitan Roman colony strategically located on the narrow isthmus connecting mainland Greece with the Peloponnese. Paul spent eighteen months here on his second journey, establishing a church and writing letters. The city was known for its commerce, diversity, and moral challenges.",
+    keyEvents: [
+      "Paul meets Priscilla and Aquila, works as a tentmaker (Acts 18:1-3)",
+      "Paul preaches for eighteen months (Acts 18:11)",
+      "Paul brought before proconsul Gallio (Acts 18:12-17)",
+    ],
+    keyPeople: ["Paul", "Priscilla", "Aquila", "Silas", "Timothy"],
+    passages: ["Acts 18:1-18", "1 Corinthians 1:1-2", "2 Corinthians 1:1"],
+    nearbyLocations: [],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Paul's Corinthian ministry",
+        dateLabel: "c. AD 50\u201352",
+        shortDescription: "Paul established a significant church in Corinth over eighteen months.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+  },
+  {
+    id: "philippi",
+    name: "Philippi",
+    modernLocation: "Krenides ruins",
+    modernCountry: "Greece",
+    ancientRegion: "Macedonia",
+    latitude: 41.0142,
+    longitude: 24.2869,
+    description:
+      "A Roman colony in eastern Macedonia and the site of the first Christian community established on European soil. Paul and Silas were imprisoned here but miraculously freed, leading to the conversion of the Philippian jailer. Paul later wrote his letter of joy to this beloved church.",
+    keyEvents: [
+      "Lydia converted at the riverside prayer meeting (Acts 16:13-15)",
+      "Paul and Silas imprisoned and miraculously freed (Acts 16:25-34)",
+      "The Philippian jailer and his household believe and are baptized (Acts 16:33-34)",
+    ],
+    keyPeople: ["Paul", "Silas", "Lydia", "Timothy", "Luke"],
+    passages: ["Acts 16:12-40", "Philippians 1:1", "Philippians 4:15-16"],
+    nearbyLocations: ["thessalonica"],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Gospel reaches Europe",
+        dateLabel: "c. AD 49\u201350",
+        shortDescription: "Philippi became the first European city to receive the gospel through Paul.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+  },
+  {
+    id: "thessalonica",
+    name: "Thessalonica",
+    modernLocation: "Thessaloniki",
+    modernCountry: "Greece",
+    ancientRegion: "Macedonia",
+    latitude: 40.6401,
+    longitude: 22.9444,
+    description:
+      "The capital and largest city of the Roman province of Macedonia. Paul preached in the synagogue here for three Sabbaths on his second journey, persuading some Jews and many Greeks. Opposition forced Paul to leave, but the Thessalonian church became known for its faith and endurance.",
+    keyEvents: [
+      "Paul reasons in the synagogue for three Sabbaths (Acts 17:1-4)",
+      "A mob attacks Jason's house seeking Paul (Acts 17:5-9)",
+      "Paul and Silas sent away by night to Berea (Acts 17:10)",
+    ],
+    keyPeople: ["Paul", "Silas", "Jason", "Timothy"],
+    passages: ["Acts 17:1-10", "1 Thessalonians 1:1", "2 Thessalonians 1:1"],
+    nearbyLocations: ["philippi"],
+    eras: ["Early Church"],
+    timelineEvents: [
+      {
+        title: "Paul's Thessalonian ministry",
+        dateLabel: "c. AD 50",
+        shortDescription: "Paul established a faithful church in Thessalonica despite opposition.",
+      },
+    ],
+    relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["paul-journey-2"],
   },
 ];
 
@@ -587,6 +858,83 @@ export const BIBLICAL_PROPHECY_LINKS: BiblicalProphecyLink[] = [
   },
 ];
 
+export const JOURNEY_ROUTE_COLORS: Record<string, string> = {
+  "exodus-route": "#D97706",
+  "paul-journey-1": "#6366F1",
+  "paul-journey-2": "#EC4899",
+  "paul-journey-3": "#14B8A6",
+};
+
+export const JOURNEY_FILTER_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "exodus-route", label: "Exodus Route" },
+  { value: "paul-journey-1", label: "Paul 1" },
+  { value: "paul-journey-2", label: "Paul 2" },
+  { value: "paul-journey-3", label: "Paul 3" },
+] as const;
+
+export type JourneyFilter = (typeof JOURNEY_FILTER_OPTIONS)[number]["value"];
+
+export const BIBLICAL_JOURNEY_ROUTES: BiblicalJourneyRoute[] = [
+  {
+    id: "exodus-route",
+    title: "Exodus Route",
+    category: "Exodus",
+    shortDescription: "Israel's journey from Egypt toward Sinai and the promised land.",
+    eras: ["Exodus"],
+    keyPassages: ["Exodus 12", "Exodus 14", "Exodus 19", "Numbers 14"],
+    stopLocationIds: ["egypt-goshen", "mount-sinai", "jordan-river"],
+    routeSegments: [
+      { fromLocationId: "egypt-goshen", toLocationId: "mount-sinai", label: "Departure from Egypt" },
+      { fromLocationId: "mount-sinai", toLocationId: "jordan-river", label: "Wilderness to the Jordan" },
+    ],
+  },
+  {
+    id: "paul-journey-1",
+    title: "Paul's First Missionary Journey",
+    category: "Early Church",
+    shortDescription: "Paul and Barnabas travel to proclaim the gospel across Cyprus and Asia Minor.",
+    eras: ["Early Church"],
+    keyPassages: ["Acts 13", "Acts 14"],
+    stopLocationIds: ["antioch", "cyprus", "antioch"],
+    routeSegments: [
+      { fromLocationId: "antioch", toLocationId: "cyprus", label: "Sail to Cyprus" },
+      { fromLocationId: "cyprus", toLocationId: "antioch", label: "Return to Antioch" },
+    ],
+  },
+  {
+    id: "paul-journey-2",
+    title: "Paul's Second Missionary Journey",
+    category: "Early Church",
+    shortDescription: "Paul revisits churches and carries the gospel into Macedonia and Greece.",
+    eras: ["Early Church"],
+    keyPassages: ["Acts 15", "Acts 16", "Acts 17", "Acts 18"],
+    stopLocationIds: ["antioch", "philippi", "thessalonica", "corinth", "ephesus", "jerusalem"],
+    routeSegments: [
+      { fromLocationId: "antioch", toLocationId: "philippi", label: "Overland to Macedonia" },
+      { fromLocationId: "philippi", toLocationId: "thessalonica", label: "Via Egnatia" },
+      { fromLocationId: "thessalonica", toLocationId: "corinth", label: "South to Achaia" },
+      { fromLocationId: "corinth", toLocationId: "ephesus", label: "Brief stop at Ephesus" },
+      { fromLocationId: "ephesus", toLocationId: "jerusalem", label: "Return to Jerusalem" },
+    ],
+  },
+  {
+    id: "paul-journey-3",
+    title: "Paul's Third Missionary Journey",
+    category: "Early Church",
+    shortDescription: "Paul strengthens churches and ministers extensively in Ephesus and beyond.",
+    eras: ["Early Church"],
+    keyPassages: ["Acts 18", "Acts 19", "Acts 20", "Acts 21"],
+    stopLocationIds: ["antioch", "ephesus", "corinth", "philippi", "jerusalem"],
+    routeSegments: [
+      { fromLocationId: "antioch", toLocationId: "ephesus", label: "Ministry in Ephesus" },
+      { fromLocationId: "ephesus", toLocationId: "corinth", label: "To Greece" },
+      { fromLocationId: "corinth", toLocationId: "philippi", label: "Through Macedonia" },
+      { fromLocationId: "philippi", toLocationId: "jerusalem", label: "Return to Jerusalem" },
+    ],
+  },
+];
+
 export function getLocationById(id: string): BiblicalLocation | undefined {
   return BIBLICAL_LOCATIONS.find((loc) => loc.id === id);
 }
@@ -624,4 +972,31 @@ export function getProphecyLinksForLocation(locationId: string): BiblicalProphec
   return location.prophecyLinkIds
     .map((plId) => getProphecyLinkById(plId))
     .filter((pl): pl is BiblicalProphecyLink => !!pl);
+}
+
+export function getJourneyRouteById(id: string): BiblicalJourneyRoute | undefined {
+  return BIBLICAL_JOURNEY_ROUTES.find((jr) => jr.id === id);
+}
+
+export function getJourneyRoutesForLocation(locationId: string): BiblicalJourneyRoute[] {
+  const location = getLocationById(locationId);
+  if (!location) return [];
+  return location.relatedJourneyRouteIds
+    .map((jrId) => getJourneyRouteById(jrId))
+    .filter((jr): jr is BiblicalJourneyRoute => !!jr);
+}
+
+export function getRouteCoordinates(route: BiblicalJourneyRoute): { latitude: number; longitude: number }[] {
+  const coords: { latitude: number; longitude: number }[] = [];
+  for (const seg of route.routeSegments) {
+    const fromLoc = getLocationById(seg.fromLocationId);
+    const toLoc = getLocationById(seg.toLocationId);
+    if (fromLoc && coords.length === 0) {
+      coords.push({ latitude: fromLoc.latitude, longitude: fromLoc.longitude });
+    }
+    if (toLoc) {
+      coords.push({ latitude: toLoc.latitude, longitude: toLoc.longitude });
+    }
+  }
+  return coords;
 }

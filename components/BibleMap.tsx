@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 
 const MARKER_COLORS: Record<string, string> = {
@@ -18,12 +18,20 @@ interface MapLocation {
   locationType: string | null;
 }
 
+export interface RouteLineData {
+  id: string;
+  coordinates: { latitude: number; longitude: number }[];
+  color: string;
+  highlight?: boolean;
+}
+
 interface BibleMapProps {
   locations: MapLocation[];
   selectedLocation: MapLocation | null;
   defaultLat: number;
   defaultLon: number;
   onMarkerPress?: (loc: MapLocation) => void;
+  routeLines?: RouteLineData[];
 }
 
 export default function BibleMap({
@@ -32,6 +40,7 @@ export default function BibleMap({
   defaultLat,
   defaultLon,
   onMarkerPress,
+  routeLines,
 }: BibleMapProps) {
   const mapRef = useRef<MapView>(null);
 
@@ -68,6 +77,16 @@ export default function BibleMap({
         showsScale
         toolbarEnabled={false}
       >
+        {routeLines && routeLines.map((route) => (
+          <Polyline
+            key={route.id}
+            coordinates={route.coordinates}
+            strokeColor={route.color}
+            strokeWidth={route.highlight ? 4 : 2.5}
+            lineDashPattern={route.highlight ? undefined : [8, 4]}
+            geodesic
+          />
+        ))}
         {locations.map((loc) => (
           <Marker
             key={loc.id}
