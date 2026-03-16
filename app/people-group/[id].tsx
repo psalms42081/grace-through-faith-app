@@ -11,41 +11,13 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import RelatedStudiesSection from "@/components/RelatedStudiesSection";
 import {
   getPeopleGroupById,
   getLocationById,
   type EraFilter,
   type OverlayType,
 } from "@/constants/biblical-locations";
-
-const BOOK_NAME_TO_ID: Record<string, number> = {
-  "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5,
-  "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
-  "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14,
-  "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalm": 19, "Psalms": 19,
-  "Proverbs": 20, "Ecclesiastes": 21, "Song of Solomon": 22,
-  "Isaiah": 23, "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27,
-  "Hosea": 28, "Joel": 29, "Amos": 30, "Obadiah": 31, "Jonah": 32,
-  "Micah": 33, "Nahum": 34, "Habakkuk": 35, "Zephaniah": 36,
-  "Haggai": 37, "Zechariah": 38, "Malachi": 39,
-  "Matthew": 40, "Mark": 41, "Luke": 42, "John": 43, "Acts": 44,
-  "Romans": 45, "1 Corinthians": 46, "2 Corinthians": 47,
-  "Galatians": 48, "Ephesians": 49, "Philippians": 50, "Colossians": 51,
-  "1 Thessalonians": 52, "2 Thessalonians": 53, "1 Timothy": 54, "2 Timothy": 55,
-  "Titus": 56, "Philemon": 57, "Hebrews": 58, "James": 59,
-  "1 Peter": 60, "2 Peter": 61, "1 John": 62, "2 John": 63, "3 John": 64,
-  "Jude": 65, "Revelation": 66,
-};
-
-function parsePassageRef(passage: string): { bookId: number; chapter: number } | null {
-  const match = passage.match(/^(\d?\s?[A-Za-z]+)\s+(\d+)/);
-  if (!match) return null;
-  const bookName = match[1].trim();
-  const chapter = parseInt(match[2], 10);
-  const bookId = BOOK_NAME_TO_ID[bookName];
-  if (!bookId) return null;
-  return { bookId, chapter };
-}
 
 export default function PeopleGroupDetailScreen() {
   const { id, mode, era, overlay } = useLocalSearchParams<{
@@ -86,8 +58,6 @@ export default function PeopleGroupDetailScreen() {
   const relatedLocations = group.relatedLocationIds
     .map((lid) => getLocationById(lid))
     .filter(Boolean);
-
-  const firstPassageRef = group.keyPassages.length > 0 ? parsePassageRef(group.keyPassages[0]) : null;
 
   return (
     <>
@@ -216,59 +186,13 @@ export default function PeopleGroupDetailScreen() {
           </View>
         )}
 
-        <View style={st.actionsSection}>
-          <Text style={[st.actionsTitle, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-            STUDY THIS PEOPLE GROUP
-          </Text>
-
-          <Pressable
-            onPress={() => {
-              if (firstPassageRef) {
-                router.push(`/read/${firstPassageRef.bookId}/${firstPassageRef.chapter}` as any);
-              }
-            }}
-            style={({ pressed }) => [st.actionBtn, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 }]}
-            disabled={!firstPassageRef}
-          >
-            <View style={[st.actionIcon, { backgroundColor: "#3B82F6" + "18" }]}>
-              <Ionicons name="book-outline" size={18} color="#3B82F6" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.actionBtnTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Read Passages
-              </Text>
-              <Text style={[st.actionSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {firstPassageRef ? `Start with ${group.keyPassages[0]}` : "No passages available"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              router.push({
-                pathname: "/maps-timeline",
-                params: { tab: "maps" },
-              } as any);
-            }}
-            style={({ pressed }) => [st.actionBtn, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 }]}
-          >
-            <View style={[st.actionIcon, { backgroundColor: "#22C55E" + "18" }]}>
-              <Ionicons name="map-outline" size={18} color="#22C55E" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.actionBtnTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                View Related Locations
-              </Text>
-              <Text style={[st.actionSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {relatedLocations.length > 0
-                  ? `${relatedLocations.length} location${relatedLocations.length !== 1 ? "s" : ""} on the map`
-                  : "Return to Bible Maps"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-        </View>
+        <RelatedStudiesSection
+          keyPassages={group.keyPassages}
+          entityName={group.name}
+          showHistoricVoices={true}
+          showViewOnMap={true}
+          mapParams={{ mode: mode || "biblical", era: era || "All", overlay: overlay || "people-groups" }}
+        />
       </ScrollView>
     </>
   );
@@ -373,38 +297,6 @@ const st = StyleSheet.create({
     fontSize: 14,
   },
   locationRegion: {
-    fontSize: 12,
-  },
-  actionsSection: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    gap: 10,
-  },
-  actionsTitle: {
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    marginBottom: 6,
-    paddingLeft: 2,
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
-    gap: 12,
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionBtnTitle: {
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  actionSub: {
     fontSize: 12,
   },
 });

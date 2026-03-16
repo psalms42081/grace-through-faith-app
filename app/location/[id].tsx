@@ -11,6 +11,7 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import RelatedStudiesSection from "@/components/RelatedStudiesSection";
 import {
   getLocationById,
   getLocationByName,
@@ -23,43 +24,6 @@ import {
   JOURNEY_ROUTE_COLORS,
   type EraFilter,
 } from "@/constants/biblical-locations";
-
-const BOOK_NAME_TO_ID: Record<string, number> = {
-  "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5,
-  "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
-  "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14,
-  "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalm": 19, "Psalms": 19,
-  "Proverbs": 20, "Ecclesiastes": 21, "Song of Solomon": 22,
-  "Isaiah": 23, "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27,
-  "Hosea": 28, "Joel": 29, "Amos": 30, "Obadiah": 31, "Jonah": 32,
-  "Micah": 33, "Nahum": 34, "Habakkuk": 35, "Zephaniah": 36,
-  "Haggai": 37, "Zechariah": 38, "Malachi": 39,
-  "Matthew": 40, "Mark": 41, "Luke": 42, "John": 43, "Acts": 44,
-  "Romans": 45, "1 Corinthians": 46, "2 Corinthians": 47,
-  "Galatians": 48, "Ephesians": 49, "Philippians": 50, "Colossians": 51,
-  "1 Thessalonians": 52, "2 Thessalonians": 53, "1 Timothy": 54, "2 Timothy": 55,
-  "Titus": 56, "Philemon": 57, "Hebrews": 58, "James": 59,
-  "1 Peter": 60, "2 Peter": 61, "1 John": 62, "2 John": 63, "3 John": 64,
-  "Jude": 65, "Revelation": 66,
-};
-
-interface ParsedPassage {
-  bookName: string;
-  chapter: number;
-  verse: number;
-  bookId: number | null;
-  reference: string;
-}
-
-function parseFirstPassage(passage: string): ParsedPassage | null {
-  const match = passage.match(/^(\d?\s?[A-Za-z]+)\s+(\d+):?(\d+)?/);
-  if (!match) return null;
-  const bookName = match[1].trim();
-  const chapter = parseInt(match[2], 10);
-  const verse = match[3] ? parseInt(match[3], 10) : 1;
-  const bookId = BOOK_NAME_TO_ID[bookName] ?? null;
-  return { bookName, chapter, verse, bookId, reference: passage };
-}
 
 export default function LocationDetailScreen() {
   const { id, mode, era, overlay, journey, kingdom, tribe } = useLocalSearchParams<{ id: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string; tribe?: string }>();
@@ -93,8 +57,6 @@ export default function LocationDetailScreen() {
       </>
     );
   }
-
-  const firstPassage = location.passages.length > 0 ? parseFirstPassage(location.passages[0]) : null;
 
   const nearbyLocs = location.nearbyLocations
     .map((nid) => BIBLICAL_LOCATIONS.find((l) => l.id === nid))
@@ -470,95 +432,16 @@ export default function LocationDetailScreen() {
           </View>
         )}
 
-        <View style={st.actionsSection}>
-          <Text style={[st.actionsTitle, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-            STUDY THIS LOCATION
-          </Text>
-
-          <Pressable
-            onPress={() => {
-              if (firstPassage?.bookId) {
-                router.push(`/read/${firstPassage.bookId}/${firstPassage.chapter}` as any);
-              }
-            }}
-            style={({ pressed }) => [st.actionBtn, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 }]}
-            disabled={!firstPassage?.bookId}
-          >
-            <View style={[st.actionIcon, { backgroundColor: "#3B82F6" + "18" }]}>
-              <Ionicons name="book-outline" size={18} color="#3B82F6" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.actionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Read Passages
-              </Text>
-              <Text style={[st.actionSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {firstPassage ? `Start with ${location.passages[0]}` : "No passages available"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              if (firstPassage?.bookId) {
-                router.push({
-                  pathname: "/study-guide",
-                  params: {
-                    verseReference: firstPassage.reference,
-                    verseText: `${location.name} - ${firstPassage.reference}`,
-                    bookName: firstPassage.bookName,
-                    chapter: String(firstPassage.chapter),
-                    verse: String(firstPassage.verse),
-                  },
-                } as any);
-              }
-            }}
-            style={({ pressed }) => [st.actionBtn, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 }]}
-            disabled={!firstPassage?.bookId}
-          >
-            <View style={[st.actionIcon, { backgroundColor: "#8B5CF6" + "18" }]}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#8B5CF6" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.actionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Start Guided Study
-              </Text>
-              <Text style={[st.actionSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                AI tutor on {location.passages[0] || "related passage"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              if (firstPassage?.bookId) {
-                router.push({
-                  pathname: "/deep-study-picker",
-                  params: {
-                    bookId: String(firstPassage.bookId),
-                    chapter: String(firstPassage.chapter),
-                  },
-                } as any);
-              }
-            }}
-            style={({ pressed }) => [st.actionBtn, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 }]}
-            disabled={!firstPassage}
-          >
-            <View style={[st.actionIcon, { backgroundColor: "#C9933A" + "18" }]}>
-              <Ionicons name="layers-outline" size={18} color="#C9933A" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[st.actionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Start Deep Study
-              </Text>
-              <Text style={[st.actionSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                4-Layer study on {location.passages[0] || "related passage"}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-          </Pressable>
-        </View>
+        <RelatedStudiesSection
+          keyPassages={location.passages}
+          entityName={location.name}
+          showProphecyExplorer={relatedProphecies.length > 0}
+          showHistoricVoices={true}
+          showViewOnMap={true}
+          mapParams={{ mode: mode || "biblical", era: era || "All", overlay: overlay || "none", journey: journey || "", kingdom: kingdom || "", tribe: tribe || "" }}
+          showViewOnTimeline={location.timelineEvents.length > 0}
+          timelineParams={{ mode: mode || "biblical", era: era || "All", overlay: overlay || "none" }}
+        />
       </ScrollView>
     </>
   );
@@ -695,38 +578,6 @@ const st = StyleSheet.create({
     fontSize: 12,
   },
 
-  actionsSection: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    gap: 10,
-  },
-  actionsTitle: {
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    marginBottom: 6,
-    paddingLeft: 2,
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
-    gap: 12,
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionTitle: {
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  actionSub: {
-    fontSize: 12,
-  },
   pgRow: {
     flexDirection: "row",
     alignItems: "center",

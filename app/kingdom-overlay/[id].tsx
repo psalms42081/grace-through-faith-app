@@ -11,40 +11,12 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import RelatedStudiesSection, { parsePassageReference } from "@/components/RelatedStudiesSection";
 import {
   getKingdomById,
   getLocationById,
   getProphecyLinkById,
 } from "@/constants/biblical-locations";
-
-const BOOK_NAME_TO_ID: Record<string, number> = {
-  "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5,
-  "Joshua": 6, "Judges": 7, "Ruth": 8, "1 Samuel": 9, "2 Samuel": 10,
-  "1 Kings": 11, "2 Kings": 12, "1 Chronicles": 13, "2 Chronicles": 14,
-  "Ezra": 15, "Nehemiah": 16, "Esther": 17, "Job": 18, "Psalm": 19, "Psalms": 19,
-  "Proverbs": 20, "Ecclesiastes": 21, "Song of Solomon": 22,
-  "Isaiah": 23, "Jeremiah": 24, "Lamentations": 25, "Ezekiel": 26, "Daniel": 27,
-  "Hosea": 28, "Joel": 29, "Amos": 30, "Obadiah": 31, "Jonah": 32,
-  "Micah": 33, "Nahum": 34, "Habakkuk": 35, "Zephaniah": 36,
-  "Haggai": 37, "Zechariah": 38, "Malachi": 39,
-  "Matthew": 40, "Mark": 41, "Luke": 42, "John": 43, "Acts": 44,
-  "Romans": 45, "1 Corinthians": 46, "2 Corinthians": 47,
-  "Galatians": 48, "Ephesians": 49, "Philippians": 50, "Colossians": 51,
-  "1 Thessalonians": 52, "2 Thessalonians": 53, "1 Timothy": 54, "2 Timothy": 55,
-  "Titus": 56, "Philemon": 57, "Hebrews": 58, "James": 59,
-  "1 Peter": 60, "2 Peter": 61, "1 John": 62, "2 John": 63, "3 John": 64,
-  "Jude": 65, "Revelation": 66,
-};
-
-function parsePassageRef(passage: string): { bookId: number; chapter: number } | null {
-  const match = passage.match(/^(\d?\s?[A-Za-z]+)\s+(\d+)/);
-  if (!match) return null;
-  const bookName = match[1].trim();
-  const chapter = parseInt(match[2], 10);
-  const bookId = BOOK_NAME_TO_ID[bookName];
-  if (!bookId) return null;
-  return { bookId, chapter };
-}
 
 export default function KingdomOverlayDetailScreen() {
   const { id, mode, era, overlay, kingdom } = useLocalSearchParams<{
@@ -91,8 +63,6 @@ export default function KingdomOverlayDetailScreen() {
     .map((plid) => getProphecyLinkById(plid))
     .filter(Boolean);
 
-  const firstPassageRef = kingdomData.keyPassages.length > 0 ? parsePassageRef(kingdomData.keyPassages[0]) : null;
-  const firstProphecy = relatedProphecies.length > 0 ? relatedProphecies[0] : null;
 
   return (
     <>
@@ -156,7 +126,7 @@ export default function KingdomOverlayDetailScreen() {
               <Pressable
                 key={p}
                 onPress={() => {
-                  const ref = parsePassageRef(p);
+                  const ref = parsePassageReference(p);
                   if (ref) router.push(`/read/${ref.bookId}/${ref.chapter}` as any);
                 }}
                 style={({ pressed }) => [st.passageBadge, { backgroundColor: kingdomData.color + "18", opacity: pressed ? 0.7 : 1 }]}
@@ -220,55 +190,16 @@ export default function KingdomOverlayDetailScreen() {
           </View>
         )}
 
-        <View style={[st.section, st.actionsSection]}>
-          {firstPassageRef && (
-            <Pressable
-              onPress={() => router.push(`/read/${firstPassageRef.bookId}/${firstPassageRef.chapter}` as any)}
-              style={({ pressed }) => [
-                st.actionBtn,
-                { backgroundColor: kingdomData.color, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Ionicons name="book-outline" size={18} color="#fff" />
-              <Text style={[st.actionText, { fontFamily: "Inter_600SemiBold" }]}>
-                Read {kingdomData.keyPassages[0]}
-              </Text>
-            </Pressable>
-          )}
-
-          <Pressable
-            onPress={() => {
-              router.push({
-                pathname: "/maps-timeline",
-                params: { tab: "maps", mode: "biblical", era: era || "All", overlay: "kingdoms", kingdom: kingdomData.id },
-              } as any);
-            }}
-            style={({ pressed }) => [
-              st.actionBtn,
-              { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Ionicons name="map-outline" size={18} color={kingdomData.color} />
-            <Text style={[st.actionTextAlt, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              View on Map
-            </Text>
-          </Pressable>
-
-          {firstProphecy && (
-            <Pressable
-              onPress={() => router.push({ pathname: `/prophecy-link/${firstProphecy.id}`, params: { mode: mode || "biblical", era: era || "All", overlay: "prophecy" } } as any)}
-              style={({ pressed }) => [
-                st.actionBtn,
-                { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Ionicons name="flash-outline" size={18} color="#F59E0B" />
-              <Text style={[st.actionTextAlt, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Open Prophecy Detail
-              </Text>
-            </Pressable>
-          )}
-        </View>
+        <RelatedStudiesSection
+          keyPassages={kingdomData.keyPassages}
+          entityName={kingdomData.name}
+          showProphecyExplorer={relatedProphecies.length > 0}
+          showHistoricVoices={true}
+          showViewOnMap={true}
+          mapParams={{ mode: "biblical", era: era || "All", overlay: "kingdoms", kingdom: kingdomData.id }}
+          showViewOnTimeline={true}
+          timelineParams={{ mode: "biblical", era: era || "All", overlay: "kingdoms", kingdom: kingdomData.id }}
+        />
       </ScrollView>
     </>
   );
@@ -302,15 +233,4 @@ const st = StyleSheet.create({
   },
   locName: { fontSize: 14 },
   locRegion: { fontSize: 12, flex: 1 },
-  actionsSection: { gap: 10, paddingBottom: 20 },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  actionText: { color: "#fff", fontSize: 15 },
-  actionTextAlt: { fontSize: 15 },
 });
