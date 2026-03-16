@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
-import MapView, { Marker, Polyline, Circle, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, Polyline, Circle, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 
 const MARKER_COLORS: Record<string, string> = {
@@ -151,7 +151,7 @@ export default function BibleMap({
           latitudeDelta: 8,
           longitudeDelta: 8,
         }}
-        mapType={Platform.OS === "ios" ? "mutedStandard" : "standard"}
+        mapType={Platform.OS === "ios" ? "mutedStandard" : "terrain"}
         customMapStyle={Platform.OS === "android" ? MUTED_MAP_STYLE : undefined}
         showsCompass={false}
         showsScale={false}
