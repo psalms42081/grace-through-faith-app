@@ -960,7 +960,7 @@ export const BIBLICAL_JOURNEY_ROUTES: BiblicalJourneyRoute[] = [
     shortDescription: "Paul and Barnabas travel to proclaim the gospel across Cyprus and Asia Minor.",
     eras: ["Early Church"],
     keyPassages: ["Acts 13", "Acts 14"],
-    stopLocationIds: ["antioch", "cyprus", "antioch"],
+    stopLocationIds: ["antioch", "cyprus"],
     routeSegments: [
       { fromLocationId: "antioch", toLocationId: "cyprus", label: "Sail to Cyprus" },
       { fromLocationId: "cyprus", toLocationId: "antioch", label: "Return to Antioch" },
