@@ -7,7 +7,6 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
-  Dimensions,
   TextInput,
 } from "react-native";
 import { useLocalSearchParams, Stack, router } from "expo-router";
@@ -179,7 +178,6 @@ const MARKER_COLORS: Record<string, string> = {
   mountain: "#22C55E",
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const HOLY_LAND_REGION = {
   latitude: 31.5,
@@ -534,8 +532,8 @@ function MapsContent({
             style={[
               styles.eraChip,
               {
-                backgroundColor: selectedEra === era ? theme.accent : theme.backgroundCard,
-                borderColor: selectedEra === era ? theme.accent : theme.border,
+                backgroundColor: selectedEra === era ? theme.accent : theme.backgroundSecondary,
+                borderColor: selectedEra === era ? theme.accent : "transparent",
               },
             ]}
           >
@@ -544,7 +542,7 @@ function MapsContent({
               style={[
                 styles.eraChipText,
                 {
-                  color: selectedEra === era ? "#fff" : theme.textSecondary,
+                  color: selectedEra === era ? "#fff" : theme.textMuted,
                   fontFamily: selectedEra === era ? "Inter_600SemiBold" : "Inter_400Regular",
                 },
               ]}
@@ -578,8 +576,8 @@ function MapsContent({
               style={[
                 styles.overlayPill,
                 {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                  borderColor: isActive ? theme.accent : theme.border,
+                  backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
+                  borderColor: isActive ? theme.accent : "transparent",
                 },
               ]}
             >
@@ -588,7 +586,7 @@ function MapsContent({
                 style={[
                   styles.overlayPillText,
                   {
-                    color: isActive ? "#fff" : theme.textSecondary,
+                    color: isActive ? "#fff" : theme.textMuted,
                     fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                   },
                 ]}
@@ -618,8 +616,8 @@ function MapsContent({
                   {
                     backgroundColor: isActive
                       ? (opt.value !== "all" ? JOURNEY_ROUTE_COLORS[opt.value] || theme.accent : theme.accent)
-                      : theme.backgroundCard,
-                    borderColor: isActive ? "transparent" : theme.border,
+                      : theme.backgroundSecondary,
+                    borderColor: "transparent",
                   },
                 ]}
               >
@@ -628,7 +626,7 @@ function MapsContent({
                   style={[
                     styles.journeyChipText,
                     {
-                      color: isActive ? "#fff" : theme.textSecondary,
+                      color: isActive ? "#fff" : theme.textMuted,
                       fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                     },
                   ]}
@@ -646,7 +644,7 @@ function MapsContent({
           <Ionicons name="search-outline" size={16} color={theme.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-            placeholder="Search places, peoples, prophecy, journeys..."
+            placeholder="Search locations, people groups, prophecy, journeys..."
             placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -875,7 +873,7 @@ function MapsContent({
         ) : overlay === "prophecy" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {`${BIBLICAL_PROPHECY_LINKS.length} Prophecy Links`}
+              {`${BIBLICAL_PROPHECY_LINKS.length} Prophecy Connections`}
             </Text>
             {BIBLICAL_PROPHECY_LINKS.map((pl) => (
               <Pressable
@@ -1075,11 +1073,34 @@ function MapsContent({
           </View>
         ) : (
           <View style={styles.tabContent}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {filteredLocations.length > 0
-                ? `${filteredLocations.length} Biblical Location${filteredLocations.length !== 1 ? "s" : ""}${selectedEra !== "All" ? ` \u00B7 ${selectedEra}` : ""}`
-                : selectedEra !== "All" ? `No locations for ${selectedEra}` : "Loading..."}
-            </Text>
+            {filteredLocations.length === 0 && selectedEra !== "All" ? (
+              <View style={[styles.emptyStateCard, { backgroundColor: theme.backgroundCard }]}>
+                <Text style={[styles.emptyStateTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                  No matching places yet
+                </Text>
+                <Text style={[styles.emptyStateBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Try another era, switch map mode, or choose a different overlay.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {filteredLocations.length > 0
+                    ? `${filteredLocations.length} Biblical Location${filteredLocations.length !== 1 ? "s" : ""}${selectedEra !== "All" ? ` \u00B7 ${selectedEra}` : ""}`
+                    : "Loading..."}
+                </Text>
+                {filteredLocations.length > 0 && filteredLocations.length <= 2 && selectedEra !== "All" && (
+                  <Text style={[styles.contextHelper, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {selectedEra === "Patriarchs" ? "Places connected to the earliest biblical world."
+                      : selectedEra === "Exodus" ? "Tracing the Exodus world through key locations."
+                      : selectedEra === "Exile" ? "Key places connected to exile and return."
+                      : selectedEra === "Kingdom" ? "Places tied to the divided kingdom period."
+                      : selectedEra === "Early Church" ? "Locations significant to the early Christian movement."
+                      : `Key places from the ${selectedEra} period.`}
+                  </Text>
+                )}
+              </>
+            )}
             {typeOrder.map((type) => {
               const locs = grouped[type];
               if (!locs || locs.length === 0) return null;
@@ -1276,7 +1297,7 @@ const styles = StyleSheet.create({
   modeToggleRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingBottom: 6,
+    paddingBottom: 4,
     gap: 8,
   },
   modeBtn: {
@@ -1285,45 +1306,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 10,
   },
   modeBtnText: {
     fontSize: 13,
   },
   eraScrollRow: {
-    maxHeight: 36,
-    marginBottom: 6,
+    maxHeight: 34,
+    marginBottom: 4,
   },
   eraScrollContent: {
     paddingHorizontal: 16,
     gap: 6,
+    alignItems: "center" as const,
   },
   eraChip: {
+    height: 30,
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 18,
+    borderRadius: 15,
     borderWidth: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   eraChipText: {
     fontSize: 12,
+    lineHeight: 14,
   },
   overlayScrollRow: {
-    maxHeight: 36,
-    marginBottom: 6,
+    maxHeight: 34,
+    marginBottom: 4,
   },
   overlayScrollContent: {
     paddingHorizontal: 16,
     gap: 8,
+    alignItems: "center" as const,
   },
   overlayPill: {
+    height: 30,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 18,
+    borderRadius: 15,
     borderWidth: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   overlayPillText: {
     fontSize: 12,
+    lineHeight: 14,
   },
   pgDescPreview: {
     fontSize: 12,
@@ -1331,25 +1360,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   journeyScrollRow: {
-    maxHeight: 36,
-    marginBottom: 6,
+    maxHeight: 34,
+    marginBottom: 4,
   },
   journeyScrollContent: {
     paddingHorizontal: 16,
     gap: 6,
+    alignItems: "center" as const,
   },
   journeyChip: {
+    height: 30,
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 18,
+    borderRadius: 15,
     borderWidth: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   journeyChipText: {
     fontSize: 12,
+    lineHeight: 14,
   },
   headerRow: {
     paddingHorizontal: 22,
-    paddingBottom: 10,
+    paddingBottom: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1523,7 +1556,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     paddingTop: 2,
-    paddingBottom: 10,
+    paddingBottom: 8,
     zIndex: 10,
   },
   searchInputRow: {
@@ -1537,7 +1570,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     paddingVertical: 0,
   },
   searchResultsPanel: {
@@ -1597,5 +1630,25 @@ const styles = StyleSheet.create({
   },
   searchEmptyText: {
     fontSize: 14,
+  },
+  emptyStateCard: {
+    borderRadius: 14,
+    padding: 20,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  emptyStateTitle: {
+    fontSize: 14,
+  },
+  emptyStateBody: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center" as const,
+  },
+  contextHelper: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: -4,
+    marginBottom: 4,
   },
 });
