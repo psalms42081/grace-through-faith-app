@@ -259,6 +259,15 @@ const LOCATIONS = [
     locationType: "city",
     era: "Early Church",
   },
+  {
+    name: "Cyprus",
+    modernName: "Paphos / Salamis",
+    latitude: "34.7720",
+    longitude: "32.4297",
+    description: "A large Mediterranean island and the homeland of Barnabas. Paul and Barnabas began their first missionary journey here, preaching in the synagogues of Salamis and confronting the sorcerer Bar-Jesus before the proconsul Sergius Paulus at Paphos.",
+    locationType: "region",
+    era: "Early Church",
+  },
 ];
 
 interface VerseRef {
@@ -379,6 +388,10 @@ const LOCATION_VERSE_REFS: Record<string, VerseRef[]> = {
   "Tarsus": [
     { bookId: 44, chapter: 9, verse: 11, note: "Saul of Tarsus" },
     { bookId: 44, chapter: 21, verse: 39, note: "Paul identifies himself as from Tarsus" },
+  ],
+  "Cyprus": [
+    { bookId: 44, chapter: 13, verse: 4, note: "Paul and Barnabas sail to Cyprus" },
+    { bookId: 44, chapter: 13, verse: 12, note: "Sergius Paulus believes on Cyprus" },
   ],
 };
 
