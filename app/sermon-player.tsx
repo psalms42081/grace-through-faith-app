@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Platform,
   Linking,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +25,7 @@ export default function SermonPlayerScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const [loading, setLoading] = useState(true);
   const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
 
   const handleOpenInYouTube = useCallback(() => {
@@ -63,6 +65,27 @@ export default function SermonPlayerScreen() {
             } as any}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+          />
+        </View>
+      );
+    }
+
+    if (Platform.OS === "ios") {
+      return (
+        <View style={st.playerContainer}>
+          {loading && (
+            <View style={st.loadingOverlay}>
+              <ActivityIndicator size="large" color={theme.accent} />
+            </View>
+          )}
+          <WebView
+            source={{ uri: embedUrl }}
+            style={st.webview}
+            allowsFullscreenVideo
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            onLoadEnd={() => setLoading(false)}
           />
         </View>
       );
@@ -156,6 +179,13 @@ const st = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+    zIndex: 10,
   },
   thumbnail: {
     ...StyleSheet.absoluteFillObject,
