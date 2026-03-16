@@ -329,6 +329,15 @@ function StudyCompletionScreen({
       contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
     >
+
+      <Pressable
+        onPress={() => router.push("/(tabs)/explore")}
+        hitSlop={12}
+        style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, marginBottom: 12 }}
+      >
+        <Ionicons name="chevron-back" size={18} color={theme.accent} />
+        <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
+      </Pressable>
       <View style={{ alignItems: "center" as const, marginBottom: 24 }}>
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 16, marginTop: 12 }}>
           <Ionicons name="ribbon" size={32} color={theme.accent} />
@@ -2111,6 +2120,14 @@ export default function StudyScreen() {
     }
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad + 16 }]}>
+        <Pressable
+          onPress={() => router.push("/(tabs)/explore")}
+          hitSlop={12}
+          style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, paddingHorizontal: 24, marginBottom: 8 }}
+        >
+          <Ionicons name="chevron-back" size={18} color={theme.accent} />
+          <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
+        </Pressable>
         <FourLayerIntro
           theme={theme}
           hasPassage={canTrack}
@@ -2201,6 +2218,14 @@ export default function StudyScreen() {
       <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: canTrack ? "transparent" : theme.border }]}>
         {canTrack ? (
           <View style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const }}>
+            <Pressable
+              onPress={() => router.push("/(tabs)/explore")}
+              hitSlop={12}
+              style={{ marginRight: 10, padding: 4 }}
+              accessibilityLabel="Back to Study"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.text} />
+            </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                 {sharedBook?.name} {chapter}
