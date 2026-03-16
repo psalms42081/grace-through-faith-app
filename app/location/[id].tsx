@@ -55,10 +55,11 @@ function parseFirstPassage(passage: string): ParsedPassage | null {
 }
 
 export default function LocationDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const isBiblical = mode === "biblical";
 
   const location = getLocationById(id || "") || getLocationByName(id || "");
 
@@ -111,27 +112,52 @@ export default function LocationDetailScreen() {
           <Text style={[st.locationName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             {location.name}
           </Text>
+          <Text style={[st.heroSubtitle, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            {isBiblical
+              ? location.ancientRegion
+              : `${location.modernLocation}, ${location.modernCountry}`}
+          </Text>
           <View style={st.regionRow}>
             <View style={[st.regionBadge, { backgroundColor: theme.accent + "18" }]}>
-              <Ionicons name="compass-outline" size={13} color={theme.accent} />
+              <Ionicons name={isBiblical ? "compass-outline" : "globe-outline"} size={13} color={theme.accent} />
               <Text style={[st.regionText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                {location.ancientRegion}
+                {isBiblical ? "Ancient Region" : "Modern"}
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
-          <View style={st.cardRow}>
-            <Ionicons name="location-outline" size={16} color={theme.textMuted} />
-            <Text style={[st.cardLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              Modern Location
+        {isBiblical ? (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="compass-outline" size={16} color={theme.textMuted} />
+              <Text style={[st.cardLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                Ancient Region
+              </Text>
+            </View>
+            <Text style={[st.cardValue, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+              {location.ancientRegion}
+            </Text>
+            <Text style={[st.cardValueSecondary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Modern: {location.modernLocation}, {location.modernCountry}
             </Text>
           </View>
-          <Text style={[st.cardValue, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-            {location.modernLocation}, {location.modernCountry}
-          </Text>
-        </View>
+        ) : (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="location-outline" size={16} color={theme.textMuted} />
+              <Text style={[st.cardLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                Modern Location
+              </Text>
+            </View>
+            <Text style={[st.cardValue, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+              {location.modernLocation}, {location.modernCountry}
+            </Text>
+            <Text style={[st.cardValueSecondary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Ancient Region: {location.ancientRegion}
+            </Text>
+          </View>
+        )}
 
         <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
           <View style={st.cardRow}>
@@ -214,14 +240,14 @@ export default function LocationDetailScreen() {
             {nearbyLocs.map((nl) => (
               <Pressable
                 key={nl!.id}
-                onPress={() => router.push(`/location/${nl!.id}` as any)}
+                onPress={() => router.push({ pathname: `/location/${nl!.id}`, params: { mode: mode || "modern" } } as any)}
                 style={({ pressed }) => [st.nearbyRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
               >
                 <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                   {nl!.name}
                 </Text>
                 <Text style={[st.nearbyRegion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {nl!.ancientRegion}
+                  {isBiblical ? nl!.ancientRegion : `${nl!.modernLocation}, ${nl!.modernCountry}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginLeft: "auto" }} />
               </Pressable>
@@ -381,6 +407,15 @@ const st = StyleSheet.create({
   cardValue: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  cardValueSecondary: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    marginBottom: 8,
   },
   description: {
     fontSize: 14,

@@ -19,6 +19,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { getLocationByName } from "@/constants/biblical-locations";
 
 type Tab = "maps" | "timeline";
+type MapMode = "modern" | "biblical";
 
 interface Location {
   id: string;
@@ -89,6 +90,7 @@ export default function MapsTimelineScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");
+  const [mapMode, setMapMode] = useState<MapMode>("modern");
 
   return (
     <>
@@ -134,7 +136,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} />
+          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -153,11 +155,16 @@ function MapsContent({
   theme,
   isDark,
   bottomPad,
+  mapMode,
+  setMapMode,
 }: {
   theme: typeof Colors.light;
   isDark: boolean;
   bottomPad: number;
+  mapMode: MapMode;
+  setMapMode: (m: MapMode) => void;
 }) {
+  const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   const { data: locations, isLoading } = useQuery<Location[]>({
@@ -177,11 +184,11 @@ function MapsContent({
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
     if (enriched) {
-      router.push(`/location/${enriched.id}` as any);
+      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode } } as any);
     } else {
       setSelectedLocation(loc);
     }
-  }, []);
+  }, [mapMode]);
 
   const handleMarkerPress = useCallback(
     (loc: any) => {
@@ -222,8 +229,47 @@ function MapsContent({
     );
   }
 
+  const getSubtitleForLocation = useCallback((loc: Location): string => {
+    if (isBiblical) {
+      const enriched = getLocationByName(loc.name);
+      if (enriched) return enriched.ancientRegion;
+      return loc.era || loc.modernName || "";
+    }
+    return [loc.modernName, loc.era].filter(Boolean).join(" \u00B7 ");
+  }, [isBiblical]);
+
   return (
     <View style={{ flex: 1 }}>
+      <View style={styles.modeToggleRow}>
+        {(["modern", "biblical"] as MapMode[]).map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => setMapMode(m)}
+            style={[
+              styles.modeBtn,
+              { backgroundColor: mapMode === m ? theme.accent : theme.backgroundSecondary },
+            ]}
+          >
+            <Ionicons
+              name={m === "modern" ? "globe-outline" : "book-outline"}
+              size={13}
+              color={mapMode === m ? "#fff" : theme.textSecondary}
+            />
+            <Text
+              style={[
+                styles.modeBtnText,
+                {
+                  color: mapMode === m ? "#fff" : theme.textSecondary,
+                  fontFamily: mapMode === m ? "Inter_600SemiBold" : "Inter_500Medium",
+                },
+              ]}
+            >
+              {m === "modern" ? "Modern" : "Biblical World"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <View style={styles.mapContainer}>
         <BibleMap
           locations={mappableLocations}
@@ -256,11 +302,12 @@ function MapsContent({
                 <Text style={[styles.overlayTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                   {selectedLocation.name}
                 </Text>
-                {selectedLocation.modernName && (
-                  <Text style={[styles.overlaySubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Modern: {selectedLocation.modernName}
-                  </Text>
-                )}
+                <Text style={[styles.overlaySubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {isBiblical
+                    ? (() => { const e = getLocationByName(selectedLocation.name); return e ? `Region: ${e.ancientRegion}` : (selectedLocation.era || ""); })()
+                    : selectedLocation.modernName ? `Modern: ${selectedLocation.modernName}` : ""
+                  }
+                </Text>
               </View>
             </View>
             {selectedLocation.description && (
@@ -390,7 +437,7 @@ function MapsContent({
                           style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
                           numberOfLines={1}
                         >
-                          {[loc.modernName, loc.era].filter(Boolean).join(" · ")}
+                          {getSubtitleForLocation(loc)}
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
@@ -539,6 +586,24 @@ function TimelineContent({ theme }: { theme: typeof Colors.light }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  modeToggleRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  modeBtnText: {
+    fontSize: 13,
+  },
   headerRow: {
     paddingHorizontal: 22,
     paddingBottom: 14,

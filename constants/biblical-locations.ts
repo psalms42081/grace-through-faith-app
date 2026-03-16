@@ -203,7 +203,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     name: "Jordan River",
     modernLocation: "Jordan River",
     modernCountry: "Israel / Jordan",
-    ancientRegion: "Jordan Rift Valley",
+    ancientRegion: "Biblical Israel / Transjordan",
     latitude: 31.8364,
     longitude: 35.5504,
     description:
