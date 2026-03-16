@@ -191,53 +191,6 @@ const NEAR_EAST_FALLBACK: { latitude: number; longitude: number }[] = [
   { latitude: 40.0, longitude: 45.0 },
 ];
 
-const EDITORIAL_PRESETS: Record<string, { latitude: number; longitude: number }[]> = {
-  "All": [
-    { latitude: 28.0, longitude: 26.0 },
-    { latitude: 42.0, longitude: 46.0 },
-  ],
-  "Patriarchs": [
-    { latitude: 29.5, longitude: 30.0 },
-    { latitude: 37.0, longitude: 45.0 },
-  ],
-  "Exodus": [
-    { latitude: 28.0, longitude: 30.0 },
-    { latitude: 33.5, longitude: 37.0 },
-  ],
-  "Kingdom": [
-    { latitude: 30.5, longitude: 34.0 },
-    { latitude: 33.5, longitude: 36.5 },
-  ],
-  "Exile": [
-    { latitude: 30.0, longitude: 34.0 },
-    { latitude: 34.0, longitude: 45.5 },
-  ],
-  "Life of Christ": [
-    { latitude: 31.0, longitude: 34.5 },
-    { latitude: 33.5, longitude: 36.0 },
-  ],
-  "Early Church": [
-    { latitude: 30.0, longitude: 26.0 },
-    { latitude: 42.0, longitude: 42.0 },
-  ],
-  "exodus-route": [
-    { latitude: 28.5, longitude: 30.0 },
-    { latitude: 33.0, longitude: 37.0 },
-  ],
-  "paul-1": [
-    { latitude: 33.0, longitude: 28.0 },
-    { latitude: 39.5, longitude: 37.0 },
-  ],
-  "paul-2": [
-    { latitude: 33.0, longitude: 26.0 },
-    { latitude: 41.0, longitude: 37.0 },
-  ],
-  "paul-3": [
-    { latitude: 33.0, longitude: 25.0 },
-    { latitude: 41.5, longitude: 37.0 },
-  ],
-};
-
 export default function MapsTimelineScreen() {
   const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam, journey: journeyParam, kingdom: kingdomParam, tribe: tribeParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string; tribe?: string }>();
   const { theme, isDark } = useTheme();
@@ -418,33 +371,75 @@ function MapsContent({
   }, []);
 
   const fitCoordinates = useMemo((): { latitude: number; longitude: number }[] => {
+    let coords: { latitude: number; longitude: number }[] = [];
     if (overlay === "journey-routes") {
-      if (selectedJourney !== "all" && EDITORIAL_PRESETS[selectedJourney]) {
-        return EDITORIAL_PRESETS[selectedJourney];
-      }
-      let coords: { latitude: number; longitude: number }[] = [];
       for (const route of routeLines) {
         coords.push(...route.coordinates);
       }
-      return coords.length > 0 ? coords : (EDITORIAL_PRESETS["Early Church"] || NEAR_EAST_FALLBACK);
+      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
     }
     if (overlay === "kingdoms") {
       if (kingdomMarkers.length === 0) return NEAR_EAST_FALLBACK;
       const selected = kingdomMarkers.find((k) => k.selected);
       if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
-      return EDITORIAL_PRESETS[selectedEra] || kingdomMarkers.map((k) => ({ latitude: k.latitude, longitude: k.longitude }));
+      return kingdomMarkers.map((k) => ({ latitude: k.latitude, longitude: k.longitude }));
     }
     if (overlay === "tribes") {
       if (tribeMarkers.length === 0) return NEAR_EAST_FALLBACK;
       const selected = tribeMarkers.find((t) => t.selected);
       if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
-      return EDITORIAL_PRESETS["Kingdom"] || tribeMarkers.map((t) => ({ latitude: t.latitude, longitude: t.longitude }));
+      return tribeMarkers.map((t) => ({ latitude: t.latitude, longitude: t.longitude }));
     }
-    if (overlay === "people-groups" || overlay === "prophecy") {
-      return EDITORIAL_PRESETS[selectedEra] || NEAR_EAST_FALLBACK;
+    if (overlay === "people-groups") {
+      const filteredPG = selectedEra === "All"
+        ? BIBLICAL_PEOPLE_GROUPS
+        : BIBLICAL_PEOPLE_GROUPS.filter((pg) => pg.eras.some((e) => e === selectedEra));
+      const seen = new Set<string>();
+      for (const pg of filteredPG) {
+        for (const locId of pg.relatedLocationIds) {
+          if (seen.has(locId)) continue;
+          seen.add(locId);
+          const loc = getLocationById(locId);
+          if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
+        }
+      }
+      if (coords.length === 0) return NEAR_EAST_FALLBACK;
+      if (coords.length === 1) {
+        return [
+          { latitude: coords[0].latitude - 3, longitude: coords[0].longitude - 4 },
+          { latitude: coords[0].latitude + 3, longitude: coords[0].longitude + 4 },
+        ];
+      }
+      return coords;
     }
-    return EDITORIAL_PRESETS[selectedEra] || NEAR_EAST_FALLBACK;
-  }, [overlay, routeLines, kingdomMarkers, tribeMarkers, selectedEra, selectedJourney]);
+    if (overlay === "prophecy") {
+      const filteredPL = selectedEra === "All"
+        ? BIBLICAL_PROPHECY_LINKS
+        : BIBLICAL_PROPHECY_LINKS.filter((pl) => pl.eras.some((e) => e === selectedEra));
+      const seen = new Set<string>();
+      for (const pl of filteredPL) {
+        for (const locId of pl.relatedLocationIds) {
+          if (seen.has(locId)) continue;
+          seen.add(locId);
+          const loc = getLocationById(locId);
+          if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
+        }
+      }
+      if (coords.length === 0) return NEAR_EAST_FALLBACK;
+      if (coords.length === 1) {
+        return [
+          { latitude: coords[0].latitude - 3, longitude: coords[0].longitude - 4 },
+          { latitude: coords[0].latitude + 3, longitude: coords[0].longitude + 4 },
+        ];
+      }
+      return coords;
+    }
+    coords = mappableLocations.map((l) => ({
+      latitude: parseFloat(l.latitude),
+      longitude: parseFloat(l.longitude),
+    }));
+    return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
+  }, [overlay, routeLines, kingdomMarkers, tribeMarkers, mappableLocations, selectedEra]);
 
   const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
   const quietMarkers = overlay === "none" || (overlay === "journey-routes" && selectedJourney === "all");

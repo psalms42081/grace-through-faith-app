@@ -44,7 +44,7 @@ The application features a mobile-first architecture with a frontend built using
 - **28 Fundamental Beliefs UX:** Interactive belief cards with scripture navigation.
 - **Great Controversy Timeline Engine:** Immersive vertical timeline.
 - **Study Screen Architecture:** Structured Study tab with hero sections, learning paths, prophecy, and reference sections.
-- **Bible Maps System:** Biblical atlas-style interactive map using Leaflet WebView with ESRI World Shaded Relief + CartoDB Voyager labels, rendered via WebView (native) and iframe (web). Features CSS-filtered dark parchment look, editorial region presets per era (Patriarchs, Exodus, Kingdom, Exile, Life of Christ, Early Church) and per journey (Exodus Route, Paul 1-3), overlays for kingdoms/empires (translucent region fills), people groups, prophecy links, journey routes (elegant polylines), and tribes of Israel. Includes search, focus system, and detail screens with related studies integration.
+- **Bible Maps System:** Advanced interactive map with overlays for Biblical locations, people groups, prophecy links, journey routes, kingdoms & empires, and tribes of Israel. Features search, focus system, and detail screens with related studies integration.
 - **Related Studies Integration Layer:** Reusable component (`RelatedStudiesSection`) for contextual study actions (e.g., Read Passages, Start Guided Study, Open Historic Voices) across all Bible Maps detail screens.
 - **Guided Study Passage Picker:** Inline book/chapter picker for AI tutor sessions.
 - **Content Engine & Study Resources:** Two-stage content pipeline with review workflow and versioning.
