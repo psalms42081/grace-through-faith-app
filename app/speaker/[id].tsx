@@ -9,13 +9,14 @@ import {
   Linking,
   Modal,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useTheme } from "@/hooks/useTheme";
-import { getSpeakerById, type SDASpeaker } from "@/constants/sda-speakers";
+import { getSpeakerById, getSpeakerImage, type SDASpeaker } from "@/constants/sda-speakers";
 
 function VideoCard({ videoId, title, theme, onPress }: { videoId: string; title: string; theme: any; onPress: () => void }) {
   const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
@@ -113,11 +114,18 @@ export default function SpeakerDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[st.profileSection, { backgroundColor: theme.backgroundCard }]}>
-          <View style={[st.avatar, { backgroundColor: speaker.color + "20" }]}>
-            <Text style={[st.avatarInitials, { color: speaker.color, fontFamily: "Inter_700Bold" }]}>
-              {speaker.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
-            </Text>
-          </View>
+          {getSpeakerImage(speaker.id) ? (
+            <Image
+              source={getSpeakerImage(speaker.id)}
+              style={[st.avatar, { backgroundColor: speaker.color + "20" }]}
+            />
+          ) : (
+            <View style={[st.avatar, { backgroundColor: speaker.color + "20" }]}>
+              <Text style={[st.avatarInitials, { color: speaker.color, fontFamily: "Inter_700Bold" }]}>
+                {speaker.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+              </Text>
+            </View>
+          )}
           <Text style={[st.speakerName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             {speaker.name}
           </Text>

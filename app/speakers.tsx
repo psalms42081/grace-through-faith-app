@@ -13,7 +13,7 @@ import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
-import { SDA_SPEAKERS, SERMON_TOPICS, getSpeakersByTopic, type SDASpeaker, type SermonTopic } from "@/constants/sda-speakers";
+import { SDA_SPEAKERS, SERMON_TOPICS, getSpeakersByTopic, getSpeakerImage, type SDASpeaker, type SermonTopic } from "@/constants/sda-speakers";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH * 0.42;
@@ -28,11 +28,18 @@ function SpeakerCard({ speaker, theme, onPress }: { speaker: SDASpeaker; theme: 
         { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
       ]}
     >
-      <View style={[st.speakerAvatar, { backgroundColor: speaker.color + "20" }]}>
-        <Text style={[st.speakerInitials, { color: speaker.color, fontFamily: "Inter_700Bold" }]}>
-          {speaker.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
-        </Text>
-      </View>
+      {getSpeakerImage(speaker.id) ? (
+        <Image
+          source={getSpeakerImage(speaker.id)}
+          style={[st.speakerAvatar, { backgroundColor: speaker.color + "20" }]}
+        />
+      ) : (
+        <View style={[st.speakerAvatar, { backgroundColor: speaker.color + "20" }]}>
+          <Text style={[st.speakerInitials, { color: speaker.color, fontFamily: "Inter_700Bold" }]}>
+            {speaker.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+          </Text>
+        </View>
+      )}
       <View style={st.speakerInfo}>
         <Text style={[st.speakerName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           {speaker.name}
