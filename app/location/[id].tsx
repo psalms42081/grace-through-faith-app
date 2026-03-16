@@ -15,6 +15,7 @@ import {
   getLocationById,
   getLocationByName,
   BIBLICAL_LOCATIONS,
+  getPeopleGroupsForLocation,
   type EraFilter,
 } from "@/constants/biblical-locations";
 
@@ -56,7 +57,7 @@ function parseFirstPassage(passage: string): ParsedPassage | null {
 }
 
 export default function LocationDetailScreen() {
-  const { id, mode, era } = useLocalSearchParams<{ id: string; mode?: string; era?: string }>();
+  const { id, mode, era, overlay } = useLocalSearchParams<{ id: string; mode?: string; era?: string; overlay?: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -93,6 +94,8 @@ export default function LocationDetailScreen() {
   const nearbyLocs = location.nearbyLocations
     .map((nid) => BIBLICAL_LOCATIONS.find((l) => l.id === nid))
     .filter(Boolean);
+
+  const relatedPeopleGroups = getPeopleGroupsForLocation(location.id);
 
   return (
     <>
@@ -270,6 +273,37 @@ export default function LocationDetailScreen() {
                   {passage}
                 </Text>
               </View>
+            ))}
+          </View>
+        )}
+
+        {relatedPeopleGroups.length > 0 && (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="people-outline" size={16} color="#22C55E" />
+              <Text style={[st.cardLabel, { color: "#22C55E", fontFamily: "Inter_600SemiBold" }]}>
+                People Groups
+              </Text>
+            </View>
+            {relatedPeopleGroups.map((pg) => (
+              <Pressable
+                key={pg.id}
+                onPress={() => router.push({ pathname: `/people-group/${pg.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "none" } } as any)}
+                style={({ pressed }) => [st.pgRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <View style={[st.pgIcon, { backgroundColor: "#22C55E" + "14" }]}>
+                  <Ionicons name="people-outline" size={16} color="#22C55E" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {pg.name}
+                  </Text>
+                  <Text style={[st.nearbyRegion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {pg.regionLabel}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
             ))}
           </View>
         )}
@@ -556,6 +590,20 @@ const st = StyleSheet.create({
   },
   actionSub: {
     fontSize: 12,
+  },
+  pgRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pgIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   eraChipsRow: {
     flexDirection: "row",

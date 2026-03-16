@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, ERA_OPTIONS, type EraFilter } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationsByEra, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, type EraFilter, type OverlayType } from "@/constants/biblical-locations";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -92,6 +92,7 @@ export default function MapsTimelineScreen() {
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");
   const [mapMode, setMapMode] = useState<MapMode>("modern");
   const [selectedEra, setSelectedEra] = useState<EraFilter>("All");
+  const [overlay, setOverlay] = useState<OverlayType>("none");
 
   return (
     <>
@@ -137,7 +138,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} />
+          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} overlay={overlay} setOverlay={setOverlay} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -160,6 +161,8 @@ function MapsContent({
   setMapMode,
   selectedEra,
   setSelectedEra,
+  overlay,
+  setOverlay,
 }: {
   theme: typeof Colors.light;
   isDark: boolean;
@@ -168,6 +171,8 @@ function MapsContent({
   setMapMode: (m: MapMode) => void;
   selectedEra: EraFilter;
   setSelectedEra: (e: EraFilter) => void;
+  overlay: OverlayType;
+  setOverlay: (o: OverlayType) => void;
 }) {
   const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -199,11 +204,11 @@ function MapsContent({
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
     if (enriched) {
-      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra } } as any);
+      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any);
     } else {
       setSelectedLocation(loc);
     }
-  }, [mapMode, selectedEra]);
+  }, [mapMode, selectedEra, overlay]);
 
   const handleMarkerPress = useCallback(
     (loc: any) => {
@@ -323,6 +328,36 @@ function MapsContent({
         ))}
       </ScrollView>
 
+      <View style={styles.overlayToggleRow}>
+        <Text style={[styles.overlayLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+          Overlay
+        </Text>
+        <View style={[styles.overlayPicker, { backgroundColor: theme.backgroundSecondary }]}>
+          {OVERLAY_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.value}
+              onPress={() => setOverlay(opt.value)}
+              style={[
+                styles.overlayPickerBtn,
+                overlay === opt.value && { backgroundColor: theme.accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.overlayPickerText,
+                  {
+                    color: overlay === opt.value ? "#fff" : theme.textSecondary,
+                    fontFamily: overlay === opt.value ? "Inter_600SemiBold" : "Inter_400Regular",
+                  },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
       <View style={styles.mapContainer}>
         <BibleMap
           locations={mappableLocations}
@@ -440,6 +475,54 @@ function MapsContent({
                 ))}
               </View>
             )}
+          </View>
+        ) : overlay === "people-groups" ? (
+          <View style={styles.tabContent}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {`${BIBLICAL_PEOPLE_GROUPS.length} People Groups`}
+            </Text>
+            {BIBLICAL_PEOPLE_GROUPS.map((pg) => (
+              <Pressable
+                key={pg.id}
+                onPress={() => router.push({ pathname: `/people-group/${pg.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any)}
+                style={({ pressed }) => [
+                  styles.regionCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.regionIcon,
+                    { backgroundColor: "#22C55E" + "18" },
+                  ]}
+                >
+                  <Ionicons name="people-outline" size={22} color="#22C55E" />
+                </View>
+                <View style={[styles.regionInfo, { flex: 1 }]}>
+                  <Text
+                    style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                  >
+                    {pg.name}
+                  </Text>
+                  <Text
+                    style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+                    numberOfLines={1}
+                  >
+                    {pg.regionLabel}
+                  </Text>
+                  <Text
+                    style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                    numberOfLines={2}
+                  >
+                    {pg.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
           </View>
         ) : (
           <View style={styles.tabContent}>
@@ -675,6 +758,39 @@ const styles = StyleSheet.create({
   },
   eraChipText: {
     fontSize: 12,
+  },
+  overlayToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  overlayLabel: {
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  overlayPicker: {
+    flex: 1,
+    flexDirection: "row",
+    borderRadius: 10,
+    padding: 2,
+    gap: 2,
+  },
+  overlayPickerBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  overlayPickerText: {
+    fontSize: 12,
+  },
+  pgDescPreview: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
   },
   headerRow: {
     paddingHorizontal: 22,

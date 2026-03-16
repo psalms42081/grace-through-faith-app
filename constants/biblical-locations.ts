@@ -4,6 +4,16 @@ export interface LocationTimelineEvent {
   shortDescription: string;
 }
 
+export interface BiblicalPeopleGroup {
+  id: string;
+  name: string;
+  regionLabel: string;
+  description: string;
+  keyPassages: string[];
+  relatedLocationIds: string[];
+  eras: string[];
+}
+
 export interface BiblicalLocation {
   id: string;
   name: string;
@@ -19,6 +29,7 @@ export interface BiblicalLocation {
   nearbyLocations: string[];
   eras: string[];
   timelineEvents: LocationTimelineEvent[];
+  relatedPeopleGroupIds: string[];
 }
 
 export const ERA_OPTIONS = [
@@ -32,6 +43,121 @@ export const ERA_OPTIONS = [
 ] as const;
 
 export type EraFilter = (typeof ERA_OPTIONS)[number];
+
+export type OverlayType = "none" | "people-groups";
+
+export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "people-groups", label: "People Groups" },
+];
+
+export const BIBLICAL_PEOPLE_GROUPS: BiblicalPeopleGroup[] = [
+  {
+    id: "philistines",
+    name: "Philistines",
+    regionLabel: "Coastal Plain (Gaza, Ashkelon, Ekron)",
+    description:
+      "A sea-faring people who settled along the southern coastal plain of Canaan. The Philistines were persistent adversaries of Israel from the period of the Judges through the early monarchy, most famously through the champion warrior Goliath.",
+    keyPassages: [
+      "Judges 14-16",
+      "1 Samuel 4-6",
+      "1 Samuel 17",
+      "2 Samuel 5:17-25",
+    ],
+    relatedLocationIds: ["jerusalem"],
+    eras: ["Exodus", "Kingdom"],
+  },
+  {
+    id: "moabites",
+    name: "Moabites",
+    regionLabel: "East of the Dead Sea (Transjordan)",
+    description:
+      "Descendants of Lot who inhabited the plateau east of the Dead Sea. Though often in conflict with Israel, the Moabite Ruth became an ancestor of King David and, ultimately, of Jesus Christ.",
+    keyPassages: [
+      "Genesis 19:36-37",
+      "Numbers 22-24",
+      "Ruth 1:1-4",
+      "2 Kings 3",
+    ],
+    relatedLocationIds: ["jordan-river", "bethlehem"],
+    eras: ["Patriarchs", "Exodus", "Kingdom"],
+  },
+  {
+    id: "edomites",
+    name: "Edomites",
+    regionLabel: "South of the Dead Sea (Seir)",
+    description:
+      "Descendants of Esau, Jacob's brother, who settled in the mountainous region of Seir south of the Dead Sea. Their relationship with Israel was marked by rivalry rooted in the conflict between the twin brothers.",
+    keyPassages: [
+      "Genesis 25:30",
+      "Genesis 36:1-8",
+      "Numbers 20:14-21",
+      "Obadiah 1",
+    ],
+    relatedLocationIds: ["jerusalem"],
+    eras: ["Patriarchs", "Exodus", "Kingdom"],
+  },
+  {
+    id: "cushites",
+    name: "Cushites",
+    regionLabel: "Upper Nile (ancient Nubia / Ethiopia)",
+    description:
+      "People from the land of Cush, located south of Egypt in the upper Nile region. Cush is mentioned prominently in the Table of Nations and appears throughout Scripture in both military and prophetic contexts.",
+    keyPassages: [
+      "Genesis 10:6-8",
+      "2 Chronicles 14:9-15",
+      "Jeremiah 13:23",
+      "Zephaniah 3:10",
+    ],
+    relatedLocationIds: [],
+    eras: ["Patriarchs", "Kingdom"],
+  },
+  {
+    id: "hittites",
+    name: "Hittites",
+    regionLabel: "Anatolia and northern Canaan",
+    description:
+      "A powerful ancient people centered in Anatolia (modern Turkey) who also had settlements in Canaan. In Scripture, Hittites appear as Canaan's inhabitants during the patriarchal era and as individuals in David's inner circle, including Uriah the Hittite.",
+    keyPassages: [
+      "Genesis 23:1-20",
+      "Exodus 3:8",
+      "2 Samuel 11:3",
+      "1 Kings 10:29",
+    ],
+    relatedLocationIds: ["jerusalem"],
+    eras: ["Patriarchs", "Kingdom"],
+  },
+  {
+    id: "amorites",
+    name: "Amorites",
+    regionLabel: "Hill country of Canaan and Transjordan",
+    description:
+      "One of the major Canaanite peoples who occupied the hill country on both sides of the Jordan River. The defeat of the Amorite kings Sihon and Og was a defining event in Israel's conquest of the Promised Land.",
+    keyPassages: [
+      "Genesis 15:16",
+      "Numbers 21:21-35",
+      "Deuteronomy 3:1-11",
+      "Joshua 10:1-27",
+    ],
+    relatedLocationIds: ["jordan-river", "jerusalem"],
+    eras: ["Patriarchs", "Exodus"],
+  },
+  {
+    id: "canaanites",
+    name: "Canaanites",
+    regionLabel: "Land of Canaan (broadly)",
+    description:
+      "The collective term for the various peoples inhabiting the land of Canaan before and during Israel's settlement. Their religious practices, centered on Baal worship, became a persistent source of spiritual conflict for Israel throughout the Old Testament.",
+    keyPassages: [
+      "Genesis 12:6",
+      "Exodus 3:8",
+      "Joshua 3:10",
+      "Judges 1:27-33",
+    ],
+    relatedLocationIds: ["jerusalem", "jordan-river"],
+    eras: ["Patriarchs", "Exodus", "Kingdom"],
+  },
+];
 
 export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
   {
@@ -68,6 +194,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Nazareth was the hometown of Jesus during His early life and ministry.",
       },
     ],
+    relatedPeopleGroupIds: [],
   },
   {
     id: "bethlehem",
@@ -111,6 +238,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Bethlehem is the birthplace of Jesus and also the city of David.",
       },
     ],
+    relatedPeopleGroupIds: ["moabites"],
   },
   {
     id: "jerusalem",
@@ -176,6 +304,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "The early church began its public witness in Jerusalem.",
       },
     ],
+    relatedPeopleGroupIds: ["canaanites", "hittites", "philistines", "amorites"],
   },
   {
     id: "capernaum",
@@ -213,6 +342,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Many miracles and teachings of Jesus took place in and around Capernaum.",
       },
     ],
+    relatedPeopleGroupIds: [],
   },
   {
     id: "babylon",
@@ -259,6 +389,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Babylon became the destination of Judah's exile and the setting of Daniel's early life.",
       },
     ],
+    relatedPeopleGroupIds: [],
   },
   {
     id: "damascus",
@@ -301,6 +432,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Damascus is linked with Saul's conversion and early Christian mission.",
       },
     ],
+    relatedPeopleGroupIds: ["hittites"],
   },
   {
     id: "jordan-river",
@@ -350,6 +482,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Jesus was baptized in the Jordan, marking the beginning of His public ministry.",
       },
     ],
+    relatedPeopleGroupIds: ["moabites", "canaanites", "amorites"],
   },
   {
     id: "sea-of-galilee",
@@ -387,6 +520,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
           "Jesus taught, called disciples, and performed miracles around the Sea of Galilee.",
       },
     ],
+    relatedPeopleGroupIds: [],
   },
 ];
 
@@ -403,4 +537,16 @@ export function getLocationByName(name: string): BiblicalLocation | undefined {
 export function getLocationsByEra(era: EraFilter): BiblicalLocation[] {
   if (era === "All") return BIBLICAL_LOCATIONS;
   return BIBLICAL_LOCATIONS.filter((loc) => loc.eras.includes(era));
+}
+
+export function getPeopleGroupById(id: string): BiblicalPeopleGroup | undefined {
+  return BIBLICAL_PEOPLE_GROUPS.find((pg) => pg.id === id);
+}
+
+export function getPeopleGroupsForLocation(locationId: string): BiblicalPeopleGroup[] {
+  const location = getLocationById(locationId);
+  if (!location) return [];
+  return location.relatedPeopleGroupIds
+    .map((pgId) => getPeopleGroupById(pgId))
+    .filter((pg): pg is BiblicalPeopleGroup => !!pg);
 }
