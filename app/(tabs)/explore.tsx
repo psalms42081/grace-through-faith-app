@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  ImageBackground,
   Image,
 } from "react-native";
 import { router } from "expo-router";
@@ -17,10 +16,18 @@ import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import ListItem from "@/components/ui/ListItem";
-import { getBookImage } from "@/constants/bible-books";
 
 const TOPIC_IMAGES: Record<string, any> = {
+  "quick-read": require("@/assets/topic-cards/quick-read.png"),
+  "guided-study": require("@/assets/topic-cards/guided-study.png"),
+  "deep-study": require("@/assets/topic-cards/deep-study.png"),
+  "study-paths": require("@/assets/topic-cards/study-paths.png"),
+  "devotional-plans": require("@/assets/topic-cards/devotional-plans.png"),
+  "study-resources": require("@/assets/topic-cards/study-resources.png"),
+  "prophecy": require("@/assets/topic-cards/prophecy.png"),
+  "historic-voices": require("@/assets/topic-cards/historic-voices.png"),
+  "fundamental-beliefs": require("@/assets/topic-cards/fundamental-beliefs.png"),
+  "maps-timeline": require("@/assets/topic-cards/maps-timeline.png"),
   love: require("@/assets/topic-cards/love.png"),
   faith: require("@/assets/topic-cards/faith.png"),
   prayer: require("@/assets/topic-cards/prayer.png"),
@@ -42,12 +49,14 @@ function TopicImageCard({
   id,
   title,
   subtitle,
+  badge,
   onPress,
   testID,
 }: {
   id: string;
   title: string;
   subtitle: string;
+  badge?: string;
   onPress: () => void;
   testID?: string;
 }) {
@@ -64,15 +73,24 @@ function TopicImageCard({
     >
       <Image source={TOPIC_IMAGES[id]} style={st.topicImageBg} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.85)"]}
-        locations={[0, 0.45, 1]}
+        colors={["transparent", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.82)"]}
+        locations={[0, 0.4, 1]}
         style={st.topicImageOverlay}
       >
         <View style={st.topicImageContent}>
           <View style={{ flex: 1 }}>
-            <Text style={[st.topicImageTitle, { fontFamily: "Inter_600SemiBold" }]}>
-              {title}
-            </Text>
+            <View style={st.topicImageTitleRow}>
+              <Text style={[st.topicImageTitle, { fontFamily: "Inter_600SemiBold" }]}>
+                {title}
+              </Text>
+              {badge ? (
+                <View style={st.topicImageBadge}>
+                  <Text style={[st.topicImageBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+                    {badge}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={[st.topicImageSub, { fontFamily: "Inter_400Regular" }]}>
               {subtitle}
             </Text>
@@ -97,8 +115,7 @@ const SPIRITUAL_THEMES = [
 ];
 
 const STUDY_TOOLS = [
-  { id: "word-study", title: "Word Study", subtitle: "Explore the meaning of key Biblical words", route: "/word-study" },
-  { id: "bible-characters", title: "Bible Characters", subtitle: "Meet the people of Scripture", route: "/resources" },
+  { id: "historic-voices", title: "Historic Voices", subtitle: "Matthew Henry, Adam Clarke, John Gill & more", route: "/(tabs)/study?tab=voices" },
   { id: "bible-maps", title: "Bible Maps", subtitle: "Ancient locations and biblical geography", route: "/maps-timeline?tab=maps" },
   { id: "timeline", title: "Timeline", subtitle: "Walk through biblical history", route: "/maps-timeline?tab=timeline" },
 ];
@@ -115,13 +132,6 @@ interface LayerCompletionEntry {
 
 const LAYER_ORDER = ["word", "context", "voices", "application"];
 
-const INSPIRATIONS = [
-  { title: "Walking in the Spirit", subtitle: "Galatians 5:16-26", gradient: ["#1A1F3C", "#0D1025"] as [string, string], icon: "walk" as const, bookId: 48, chapter: 5, bookName: "Galatians" },
-  { title: "Armor of God", subtitle: "Ephesians 6:10-18", gradient: ["#2E7D32", "#1B5E20"] as [string, string], icon: "shield-checkmark" as const, bookId: 49, chapter: 6, bookName: "Ephesians" },
-  { title: "The Lord's Prayer", subtitle: "Matthew 6:9-13", gradient: ["#C9933A", "#A87828"] as [string, string], icon: "hand-left" as const, bookId: 40, chapter: 6, bookName: "Matthew" },
-  { title: "The Beatitudes", subtitle: "Matthew 5:3-12", gradient: ["#8B5CF6", "#6D3BD4"] as [string, string], icon: "sparkles" as const, bookId: 40, chapter: 5, bookName: "Matthew" },
-  { title: "Love Chapter", subtitle: "1 Corinthians 13", gradient: ["#E8456B", "#C2185B"] as [string, string], icon: "heart" as const, bookId: 46, chapter: 13, bookName: "1 Corinthians" },
-];
 
 function SectionLabel({ label, theme }: { label: string; theme: typeof Colors.dark }) {
   return (
@@ -180,67 +190,9 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
   );
 }
 
-function StudyModeCard({
-  icon,
-  iconColor,
-  title,
-  subtitle,
-  badge,
-  onPress,
-  theme,
-  isDark,
-  testID,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  title: string;
-  subtitle: string;
-  badge?: string;
-  onPress: () => void;
-  theme: typeof Colors.dark;
-  isDark: boolean;
-  testID?: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      testID={testID}
-      style={({ pressed }) => [
-        st.heroCard,
-        {
-          backgroundColor: isDark ? "#0E0E18" : "#FFFDF8",
-          borderColor: isDark ? iconColor + "28" : iconColor + "20",
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}
-    >
-      <View style={[st.heroIcon, { backgroundColor: iconColor + "14" }]}>
-        <Ionicons name={icon} size={24} color={iconColor} />
-      </View>
-      <View style={st.heroText}>
-        <View style={st.heroTitleRow}>
-          <Text style={[st.heroTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-            {title}
-          </Text>
-          {badge ? (
-            <View style={[st.heroBadge, { backgroundColor: iconColor + "18" }]}>
-              <Text style={[st.heroBadgeText, { color: iconColor, fontFamily: "Inter_600SemiBold" }]}>
-                {badge}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        <Text style={[st.heroSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          {subtitle}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-    </Pressable>
-  );
-}
 
 export default function StudyScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
 
@@ -291,220 +243,105 @@ export default function StudyScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={st.heroSection}>
-          <Text style={[st.heroSectionTitle, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
-            STUDY SCRIPTURE
-          </Text>
+        <SectionLabel label="Study Scripture" theme={theme} />
 
-          <View style={st.heroCards}>
-            <StudyModeCard
-              icon="book-outline"
-              iconColor="#3B82F6"
-              title="Quick Read"
-              subtitle="Read a passage without extra study layers"
-              onPress={() => router.push("/book-picker" as any)}
-              theme={theme}
-              isDark={isDark}
-              testID="study-mode-quick_read"
-            />
-
-            <StudyModeCard
-              icon="chatbubbles-outline"
-              iconColor="#8B5CF6"
-              title="Guided Study"
-              subtitle="Choose a passage, then study it with an AI tutor"
-              onPress={() => router.push("/study-guide" as any)}
-              theme={theme}
-              isDark={isDark}
-              testID="study-mode-guided_study"
-            />
-
-            <StudyModeCard
-              icon="layers-outline"
-              iconColor="#C9933A"
-              title="Deep Study"
-              subtitle={deepStudyState.sub}
-              badge="4-Layer"
-              onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
-              theme={theme}
-              isDark={isDark}
-              testID="study-mode-deep_study"
-            />
-          </View>
+        <View style={st.topicImageCards}>
+          <TopicImageCard
+            id="quick-read"
+            title="Quick Read"
+            subtitle="Read a passage without extra study layers"
+            onPress={() => router.push("/book-picker" as any)}
+            testID="study-mode-quick_read"
+          />
+          <TopicImageCard
+            id="guided-study"
+            title="Guided Study"
+            subtitle="Choose a passage, then study it with an AI tutor"
+            onPress={() => router.push("/study-guide" as any)}
+            testID="study-mode-guided_study"
+          />
+          <TopicImageCard
+            id="deep-study"
+            title="Deep Study"
+            subtitle={deepStudyState.sub}
+            badge="4-Layer"
+            onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
+            testID="study-mode-deep_study"
+          />
         </View>
 
         <EnrolledTracksPreview theme={theme} />
 
-        <View style={st.secondaryZone}>
-          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
+        <View style={{ height: 24 }} />
 
-          <SectionLabel label="Learning Paths" theme={theme} />
+        <SectionLabel label="Learning Paths" theme={theme} />
 
-          <ListItem
-            icon="trail-sign"
-            iconColor="#2E7D32"
+        <View style={st.topicImageCards}>
+          <TopicImageCard
+            id="study-paths"
             title="Study Paths"
             subtitle="Structured paths through Scripture"
             onPress={() => router.push("/study-paths" as any)}
-            style={{ marginBottom: 10 }}
+            testID="study-paths"
           />
-
-          <ListItem
-            icon="flame"
-            iconColor="#C9933A"
+          <TopicImageCard
+            id="devotional-plans"
             title="Devotional Plans"
             subtitle="Daily reading plans for spiritual growth"
             onPress={() => router.push("/devotionals" as any)}
-            style={{ marginBottom: 10 }}
+            testID="devotional-plans"
           />
+        </View>
 
-          <ListItem
-            icon="library"
-            iconColor="#1A237E"
-            title="Study Resources"
-            subtitle="Sabbath School companions, topical studies & family worship"
-            onPress={() => router.push("/resources" as any)}
-            style={{ marginBottom: 10 }}
-          />
+        <View style={{ height: 24 }} />
 
-          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
+        <SectionLabel label="Study Tools" theme={theme} />
 
-          <ListItem
-            icon="telescope"
-            iconColor="#C9933A"
-            title="Prophecy & End Times"
-            subtitle="Explore Daniel, Revelation & the Great Controversy"
-            onPress={() => router.push("/prophecy-hub" as any)}
-            style={{ marginBottom: 10 }}
-          />
+        <View style={st.topicImageCards}>
+          {STUDY_TOOLS.map((item) => (
+            <TopicImageCard
+              key={item.id}
+              id={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              onPress={() => router.push(item.route as any)}
+              testID={`tool-${item.id}`}
+            />
+          ))}
+        </View>
 
-          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
+        <View style={{ height: 24 }} />
 
-          <SectionLabel label="Reference" theme={theme} />
+        <SectionLabel label="Spiritual Themes" theme={theme} />
 
-          <ListItem
-            icon="chatbubble-ellipses"
-            iconColor="#3B6CB5"
-            title="Historic Voices"
-            subtitle="Commentary from Matthew Henry, Adam Clarke, John Gill & more"
-            onPress={() => router.push("/(tabs)/study?tab=voices")}
-            style={{ marginBottom: 10 }}
-          />
+        <View style={st.topicImageCards}>
+          {SPIRITUAL_THEMES.map((item) => (
+            <TopicImageCard
+              key={item.id}
+              id={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              onPress={() => router.push(`/topic/${item.id}`)}
+              testID={`topic-${item.id}`}
+            />
+          ))}
+        </View>
 
-          <ListItem
-            icon="book"
-            iconColor="#7C3AED"
-            title="Fundamental Beliefs"
-            subtitle="Browse and study the 28 Fundamental Beliefs"
-            onPress={() => router.push("/sda-studies" as any)}
-            style={{ marginBottom: 10 }}
-          />
+        <View style={{ height: 24 }} />
 
-          <ListItem
-            icon="map"
-            iconColor={isDark ? "#8B9FD4" : "#1A1F3C"}
-            title="Bible Maps & Timeline"
-            subtitle="Ancient locations and biblical history"
-            onPress={() => router.push("/maps-timeline?tab=maps")}
-            style={{ marginBottom: 10 }}
-          />
+        <SectionLabel label="Adventist Studies" theme={theme} />
 
-          <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
-
-          <SectionLabel label="Beloved Passages" theme={theme} />
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.inspirationScroll}>
-            {INSPIRATIONS.map((item, i) => {
-              const bookImg = getBookImage(item.bookName);
-              return (
-                <Pressable
-                  key={i}
-                  onPress={() => router.push(`/read/${item.bookId}/${item.chapter}`)}
-                  style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                >
-                  {bookImg ? (
-                    <ImageBackground
-                      source={bookImg}
-                      style={st.inspirationCard}
-                      imageStyle={{ borderRadius: 16 }}
-                      resizeMode="cover"
-                    >
-                      <LinearGradient
-                        colors={["transparent", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.9)"]}
-                        style={st.inspirationOverlay}
-                      >
-                        <Ionicons name={item.icon} size={22} color="rgba(255,255,255,0.85)" />
-                        <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
-                        <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
-                      </LinearGradient>
-                    </ImageBackground>
-                  ) : (
-                    <LinearGradient
-                      colors={item.gradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={st.inspirationCard}
-                    >
-                      <Ionicons name={item.icon} size={24} color="rgba(255,255,255,0.75)" />
-                      <Text style={[st.inspirationTitle, { fontFamily: "Lora_700Bold" }]}>{item.title}</Text>
-                      <Text style={[st.inspirationSub, { fontFamily: "Inter_400Regular" }]}>{item.subtitle}</Text>
-                    </LinearGradient>
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View style={{ height: 24 }} />
-
-          <SectionLabel label="Spiritual Themes" theme={theme} />
-
-          <View style={st.topicImageCards}>
-            {SPIRITUAL_THEMES.map((item) => (
-              <TopicImageCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                subtitle={item.subtitle}
-                onPress={() => router.push(`/topic/${item.id}`)}
-                testID={`topic-${item.id}`}
-              />
-            ))}
-          </View>
-
-          <View style={{ height: 24 }} />
-
-          <SectionLabel label="Bible Study Tools" theme={theme} />
-
-          <View style={st.topicImageCards}>
-            {STUDY_TOOLS.map((item) => (
-              <TopicImageCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                subtitle={item.subtitle}
-                onPress={() => router.push(item.route as any)}
-                testID={`tool-${item.id}`}
-              />
-            ))}
-          </View>
-
-          <View style={{ height: 24 }} />
-
-          <SectionLabel label="Adventist Studies" theme={theme} />
-
-          <View style={st.topicImageCards}>
-            {ADVENTIST_STUDIES.map((item) => (
-              <TopicImageCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                subtitle={item.subtitle}
-                onPress={() => router.push(`/topic/${item.id}`)}
-                testID={`topic-${item.id}`}
-              />
-            ))}
-          </View>
+        <View style={st.topicImageCards}>
+          {ADVENTIST_STUDIES.map((item) => (
+            <TopicImageCard
+              key={item.id}
+              id={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              onPress={() => router.push(`/topic/${item.id}`)}
+              testID={`topic-${item.id}`}
+            />
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -522,49 +359,6 @@ const st = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 24 },
 
-  heroSection: {
-    marginBottom: 10,
-  },
-  heroSectionTitle: {
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    marginBottom: 16,
-    paddingLeft: 2,
-  },
-  heroCards: {
-    gap: 14,
-  },
-  heroCard: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 16,
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  heroText: { flex: 1 },
-  heroTitleRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 8,
-    marginBottom: 5,
-  },
-  heroTitle: { fontSize: 17, letterSpacing: 0.1 },
-  heroBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 7,
-  },
-  heroBadgeText: { fontSize: 10, letterSpacing: 0.3 },
-  heroSub: { fontSize: 13, lineHeight: 19 },
-
   sectionHeader: {
     marginBottom: 14,
     paddingLeft: 2,
@@ -572,15 +366,6 @@ const st = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     letterSpacing: 0.5,
-  },
-
-  secondaryZone: {
-    marginTop: 16,
-  },
-  secondaryDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 28,
-    opacity: 0.4,
   },
 
   enrolledCard: {
@@ -616,29 +401,6 @@ const st = StyleSheet.create({
   },
   enrolledPercent: { fontSize: 11 },
 
-  inspirationScroll: {
-    gap: 14,
-    paddingBottom: 4,
-  },
-  inspirationCard: {
-    width: 200,
-    height: 240,
-    borderRadius: 16,
-    padding: 20,
-    gap: 10,
-    justifyContent: "flex-end" as const,
-    overflow: "hidden" as const,
-  },
-  inspirationOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
-    padding: 20,
-    justifyContent: "flex-end" as const,
-    gap: 6,
-  },
-  inspirationTitle: { color: "#fff", fontSize: 16, letterSpacing: 0.1 },
-  inspirationSub: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
-
   topicImageCards: {
     gap: 10,
   },
@@ -667,6 +429,23 @@ const st = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     marginBottom: 2,
+  },
+  topicImageTitleRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 2,
+  },
+  topicImageBadge: {
+    backgroundColor: "rgba(201,147,58,0.25)",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  topicImageBadgeText: {
+    color: "#C9933A",
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   topicImageSub: {
     color: "rgba(255,255,255,0.7)",
