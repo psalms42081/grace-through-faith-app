@@ -151,7 +151,7 @@ export default function BibleMap({
           latitudeDelta: 8,
           longitudeDelta: 8,
         }}
-        mapType={Platform.OS === "ios" ? "mutedStandard" : "terrain"}
+        mapType={Platform.OS === "ios" ? "mutedStandard" : "hybrid"}
         customMapStyle={Platform.OS === "android" ? MUTED_MAP_STYLE : undefined}
         showsCompass={false}
         showsScale={false}

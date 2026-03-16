@@ -448,8 +448,15 @@ function MapsContent({
     if (overlay === "journey-routes" && selectedJourney !== "all") {
       const route = BIBLICAL_JOURNEY_ROUTES.find((r) => r.id === selectedJourney);
       if (route) {
-        const stopIds = new Set(route.stopLocationIds);
-        return mappableLocations.filter((l) => stopIds.has(l.id));
+        const stopNames = new Set(
+          route.stopLocationIds
+            .map((sid) => {
+              const loc = getLocationById(sid);
+              return loc ? loc.name.toLowerCase() : "";
+            })
+            .filter(Boolean)
+        );
+        return mappableLocations.filter((l) => stopNames.has(l.name.toLowerCase()));
       }
     }
     return mappableLocations;
