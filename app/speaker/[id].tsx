@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,11 @@ import {
   Pressable,
   Platform,
   Linking,
-  Modal,
-  ActivityIndicator,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { WebView } from "react-native-webview";
 import { useTheme } from "@/hooks/useTheme";
 import { getSpeakerById, getSpeakerImage, type SDASpeaker } from "@/constants/sda-speakers";
 
@@ -46,34 +43,16 @@ export default function SpeakerDetailScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const speaker = getSpeakerById(id || "");
-  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
-  const [webViewLoading, setWebViewLoading] = useState(true);
 
   const handleWatchChannel = useCallback(() => {
     if (!speaker) return;
-    const channelUrl = `https://www.youtube.com/channel/${speaker.youtubeChannelId}`;
-    if (Platform.OS === "web") {
-      Linking.openURL(channelUrl);
-    } else {
-      setWebViewLoading(true);
-      setActiveVideoUrl(channelUrl);
-    }
+    Linking.openURL(`https://www.youtube.com/channel/${speaker.youtubeChannelId}`);
   }, [speaker]);
 
   const handleWatchVideo = useCallback((videoId: string) => {
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
-    if (Platform.OS === "web") {
-      Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
-    } else {
-      setWebViewLoading(true);
-      setActiveVideoUrl(embedUrl);
-    }
+    Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
   }, []);
 
-  const handleClosePlayer = useCallback(() => {
-    setActiveVideoUrl(null);
-    setWebViewLoading(true);
-  }, []);
 
   if (!speaker) {
     return (
@@ -187,53 +166,6 @@ export default function SpeakerDetailScreen() {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={activeVideoUrl !== null}
-        animationType="slide"
-        onRequestClose={handleClosePlayer}
-        presentationStyle="fullScreen"
-      >
-        <View style={[st.playerContainer, { backgroundColor: theme.background }]}>
-          <View style={[st.playerHeader, { paddingTop: topPad + 8, backgroundColor: theme.backgroundCard, borderBottomColor: theme.border }]}>
-            <Pressable onPress={handleClosePlayer} hitSlop={12}>
-              <Ionicons name="close" size={24} color={theme.text} />
-            </Pressable>
-            <Text style={[st.playerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-              {speaker.name}
-            </Text>
-            <Pressable
-              onPress={() => {
-                if (activeVideoUrl) Linking.openURL(activeVideoUrl);
-                handleClosePlayer();
-              }}
-              hitSlop={12}
-            >
-              <Ionicons name="open-outline" size={20} color={theme.accent} />
-            </Pressable>
-          </View>
-
-          {webViewLoading && (
-            <View style={st.loadingOverlay}>
-              <ActivityIndicator size="large" color={theme.accent} />
-              <Text style={[st.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Loading content...
-              </Text>
-            </View>
-          )}
-          {activeVideoUrl && (
-            <WebView
-              source={{ uri: activeVideoUrl }}
-              style={st.webView}
-              onLoadEnd={() => setWebViewLoading(false)}
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState={false}
-            />
-          )}
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -346,31 +278,6 @@ const st = StyleSheet.create({
   videoTitle: {
     fontSize: 14,
     padding: 14,
-  },
-  playerContainer: { flex: 1 },
-  playerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 14,
-    borderBottomWidth: 1,
-  },
-  playerTitle: {
-    flex: 1,
-    fontSize: 16,
-    textAlign: "center",
-  },
-  webView: { flex: 1 },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    zIndex: 10,
-  },
-  loadingText: {
-    fontSize: 14,
   },
   emptyState: {
     flex: 1,
