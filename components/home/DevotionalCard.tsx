@@ -1,9 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+
+const STUDY_GUIDE_IMAGE = require("@/assets/home-cards/study-guide.png");
 
 interface DevotionalCardProps {
   hasActivePlan: boolean;
@@ -26,80 +28,99 @@ export default function DevotionalCard({ hasActivePlan, progress, total, enrollm
           router.push("/devotionals");
         }
       }}
-      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={hasActivePlan ? "Continue your devotional plan" : "Browse devotional plans"}
     >
+      <Image source={STUDY_GUIDE_IMAGE} style={styles.cardImage} resizeMode="cover" />
       <LinearGradient
-        colors={isDark ? ["#1A1610", "#15120D"] : ["#FFF8EC", "#FFFDF6"]}
-        style={styles.devotionalCard}
+        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.82)"]}
+        locations={[0, 0.4, 1]}
+        style={styles.cardOverlay}
       >
-        <View style={styles.devotionalLeft}>
-          <View style={[styles.devotionalIconWrap, { backgroundColor: theme.accent + "20" }]}>
-            <Ionicons name="flame" size={20} color={theme.accent} />
-          </View>
-          <View style={styles.devotionalInfo}>
-            <Text style={[styles.devotionalTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+        <View style={styles.cardContent}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardLabel, { fontFamily: "Inter_600SemiBold" }]}>
               {hasActivePlan ? "Continue Your Plan" : "Devotional Plans"}
             </Text>
-            <Text style={[styles.devotionalSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.cardSub, { fontFamily: "Inter_400Regular" }]}>
               {hasActivePlan
                 ? `Day ${progress} of ${total}`
-                : "Guided daily reading"}
+                : "Guided daily reading and reflection"}
             </Text>
           </View>
-        </View>
-        {hasActivePlan && (
-          <View style={styles.devotionalProgress}>
-            <View style={[styles.devotionalProgressTrack, { backgroundColor: isDark ? "#2A2520" : theme.border }]}>
-              <LinearGradient
-                colors={[theme.accent, theme.accentDark]}
-                style={[styles.devotionalProgressFill, { width: `${Math.min((progress / total) * 100, 100)}%` as any }]}
-              />
+          {hasActivePlan ? (
+            <View style={styles.progressWrap}>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${total > 0 ? Math.min((progress / total) * 100, 100) : 0}%` as any, backgroundColor: theme.accent }]} />
+              </View>
+              <Text style={[styles.progressPct, { fontFamily: "Inter_600SemiBold" }]}>
+                {total > 0 ? Math.round((progress / total) * 100) : 0}%
+              </Text>
             </View>
-          </View>
-        )}
-        {!hasActivePlan && (
-          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
-        )}
+          ) : (
+            <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
+          )}
+        </View>
       </LinearGradient>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  devotionalCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 20,
-    padding: 18,
+  card: {
+    borderRadius: 16,
+    overflow: "hidden",
     marginTop: 4,
     marginBottom: 20,
+    height: 100,
   },
-  devotionalLeft: {
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+  },
+  cardContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 8,
   },
-  devotionalIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+  cardLabel: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cardSub: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+  },
+  progressWrap: {
     alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
+    marginLeft: 12,
   },
-  devotionalInfo: { flex: 1 },
-  devotionalTitle: { fontSize: 16, marginBottom: 2 },
-  devotionalSub: { fontSize: 13, lineHeight: 19 },
-  devotionalProgress: { width: 56, marginLeft: 12 },
-  devotionalProgressTrack: {
-    height: 6,
+  progressTrack: {
+    width: 48,
+    height: 5,
     borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.2)",
     overflow: "hidden",
   },
-  devotionalProgressFill: {
-    height: 6,
+  progressFill: {
+    height: 5,
     borderRadius: 3,
+  },
+  progressPct: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 11,
   },
 });

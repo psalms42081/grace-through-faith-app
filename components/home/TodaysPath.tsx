@@ -1,7 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+
+const HOME_IMAGES = {
+  read: require("@/assets/home-cards/read.png"),
+  study: require("@/assets/home-cards/study.png"),
+  pray: require("@/assets/home-cards/pray.png"),
+};
 
 const BOOK_IDS: Record<string, number> = {
   "Genesis": 1, "Exodus": 2, "Leviticus": 3, "Numbers": 4, "Deuteronomy": 5,
@@ -31,9 +38,9 @@ function parseReference(ref: string): { bookId: number; chapter: number } | null
 }
 
 interface PathItem {
-  icon: keyof typeof Ionicons.glyphMap;
+  image: any;
   label: string;
-  subtitle?: string;
+  subtitle: string;
   completed: boolean;
   onPress: () => void;
 }
@@ -57,8 +64,9 @@ export default function TodaysPath({
 
   const items: PathItem[] = [
     {
-      icon: "book-outline",
+      image: HOME_IMAGES.read,
       label: dailyVerseRef ? `Read ${dailyVerseRef.replace(/:\d+$/, "")}` : "Read today's passage",
+      subtitle: "Open Scripture in quiet devotion",
       completed: hasRecentRead,
       onPress: () => {
         if (parsed) {
@@ -69,7 +77,7 @@ export default function TodaysPath({
       },
     },
     {
-      icon: "layers-outline",
+      image: HOME_IMAGES.study,
       label: "Study",
       subtitle: "Reflect on today's passage",
       completed: false,
@@ -82,7 +90,7 @@ export default function TodaysPath({
       },
     },
     {
-      icon: "hand-left-outline",
+      image: HOME_IMAGES.pray,
       label: "Pray",
       subtitle: "Respond in prayer",
       completed: prayerDone,
@@ -90,100 +98,105 @@ export default function TodaysPath({
     },
   ];
 
-  const firstIncompleteIdx = items.findIndex(item => !item.completed);
-
   return (
-    <View style={[s.card, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+    <View style={s.container}>
       <View style={s.header}>
         <Ionicons name="sunny-outline" size={18} color={theme.accent} />
         <Text style={[s.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Your Daily Rhythm
         </Text>
       </View>
-      {items.map((item, i) => {
-        const isNextStep = i === firstIncompleteIdx;
-        return (
-          <Pressable
-            key={item.label}
-            onPress={item.onPress}
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            style={({ pressed }) => [
-              s.row,
-              i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border },
-              isNextStep && { backgroundColor: theme.accent + "08", marginHorizontal: -12, paddingHorizontal: 12, borderRadius: 12 },
-              pressed && { opacity: 0.85 },
-            ]}
+      {items.map((item, i) => (
+        <Pressable
+          key={item.label}
+          onPress={item.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          style={({ pressed }) => [
+            s.card,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <Image source={item.image} style={s.cardImage} resizeMode="cover" />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.85)"]}
+            locations={[0, 0.5, 1]}
+            style={s.cardOverlay}
           >
-            <View style={[s.iconWrap, {
-              backgroundColor: item.completed
-                ? theme.accent + "20"
-                : isNextStep
-                  ? theme.accent + "18"
-                  : (isDark ? "#1E1E38" : "#EBE5D8"),
-            }]}>
-              <Ionicons
-                name={item.completed ? "checkmark" : item.icon}
-                size={18}
-                color={item.completed ? theme.accent : isNextStep ? theme.accent : (isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)")}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[
-                  s.label,
-                  {
-                    color: item.completed ? theme.textMuted : theme.text,
-                    fontFamily: isNextStep ? "Inter_600SemiBold" : "Inter_500Medium",
-                    textDecorationLine: item.completed ? "line-through" : "none",
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-              {item.subtitle && !item.completed && (
-                <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+            <View style={s.cardContent}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.cardLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                  {item.label}
+                </Text>
+                <Text style={[s.cardSubtitle, { fontFamily: "Inter_400Regular" }]}>
                   {item.subtitle}
                 </Text>
+              </View>
+              {item.completed ? (
+                <View style={s.completedBadge}>
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                </View>
+              ) : (
+                <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
               )}
             </View>
-            <Ionicons name={isNextStep ? "arrow-forward" : "chevron-forward"} size={16} color={isNextStep ? theme.accent : theme.textMuted} />
-          </Pressable>
-        );
-      })}
+          </LinearGradient>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  card: {
-    borderRadius: 18,
-    padding: 16,
+  container: {
     marginBottom: 16,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   title: {
     fontSize: 16,
   },
-  row: {
+  card: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 10,
+    height: 100,
+  },
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+  },
+  cardContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 11,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 8,
   },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+  cardLabel: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cardSubtitle: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+  },
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(78,204,163,0.85)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  label: {
-    fontSize: 14,
   },
 });

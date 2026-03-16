@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
 import Animated, {
@@ -35,10 +35,10 @@ const RING_COLORS = {
   engage: { main: "#E8A838", dim: "rgba(232,168,56,0.15)" },
 };
 
-const RING_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  study: "book",
-  prayer: "hand-left",
-  engage: "sparkles",
+const RING_IMAGES: Record<string, any> = {
+  study: require("@/assets/home-cards/ring-study.png"),
+  prayer: require("@/assets/home-cards/ring-prayer.png"),
+  engage: require("@/assets/home-cards/ring-engage.png"),
 };
 
 const SIZE = 160;
@@ -109,12 +109,10 @@ function RingLabel({
   const isClosed = ring.current >= ring.goal;
   return (
     <View style={styles.ringLabelRow}>
-      <View style={[styles.ringDot, { backgroundColor: RING_COLORS[colorKey].main }]} />
-      <Ionicons
-        name={RING_ICONS[colorKey]}
-        size={14}
-        color={RING_COLORS[colorKey].main}
-        style={{ marginRight: 4 }}
+      <Image
+        source={RING_IMAGES[colorKey]}
+        style={[styles.ringThumb, { borderColor: RING_COLORS[colorKey].main }]}
+        resizeMode="cover"
       />
       <Text style={[styles.ringLabelText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
         {ring.label}
@@ -300,12 +298,13 @@ const styles = StyleSheet.create({
   ringLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
-  ringDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  ringThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
   },
   ringLabelText: { fontSize: 12, flex: 1 },
   ringLabelValue: { fontSize: 12 },
