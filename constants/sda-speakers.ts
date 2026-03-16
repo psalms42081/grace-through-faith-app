@@ -9,23 +9,11 @@ export interface SDASpeaker {
   featuredVideoIds: string[];
 }
 
-const SPEAKER_IMAGES: Record<string, any> = {
-  "doug-batchelor": require("@/assets/speakers/doug-batchelor.png"),
-  "john-lomacang": require("@/assets/speakers/john-lomacang.png"),
-  "david-asscherick": require("@/assets/speakers/david-asscherick.png"),
-  "ivor-myers": require("@/assets/speakers/ivor-myers.png"),
-  "randy-skeete": require("@/assets/speakers/randy-skeete.png"),
-  "ca-murray": require("@/assets/speakers/ca-murray.png"),
-  "wes-peppers": require("@/assets/speakers/wes-peppers.png"),
-  "elizabeth-talbot": require("@/assets/speakers/elizabeth-talbot.png"),
-  "shawn-boonstra": require("@/assets/speakers/shawn-boonstra.png"),
-  "mark-finley": require("@/assets/speakers/mark-finley.png"),
-  "john-bradshaw": require("@/assets/speakers/john-bradshaw.png"),
-  "walter-veith": require("@/assets/speakers/walter-veith.png"),
-  "stephen-bohr": require("@/assets/speakers/stephen-bohr.png"),
-  "carlton-byrd": require("@/assets/speakers/carlton-byrd.png"),
-  "taj-pacleb": require("@/assets/speakers/taj-pacleb.png"),
-};
+const SPEAKER_IMAGES: Record<string, any> = {};
+
+export function setSpeakerImage(id: string, source: any) {
+  SPEAKER_IMAGES[id] = source;
+}
 
 export function getSpeakerImage(id: string): any | undefined {
   return SPEAKER_IMAGES[id];
