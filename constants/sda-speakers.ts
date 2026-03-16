@@ -9,8 +9,25 @@ export interface SDASpeaker {
   featuredVideoIds: string[];
 }
 
-export function getSpeakerImage(_id: string): any | undefined {
-  return undefined;
+const SPEAKER_IMAGES: Record<string, any> = {
+  "doug-batchelor": require("@/assets/speakers/doug-batchelor.jpg"),
+  "john-lomacang": require("@/assets/speakers/john-lomacang.jpg"),
+  "david-asscherick": require("@/assets/speakers/david-asscherick.jpg"),
+  "ivor-myers": require("@/assets/speakers/ivor-myers.jpg"),
+  "randy-skeete": require("@/assets/speakers/randy-skeete.png"),
+  "ca-murray": require("@/assets/speakers/ca-murray.jpg"),
+  "wes-peppers": require("@/assets/speakers/wes-peppers.jpg"),
+  "elizabeth-talbot": require("@/assets/speakers/elizabeth-talbot.jpg"),
+  "shawn-boonstra": require("@/assets/speakers/shawn-boonstra.jpg"),
+  "mark-finley": require("@/assets/speakers/mark-finley.jpg"),
+  "john-bradshaw": require("@/assets/speakers/john-bradshaw.jpg"),
+  "stephen-bohr": require("@/assets/speakers/stephen-bohr.png"),
+  "carlton-byrd": require("@/assets/speakers/carlton-byrd.png"),
+  "taj-pacleb": require("@/assets/speakers/taj-pacleb.webp"),
+};
+
+export function getSpeakerImage(id: string): any | undefined {
+  return SPEAKER_IMAGES[id];
 }
 
 export interface SermonVideo {
