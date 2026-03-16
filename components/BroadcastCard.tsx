@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, Linking } from "react-native";
+import { View, Text, StyleSheet, Pressable, Linking, Image, ImageSourcePropType } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +10,23 @@ export interface BroadcastSource {
   descKey: string;
   watchUrl: string;
   websiteUrl: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  logo: ImageSourcePropType;
+  logoBg: string;
   color: string;
 }
 
 export const broadcastSources: BroadcastSource[] = [
+  {
+    id: "hope-channel",
+    name: "Hope Channel",
+    nameKey: "broadcasts.hopeChannelName",
+    descKey: "broadcasts.hopeChannelDesc",
+    watchUrl: "https://www.hopetv.org/watch/",
+    websiteUrl: "https://www.hopetv.org",
+    logo: require("@/assets/ministry-logos/hope-channel.jpg"),
+    logoBg: "#FFFFFF",
+    color: "#2E5FA1",
+  },
   {
     id: "3abn",
     name: "3ABN",
@@ -22,8 +34,9 @@ export const broadcastSources: BroadcastSource[] = [
     descKey: "broadcasts.3abnDesc",
     watchUrl: "https://3abnplus.tv/categories/category-8xMkCnggSZc",
     websiteUrl: "https://3abnplus.tv",
-    icon: "tv",
-    color: "#5B86E5",
+    logo: require("@/assets/ministry-logos/3abn.jpg"),
+    logoBg: "#0A1929",
+    color: "#00B4D8",
   },
   {
     id: "amazing-facts",
@@ -32,8 +45,31 @@ export const broadcastSources: BroadcastSource[] = [
     descKey: "broadcasts.amazingFactsDesc",
     watchUrl: "https://www.amazingfacts.org/watch/aftv/",
     websiteUrl: "https://www.amazingfacts.org",
-    icon: "play-circle",
+    logo: require("@/assets/ministry-logos/amazing-facts.png"),
+    logoBg: "#1A1200",
     color: "#C9933A",
+  },
+  {
+    id: "it-is-written",
+    name: "It Is Written",
+    nameKey: "broadcasts.itIsWrittenName",
+    descKey: "broadcasts.itIsWrittenDesc",
+    watchUrl: "https://www.itiswritten.com/watch/",
+    websiteUrl: "https://www.itiswritten.com",
+    logo: require("@/assets/ministry-logos/it-is-written.png"),
+    logoBg: "#FFFFFF",
+    color: "#2A7B88",
+  },
+  {
+    id: "breath-of-life",
+    name: "Breath of Life",
+    nameKey: "broadcasts.breathOfLifeName",
+    descKey: "broadcasts.breathOfLifeDesc",
+    watchUrl: "https://breathoflife.tv/broadcast/",
+    websiteUrl: "https://breathoflife.tv",
+    logo: require("@/assets/ministry-logos/breath-of-life.png"),
+    logoBg: "#FFFFFF",
+    color: "#4A90B8",
   },
 ];
 
@@ -49,8 +85,8 @@ export default function BroadcastCard({ source, theme, onWatch }: Props) {
   return (
     <View style={[st.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
       <View style={st.cardHeader}>
-        <View style={[st.cardIcon, { backgroundColor: source.color + "15" }]}>
-          <Ionicons name={source.icon} size={28} color={source.color} />
+        <View style={[st.cardLogo, { backgroundColor: source.logoBg }]}>
+          <Image source={source.logo} style={st.logoImage} resizeMode="contain" />
         </View>
         <Text style={[st.cardName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           {t(source.nameKey)}
@@ -104,12 +140,17 @@ const st = StyleSheet.create({
     alignItems: "center",
     gap: 14,
   },
-  cardIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+  cardLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  logoImage: {
+    width: 48,
+    height: 48,
   },
   cardName: {
     fontSize: 19,

@@ -29,7 +29,7 @@
     "smallGroups": "Live Fellowship",
     "smallGroupsSub": "Small groups, prayer rooms, and live Bible studies",
     "broadcasts": "Broadcasts",
-    "broadcastsSub": "Watch 3ABN & Amazing Facts",
+    "broadcastsSub": "Hope Channel, 3ABN, Amazing Facts & more",
     "liveStreams": "Live Streams",
     "liveStreamsSub": "Watch and host live Bible studies and worship",
     "soon": "Soon",
@@ -44,10 +44,16 @@
     "unableToLoad": "Unable to load stream",
     "openInBrowser": "Open in Browser",
     "loadingStream": "Loading stream...",
+    "hopeChannelName": "Hope Channel (Live)",
+    "hopeChannelDesc": "The official television network of the Seventh-day Adventist Church, broadcasting hope and wholeness worldwide with worship, health, and family programming.",
     "3abnName": "3ABN (Live)",
     "3abnDesc": "Three Angels Broadcasting Network delivers 24/7 Adventist programming including worship, health, Bible study, and family content.",
     "amazingFactsName": "Amazing Facts TV (Live)",
-    "amazingFactsDesc": "Watch Amazing Facts live programming featuring Bible prophecy seminars, evangelistic series, and faith-building content."
+    "amazingFactsDesc": "Watch Amazing Facts live programming featuring Bible prophecy seminars, evangelistic series, and faith-building content.",
+    "itIsWrittenName": "It Is Written",
+    "itIsWrittenDesc": "One of the longest-running Christian television programs, bringing Bible truth to millions through media, live events, and mission outreach.",
+    "breathOfLifeName": "Breath of Life",
+    "breathOfLifeDesc": "Celebrating 50 years of media, music, and evangelism. Reaching diverse communities with powerful preaching and Spirit-filled ministry."
   },
   "profile": {
     "title": "You",

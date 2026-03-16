@@ -9,24 +9,8 @@ export interface SDASpeaker {
   featuredVideoIds: string[];
 }
 
-const MINISTRY_LOGOS: Record<string, any> = {
-  "Amazing Facts": require("@/assets/ministry-logos/amazing-facts.png"),
-  "3ABN": require("@/assets/ministry-logos/3abn.png"),
-  "ARISE Institute": require("@/assets/ministry-logos/arise-institute.png"),
-  "Power of the Lamb": require("@/assets/ministry-logos/power-of-the-lamb.png"),
-  "Evangelist": require("@/assets/ministry-logos/evangelist.png"),
-  "Voice of Prophecy": require("@/assets/ministry-logos/voice-of-prophecy.png"),
-  "It Is Written": require("@/assets/ministry-logos/it-is-written.png"),
-  "Amazing Discoveries": require("@/assets/ministry-logos/amazing-discoveries.png"),
-  "Secrets Unsealed": require("@/assets/ministry-logos/secrets-unsealed.png"),
-  "Breath of Life": require("@/assets/ministry-logos/breath-of-life.png"),
-  "Revelation of Hope": require("@/assets/ministry-logos/revelation-of-hope.png"),
-};
-
-export function getSpeakerImage(id: string): any | undefined {
-  const speaker = SDA_SPEAKERS.find(s => s.id === id);
-  if (!speaker) return undefined;
-  return MINISTRY_LOGOS[speaker.ministry];
+export function getSpeakerImage(_id: string): any | undefined {
+  return undefined;
 }
 
 export interface SermonVideo {
@@ -44,7 +28,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Doug Batchelor",
     ministry: "Amazing Facts",
     bio: "Evangelist and president of Amazing Facts International, known for dynamic prophecy seminars and Bible teaching.",
-    topics: ["Prophecy", "Evangelism", "Revelation", "Daniel"],
+    topics: ["Prophecy", "Evangelism", "Revelation", "Daniel", "Three Angels", "Health"],
     color: "#27AE60",
     youtubeChannelId: "UCEJi8oj_u3bEGgqeonhzr5Q",
     featuredVideoIds: ["xRDHv1CeDOk", "5m7kRLtCq8Q", "J7jwGZc1htA"],
@@ -64,7 +48,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "David Asscherick",
     ministry: "ARISE Institute",
     bio: "Former punk musician turned evangelist, co-founder of ARISE, known for clear, compelling presentations on prophecy and apologetics.",
-    topics: ["Prophecy", "Apologetics", "Daniel", "Revelation"],
+    topics: ["Prophecy", "Apologetics", "Daniel", "Revelation", "Three Angels"],
     color: "#2980B9",
     youtubeChannelId: "UC-7c_7El1xpPmWlVceyBcpw",
     featuredVideoIds: ["mFmU1jYzuQE"],
@@ -74,7 +58,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Ivor Myers",
     ministry: "Power of the Lamb",
     bio: "Former hip-hop artist turned pastor and evangelist, founder of Power of the Lamb Ministries, specializing in Revelation's prophecies.",
-    topics: ["Revelation", "Youth Ministry", "Urban Evangelism"],
+    topics: ["Revelation", "Youth Ministry", "Urban Evangelism", "Three Angels"],
     color: "#8E44AD",
     youtubeChannelId: "UCIeLxYak5fb5Cqe1P0KGqQg",
     featuredVideoIds: ["bKq9J-9v3k0"],
@@ -134,7 +118,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Mark Finley",
     ministry: "It Is Written",
     bio: "Former speaker/director of It Is Written, one of the most experienced evangelists in SDA history with decades of global campaigns.",
-    topics: ["Evangelism", "Health", "Prophecy"],
+    topics: ["Evangelism", "Health", "Prophecy", "Three Angels"],
     color: "#1565C0",
     youtubeChannelId: "UCAvh27iVZQ_23kEYV2P4C1g",
     featuredVideoIds: [],
@@ -154,7 +138,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Walter Veith",
     ministry: "Amazing Discoveries",
     bio: "Former zoology professor turned evangelist, known for in-depth prophecy and history presentations connecting Scripture to world events.",
-    topics: ["Prophecy", "History", "Daniel", "Revelation"],
+    topics: ["Prophecy", "History", "Daniel", "Revelation", "Three Angels", "Health"],
     color: "#4E342E",
     youtubeChannelId: "UC3kY2iRN0XQkBPWotpPkU4g",
     featuredVideoIds: [],
@@ -164,7 +148,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Stephen Bohr",
     ministry: "Secrets Unsealed",
     bio: "Pastor and founder of Secrets Unsealed, specializing in deep verse-by-verse study of Daniel, Revelation, and sanctuary theology.",
-    topics: ["Daniel", "Revelation", "Sanctuary", "Prophecy"],
+    topics: ["Daniel", "Revelation", "Sanctuary", "Prophecy", "Three Angels"],
     color: "#1A237E",
     youtubeChannelId: "UCiAQVG0W3HkQwBGvGiS14kg",
     featuredVideoIds: [],
@@ -184,7 +168,7 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     name: "Taj Pacleb",
     ministry: "Revelation of Hope",
     bio: "Young evangelist and founder of Revelation of Hope Ministries, known for energetic prophecy-focused evangelism targeting youth.",
-    topics: ["Youth Evangelism", "Prophecy", "Revelation"],
+    topics: ["Youth Evangelism", "Prophecy", "Revelation", "Three Angels"],
     color: "#F57C00",
     youtubeChannelId: "UC3_5kVLUUB7NrV-NnPLzFJg",
     featuredVideoIds: [],
@@ -196,10 +180,11 @@ export const SERMON_TOPICS = [
   "Prophecy",
   "Revelation",
   "Daniel",
+  "Three Angels",
+  "Health",
   "Evangelism",
   "Devotional",
   "Bible Study",
-  "Health",
   "Youth",
   "Revival",
   "Sanctuary",
