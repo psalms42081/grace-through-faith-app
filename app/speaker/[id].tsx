@@ -169,7 +169,7 @@ export default function SpeakerDetailScreen() {
             About {speaker.ministry}
           </Text>
           <Text style={[st.aboutText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Watch sermons, Bible studies, and teaching content from {speaker.name} through {speaker.ministry}. All content plays directly within the app for a seamless viewing experience.
+            Watch sermons, Bible studies, and teaching content from {speaker.name} through {speaker.ministry}. Tap any video to open it in YouTube.
           </Text>
         </View>
       </ScrollView>

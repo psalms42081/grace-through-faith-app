@@ -313,10 +313,19 @@ export default function FamilyDashboard() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Family</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-            Your family's growth
-          </Text>
+          <Pressable
+            onPress={() => router.push("/(tabs)/connect")}
+            style={styles.headerBackBtn}
+            accessibilityLabel="Back to Connect"
+          >
+            <Ionicons name="arrow-back" size={22} color={theme.text} />
+          </Pressable>
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Family</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+              Your family's growth
+            </Text>
+          </View>
         </View>
 
         {isGuest ? (
@@ -1010,6 +1019,16 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 28,

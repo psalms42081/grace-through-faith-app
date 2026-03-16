@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   Pressable,
   Platform,
   Linking,
-  ActivityIndicator,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,19 +24,11 @@ export default function SermonPlayerScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
   const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
 
   const handleOpenInYouTube = useCallback(() => {
     Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
   }, [videoId]);
-
-  const handleRetry = useCallback(() => {
-    setError(false);
-    setLoading(true);
-  }, []);
 
   if (!videoId) {
     return (
@@ -55,6 +47,8 @@ export default function SermonPlayerScreen() {
       </View>
     );
   }
+
+  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
   const renderPlayer = () => {
     if (Platform.OS === "web") {
@@ -75,48 +69,18 @@ export default function SermonPlayerScreen() {
     }
 
     return (
-      <View style={st.playerContainer}>
-        {loading && (
-          <View style={st.loadingOverlay}>
-            <ActivityIndicator size="large" color={theme.accent} />
-            <Text style={[st.loadingText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              Loading sermon...
-            </Text>
+      <Pressable onPress={handleOpenInYouTube} style={st.playerContainer}>
+        <Image
+          source={{ uri: thumbnailUrl }}
+          style={st.thumbnail}
+          resizeMode="cover"
+        />
+        <View style={st.playOverlay}>
+          <View style={st.playButton}>
+            <Ionicons name="play" size={32} color="#FFFFFF" style={{ marginLeft: 3 }} />
           </View>
-        )}
-        {error ? (
-          <View style={st.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={40} color={theme.textMuted} />
-            <Text style={[st.errorText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              This is taking longer than expected.
-            </Text>
-            <Pressable onPress={handleRetry} style={[st.retryBtn, { borderColor: theme.accent }]}>
-              <Text style={[st.retryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                Try again
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-          <WebView
-            key={error ? "retry" : "initial"}
-            source={{ uri: embedUrl }}
-            style={st.webview}
-            allowsFullscreenVideo
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            onLoadEnd={() => setLoading(false)}
-            onError={() => {
-              setLoading(false);
-              setError(true);
-            }}
-            onHttpError={() => {
-              setLoading(false);
-              setError(true);
-            }}
-          />
-        )}
-      </View>
+        </View>
+      </Pressable>
     );
   };
 
@@ -193,38 +157,24 @@ const st = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
-  loadingOverlay: {
+  thumbnail: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  playOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#000",
-    zIndex: 10,
-    gap: 12,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  loadingText: {
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
+  playButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(255,0,0,0.9)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#000",
-    gap: 12,
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: "center",
-  },
-  retryBtn: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  retryText: {
-    fontSize: 14,
   },
   details: {
     paddingHorizontal: 20,
