@@ -248,12 +248,14 @@ function NextLayerCTA({
           <Ionicons name="arrow-forward" size={18} color="#fff" />
         </Pressable>
       ) : (
-        <View style={[ctaStyles.completeBanner, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-          <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
-          <Text style={[ctaStyles.completeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            Layer complete
-          </Text>
-        </View>
+        <Pressable
+          onPress={onAllComplete}
+          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
+          testID="view-study-complete"
+        >
+          <Ionicons name="ribbon-outline" size={18} color="#fff" />
+          <Text style={ctaStyles.btnText}>View Study Summary</Text>
+        </Pressable>
       )}
     </View>
   );
