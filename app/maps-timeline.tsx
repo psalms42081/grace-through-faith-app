@@ -394,25 +394,45 @@ function MapsContent({
       const filteredPG = selectedEra === "All"
         ? BIBLICAL_PEOPLE_GROUPS
         : BIBLICAL_PEOPLE_GROUPS.filter((pg) => pg.eras.some((e) => e === selectedEra));
+      const seen = new Set<string>();
       for (const pg of filteredPG) {
         for (const locId of pg.relatedLocationIds) {
+          if (seen.has(locId)) continue;
+          seen.add(locId);
           const loc = getLocationById(locId);
           if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
         }
       }
-      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
+      if (coords.length === 0) return NEAR_EAST_FALLBACK;
+      if (coords.length === 1) {
+        return [
+          { latitude: coords[0].latitude - 3, longitude: coords[0].longitude - 4 },
+          { latitude: coords[0].latitude + 3, longitude: coords[0].longitude + 4 },
+        ];
+      }
+      return coords;
     }
     if (overlay === "prophecy") {
       const filteredPL = selectedEra === "All"
         ? BIBLICAL_PROPHECY_LINKS
         : BIBLICAL_PROPHECY_LINKS.filter((pl) => pl.eras.some((e) => e === selectedEra));
+      const seen = new Set<string>();
       for (const pl of filteredPL) {
         for (const locId of pl.relatedLocationIds) {
+          if (seen.has(locId)) continue;
+          seen.add(locId);
           const loc = getLocationById(locId);
           if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
         }
       }
-      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
+      if (coords.length === 0) return NEAR_EAST_FALLBACK;
+      if (coords.length === 1) {
+        return [
+          { latitude: coords[0].latitude - 3, longitude: coords[0].longitude - 4 },
+          { latitude: coords[0].latitude + 3, longitude: coords[0].longitude + 4 },
+        ];
+      }
+      return coords;
     }
     coords = mappableLocations.map((l) => ({
       latitude: parseFloat(l.latitude),
@@ -720,7 +740,7 @@ function MapsContent({
           <Ionicons name="search-outline" size={16} color={theme.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-            placeholder="Search locations, people groups, prophecy, journeys..."
+            placeholder="Search locations, people groups, prophecy, or journeys"
             placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}

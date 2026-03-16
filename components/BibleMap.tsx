@@ -12,6 +12,23 @@ const MARKER_COLORS: Record<string, string> = {
 
 const QUIET_MARKER_COLOR = "#8B8B8B";
 
+const MUTED_MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#3a3a3a" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4a4a4a" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#2e2e2e" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "road", stylers: [{ visibility: "simplified" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#333333" }] },
+  { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a3a3a" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#1a2940" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4a6a8a" }] },
+];
+
 interface MapLocation {
   id: string;
   name: string;
@@ -85,7 +102,7 @@ export default function BibleMap({
       if (!mapRef.current) return;
       if (!fitCoordinates || fitCoordinates.length === 0) return;
       const padding = isJourneySelected
-        ? { top: 64, right: 44, bottom: 64, left: 44 }
+        ? { top: 72, right: 52, bottom: 72, left: 52 }
         : { top: 56, right: 40, bottom: 56, left: 40 };
       if (fitCoordinates.length >= 2) {
         mapRef.current.fitToCoordinates(fitCoordinates, {
@@ -97,8 +114,8 @@ export default function BibleMap({
         mapRef.current.animateToRegion({
           latitude: fitCoordinates[0].latitude,
           longitude: fitCoordinates[0].longitude,
-          latitudeDelta: 4,
-          longitudeDelta: 4,
+          latitudeDelta: 6,
+          longitudeDelta: 6,
         }, didInitialFit.current ? 400 : 0);
         didInitialFit.current = true;
       }
@@ -134,12 +151,17 @@ export default function BibleMap({
           latitudeDelta: 8,
           longitudeDelta: 8,
         }}
-        mapType="terrain"
+        mapType="mutedStandard"
+        customMapStyle={MUTED_MAP_STYLE}
         showsCompass={false}
-        showsScale
+        showsScale={false}
         toolbarEnabled={false}
         rotateEnabled={false}
         pitchEnabled={false}
+        showsTraffic={false}
+        showsBuildings={false}
+        showsIndoors={false}
+        showsPointsOfInterest={false}
       >
         {routeLines && routeLines.map((route) => (
           <Polyline
