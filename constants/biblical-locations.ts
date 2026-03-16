@@ -33,6 +33,20 @@ export interface BiblicalLocation {
   prophecyLinkIds: string[];
   relatedJourneyRouteIds: string[];
   relatedKingdomIds: string[];
+  relatedTribeIds: string[];
+}
+
+export interface BiblicalTribeOverlay {
+  id: string;
+  name: string;
+  regionLabel: string;
+  shortDescription: string;
+  keyPassages: string[];
+  relatedLocationIds: string[];
+  color: string;
+  centerLatitude: number;
+  centerLongitude: number;
+  periods: string[];
 }
 
 export interface BiblicalKingdomOverlay {
@@ -89,7 +103,7 @@ export interface BiblicalJourneyRoute {
   routeSegments: RouteSegment[];
 }
 
-export type OverlayType = "none" | "people-groups" | "prophecy" | "journey-routes" | "kingdoms";
+export type OverlayType = "none" | "people-groups" | "prophecy" | "journey-routes" | "kingdoms" | "tribes";
 
 export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
   { value: "none", label: "None" },
@@ -97,6 +111,7 @@ export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
   { value: "prophecy", label: "Prophecy" },
   { value: "journey-routes", label: "Journey Routes" },
   { value: "kingdoms", label: "Kingdoms" },
+  { value: "tribes", label: "Tribes of Israel" },
 ];
 
 export const BIBLICAL_PEOPLE_GROUPS: BiblicalPeopleGroup[] = [
@@ -246,6 +261,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["rome"],
+    relatedTribeIds: ["naphtali"],
   },
   {
     id: "bethlehem",
@@ -293,6 +309,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["rome"],
+    relatedTribeIds: ["judah"],
   },
   {
     id: "jerusalem",
@@ -362,6 +379,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: ["prophecy-jerusalem"],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
     relatedKingdomIds: ["assyria", "babylon-empire", "medo-persia", "greece", "rome"],
+    relatedTribeIds: ["judah", "benjamin", "levi"],
   },
   {
     id: "capernaum",
@@ -403,6 +421,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["rome"],
+    relatedTribeIds: ["naphtali"],
   },
   {
     id: "babylon",
@@ -453,6 +472,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: ["prophecy-babylon"],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["babylon-empire", "medo-persia"],
+    relatedTribeIds: [],
   },
   {
     id: "damascus",
@@ -499,6 +519,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["assyria"],
+    relatedTribeIds: [],
   },
   {
     id: "jordan-river",
@@ -552,6 +573,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: ["prophecy-jordan-river"],
     relatedJourneyRouteIds: ["exodus-route"],
     relatedKingdomIds: ["egypt"],
+    relatedTribeIds: ["manasseh"],
   },
   {
     id: "sea-of-galilee",
@@ -593,6 +615,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: ["prophecy-sea-of-galilee"],
     relatedJourneyRouteIds: [],
     relatedKingdomIds: ["rome"],
+    relatedTribeIds: ["naphtali"],
   },
   {
     id: "egypt-goshen",
@@ -625,6 +648,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["exodus-route"],
     relatedKingdomIds: ["egypt"],
+    relatedTribeIds: [],
   },
   {
     id: "mount-sinai",
@@ -658,6 +682,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["exodus-route"],
     relatedKingdomIds: ["egypt"],
+    relatedTribeIds: [],
   },
   {
     id: "antioch",
@@ -690,6 +715,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-1", "paul-journey-2", "paul-journey-3"],
     relatedKingdomIds: ["greece", "rome"],
+    relatedTribeIds: [],
   },
   {
     id: "cyprus",
@@ -720,6 +746,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-1"],
     relatedKingdomIds: ["rome"],
+    relatedTribeIds: [],
   },
   {
     id: "ephesus",
@@ -752,6 +779,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
     relatedKingdomIds: ["greece", "rome"],
+    relatedTribeIds: [],
   },
   {
     id: "corinth",
@@ -783,6 +811,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
     relatedKingdomIds: ["greece", "rome"],
+    relatedTribeIds: [],
   },
   {
     id: "philippi",
@@ -814,6 +843,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
     relatedKingdomIds: ["greece", "rome"],
+    relatedTribeIds: [],
   },
   {
     id: "thessalonica",
@@ -845,6 +875,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2"],
     relatedKingdomIds: ["greece", "rome"],
+    relatedTribeIds: [],
   },
 ];
 
@@ -1131,4 +1162,103 @@ export function getRouteCoordinates(route: BiblicalJourneyRoute): { latitude: nu
     }
   }
   return coords;
+}
+
+export const BIBLICAL_TRIBE_OVERLAYS: BiblicalTribeOverlay[] = [
+  {
+    id: "judah",
+    name: "Judah",
+    regionLabel: "Southern hill country and Jerusalem region",
+    shortDescription: "Judah became the leading southern tribe and the line of David.",
+    keyPassages: ["Joshua 15", "1 Samuel 17", "2 Samuel 5", "Micah 5"],
+    relatedLocationIds: ["jerusalem", "bethlehem"],
+    color: "#D97706",
+    centerLatitude: 31.55,
+    centerLongitude: 35.09,
+    periods: ["Conquest", "United Monarchy", "Divided Kingdom", "Post-Exile"],
+  },
+  {
+    id: "benjamin",
+    name: "Benjamin",
+    regionLabel: "Central hill country between Judah and Ephraim",
+    shortDescription: "Benjamin occupied a strategic region near Jerusalem and produced Israel's first king.",
+    keyPassages: ["Joshua 18", "1 Samuel 9", "Philippians 3"],
+    relatedLocationIds: ["jerusalem"],
+    color: "#DC2626",
+    centerLatitude: 31.85,
+    centerLongitude: 35.22,
+    periods: ["Conquest", "United Monarchy", "Divided Kingdom"],
+  },
+  {
+    id: "ephraim",
+    name: "Ephraim",
+    regionLabel: "Central highlands north of Benjamin",
+    shortDescription: "Ephraim became one of the strongest northern tribes and a major center of Israel's history.",
+    keyPassages: ["Joshua 16", "Judges 8", "Hosea 4"],
+    relatedLocationIds: [],
+    color: "#2563EB",
+    centerLatitude: 32.1,
+    centerLongitude: 35.25,
+    periods: ["Conquest", "Judges", "Divided Kingdom"],
+  },
+  {
+    id: "manasseh",
+    name: "Manasseh",
+    regionLabel: "Central region with western and transjordan branches",
+    shortDescription: "Manasseh was a large tribe with inheritance on both sides of the Jordan.",
+    keyPassages: ["Joshua 17", "Numbers 32"],
+    relatedLocationIds: ["jordan-river"],
+    color: "#7C3AED",
+    centerLatitude: 32.4,
+    centerLongitude: 35.45,
+    periods: ["Conquest", "Judges", "Divided Kingdom"],
+  },
+  {
+    id: "dan",
+    name: "Dan",
+    regionLabel: "Coastal lowlands and later northern migration",
+    shortDescription: "Dan's inheritance shifted, and the tribe became known for migration and later idolatry.",
+    keyPassages: ["Joshua 19", "Judges 18"],
+    relatedLocationIds: [],
+    color: "#0891B2",
+    centerLatitude: 33.25,
+    centerLongitude: 35.65,
+    periods: ["Conquest", "Judges"],
+  },
+  {
+    id: "naphtali",
+    name: "Naphtali",
+    regionLabel: "Northern Galilee",
+    shortDescription: "Naphtali occupied the northern region later associated with Galilean ministry.",
+    keyPassages: ["Joshua 19", "Isaiah 9", "Matthew 4"],
+    relatedLocationIds: ["nazareth", "sea-of-galilee", "capernaum"],
+    color: "#059669",
+    centerLatitude: 32.85,
+    centerLongitude: 35.5,
+    periods: ["Conquest", "Judges", "Life of Christ"],
+  },
+  {
+    id: "levi",
+    name: "Levi",
+    regionLabel: "Scattered priestly cities throughout Israel",
+    shortDescription: "Levi had no single tribal territory but was distributed in priestly service across the land.",
+    keyPassages: ["Numbers 18", "Joshua 21", "Malachi 2"],
+    relatedLocationIds: ["jerusalem"],
+    color: "#BE185D",
+    centerLatitude: 31.78,
+    centerLongitude: 35.2,
+    periods: ["Wilderness", "Conquest", "United Monarchy", "Second Temple"],
+  },
+];
+
+export function getTribeById(id: string): BiblicalTribeOverlay | undefined {
+  return BIBLICAL_TRIBE_OVERLAYS.find((t) => t.id === id);
+}
+
+export function getTribesForLocation(locationId: string): BiblicalTribeOverlay[] {
+  const location = getLocationById(locationId);
+  if (!location) return [];
+  return location.relatedTribeIds
+    .map((tid) => getTribeById(tid))
+    .filter((t): t is BiblicalTribeOverlay => !!t);
 }

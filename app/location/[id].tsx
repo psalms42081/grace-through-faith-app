@@ -19,6 +19,7 @@ import {
   getProphecyLinksForLocation,
   getJourneyRoutesForLocation,
   getKingdomsForLocation,
+  getTribesForLocation,
   JOURNEY_ROUTE_COLORS,
   type EraFilter,
 } from "@/constants/biblical-locations";
@@ -61,7 +62,7 @@ function parseFirstPassage(passage: string): ParsedPassage | null {
 }
 
 export default function LocationDetailScreen() {
-  const { id, mode, era, overlay, journey, kingdom } = useLocalSearchParams<{ id: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string }>();
+  const { id, mode, era, overlay, journey, kingdom, tribe } = useLocalSearchParams<{ id: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string; tribe?: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -103,6 +104,7 @@ export default function LocationDetailScreen() {
   const relatedProphecies = getProphecyLinksForLocation(location.id);
   const relatedJourneys = getJourneyRoutesForLocation(location.id);
   const relatedKingdoms = getKingdomsForLocation(location.id);
+  const relatedTribes = getTribesForLocation(location.id);
 
   return (
     <>
@@ -391,7 +393,7 @@ export default function LocationDetailScreen() {
             {relatedKingdoms.map((k) => (
               <Pressable
                 key={k.id}
-                onPress={() => router.push({ pathname: `/kingdom-overlay/${k.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "kingdoms", kingdom: kingdom || k.id } } as any)}
+                onPress={() => router.push({ pathname: `/kingdom-overlay/${k.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "kingdoms", kingdom: k.id } } as any)}
                 style={({ pressed }) => [st.pgRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
               >
                 <View style={[st.pgIcon, { backgroundColor: k.color + "14" }]}>
@@ -411,6 +413,37 @@ export default function LocationDetailScreen() {
           </View>
         )}
 
+        {relatedTribes.length > 0 && (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="people-outline" size={16} color="#059669" />
+              <Text style={[st.cardLabel, { color: "#059669", fontFamily: "Inter_600SemiBold" }]}>
+                Tribes of Israel
+              </Text>
+            </View>
+            {relatedTribes.map((t) => (
+              <Pressable
+                key={t.id}
+                onPress={() => router.push({ pathname: `/tribe-overlay/${t.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "tribes", tribe: t.id } } as any)}
+                style={({ pressed }) => [st.pgRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <View style={[st.pgIcon, { backgroundColor: t.color + "14" }]}>
+                  <Ionicons name="people-outline" size={16} color={t.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {t.name}
+                  </Text>
+                  <Text style={[st.nearbyRegion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {t.regionLabel}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {nearbyLocs.length > 0 && (
           <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
             <View style={st.cardRow}>
@@ -422,7 +455,7 @@ export default function LocationDetailScreen() {
             {nearbyLocs.map((nl) => (
               <Pressable
                 key={nl!.id}
-                onPress={() => router.push({ pathname: `/location/${nl!.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "none", journey: journey || "", kingdom: kingdom || "" } } as any)}
+                onPress={() => router.push({ pathname: `/location/${nl!.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "none", journey: journey || "", kingdom: kingdom || "", tribe: tribe || "" } } as any)}
                 style={({ pressed }) => [st.nearbyRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
               >
                 <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>

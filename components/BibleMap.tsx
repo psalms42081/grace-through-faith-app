@@ -34,6 +34,15 @@ export interface KingdomMarkerData {
   selected?: boolean;
 }
 
+export interface TribeMarkerData {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+  color: string;
+  selected?: boolean;
+}
+
 interface BibleMapProps {
   locations: MapLocation[];
   selectedLocation: MapLocation | null;
@@ -43,6 +52,8 @@ interface BibleMapProps {
   routeLines?: RouteLineData[];
   kingdomMarkers?: KingdomMarkerData[];
   onKingdomPress?: (id: string) => void;
+  tribeMarkers?: TribeMarkerData[];
+  onTribePress?: (id: string) => void;
 }
 
 export default function BibleMap({
@@ -54,6 +65,8 @@ export default function BibleMap({
   routeLines,
   kingdomMarkers,
   onKingdomPress,
+  tribeMarkers,
+  onTribePress,
 }: BibleMapProps) {
   const mapRef = useRef<MapView>(null);
 
@@ -118,6 +131,29 @@ export default function BibleMap({
               <View style={mapStyles.kingdomLabel}>
                 <Text style={[mapStyles.kingdomLabelText, { color: km.color }]}>
                   {km.label}
+                </Text>
+              </View>
+            </Marker>
+          </React.Fragment>
+        ))}
+        {tribeMarkers && tribeMarkers.map((tm) => (
+          <React.Fragment key={`tribe-${tm.id}`}>
+            <Circle
+              center={{ latitude: tm.latitude, longitude: tm.longitude }}
+              radius={tm.selected ? 28000 : 20000}
+              strokeColor={tm.color + "50"}
+              fillColor={tm.color + (tm.selected ? "25" : "0D")}
+              strokeWidth={tm.selected ? 2 : 1}
+            />
+            <Marker
+              coordinate={{ latitude: tm.latitude, longitude: tm.longitude }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              opacity={tm.selected ? 1 : 0.7}
+              onPress={() => onTribePress?.(tm.id)}
+            >
+              <View style={mapStyles.kingdomLabel}>
+                <Text style={[mapStyles.kingdomLabelText, { color: tm.color, fontSize: 9, letterSpacing: 1 }]}>
+                  {tm.label}
                 </Text>
               </View>
             </Marker>

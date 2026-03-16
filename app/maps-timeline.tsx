@@ -16,8 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
-import type { RouteLineData, KingdomMarkerData } from "@/components/BibleMap";
+import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
+import type { RouteLineData, KingdomMarkerData, TribeMarkerData } from "@/components/BibleMap";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -86,7 +86,7 @@ const HOLY_LAND_REGION = {
 };
 
 export default function MapsTimelineScreen() {
-  const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam, journey: journeyParam, kingdom: kingdomParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string }>();
+  const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam, journey: journeyParam, kingdom: kingdomParam, tribe: tribeParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string; tribe?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -96,6 +96,7 @@ export default function MapsTimelineScreen() {
   const [overlay, setOverlay] = useState<OverlayType>((overlayParam as OverlayType) || "none");
   const [selectedJourney, setSelectedJourney] = useState<JourneyFilter>((journeyParam as JourneyFilter) || "all");
   const [selectedKingdom, setSelectedKingdom] = useState<string>(kingdomParam || "");
+  const [selectedTribe, setSelectedTribe] = useState<string>(tribeParam || "");
 
   return (
     <>
@@ -141,7 +142,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} overlay={overlay} setOverlay={setOverlay} selectedJourney={selectedJourney} setSelectedJourney={setSelectedJourney} selectedKingdom={selectedKingdom} setSelectedKingdom={setSelectedKingdom} />
+          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} overlay={overlay} setOverlay={setOverlay} selectedJourney={selectedJourney} setSelectedJourney={setSelectedJourney} selectedKingdom={selectedKingdom} setSelectedKingdom={setSelectedKingdom} selectedTribe={selectedTribe} setSelectedTribe={setSelectedTribe} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -170,6 +171,8 @@ function MapsContent({
   setSelectedJourney,
   selectedKingdom,
   setSelectedKingdom,
+  selectedTribe,
+  setSelectedTribe,
 }: {
   theme: typeof Colors.light;
   isDark: boolean;
@@ -184,6 +187,8 @@ function MapsContent({
   setSelectedJourney: (j: JourneyFilter) => void;
   selectedKingdom: string;
   setSelectedKingdom: (k: string) => void;
+  selectedTribe: string;
+  setSelectedTribe: (t: string) => void;
 }) {
   const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -241,14 +246,30 @@ function MapsContent({
     setSelectedKingdom(id);
   }, []);
 
+  const tribeMarkers = useMemo((): TribeMarkerData[] => {
+    if (overlay !== "tribes") return [];
+    return BIBLICAL_TRIBE_OVERLAYS.map((t) => ({
+      id: t.id,
+      label: t.name.toUpperCase(),
+      latitude: t.centerLatitude,
+      longitude: t.centerLongitude,
+      color: t.color,
+      selected: selectedTribe === t.id,
+    }));
+  }, [overlay, selectedTribe]);
+
+  const handleTribePress = useCallback((id: string) => {
+    setSelectedTribe(id);
+  }, []);
+
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
     if (enriched) {
-      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney, kingdom: selectedKingdom } } as any);
+      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney, kingdom: selectedKingdom, tribe: selectedTribe } } as any);
     } else {
       setSelectedLocation(loc);
     }
-  }, [mapMode, selectedEra, overlay, selectedJourney, selectedKingdom]);
+  }, [mapMode, selectedEra, overlay, selectedJourney, selectedKingdom, selectedTribe]);
 
   const handleMarkerPress = useCallback(
     (loc: any) => {
@@ -453,6 +474,8 @@ function MapsContent({
           routeLines={routeLines}
           kingdomMarkers={kingdomMarkers}
           onKingdomPress={handleKingdomPress}
+          tribeMarkers={tribeMarkers}
+          onTribePress={handleTribePress}
         />
 
         {selectedLocation && (
@@ -751,6 +774,56 @@ function MapsContent({
                     numberOfLines={2}
                   >
                     {k.shortDescription}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : overlay === "tribes" ? (
+          <View style={styles.tabContent}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {`${BIBLICAL_TRIBE_OVERLAYS.length} Tribes of Israel`}
+            </Text>
+            {BIBLICAL_TRIBE_OVERLAYS.map((t) => (
+              <Pressable
+                key={t.id}
+                onPress={() => router.push({ pathname: `/tribe-overlay/${t.id}`, params: { mode: mapMode, era: selectedEra, overlay, tribe: t.id } } as any)}
+                style={({ pressed }) => [
+                  styles.regionCard,
+                  {
+                    backgroundColor: selectedTribe === t.id ? t.color + "14" : theme.backgroundCard,
+                    opacity: pressed ? 0.75 : 1,
+                    borderWidth: selectedTribe === t.id ? 1 : 0,
+                    borderColor: selectedTribe === t.id ? t.color + "40" : "transparent",
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.regionIcon,
+                    { backgroundColor: t.color + "18" },
+                  ]}
+                >
+                  <Ionicons name="people-outline" size={22} color={t.color} />
+                </View>
+                <View style={[styles.regionInfo, { flex: 1 }]}>
+                  <Text
+                    style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                  >
+                    {t.name}
+                  </Text>
+                  <Text
+                    style={[styles.regionPlaces, { color: t.color, fontFamily: "Inter_500Medium" }]}
+                    numberOfLines={1}
+                  >
+                    {t.regionLabel}
+                  </Text>
+                  <Text
+                    style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                    numberOfLines={2}
+                  >
+                    {t.shortDescription}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
