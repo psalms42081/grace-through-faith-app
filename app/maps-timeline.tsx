@@ -470,10 +470,17 @@ function MapsContent({
   const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
 
   const getSubtitleForLocation = useCallback((loc: Location): string => {
+    const enriched = getLocationByName(loc.name);
     if (isBiblical) {
-      const enriched = getLocationByName(loc.name);
-      if (enriched) return enriched.ancientRegion;
+      if (enriched) {
+        const parts = [enriched.ancientRegion];
+        if (enriched.eras.length > 0) parts.push(enriched.eras.length <= 2 ? enriched.eras.join(" to ") : `${enriched.eras[0]} to ${enriched.eras[enriched.eras.length - 1]}`);
+        return parts.join(" \u00B7 ");
+      }
       return loc.era || loc.modernName || "";
+    }
+    if (enriched) {
+      return [enriched.modernLocation, enriched.modernCountry].filter(Boolean).join(", ");
     }
     return [loc.modernName, loc.era].filter(Boolean).join(" \u00B7 ");
   }, [isBiblical]);
@@ -562,7 +569,7 @@ function MapsContent({
         {OVERLAY_OPTIONS.map((opt) => {
           const shortLabels: Record<string, string> = {
             "none": "None",
-            "people-groups": "Peoples",
+            "people-groups": "People",
             "prophecy": "Prophecy",
             "journey-routes": "Journeys",
             "kingdoms": "Kingdoms",
@@ -1468,12 +1475,12 @@ const styles = StyleSheet.create({
   },
   locationListContent: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 6,
   },
   detailSection: { gap: 12 },
   sectionTitle: {
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionLabel: {
     fontSize: 11,
@@ -1648,7 +1655,6 @@ const styles = StyleSheet.create({
   contextHelper: {
     fontSize: 12,
     lineHeight: 17,
-    marginTop: -4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
 });
