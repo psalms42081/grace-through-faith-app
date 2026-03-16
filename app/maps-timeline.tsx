@@ -442,7 +442,18 @@ function MapsContent({
   }, [overlay, routeLines, kingdomMarkers, tribeMarkers, mappableLocations, selectedEra]);
 
   const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
-  const quietMarkers = overlay === "none" || overlay === "journey-routes";
+  const quietMarkers = overlay === "none" || (overlay === "journey-routes" && selectedJourney === "all");
+
+  const displayLocations = useMemo(() => {
+    if (overlay === "journey-routes" && selectedJourney !== "all") {
+      const route = BIBLICAL_JOURNEY_ROUTES.find((r) => r.id === selectedJourney);
+      if (route) {
+        const stopIds = new Set(route.stopLocationIds);
+        return mappableLocations.filter((l) => stopIds.has(l.id));
+      }
+    }
+    return mappableLocations;
+  }, [overlay, selectedJourney, mappableLocations]);
 
   const filteredPeopleGroups = useMemo(() => {
     if (selectedEra === "All") return BIBLICAL_PEOPLE_GROUPS;
@@ -797,7 +808,7 @@ function MapsContent({
 
       <View style={[styles.mapContainer, isJourneySelected && { height: 280 }]}>
         <BibleMap
-          locations={mappableLocations}
+          locations={displayLocations}
           selectedLocation={selectedLocation && selectedLocation.latitude && selectedLocation.longitude ? {
             id: selectedLocation.id,
             name: selectedLocation.name,
