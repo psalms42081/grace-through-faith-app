@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   Dimensions,
 } from "react-native";
-import { useLocalSearchParams, Stack } from "expo-router";
+import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { getLocationByName } from "@/constants/biblical-locations";
 
 type Tab = "maps" | "timeline";
 
@@ -173,18 +174,27 @@ function MapsContent({
     return locations.filter((l): l is Location & { latitude: string; longitude: string } => !!l.latitude && !!l.longitude);
   }, [locations]);
 
+  const navigateToLocationDetail = useCallback((loc: Location) => {
+    const enriched = getLocationByName(loc.name);
+    if (enriched) {
+      router.push(`/location/${enriched.id}` as any);
+    } else {
+      setSelectedLocation(loc);
+    }
+  }, []);
+
   const handleMarkerPress = useCallback(
     (loc: any) => {
-      setSelectedLocation(loc as Location);
+      navigateToLocationDetail(loc as Location);
     },
-    []
+    [navigateToLocationDetail]
   );
 
   const handleListPress = useCallback(
     (loc: Location) => {
-      setSelectedLocation(loc);
+      navigateToLocationDetail(loc);
     },
-    []
+    [navigateToLocationDetail]
   );
 
   const clearSelection = useCallback(() => {
