@@ -13,20 +13,21 @@ const MARKER_COLORS: Record<string, string> = {
 const QUIET_MARKER_COLOR = "#8B8B8B";
 
 const MUTED_MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
-  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#3a3a3a" }] },
-  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4a4a4a" }] },
-  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#2e2e2e" }] },
+  { elementType: "geometry", stylers: [{ color: "#1e1e2a" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#7a7a8a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#111118" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#3a3a4a" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#555566" }] },
+  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#6a6a7a" }] },
+  { featureType: "administrative.province", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#606070" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#242434" }] },
+  { featureType: "landscape.natural.terrain", elementType: "geometry", stylers: [{ color: "#2a2a3a" }] },
   { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "road", stylers: [{ visibility: "simplified" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#333333" }] },
-  { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a3a3a" }] },
+  { featureType: "road", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#1a2940" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4a6a8a" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#141e30" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3a5a7a" }] },
 ];
 
 interface MapLocation {
@@ -144,14 +145,14 @@ export default function BibleMap({
       <MapView
         ref={mapRef}
         style={mapStyles.map}
-        provider={PROVIDER_DEFAULT}
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
         initialRegion={{
           latitude: defaultLat,
           longitude: defaultLon,
           latitudeDelta: 8,
           longitudeDelta: 8,
         }}
-        mapType={Platform.OS === "ios" ? "mutedStandard" : "hybrid"}
+        mapType={Platform.OS === "ios" ? "mutedStandard" : "standard"}
         customMapStyle={Platform.OS === "android" ? MUTED_MAP_STYLE : undefined}
         showsCompass={false}
         showsScale={false}
