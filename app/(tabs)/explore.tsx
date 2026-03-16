@@ -222,7 +222,7 @@ export default function StudyScreen() {
               iconColor="#3B82F6"
               title="Quick Read"
               subtitle="Read a passage without extra study layers"
-              onPress={() => router.push("/(tabs)/read" as any)}
+              onPress={() => router.push("/book-picker" as any)}
               theme={theme}
               isDark={isDark}
               testID="study-mode-quick_read"
@@ -245,7 +245,7 @@ export default function StudyScreen() {
               title="Deep Study"
               subtitle={deepStudyState.sub}
               badge="4-Layer"
-              onPress={() => router.push({ pathname: "/(tabs)/study", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
+              onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
               theme={theme}
               isDark={isDark}
               testID="study-mode-deep_study"
@@ -259,7 +259,7 @@ export default function StudyScreen() {
             <SectionLabel label="Continue Your Journey" theme={theme} />
             {hasActiveProgress && lastRead ? (
               <Pressable
-                onPress={() => router.push({ pathname: "/(tabs)/study", params: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter), _t: String(Date.now()) } } as any)}
+                onPress={() => router.push({ pathname: "/deep-study-picker", params: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter), _t: String(Date.now()) } } as any)}
                 testID="study-resume-cta"
                 style={({ pressed }) => [
                   st.resumeCard,
