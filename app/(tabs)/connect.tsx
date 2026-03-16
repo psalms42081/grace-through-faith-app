@@ -5,23 +5,66 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Pressable,
+  Image,
+  Dimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import ListItem from "@/components/ui/ListItem";
+import { LinearGradient } from "expo-linear-gradient";
 
-import SectionHeaderShared from "@/components/SectionHeader";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-function SectionDivider({ theme }: { theme: typeof Colors.dark }) {
-  return <View style={[st.divider, { backgroundColor: theme.divider }]} />;
+const CARD_IMAGES: Record<string, any> = {
+  church: require("@/assets/connect-cards/church-connect.png"),
+  fellowship: require("@/assets/connect-cards/live-fellowship.png"),
+  family: require("@/assets/connect-cards/family-dashboard.png"),
+  speakers: require("@/assets/connect-cards/speakers.png"),
+  broadcasts: require("@/assets/connect-cards/broadcasts.png"),
+  radio: require("@/assets/connect-cards/radio.png"),
+};
+
+interface VisualCardProps {
+  imageKey: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  theme: any;
+}
+
+function VisualCard({ imageKey, title, subtitle, onPress, theme }: VisualCardProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [st.card, { opacity: pressed ? 0.9 : 1 }]}
+    >
+      <Image source={CARD_IMAGES[imageKey]} style={st.cardImage} resizeMode="cover" />
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.75)", "rgba(0,0,0,0.92)"]}
+        locations={[0.1, 0.6, 1]}
+        style={st.cardGradient}
+      />
+      <View style={st.cardContent}>
+        <Text style={[st.cardTitle, { fontFamily: "Inter_600SemiBold" }]}>{title}</Text>
+        <Text style={[st.cardSubtitle, { fontFamily: "Inter_400Regular" }]}>{subtitle}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function SectionLabel({ title, theme }: { title: string; theme: any }) {
+  return (
+    <Text style={[st.sectionLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+      {title}
+    </Text>
+  );
 }
 
 export default function ConnectScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
@@ -45,73 +88,56 @@ export default function ConnectScreen() {
           {t("connect.purpose")}
         </Text>
 
-        <SectionHeaderShared title={t("connect.findAndConnect")} color={theme.text} />
+        <SectionLabel title={t("connect.findAndConnect")} theme={theme} />
 
-        <ListItem
-          icon="location"
-          iconColor="#C9933A"
+        <VisualCard
+          imageKey="church"
           title={t("connect.churchConnect")}
           subtitle={t("connect.churchConnectSub")}
           onPress={() => router.push("/church-connect" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
 
-        <ListItem
-          icon="people-circle"
-          iconColor="#10B981"
+        <VisualCard
+          imageKey="fellowship"
           title={t("connect.smallGroups")}
           subtitle={t("connect.smallGroupsSub")}
           onPress={() => router.push("/groups" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
 
-        <ListItem
-          icon="home"
-          iconColor="#5B86E5"
+        <VisualCard
+          imageKey="family"
           title={t("connect.familyDashboard")}
           subtitle={t("connect.familyDashboardSub")}
           onPress={() => router.push("/(tabs)/family" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
 
-        <SectionDivider theme={theme} />
+        <SectionLabel title={t("connect.watchAndListen")} theme={theme} />
 
-        <SectionHeaderShared title={t("connect.watchAndListen")} color={theme.text} />
-
-        <ListItem
-          icon="mic"
-          iconColor="#C9933A"
+        <VisualCard
+          imageKey="speakers"
           title="SDA Speakers"
           subtitle="Watch sermons from Adventist teachers"
           onPress={() => router.push("/speakers" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
 
-        <ListItem
-          icon="tv"
-          iconColor="#E8456B"
+        <VisualCard
+          imageKey="broadcasts"
           title={t("connect.broadcasts")}
           subtitle={t("connect.broadcastsSub")}
           onPress={() => router.push("/broadcasts" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
 
-        <ListItem
-          icon="radio"
-          iconColor="#C9933A"
+        <VisualCard
+          imageKey="radio"
           title="Christian Radio"
           subtitle="Live Adventist & gospel streams"
           onPress={() => router.push("/music" as any)}
-          style={{ marginBottom: 12 }}
-        />
-
-        <ListItem
-          icon="videocam"
-          iconColor="#E8456B"
-          title={t("connect.liveStreams")}
-          subtitle={t("connect.liveStreamsSub")}
-          onPress={() => router.push("/groups" as any)}
-          style={{ marginBottom: 12 }}
+          theme={theme}
         />
       </ScrollView>
     </View>
@@ -122,20 +148,54 @@ const st = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 18,
+    paddingBottom: 10,
   },
   title: { fontSize: 28, letterSpacing: -0.3 },
   scrollView: { flex: 1 },
-  content: { paddingHorizontal: 24 },
+  content: { paddingHorizontal: 20, gap: 14 },
   tabPurpose: {
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: 4,
     opacity: 0.85,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 30,
-    opacity: 0.4,
+  sectionLabel: {
+    fontSize: 16,
+    letterSpacing: -0.2,
+    marginTop: 10,
+    marginBottom: -2,
+  },
+  card: {
+    borderRadius: 18,
+    overflow: "hidden",
+    height: 160,
+    position: "relative",
+  },
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  cardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cardContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    gap: 3,
+  },
+  cardTitle: {
+    color: "#fff",
+    fontSize: 18,
+    letterSpacing: -0.2,
+  },
+  cardSubtitle: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

@@ -136,7 +136,7 @@ export default function SpeakerDetailScreen() {
         >
           <Ionicons name="play-circle" size={22} color="#fff" />
           <Text style={[st.watchChannelText, { fontFamily: "Inter_600SemiBold" }]}>
-            Watch Sermons
+            Browse Sermons
           </Text>
         </Pressable>
 
