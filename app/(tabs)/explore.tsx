@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   ImageBackground,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,9 +17,96 @@ import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import { TOPICS_LIST as TOPICS } from "@/data/topics";
 import ListItem from "@/components/ui/ListItem";
 import { getBookImage } from "@/constants/bible-books";
+
+const TOPIC_IMAGES: Record<string, any> = {
+  love: require("@/assets/topic-cards/love.png"),
+  faith: require("@/assets/topic-cards/faith.png"),
+  prayer: require("@/assets/topic-cards/prayer.png"),
+  peace: require("@/assets/topic-cards/peace.png"),
+  hope: require("@/assets/topic-cards/hope.png"),
+  strength: require("@/assets/topic-cards/strength.png"),
+  wisdom: require("@/assets/topic-cards/wisdom.png"),
+  grace: require("@/assets/topic-cards/grace.png"),
+  joy: require("@/assets/topic-cards/joy.png"),
+  "word-study": require("@/assets/topic-cards/word-study.png"),
+  "bible-characters": require("@/assets/topic-cards/bible-characters.png"),
+  "bible-maps": require("@/assets/topic-cards/bible-maps.png"),
+  timeline: require("@/assets/topic-cards/timeline.png"),
+  "three-angels": require("@/assets/topic-cards/three-angels.png"),
+  health: require("@/assets/topic-cards/health-message.png"),
+};
+
+function TopicImageCard({
+  id,
+  title,
+  subtitle,
+  onPress,
+  testID,
+}: {
+  id: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [
+        st.topicImageCard,
+        pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+    >
+      <Image source={TOPIC_IMAGES[id]} style={st.topicImageBg} resizeMode="cover" />
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.85)"]}
+        locations={[0, 0.45, 1]}
+        style={st.topicImageOverlay}
+      >
+        <View style={st.topicImageContent}>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.topicImageTitle, { fontFamily: "Inter_600SemiBold" }]}>
+              {title}
+            </Text>
+            <Text style={[st.topicImageSub, { fontFamily: "Inter_400Regular" }]}>
+              {subtitle}
+            </Text>
+          </View>
+          <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.7)" />
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+const SPIRITUAL_THEMES = [
+  { id: "love", title: "Love", subtitle: "Explore what Scripture teaches about love" },
+  { id: "faith", title: "Faith", subtitle: "Walking by faith, not by sight" },
+  { id: "prayer", title: "Prayer", subtitle: "Drawing near to God in prayer" },
+  { id: "peace", title: "Peace", subtitle: "Finding rest in God's promises" },
+  { id: "hope", title: "Hope", subtitle: "Anchored in the hope of Christ" },
+  { id: "strength", title: "Strength", subtitle: "God's strength in our weakness" },
+  { id: "wisdom", title: "Wisdom", subtitle: "Seeking wisdom from above" },
+  { id: "grace", title: "Grace", subtitle: "The unmerited favor of God" },
+  { id: "joy", title: "Joy", subtitle: "The joy of the Lord is our strength" },
+];
+
+const STUDY_TOOLS = [
+  { id: "word-study", title: "Word Study", subtitle: "Explore the meaning of key Biblical words", route: "/word-study" },
+  { id: "bible-characters", title: "Bible Characters", subtitle: "Meet the people of Scripture", route: "/resources" },
+  { id: "bible-maps", title: "Bible Maps", subtitle: "Ancient locations and biblical geography", route: "/maps-timeline?tab=maps" },
+  { id: "timeline", title: "Timeline", subtitle: "Walk through biblical history", route: "/maps-timeline?tab=timeline" },
+];
+
+const ADVENTIST_STUDIES = [
+  { id: "three-angels", title: "Three Angels' Messages", subtitle: "Study the messages of Revelation 14" },
+  { id: "health", title: "Health Message", subtitle: "Biblical principles for wholeness" },
+];
 
 interface LayerCompletionEntry {
   layer: string;
@@ -202,7 +290,7 @@ export default function StudyScreen() {
           Study
         </Text>
         <Text style={[st.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Start with Scripture, continue your journey, or explore trusted study tools.
+          Explore Bible themes, doctrines, and study tools.
         </Text>
       </View>
 
@@ -410,28 +498,54 @@ export default function StudyScreen() {
             })}
           </ScrollView>
 
-          <View style={{ height: 20 }} />
+          <View style={{ height: 24 }} />
 
           <SectionLabel label="Spiritual Themes" theme={theme} />
 
-          <View style={st.topicsGrid}>
-            {TOPICS.map((topic) => (
-              <Pressable
-                key={topic.id}
-                onPress={() => router.push(`/topic/${topic.id}`)}
-                style={({ pressed }) => [st.topicCard, { opacity: pressed ? 0.8 : 1 }]}
-                testID={`topic-${topic.id}`}
-              >
-                <LinearGradient
-                  colors={topic.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={st.topicGradient}
-                >
-                  <Ionicons name={topic.icon} size={22} color="rgba(255,255,255,0.9)" />
-                  <Text style={[st.topicTitle, { fontFamily: "Inter_600SemiBold" }]}>{topic.title}</Text>
-                </LinearGradient>
-              </Pressable>
+          <View style={st.topicImageCards}>
+            {SPIRITUAL_THEMES.map((item) => (
+              <TopicImageCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                subtitle={item.subtitle}
+                onPress={() => router.push(`/topic/${item.id}`)}
+                testID={`topic-${item.id}`}
+              />
+            ))}
+          </View>
+
+          <View style={{ height: 24 }} />
+
+          <SectionLabel label="Bible Study Tools" theme={theme} />
+
+          <View style={st.topicImageCards}>
+            {STUDY_TOOLS.map((item) => (
+              <TopicImageCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                subtitle={item.subtitle}
+                onPress={() => router.push(item.route as any)}
+                testID={`tool-${item.id}`}
+              />
+            ))}
+          </View>
+
+          <View style={{ height: 24 }} />
+
+          <SectionLabel label="Adventist Studies" theme={theme} />
+
+          <View style={st.topicImageCards}>
+            {ADVENTIST_STUDIES.map((item) => (
+              <TopicImageCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                subtitle={item.subtitle}
+                onPress={() => router.push(`/topic/${item.id}`)}
+                testID={`topic-${item.id}`}
+              />
             ))}
           </View>
         </View>
@@ -589,23 +703,37 @@ const st = StyleSheet.create({
   inspirationTitle: { color: "#fff", fontSize: 16, letterSpacing: 0.1 },
   inspirationSub: { color: "rgba(255,255,255,0.65)", fontSize: 12 },
 
-  topicsGrid: {
-    flexDirection: "row" as const,
-    flexWrap: "wrap" as const,
+  topicImageCards: {
     gap: 10,
   },
-  topicCard: {
-    width: "31%" as any,
-    minWidth: 95,
-    flexGrow: 1,
-  },
-  topicGradient: {
+  topicImageCard: {
     borderRadius: 16,
-    padding: 16,
-    alignItems: "center" as const,
-    gap: 8,
-    minHeight: 90,
-    justifyContent: "center" as const,
+    overflow: "hidden" as const,
+    height: 100,
   },
-  topicTitle: { color: "#fff", fontSize: 13, letterSpacing: 0.2 },
+  topicImageBg: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%" as any,
+    height: "100%" as any,
+  },
+  topicImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end" as const,
+  },
+  topicImageContent: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 8,
+  },
+  topicImageTitle: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  topicImageSub: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+  },
 });
