@@ -151,16 +151,6 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     featuredVideoIds: [],
   },
   {
-    id: "walter-veith",
-    name: "Walter Veith",
-    ministry: "Amazing Discoveries",
-    bio: "Former zoology professor turned evangelist, known for in-depth prophecy and history presentations connecting Scripture to world events.",
-    topics: ["Prophecy", "History", "Daniel", "Revelation", "Three Angels", "Health"],
-    color: "#4E342E",
-    youtubeChannelId: "UC3kY2iRN0XQkBPWotpPkU4g",
-    featuredVideoIds: [],
-  },
-  {
     id: "stephen-bohr",
     name: "Stephen Bohr",
     ministry: "Secrets Unsealed",
