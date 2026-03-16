@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationsByEra, ERA_OPTIONS, type EraFilter } from "@/constants/biblical-locations";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -91,6 +91,7 @@ export default function MapsTimelineScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");
   const [mapMode, setMapMode] = useState<MapMode>("modern");
+  const [selectedEra, setSelectedEra] = useState<EraFilter>("All");
 
   return (
     <>
@@ -136,7 +137,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} />
+          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} mapMode={mapMode} setMapMode={setMapMode} selectedEra={selectedEra} setSelectedEra={setSelectedEra} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -157,12 +158,16 @@ function MapsContent({
   bottomPad,
   mapMode,
   setMapMode,
+  selectedEra,
+  setSelectedEra,
 }: {
   theme: typeof Colors.light;
   isDark: boolean;
   bottomPad: number;
   mapMode: MapMode;
   setMapMode: (m: MapMode) => void;
+  selectedEra: EraFilter;
+  setSelectedEra: (e: EraFilter) => void;
 }) {
   const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -176,19 +181,29 @@ function MapsContent({
     enabled: !!selectedLocation,
   });
 
+  const eraFilteredNames = useMemo(() => {
+    if (selectedEra === "All") return null;
+    const eraLocs = getLocationsByEra(selectedEra);
+    return new Set(eraLocs.map((l) => l.name.toLowerCase()));
+  }, [selectedEra]);
+
   const mappableLocations = useMemo(() => {
     if (!locations) return [];
-    return locations.filter((l): l is Location & { latitude: string; longitude: string } => !!l.latitude && !!l.longitude);
-  }, [locations]);
+    let filtered = locations.filter((l): l is Location & { latitude: string; longitude: string } => !!l.latitude && !!l.longitude);
+    if (eraFilteredNames) {
+      filtered = filtered.filter((l) => eraFilteredNames.has(l.name.toLowerCase()));
+    }
+    return filtered;
+  }, [locations, eraFilteredNames]);
 
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
     if (enriched) {
-      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode } } as any);
+      router.push({ pathname: `/location/${enriched.id}`, params: { mode: mapMode, era: selectedEra } } as any);
     } else {
       setSelectedLocation(loc);
     }
-  }, [mapMode]);
+  }, [mapMode, selectedEra]);
 
   const handleMarkerPress = useCallback(
     (loc: any) => {
@@ -208,16 +223,21 @@ function MapsContent({
     setSelectedLocation(null);
   }, []);
 
+  const filteredLocations = useMemo(() => {
+    if (!locations) return [];
+    if (!eraFilteredNames) return locations;
+    return locations.filter((l) => eraFilteredNames.has(l.name.toLowerCase()));
+  }, [locations, eraFilteredNames]);
+
   const grouped = useMemo(() => {
-    if (!locations) return {};
     const g: Record<string, Location[]> = {};
-    for (const loc of locations) {
+    for (const loc of filteredLocations) {
       const type = loc.locationType || "other";
       if (!g[type]) g[type] = [];
       g[type].push(loc);
     }
     return g;
-  }, [locations]);
+  }, [filteredLocations]);
 
   const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
 
@@ -269,6 +289,39 @@ function MapsContent({
           </Pressable>
         ))}
       </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.eraScrollRow}
+        contentContainerStyle={styles.eraScrollContent}
+      >
+        {ERA_OPTIONS.map((era) => (
+          <Pressable
+            key={era}
+            onPress={() => setSelectedEra(era)}
+            style={[
+              styles.eraChip,
+              {
+                backgroundColor: selectedEra === era ? theme.accent : theme.backgroundCard,
+                borderColor: selectedEra === era ? theme.accent : theme.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.eraChipText,
+                {
+                  color: selectedEra === era ? "#fff" : theme.textSecondary,
+                  fontFamily: selectedEra === era ? "Inter_600SemiBold" : "Inter_400Regular",
+                },
+              ]}
+            >
+              {era}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
 
       <View style={styles.mapContainer}>
         <BibleMap
@@ -391,7 +444,9 @@ function MapsContent({
         ) : (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {locations ? `${locations.length} Biblical Locations` : "Loading..."}
+              {filteredLocations.length > 0
+                ? `${filteredLocations.length} Biblical Location${filteredLocations.length !== 1 ? "s" : ""}${selectedEra !== "All" ? ` \u00B7 ${selectedEra}` : ""}`
+                : selectedEra !== "All" ? `No locations for ${selectedEra}` : "Loading..."}
             </Text>
             {typeOrder.map((type) => {
               const locs = grouped[type];
@@ -603,6 +658,23 @@ const styles = StyleSheet.create({
   },
   modeBtnText: {
     fontSize: 13,
+  },
+  eraScrollRow: {
+    maxHeight: 36,
+    marginBottom: 8,
+  },
+  eraScrollContent: {
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  eraChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  eraChipText: {
+    fontSize: 12,
   },
   headerRow: {
     paddingHorizontal: 22,

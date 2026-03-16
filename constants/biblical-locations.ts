@@ -1,3 +1,9 @@
+export interface LocationTimelineEvent {
+  title: string;
+  dateLabel: string;
+  shortDescription: string;
+}
+
 export interface BiblicalLocation {
   id: string;
   name: string;
@@ -11,7 +17,21 @@ export interface BiblicalLocation {
   keyPeople: string[];
   passages: string[];
   nearbyLocations: string[];
+  eras: string[];
+  timelineEvents: LocationTimelineEvent[];
 }
+
+export const ERA_OPTIONS = [
+  "All",
+  "Patriarchs",
+  "Exodus",
+  "Kingdom",
+  "Exile",
+  "Life of Christ",
+  "Early Church",
+] as const;
+
+export type EraFilter = (typeof ERA_OPTIONS)[number];
 
 export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
   {
@@ -39,6 +59,15 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Matthew 2:23",
     ],
     nearbyLocations: ["capernaum", "sea-of-galilee"],
+    eras: ["Life of Christ"],
+    timelineEvents: [
+      {
+        title: "Jesus raised in Nazareth",
+        dateLabel: "c. 4 BC\u2013AD 30",
+        shortDescription:
+          "Nazareth was the hometown of Jesus during His early life and ministry.",
+      },
+    ],
   },
   {
     id: "bethlehem",
@@ -67,6 +96,21 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Ruth 2:1-4",
     ],
     nearbyLocations: ["jerusalem"],
+    eras: ["Kingdom", "Life of Christ"],
+    timelineEvents: [
+      {
+        title: "David's hometown",
+        dateLabel: "c. 1000 BC",
+        shortDescription:
+          "Bethlehem was closely tied to the rise of King David.",
+      },
+      {
+        title: "Birth of Jesus",
+        dateLabel: "c. 4 BC",
+        shortDescription:
+          "Bethlehem is the birthplace of Jesus and also the city of David.",
+      },
+    ],
   },
   {
     id: "jerusalem",
@@ -105,6 +149,33 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "1 Kings 6:1",
     ],
     nearbyLocations: ["bethlehem"],
+    eras: ["Kingdom", "Exile", "Life of Christ", "Early Church"],
+    timelineEvents: [
+      {
+        title: "Temple worship under the kings",
+        dateLabel: "c. 1000\u2013586 BC",
+        shortDescription:
+          "Jerusalem became the political and spiritual center of Judah.",
+      },
+      {
+        title: "Fall of Jerusalem",
+        dateLabel: "586 BC",
+        shortDescription:
+          "Babylon destroyed Jerusalem and the temple.",
+      },
+      {
+        title: "Crucifixion and resurrection era",
+        dateLabel: "c. AD 30",
+        shortDescription:
+          "Jerusalem is central to the final week, crucifixion, and resurrection of Jesus.",
+      },
+      {
+        title: "Pentecost and early church",
+        dateLabel: "c. AD 30+",
+        shortDescription:
+          "The early church began its public witness in Jerusalem.",
+      },
+    ],
   },
   {
     id: "capernaum",
@@ -133,6 +204,15 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Matthew 9:9",
     ],
     nearbyLocations: ["sea-of-galilee", "nazareth"],
+    eras: ["Life of Christ"],
+    timelineEvents: [
+      {
+        title: "Jesus' Galilean ministry base",
+        dateLabel: "c. AD 27\u201330",
+        shortDescription:
+          "Many miracles and teachings of Jesus took place in and around Capernaum.",
+      },
+    ],
   },
   {
     id: "babylon",
@@ -170,6 +250,15 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Revelation 17-18",
     ],
     nearbyLocations: [],
+    eras: ["Exile"],
+    timelineEvents: [
+      {
+        title: "Judah taken into exile",
+        dateLabel: "605\u2013586 BC",
+        shortDescription:
+          "Babylon became the destination of Judah's exile and the setting of Daniel's early life.",
+      },
+    ],
   },
   {
     id: "damascus",
@@ -197,6 +286,21 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "2 Corinthians 11:32-33",
     ],
     nearbyLocations: ["jerusalem"],
+    eras: ["Kingdom", "Early Church"],
+    timelineEvents: [
+      {
+        title: "Aramean capital",
+        dateLabel: "Old Testament period",
+        shortDescription:
+          "Damascus was a major regional center in Old Testament history.",
+      },
+      {
+        title: "Saul's conversion route",
+        dateLabel: "c. AD 34",
+        shortDescription:
+          "Damascus is linked with Saul's conversion and early Christian mission.",
+      },
+    ],
   },
   {
     id: "jordan-river",
@@ -231,6 +335,21 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Mark 1:9-11",
     ],
     nearbyLocations: ["sea-of-galilee"],
+    eras: ["Exodus", "Life of Christ"],
+    timelineEvents: [
+      {
+        title: "Israel crosses into the land",
+        dateLabel: "c. 1400 BC",
+        shortDescription:
+          "The Jordan River marked Israel's entry into the promised land.",
+      },
+      {
+        title: "Baptism of Jesus",
+        dateLabel: "c. AD 27",
+        shortDescription:
+          "Jesus was baptized in the Jordan, marking the beginning of His public ministry.",
+      },
+    ],
   },
   {
     id: "sea-of-galilee",
@@ -259,6 +378,15 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "John 21:1-14",
     ],
     nearbyLocations: ["capernaum", "nazareth", "jordan-river"],
+    eras: ["Life of Christ"],
+    timelineEvents: [
+      {
+        title: "Ministry around the lake",
+        dateLabel: "c. AD 27\u201330",
+        shortDescription:
+          "Jesus taught, called disciples, and performed miracles around the Sea of Galilee.",
+      },
+    ],
   },
 ];
 
@@ -270,4 +398,9 @@ export function getLocationByName(name: string): BiblicalLocation | undefined {
   return BIBLICAL_LOCATIONS.find(
     (loc) => loc.name.toLowerCase() === name.toLowerCase(),
   );
+}
+
+export function getLocationsByEra(era: EraFilter): BiblicalLocation[] {
+  if (era === "All") return BIBLICAL_LOCATIONS;
+  return BIBLICAL_LOCATIONS.filter((loc) => loc.eras.includes(era));
 }

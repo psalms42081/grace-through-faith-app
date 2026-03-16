@@ -14,48 +14,42 @@ The application features a mobile-first architecture. The frontend uses Expo (Re
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Emphasizes a borderless, immersive dark theme for readability and clear information hierarchy.
 - **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer with Cinematic and Interactive modes.
+- **Visual Design System:** Premium image-based cards replace icons throughout the app. Home screen, devotional cards, connect page, and study topics utilize specific image assets for a consistent aesthetic. Bible book cover art uses 66 AI-generated classical Renaissance-style paintings.
 
 **Technical Implementations & Feature Specifications:**
-- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels, ensuring continuity between layers.
-- **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation, including a Socratic AI Study Guide and Dynamic AI Reading Plans.
-- **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech` device voices.
+- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels.
+- **AI Integration:** Utilizes OpenAI's `gpt-4o-mini` for on-demand content generation (Socratic AI Study Guide, Dynamic AI Reading Plans). Features an AI Ethics & Transparency Layer with disclosures and guidelines.
+- **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech`.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
-- **User Features:** Includes notes, highlights, bookmarks, a prayer journal, reading history, and a unified "Saved" screen.
+- **User Features:** Notes, highlights, bookmarks, prayer journal, reading history, and a unified "Saved" screen.
 - **Semantic Search:** AI-powered natural language Bible search.
-- **Formation System:** A curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle with four distinct phases.
-- **Church Connect:** A global SDA church finder.
-- **Spiritual Rings:** Apple Watch-style concentric SVG rings on the home screen tracking daily spiritual disciplines. Ring labels use tiny thumbnail images (`assets/home-cards/ring-study.png`, `ring-prayer.png`, `ring-engage.png`) instead of vector icons.
+- **Formation System:** Curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle.
+- **Church Connect:** Global SDA church finder.
+- **Spiritual Rings:** Apple Watch-style concentric SVG rings on the home screen tracking daily spiritual disciplines.
 - **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next`.
-- **Contextual Tutorial System:** Full-screen walkthrough tutorials for major features.
+- **Contextual Tutorial System:** Full-screen walkthroughs for major features.
 - **Supporter/Mission System:** Mission-driven donation model.
-- **Live Fellowship:** Community feature (formerly Small Groups) with structured group experience — Discussion, Prayer, Devotional, Study, and Live tabs. "Live Now" section surfaces active sessions at the top of the groups list. LiveKit Cloud powers real-time video/audio via WebView. Leaders can start sessions; members can join from the group's Live tab or the Live Now section.
-- **Visual Design System:** Premium image-based cards replacing icons across the entire app. Home screen "Your Daily Rhythm" (Read/Study/Pray) uses full-width image banner cards with LinearGradient overlays (`assets/home-cards/`). DevotionalCard uses `study-guide.png` background. Connect page uses atmospheric image cards (`assets/connect-cards/`). Study tab reorganized into 3 sections (Spiritual Themes, Bible Study Tools, Adventist Studies) with 15 full-width image cards (`assets/topic-cards/`). All imagery follows warm lighting, natural colors, shallow depth of field, calm/reverent tone. No colored gradient tiles remain.
-- **Bible Book Cover Art:** 66 AI-generated classical Renaissance-style paintings, one per Bible book (`assets/bible-books/`). Mapped via `constants/bible-books.ts` with `getBookImage(bookName)` lookup. Used in Verse of the Day, Beloved Passages carousel, and study cards.
-- **SDA Speakers Experience:** In-app browsing of 15 curated SDA speakers/ministries (`constants/sda-speakers.ts`). Speakers screen at `/speakers` with topic filtering (includes Three Angels, Health). Speaker detail at `/speaker/[id]` with embedded YouTube playback via WebView. Real speaker photos in `assets/speakers/` for 14 of 15 speakers sourced from official ministry websites (amazingfacts.org, 3abn.org, itiswritten.com, NAD Adventist, arise.online, jesus101.tv, sumtv.org, gmitv.org, revelationofhope.com); Walter Veith uses colored initials fallback. `getSpeakerImage(id)` returns require() source. Accessed from Connect tab "Watch and Listen" section.
-- **Broadcasts:** 5 SDA broadcast networks with real ministry logos (`assets/ministry-logos/`): Hope Channel (official SDA network), 3ABN, Amazing Facts, It Is Written, Breath of Life. Cards show logo images, Watch Live (WebView), and Open Website buttons. Hope Channel listed first as the official denominational network.
-- **Kids Star Shop:** Cosmetic rewards store (`app/kids/shop.tsx`) with 16 items across 3 categories (avatar frames, themes, celebration effects). Prices 8-25 stars. Purchase/equip API at `/api/kids/shop/*`. Catalog in `constants/kids-shop.ts`. Accessed from My Stars tab.
-- **Kids Daily Quests:** 3 daily quests (Read Story, Practice Verse, Take Quiz) shown on Kids home screen. Auto-completed via existing progress endpoints. Daily Champion bonus for completing all 3. API at `/api/kids/quests/*`. DB tables: `kids_purchases`, `kids_daily_quests`.
-- **AI Ethics & Transparency Layer:** Comprehensive AI disclosure system following SDA Church guidelines. Reusable `AIDisclosure` component (`components/AIDisclosure.tsx`) with inline, banner, and notice variants. "AI-assisted" labels on all AI-generated content surfaces (study guide, devotional reflections, Great Controversy insights, Chapter Insights panel, reading plan generator, Sabbath School discussions). Dedicated "AI Use & Ethics" screen (`app/ai-guidelines.tsx`) covering Scripture-first principle, theological integrity, transparency, human connection, privacy, and limitations. Accessible from Profile > Help section. AI prompts already enforce strict SDA doctrinal guardrails (Sabbath, state of the dead, health message, no speculative theology).
-- **Feedback System:** Dedicated feedback screen (`app/feedback.tsx`) with full form — feedback type selector (Bug, Suggestion, Content Issue, Performance, Other), message field, context field, email field. Submits to `POST /api/feedback` with `context`, `email`, `appVersion`, `platform` columns. DB table: `user_feedback`. FeedbackWidget card on Home navigates to `/feedback`.
-- **In-App Sermon Player:** Dedicated sermon player screen (`app/sermon-player.tsx`) with embedded YouTube iframe (web) / WebView (native). Shows sermon title, speaker name, "Open in YouTube" secondary button. Proper back navigation: player → speaker detail → speakers → connect. Speaker detail video cards route to in-app player instead of opening YouTube externally.
-- **Skeleton Loading States:** Reusable skeleton components (`components/ui/Skeleton.tsx`) — VerseCardSkeleton, BannerCardSkeleton, SpeakerCardSkeleton, SermonCardSkeleton, ContentLoadingMessage, LoadingTimeout. Integrated in resources screen, groups screen. Contextual loading text added to devotionals, resources screens.
-- **Prophecy Explorer:** Interactive Daniel & Revelation study screen with a horizontal timeline.
-- **Spiritual Growth Map:** Visual spiritual journey screen tracking 5 dimensions with 4 levels each.
+- **Live Fellowship:** Community feature for structured group experiences (Discussion, Prayer, Devotional, Study, Live tabs) with real-time video/audio powered by LiveKit Cloud.
+- **SDA Speakers Experience:** In-app browsing of 15 curated SDA speakers/ministries with embedded YouTube playback.
+- **Broadcasts:** 5 SDA broadcast networks with live streaming.
+- **Kids Star Shop:** Cosmetic rewards store.
+- **Kids Daily Quests:** 3 daily quests for children.
+- **Feedback System:** Dedicated in-app feedback screen.
+- **In-App Sermon Player:** Dedicated screen for playing sermons from YouTube.
+- **Prophecy Explorer:** Interactive Daniel & Revelation study with a horizontal timeline.
+- **Spiritual Growth Map:** Visual spiritual journey tracking 5 dimensions with 4 levels each.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
-- **Dynamic Topic Content:** Topic detail pages feature AI-generated daily reflections and shuffled verses/media. 14 topics total including SDA-distinctive: Health Message (body temple, NEWSTART, Daniel's diet) and Three Angels' Messages (Revelation 14, mark of the beast, remnant, loud cry).
+- **Dynamic Topic Content:** AI-generated daily reflections and shuffled verses/media for 14 topics including SDA-distinctive themes.
 - **Insight & Voices:** Commentary screen with Adventist-first content ordering, including AI-generated Ellen G. White perspectives.
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
-- **28 Fundamental Beliefs UX:** Belief cards with animated chevrons, scripture navigation, and authority hierarchy.
-- **Great Controversy Timeline Engine:** An immersive vertical timeline tracing the cosmic conflict.
-- **Study Screen Architecture:** Finalized Study tab with "Study Scripture" hero section containing three inline study mode cards (Quick Read → reader, Guided Study → AI Socratic tutor at `/study-guide`, Deep Study → 4-Layer study with state-aware subtitle showing resume/progress). Deep Study card is the single entry point for 4-layer study (no separate "Continue Your Journey" section). Enrolled study paths shown below hero. Secondary sections: "Learning Paths" (Study Paths, Devotional Plans, Study Resources), "Prophecy & End Times" → prophecy hub, "Reference" (Historic Voices, Fundamental Beliefs, Bible Maps & Timeline), bottom browse sections (Beloved Passages, Spiritual Themes, Bible Study Tools, Adventist Studies).
-- **Bible Maps Location Detail:** Enriched location data model (`constants/biblical-locations.ts`) with `BiblicalLocation` interface providing ancientRegion, keyEvents, keyPeople, passages, nearbyLocations for 8 key locations (Nazareth, Bethlehem, Jerusalem, Capernaum, Babylon, Damascus, Jordan River, Sea of Galilee). Location Detail screen at `/location/[id]` shows region badge, modern location, description, key events timeline, key people chips, related passages, nearby location links, and three study action buttons (Read Passages → reader, Start Guided Study → AI tutor, Start Deep Study → 4-layer study). Map pins and list items for enriched locations navigate to detail screen; non-enriched locations fall back to inline expansion. **Ancient vs Modern mode toggle**: Segmented control ("Modern" / "Biblical World") above the map. Mode stored as state in MapsTimelineScreen, passed as `mode` route param to detail screen. Modern mode: modern location names primary, ancient region secondary. Biblical World mode: ancient region names primary, modern location secondary. Mode persists across navigation (back from detail preserves selected mode). Labels change in map overlay card, location list subtitles, detail screen hero subtitle, region badge, and location info card.
-- **Prophecy Hub:** `/prophecy-hub` is the single top-level prophecy entry point. Contains three sub-modes: Prophecy Explorer (reference), Guided Prophecy Study (learning path → `/study-paths?filter=prophecy`), Great Controversy Timeline (narrative overview). No separate prophecy entries exist on the Study screen.
-- **Beliefs Hub:** "Fundamental Beliefs" in Reference → `/sda-studies` is the single beliefs entry. Contains browse (28 belief cards) and "Deep Dive Study Path" banner → `/study-paths?filter=beliefs`. No separate beliefs entries exist in Study Paths default view.
-- **Study Paths Filtering:** `/study-paths` hides `beliefs` and `prophecy` categories in default view (accessed from Study screen). When accessed with `?filter=beliefs` or `?filter=prophecy`, shows only that category with contextual title. Enrolled tracks from hub-owned categories are also filtered from the Study screen's enrolled tracks preview.
-- **Guided Study Passage Picker:** study-guide.tsx hub now has an inline book/chapter picker (NT first, OT below) instead of redirecting to the Bible reader. Selecting a book shows chapter grid; selecting a chapter fetches verse 1 from `/api/passage` and auto-launches the AI tutor session with passage params.
-- **Content Engine & Study Resources:** A two-stage content pipeline (Source Packets and Generation) with a review workflow, version-safe regeneration, and rollback capabilities.
-- **Role System:** Supports "user," "editor," and "admin" roles with role-gated middleware.
-- **Admin Review UI:** Internal content management screen for editors and admins with review workflow features.
+- **28 Fundamental Beliefs UX:** Interactive belief cards with scripture navigation.
+- **Great Controversy Timeline Engine:** Immersive vertical timeline.
+- **Study Screen Architecture:** Structured Study tab with hero sections, learning paths, prophecy, and reference sections.
+- **Bible Maps Location Detail:** Enriched location data (`constants/biblical-locations.ts`) with `BiblicalLocation` interface (ancientRegion, keyEvents, keyPeople, passages, nearbyLocations, eras, timelineEvents) for 8 locations. Detail screen at `/location/[id]` with region badge, timeline section, key events, people, passages, nearby links, and study actions. Ancient/modern mode toggle and era-based timeline overlay with filtering. `ERA_OPTIONS` and `getLocationsByEra()` exported. Mode + era state preserved across navigation via route params.
+- **Prophecy Hub & Beliefs Hub:** Centralized entry points for prophecy and fundamental beliefs study, respectively, with filtered study paths.
+- **Guided Study Passage Picker:** Inline book/chapter picker for AI tutor sessions.
+- **Content Engine & Study Resources:** Two-stage content pipeline with review workflow and versioning.
+- **Role System:** Supports "user," "editor," and "admin" roles with role-gated middleware and an internal content management UI.
 
 ## External Dependencies
 

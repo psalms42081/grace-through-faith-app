@@ -15,6 +15,7 @@ import {
   getLocationById,
   getLocationByName,
   BIBLICAL_LOCATIONS,
+  type EraFilter,
 } from "@/constants/biblical-locations";
 
 const BOOK_NAME_TO_ID: Record<string, number> = {
@@ -55,11 +56,12 @@ function parseFirstPassage(passage: string): ParsedPassage | null {
 }
 
 export default function LocationDetailScreen() {
-  const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
+  const { id, mode, era } = useLocalSearchParams<{ id: string; mode?: string; era?: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const isBiblical = mode === "biblical";
+  const currentEra = (era || "All") as EraFilter;
 
   const location = getLocationById(id || "") || getLocationByName(id || "");
 
@@ -124,6 +126,14 @@ export default function LocationDetailScreen() {
                 {isBiblical ? "Ancient Region" : "Modern"}
               </Text>
             </View>
+            {location.eras.length > 0 && (
+              <View style={[st.regionBadge, { backgroundColor: "#7C3AED" + "18" }]}>
+                <Ionicons name="time-outline" size={13} color="#7C3AED" />
+                <Text style={[st.regionText, { color: "#7C3AED", fontFamily: "Inter_600SemiBold" }]}>
+                  View in Timeline Context
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -170,6 +180,41 @@ export default function LocationDetailScreen() {
             {location.description}
           </Text>
         </View>
+
+        {location.timelineEvents.length > 0 && (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="time-outline" size={16} color="#7C3AED" />
+              <Text style={[st.cardLabel, { color: "#7C3AED", fontFamily: "Inter_600SemiBold" }]}>
+                Timeline
+              </Text>
+            </View>
+            {location.eras.length > 0 && (
+              <View style={st.eraChipsRow}>
+                {location.eras.map((e, i) => (
+                  <View key={i} style={[st.eraChipDetail, { backgroundColor: "#7C3AED" + "14" }]}>
+                    <Text style={[st.eraChipDetailText, { color: "#7C3AED", fontFamily: "Inter_500Medium" }]}>
+                      {e}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {location.timelineEvents.map((te, i) => (
+              <View key={i} style={[st.timelineEventCard, { backgroundColor: theme.background }]}>
+                <Text style={[st.timelineEventDate, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {te.dateLabel}
+                </Text>
+                <Text style={[st.timelineEventTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {te.title}
+                </Text>
+                <Text style={[st.timelineEventDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {te.shortDescription}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {location.keyEvents.length > 0 && (
           <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
@@ -240,7 +285,7 @@ export default function LocationDetailScreen() {
             {nearbyLocs.map((nl) => (
               <Pressable
                 key={nl!.id}
-                onPress={() => router.push({ pathname: `/location/${nl!.id}`, params: { mode: mode || "modern" } } as any)}
+                onPress={() => router.push({ pathname: `/location/${nl!.id}`, params: { mode: mode || "modern", era: currentEra } } as any)}
                 style={({ pressed }) => [st.nearbyRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
               >
                 <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -511,5 +556,37 @@ const st = StyleSheet.create({
   },
   actionSub: {
     fontSize: 12,
+  },
+  eraChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 12,
+  },
+  eraChipDetail: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  eraChipDetailText: {
+    fontSize: 11,
+  },
+  timelineEventCard: {
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  timelineEventDate: {
+    fontSize: 11,
+    letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  timelineEventTitle: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  timelineEventDesc: {
+    fontSize: 13,
+    lineHeight: 19,
   },
 });
