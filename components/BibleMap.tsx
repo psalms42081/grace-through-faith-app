@@ -107,9 +107,9 @@ export default function BibleMap({
           <Polyline
             key={route.id}
             coordinates={route.coordinates}
-            strokeColor={route.color}
-            strokeWidth={route.highlight ? 4 : 2.5}
-            lineDashPattern={route.highlight ? undefined : [8, 4]}
+            strokeColor={route.highlight ? route.color : route.color + "50"}
+            strokeWidth={route.highlight ? 4 : 1.5}
+            lineDashPattern={route.highlight ? undefined : [6, 5]}
             geodesic
           />
         ))}
@@ -118,18 +118,18 @@ export default function BibleMap({
             <Circle
               center={{ latitude: km.latitude, longitude: km.longitude }}
               radius={km.selected ? 180000 : 120000}
-              strokeColor={km.color + "60"}
-              fillColor={km.color + (km.selected ? "20" : "10")}
-              strokeWidth={km.selected ? 2 : 1}
+              strokeColor={km.color + (km.selected ? "80" : "30")}
+              fillColor={km.color + (km.selected ? "1A" : "08")}
+              strokeWidth={km.selected ? 2.5 : 0.5}
             />
             <Marker
               coordinate={{ latitude: km.latitude, longitude: km.longitude }}
               anchor={{ x: 0.5, y: 0.5 }}
-              opacity={km.selected ? 1 : 0.7}
+              opacity={km.selected ? 1 : 0.5}
               onPress={() => onKingdomPress?.(km.id)}
             >
-              <View style={mapStyles.kingdomLabel}>
-                <Text style={[mapStyles.kingdomLabelText, { color: km.color }]}>
+              <View style={[mapStyles.kingdomLabel, km.selected && { backgroundColor: "rgba(0,0,0,0.75)" }]}>
+                <Text style={[mapStyles.kingdomLabelText, { color: km.color, fontSize: km.selected ? 12 : 10 }]}>
                   {km.label}
                 </Text>
               </View>
@@ -141,18 +141,18 @@ export default function BibleMap({
             <Circle
               center={{ latitude: tm.latitude, longitude: tm.longitude }}
               radius={tm.selected ? 28000 : 20000}
-              strokeColor={tm.color + "50"}
-              fillColor={tm.color + (tm.selected ? "25" : "0D")}
-              strokeWidth={tm.selected ? 2 : 1}
+              strokeColor={tm.color + (tm.selected ? "70" : "28")}
+              fillColor={tm.color + (tm.selected ? "20" : "08")}
+              strokeWidth={tm.selected ? 2 : 0.5}
             />
             <Marker
               coordinate={{ latitude: tm.latitude, longitude: tm.longitude }}
               anchor={{ x: 0.5, y: 0.5 }}
-              opacity={tm.selected ? 1 : 0.7}
+              opacity={tm.selected ? 1 : 0.45}
               onPress={() => onTribePress?.(tm.id)}
             >
-              <View style={mapStyles.kingdomLabel}>
-                <Text style={[mapStyles.kingdomLabelText, { color: tm.color, fontSize: 9, letterSpacing: 1 }]}>
+              <View style={[mapStyles.kingdomLabel, tm.selected && { backgroundColor: "rgba(0,0,0,0.75)" }]}>
+                <Text style={[mapStyles.kingdomLabelText, { color: tm.color, fontSize: tm.selected ? 10 : 8, letterSpacing: 1 }]}>
                   {tm.label}
                 </Text>
               </View>

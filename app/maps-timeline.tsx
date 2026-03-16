@@ -506,6 +506,7 @@ function MapsContent({
               color={mapMode === m ? "#fff" : theme.textSecondary}
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.modeBtnText,
                 {
@@ -539,6 +540,7 @@ function MapsContent({
             ]}
           >
             <Text
+              numberOfLines={1}
               style={[
                 styles.eraChipText,
                 {
@@ -553,35 +555,91 @@ function MapsContent({
         ))}
       </ScrollView>
 
-      <View style={styles.overlayToggleRow}>
-        <Text style={[styles.overlayLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-          Overlay
-        </Text>
-        <View style={[styles.overlayPicker, { backgroundColor: theme.backgroundSecondary }]}>
-          {OVERLAY_OPTIONS.map((opt) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.overlayScrollRow}
+        contentContainerStyle={styles.overlayScrollContent}
+      >
+        {OVERLAY_OPTIONS.map((opt) => {
+          const shortLabels: Record<string, string> = {
+            "none": "None",
+            "people-groups": "Peoples",
+            "prophecy": "Prophecy",
+            "journey-routes": "Journeys",
+            "kingdoms": "Kingdoms",
+            "tribes": "Tribes",
+          };
+          const isActive = overlay === opt.value;
+          return (
             <Pressable
               key={opt.value}
               onPress={() => setOverlay(opt.value)}
               style={[
-                styles.overlayPickerBtn,
-                overlay === opt.value && { backgroundColor: theme.accent },
+                styles.overlayPill,
+                {
+                  backgroundColor: isActive ? theme.accent : theme.backgroundCard,
+                  borderColor: isActive ? theme.accent : theme.border,
+                },
               ]}
             >
               <Text
+                numberOfLines={1}
                 style={[
-                  styles.overlayPickerText,
+                  styles.overlayPillText,
                   {
-                    color: overlay === opt.value ? "#fff" : theme.textSecondary,
-                    fontFamily: overlay === opt.value ? "Inter_600SemiBold" : "Inter_400Regular",
+                    color: isActive ? "#fff" : theme.textSecondary,
+                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                   },
                 ]}
               >
-                {opt.label}
+                {shortLabels[opt.value] || opt.label}
               </Text>
             </Pressable>
-          ))}
-        </View>
-      </View>
+          );
+        })}
+      </ScrollView>
+
+      {overlay === "journey-routes" && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.journeyScrollRow}
+          contentContainerStyle={styles.journeyScrollContent}
+        >
+          {JOURNEY_FILTER_OPTIONS.map((opt) => {
+            const isActive = selectedJourney === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setSelectedJourney(opt.value)}
+                style={[
+                  styles.journeyChip,
+                  {
+                    backgroundColor: isActive
+                      ? (opt.value !== "all" ? JOURNEY_ROUTE_COLORS[opt.value] || theme.accent : theme.accent)
+                      : theme.backgroundCard,
+                    borderColor: isActive ? "transparent" : theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.journeyChipText,
+                    {
+                      color: isActive ? "#fff" : theme.textSecondary,
+                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                    },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <View style={styles.searchContainer}>
         <View style={[styles.searchInputRow, { backgroundColor: theme.backgroundCard, borderColor: searchFocused ? theme.accent : theme.border }]}>
@@ -642,45 +700,6 @@ function MapsContent({
           </View>
         )}
       </View>
-
-      {overlay === "journey-routes" && (
-        <View style={styles.journeySelectorRow}>
-          <Text style={[styles.overlayLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-            Journey
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.journeySelectorScroll}>
-            {JOURNEY_FILTER_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt.value}
-                onPress={() => setSelectedJourney(opt.value)}
-                style={[
-                  styles.journeyChip,
-                  {
-                    backgroundColor: selectedJourney === opt.value
-                      ? (opt.value !== "all" ? JOURNEY_ROUTE_COLORS[opt.value] || theme.accent : theme.accent)
-                      : theme.backgroundCard,
-                    borderColor: selectedJourney === opt.value
-                      ? "transparent"
-                      : theme.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.journeyChipText,
-                    {
-                      color: selectedJourney === opt.value ? "#fff" : theme.textSecondary,
-                      fontFamily: selectedJourney === opt.value ? "Inter_600SemiBold" : "Inter_400Regular",
-                    },
-                  ]}
-                >
-                  {opt.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      )}
 
       <View style={styles.mapContainer}>
         <BibleMap
@@ -1257,7 +1276,7 @@ const styles = StyleSheet.create({
   modeToggleRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 6,
     gap: 8,
   },
   modeBtn: {
@@ -1274,14 +1293,14 @@ const styles = StyleSheet.create({
   },
   eraScrollRow: {
     maxHeight: 36,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   eraScrollContent: {
     paddingHorizontal: 16,
     gap: 6,
   },
   eraChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 18,
     borderWidth: 1,
@@ -1289,32 +1308,21 @@ const styles = StyleSheet.create({
   eraChipText: {
     fontSize: 12,
   },
-  overlayToggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  overlayScrollRow: {
+    maxHeight: 36,
+    marginBottom: 6,
+  },
+  overlayScrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 10,
+    gap: 8,
   },
-  overlayLabel: {
-    fontSize: 11,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  overlayPicker: {
-    flex: 1,
-    flexDirection: "row",
-    borderRadius: 10,
-    padding: 2,
-    gap: 2,
-  },
-  overlayPickerBtn: {
-    flex: 1,
-    alignItems: "center",
+  overlayPill: {
+    paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 18,
+    borderWidth: 1,
   },
-  overlayPickerText: {
+  overlayPillText: {
     fontSize: 12,
   },
   pgDescPreview: {
@@ -1322,21 +1330,18 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 4,
   },
-  journeySelectorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 10,
+  journeyScrollRow: {
+    maxHeight: 36,
+    marginBottom: 6,
   },
-  journeySelectorScroll: {
-    flexDirection: "row",
+  journeyScrollContent: {
+    paddingHorizontal: 16,
     gap: 6,
   },
   journeyChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
   },
   journeyChipText: {
@@ -1344,7 +1349,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     paddingHorizontal: 22,
-    paddingBottom: 14,
+    paddingBottom: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1517,7 +1522,8 @@ const styles = StyleSheet.create({
   verseText: { fontSize: 14, lineHeight: 22 },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingTop: 2,
+    paddingBottom: 10,
     zIndex: 10,
   },
   searchInputRow: {
