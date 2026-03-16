@@ -246,12 +246,6 @@ export default function ProfileScreen() {
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionSubLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-          Growth & Depth
-        </Text>
-      </View>
-
       <GrowthAnalytics
         studyMinutes={studyMinutes}
         wordsLearned={wordsLearned}
@@ -325,7 +319,7 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Spiritual Practices
+          Library
         </Text>
         <ListItem
           icon="journal"
@@ -334,14 +328,6 @@ export default function ProfileScreen() {
           onPress={() => router.push("/prayer-journal" as any)}
           style={{ marginBottom: 6 }}
         />
-      </View>
-
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
-
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Your Content
-        </Text>
         <ListItem
           icon="bookmark"
           iconColor="#C9933A"
@@ -355,7 +341,7 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Family & Settings
+          Settings
         </Text>
         <ListItem
           icon="shield-checkmark"
@@ -383,14 +369,9 @@ export default function ProfileScreen() {
           useDeviceLanguageLabel={t("profile.useDeviceLanguage")}
           sameAsAppLabel={t("profile.sameAsApp")}
         />
-      </View>
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+        <View style={{ height: 12 }} />
 
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Help
-        </Text>
         {[
           ...(user?.role === "admin" || user?.role === "editor" ? [
             { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },

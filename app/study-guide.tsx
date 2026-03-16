@@ -669,7 +669,7 @@ export default function StudyGuideScreen() {
               Choose Your Tutor
             </Text>
             <Text style={[styles.personaSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Each tutor brings a unique perspective to your study
+              Tap to select, then begin
             </Text>
             <View style={styles.personaList}>
               {PERSONAS.map((p) => {
@@ -677,19 +677,25 @@ export default function StudyGuideScreen() {
                 return (
                   <Pressable
                     key={p.id}
-                    onPress={() => setSelectedPersona(p.id)}
+                    onPress={() => {
+                      if (isSelected) {
+                        handleStartWithPersona(p.id);
+                      } else {
+                        setSelectedPersona(p.id);
+                      }
+                    }}
                     style={[
                       styles.personaCard,
                       {
-                        backgroundColor: theme.backgroundCard,
-                        borderColor: isSelected ? theme.accent : "transparent",
-                        borderWidth: 2,
+                        backgroundColor: isSelected ? theme.accent + "12" : theme.backgroundCard,
+                        borderColor: isSelected ? theme.accent : theme.backgroundCard,
+                        borderWidth: 1.5,
                       },
                     ]}
                     testID={`persona-${p.id}`}
                   >
                     <View style={[styles.personaIconWrap, { backgroundColor: isSelected ? theme.accent + "20" : theme.textMuted + "10" }]}>
-                      <Ionicons name={p.icon} size={24} color={isSelected ? theme.accent : theme.textMuted} />
+                      <Ionicons name={p.icon} size={22} color={isSelected ? theme.accent : theme.textMuted} />
                     </View>
                     <View style={styles.personaInfo}>
                       <Text style={[styles.personaLabel, { color: isSelected ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -700,7 +706,9 @@ export default function StudyGuideScreen() {
                       </Text>
                     </View>
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
+                      <View style={styles.personaStartHint}>
+                        <Ionicons name="arrow-forward-circle" size={22} color={theme.accent} />
+                      </View>
                     )}
                   </Pressable>
                 );
@@ -711,6 +719,7 @@ export default function StudyGuideScreen() {
               style={[styles.beginBtn, { backgroundColor: theme.accent }]}
               testID="begin-study-btn"
             >
+              <Ionicons name="chatbubbles-outline" size={16} color="#fff" />
               <Text style={[styles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
                 Begin Study
               </Text>
@@ -764,15 +773,18 @@ export default function StudyGuideScreen() {
             />
 
             {isComplete ? (
-              <View style={[styles.completeBar, { backgroundColor: "#2E7D32" + "20", paddingBottom: bottomPadding + 10 }]}>
-                <View style={styles.completeTopRow}>
-                  <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                  <Text style={[styles.completeText, { color: "#2E7D32", fontFamily: "Inter_600SemiBold" }]}>
-                    Study Complete
-                  </Text>
+              <View style={[styles.completeBar, { backgroundColor: theme.backgroundCard, paddingBottom: bottomPadding + 10 }]}>
+                <View style={styles.completeGlow}>
+                  <Ionicons name="sparkles" size={28} color={theme.accent} />
                 </View>
+                <Text style={[styles.completeTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
+                  Study Complete
+                </Text>
+                <Text style={[styles.completeVerse, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                  {params.verseReference}
+                </Text>
                 {studySummary ? (
-                  <Text style={[styles.summaryText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                  <Text style={[styles.summaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                     {studySummary}
                   </Text>
                 ) : null}
@@ -973,33 +985,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     gap: 10,
   },
-  personaTitle: { fontSize: 24, textAlign: "center" as const, letterSpacing: -0.2 },
-  personaSubtitle: { fontSize: 13, textAlign: "center" as const, marginBottom: 20, lineHeight: 19, opacity: 0.8 },
-  personaList: { gap: 12 },
+  personaTitle: { fontSize: 22, textAlign: "center" as const, letterSpacing: -0.2 },
+  personaSubtitle: { fontSize: 13, textAlign: "center" as const, marginBottom: 16, lineHeight: 19, opacity: 0.7 },
+  personaList: { gap: 10 },
   personaCard: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    padding: 18,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 16,
     gap: 14,
   },
   personaIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     justifyContent: "center" as const,
     alignItems: "center" as const,
   },
   personaInfo: { flex: 1 },
-  personaLabel: { fontSize: 16, letterSpacing: 0.1 },
-  personaDesc: { fontSize: 12, marginTop: 3, lineHeight: 17 },
-  beginBtn: {
-    alignItems: "center" as const,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 24,
+  personaLabel: { fontSize: 15, letterSpacing: 0.1 },
+  personaDesc: { fontSize: 12, marginTop: 2, lineHeight: 17 },
+  personaStartHint: {
+    marginLeft: 4,
   },
-  beginBtnText: { color: "#fff", fontSize: 15, letterSpacing: 0.3 },
+  beginBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+    marginTop: 18,
+  },
+  beginBtnText: { color: "#fff", fontSize: 14, letterSpacing: 0.2 },
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1011,18 +1029,25 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { color: "#fff", fontSize: 14 },
   completeBar: {
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    gap: 10,
-  },
-  completeTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: "center" as const,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     gap: 8,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
-  completeText: { fontSize: 14 },
-  summaryText: { fontSize: 13, lineHeight: 20, textAlign: "center" as const, paddingHorizontal: 8 },
+  completeGlow: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(201,147,58,0.12)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginBottom: 4,
+  },
+  completeTitle: { fontSize: 20, letterSpacing: -0.2 },
+  completeVerse: { fontSize: 13, marginBottom: 4 },
+  summaryText: { fontSize: 13, lineHeight: 20, textAlign: "center" as const, paddingHorizontal: 12, opacity: 0.85 },
   completeActions: {
     flexDirection: "row",
     alignItems: "center",

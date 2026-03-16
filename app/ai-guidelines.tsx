@@ -74,7 +74,7 @@ export default function AIGuidelinesScreen() {
             Our Commitment to Ethical AI
           </Text>
           <Text style={[st.introBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Grace through Faith uses artificial intelligence as a tool to support spiritual growth, never to replace Scripture, pastoral guidance, or the Holy Spirit's leading. Our approach is guided by the Seventh-day Adventist Church's principles for responsible AI use.
+            AI supports spiritual growth here, never replacing Scripture, pastoral guidance, or the Holy Spirit's leading.
           </Text>
         </View>
 
@@ -83,9 +83,8 @@ export default function AIGuidelinesScreen() {
           iconColor="#4A90D9"
           title="Scripture First"
           points={[
-            "AI never replaces or reinterprets the Bible. All generated content is rooted in Scripture and presented as a study aid.",
-            "Every AI-assisted insight points back to the biblical text. We encourage you to read the Word yourself.",
-            "AI content is clearly labeled so you always know what is generated versus curated by people.",
+            "AI never replaces the Bible. All generated content is a study aid rooted in Scripture.",
+            "AI content is clearly labeled so you always know what is generated versus human-curated.",
           ]}
           theme={theme}
         />
@@ -95,10 +94,8 @@ export default function AIGuidelinesScreen() {
           iconColor="#4CAF50"
           title="Theological Integrity"
           points={[
-            "All AI outputs are constrained by SDA doctrinal boundaries including the Sabbath, state of the dead, the Second Coming, and the health message.",
-            "Content that conflicts with fundamental Adventist beliefs is filtered at the prompt level before it ever reaches you.",
-            "Study resources reference Ellen G. White's writings topically while maintaining a Scripture-first approach.",
-            "AI never presents speculative theology as settled doctrine.",
+            "AI outputs are constrained by SDA doctrinal boundaries including the Sabbath, state of the dead, and the Second Coming.",
+            "Content conflicting with fundamental Adventist beliefs is filtered before it reaches you.",
           ]}
           theme={theme}
         />
@@ -108,9 +105,8 @@ export default function AIGuidelinesScreen() {
           iconColor="#E8A838"
           title="Transparency"
           points={[
-            "AI-assisted content is always labeled with a sparkle icon so you can distinguish it from human-curated material.",
-            "We are open about what AI can and cannot do. It is a tool, not a teacher.",
-            "The AI does not know you personally. Its responses are general and should not replace relationship with your pastor, church family, or prayer life.",
+            "AI-assisted content is marked with a sparkle icon so you can distinguish it from curated material.",
+            "AI is a tool, not a teacher. Its responses should not replace your pastor, church family, or prayer life.",
           ]}
           theme={theme}
         />
@@ -120,10 +116,8 @@ export default function AIGuidelinesScreen() {
           iconColor="#7B61FF"
           title="Human Connection"
           points={[
-            "AI should complement, not replace, human discipleship and fellowship.",
-            "We encourage discussing study insights with your small group, family, or pastor.",
-            "Kids Mode features like Dinner Table Topics are designed to bring families together around what children have learned.",
-            "The app encourages church attendance and community participation.",
+            "AI complements human discipleship. We encourage discussing insights with your small group or pastor.",
+            "Kids features like Dinner Table Topics bring families together around Scripture.",
           ]}
           theme={theme}
         />
@@ -134,9 +128,7 @@ export default function AIGuidelinesScreen() {
           title="Privacy & Safety"
           points={[
             "We do not train AI models on your personal data, prayers, or journal entries.",
-            "Kids Mode content undergoes additional safety review for age-appropriateness.",
-            "Parent controls (PIN protection) keep children within safe content boundaries.",
-            "No personal data is shared with third-party AI providers beyond what is needed to generate content.",
+            "Kids Mode has additional safety review. Parent controls keep children within safe boundaries.",
           ]}
           theme={theme}
         />
@@ -146,10 +138,8 @@ export default function AIGuidelinesScreen() {
           iconColor="#FF6B35"
           title="Limitations"
           points={[
-            "AI may occasionally produce imprecise or imperfect responses. Always verify against Scripture.",
-            "AI-generated content is not reviewed by your local church or conference and does not constitute official church teaching.",
-            "If you encounter content that seems inconsistent with SDA beliefs, please report it through the app's feedback system.",
-            "AI cannot replace the conviction and guidance of the Holy Spirit.",
+            "AI may produce imprecise responses. Always verify against Scripture.",
+            "AI content is not official church teaching. Report concerns through the feedback system.",
           ]}
           theme={theme}
         />
@@ -159,7 +149,7 @@ export default function AIGuidelinesScreen() {
             Aligned with SDA Guidelines
           </Text>
           <Text style={[st.sadBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Our approach to AI follows the principles outlined by the Seventh-day Adventist Church for responsible technology use: prioritizing transparency, ethical responsibility, security, and ensuring technology serves the church's mission of sharing the everlasting gospel.
+            Our AI approach follows SDA principles: transparency, ethical responsibility, and ensuring technology serves the gospel mission.
           </Text>
         </View>
       </ScrollView>

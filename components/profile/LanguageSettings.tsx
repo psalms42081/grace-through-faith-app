@@ -118,7 +118,7 @@ export default function LanguageSettings({
         <Ionicons name={contentLangPickerOpen ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
       </Pressable>
 
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, paddingHorizontal: 16, paddingBottom: 8, lineHeight: 17 }}>
+      <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, paddingHorizontal: 16, paddingBottom: 10, paddingTop: 2, lineHeight: 19 }}>
         {contentLangSub}
       </Text>
 

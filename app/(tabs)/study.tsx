@@ -1521,10 +1521,10 @@ const INSIGHT_SECTIONS: PromptSection[] = [
 ];
 
 const TRANSFORMATION_SECTIONS: PromptSection[] = [
-  { key: "belief_challenged", title: "Belief or Assumption Challenged", icon: "bulb-outline", color: "#C9933A", placeholder: "What belief or assumption does this text challenge in you?" },
-  { key: "habit_shaped", title: "Habit or Practice Shaped", icon: "footsteps-outline", color: "#2E7D32", placeholder: "What habit or daily practice could this shape?" },
-  { key: "conversation_impacted", title: "Conversation or Relationship Impacted", icon: "chatbubbles-outline", color: "#3B6CB5", placeholder: "How might this change a conversation or relationship?" },
-  { key: "prayer_response", title: "Prayer Response", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
+  { key: "belief_challenged", title: "What Challenged You", icon: "bulb-outline", color: "#C9933A", placeholder: "What belief or assumption does this passage challenge?" },
+  { key: "habit_shaped", title: "How You'll Respond", icon: "footsteps-outline", color: "#2E7D32", placeholder: "What habit or practice could this shape in your life?" },
+  { key: "conversation_impacted", title: "Who This Affects", icon: "chatbubbles-outline", color: "#3B6CB5", placeholder: "How might this change a conversation or relationship?" },
+  { key: "prayer_response", title: "Your Prayer", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
 ];
 
 function JournalPromptCard({
@@ -1604,8 +1604,9 @@ function JournalPromptCard({
               disabled={isSaving || text.trim().length === 0}
               style={[jpStyles.saveBtn, { backgroundColor: theme.accent, opacity: isSaving || text.trim().length === 0 ? 0.5 : 1 }]}
             >
+              <Ionicons name="bookmark-outline" size={13} color="#fff" />
               <Text style={[jpStyles.saveBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? "Saving..." : "Keep"}
               </Text>
             </Pressable>
           </View>
@@ -2600,7 +2601,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                   <View style={styles.loadingBox}>
                     <ActivityIndicator size="small" color={theme.accent} />
                     <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
+                      {generateWordsMutation.isPending ? "Studying original languages..." : "Loading word study..."}
                     </Text>
                   </View>
                 )}
@@ -2772,7 +2773,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                   <View style={styles.loadingBox}>
                     <ActivityIndicator size="small" color={theme.accent} />
                     <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {generateWordsMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
+                      {generateWordsMutation.isPending ? "Studying original languages..." : "Loading word study..."}
                     </Text>
                   </View>
                 )}
@@ -3321,10 +3322,10 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Generating Context
+                Uncovering Context
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Preparing historical and cultural context for {selectedBook.name} {selectedChapter}...
+                Exploring the historical and cultural world of {selectedBook.name} {selectedChapter}
               </Text>
             </View>
           )}
@@ -3705,10 +3706,10 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Generating Commentary
+                Gathering Insights
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Creating scholarly commentary for {selectedBook.name} {selectedChapter}...
+                Drawing from classic scholars on {selectedBook.name} {selectedChapter}
               </Text>
             </View>
           )}
@@ -4013,10 +4014,10 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <ActivityIndicator size="small" color={theme.accent} />
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Generating Application
+                Preparing Reflections
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Creating Then & Now application study for {selectedBook.name} {selectedChapter}...
+                Crafting personal application for {selectedBook.name} {selectedChapter}
               </Text>
             </View>
           )}
@@ -4622,7 +4623,10 @@ const jpStyles = StyleSheet.create({
     fontSize: 13,
   },
   saveBtn: {
-    paddingHorizontal: 18,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
   },

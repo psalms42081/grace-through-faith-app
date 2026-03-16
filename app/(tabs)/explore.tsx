@@ -274,14 +274,6 @@ export default function StudyScreen() {
     return { sub: `Begin ${ref} -- 4 layers`, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
   }, [lastRead, layerCompletions]);
 
-  const hasActiveProgress = useMemo(() => {
-    if (lastRead) {
-      const completedSet = new Set(layerCompletions?.map((c) => c.layer) ?? []);
-      const count = LAYER_ORDER.filter((l) => completedSet.has(l)).length;
-      if (count > 0 && count < 4) return true;
-    }
-    return false;
-  }, [lastRead, layerCompletions]);
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
@@ -341,42 +333,7 @@ export default function StudyScreen() {
           </View>
         </View>
 
-        {(hasActiveProgress) ? (
-          <>
-            <View style={st.sectionSpacer} />
-            <SectionLabel label="Continue Your Journey" theme={theme} />
-            {hasActiveProgress && lastRead ? (
-              <Pressable
-                onPress={() => router.push({ pathname: "/deep-study-picker", params: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter), _t: String(Date.now()) } } as any)}
-                testID="study-resume-cta"
-                style={({ pressed }) => [
-                  st.resumeCard,
-                  {
-                    backgroundColor: isDark ? "#111118" : "#FFFDF8",
-                    borderColor: theme.accent + "25",
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <View style={[st.resumeIcon, { backgroundColor: theme.accent + "14" }]}>
-                  <Ionicons name="layers" size={20} color={theme.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[st.resumeTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    {lastRead.bookName} {lastRead.chapter}
-                  </Text>
-                  <Text style={[st.resumeSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {LAYER_ORDER.filter((l) => new Set(layerCompletions?.map((c) => c.layer) ?? []).has(l)).length} of 4 layers complete
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.accent} />
-              </Pressable>
-            ) : null}
-            <EnrolledTracksPreview theme={theme} />
-          </>
-        ) : (
-          <EnrolledTracksPreview theme={theme} />
-        )}
+        <EnrolledTracksPreview theme={theme} />
 
         <View style={st.secondaryZone}>
           <View style={[st.secondaryDivider, { backgroundColor: theme.divider }]} />
@@ -608,8 +565,6 @@ const st = StyleSheet.create({
   heroBadgeText: { fontSize: 10, letterSpacing: 0.3 },
   heroSub: { fontSize: 13, lineHeight: 19 },
 
-  sectionSpacer: { height: 28 },
-
   sectionHeader: {
     marginBottom: 14,
     paddingLeft: 2,
@@ -618,25 +573,6 @@ const st = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.5,
   },
-
-  resumeCard: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 14,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  resumeIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  resumeTitle: { fontSize: 15, marginBottom: 3 },
-  resumeSub: { fontSize: 12, lineHeight: 17 },
 
   secondaryZone: {
     marginTop: 16,
