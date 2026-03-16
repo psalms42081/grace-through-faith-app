@@ -116,10 +116,19 @@ async function ensureTables() {
         user_id VARCHAR NOT NULL,
         topic VARCHAR(32) NOT NULL,
         message TEXT NOT NULL,
+        context TEXT,
+        email VARCHAR(255),
+        app_version VARCHAR(32),
+        platform VARCHAR(16),
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
     console.log("Created table: user_feedback");
+  } else {
+    await db.execute(sql`ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS context TEXT`);
+    await db.execute(sql`ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+    await db.execute(sql`ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS app_version VARCHAR(32)`);
+    await db.execute(sql`ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS platform VARCHAR(16)`);
   }
 
   if (missing.length === 0) {

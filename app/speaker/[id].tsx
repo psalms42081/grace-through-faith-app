@@ -50,9 +50,16 @@ export default function SpeakerDetailScreen() {
     Linking.openURL(`https://www.youtube.com/results?search_query=${query}`);
   }, [speaker]);
 
-  const handleWatchVideo = useCallback((videoId: string) => {
-    Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
-  }, []);
+  const handleWatchVideo = useCallback((videoId: string, videoTitle?: string) => {
+    router.push({
+      pathname: "/sermon-player",
+      params: {
+        videoId,
+        title: videoTitle || "",
+        speaker: speaker?.name || "",
+      },
+    });
+  }, [speaker]);
 
 
   if (!speaker) {
@@ -151,7 +158,7 @@ export default function SpeakerDetailScreen() {
                 videoId={video.id}
                 title={video.title}
                 theme={theme}
-                onPress={() => handleWatchVideo(video.id)}
+                onPress={() => handleWatchVideo(video.id, video.title)}
               />
             ))}
           </View>

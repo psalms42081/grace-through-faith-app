@@ -137,17 +137,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/feedback", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const { topic, message } = req.body;
+      const { topic, message, context, email, appVersion, platform } = req.body;
       if (!message?.trim()) {
         return res.status(400).json({ error: "Message is required" });
       }
-      const allowedTopics = ["bug", "feature", "content", "other"];
+      const allowedTopics = ["bug", "feature", "content", "performance", "other"];
       const safeTopic = allowedTopics.includes(topic) ? topic : "other";
       const safeMessage = message.trim().substring(0, 5000);
+      const safeContext = context?.trim()?.substring(0, 2000) || null;
+      const safeEmail = email?.trim()?.substring(0, 255) || null;
       await db.insert(userFeedback).values({
         userId,
         topic: safeTopic,
         message: safeMessage,
+        context: safeContext,
+        email: safeEmail,
+        appVersion: appVersion?.substring(0, 32) || null,
+        platform: platform?.substring(0, 16) || null,
       });
       res.json({ success: true });
     } catch (err) {

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import ScreenHeader from "@/components/ScreenHeader";
+import { BannerCardSkeleton, ContentLoadingMessage } from "@/components/ui/Skeleton";
 
 interface Resource {
   id: string;
@@ -261,7 +262,13 @@ export default function ResourcesScreen() {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#C9933A" />
+          <ContentLoadingMessage message="Loading study resources..." />
+          <View style={{ paddingHorizontal: 20, width: "100%" }}>
+            <BannerCardSkeleton />
+            <BannerCardSkeleton />
+            <BannerCardSkeleton />
+            <BannerCardSkeleton />
+          </View>
         </View>
       ) : resources.length === 0 ? (
         <View style={styles.emptyContainer}>

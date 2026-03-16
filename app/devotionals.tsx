@@ -262,6 +262,9 @@ export default function DevotionalsScreen() {
         {isLoading && (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="small" color={theme.accent} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 8 }}>
+              Loading devotional plans...
+            </Text>
           </View>
         )}
 

@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
+import { SpeakerCardSkeleton, ContentLoadingMessage } from "@/components/ui/Skeleton";
 
 interface SmallGroup {
   id: string;
@@ -290,7 +291,11 @@ export default function GroupsScreen() {
           </View>
 
           {myLoading ? (
-            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
+              <ContentLoadingMessage message="Loading your groups..." />
+              <SpeakerCardSkeleton />
+              <SpeakerCardSkeleton />
+            </View>
           ) : groups.length === 0 ? (
             <EmptyState
               icon="people-outline"
@@ -352,7 +357,12 @@ export default function GroupsScreen() {
           </ScrollView>
 
           {publicLoading ? (
-            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
+              <ContentLoadingMessage message="Discovering groups..." />
+              <SpeakerCardSkeleton />
+              <SpeakerCardSkeleton />
+              <SpeakerCardSkeleton />
+            </View>
           ) : (publicGroups || []).length === 0 ? (
             <EmptyState
               icon="globe-outline"

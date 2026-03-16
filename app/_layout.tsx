@@ -110,6 +110,8 @@ function RootLayoutNav() {
       <Stack.Screen name="growth-map" options={{ headerShown: false }} />
       <Stack.Screen name="resources" options={{ headerShown: false }} />
       <Stack.Screen name="resource-detail" options={{ headerShown: false }} />
+      <Stack.Screen name="feedback" options={{ headerShown: false }} />
+      <Stack.Screen name="sermon-player" options={{ headerShown: false }} />
     </Stack>
   );
 }

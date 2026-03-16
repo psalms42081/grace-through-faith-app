@@ -1689,5 +1689,9 @@ export const userFeedback = pgTable("user_feedback", {
   userId: varchar("user_id").notNull(),
   topic: varchar("topic", { length: 32 }).notNull(),
   message: text("message").notNull(),
+  context: text("context"),
+  email: varchar("email", { length: 255 }),
+  appVersion: varchar("app_version", { length: 32 }),
+  platform: varchar("platform", { length: 16 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
