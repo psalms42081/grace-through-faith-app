@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
+  TextInput,
 } from "react-native";
 import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
 import type { RouteLineData, KingdomMarkerData, TribeMarkerData } from "@/components/BibleMap";
 
 type Tab = "maps" | "timeline";
@@ -54,6 +55,108 @@ interface LinkedVerse {
   bookName: string;
   note?: string | null;
 }
+
+type SearchResultType = "location" | "people-group" | "prophecy" | "journey" | "kingdom" | "tribe";
+
+interface SearchResult {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  subtitle: string;
+  color: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
+  "location": "Location",
+  "people-group": "People Group",
+  "prophecy": "Prophecy",
+  "journey": "Journey",
+  "kingdom": "Kingdom",
+  "tribe": "Tribe",
+};
+
+const SEARCH_TYPE_COLORS: Record<SearchResultType, string> = {
+  "location": "#C9933A",
+  "people-group": "#7C3AED",
+  "prophecy": "#D97706",
+  "journey": "#14B8A6",
+  "kingdom": "#BE185D",
+  "tribe": "#059669",
+};
+
+const SEARCH_TYPE_ICONS: Record<SearchResultType, keyof typeof Ionicons.glyphMap> = {
+  "location": "location-outline",
+  "people-group": "people-outline",
+  "prophecy": "flame-outline",
+  "journey": "trail-sign-outline",
+  "kingdom": "shield-outline",
+  "tribe": "people-outline",
+};
+
+function buildSearchIndex(): SearchResult[] {
+  const results: SearchResult[] = [];
+  for (const loc of BIBLICAL_LOCATIONS) {
+    results.push({
+      id: loc.id,
+      type: "location",
+      title: loc.name,
+      subtitle: `${loc.ancientRegion} \u00B7 ${loc.modernLocation}`,
+      color: "#C9933A",
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    });
+  }
+  for (const pg of BIBLICAL_PEOPLE_GROUPS) {
+    results.push({
+      id: pg.id,
+      type: "people-group",
+      title: pg.name,
+      subtitle: pg.regionLabel,
+      color: "#7C3AED",
+    });
+  }
+  for (const pl of BIBLICAL_PROPHECY_LINKS) {
+    results.push({
+      id: pl.id,
+      type: "prophecy",
+      title: pl.title,
+      subtitle: pl.theme,
+      color: "#D97706",
+    });
+  }
+  for (const jr of BIBLICAL_JOURNEY_ROUTES) {
+    results.push({
+      id: jr.id,
+      type: "journey",
+      title: jr.title,
+      subtitle: `${jr.category} \u00B7 ${jr.stopLocationIds.length} stops`,
+      color: JOURNEY_ROUTE_COLORS[jr.id] || "#14B8A6",
+    });
+  }
+  for (const k of BIBLICAL_KINGDOM_OVERLAYS) {
+    results.push({
+      id: k.id,
+      type: "kingdom",
+      title: k.name,
+      subtitle: k.eraLabel,
+      color: k.color,
+    });
+  }
+  for (const t of BIBLICAL_TRIBE_OVERLAYS) {
+    results.push({
+      id: t.id,
+      type: "tribe",
+      title: t.name,
+      subtitle: t.regionLabel,
+      color: t.color,
+    });
+  }
+  return results;
+}
+
+const SEARCH_INDEX = buildSearchIndex();
 
 const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   city: "business-outline",
@@ -192,6 +295,8 @@ function MapsContent({
 }) {
   const isBiblical = mapMode === "biblical";
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const { data: locations, isLoading } = useQuery<Location[]>({
     queryKey: ["/api/location"],
@@ -261,6 +366,65 @@ function MapsContent({
   const handleTribePress = useCallback((id: string) => {
     setSelectedTribe(id);
   }, []);
+
+  const overlayTypeMap: Record<OverlayType, SearchResultType | null> = {
+    "none": null,
+    "people-groups": "people-group",
+    "prophecy": "prophecy",
+    "journey-routes": "journey",
+    "kingdoms": "kingdom",
+    "tribes": "tribe",
+  };
+
+  const searchResults = useMemo((): SearchResult[] => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const priorityType = overlayTypeMap[overlay];
+    const titleMatches: SearchResult[] = [];
+    const subtitleMatches: SearchResult[] = [];
+    for (const item of SEARCH_INDEX) {
+      const titleLower = item.title.toLowerCase();
+      const subtitleLower = item.subtitle.toLowerCase();
+      if (titleLower.includes(q)) {
+        titleMatches.push(item);
+      } else if (subtitleLower.includes(q)) {
+        subtitleMatches.push(item);
+      }
+    }
+    const combined = [...titleMatches, ...subtitleMatches];
+    if (priorityType) {
+      combined.sort((a, b) => {
+        const aP = a.type === priorityType ? 0 : 1;
+        const bP = b.type === priorityType ? 0 : 1;
+        return aP - bP;
+      });
+    }
+    return combined.slice(0, 15);
+  }, [searchQuery, overlay]);
+
+  const handleSearchResultPress = useCallback((result: SearchResult) => {
+    setSearchFocused(false);
+    switch (result.type) {
+      case "location":
+        router.push({ pathname: `/location/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney, kingdom: selectedKingdom, tribe: selectedTribe } } as any);
+        break;
+      case "people-group":
+        router.push({ pathname: `/people-group/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay: overlay || "people-groups" } } as any);
+        break;
+      case "prophecy":
+        router.push({ pathname: `/prophecy-link/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay: overlay || "prophecy" } } as any);
+        break;
+      case "journey":
+        router.push({ pathname: `/journey-route/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay: "journey-routes", journey: result.id } } as any);
+        break;
+      case "kingdom":
+        router.push({ pathname: `/kingdom-overlay/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay: "kingdoms", kingdom: result.id } } as any);
+        break;
+      case "tribe":
+        router.push({ pathname: `/tribe-overlay/${result.id}`, params: { mode: mapMode, era: selectedEra, overlay: "tribes", tribe: result.id } } as any);
+        break;
+    }
+  }, [mapMode, selectedEra, overlay, selectedJourney, selectedKingdom, selectedTribe]);
 
   const navigateToLocationDetail = useCallback((loc: Location) => {
     const enriched = getLocationByName(loc.name);
@@ -417,6 +581,66 @@ function MapsContent({
             </Pressable>
           ))}
         </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchInputRow, { backgroundColor: theme.backgroundCard, borderColor: searchFocused ? theme.accent : theme.border }]}>
+          <Ionicons name="search-outline" size={16} color={theme.textMuted} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
+            placeholder="Search places, peoples, prophecy, journeys..."
+            placeholderTextColor={theme.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => { setSearchQuery(""); setSearchFocused(false); }} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+            </Pressable>
+          )}
+        </View>
+        {searchQuery.trim().length >= 2 && searchFocused && (
+          <View style={[styles.searchResultsPanel, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+            {searchResults.length > 0 ? (
+              <ScrollView style={styles.searchResultsScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {searchResults.map((r) => (
+                  <Pressable
+                    key={`${r.type}-${r.id}`}
+                    onPress={() => handleSearchResultPress(r)}
+                    style={({ pressed }) => [styles.searchResultRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <View style={[styles.searchResultIcon, { backgroundColor: (SEARCH_TYPE_COLORS[r.type] || r.color) + "14" }]}>
+                      <Ionicons name={SEARCH_TYPE_ICONS[r.type]} size={14} color={SEARCH_TYPE_COLORS[r.type] || r.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.searchResultTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                        {r.title}
+                      </Text>
+                      <Text style={[styles.searchResultSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                        {r.subtitle}
+                      </Text>
+                    </View>
+                    <View style={[styles.searchTypeBadge, { backgroundColor: (SEARCH_TYPE_COLORS[r.type] || r.color) + "18" }]}>
+                      <Text style={[styles.searchTypeBadgeText, { color: SEARCH_TYPE_COLORS[r.type] || r.color, fontFamily: "Inter_500Medium" }]}>
+                        {SEARCH_TYPE_LABELS[r.type]}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.searchEmpty}>
+                <Ionicons name="search-outline" size={24} color={theme.textMuted} />
+                <Text style={[styles.searchEmptyText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  No matching map results
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       {overlay === "journey-routes" && (
@@ -1291,4 +1515,81 @@ const styles = StyleSheet.create({
   },
   verseRef: { fontSize: 12, letterSpacing: 0.3 },
   verseText: { fontSize: 14, lineHeight: 22 },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  searchInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "web" ? 10 : 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  searchResultsPanel: {
+    position: "absolute",
+    top: Platform.OS === "web" ? 48 : 44,
+    left: 16,
+    right: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    maxHeight: 280,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 20,
+  },
+  searchResultsScroll: {
+    maxHeight: 280,
+  },
+  searchResultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  searchResultIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchResultTitle: {
+    fontSize: 14,
+  },
+  searchResultSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  searchTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  searchTypeBadgeText: {
+    fontSize: 10,
+  },
+  searchEmpty: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    gap: 8,
+  },
+  searchEmptyText: {
+    fontSize: 14,
+  },
 });
