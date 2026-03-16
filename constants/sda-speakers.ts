@@ -9,14 +9,24 @@ export interface SDASpeaker {
   featuredVideoIds: string[];
 }
 
-const SPEAKER_IMAGES: Record<string, any> = {};
-
-export function setSpeakerImage(id: string, source: any) {
-  SPEAKER_IMAGES[id] = source;
-}
+const MINISTRY_LOGOS: Record<string, any> = {
+  "Amazing Facts": require("@/assets/ministry-logos/amazing-facts.png"),
+  "3ABN": require("@/assets/ministry-logos/3abn.png"),
+  "ARISE Institute": require("@/assets/ministry-logos/arise-institute.png"),
+  "Power of the Lamb": require("@/assets/ministry-logos/power-of-the-lamb.png"),
+  "Evangelist": require("@/assets/ministry-logos/evangelist.png"),
+  "Voice of Prophecy": require("@/assets/ministry-logos/voice-of-prophecy.png"),
+  "It Is Written": require("@/assets/ministry-logos/it-is-written.png"),
+  "Amazing Discoveries": require("@/assets/ministry-logos/amazing-discoveries.png"),
+  "Secrets Unsealed": require("@/assets/ministry-logos/secrets-unsealed.png"),
+  "Breath of Life": require("@/assets/ministry-logos/breath-of-life.png"),
+  "Revelation of Hope": require("@/assets/ministry-logos/revelation-of-hope.png"),
+};
 
 export function getSpeakerImage(id: string): any | undefined {
-  return SPEAKER_IMAGES[id];
+  const speaker = SDA_SPEAKERS.find(s => s.id === id);
+  if (!speaker) return undefined;
+  return MINISTRY_LOGOS[speaker.ministry];
 }
 
 export interface SermonVideo {
