@@ -32,6 +32,22 @@ export interface BiblicalLocation {
   relatedPeopleGroupIds: string[];
   prophecyLinkIds: string[];
   relatedJourneyRouteIds: string[];
+  relatedKingdomIds: string[];
+}
+
+export interface BiblicalKingdomOverlay {
+  id: string;
+  name: string;
+  eraLabel: string;
+  shortDescription: string;
+  keyPassages: string[];
+  relatedLocationIds: string[];
+  relatedProphecyLinkIds: string[];
+  color: string;
+  centerLatitude: number;
+  centerLongitude: number;
+  mapLabel: string;
+  periods: string[];
 }
 
 export const ERA_OPTIONS = [
@@ -73,13 +89,14 @@ export interface BiblicalJourneyRoute {
   routeSegments: RouteSegment[];
 }
 
-export type OverlayType = "none" | "people-groups" | "prophecy" | "journey-routes";
+export type OverlayType = "none" | "people-groups" | "prophecy" | "journey-routes" | "kingdoms";
 
 export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
   { value: "none", label: "None" },
   { value: "people-groups", label: "People Groups" },
   { value: "prophecy", label: "Prophecy" },
   { value: "journey-routes", label: "Journey Routes" },
+  { value: "kingdoms", label: "Kingdoms" },
 ];
 
 export const BIBLICAL_PEOPLE_GROUPS: BiblicalPeopleGroup[] = [
@@ -228,6 +245,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["rome"],
   },
   {
     id: "bethlehem",
@@ -274,6 +292,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: ["moabites"],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["rome"],
   },
   {
     id: "jerusalem",
@@ -342,6 +361,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: ["canaanites", "hittites", "philistines", "amorites"],
     prophecyLinkIds: ["prophecy-jerusalem"],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+    relatedKingdomIds: ["assyria", "babylon-empire", "medo-persia", "greece", "rome"],
   },
   {
     id: "capernaum",
@@ -382,6 +402,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["rome"],
   },
   {
     id: "babylon",
@@ -431,6 +452,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: ["prophecy-babylon"],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["babylon-empire", "medo-persia"],
   },
   {
     id: "damascus",
@@ -476,6 +498,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: ["hittites"],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["assyria"],
   },
   {
     id: "jordan-river",
@@ -528,6 +551,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: ["moabites", "canaanites", "amorites"],
     prophecyLinkIds: ["prophecy-jordan-river"],
     relatedJourneyRouteIds: ["exodus-route"],
+    relatedKingdomIds: ["egypt"],
   },
   {
     id: "sea-of-galilee",
@@ -568,6 +592,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: ["prophecy-sea-of-galilee"],
     relatedJourneyRouteIds: [],
+    relatedKingdomIds: ["rome"],
   },
   {
     id: "egypt-goshen",
@@ -599,6 +624,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["exodus-route"],
+    relatedKingdomIds: ["egypt"],
   },
   {
     id: "mount-sinai",
@@ -631,6 +657,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["exodus-route"],
+    relatedKingdomIds: ["egypt"],
   },
   {
     id: "antioch",
@@ -662,6 +689,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-1", "paul-journey-2", "paul-journey-3"],
+    relatedKingdomIds: ["greece", "rome"],
   },
   {
     id: "cyprus",
@@ -691,6 +719,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-1"],
+    relatedKingdomIds: ["rome"],
   },
   {
     id: "ephesus",
@@ -722,6 +751,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+    relatedKingdomIds: ["greece", "rome"],
   },
   {
     id: "corinth",
@@ -752,6 +782,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+    relatedKingdomIds: ["greece", "rome"],
   },
   {
     id: "philippi",
@@ -782,6 +813,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2", "paul-journey-3"],
+    relatedKingdomIds: ["greece", "rome"],
   },
   {
     id: "thessalonica",
@@ -812,6 +844,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedPeopleGroupIds: [],
     prophecyLinkIds: [],
     relatedJourneyRouteIds: ["paul-journey-2"],
+    relatedKingdomIds: ["greece", "rome"],
   },
 ];
 
@@ -934,6 +967,105 @@ export const BIBLICAL_JOURNEY_ROUTES: BiblicalJourneyRoute[] = [
     ],
   },
 ];
+
+export const BIBLICAL_KINGDOM_OVERLAYS: BiblicalKingdomOverlay[] = [
+  {
+    id: "egypt",
+    name: "Egypt",
+    eraLabel: "Patriarchs / Exodus",
+    shortDescription: "Egypt is central to Israel's early story, including Joseph, Moses, and the Exodus.",
+    keyPassages: ["Genesis 41", "Exodus 1", "Exodus 12", "Exodus 14"],
+    relatedLocationIds: ["egypt-goshen", "mount-sinai", "jordan-river"],
+    relatedProphecyLinkIds: [],
+    color: "#D97706",
+    centerLatitude: 30.0444,
+    centerLongitude: 31.2357,
+    mapLabel: "EGYPT",
+    periods: ["Old Kingdom", "Middle Kingdom", "New Kingdom"],
+  },
+  {
+    id: "assyria",
+    name: "Assyria",
+    eraLabel: "Divided Kingdom",
+    shortDescription: "Assyria dominated the ancient Near East and conquered the northern kingdom of Israel.",
+    keyPassages: ["2 Kings 17", "Isaiah 10", "Jonah 1", "Nahum 1"],
+    relatedLocationIds: ["jerusalem", "damascus"],
+    relatedProphecyLinkIds: [],
+    color: "#DC2626",
+    centerLatitude: 36.34,
+    centerLongitude: 43.13,
+    mapLabel: "ASSYRIA",
+    periods: ["Neo-Assyrian Empire"],
+  },
+  {
+    id: "babylon-empire",
+    name: "Babylon",
+    eraLabel: "Exile",
+    shortDescription: "Babylon carried Judah into exile and became a major prophetic symbol in Scripture.",
+    keyPassages: ["2 Kings 24", "Daniel 1", "Daniel 2", "Jeremiah 29", "Revelation 17", "Revelation 18"],
+    relatedLocationIds: ["babylon", "jerusalem"],
+    relatedProphecyLinkIds: ["prophecy-babylon"],
+    color: "#7C3AED",
+    centerLatitude: 32.5,
+    centerLongitude: 44.42,
+    mapLabel: "BABYLON",
+    periods: ["Neo-Babylonian Empire"],
+  },
+  {
+    id: "medo-persia",
+    name: "Medo-Persia",
+    eraLabel: "Exile / Restoration",
+    shortDescription: "Medo-Persia succeeded Babylon and played a major role in Israel's restoration and prophetic history.",
+    keyPassages: ["Daniel 5", "Daniel 6", "Ezra 1", "Isaiah 45"],
+    relatedLocationIds: ["babylon", "jerusalem"],
+    relatedProphecyLinkIds: ["prophecy-babylon"],
+    color: "#0891B2",
+    centerLatitude: 32.65,
+    centerLongitude: 51.68,
+    mapLabel: "MEDO-PERSIA",
+    periods: ["Achaemenid Empire"],
+  },
+  {
+    id: "greece",
+    name: "Greece",
+    eraLabel: "Intertestamental / Prophetic",
+    shortDescription: "Greece shaped the world after Persia and is central in the prophetic sequence of Daniel.",
+    keyPassages: ["Daniel 8", "Daniel 11"],
+    relatedLocationIds: ["corinth", "ephesus", "philippi", "thessalonica", "antioch", "jerusalem"],
+    relatedProphecyLinkIds: [],
+    color: "#2563EB",
+    centerLatitude: 37.98,
+    centerLongitude: 23.73,
+    mapLabel: "GREECE",
+    periods: ["Macedonian Empire", "Hellenistic Kingdoms"],
+  },
+  {
+    id: "rome",
+    name: "Rome",
+    eraLabel: "New Testament / Early Church",
+    shortDescription: "Rome dominated the world of Jesus and the apostles and is central in New Testament history.",
+    keyPassages: ["Luke 2", "John 19", "Acts 28", "Daniel 7", "Revelation 13"],
+    relatedLocationIds: ["jerusalem", "nazareth", "bethlehem", "capernaum", "sea-of-galilee", "corinth", "ephesus", "philippi", "thessalonica", "antioch", "cyprus"],
+    relatedProphecyLinkIds: [],
+    color: "#BE185D",
+    centerLatitude: 41.9,
+    centerLongitude: 12.5,
+    mapLabel: "ROME",
+    periods: ["Roman Republic", "Roman Empire"],
+  },
+];
+
+export function getKingdomById(id: string): BiblicalKingdomOverlay | undefined {
+  return BIBLICAL_KINGDOM_OVERLAYS.find((k) => k.id === id);
+}
+
+export function getKingdomsForLocation(locationId: string): BiblicalKingdomOverlay[] {
+  const location = getLocationById(locationId);
+  if (!location) return [];
+  return location.relatedKingdomIds
+    .map((kid) => getKingdomById(kid))
+    .filter((k): k is BiblicalKingdomOverlay => !!k);
+}
 
 export function getLocationById(id: string): BiblicalLocation | undefined {
   return BIBLICAL_LOCATIONS.find((loc) => loc.id === id);

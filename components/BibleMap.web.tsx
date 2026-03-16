@@ -16,6 +16,15 @@ export interface RouteLineData {
   highlight?: boolean;
 }
 
+export interface KingdomMarkerData {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+  color: string;
+  selected?: boolean;
+}
+
 interface BibleMapProps {
   locations: MapLocation[];
   selectedLocation: MapLocation | null;
@@ -23,6 +32,8 @@ interface BibleMapProps {
   defaultLon: number;
   onMarkerPress?: (loc: MapLocation) => void;
   routeLines?: RouteLineData[];
+  kingdomMarkers?: KingdomMarkerData[];
+  onKingdomPress?: (id: string) => void;
 }
 
 export default function BibleMap({

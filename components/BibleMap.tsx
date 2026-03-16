@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, Polyline, Circle, PROVIDER_DEFAULT } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 
 const MARKER_COLORS: Record<string, string> = {
@@ -25,6 +25,15 @@ export interface RouteLineData {
   highlight?: boolean;
 }
 
+export interface KingdomMarkerData {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+  color: string;
+  selected?: boolean;
+}
+
 interface BibleMapProps {
   locations: MapLocation[];
   selectedLocation: MapLocation | null;
@@ -32,6 +41,8 @@ interface BibleMapProps {
   defaultLon: number;
   onMarkerPress?: (loc: MapLocation) => void;
   routeLines?: RouteLineData[];
+  kingdomMarkers?: KingdomMarkerData[];
+  onKingdomPress?: (id: string) => void;
 }
 
 export default function BibleMap({
@@ -41,6 +52,8 @@ export default function BibleMap({
   defaultLon,
   onMarkerPress,
   routeLines,
+  kingdomMarkers,
+  onKingdomPress,
 }: BibleMapProps) {
   const mapRef = useRef<MapView>(null);
 
@@ -87,6 +100,29 @@ export default function BibleMap({
             geodesic
           />
         ))}
+        {kingdomMarkers && kingdomMarkers.map((km) => (
+          <React.Fragment key={`kingdom-${km.id}`}>
+            <Circle
+              center={{ latitude: km.latitude, longitude: km.longitude }}
+              radius={km.selected ? 180000 : 120000}
+              strokeColor={km.color + "60"}
+              fillColor={km.color + (km.selected ? "20" : "10")}
+              strokeWidth={km.selected ? 2 : 1}
+            />
+            <Marker
+              coordinate={{ latitude: km.latitude, longitude: km.longitude }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              opacity={km.selected ? 1 : 0.7}
+              onPress={() => onKingdomPress?.(km.id)}
+            >
+              <View style={mapStyles.kingdomLabel}>
+                <Text style={[mapStyles.kingdomLabelText, { color: km.color }]}>
+                  {km.label}
+                </Text>
+              </View>
+            </Marker>
+          </React.Fragment>
+        ))}
         {locations.map((loc) => (
           <Marker
             key={loc.id}
@@ -114,5 +150,16 @@ const mapStyles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
+  },
+  kingdomLabel: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 6,
+  },
+  kingdomLabelText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
   },
 });
