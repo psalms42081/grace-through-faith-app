@@ -1,0 +1,204 @@
+Do not add new features.
+
+This task is a pure Bible Maps UX polish pass focused on making the screen feel like a premium study tool instead of a generic Google map view.
+
+GOAL
+Keep the current map architecture, overlays, filters, and routing.
+Do NOT rebuild the whole map system.
+Do NOT add polygons, animation systems, or new overlay types.
+Only improve clarity, framing, hierarchy, and vertical efficiency.
+
+PRIORITY PROBLEMS TO FIX
+1. The map still feels too much like a generic travel map.
+2. “All + None” is too visually noisy.
+3. People overlay framing is not trustworthy.
+4. Journey screens waste vertical space with duplicate titles.
+5. The control stack above the map is still too tall.
+
+IMPLEMENT EXACTLY THE FOLLOWING
+
+1) REDUCE VISUAL NOISE IN DEFAULT MAP STATE
+When:
+- overlay = none
+- era = all
+
+Do this:
+- keep all visible locations
+- but reduce marker visual weight significantly
+- use one neutral default marker color for standard location browsing instead of multiple competing colors
+- selected state can still use accent color
+- non-selected markers must feel quiet and secondary
+
+Requirements:
+- no rainbow effect in default browsing
+- map should feel calm and readable
+- list below remains the primary study surface
+
+2) MAKE PEOPLE OVERLAY FRAME TO ACTUAL PEOPLE DATA
+Current behavior appears inconsistent.
+
+When overlay = people:
+- compute fit bounds from all visible people-group related locations
+- not from stale map state
+- not from previous overlay state
+- not from one surviving marker
+- not from generic visible locations
+
+If era = all:
+- fit to all people-group related locations
+If a specific era is selected:
+- only fit to people groups whose eras include that era
+- then resolve their relatedLocationIds
+- fit to those resolved coordinates only
+
+Add a defensive fallback:
+- if zero resolved coordinates exist for that filtered people-group set, do not reuse previous framing
+- instead show a stable regional fallback centered on the biblical Near East
+
+3) REMOVE DUPLICATE JOURNEY TITLE BLOCK ABOVE CARD
+For specific journey selections, the screen currently shows:
+- map
+- big journey heading
+- then a card that repeats the same title
+
+Change this:
+- remove the standalone heading above the card
+- keep only the journey card below the map
+- the card title is enough
+
+Apply this to:
+- Exodus Route
+- Paul 1
+- Paul 2
+- Paul 3
+
+Do not remove the count header for list states like “4 Journey Routes”.
+Only remove the duplicate extra title block for a specifically selected journey.
+
+4) MAKE THE MAP MORE “STUDY FIRST”
+Keep Google map for now, but suppress some travel-map feel.
+
+In the native map component:
+- disable rotate
+- disable pitch
+- disable compass if visible
+- disable toolbar if applicable
+- keep pan and pinch available only as secondary behavior
+- default framing must always be correct so the user does not need to manipulate the map
+
+If there is any map setting available to simplify visual clutter without breaking compatibility, apply it conservatively.
+Do not switch providers in this task.
+
+5) TIGHTEN THE VERTICAL STACK ABOVE THE MAP
+Reduce wasted height in the control stack without hurting tapability.
+
+Target areas:
+- row spacing between mode / era / overlay / journey rows
+- vertical padding inside chips
+- margin between search box and map
+- overall space between the title row and the first chip row
+
+Rules:
+- keep controls comfortable to tap
+- do not create cramped text
+- do not wrap chip labels
+- preserve horizontal scrolling behavior
+
+6) MAKE RESULTS BEGIN HIGHER
+After the map:
+- tighten space between map bottom and the count/header line
+- tighten space between count/header and first card
+- do not make it feel cramped
+- goal is to show more of the first result card on phone portrait
+
+7) ADD A STABLE NEAR-EAST FALLBACK REGION
+Create a shared fallback map region for cases where fit bounds are empty or unreliable.
+
+Use one consistent biblical-world framing that covers roughly:
+- Egypt / Sinai
+- Israel / Jordan
+- Syria / Mesopotamia
+- Asia Minor / Greece only when needed should still rely on actual fitCoordinates
+
+Fallback must be used only when filtered data resolves to zero usable coordinates.
+Do not use it when real coordinates exist.
+
+8) MAKE SPECIFIC JOURNEY PRESENTATION CONSISTENT
+For a selected journey:
+- map height should remain slightly taller than default list map
+- route should be visually primary
+- non-route markers should be visually secondary
+- route endpoints must not be clipped by the viewport
+- route color should remain strong
+- map must show the full route on first render with no manual zoom
+
+9) KEEP CURRENT FEATURE SET INTACT
+Do not break:
+- mode toggle
+- era filtering
+- overlay filtering
+- journey sub-filter
+- search
+- list routing
+- detail screen routing
+- state preservation when navigating back
+
+VERIFY MANUALLY
+Check these exact states on mobile portrait:
+
+1. Modern + All + None
+Expected:
+- quiet neutral markers
+- no rainbow clutter
+- results begin high enough
+
+2. Modern + Exodus + None
+Expected:
+- Sinai + Jordan area visible
+- no clipping
+- first result card visible
+
+3. Modern + Exile + None
+Expected:
+- Babylon + Jerusalem both visible
+- first card visible
+
+4. Modern + Exile + People
+Expected:
+- framing based on filtered people-group coordinates
+- not stuck near Jerusalem only
+- count and first people-group card visible
+
+5. Modern + Exile + Prophecy
+Expected:
+- Babylon + Jerusalem framing works
+- first prophecy card visible
+
+6. Modern + Early Church + Journeys + All
+Expected:
+- multiple journey routes visible
+- no extra duplicate journey title block
+- first journey card visible
+
+7. Modern + Early Church + Journeys + Paul 1
+Expected:
+- full route visible
+- no duplicate standalone title above card
+
+8. Modern + Early Church + Journeys + Paul 2
+Expected:
+- full route visible
+- Greece + Levant both fit
+
+9. Modern + Early Church + Journeys + Paul 3
+Expected:
+- full triangular route visible
+- no clipping
+- no duplicate standalone title above card
+
+Then report:
+- files modified
+- exact spacing reductions made
+- exact marker simplification made for default browsing
+- how people overlay fit bounds are now calculated
+- confirmation that duplicate selected-journey headings were removed

@@ -47,6 +47,7 @@ interface BibleMapProps {
   onTribePress?: (id: string) => void;
   fitCoordinates?: { latitude: number; longitude: number }[];
   isJourneySelected?: boolean;
+  quietMarkers?: boolean;
 }
 
 export default function BibleMap({

@@ -10,6 +10,8 @@ const MARKER_COLORS: Record<string, string> = {
   mountain: "#22C55E",
 };
 
+const QUIET_MARKER_COLOR = "#8B8B8B";
+
 interface MapLocation {
   id: string;
   name: string;
@@ -56,6 +58,7 @@ interface BibleMapProps {
   onTribePress?: (id: string) => void;
   fitCoordinates?: { latitude: number; longitude: number }[];
   isJourneySelected?: boolean;
+  quietMarkers?: boolean;
 }
 
 export default function BibleMap({
@@ -71,6 +74,7 @@ export default function BibleMap({
   onTribePress,
   fitCoordinates,
   isJourneySelected,
+  quietMarkers,
 }: BibleMapProps) {
   const mapRef = useRef<MapView>(null);
   const didInitialFit = useRef(false);
@@ -193,18 +197,22 @@ export default function BibleMap({
             </Marker>
           </React.Fragment>
         ))}
-        {locations.map((loc) => (
-          <Marker
-            key={loc.id}
-            coordinate={{
-              latitude: parseFloat(loc.latitude),
-              longitude: parseFloat(loc.longitude),
-            }}
-            title={loc.name}
-            pinColor={MARKER_COLORS[loc.locationType || "city"] || "#C9933A"}
-            onPress={() => handleMarkerPress(loc)}
-          />
-        ))}
+        {locations.map((loc) => {
+          const isSelected = selectedLocation && loc.id === selectedLocation.id;
+          return (
+            <Marker
+              key={loc.id}
+              coordinate={{
+                latitude: parseFloat(loc.latitude),
+                longitude: parseFloat(loc.longitude),
+              }}
+              title={loc.name}
+              pinColor={isSelected ? "#C9933A" : (quietMarkers ? QUIET_MARKER_COLOR : (MARKER_COLORS[loc.locationType || "city"] || "#C9933A"))}
+              opacity={isSelected ? 1 : (quietMarkers ? 0.6 : 1)}
+              onPress={() => handleMarkerPress(loc)}
+            />
+          );
+        })}
       </MapView>
     </View>
   );

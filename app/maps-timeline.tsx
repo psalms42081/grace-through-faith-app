@@ -186,6 +186,11 @@ const HOLY_LAND_REGION = {
   longitudeDelta: 8,
 };
 
+const NEAR_EAST_FALLBACK: { latitude: number; longitude: number }[] = [
+  { latitude: 29.0, longitude: 27.0 },
+  { latitude: 40.0, longitude: 45.0 },
+];
+
 export default function MapsTimelineScreen() {
   const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam, journey: journeyParam, kingdom: kingdomParam, tribe: tribeParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string; journey?: string; kingdom?: string; tribe?: string }>();
   const { theme, isDark } = useTheme();
@@ -366,52 +371,68 @@ function MapsContent({
   }, []);
 
   const fitCoordinates = useMemo((): { latitude: number; longitude: number }[] => {
+    let coords: { latitude: number; longitude: number }[] = [];
     if (overlay === "journey-routes") {
-      const coords: { latitude: number; longitude: number }[] = [];
       for (const route of routeLines) {
         coords.push(...route.coordinates);
       }
-      return coords;
+      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
     }
     if (overlay === "kingdoms") {
-      if (kingdomMarkers.length === 0) return [];
+      if (kingdomMarkers.length === 0) return NEAR_EAST_FALLBACK;
       const selected = kingdomMarkers.find((k) => k.selected);
       if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
       return kingdomMarkers.map((k) => ({ latitude: k.latitude, longitude: k.longitude }));
     }
     if (overlay === "tribes") {
-      if (tribeMarkers.length === 0) return [];
+      if (tribeMarkers.length === 0) return NEAR_EAST_FALLBACK;
       const selected = tribeMarkers.find((t) => t.selected);
       if (selected) return [{ latitude: selected.latitude, longitude: selected.longitude }];
       return tribeMarkers.map((t) => ({ latitude: t.latitude, longitude: t.longitude }));
     }
     if (overlay === "people-groups") {
-      const coords: { latitude: number; longitude: number }[] = [];
-      for (const pg of BIBLICAL_PEOPLE_GROUPS) {
+      const filteredPG = selectedEra === "All"
+        ? BIBLICAL_PEOPLE_GROUPS
+        : BIBLICAL_PEOPLE_GROUPS.filter((pg) => pg.eras.some((e) => e === selectedEra));
+      for (const pg of filteredPG) {
         for (const locId of pg.relatedLocationIds) {
           const loc = getLocationById(locId);
           if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
         }
       }
-      return coords;
+      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
     }
     if (overlay === "prophecy") {
-      const coords: { latitude: number; longitude: number }[] = [];
-      for (const pl of BIBLICAL_PROPHECY_LINKS) {
+      const filteredPL = selectedEra === "All"
+        ? BIBLICAL_PROPHECY_LINKS
+        : BIBLICAL_PROPHECY_LINKS.filter((pl) => pl.eras.some((e) => e === selectedEra));
+      for (const pl of filteredPL) {
         for (const locId of pl.relatedLocationIds) {
           const loc = getLocationById(locId);
           if (loc) coords.push({ latitude: loc.latitude, longitude: loc.longitude });
         }
       }
-      return coords;
+      return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
     }
-    return mappableLocations.map((l) => ({
+    coords = mappableLocations.map((l) => ({
       latitude: parseFloat(l.latitude),
       longitude: parseFloat(l.longitude),
     }));
-  }, [overlay, routeLines, kingdomMarkers, tribeMarkers, mappableLocations]);
+    return coords.length > 0 ? coords : NEAR_EAST_FALLBACK;
+  }, [overlay, routeLines, kingdomMarkers, tribeMarkers, mappableLocations, selectedEra]);
 
   const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
+  const quietMarkers = overlay === "none" || overlay === "journey-routes";
+
+  const filteredPeopleGroups = useMemo(() => {
+    if (selectedEra === "All") return BIBLICAL_PEOPLE_GROUPS;
+    return BIBLICAL_PEOPLE_GROUPS.filter((pg) => pg.eras.some((e) => e === selectedEra));
+  }, [selectedEra]);
+
+  const filteredProphecyLinks = useMemo(() => {
+    if (selectedEra === "All") return BIBLICAL_PROPHECY_LINKS;
+    return BIBLICAL_PROPHECY_LINKS.filter((pl) => pl.eras.some((e) => e === selectedEra));
+  }, [selectedEra]);
 
   const overlayTypeMap: Record<OverlayType, SearchResultType | null> = {
     "none": null,
@@ -774,6 +795,7 @@ function MapsContent({
           onTribePress={handleTribePress}
           fitCoordinates={fitCoordinates}
           isJourneySelected={isJourneySelected}
+          quietMarkers={quietMarkers}
         />
 
         {selectedLocation && (
@@ -882,9 +904,9 @@ function MapsContent({
         ) : overlay === "people-groups" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {`${BIBLICAL_PEOPLE_GROUPS.length} People Groups`}
+              {`${filteredPeopleGroups.length} People Groups`}
             </Text>
-            {BIBLICAL_PEOPLE_GROUPS.map((pg) => (
+            {filteredPeopleGroups.map((pg) => (
               <Pressable
                 key={pg.id}
                 onPress={() => router.push({ pathname: `/people-group/${pg.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any)}
@@ -930,9 +952,9 @@ function MapsContent({
         ) : overlay === "prophecy" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {`${BIBLICAL_PROPHECY_LINKS.length} Prophecy Connections`}
+              {`${filteredProphecyLinks.length} Prophecy Connections`}
             </Text>
-            {BIBLICAL_PROPHECY_LINKS.map((pl) => (
+            {filteredProphecyLinks.map((pl) => (
               <Pressable
                 key={pl.id}
                 onPress={() => router.push({ pathname: `/prophecy-link/${pl.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney } } as any)}
@@ -977,11 +999,11 @@ function MapsContent({
           </View>
         ) : overlay === "journey-routes" ? (
           <View style={styles.tabContent}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedJourney === "all"
-                ? `${BIBLICAL_JOURNEY_ROUTES.length} Journey Routes`
-                : BIBLICAL_JOURNEY_ROUTES.find((r) => r.id === selectedJourney)?.title || "Journey Route"}
-            </Text>
+            {selectedJourney === "all" && (
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {`${BIBLICAL_JOURNEY_ROUTES.length} Journey Routes`}
+              </Text>
+            )}
             {(selectedJourney === "all"
               ? BIBLICAL_JOURNEY_ROUTES
               : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney)
@@ -1354,7 +1376,7 @@ const styles = StyleSheet.create({
   modeToggleRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingBottom: 4,
+    paddingBottom: 2,
     gap: 8,
   },
   modeBtn: {
@@ -1363,15 +1385,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 10,
   },
   modeBtnText: {
     fontSize: 13,
   },
   eraScrollRow: {
-    maxHeight: 34,
-    marginBottom: 4,
+    maxHeight: 32,
+    marginBottom: 2,
   },
   eraScrollContent: {
     paddingHorizontal: 16,
@@ -1379,9 +1401,9 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
   },
   eraChip: {
-    height: 30,
-    paddingHorizontal: 14,
-    borderRadius: 15,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1391,8 +1413,8 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   overlayScrollRow: {
-    maxHeight: 34,
-    marginBottom: 4,
+    maxHeight: 32,
+    marginBottom: 2,
   },
   overlayScrollContent: {
     paddingHorizontal: 16,
@@ -1400,9 +1422,9 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
   },
   overlayPill: {
-    height: 30,
-    paddingHorizontal: 16,
-    borderRadius: 15,
+    height: 28,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1417,8 +1439,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   journeyScrollRow: {
-    maxHeight: 34,
-    marginBottom: 4,
+    maxHeight: 32,
+    marginBottom: 2,
   },
   journeyScrollContent: {
     paddingHorizontal: 16,
@@ -1426,9 +1448,9 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
   },
   journeyChip: {
-    height: 30,
-    paddingHorizontal: 14,
-    borderRadius: 15,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -1439,7 +1461,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     paddingHorizontal: 22,
-    paddingBottom: 8,
+    paddingBottom: 4,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1456,7 +1478,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 10,
   },
   toggleText: { fontSize: 13 },
@@ -1612,8 +1634,8 @@ const styles = StyleSheet.create({
   verseText: { fontSize: 14, lineHeight: 22 },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 2,
-    paddingBottom: 6,
+    paddingTop: 1,
+    paddingBottom: 4,
     zIndex: 10,
   },
   searchInputRow: {
