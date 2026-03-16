@@ -26,8 +26,9 @@ function VideoCard({ videoId, title, theme, onPress }: { videoId: string; title:
       style={({ pressed }) => [st.videoCard, { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 }]}
     >
       <View style={st.videoThumbWrap}>
-        <View style={[st.videoThumb, { backgroundColor: theme.border }]}>
-          <Ionicons name="play-circle" size={44} color="rgba(255,255,255,0.9)" />
+        <Image source={{ uri: thumbnailUrl }} style={st.videoThumb} resizeMode="cover" />
+        <View style={st.playOverlay}>
+          <Ionicons name="play-circle" size={52} color="rgba(255,255,255,0.95)" />
         </View>
       </View>
       <Text style={[st.videoTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={2}>
@@ -159,18 +160,18 @@ export default function SpeakerDetailScreen() {
           </Text>
         </Pressable>
 
-        {speaker.featuredVideoIds.length > 0 && (
+        {speaker.featuredVideos.length > 0 && (
           <View style={st.section}>
             <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               Featured Sermons
             </Text>
-            {speaker.featuredVideoIds.map((videoId, idx) => (
+            {speaker.featuredVideos.map((video) => (
               <VideoCard
-                key={videoId}
-                videoId={videoId}
-                title={`${speaker.name} - Sermon ${idx + 1}`}
+                key={video.id}
+                videoId={video.id}
+                title={video.title}
                 theme={theme}
-                onPress={() => handleWatchVideo(videoId)}
+                onPress={() => handleWatchVideo(video.id)}
               />
             ))}
           </View>
@@ -328,11 +329,19 @@ const st = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
   },
-  videoThumbWrap: {},
+  videoThumbWrap: {
+    position: "relative" as const,
+  },
   videoThumb: {
-    height: 180,
-    alignItems: "center",
-    justifyContent: "center",
+    height: 200,
+    width: "100%" as any,
+    backgroundColor: "#1a1a1a",
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
   videoTitle: {
     fontSize: 14,

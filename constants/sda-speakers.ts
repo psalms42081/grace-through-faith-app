@@ -1,3 +1,8 @@
+export interface FeaturedVideo {
+  id: string;
+  title: string;
+}
+
 export interface SDASpeaker {
   id: string;
   name: string;
@@ -6,7 +11,7 @@ export interface SDASpeaker {
   topics: string[];
   color: string;
   youtubeChannelId: string;
-  featuredVideoIds: string[];
+  featuredVideos: FeaturedVideo[];
 }
 
 const SPEAKER_IMAGES: Record<string, any> = {
@@ -48,7 +53,11 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Prophecy", "Evangelism", "Revelation", "Daniel", "Three Angels", "Health"],
     color: "#27AE60",
     youtubeChannelId: "UCEJi8oj_u3bEGgqeonhzr5Q",
-    featuredVideoIds: ["xRDHv1CeDOk", "5m7kRLtCq8Q", "J7jwGZc1htA"],
+    featuredVideos: [
+      { id: "jrQs0yBOVDI", title: "Power for Persevering Patience" },
+      { id: "dzyMS5eu6pc", title: "The Mystery of the Trinity" },
+      { id: "y-7bAJbtZ60", title: "Bible Answers Live" },
+    ],
   },
   {
     id: "john-lomacang",
@@ -58,7 +67,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Worship", "Preaching", "Music Ministry"],
     color: "#1ABC9C",
     youtubeChannelId: "UC2oGtEVKfqECfNbUq4eFgsQ",
-    featuredVideoIds: ["kJZ-YqHV6KE", "VwGOjNJE3TY"],
+    featuredVideos: [
+      { id: "7qCWkoksGNw", title: "The Power of Deception" },
+      { id: "CeNDYBA36n0", title: "Deepen Your Relationship With God Through Prayer" },
+    ],
   },
   {
     id: "david-asscherick",
@@ -68,7 +80,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Prophecy", "Apologetics", "Daniel", "Revelation", "Three Angels"],
     color: "#2980B9",
     youtubeChannelId: "UC-7c_7El1xpPmWlVceyBcpw",
-    featuredVideoIds: ["mFmU1jYzuQE"],
+    featuredVideos: [
+      { id: "3hzqSMqb4Pw", title: "You Can Understand Bible Prophecy" },
+      { id: "5KPcUtPeWU0", title: "Personal Testimony" },
+    ],
   },
   {
     id: "ivor-myers",
@@ -78,7 +93,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Revelation", "Youth Ministry", "Urban Evangelism", "Three Angels"],
     color: "#8E44AD",
     youtubeChannelId: "UCIeLxYak5fb5Cqe1P0KGqQg",
-    featuredVideoIds: ["bKq9J-9v3k0"],
+    featuredVideos: [
+      { id: "5LpSFnbSJCE", title: "Is 1844 Really Biblical? The Truth on Daniel 8:14" },
+      { id: "52xNFap3uAQ", title: "Back to Basics: The Deadly Wound Healed?" },
+    ],
   },
   {
     id: "randy-skeete",
@@ -88,7 +106,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Bible Study", "Revival", "Righteousness by Faith"],
     color: "#D35400",
     youtubeChannelId: "UCZw0F_VXflZ3BwWfnhj9CPA",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "0YnA9cOtru8", title: "Do Not Marry!" },
+      { id: "3BzogVmkC9k", title: "Resolutions - Advice for the New Year" },
+    ],
   },
   {
     id: "ca-murray",
@@ -98,7 +119,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Preaching", "Pastoral", "Faith"],
     color: "#2C3E50",
     youtubeChannelId: "UC2oGtEVKfqECfNbUq4eFgsQ",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "7oyOLBtCLsM", title: "Thoughts on My Bed, Visions in My Head - Daniel" },
+      { id: "AdoKEaCgCdY", title: "Jesus, The Way Out" },
+    ],
   },
   {
     id: "wes-peppers",
@@ -108,7 +132,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Prophecy", "Youth", "Evangelism"],
     color: "#16A085",
     youtubeChannelId: "UCLx1AuFKbSCJDfXb_3s6OsA",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "1T-CLqTbiX4", title: "Overcoming Through Surrendering" },
+      { id: "3lwv8R-d_e0", title: "Competitive Christianity" },
+    ],
   },
   {
     id: "elizabeth-talbot",
@@ -118,7 +145,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Devotional", "Theology", "Women's Ministry"],
     color: "#C0392B",
     youtubeChannelId: "UCbRq0CsBuFj63M-VdAPlKEQ",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "3RklNWWRx5w", title: "After God's Heart: Chosen" },
+      { id: "6BFhRPDhXmQ", title: "The Lord is My Light" },
+    ],
   },
   {
     id: "shawn-boonstra",
@@ -128,7 +158,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Prophecy", "Culture", "Current Events"],
     color: "#E67E22",
     youtubeChannelId: "UCbRq0CsBuFj63M-VdAPlKEQ",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "4VhSNcvRglY", title: "How Infinity and God Work Together" },
+      { id: "8VJBU6OtK4Q", title: "How Science May Be Proving We're Special" },
+    ],
   },
   {
     id: "mark-finley",
@@ -138,7 +171,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Evangelism", "Health", "Prophecy", "Three Angels"],
     color: "#1565C0",
     youtubeChannelId: "UCAvh27iVZQ_23kEYV2P4C1g",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "2aWQb_9u3Q0", title: "Exact Proof the Bible is Accurate Using Time Prophecy" },
+      { id: "aPtsBMusM34", title: "Getting Through Life's Toughest Times" },
+    ],
   },
   {
     id: "john-bradshaw",
@@ -148,7 +184,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Devotional", "Outreach", "Bible Study"],
     color: "#0D47A1",
     youtubeChannelId: "UCAvh27iVZQ_23kEYV2P4C1g",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "386ld_V5g64", title: "The Truth About the Investigative Judgment" },
+      { id: "6DTJwMiRxHM", title: "Then God Changed Everything" },
+    ],
   },
   {
     id: "stephen-bohr",
@@ -158,7 +197,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Daniel", "Revelation", "Sanctuary", "Prophecy", "Three Angels"],
     color: "#1A237E",
     youtubeChannelId: "UCiAQVG0W3HkQwBGvGiS14kg",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "67dqMEwAo4M", title: "Decoding the Mysteries of Daniel 11" },
+      { id: "4e6Bcq1g5N0", title: "Lambs Among Wolves" },
+    ],
   },
   {
     id: "carlton-byrd",
@@ -168,7 +210,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Preaching", "Revival", "Faith"],
     color: "#6A1B9A",
     youtubeChannelId: "UCUsCnzlCTMfwLn5GRKIyB6A",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "77xTENXV8TA", title: "John Saw You" },
+      { id: "1HmUm6pm2FY", title: "There is Power in the Name" },
+    ],
   },
   {
     id: "taj-pacleb",
@@ -178,7 +223,10 @@ export const SDA_SPEAKERS: SDASpeaker[] = [
     topics: ["Youth Evangelism", "Prophecy", "Revelation", "Three Angels"],
     color: "#F57C00",
     youtubeChannelId: "UC3_5kVLUUB7NrV-NnPLzFJg",
-    featuredVideoIds: [],
+    featuredVideos: [
+      { id: "5nZRgZoczR4", title: "The Deeper Message of Hawaii's Green Sands Beach" },
+      { id: "755UmHcJrkQ", title: "Walking the Narrow Way to Eternal Joy" },
+    ],
   },
 ];
 
