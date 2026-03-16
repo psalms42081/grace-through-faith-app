@@ -30,6 +30,7 @@ export interface BiblicalLocation {
   eras: string[];
   timelineEvents: LocationTimelineEvent[];
   relatedPeopleGroupIds: string[];
+  prophecyLinkIds: string[];
 }
 
 export const ERA_OPTIONS = [
@@ -44,11 +45,22 @@ export const ERA_OPTIONS = [
 
 export type EraFilter = (typeof ERA_OPTIONS)[number];
 
-export type OverlayType = "none" | "people-groups";
+export interface BiblicalProphecyLink {
+  id: string;
+  title: string;
+  theme: string;
+  description: string;
+  keyPassages: string[];
+  relatedLocationIds: string[];
+  eras: string[];
+}
+
+export type OverlayType = "none" | "people-groups" | "prophecy";
 
 export const OVERLAY_OPTIONS: { value: OverlayType; label: string }[] = [
   { value: "none", label: "None" },
   { value: "people-groups", label: "People Groups" },
+  { value: "prophecy", label: "Prophecy" },
 ];
 
 export const BIBLICAL_PEOPLE_GROUPS: BiblicalPeopleGroup[] = [
@@ -195,6 +207,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
   },
   {
     id: "bethlehem",
@@ -239,6 +252,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: ["moabites"],
+    prophecyLinkIds: [],
   },
   {
     id: "jerusalem",
@@ -305,6 +319,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: ["canaanites", "hittites", "philistines", "amorites"],
+    prophecyLinkIds: ["prophecy-jerusalem"],
   },
   {
     id: "capernaum",
@@ -343,6 +358,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: [],
+    prophecyLinkIds: [],
   },
   {
     id: "babylon",
@@ -390,6 +406,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: [],
+    prophecyLinkIds: ["prophecy-babylon"],
   },
   {
     id: "damascus",
@@ -433,6 +450,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: ["hittites"],
+    prophecyLinkIds: [],
   },
   {
     id: "jordan-river",
@@ -483,6 +501,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: ["moabites", "canaanites", "amorites"],
+    prophecyLinkIds: ["prophecy-jordan-river"],
   },
   {
     id: "sea-of-galilee",
@@ -521,6 +540,50 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       },
     ],
     relatedPeopleGroupIds: [],
+    prophecyLinkIds: ["prophecy-sea-of-galilee"],
+  },
+];
+
+export const BIBLICAL_PROPHECY_LINKS: BiblicalProphecyLink[] = [
+  {
+    id: "prophecy-babylon",
+    title: "Babylon: Kingdoms and Final Rebellion",
+    theme: "Kingdoms and final rebellion",
+    description:
+      "Babylon stands at the center of biblical prophecy as both a literal empire and a symbol of human rebellion against God. Nebuchadnezzar's dream in Daniel 2 reveals a succession of world kingdoms beginning with Babylon. The prophets foretold Babylon's fall and the exile of Judah, while Revelation uses 'Babylon' as a symbol of end-time opposition to God's people, culminating in its final judgment.",
+    keyPassages: ["Daniel 1", "Daniel 2", "Jeremiah 29", "Revelation 17", "Revelation 18"],
+    relatedLocationIds: ["babylon"],
+    eras: ["Exile", "Kingdom"],
+  },
+  {
+    id: "prophecy-jerusalem",
+    title: "Jerusalem: Covenant, Judgment, and Restoration",
+    theme: "Covenant center, judgment, restoration",
+    description:
+      "Jerusalem occupies the prophetic center of Scripture. Isaiah and Jeremiah warned of judgment on a city that had forsaken its covenant with God. Jesus wept over Jerusalem and prophesied its destruction in Matthew 24 and Luke 21. Yet Revelation 21 envisions a New Jerusalem descending from heaven as the eternal home of God's redeemed people, bringing the prophetic arc of Scripture to its climax.",
+    keyPassages: ["Isaiah 1", "Jeremiah 7", "Matthew 24", "Luke 21", "Revelation 21"],
+    relatedLocationIds: ["jerusalem"],
+    eras: ["Kingdom", "Exile", "Life of Christ", "Early Church"],
+  },
+  {
+    id: "prophecy-jordan-river",
+    title: "Jordan River: Entry, Transition, and Covenant",
+    theme: "Entry, transition, covenant moments",
+    description:
+      "The Jordan River marks prophetic thresholds in salvation history. Israel's crossing under Joshua signaled the fulfillment of the promise to enter Canaan. Centuries later, John the Baptist proclaimed repentance at the Jordan, and Jesus' baptism there inaugurated the messianic age. The Jordan represents divine transition -- from wilderness to promise, from old covenant to new.",
+    keyPassages: ["Joshua 3", "Matthew 3"],
+    relatedLocationIds: ["jordan-river"],
+    eras: ["Exodus", "Life of Christ"],
+  },
+  {
+    id: "prophecy-sea-of-galilee",
+    title: "Sea of Galilee: Kingdom Ministry of Jesus",
+    theme: "Kingdom ministry of Jesus",
+    description:
+      "The Sea of Galilee was the stage for Jesus' proclamation of the Kingdom of God. Isaiah prophesied that 'the people walking in darkness' in the region of Galilee would see a great light. Jesus fulfilled this by calling His first disciples from its shores, teaching the crowds, calming its storms, and performing signs that revealed His messianic identity.",
+    keyPassages: ["Matthew 4", "Mark 4", "Luke 5"],
+    relatedLocationIds: ["sea-of-galilee"],
+    eras: ["Life of Christ"],
   },
 ];
 
@@ -549,4 +612,16 @@ export function getPeopleGroupsForLocation(locationId: string): BiblicalPeopleGr
   return location.relatedPeopleGroupIds
     .map((pgId) => getPeopleGroupById(pgId))
     .filter((pg): pg is BiblicalPeopleGroup => !!pg);
+}
+
+export function getProphecyLinkById(id: string): BiblicalProphecyLink | undefined {
+  return BIBLICAL_PROPHECY_LINKS.find((pl) => pl.id === id);
+}
+
+export function getProphecyLinksForLocation(locationId: string): BiblicalProphecyLink[] {
+  const location = getLocationById(locationId);
+  if (!location) return [];
+  return location.prophecyLinkIds
+    .map((plId) => getProphecyLinkById(plId))
+    .filter((pl): pl is BiblicalProphecyLink => !!pl);
 }

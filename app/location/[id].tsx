@@ -16,6 +16,7 @@ import {
   getLocationByName,
   BIBLICAL_LOCATIONS,
   getPeopleGroupsForLocation,
+  getProphecyLinksForLocation,
   type EraFilter,
 } from "@/constants/biblical-locations";
 
@@ -96,6 +97,7 @@ export default function LocationDetailScreen() {
     .filter(Boolean);
 
   const relatedPeopleGroups = getPeopleGroupsForLocation(location.id);
+  const relatedProphecies = getProphecyLinksForLocation(location.id);
 
   return (
     <>
@@ -300,6 +302,37 @@ export default function LocationDetailScreen() {
                   </Text>
                   <Text style={[st.nearbyRegion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                     {pg.regionLabel}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {relatedProphecies.length > 0 && (
+          <View style={[st.card, { backgroundColor: theme.backgroundCard }]}>
+            <View style={st.cardRow}>
+              <Ionicons name="flash-outline" size={16} color="#F59E0B" />
+              <Text style={[st.cardLabel, { color: "#F59E0B", fontFamily: "Inter_600SemiBold" }]}>
+                Prophecy Connections
+              </Text>
+            </View>
+            {relatedProphecies.map((pl) => (
+              <Pressable
+                key={pl.id}
+                onPress={() => router.push({ pathname: `/prophecy-link/${pl.id}`, params: { mode: mode || "modern", era: currentEra, overlay: overlay || "none" } } as any)}
+                style={({ pressed }) => [st.pgRow, { borderColor: theme.border, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <View style={[st.pgIcon, { backgroundColor: "#F59E0B" + "14" }]}>
+                  <Ionicons name="flash-outline" size={16} color="#F59E0B" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.nearbyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {pl.title}
+                  </Text>
+                  <Text style={[st.nearbyRegion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {pl.theme}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />

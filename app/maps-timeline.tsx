@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, type EraFilter, type OverlayType } from "@/constants/biblical-locations";
+import { getLocationByName, getLocationsByEra, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, type EraFilter, type OverlayType } from "@/constants/biblical-locations";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -85,14 +85,14 @@ const HOLY_LAND_REGION = {
 };
 
 export default function MapsTimelineScreen() {
-  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const { tab: tabParam, mode: modeParam, era: eraParam, overlay: overlayParam } = useLocalSearchParams<{ tab?: string; mode?: string; era?: string; overlay?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");
-  const [mapMode, setMapMode] = useState<MapMode>("modern");
-  const [selectedEra, setSelectedEra] = useState<EraFilter>("All");
-  const [overlay, setOverlay] = useState<OverlayType>("none");
+  const [mapMode, setMapMode] = useState<MapMode>((modeParam as MapMode) || "modern");
+  const [selectedEra, setSelectedEra] = useState<EraFilter>((eraParam as EraFilter) || "All");
+  const [overlay, setOverlay] = useState<OverlayType>((overlayParam as OverlayType) || "none");
 
   return (
     <>
@@ -246,14 +246,6 @@ function MapsContent({
 
   const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.accent} />
-      </View>
-    );
-  }
-
   const getSubtitleForLocation = useCallback((loc: Location): string => {
     if (isBiblical) {
       const enriched = getLocationByName(loc.name);
@@ -262,6 +254,14 @@ function MapsContent({
     }
     return [loc.modernName, loc.era].filter(Boolean).join(" \u00B7 ");
   }, [isBiblical]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingBox}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -518,6 +518,54 @@ function MapsContent({
                     numberOfLines={2}
                   >
                     {pg.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        ) : overlay === "prophecy" ? (
+          <View style={styles.tabContent}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {`${BIBLICAL_PROPHECY_LINKS.length} Prophecy Links`}
+            </Text>
+            {BIBLICAL_PROPHECY_LINKS.map((pl) => (
+              <Pressable
+                key={pl.id}
+                onPress={() => router.push({ pathname: `/prophecy-link/${pl.id}`, params: { mode: mapMode, era: selectedEra, overlay } } as any)}
+                style={({ pressed }) => [
+                  styles.regionCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.regionIcon,
+                    { backgroundColor: "#F59E0B" + "18" },
+                  ]}
+                >
+                  <Ionicons name="flash-outline" size={22} color="#F59E0B" />
+                </View>
+                <View style={[styles.regionInfo, { flex: 1 }]}>
+                  <Text
+                    style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                  >
+                    {pl.title}
+                  </Text>
+                  <Text
+                    style={[styles.regionPlaces, { color: "#F59E0B", fontFamily: "Inter_500Medium" }]}
+                    numberOfLines={1}
+                  >
+                    {pl.theme}
+                  </Text>
+                  <Text
+                    style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                    numberOfLines={2}
+                  >
+                    {pl.description}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
