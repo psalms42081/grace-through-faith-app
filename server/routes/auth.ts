@@ -20,8 +20,8 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    if (cleanPassword.length < 4) {
-      return res.status(400).json({ error: "Password must be at least 4 characters" });
+    if (cleanPassword.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
     const existing = await db.select().from(users).where(eq(users.email, cleanEmail));
@@ -110,8 +110,72 @@ router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/auth/reset-password", async (_req, res) => {
-  return res.status(501).json({ error: "Password reset is not available. Please contact support for account recovery." });
+router.post("/api/auth/reset-password", authLimiter, requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ error: "New password is required" });
+    }
+
+    const cleanPassword = newPassword.trim();
+
+    if (cleanPassword.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(cleanPassword, 10);
+    await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    return res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+const VALID_ROLES = ["member", "student", "church_leader", "editor", "admin"];
+
+router.post("/api/auth/update-role", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const { role } = req.body;
+
+    if (!role || !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    if (role === "admin" || role === "editor" || role === "church_leader") {
+      const [currentUser] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Only admins can assign privileged roles" });
+      }
+    }
+
+    await db.update(users).set({ role }).where(eq(users.id, userId));
+
+    const [updated] = await db.select().from(users).where(eq(users.id, userId));
+    return res.json({
+      user: {
+        id: updated.id,
+        displayName: updated.displayName,
+        email: updated.email,
+        familyId: updated.familyId,
+        isPro: updated.isPro,
+        isPatron: updated.isPatron,
+        role: updated.role,
+      },
+    });
+  } catch (err) {
+    console.error("Update role error:", err);
+    return res.status(500).json({ error: "Failed to update role" });
+  }
 });
 
 router.get("/api/auth/me", async (req, res) => {

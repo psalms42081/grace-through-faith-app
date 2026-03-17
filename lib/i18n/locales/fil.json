@@ -14,7 +14,49 @@
     "studyGuide": "Gabay na pag-aaral",
     "prayerJournal": "Talaarawan ng panalangin",
     "devotionalPlans": "Mga plano ng debosyon",
-    "studyPaths": "Mga landas ng pag-aaral"
+    "studyPaths": "Mga landas ng pag-aaral",
+    "goodMorning": "Magandang umaga",
+    "goodAfternoon": "Magandang hapon",
+    "goodEvening": "Magandang gabi"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "Bagong password",
+    "yourName": "Ang iyong pangalan",
+    "signIn": "Mag-sign in",
+    "createAccount": "Gumawa ng account",
+    "resetPassword": "I-reset ang password",
+    "backToSignIn": "Bumalik sa pag-sign in",
+    "forgotPassword": "Nakalimutan ang password?",
+    "noAccount": "Wala pang account?",
+    "haveAccount": "May account na?",
+    "continueAsGuest": "Magpatuloy bilang bisita",
+    "passwordPlaceholder": "Hindi bababa sa 6 na karakter"
+  },
+  "read": {
+    "bible": "Bibliya",
+    "selectTranslation": "Pumili ng salin",
+    "published": "Inilathala",
+    "unableToLoadBooks": "Hindi ma-load ang mga aklat",
+    "checkConnection": "Pakisuri ang iyong koneksyon at subukan muli.",
+    "oldTestament": "Lumang Tipan",
+    "newTestament": "Bagong Tipan",
+    "books": "mga aklat"
+  },
+  "sabbathSchool": {
+    "title": "Sabbath School",
+    "currentQuarter": "KASALUKUYANG QUARTER",
+    "lesson": "ARALIN",
+    "loading": "Nilo-load ang aralin ngayong linggo...",
+    "syncing": "Ang nilalaman ng Sabbath School ay sini-sync. Bumalik muli mamaya.",
+    "daysCompleted": "{{completed}} sa {{total}} araw ang natapos",
+    "discussionMode": "Mode ng talakayan",
+    "sabbathCompanion": "Kasama sa umaga ng Sabbath",
+    "sourceAttribution": "Nilalaman ng aralin mula sa Adventech (sabbath-school.adventech.io). Ang paghahanda sa talakayan ay ginawa ng AI.",
+    "archive": "Mga nakaraang quarter",
+    "viewArchive": "Tingnan ang mga nakaraang quarter",
+    "noArchive": "Wala pang nakaraang quarter na available."
   },
   "connect": {
     "title": "Kumonekta",

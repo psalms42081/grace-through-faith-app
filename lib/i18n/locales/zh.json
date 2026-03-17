@@ -14,7 +14,49 @@
     "studyGuide": "引导学习",
     "prayerJournal": "祷告日记",
     "devotionalPlans": "灵修计划",
-    "studyPaths": "学习路径"
+    "studyPaths": "学习路径",
+    "goodMorning": "早上好",
+    "goodAfternoon": "下午好",
+    "goodEvening": "晚上好"
+  },
+  "auth": {
+    "email": "邮箱",
+    "password": "密码",
+    "newPassword": "新密码",
+    "yourName": "您的姓名",
+    "signIn": "登录",
+    "createAccount": "创建账户",
+    "resetPassword": "重置密码",
+    "backToSignIn": "返回登录",
+    "forgotPassword": "忘记密码？",
+    "noAccount": "没有账户？",
+    "haveAccount": "已有账户？",
+    "continueAsGuest": "以访客身份继续",
+    "passwordPlaceholder": "至少6个字符"
+  },
+  "read": {
+    "bible": "圣经",
+    "selectTranslation": "选择译本",
+    "published": "出版于",
+    "unableToLoadBooks": "无法加载书卷",
+    "checkConnection": "请检查您的网络连接并重试。",
+    "oldTestament": "旧约",
+    "newTestament": "新约",
+    "books": "卷"
+  },
+  "sabbathSchool": {
+    "title": "安息日学",
+    "currentQuarter": "本季度",
+    "lesson": "课程",
+    "loading": "正在加载本周课程...",
+    "syncing": "安息日学内容正在同步中，请稍后再来。",
+    "daysCompleted": "已完成 {{completed}}/{{total}} 天",
+    "discussionMode": "讨论模式",
+    "sabbathCompanion": "安息日早晨伴侣",
+    "sourceAttribution": "课程内容来自Adventech (sabbath-school.adventech.io)。讨论准备由AI生成。",
+    "archive": "往期季度",
+    "viewArchive": "浏览往期季度",
+    "noArchive": "暂无往期季度。"
   },
   "connect": {
     "title": "连接",

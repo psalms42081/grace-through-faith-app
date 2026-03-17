@@ -14,7 +14,49 @@
     "studyGuide": "Study Guide",
     "prayerJournal": "Prayer Journal",
     "devotionalPlans": "Devotional Plans",
-    "studyPaths": "Study Paths"
+    "studyPaths": "Study Paths",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New Password",
+    "yourName": "Your Name",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "resetPassword": "Reset Password",
+    "backToSignIn": "Back to Sign In",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "continueAsGuest": "Continue as Guest",
+    "passwordPlaceholder": "At least 6 characters"
+  },
+  "read": {
+    "bible": "Bible",
+    "selectTranslation": "Select Translation",
+    "published": "Published",
+    "unableToLoadBooks": "Unable to load books",
+    "checkConnection": "Please check your connection and try again.",
+    "oldTestament": "Old Testament",
+    "newTestament": "New Testament",
+    "books": "books"
+  },
+  "sabbathSchool": {
+    "title": "Sabbath School",
+    "currentQuarter": "CURRENT QUARTER",
+    "lesson": "LESSON",
+    "loading": "Loading this week's lesson...",
+    "syncing": "Sabbath School content is being synced. Please check back shortly.",
+    "daysCompleted": "{{completed}} of {{total}} days completed",
+    "discussionMode": "Discussion Mode",
+    "sabbathCompanion": "Sabbath morning companion",
+    "sourceAttribution": "Lesson content from Adventech (sabbath-school.adventech.io). Discussion prep is AI-generated.",
+    "archive": "Past Quarters",
+    "viewArchive": "Browse Past Quarters",
+    "noArchive": "No past quarters available yet."
   },
   "connect": {
     "title": "Connect",

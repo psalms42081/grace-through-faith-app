@@ -179,16 +179,22 @@ export default function SabbathSchoolDayScreen() {
   const params = useLocalSearchParams<{
     lessonNumber: string;
     dayNumber: string;
+    quarterCode?: string;
   }>();
 
   const lessonNumber = parseInt(params.lessonNumber || "1");
   const dayNumber = parseInt(params.dayNumber || "1");
+  const quarterCode = params.quarterCode || "";
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const queryPath = quarterCode
+    ? `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&quarterCode=${quarterCode}`
+    : `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}`;
+
   const { data, isLoading } = useQuery<LessonResponse>({
-    queryKey: [`/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}`],
+    queryKey: [queryPath],
   });
 
   const day = data?.lesson?.days?.find((d) => d.dayNumber === dayNumber);
@@ -215,7 +221,7 @@ export default function SabbathSchoolDayScreen() {
     onSuccess: () => {
       setIsCompleted(true);
       queryClient.invalidateQueries({
-        queryKey: [`/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}`],
+        queryKey: [queryPath],
       });
       queryClient.invalidateQueries({
         queryKey: [`/api/sabbath-school/current?userId=${userId}`],
@@ -244,7 +250,7 @@ export default function SabbathSchoolDayScreen() {
             <Pressable
               onPress={() =>
                 router.replace(
-                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber - 1}` as any
+                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber - 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
                 )
               }
               hitSlop={8}
@@ -256,7 +262,7 @@ export default function SabbathSchoolDayScreen() {
             <Pressable
               onPress={() =>
                 router.replace(
-                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}` as any
+                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
                 )
               }
               hitSlop={8}

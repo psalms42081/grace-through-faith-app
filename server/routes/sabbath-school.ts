@@ -98,8 +98,16 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   try {
     const userId = getAuthUserId(req) || "guest";
     const lessonNumber = parseInt(req.params.lessonNumber);
+    const quarterCode = req.query.quarterCode as string | undefined;
 
-    const quarterly = await getMostRecentQuarterly();
+    let quarterly: any = null;
+    if (quarterCode) {
+      const [q] = await db.select().from(sabbathSchoolQuarterlies).where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+      quarterly = q || null;
+    }
+    if (!quarterly) {
+      quarterly = await getMostRecentQuarterly();
+    }
 
     if (!quarterly) {
       return res.status(404).json({ error: "Quarterly not found" });
@@ -153,6 +161,48 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   } catch (err) {
     console.error("Sabbath School lesson error:", err);
     return res.status(500).json({ error: "Failed to fetch lesson" });
+  }
+});
+
+router.get("/api/sabbath-school/quarters", async (req, res) => {
+  try {
+    const quarters = await db
+      .select()
+      .from(sabbathSchoolQuarterlies)
+      .orderBy(desc(sabbathSchoolQuarterlies.quarterCode));
+
+    return res.json({ quarters });
+  } catch (err) {
+    console.error("Sabbath School quarters error:", err);
+    return res.status(500).json({ error: "Failed to fetch quarters" });
+  }
+});
+
+router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const { quarterCode } = req.params;
+
+    const [quarterly] = await db
+      .select()
+      .from(sabbathSchoolQuarterlies)
+      .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
+      .limit(1);
+
+    if (!quarterly) {
+      return res.status(404).json({ error: "Quarter not found" });
+    }
+
+    const lessons = await db
+      .select()
+      .from(sabbathSchoolLessons)
+      .where(eq(sabbathSchoolLessons.quarterlyId, quarterly.id))
+      .orderBy(sabbathSchoolLessons.lessonNumber);
+
+    return res.json({ quarterly, lessons });
+  } catch (err) {
+    console.error("Sabbath School quarter detail error:", err);
+    return res.status(500).json({ error: "Failed to fetch quarter detail" });
   }
 });
 

@@ -1184,7 +1184,8 @@ export default function AdminReviewScreen() {
   } | null>(null);
 
   const isAdmin = user?.role === "admin";
-  const isEditor = user?.role === "editor" || isAdmin;
+  const canEdit = user?.role === "editor" || isAdmin;
+  const isEditor = canEdit || user?.role === "church_leader";
 
   const overviewParams = new URLSearchParams({ reviewStatus: filterReviewStatus, sortBy, sortOrder });
   if (filterPromptVersion) overviewParams.set("promptVersion", filterPromptVersion);
@@ -1393,6 +1394,7 @@ export default function AdminReviewScreen() {
               items={overview?.filteredList || []}
               isLoading={overviewLoading}
               isAdmin={isAdmin}
+              canEdit={canEdit}
               onReview={handleReviewStart}
               onPreview={setPreviewId}
               onDiff={setDiffId}
@@ -1410,6 +1412,7 @@ export default function AdminReviewScreen() {
             quartersLoading={quartersLoading}
             quarterLoading={quarterLoading}
             isAdmin={isAdmin}
+            canEdit={canEdit}
             onSelectQuarter={setSelectedQuarter}
             onGenerate={handleGenerate}
             generateLoading={generateMutation.isPending}
@@ -1620,6 +1623,7 @@ function PendingTab({
   items,
   isLoading,
   isAdmin,
+  canEdit = true,
   onReview,
   onPreview,
   onDiff,
@@ -1629,6 +1633,7 @@ function PendingTab({
   items: FilteredItem[];
   isLoading: boolean;
   isAdmin: boolean;
+  canEdit?: boolean;
   onReview: (id: string, action: string, title: string) => void;
   onPreview: (id: string) => void;
   onDiff: (id: string) => void;
@@ -1707,7 +1712,7 @@ function PendingTab({
               </Text>
             </View>
           )}
-          {item.reviewStatus === "pending" && (
+          {item.reviewStatus === "pending" && canEdit && (
             <View style={styles.reviewActions}>
               <Pressable
                 style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
@@ -1748,6 +1753,7 @@ function QuarterTab({
   quartersLoading,
   quarterLoading,
   isAdmin,
+  canEdit = true,
   onSelectQuarter,
   onGenerate,
   generateLoading,
@@ -1762,6 +1768,7 @@ function QuarterTab({
   quartersLoading: boolean;
   quarterLoading: boolean;
   isAdmin: boolean;
+  canEdit?: boolean;
   onSelectQuarter: (code: string) => void;
   onGenerate: (code: string) => void;
   generateLoading: boolean;
@@ -1874,7 +1881,7 @@ function QuarterTab({
                 </View>
               </View>
 
-              {lesson.companion && lesson.companion.reviewStatus === "pending" && (
+              {lesson.companion && lesson.companion.reviewStatus === "pending" && canEdit && (
                 <View style={[styles.reviewActions, { marginTop: 8 }]}>
                   <Pressable
                     style={[styles.actionBtn, { backgroundColor: "#10B981" }]}

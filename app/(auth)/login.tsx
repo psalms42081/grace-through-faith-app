@@ -14,17 +14,18 @@ import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login, resetPassword } = useAuth();
+  const { login } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetMode, setResetMode] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -42,26 +43,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!email.trim()) {
-      setError("Please enter your email address");
-      return;
-    }
-    if (!newPassword.trim() || newPassword.trim().length < 4) {
-      setError("New password must be at least 4 characters");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    const result = await resetPassword(email.trim(), newPassword.trim());
-    setLoading(false);
-    if (result.success) {
-      router.dismissAll();
-    } else {
-      setError(result.error || "Password reset failed");
-    }
-  };
-
   return (
     <KeyboardAvoidingView
       style={s.container}
@@ -74,7 +55,7 @@ export default function LoginScreen() {
       >
         <View style={s.header}>
           <Ionicons name="book" size={48} color="#C9933A" />
-          <Text style={s.title}>{resetMode ? "Reset Password" : "Welcome Back"}</Text>
+          <Text style={s.title}>{resetMode ? t("auth.resetPassword") : t("auth.signIn")}</Text>
           <Text style={s.subtitle}>
             {resetMode
               ? "Enter your email and a new password"
@@ -90,7 +71,7 @@ export default function LoginScreen() {
         ) : null}
 
         <View style={s.form}>
-          <Text style={s.label}>Email</Text>
+          <Text style={s.label}>{t("auth.email")}</Text>
           <TextInput
             style={s.input}
             placeholder="your@email.com"
@@ -105,52 +86,29 @@ export default function LoginScreen() {
 
           {resetMode ? (
             <>
-              <Text style={s.label}>New Password</Text>
-              <View style={s.passwordRow}>
-                <TextInput
-                  style={[s.input, s.passwordInput]}
-                  placeholder="Enter new password"
-                  placeholderTextColor="#666"
-                  secureTextEntry={!showPassword}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  testID="reset-password"
-                />
-                <Pressable
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={s.eyeBtn}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color="#888"
-                  />
-                </Pressable>
+              <View style={s.resetInfo}>
+                <Ionicons name="information-circle" size={20} color="#C9933A" />
+                <Text style={s.resetInfoText}>
+                  Password reset is available from your profile after signing in. If you cannot access your account, please create a new one.
+                </Text>
               </View>
 
               <Pressable
-                onPress={handleResetPassword}
-                disabled={loading}
-                style={[s.primaryBtn, loading && s.btnDisabled]}
-                testID="reset-submit"
+                onPress={() => { setResetMode(false); setError(""); }}
+                style={s.primaryBtn}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={s.primaryBtnText}>Reset Password</Text>
-                )}
+                <Text style={s.primaryBtnText}>{t("auth.backToSignIn")}</Text>
               </Pressable>
 
-              <Pressable
-                onPress={() => { setResetMode(false); setError(""); setNewPassword(""); }}
-                style={s.skipBtn}
-              >
-                <Text style={s.linkText}>Back to Sign In</Text>
-              </Pressable>
+              <Link href="/(auth)/register" asChild>
+                <Pressable style={s.skipBtn}>
+                  <Text style={s.linkText}>{t("auth.createAccount")}</Text>
+                </Pressable>
+              </Link>
             </>
           ) : (
             <>
-              <Text style={s.label}>Password</Text>
+              <Text style={s.label}>{t("auth.password")}</Text>
               <View style={s.passwordRow}>
                 <TextInput
                   style={[s.input, s.passwordInput]}
@@ -182,7 +140,7 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={s.primaryBtnText}>Sign In</Text>
+                  <Text style={s.primaryBtnText}>{t("auth.signIn")}</Text>
                 )}
               </Pressable>
 
@@ -190,7 +148,7 @@ export default function LoginScreen() {
                 onPress={() => { setResetMode(true); setError(""); }}
                 style={s.forgotBtn}
               >
-                <Text style={s.forgotText}>Forgot Password?</Text>
+                <Text style={s.forgotText}>{t("auth.forgotPassword")}</Text>
               </Pressable>
             </>
           )}
@@ -199,16 +157,16 @@ export default function LoginScreen() {
         {!resetMode && (
           <>
             <View style={s.footer}>
-              <Text style={s.footerText}>Don't have an account?</Text>
+              <Text style={s.footerText}>{t("auth.noAccount")}</Text>
               <Link href="/(auth)/register" asChild>
                 <Pressable>
-                  <Text style={s.linkText}>Create Account</Text>
+                  <Text style={s.linkText}>{t("auth.createAccount")}</Text>
                 </Pressable>
               </Link>
             </View>
 
             <Pressable onPress={() => router.back()} style={s.skipBtn}>
-              <Text style={s.skipText}>Continue as Guest</Text>
+              <Text style={s.skipText}>{t("auth.continueAsGuest")}</Text>
             </Pressable>
           </>
         )}
@@ -294,4 +252,21 @@ const s = StyleSheet.create({
   skipText: { color: "#666", fontSize: 13, fontFamily: "Inter_400Regular" },
   forgotBtn: { alignItems: "center" as const, marginTop: 12 },
   forgotText: { color: "#C9933A", fontSize: 13, fontFamily: "Inter_500Medium" },
+  resetInfo: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 10,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(201, 147, 58, 0.08)",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  resetInfoText: {
+    color: "#B8A07A",
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+    lineHeight: 20,
+  },
 });

@@ -14,10 +14,12 @@ import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,8 +36,8 @@ export default function RegisterScreen() {
       setError("Please enter your email");
       return;
     }
-    if (password.length < 4) {
-      setError("Password must be at least 4 characters");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
       return;
     }
     setError("");
@@ -61,7 +63,7 @@ export default function RegisterScreen() {
       >
         <View style={s.header}>
           <Ionicons name="person-add" size={48} color="#C9933A" />
-          <Text style={s.title}>Create Account</Text>
+          <Text style={s.title}>{t("auth.createAccount")}</Text>
           <Text style={s.subtitle}>
             Save your progress, join prayer groups, and connect with your church family
           </Text>
@@ -75,7 +77,7 @@ export default function RegisterScreen() {
         ) : null}
 
         <View style={s.form}>
-          <Text style={s.label}>Your Name</Text>
+          <Text style={s.label}>{t("auth.yourName")}</Text>
           <TextInput
             style={s.input}
             placeholder="How should we greet you?"
@@ -86,7 +88,7 @@ export default function RegisterScreen() {
             testID="register-name"
           />
 
-          <Text style={s.label}>Email</Text>
+          <Text style={s.label}>{t("auth.email")}</Text>
           <TextInput
             style={s.input}
             placeholder="your@email.com"
@@ -99,11 +101,12 @@ export default function RegisterScreen() {
             testID="register-email"
           />
 
-          <Text style={s.label}>Password</Text>
+          <Text style={s.label}>{t("auth.password")}</Text>
           <View style={s.passwordRow}>
             <TextInput
               style={[s.input, s.passwordInput]}
               placeholder="At least 6 characters"
+              autoCapitalize="none"
               placeholderTextColor="#666"
               secureTextEntry={!showPassword}
               value={password}
@@ -131,16 +134,16 @@ export default function RegisterScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={s.primaryBtnText}>Create Account</Text>
+              <Text style={s.primaryBtnText}>{t("auth.createAccount")}</Text>
             )}
           </Pressable>
         </View>
 
         <View style={s.footer}>
-          <Text style={s.footerText}>Already have an account?</Text>
+          <Text style={s.footerText}>{t("auth.haveAccount")}</Text>
           <Link href="/(auth)/login" asChild>
             <Pressable>
-              <Text style={s.linkText}>Sign In</Text>
+              <Text style={s.linkText}>{t("auth.signIn")}</Text>
             </Pressable>
           </Link>
         </View>

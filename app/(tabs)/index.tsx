@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -1039,6 +1040,7 @@ function AdultHomeScreen() {
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId } = useAuth();
   const sabbath = useSabbath();
+  const { t } = useTranslation();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -1061,7 +1063,12 @@ function AdultHomeScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const greeting = useMemo(() => getGreeting(), []);
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t("home.goodMorning");
+    if (hour < 17) return t("home.goodAfternoon");
+    return t("home.goodEvening");
+  }, [t]);
   const verse = useMemo(() => getTodaysVerse(), []);
   const bgImage = useMemo(() => {
     const dayOfYear = Math.floor(

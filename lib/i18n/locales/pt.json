@@ -14,7 +14,49 @@
     "studyGuide": "Estudo guiado",
     "prayerJournal": "Diario de oracao",
     "devotionalPlans": "Planos devocionais",
-    "studyPaths": "Trilhas de estudo"
+    "studyPaths": "Trilhas de estudo",
+    "goodMorning": "Bom dia",
+    "goodAfternoon": "Boa tarde",
+    "goodEvening": "Boa noite"
+  },
+  "auth": {
+    "email": "E-mail",
+    "password": "Senha",
+    "newPassword": "Nova senha",
+    "yourName": "Seu nome",
+    "signIn": "Entrar",
+    "createAccount": "Criar conta",
+    "resetPassword": "Redefinir senha",
+    "backToSignIn": "Voltar ao login",
+    "forgotPassword": "Esqueceu a senha?",
+    "noAccount": "Nao tem uma conta?",
+    "haveAccount": "Ja tem uma conta?",
+    "continueAsGuest": "Continuar como convidado",
+    "passwordPlaceholder": "Pelo menos 6 caracteres"
+  },
+  "read": {
+    "bible": "Biblia",
+    "selectTranslation": "Selecionar traducao",
+    "published": "Publicado",
+    "unableToLoadBooks": "Nao foi possivel carregar os livros",
+    "checkConnection": "Por favor, verifique sua conexao e tente novamente.",
+    "oldTestament": "Antigo Testamento",
+    "newTestament": "Novo Testamento",
+    "books": "livros"
+  },
+  "sabbathSchool": {
+    "title": "Escola Sabatica",
+    "currentQuarter": "TRIMESTRE ATUAL",
+    "lesson": "LICAO",
+    "loading": "Carregando a licao desta semana...",
+    "syncing": "O conteudo da Escola Sabatica esta sendo sincronizado. Por favor, volte em breve.",
+    "daysCompleted": "{{completed}} de {{total}} dias concluidos",
+    "discussionMode": "Modo de discussao",
+    "sabbathCompanion": "Companheiro do sabado",
+    "sourceAttribution": "Conteudo das licoes de Adventech (sabbath-school.adventech.io). A preparacao para discussao e gerada por IA.",
+    "archive": "Trimestres anteriores",
+    "viewArchive": "Ver trimestres anteriores",
+    "noArchive": "Nenhum trimestre anterior disponivel ainda."
   },
   "connect": {
     "title": "Conectar",

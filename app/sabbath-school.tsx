@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import { useTranslation } from "react-i18next";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sabbath"];
 
@@ -44,6 +45,7 @@ interface QuarterlyData {
   title: string;
   humanDate: string | null;
   colorPrimary: string | null;
+  quarterCode?: string;
 }
 
 export default function SabbathSchoolScreen() {
@@ -51,6 +53,8 @@ export default function SabbathSchoolScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { depth } = useStudyDepth();
+  const { t } = useTranslation();
+  const [showArchive, setShowArchive] = useState(false);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -65,28 +69,37 @@ export default function SabbathSchoolScreen() {
     queryKey: [`/api/sabbath-school/current?userId=${userId}`],
   });
 
+  const { data: archiveData } = useQuery<{ quarters: QuarterlyData[] }>({
+    queryKey: ["/api/sabbath-school/quarters"],
+    enabled: showArchive,
+  });
+
   const quarterly = data?.quarterly;
   const lesson = data?.currentLesson;
   const days = lesson?.days || [];
   const completedCount = data?.completedDays || 0;
   const todayDayNumber = data?.todayDayNumber || null;
 
+  const pastQuarters = (archiveData?.quarters || []).filter(
+    (q) => quarterly && q.id !== quarterly.id
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenHeader title="Sabbath School" />
+      <ScreenHeader title={t("sabbathSchool.title")} />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-            Loading this week's lesson...
+            {t("sabbathSchool.loading")}
           </Text>
         </View>
       ) : !quarterly || !lesson ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="book-outline" size={48} color={theme.textMuted} />
           <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-            Sabbath School content is being synced. Please check back shortly.
+            {t("sabbathSchool.syncing")}
           </Text>
         </View>
       ) : (
@@ -96,7 +109,7 @@ export default function SabbathSchoolScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.quarterlyCard, { backgroundColor: quarterly.colorPrimary || "#2E4161" }]}>
-            <Text style={styles.quarterlyLabel}>CURRENT QUARTER</Text>
+            <Text style={styles.quarterlyLabel}>{t("sabbathSchool.currentQuarter")}</Text>
             <Text style={styles.quarterlyTitle}>{quarterly.title}</Text>
             {quarterly.humanDate && (
               <Text style={styles.quarterlyDate}>{quarterly.humanDate}</Text>
@@ -106,7 +119,7 @@ export default function SabbathSchoolScreen() {
           <View style={styles.lessonHeader}>
             <View style={styles.lessonBadge}>
               <Text style={[styles.lessonBadgeText, { color: theme.accent }]}>
-                LESSON {data?.currentLessonNumber || lesson.lessonNumber}
+                {t("sabbathSchool.lesson")} {data?.currentLessonNumber || lesson.lessonNumber}
               </Text>
             </View>
             <Text style={[styles.lessonTitle, { color: theme.text }]}>
@@ -134,7 +147,7 @@ export default function SabbathSchoolScreen() {
               />
             </View>
             <Text style={[styles.progressText, { color: theme.textMuted }]}>
-              {completedCount} of {days.length} days completed
+              {t("sabbathSchool.daysCompleted", { completed: completedCount, total: days.length })}
             </Text>
           </View>
 
@@ -219,18 +232,73 @@ export default function SabbathSchoolScreen() {
           >
             <Ionicons name="chatbubbles" size={22} color="#050507" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.discussionBtnTitle}>Discussion Mode</Text>
+              <Text style={styles.discussionBtnTitle}>{t("sabbathSchool.discussionMode")}</Text>
               <Text style={styles.discussionBtnSub}>
-                Sabbath morning companion
+                {t("sabbathSchool.sabbathCompanion")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#050507" />
           </Pressable>
 
+          <Pressable
+            onPress={() => setShowArchive(!showArchive)}
+            style={({ pressed }) => [
+              styles.archiveToggle,
+              {
+                backgroundColor: theme.backgroundCard,
+                borderColor: theme.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="library-outline" size={18} color={theme.textSecondary} />
+            <Text style={[styles.archiveToggleText, { color: theme.text }]}>
+              {t("sabbathSchool.viewArchive")}
+            </Text>
+            <Ionicons
+              name={showArchive ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={theme.textMuted}
+            />
+          </Pressable>
+
+          {showArchive && (
+            <View style={styles.archiveSection}>
+              {pastQuarters.length === 0 ? (
+                <Text style={[styles.archiveEmpty, { color: theme.textMuted }]}>
+                  {t("sabbathSchool.noArchive")}
+                </Text>
+              ) : (
+                pastQuarters.map((q) => (
+                  <Pressable
+                    key={q.id}
+                    onPress={() =>
+                      router.push(
+                        `/sabbath-school-quarter?quarterCode=${(q as any).quarterCode}&title=${encodeURIComponent(q.title)}` as any
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.archiveCard,
+                      {
+                        backgroundColor: q.colorPrimary || "#2E4161",
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.archiveCardTitle}>{q.title}</Text>
+                    {q.humanDate && (
+                      <Text style={styles.archiveCardDate}>{q.humanDate}</Text>
+                    )}
+                  </Pressable>
+                ))
+              )}
+            </View>
+          )}
+
           <View style={styles.sourceFooter}>
             <Ionicons name="library-outline" size={12} color={theme.textMuted} />
             <Text style={[styles.sourceFooterText, { color: theme.textMuted }]}>
-              Lesson content from Adventech (sabbath-school.adventech.io). Discussion prep is AI-generated.
+              {t("sabbathSchool.sourceAttribution")}
             </Text>
           </View>
 
@@ -374,6 +442,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(5, 5, 7, 0.6)",
     marginTop: 1,
+  },
+  archiveToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  archiveToggleText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    flex: 1,
+  },
+  archiveSection: { gap: 10 },
+  archiveEmpty: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    textAlign: "center",
+    paddingVertical: 12,
+  },
+  archiveCard: {
+    borderRadius: 14,
+    padding: 16,
+    gap: 4,
+  },
+  archiveCardTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 16,
+    color: "#fff",
+    lineHeight: 22,
+  },
+  archiveCardDate: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
   },
   sourceFooter: {
     flexDirection: "row" as const,

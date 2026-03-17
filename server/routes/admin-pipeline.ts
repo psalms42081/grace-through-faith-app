@@ -9,11 +9,11 @@ import {
   sabbathSchoolQuarterlies,
 } from "../../shared/schema";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
-import { requireAdmin, requireEditor } from "../middleware/auth";
+import { requireAdmin, requireEditor, requirePipelineAccess } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
+router.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, res) => {
   try {
     const filterReviewStatus = req.query.reviewStatus as string | undefined;
     const filterGenStatus = req.query.generationStatus as string | undefined;
@@ -309,7 +309,7 @@ router.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
   }
 });
 
-router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req, res) => {
+router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -456,7 +456,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req
   }
 });
 
-router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, res) => {
+router.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -580,7 +580,7 @@ router.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, r
   }
 });
 
-router.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (req, res) => {
+router.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, async (req, res) => {
   try {
     const { quarterCode } = req.params;
 
@@ -729,7 +729,7 @@ router.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, re
   }
 });
 
-router.get("/api/admin/pipeline/quarters", requireEditor, async (_req, res) => {
+router.get("/api/admin/pipeline/quarters", requirePipelineAccess, async (_req, res) => {
   try {
     const { getAvailableQuarters } = await import("../services/batch-generator");
     const quarters = await getAvailableQuarters();
@@ -745,8 +745,8 @@ router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!role || !["user", "editor", "admin"].includes(role)) {
-      return res.status(400).json({ error: "role must be user, editor, or admin" });
+    if (!role || !["member", "student", "church_leader", "editor", "admin"].includes(role)) {
+      return res.status(400).json({ error: "role must be member, student, church_leader, editor, or admin" });
     }
 
     const [target] = await db
@@ -781,7 +781,7 @@ router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   }
 });
 
-router.get("/api/admin/pipeline/resource/:id/review-history", requireEditor, async (req, res) => {
+router.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAccess, async (req, res) => {
   try {
     const { id } = req.params;
 

@@ -79,6 +79,8 @@ export function requireRole(...allowedRoles: string[]) {
 
 export const requireEditor = requireRole("editor", "admin");
 export const requireAdmin = requireRole("admin");
+export const requireChurchLeader = requireRole("church_leader", "admin");
+export const requirePipelineAccess = requireRole("editor", "church_leader", "admin");
 
 export async function checkProStatus(
   req: Request,

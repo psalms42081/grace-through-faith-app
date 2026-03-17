@@ -18,6 +18,7 @@ import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
+import { apiRequest, queryClient } from "@/lib/query-client";
 import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
@@ -280,7 +281,7 @@ export default function ProfileScreen() {
         <View style={{ height: 12 }} />
 
         {[
-          ...(user?.role === "admin" || user?.role === "editor" ? [
+          ...(user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader" ? [
             { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
