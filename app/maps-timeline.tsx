@@ -14,10 +14,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import BibleMap from "@/components/BibleMap";
+import AtlasPlate from "@/components/AtlasPlate";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { getLocationByName, getLocationById, getLocationsByEra, getRouteCoordinates, ERA_OPTIONS, OVERLAY_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type OverlayType, type JourneyFilter } from "@/constants/biblical-locations";
 import type { RouteLineData, KingdomMarkerData, TribeMarkerData } from "@/components/BibleMap";
+import { getPlateForEra, getPlateForJourney, type AtlasHotspot } from "@/constants/atlas-plates";
 
 type Tab = "maps" | "timeline";
 type MapMode = "modern" | "biblical";
@@ -244,7 +246,7 @@ export default function MapsTimelineScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [activeTab, setActiveTab] = useState<Tab>((tabParam as Tab) || "maps");
-  const [mapMode, setMapMode] = useState<MapMode>((modeParam as MapMode) || "modern");
+  const [mapMode, setMapMode] = useState<MapMode>((modeParam as MapMode) || "biblical");
   const [selectedEra, setSelectedEra] = useState<EraFilter>((eraParam as EraFilter) || "All");
   const [overlay, setOverlay] = useState<OverlayType>((overlayParam as OverlayType) || "none");
   const [selectedJourney, setSelectedJourney] = useState<JourneyFilter>((journeyParam as JourneyFilter) || "all");
@@ -452,6 +454,28 @@ function MapsContent({
 
   const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
   const quietMarkers = overlay === "none" || (overlay === "journey-routes" && selectedJourney === "all");
+
+  const currentPlate = useMemo(() => {
+    if (overlay === "journey-routes" && selectedJourney !== "all") {
+      const journeyPlate = getPlateForJourney(selectedJourney);
+      if (journeyPlate) return journeyPlate;
+    }
+    return getPlateForEra(selectedEra);
+  }, [selectedEra, overlay, selectedJourney]);
+
+  const handleHotspotPress = useCallback((hotspot: AtlasHotspot) => {
+    switch (hotspot.targetType) {
+      case "location":
+        router.push({ pathname: `/location/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney, kingdom: selectedKingdom, tribe: selectedTribe } } as any);
+        break;
+      case "journey":
+        router.push({ pathname: `/journey-route/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay: "journey-routes", journey: hotspot.targetId } } as any);
+        break;
+      case "kingdom":
+        router.push({ pathname: `/kingdom-overlay/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay: "kingdoms", kingdom: hotspot.targetId } } as any);
+        break;
+    }
+  }, [mapMode, selectedEra, overlay, selectedJourney, selectedKingdom, selectedTribe]);
 
   const displayLocations = useMemo(() => {
     if (overlay === "journey-routes" && selectedJourney !== "all") {
@@ -823,27 +847,35 @@ function MapsContent({
       </View>
 
       <View style={[styles.mapContainer, isJourneySelected && { height: 280 }]}>
-        <BibleMap
-          locations={displayLocations}
-          selectedLocation={selectedLocation && selectedLocation.latitude && selectedLocation.longitude ? {
-            id: selectedLocation.id,
-            name: selectedLocation.name,
-            latitude: selectedLocation.latitude,
-            longitude: selectedLocation.longitude,
-            locationType: selectedLocation.locationType,
-          } : null}
-          defaultLat={HOLY_LAND_REGION.latitude}
-          defaultLon={HOLY_LAND_REGION.longitude}
-          onMarkerPress={handleMarkerPress}
-          routeLines={routeLines}
-          kingdomMarkers={kingdomMarkers}
-          onKingdomPress={handleKingdomPress}
-          tribeMarkers={tribeMarkers}
-          onTribePress={handleTribePress}
-          fitCoordinates={fitCoordinates}
-          isJourneySelected={isJourneySelected}
-          quietMarkers={quietMarkers}
-        />
+        {isBiblical ? (
+          <AtlasPlate
+            key={currentPlate.id}
+            plate={currentPlate}
+            onHotspotPress={handleHotspotPress}
+          />
+        ) : (
+          <BibleMap
+            locations={displayLocations}
+            selectedLocation={selectedLocation && selectedLocation.latitude && selectedLocation.longitude ? {
+              id: selectedLocation.id,
+              name: selectedLocation.name,
+              latitude: selectedLocation.latitude,
+              longitude: selectedLocation.longitude,
+              locationType: selectedLocation.locationType,
+            } : null}
+            defaultLat={HOLY_LAND_REGION.latitude}
+            defaultLon={HOLY_LAND_REGION.longitude}
+            onMarkerPress={handleMarkerPress}
+            routeLines={routeLines}
+            kingdomMarkers={kingdomMarkers}
+            onKingdomPress={handleKingdomPress}
+            tribeMarkers={tribeMarkers}
+            onTribePress={handleTribePress}
+            fitCoordinates={fitCoordinates}
+            isJourneySelected={isJourneySelected}
+            quietMarkers={quietMarkers}
+          />
+        )}
 
         {selectedLocation && (
           <View style={[styles.mapOverlayCard, { backgroundColor: isDark ? "#1A1A2E" : "#fff" }]}>
