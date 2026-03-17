@@ -125,7 +125,10 @@ fi
 cleanup_server
 trap - EXIT
 
-echo "=== Building Expo static ==="
+echo "=== Building Expo static (mobile) ==="
 npm run expo:static:build
+
+echo "=== Building Expo web ==="
+npx expo export --platform web --output-dir dist
 
 echo "=== Build complete ==="
