@@ -118,28 +118,10 @@ export default function ConnectScreen() {
         <SectionLabel title={t("connect.watchAndListen")} theme={theme} />
 
         <VisualCard
-          imageKey="speakers"
-          title="SDA Speakers"
-          subtitle="Watch sermons from Adventist teachers"
-          onPress={() => router.push("/speakers" as any)}
-          theme={theme}
-          compact
-        />
-
-        <VisualCard
           imageKey="broadcasts"
-          title={t("connect.broadcasts")}
-          subtitle={t("connect.broadcastsSub")}
-          onPress={() => router.push("/broadcasts" as any)}
-          theme={theme}
-          compact
-        />
-
-        <VisualCard
-          imageKey="radio"
-          title="Christian Radio"
-          subtitle="Live Adventist & gospel streams"
-          onPress={() => router.push("/music" as any)}
+          title={t("connect.watchAndListen")}
+          subtitle="SDA Speakers, Broadcasts, Christian Radio"
+          onPress={() => router.push({ pathname: "/connect-media" } as any)}
           theme={theme}
           compact
         />

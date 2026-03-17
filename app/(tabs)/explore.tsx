@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -17,129 +17,95 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 
-const TOPIC_IMAGES: Record<string, any> = {
-  "quick-read": require("@/assets/topic-cards/quick-read.png"),
-  "guided-study": require("@/assets/topic-cards/guided-study.png"),
-  "deep-study": require("@/assets/topic-cards/deep-study.png"),
-  "study-paths": require("@/assets/topic-cards/study-paths.png"),
-  "devotional-plans": require("@/assets/topic-cards/devotional-plans.png"),
-  "study-resources": require("@/assets/topic-cards/study-resources.png"),
-  "prophecy": require("@/assets/topic-cards/prophecy.png"),
-  "historic-voices": require("@/assets/topic-cards/historic-voices.png"),
-  "fundamental-beliefs": require("@/assets/topic-cards/fundamental-beliefs.png"),
-  "maps-timeline": require("@/assets/topic-cards/maps-timeline.png"),
-  love: require("@/assets/topic-cards/love.png"),
-  faith: require("@/assets/topic-cards/faith.png"),
-  prayer: require("@/assets/topic-cards/prayer.png"),
-  peace: require("@/assets/topic-cards/peace.png"),
-  hope: require("@/assets/topic-cards/hope.png"),
-  strength: require("@/assets/topic-cards/strength.png"),
-  wisdom: require("@/assets/topic-cards/wisdom.png"),
-  grace: require("@/assets/topic-cards/grace.png"),
-  joy: require("@/assets/topic-cards/joy.png"),
-  "word-study": require("@/assets/topic-cards/word-study.png"),
-  "bible-characters": require("@/assets/topic-cards/bible-characters.png"),
-  "bible-maps": require("@/assets/topic-cards/bible-maps.png"),
-  timeline: require("@/assets/topic-cards/timeline.png"),
-  "three-angels": require("@/assets/topic-cards/three-angels.png"),
-  health: require("@/assets/topic-cards/health-message.png"),
+const CATEGORY_IMAGES: Record<string, any> = {
+  "study-scripture": require("@/assets/topic-cards/deep-study.png"),
+  "sabbath-prayer": require("@/assets/topic-cards/fundamental-beliefs.png"),
+  "learning-paths": require("@/assets/topic-cards/study-paths.png"),
+  "study-tools": require("@/assets/topic-cards/maps-timeline.png"),
+  "adventist-studies": require("@/assets/topic-cards/three-angels.png"),
+  "spiritual-themes": require("@/assets/topic-cards/grace.png"),
 };
 
-function TopicImageCard({
+const CATEGORIES = [
+  {
+    id: "study-scripture",
+    title: "Study Scripture",
+    subtitle: "Quick Read, Guided Study, Deep Study",
+    icon: "book" as const,
+  },
+  {
+    id: "sabbath-prayer",
+    title: "Sabbath School & Prayer",
+    subtitle: "Weekly lesson, Prayer Journal",
+    icon: "calendar" as const,
+  },
+  {
+    id: "learning-paths",
+    title: "Learning Paths",
+    subtitle: "Study Paths, Devotional Plans",
+    icon: "trail-sign" as const,
+  },
+  {
+    id: "study-tools",
+    title: "Study Tools",
+    subtitle: "Historic Voices, Bible Maps, Timeline",
+    icon: "compass" as const,
+  },
+  {
+    id: "adventist-studies",
+    title: "Adventist Studies",
+    subtitle: "Three Angels' Messages, Health Message",
+    icon: "school" as const,
+  },
+  {
+    id: "spiritual-themes",
+    title: "Spiritual Themes",
+    subtitle: "Love, Faith, Prayer, Peace, Hope & more",
+    icon: "heart" as const,
+  },
+];
+
+function CategoryCard({
   id,
   title,
   subtitle,
-  badge,
   onPress,
-  testID,
 }: {
   id: string;
   title: string;
   subtitle: string;
-  badge?: string;
   onPress: () => void;
-  testID?: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      testID={testID}
+      testID={`study-cat-${id}`}
       style={({ pressed }) => [
-        st.topicImageCard,
+        st.categoryCard,
         pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
       ]}
       accessibilityRole="button"
       accessibilityLabel={title}
     >
-      <Image source={TOPIC_IMAGES[id]} style={st.topicImageBg} resizeMode="cover" />
+      <Image source={CATEGORY_IMAGES[id]} style={st.categoryBg} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.82)"]}
-        locations={[0, 0.4, 1]}
-        style={st.topicImageOverlay}
+        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.88)"]}
+        locations={[0, 0.35, 1]}
+        style={st.categoryOverlay}
       >
-        <View style={st.topicImageContent}>
+        <View style={st.categoryContent}>
           <View style={{ flex: 1 }}>
-            <View style={st.topicImageTitleRow}>
-              <Text style={[st.topicImageTitle, { fontFamily: "Inter_600SemiBold" }]}>
-                {title}
-              </Text>
-              {badge ? (
-                <View style={st.topicImageBadge}>
-                  <Text style={[st.topicImageBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
-                    {badge}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={[st.topicImageSub, { fontFamily: "Inter_400Regular" }]}>
+            <Text style={[st.categoryTitle, { fontFamily: "Inter_600SemiBold" }]}>
+              {title}
+            </Text>
+            <Text style={[st.categorySub, { fontFamily: "Inter_400Regular" }]}>
               {subtitle}
             </Text>
           </View>
-          <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.7)" />
+          <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
         </View>
       </LinearGradient>
     </Pressable>
-  );
-}
-
-const SPIRITUAL_THEMES = [
-  { id: "love", title: "Love", subtitle: "Explore what Scripture teaches about love" },
-  { id: "faith", title: "Faith", subtitle: "Walking by faith, not by sight" },
-  { id: "prayer", title: "Prayer", subtitle: "Drawing near to God in prayer" },
-  { id: "peace", title: "Peace", subtitle: "Finding rest in God's promises" },
-  { id: "hope", title: "Hope", subtitle: "Anchored in the hope of Christ" },
-  { id: "strength", title: "Strength", subtitle: "God's strength in our weakness" },
-  { id: "wisdom", title: "Wisdom", subtitle: "Seeking wisdom from above" },
-  { id: "grace", title: "Grace", subtitle: "The unmerited favor of God" },
-  { id: "joy", title: "Joy", subtitle: "The joy of the Lord is our strength" },
-];
-
-const STUDY_TOOLS = [
-  { id: "historic-voices", title: "Historic Voices", subtitle: "Matthew Henry, Adam Clarke, John Gill & more", route: "/(tabs)/study?tab=voices" },
-  { id: "bible-maps", title: "Bible Maps", subtitle: "Ancient locations and biblical geography", route: "/maps-timeline?tab=maps" },
-  { id: "timeline", title: "Timeline", subtitle: "Walk through biblical history", route: "/maps-timeline?tab=timeline" },
-];
-
-const ADVENTIST_STUDIES = [
-  { id: "three-angels", title: "Three Angels' Messages", subtitle: "Study the messages of Revelation 14" },
-  { id: "health", title: "Health Message", subtitle: "Biblical principles for wholeness" },
-];
-
-interface LayerCompletionEntry {
-  layer: string;
-  completedAt: string;
-}
-
-const LAYER_ORDER = ["word", "context", "voices", "application"];
-
-
-function SectionLabel({ label, theme }: { label: string; theme: typeof Colors.dark }) {
-  return (
-    <View style={st.sectionHeader}>
-      <Text style={[st.sectionLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -157,7 +123,10 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
   if (enrolled.length === 0) return null;
 
   return (
-    <View>
+    <View style={{ marginTop: 20 }}>
+      <Text style={[st.sectionLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold", paddingLeft: 2, marginBottom: 12 }]}>
+        Active Paths
+      </Text>
       {enrolled.map((p: any) => (
         <Pressable
           key={p.id}
@@ -190,42 +159,12 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
   );
 }
 
-
 export default function StudyScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-
-  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
-    queryKey: [`/api/reading-history/recent?userId=${userId}`],
-  });
-
-  const lastRead = recentReads?.[0] ?? null;
-
-  const { data: layerCompletions } = useQuery<LayerCompletionEntry[]>({
-    queryKey: [`/api/layer-completions?userId=${userId}&bookId=${lastRead?.bookId}&chapter=${lastRead?.chapter}`],
-    enabled: !!userId && !!lastRead,
-  });
-
-  const deepStudyState = useMemo(() => {
-    if (!lastRead) {
-      return { sub: "Observe \u00B7 Context \u00B7 Insight \u00B7 Respond", routeParams: { showIntro: "true" } };
-    }
-    const completedSet = new Set(layerCompletions?.map((c) => c.layer) ?? []);
-    const count = LAYER_ORDER.filter((l) => completedSet.has(l)).length;
-    const ref = `${lastRead.bookName} ${lastRead.chapter}`;
-    if (count === 4) {
-      return { sub: `${ref} -- all 4 layers complete`, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
-    }
-    if (count > 0) {
-      return { sub: `Resume ${ref} -- ${count} of 4 layers`, routeParams: { bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
-    }
-    return { sub: `Begin ${ref} -- 4 layers`, routeParams: { showIntro: "true", bookId: String(lastRead.bookId), chapter: String(lastRead.chapter) } };
-  }, [lastRead, layerCompletions]);
-
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
@@ -243,127 +182,19 @@ export default function StudyScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <SectionLabel label="Study Scripture" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          <TopicImageCard
-            id="quick-read"
-            title="Quick Read"
-            subtitle="Read a passage without extra study layers"
-            onPress={() => router.push("/book-picker" as any)}
-            testID="study-mode-quick_read"
-          />
-          <TopicImageCard
-            id="guided-study"
-            title="Guided Study"
-            subtitle="Choose a passage and explore it with guided questions"
-            onPress={() => router.push("/study-guide" as any)}
-            testID="study-mode-guided_study"
-          />
-          <TopicImageCard
-            id="deep-study"
-            title="Deep Study"
-            subtitle={deepStudyState.sub}
-            badge="4-Layer"
-            onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
-            testID="study-mode-deep_study"
-          />
-        </View>
-
-        <View style={{ height: 24 }} />
-
-        <SectionLabel label="Sabbath School & Prayer" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          <TopicImageCard
-            id="fundamental-beliefs"
-            title="Sabbath School"
-            subtitle="This week's lesson, discussion questions, and insights"
-            onPress={() => router.push("/sabbath-school" as any)}
-            testID="sabbath-school-entry"
-          />
-          <TopicImageCard
-            id="prayer"
-            title="Prayer Journal"
-            subtitle="Record, track, and reflect on your prayer life"
-            onPress={() => router.push("/prayer-journal" as any)}
-            testID="prayer-journal-entry"
-          />
+        <View style={st.categoryCards}>
+          {CATEGORIES.map((cat) => (
+            <CategoryCard
+              key={cat.id}
+              id={cat.id}
+              title={cat.title}
+              subtitle={cat.subtitle}
+              onPress={() => router.push({ pathname: "/study-category", params: { category: cat.id } } as any)}
+            />
+          ))}
         </View>
 
         <EnrolledTracksPreview theme={theme} />
-
-        <View style={{ height: 24 }} />
-
-        <SectionLabel label="Learning Paths" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          <TopicImageCard
-            id="study-paths"
-            title="Study Paths"
-            subtitle="Structured paths through Scripture"
-            onPress={() => router.push("/study-paths" as any)}
-            testID="study-paths"
-          />
-          <TopicImageCard
-            id="devotional-plans"
-            title="Devotional Plans"
-            subtitle="Daily reading plans for spiritual growth"
-            onPress={() => router.push("/devotionals" as any)}
-            testID="devotional-plans"
-          />
-        </View>
-
-        <View style={{ height: 24 }} />
-
-        <SectionLabel label="Study Tools" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          {STUDY_TOOLS.map((item) => (
-            <TopicImageCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              subtitle={item.subtitle}
-              onPress={() => router.push(item.route as any)}
-              testID={`tool-${item.id}`}
-            />
-          ))}
-        </View>
-
-        <View style={{ height: 24 }} />
-
-        <SectionLabel label="Adventist Studies" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          {ADVENTIST_STUDIES.map((item) => (
-            <TopicImageCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              subtitle={item.subtitle}
-              onPress={() => router.push(`/topic/${item.id}`)}
-              testID={`topic-${item.id}`}
-            />
-          ))}
-        </View>
-
-        <View style={{ height: 24 }} />
-
-        <SectionLabel label="Spiritual Themes" theme={theme} />
-
-        <View style={st.topicImageCards}>
-          {SPIRITUAL_THEMES.map((item) => (
-            <TopicImageCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              subtitle={item.subtitle}
-              onPress={() => router.push(`/topic/${item.id}`)}
-              testID={`topic-${item.id}`}
-            />
-          ))}
-        </View>
       </ScrollView>
     </View>
   );
@@ -380,13 +211,43 @@ const st = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 24 },
 
-  sectionHeader: {
-    marginBottom: 14,
-    paddingLeft: 2,
-  },
   sectionLabel: {
     fontSize: 12,
     letterSpacing: 0.5,
+  },
+
+  categoryCards: {
+    gap: 12,
+  },
+  categoryCard: {
+    borderRadius: 18,
+    overflow: "hidden" as const,
+    height: 120,
+  },
+  categoryBg: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%" as any,
+    height: "100%" as any,
+  },
+  categoryOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end" as const,
+  },
+  categoryContent: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    paddingTop: 10,
+  },
+  categoryTitle: {
+    color: "#fff",
+    fontSize: 18,
+    marginBottom: 3,
+  },
+  categorySub: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 13,
   },
 
   enrolledCard: {
@@ -421,55 +282,4 @@ const st = StyleSheet.create({
     borderRadius: 2,
   },
   enrolledPercent: { fontSize: 11 },
-
-  topicImageCards: {
-    gap: 10,
-  },
-  topicImageCard: {
-    borderRadius: 16,
-    overflow: "hidden" as const,
-    height: 100,
-  },
-  topicImageBg: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%" as any,
-    height: "100%" as any,
-  },
-  topicImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end" as const,
-  },
-  topicImageContent: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 8,
-  },
-  topicImageTitle: {
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  topicImageTitleRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 8,
-    marginBottom: 2,
-  },
-  topicImageBadge: {
-    backgroundColor: "rgba(201,147,58,0.25)",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  topicImageBadgeText: {
-    color: "#C9933A",
-    fontSize: 10,
-    letterSpacing: 0.3,
-  },
-  topicImageSub: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-  },
 });

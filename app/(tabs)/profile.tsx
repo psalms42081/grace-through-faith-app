@@ -23,7 +23,6 @@ import { type ContentLanguageOption } from "@/lib/content-language";
 import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
-import SpiritualRings from "@/components/SpiritualRings";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -198,10 +197,6 @@ export default function ProfileScreen() {
           </Text>
         </View>
       )}
-
-      <View style={{ height: 16 }} />
-
-      <SpiritualRings theme={theme} isDark={isDark} />
 
       <View style={{ height: 16 }} />
 
