@@ -212,7 +212,16 @@ export default function MapsTimelineScreen() {
   );
 }
 
-const MAX_PLATE_HEIGHT = 310;
+const MAX_PLATE_HEIGHT = 340;
+
+const ERA_DESCRIPTIONS: Record<string, string> = {
+  All: "Explore key biblical locations across every era of Scripture.",
+  Patriarchs: "The world of Abraham, Isaac, and Jacob \u2014 from Ur to the Promised Land.",
+  Exodus: "Israel's deliverance from Egypt and the journey to Canaan.",
+  Kingdom: "The united monarchy and the era of David and Solomon.",
+  Exile: "The fall of Israel and Judah, and the Babylonian captivity.",
+  "Early Church": "The apostolic age and the spread of the gospel across the Roman Empire.",
+};
 
 function MapsContent({
   theme,
@@ -480,8 +489,8 @@ function MapsContent({
         />
       </View>
 
-      <View style={styles.plateSubtitleRow}>
-        <Text style={[styles.plateSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+      <View style={styles.plateMetaRow}>
+        <Text style={[styles.plateSubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
           {currentPlate.subtitle}
         </Text>
         <Text style={[styles.plateAttribution, { color: theme.textMuted }]}>
@@ -495,6 +504,10 @@ function MapsContent({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.tabContent}>
+          <Text style={[styles.eraDescription, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {ERA_DESCRIPTIONS[selectedEra] || ""}
+          </Text>
+
           {eraHasJourneys && (
             <>
               {selectedJourney === "all" && journeyRoutesForEra.length > 1 && (
@@ -586,13 +599,19 @@ function MapsContent({
                       {loc.name}
                     </Text>
                     <Text
-                      style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+                      style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}
                       numberOfLines={1}
                     >
                       {loc.ancientRegion}
                     </Text>
+                    <Text
+                      style={[styles.locDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                      numberOfLines={2}
+                    >
+                      {loc.description}
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ alignSelf: "flex-start", marginTop: 4 }} />
                 </Pressable>
               ))}
             </>
@@ -804,27 +823,29 @@ const styles = StyleSheet.create({
   content: { padding: 20 },
   tabContent: { gap: 12 },
   mapContainer: {
-    borderRadius: 14,
+    borderRadius: 12,
     overflow: "hidden",
     marginHorizontal: 16,
     marginBottom: 0,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.06)",
   },
-  plateSubtitleRow: {
+  plateMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   plateSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     flex: 1,
+    lineHeight: 16,
   },
   plateAttribution: {
     fontSize: 9,
-    opacity: 0.4,
+    opacity: 0.35,
     fontFamily: "Inter_400Regular",
     marginLeft: 8,
   },
@@ -833,7 +854,12 @@ const styles = StyleSheet.create({
   },
   locationListContent: {
     paddingHorizontal: 16,
-    paddingTop: 2,
+    paddingTop: 0,
+  },
+  eraDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 4,
   },
   sectionLabel: {
     fontSize: 11,
@@ -842,19 +868,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4,
   },
+  locDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
   regionCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     borderRadius: 14,
     padding: 14,
     gap: 14,
   },
   regionIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 2,
   },
   regionInfo: { flex: 1 },
   regionName: { fontSize: 15, marginBottom: 3 },

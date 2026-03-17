@@ -16,7 +16,7 @@ interface AtlasPlateProps {
 }
 
 const MIN_HIT_SIZE = 28;
-const DOT_SIZE = 5;
+const DOT_SIZE = 4;
 
 export default function AtlasPlate({ plate, onHotspotPress }: AtlasPlateProps) {
   const [imageLayout, setImageLayout] = useState<{
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: "relative",
+    backgroundColor: "#1a1710",
   },
   image: {
     width: "100%",
@@ -123,19 +124,19 @@ const styles = StyleSheet.create({
   titleOverlay: {
     position: "absolute",
     overflow: "hidden",
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
   titleGradient: {
-    paddingHorizontal: 12,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingHorizontal: 14,
+    paddingTop: 24,
+    paddingBottom: 10,
   },
   titleText: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
   },
   hotspot: {
     position: "absolute",
@@ -147,8 +148,8 @@ const styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: "rgba(42, 34, 24, 0.55)",
+    backgroundColor: "rgba(201, 147, 58, 0.5)",
     borderWidth: 0.5,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.35)",
   },
 });
