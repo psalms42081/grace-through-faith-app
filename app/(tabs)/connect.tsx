@@ -115,8 +115,6 @@ export default function ConnectScreen() {
           theme={theme}
         />
 
-        <SectionLabel title={t("connect.watchAndListen")} theme={theme} />
-
         <VisualCard
           imageKey="broadcasts"
           title={t("connect.watchAndListen")}
