@@ -119,7 +119,7 @@ body{background:#3a3428}
 </style></head><body><div id="map"></div>
 <script>
 function p(d){window.ReactNativeWebView?window.ReactNativeWebView.postMessage(JSON.stringify(d)):window.parent.postMessage(JSON.stringify(d),'*')}
-var map=L.map('map',{zoomControl:false,attributionControl:true,maxZoom:10,minZoom:3});
+var _ts=${Date.now()};var map=L.map('map',{zoomControl:false,attributionControl:true,maxZoom:10,minZoom:3});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxZoom:13,attribution:'Esri'}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:16,attribution:'CARTO',opacity:0.08,pane:'overlayPane'}).addTo(map);
 ${fitJs}
