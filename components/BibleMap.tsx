@@ -111,7 +111,7 @@ function buildHtml(props: {
 html,body,#map{width:100%;height:100%;overflow:hidden}
 body{background:#3a3428}
 .leaflet-container{background:#3a3428!important}
-.leaflet-tile-pane{filter:brightness(1.0) contrast(0.95) sepia(0.7) saturate(0.35) hue-rotate(-15deg)}
+.leaflet-tile-pane{filter:brightness(0.72) contrast(1.1) sepia(0.6) saturate(0.4) hue-rotate(-12deg)}
 .leaflet-control-zoom{display:none!important}
 .leaflet-control-attribution{font-size:7px!important;background:rgba(50,45,35,0.5)!important;color:rgba(140,130,110,0.35)!important;padding:1px 4px!important}
 .leaflet-control-attribution a{color:rgba(140,130,110,0.35)!important;text-decoration:none!important}
