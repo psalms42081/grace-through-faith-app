@@ -923,10 +923,10 @@ export const BIBLICAL_PROPHECY_LINKS: BiblicalProphecyLink[] = [
 ];
 
 export const JOURNEY_ROUTE_COLORS: Record<string, string> = {
-  "exodus-route": "#D97706",
-  "paul-journey-1": "#6366F1",
-  "paul-journey-2": "#EC4899",
-  "paul-journey-3": "#14B8A6",
+  "exodus-route": "#8B5E3C",
+  "paul-journey-1": "#3B4F7A",
+  "paul-journey-2": "#6B3A3A",
+  "paul-journey-3": "#2E5E4E",
 };
 
 export const JOURNEY_FILTER_OPTIONS = [

@@ -187,51 +187,54 @@ const HOLY_LAND_REGION = {
 };
 
 const NEAR_EAST_FALLBACK: { latitude: number; longitude: number }[] = [
-  { latitude: 29.0, longitude: 27.0 },
-  { latitude: 40.0, longitude: 45.0 },
+  { latitude: 28.0, longitude: 26.0 },
+  { latitude: 41.0, longitude: 46.0 },
 ];
 
 const EDITORIAL_PRESETS: Record<string, { latitude: number; longitude: number }[]> = {
-  All: NEAR_EAST_FALLBACK,
+  All: [
+    { latitude: 28.5, longitude: 28.0 },
+    { latitude: 39.0, longitude: 44.0 },
+  ],
   Patriarchs: [
-    { latitude: 30.5, longitude: 31.0 },
-    { latitude: 37.5, longitude: 44.5 },
+    { latitude: 29.5, longitude: 30.0 },
+    { latitude: 37.5, longitude: 45.0 },
   ],
   Exodus: [
-    { latitude: 27.5, longitude: 29.0 },
-    { latitude: 33.0, longitude: 36.0 },
+    { latitude: 26.5, longitude: 28.5 },
+    { latitude: 33.5, longitude: 37.0 },
   ],
   Kingdom: [
-    { latitude: 30.5, longitude: 34.0 },
-    { latitude: 33.8, longitude: 36.5 },
+    { latitude: 30.0, longitude: 33.5 },
+    { latitude: 34.0, longitude: 37.0 },
   ],
   Exile: [
-    { latitude: 30.0, longitude: 34.0 },
-    { latitude: 34.0, longitude: 45.5 },
+    { latitude: 29.5, longitude: 33.0 },
+    { latitude: 34.5, longitude: 46.0 },
   ],
   "Life of Christ": [
-    { latitude: 31.2, longitude: 34.5 },
-    { latitude: 33.5, longitude: 36.2 },
+    { latitude: 31.0, longitude: 34.2 },
+    { latitude: 33.8, longitude: 36.5 },
   ],
   "Early Church": [
-    { latitude: 30.0, longitude: 27.0 },
-    { latitude: 42.0, longitude: 42.0 },
+    { latitude: 29.0, longitude: 24.0 },
+    { latitude: 42.5, longitude: 42.0 },
   ],
   "exodus-route": [
-    { latitude: 27.5, longitude: 29.0 },
-    { latitude: 33.0, longitude: 36.0 },
+    { latitude: 26.5, longitude: 28.5 },
+    { latitude: 33.5, longitude: 37.0 },
   ],
   "paul-journey-1": [
-    { latitude: 32.0, longitude: 28.0 },
+    { latitude: 31.0, longitude: 30.0 },
     { latitude: 40.0, longitude: 38.0 },
   ],
   "paul-journey-2": [
-    { latitude: 33.0, longitude: 20.0 },
-    { latitude: 42.5, longitude: 38.0 },
+    { latitude: 35.0, longitude: 19.0 },
+    { latitude: 42.0, longitude: 36.0 },
   ],
   "paul-journey-3": [
-    { latitude: 30.0, longitude: 19.0 },
-    { latitude: 43.0, longitude: 40.0 },
+    { latitude: 29.0, longitude: 17.0 },
+    { latitude: 43.0, longitude: 41.0 },
   ],
 };
 
