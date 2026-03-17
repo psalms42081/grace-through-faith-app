@@ -745,8 +745,8 @@ router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!role || !["member", "student", "church_leader", "editor", "admin"].includes(role)) {
-      return res.status(400).json({ error: "role must be member, student, church_leader, editor, or admin" });
+    if (!role || !["member", "student", "church_leader_pending", "church_leader", "editor", "admin"].includes(role)) {
+      return res.status(400).json({ error: "role must be member, student, church_leader_pending, church_leader, editor, or admin" });
     }
 
     const [target] = await db

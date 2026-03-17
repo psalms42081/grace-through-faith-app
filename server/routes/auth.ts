@@ -12,13 +12,20 @@ const router = Router();
 
 router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), async (req, res) => {
   try {
-    const { email, password, displayName } = req.body;
+    const { email, password, displayName, profileType } = req.body;
     if (!email || !password || !displayName) {
       return res.status(400).json({ error: "Email, password, and display name are required" });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
+
+    const validProfileTypes = ["member", "student", "church_leader", "exploring"];
+    const cleanProfileType = validProfileTypes.includes(profileType) ? profileType : "member";
+
+    let assignedRole = "member";
+    if (cleanProfileType === "student") assignedRole = "student";
+    else if (cleanProfileType === "church_leader") assignedRole = "church_leader_pending";
 
     if (cleanPassword.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
@@ -37,6 +44,8 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
       password: hashedPassword,
       displayName: displayName.trim(),
       email: cleanEmail,
+      role: assignedRole,
+      profileType: cleanProfileType,
       isPro: true,
     }).returning();
 
@@ -116,7 +125,7 @@ router.post("/api/auth/reset-password", authLimiter, (_req, res) => {
   });
 });
 
-const VALID_ROLES = ["member", "student", "church_leader", "editor", "admin"];
+const VALID_ROLES = ["member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
 
 router.post("/api/auth/update-role", requireAuth, async (req, res) => {
   try {
@@ -132,6 +141,9 @@ router.post("/api/auth/update-role", requireAuth, async (req, res) => {
       if (!currentUser || currentUser.role !== "admin") {
         return res.status(403).json({ error: "Only admins can assign privileged roles" });
       }
+    }
+    if (role === "church_leader_pending") {
+      return res.status(400).json({ error: "Cannot directly assign pending status" });
     }
 
     await db.update(users).set({ role }).where(eq(users.id, userId));

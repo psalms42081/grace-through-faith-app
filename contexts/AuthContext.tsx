@@ -25,7 +25,7 @@ interface AuthContextType {
   isLoading: boolean;
   userId: string;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, displayName: string, profileType?: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -142,9 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (email: string, password: string, displayName: string) => {
+  const register = useCallback(async (email: string, password: string, displayName: string, profileType?: string) => {
     try {
-      const res = await apiRequest("POST", "/api/auth/register", { email, password, displayName });
+      const res = await apiRequest("POST", "/api/auth/register", { email, password, displayName, profileType: profileType || "member" });
       const data = (await (res as any).json()) as { user: AuthUser; token: string; error?: string };
 
       if (data.error) return { success: false, error: data.error };

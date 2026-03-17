@@ -16,6 +16,33 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 
+const PROFILE_OPTIONS = [
+  {
+    key: "member",
+    icon: "person" as const,
+    title: "Member",
+    desc: "Daily devotions, Bible study, and prayer",
+  },
+  {
+    key: "student",
+    icon: "school" as const,
+    title: "Student",
+    desc: "Structured courses and formation paths",
+  },
+  {
+    key: "church_leader",
+    icon: "shield-checkmark" as const,
+    title: "Church Leader",
+    desc: "Leader access will be reviewed after sign-up",
+  },
+  {
+    key: "exploring",
+    icon: "compass" as const,
+    title: "Just Exploring",
+    desc: "Browse freely and decide later",
+  },
+];
+
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
@@ -23,6 +50,7 @@ export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [profileType, setProfileType] = useState("member");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -49,7 +77,7 @@ export default function RegisterScreen() {
     }
     setError("");
     setLoading(true);
-    const result = await register(email.trim(), password, displayName.trim());
+    const result = await register(email.trim(), password, displayName.trim(), profileType);
     setLoading(false);
     if (result.success) {
       router.dismissAll();
@@ -132,6 +160,40 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
 
+          <Text style={[s.label, { marginTop: 16 }]}>I am a...</Text>
+          <View style={s.roleGroup}>
+            {PROFILE_OPTIONS.map((opt) => {
+              const active = profileType === opt.key;
+              return (
+                <Pressable
+                  key={opt.key}
+                  onPress={() => setProfileType(opt.key)}
+                  style={[s.roleCard, active && s.roleCardActive]}
+                  testID={`profile-${opt.key}`}
+                >
+                  <View style={s.roleRow}>
+                    <View style={[s.roleIcon, active && s.roleIconActive]}>
+                      <Ionicons
+                        name={opt.icon}
+                        size={18}
+                        color={active ? "#050507" : "#C9933A"}
+                      />
+                    </View>
+                    <View style={s.roleText}>
+                      <Text style={[s.roleTitle, active && s.roleTitleActive]}>
+                        {opt.title}
+                      </Text>
+                      <Text style={s.roleDesc}>{opt.desc}</Text>
+                    </View>
+                    {active && (
+                      <Ionicons name="checkmark-circle" size={20} color="#C9933A" />
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <Pressable
             onPress={handleRegister}
             disabled={loading}
@@ -210,6 +272,49 @@ const s = StyleSheet.create({
     position: "absolute" as const,
     right: 14,
     top: 16,
+  },
+  roleGroup: { gap: 8, marginTop: 4 },
+  roleCard: {
+    backgroundColor: "#1A1A2E",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#2A2A3E",
+  },
+  roleCardActive: {
+    borderColor: "#C9933A",
+    backgroundColor: "rgba(201, 147, 58, 0.06)",
+  },
+  roleRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  roleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(201, 147, 58, 0.12)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  roleIconActive: {
+    backgroundColor: "#C9933A",
+  },
+  roleText: { flex: 1 },
+  roleTitle: {
+    fontSize: 15,
+    color: "#F0E8D8",
+    fontFamily: "Inter_600SemiBold",
+  },
+  roleTitleActive: {
+    color: "#C9933A",
+  },
+  roleDesc: {
+    fontSize: 12,
+    color: "#888",
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   primaryBtn: {
     backgroundColor: "#C9933A",
