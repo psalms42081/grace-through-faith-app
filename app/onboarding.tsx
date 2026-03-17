@@ -60,7 +60,7 @@ function WelcomePage() {
         </Text>
         <View style={pageStyles.dividerLine} />
         <Text style={[pageStyles.tagline, { fontFamily: "Lora_400Regular_Italic" }]}>
-          Helping Adventists grow deeper{"\n"}in Scripture, prayer, and Sabbath life.
+          Grow deeper in Scripture, prayer,{"\n"}and Sabbath life — with your church.
         </Text>
       </Animated.View>
       <View style={pageStyles.bottomSpacer} />
@@ -80,7 +80,7 @@ function GetStartedPage({ onGetStarted }: { onGetStarted: () => void }) {
           Begin Your{"\n"}Journey
         </Text>
         <Text style={[pageStyles.startDesc, { fontFamily: "Inter_400Regular" }]}>
-          Study Scripture, deepen your prayer life, and grow together in community.
+          Study Scripture, grow in prayer, and stay connected to your church family.
         </Text>
         <Pressable
           style={({ pressed }) => [pageStyles.startBtn, pressed && { opacity: 0.85 }]}

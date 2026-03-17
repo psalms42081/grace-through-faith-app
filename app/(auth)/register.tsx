@@ -63,7 +63,7 @@ export default function RegisterScreen() {
           <Ionicons name="person-add" size={48} color="#C9933A" />
           <Text style={s.title}>Create Account</Text>
           <Text style={s.subtitle}>
-            Join to save your progress, connect with family, and join prayer groups
+            Save your progress, join prayer groups, and connect with your church family
           </Text>
         </View>
 

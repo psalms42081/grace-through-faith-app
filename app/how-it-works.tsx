@@ -40,8 +40,8 @@ const SECTIONS = [
   {
     icon: "people" as const,
     color: "#10B981",
-    title: "Family & Community",
-    body: "Track progress as a family, join prayer groups, and encourage one another. Faith grows best in community.",
+    title: "Church & Community",
+    body: "Use this app alongside your local church, Sabbath School class, or small group. Join prayer circles, study together, and stay connected to your church family.",
   },
   {
     icon: "happy" as const,
@@ -93,7 +93,7 @@ export default function HowItWorksScreen() {
           </View>
           <Text style={[st.approachTitle, { color: theme.text }]}>Our Mission</Text>
           <Text style={[st.approachBody, { color: theme.textSecondary }]}>
-            Grounded in Seventh-day Adventist teaching, this app is designed for spiritual formation{"\u2014"}helping you grow through structured Bible study, Adventist doctrine, prophecy, and daily spiritual disciplines. Everything is Scripture-first and faithful to the historic positions of the Adventist Church.
+            Grounded in Seventh-day Adventist teaching, this app supports your spiritual growth alongside your local church{"\u2014"}through structured Bible study, Adventist doctrine, prophecy, and daily spiritual disciplines. It is designed to strengthen, not replace, your church life. Everything is Scripture-first and faithful to the historic positions of the Adventist Church.
           </Text>
         </View>
 

@@ -78,7 +78,7 @@ export default function LoginScreen() {
           <Text style={s.subtitle}>
             {resetMode
               ? "Enter your email and a new password"
-              : "Sign in to sync your Bible study progress"}
+              : "Sign in to sync your progress and stay connected"}
           </Text>
         </View>
 

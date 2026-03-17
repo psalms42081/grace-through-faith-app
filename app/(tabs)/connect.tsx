@@ -139,6 +139,13 @@ export default function ConnectScreen() {
           onPress={() => router.push("/music" as any)}
           theme={theme}
         />
+
+        <View style={[st.useWithChurch, { backgroundColor: theme.backgroundCard }]}>
+          <Ionicons name="heart" size={16} color="#C9933A" />
+          <Text style={[st.useWithChurchText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            This app is designed to support your local church, Sabbath School class, small group, or school — not replace them. Use it to prepare, pray, and stay connected between gatherings.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -197,5 +204,19 @@ const st = StyleSheet.create({
     color: "rgba(255,255,255,0.75)",
     fontSize: 13,
     lineHeight: 18,
+  },
+  useWithChurch: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 8,
+  },
+  useWithChurchText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    opacity: 0.8,
   },
 });
