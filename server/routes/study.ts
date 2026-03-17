@@ -217,7 +217,15 @@ router.get("/api/context", async (req, res) => {
           : eq(contextCards.bookId, Number(book))
       );
 
-    return res.json(cards);
+    const seen = new Set<string>();
+    const deduped = cards.filter((c) => {
+      const key = `${c.bookId}_${c.chapter}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return res.json(deduped);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
