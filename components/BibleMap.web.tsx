@@ -171,7 +171,7 @@ export default function BibleMap({
 html,body,#map{width:100%;height:100vh;overflow:hidden}
 body{background:#3a3428}
 .leaflet-container{background:#3a3428!important}
-.leaflet-tile-pane{filter:brightness(0.85) contrast(1.05) sepia(0.55) saturate(0.45) hue-rotate(-10deg)}
+.leaflet-tile-pane{filter:brightness(1.0) contrast(0.95) sepia(0.7) saturate(0.35) hue-rotate(-15deg)}
 .leaflet-control-zoom{display:none!important}
 .leaflet-control-attribution{font-size:7px!important;background:rgba(50,45,35,0.5)!important;color:rgba(140,130,110,0.35)!important;padding:1px 4px!important}
 .leaflet-control-attribution a{color:rgba(140,130,110,0.35)!important;text-decoration:none!important}
@@ -181,7 +181,7 @@ body{background:#3a3428}
 function p(d){window.parent.postMessage(JSON.stringify(d),'*')}
 var map=L.map('map',{zoomControl:false,attributionControl:true,maxZoom:10,minZoom:3});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxZoom:13,attribution:'Esri'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:16,attribution:'CARTO',opacity:0.18,pane:'overlayPane'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:16,attribution:'CARTO',opacity:0.08,pane:'overlayPane'}).addTo(map);
 ${fitJs}
 ${kingdomJs}${tribeJs}${routeJs}${markersJs}
 <\/script></body></html>`;
