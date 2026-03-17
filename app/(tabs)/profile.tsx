@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -282,7 +283,10 @@ export default function ProfileScreen() {
 
         {[
           ...(user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader" ? [
-            { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
+            { title: "Admin Dashboard", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
+          ] : []),
+          ...(user?.role === "church_leader_pending" ? [
+            { title: "Leader Access", icon: "hourglass" as const, color: "#F59E0B", route: "pending-leader" },
           ] : []),
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
         ].map((link) => (
@@ -291,7 +295,13 @@ export default function ProfileScreen() {
             icon={link.icon}
             iconColor={link.color}
             title={link.title}
-            onPress={() => router.push(link.route as any)}
+            onPress={() => {
+              if (link.route === "pending-leader") {
+                Alert.alert("Pending Review", "Your church leader access is being reviewed. You'll be notified when approved.");
+                return;
+              }
+              router.push(link.route as any);
+            }}
             style={{ marginBottom: 6 }}
           />
         ))}
