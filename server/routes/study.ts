@@ -310,7 +310,15 @@ router.get("/api/commentary", async (req, res) => {
         )
       );
 
-    return res.json(entries);
+    const seen = new Set<string>();
+    const deduped = entries.filter((e) => {
+      const key = `${e.entry.commentatorId}_${e.entry.bookId}_${e.entry.chapter}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return res.json(deduped);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -453,6 +461,20 @@ router.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =>
     const results: any[] = [];
 
     for (const src of COMMENTARY_SOURCES) {
+      const existingSrc = await db.select().from(commentaryEntries).where(
+        and(
+          eq(commentaryEntries.commentatorId, src.dbId),
+          eq(commentaryEntries.bookId, Number(bookId)),
+          eq(commentaryEntries.chapter, Number(chapter))
+        )
+      ).limit(1);
+
+      if (existingSrc.length > 0) {
+        const cRow = await db.select().from(commentators).where(eq(commentators.id, src.dbId)).limit(1);
+        results.push({ entry: existingSrc[0], commentator: cRow[0] || null });
+        continue;
+      }
+
       const data = await fetchRealCommentary(src.apiId, bookCode, Number(chapter));
       if (!data || data.verses.length === 0) continue;
 
