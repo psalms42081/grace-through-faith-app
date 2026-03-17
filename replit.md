@@ -67,4 +67,4 @@ The application features a mobile-first architecture with a frontend built using
 - **LiveKit Cloud:** Real-time video/audio conferencing.
 - **react-native-webview:** Loads LiveKit room HTML on native.
 - **react-native-maps@1.18.0:** Available for native map views (currently unused by Bible Maps, which uses atlas plates).
-- **Headwaters Bible Maps:** Static atlas plate images (CC BY-NC-SA 4.0) for the Bible Maps screen.
+- **sharp:** SVG-to-PNG conversion for custom atlas map plate generation.
