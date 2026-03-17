@@ -33,13 +33,14 @@ interface VisualCardProps {
   subtitle: string;
   onPress: () => void;
   theme: any;
+  compact?: boolean;
 }
 
-function VisualCard({ imageKey, title, subtitle, onPress, theme }: VisualCardProps) {
+function VisualCard({ imageKey, title, subtitle, onPress, theme, compact }: VisualCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [st.card, { opacity: pressed ? 0.9 : 1 }]}
+      style={({ pressed }) => [st.card, compact && st.cardCompact, { opacity: pressed ? 0.9 : 1 }]}
     >
       <Image source={CARD_IMAGES[imageKey]} style={st.cardImage} resizeMode="cover" />
       <LinearGradient
@@ -122,6 +123,7 @@ export default function ConnectScreen() {
           subtitle="Watch sermons from Adventist teachers"
           onPress={() => router.push("/speakers" as any)}
           theme={theme}
+          compact
         />
 
         <VisualCard
@@ -130,6 +132,7 @@ export default function ConnectScreen() {
           subtitle={t("connect.broadcastsSub")}
           onPress={() => router.push("/broadcasts" as any)}
           theme={theme}
+          compact
         />
 
         <VisualCard
@@ -138,6 +141,7 @@ export default function ConnectScreen() {
           subtitle="Live Adventist & gospel streams"
           onPress={() => router.push("/music" as any)}
           theme={theme}
+          compact
         />
 
         <View style={[st.useWithChurch, { backgroundColor: theme.backgroundCard }]}>
@@ -175,8 +179,11 @@ const st = StyleSheet.create({
   card: {
     borderRadius: 18,
     overflow: "hidden",
-    height: 160,
+    height: 170,
     position: "relative",
+  },
+  cardCompact: {
+    height: 130,
   },
   cardImage: {
     ...StyleSheet.absoluteFillObject,
