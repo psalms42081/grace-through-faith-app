@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   },
   journeyScrollContent: {
     paddingHorizontal: 16,
-    gap: 6,
+    gap: 7,
     alignItems: "center" as const,
   },
   journeyChip: {
@@ -833,37 +833,37 @@ const styles = StyleSheet.create({
   },
   plateMetaRow: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   plateSubtitle: {
-    fontSize: 12.5,
-    lineHeight: 17,
+    fontSize: 12,
+    lineHeight: 16,
   },
   plateAttribution: {
-    fontSize: 9,
-    opacity: 0.3,
+    fontSize: 8.5,
+    opacity: 0.22,
     fontFamily: "Inter_400Regular",
-    marginTop: 3,
+    marginTop: 2,
   },
   locationList: {
     flex: 1,
   },
   locationListContent: {
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingTop: 4,
   },
   eraDescription: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 4,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginBottom: 6,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 6,
   },
   locDesc: {
     fontSize: 12,
