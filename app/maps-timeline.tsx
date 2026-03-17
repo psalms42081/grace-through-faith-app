@@ -212,7 +212,7 @@ export default function MapsTimelineScreen() {
   );
 }
 
-const MAX_PLATE_HEIGHT = 340;
+const MAX_PLATE_HEIGHT = 520;
 
 const ERA_DESCRIPTIONS: Record<string, string> = {
   All: "Explore key biblical locations across every era of Scripture.",
@@ -494,7 +494,7 @@ function MapsContent({
           {currentPlate.subtitle}
         </Text>
         <Text style={[styles.plateAttribution, { color: theme.textMuted }]}>
-          Grace Through Faith Atlas
+          Bible Mapper
         </Text>
       </View>
 
