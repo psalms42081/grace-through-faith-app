@@ -490,7 +490,7 @@ function MapsContent({
       </View>
 
       <View style={styles.plateMetaRow}>
-        <Text style={[styles.plateSubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+        <Text style={[styles.plateSubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
           {currentPlate.subtitle}
         </Text>
         <Text style={[styles.plateAttribution, { color: theme.textMuted }]}>
@@ -759,15 +759,15 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
   },
   eraChip: {
-    height: 30,
-    paddingHorizontal: 14,
-    borderRadius: 15,
+    height: 28,
+    paddingHorizontal: 11,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
   eraChipText: {
-    fontSize: 12,
+    fontSize: 11.5,
     lineHeight: 14,
   },
   pgDescPreview: {
@@ -776,8 +776,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   journeyScrollRow: {
-    maxHeight: 32,
-    marginBottom: 2,
+    maxHeight: 30,
+    marginTop: 2,
+    marginBottom: 4,
   },
   journeyScrollContent: {
     paddingHorizontal: 16,
@@ -785,16 +786,16 @@ const styles = StyleSheet.create({
     alignItems: "center" as const,
   },
   journeyChip: {
-    height: 28,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
     borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
   journeyChipText: {
-    fontSize: 12,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 13,
   },
   headerRow: {
     paddingHorizontal: 22,
@@ -831,23 +832,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.06)",
   },
   plateMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   plateSubtitle: {
-    fontSize: 12,
-    flex: 1,
-    lineHeight: 16,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   plateAttribution: {
     fontSize: 9,
-    opacity: 0.35,
+    opacity: 0.3,
     fontFamily: "Inter_400Regular",
-    marginLeft: 8,
+    marginTop: 3,
   },
   locationList: {
     flex: 1,
