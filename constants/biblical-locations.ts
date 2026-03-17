@@ -290,7 +290,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Ruth 2:1-4",
     ],
     nearbyLocations: ["jerusalem"],
-    eras: ["Kingdom", "Life of Christ"],
+    eras: ["Patriarchs", "Kingdom", "Life of Christ"],
     timelineEvents: [
       {
         title: "David's hometown",
@@ -348,7 +348,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "1 Kings 6:1",
     ],
     nearbyLocations: ["bethlehem"],
-    eras: ["Kingdom", "Exile", "Life of Christ", "Early Church"],
+    eras: ["Patriarchs", "Kingdom", "Exile", "Life of Christ", "Early Church"],
     timelineEvents: [
       {
         title: "Temple worship under the kings",
@@ -459,7 +459,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "Revelation 17-18",
     ],
     nearbyLocations: [],
-    eras: ["Exile"],
+    eras: ["Patriarchs", "Exile"],
     timelineEvents: [
       {
         title: "Judah taken into exile",
@@ -500,7 +500,7 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
       "2 Corinthians 11:32-33",
     ],
     nearbyLocations: ["jerusalem"],
-    eras: ["Kingdom", "Early Church"],
+    eras: ["Patriarchs", "Kingdom", "Early Church"],
     timelineEvents: [
       {
         title: "Aramean capital",
@@ -649,6 +649,94 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     relatedJourneyRouteIds: ["exodus-route"],
     relatedKingdomIds: ["egypt"],
     relatedTribeIds: [],
+  },
+  {
+    id: "hebron",
+    name: "Hebron",
+    modernLocation: "Al-Khalil (Hebron)",
+    modernCountry: "Palestinian Territories",
+    ancientRegion: "Hill Country of Judah",
+    latitude: 31.5326,
+    longitude: 35.0998,
+    description:
+      "One of the oldest cities in the world, Hebron was deeply significant to the patriarchs. Abraham purchased the Cave of Machpelah here as a burial site for Sarah, and it became the resting place of Abraham, Isaac, Jacob, and their wives. David ruled from Hebron for seven years before moving his capital to Jerusalem.",
+    keyEvents: [
+      "Abraham settles near Hebron by the oaks of Mamre (Genesis 13:18)",
+      "Abraham purchases the Cave of Machpelah to bury Sarah (Genesis 23:1-20)",
+      "The twelve spies explore the land near Hebron (Numbers 13:22)",
+      "Caleb receives Hebron as his inheritance (Joshua 14:13-14)",
+      "David is anointed king over Judah at Hebron (2 Samuel 2:1-4)",
+      "David rules from Hebron for seven years (2 Samuel 5:4-5)",
+    ],
+    keyPeople: ["Abraham", "Sarah", "Isaac", "Jacob", "Caleb", "David"],
+    passages: [
+      "Genesis 13:18",
+      "Genesis 23:1-20",
+      "Numbers 13:22",
+      "Joshua 14:13-14",
+      "2 Samuel 2:1-4",
+      "2 Samuel 5:4-5",
+    ],
+    nearbyLocations: ["jerusalem", "bethlehem"],
+    eras: ["Patriarchs", "Exodus", "Kingdom"],
+    timelineEvents: [
+      {
+        title: "Abraham at Mamre",
+        dateLabel: "c. 2000 BC",
+        shortDescription: "Abraham dwelt by the oaks of Mamre near Hebron and purchased the Cave of Machpelah.",
+      },
+      {
+        title: "David's first capital",
+        dateLabel: "c. 1010 BC",
+        shortDescription: "David reigned from Hebron over Judah for seven years before conquering Jerusalem.",
+      },
+    ],
+    relatedPeopleGroupIds: ["hittites", "canaanites"],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: [],
+    relatedKingdomIds: [],
+    relatedTribeIds: ["judah"],
+  },
+  {
+    id: "jericho",
+    name: "Jericho",
+    modernLocation: "Tell es-Sultan (near modern Jericho)",
+    modernCountry: "Palestinian Territories",
+    ancientRegion: "Jordan Valley",
+    latitude: 31.871,
+    longitude: 35.4444,
+    description:
+      "One of the oldest known cities in the world, Jericho guarded the entrance to Canaan from the east. Its dramatic conquest under Joshua, when the walls fell after Israel marched around the city for seven days, is one of the most iconic events in the Old Testament. The city later appears in the ministry of Jesus.",
+    keyEvents: [
+      "Joshua sends two spies to Jericho; Rahab hides them (Joshua 2)",
+      "The walls of Jericho fall after Israel marches around them (Joshua 6:1-20)",
+      "Rahab and her family are spared (Joshua 6:22-25)",
+      "Elijah and Elisha cross the Jordan near Jericho (2 Kings 2:4-8)",
+      "Jesus heals blind Bartimaeus near Jericho (Mark 10:46-52)",
+      "Jesus meets Zacchaeus in Jericho (Luke 19:1-10)",
+    ],
+    keyPeople: ["Joshua", "Rahab", "Elijah", "Elisha", "Bartimaeus", "Zacchaeus"],
+    passages: [
+      "Joshua 2:1-24",
+      "Joshua 6:1-20",
+      "Hebrews 11:30-31",
+      "Mark 10:46-52",
+      "Luke 19:1-10",
+    ],
+    nearbyLocations: ["jerusalem", "jordan-river"],
+    eras: ["Patriarchs", "Exodus", "Kingdom", "Life of Christ"],
+    timelineEvents: [
+      {
+        title: "Fall of Jericho",
+        dateLabel: "c. 1400 BC",
+        shortDescription: "The walls of Jericho fell as Israel entered the Promised Land under Joshua.",
+      },
+    ],
+    relatedPeopleGroupIds: ["canaanites", "amorites"],
+    prophecyLinkIds: [],
+    relatedJourneyRouteIds: ["exodus-route"],
+    relatedKingdomIds: [],
+    relatedTribeIds: ["benjamin"],
   },
   {
     id: "mount-sinai",

@@ -13,6 +13,7 @@ export interface AtlasHotspot {
 export interface AtlasPlate {
   id: string;
   title: string;
+  subtitle: string;
   imageSource: ImageSourcePropType;
   aspectRatio: number;
   hotspots: AtlasHotspot[];
@@ -22,6 +23,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   all: {
     id: "all",
     title: "The Topography of Israel",
+    subtitle: "The land of the Bible from Dan to Beersheba",
     imageSource: require("../assets/plates/all.jpg"),
     aspectRatio: 530 / 702,
     hotspots: [
@@ -39,6 +41,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   patriarchs: {
     id: "patriarchs",
     title: "Abram's Journey to the Promised Land",
+    subtitle: "The world of Abraham, Isaac, and Jacob",
     imageSource: require("../assets/plates/patriarchs.jpg"),
     aspectRatio: 660 / 530,
     hotspots: [
@@ -55,6 +58,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   exodus: {
     id: "exodus",
     title: "The Exodus from Egypt",
+    subtitle: "Israel's journey from slavery to the Promised Land",
     imageSource: require("../assets/plates/exodus.jpg"),
     aspectRatio: 660 / 530,
     hotspots: [
@@ -71,6 +75,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   kingdom: {
     id: "kingdom",
     title: "During the Reign of David",
+    subtitle: "The united and divided kingdom of Israel",
     imageSource: require("../assets/plates/kingdom.jpg"),
     aspectRatio: 530 / 661,
     hotspots: [
@@ -88,6 +93,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   exile: {
     id: "exile",
     title: "Israel and Judah's Exile",
+    subtitle: "The Assyrian and Babylonian captivities",
     imageSource: require("../assets/plates/exile.jpg"),
     aspectRatio: 654 / 530,
     hotspots: [
@@ -101,6 +107,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   "early-church": {
     id: "early-church",
     title: "The Roman Empire",
+    subtitle: "The world of the apostles and the early church",
     imageSource: require("../assets/plates/early-church.jpg"),
     aspectRatio: 951 / 530,
     hotspots: [
@@ -114,6 +121,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   "paul-1": {
     id: "paul-1",
     title: "Paul's First Missionary Journey",
+    subtitle: "From Antioch through Cyprus and southern Asia Minor",
     imageSource: require("../assets/plates/paul-1.jpg"),
     aspectRatio: 660 / 530,
     hotspots: [
@@ -130,6 +138,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   "paul-2": {
     id: "paul-2",
     title: "Paul's Second Missionary Journey",
+    subtitle: "Through Asia Minor, Macedonia, and Greece",
     imageSource: require("../assets/plates/paul-2.jpg"),
     aspectRatio: 660 / 530,
     hotspots: [
@@ -146,6 +155,7 @@ export const ATLAS_PLATES: Record<string, AtlasPlate> = {
   "paul-3": {
     id: "paul-3",
     title: "Paul's Third Missionary Journey",
+    subtitle: "Ephesus, Macedonia, Greece, and the journey to Jerusalem",
     imageSource: require("../assets/plates/paul-3.jpg"),
     aspectRatio: 660 / 530,
     hotspots: [
@@ -169,7 +179,6 @@ export function getPlateForEra(era: string): AtlasPlate {
     Patriarchs: "patriarchs",
     Exodus: "exodus",
     Kingdom: "kingdom",
-    "Life of Christ": "kingdom",
     Exile: "exile",
     "Early Church": "early-church",
   };

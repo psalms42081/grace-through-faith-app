@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   TextInput,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,22 +17,10 @@ import { useQuery } from "@tanstack/react-query";
 import AtlasPlate from "@/components/AtlasPlate";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { getLocationByName, getLocationsByEra, ERA_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type JourneyFilter } from "@/constants/biblical-locations";
+import { getLocationsByEra, ERA_OPTIONS, BIBLICAL_LOCATIONS, BIBLICAL_PEOPLE_GROUPS, BIBLICAL_PROPHECY_LINKS, BIBLICAL_JOURNEY_ROUTES, BIBLICAL_KINGDOM_OVERLAYS, BIBLICAL_TRIBE_OVERLAYS, JOURNEY_FILTER_OPTIONS, JOURNEY_ROUTE_COLORS, type EraFilter, type JourneyFilter, type BiblicalLocation } from "@/constants/biblical-locations";
 import { getPlateForEra, getPlateForJourney, type AtlasHotspot } from "@/constants/atlas-plates";
 
 type Tab = "maps" | "timeline";
-
-interface Location {
-  id: string;
-  name: string;
-  modernName: string | null;
-  latitude: string | null;
-  longitude: string | null;
-  description: string | null;
-  imageUrl: string | null;
-  locationType: string | null;
-  era: string | null;
-}
 
 interface TimelineEvent {
   id: string;
@@ -152,26 +141,6 @@ function buildSearchIndex(): SearchResult[] {
 
 const SEARCH_INDEX = buildSearchIndex();
 
-const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  city: "business-outline",
-  region: "globe-outline",
-  body_of_water: "water-outline",
-  mountain: "triangle-outline",
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  city: "Cities",
-  region: "Regions",
-  body_of_water: "Bodies of Water",
-  mountain: "Mountains",
-};
-
-const MARKER_COLORS: Record<string, string> = {
-  city: "#C9933A",
-  region: "#7C3AED",
-  body_of_water: "#3B82F6",
-  mountain: "#22C55E",
-};
 
 const ATLAS_ERA_OPTIONS = ERA_OPTIONS.filter((e) => e !== "Life of Christ");
 
@@ -228,7 +197,7 @@ export default function MapsTimelineScreen() {
         </View>
 
         {activeTab === "maps" ? (
-          <MapsContent theme={theme} isDark={isDark} bottomPad={bottomPad} selectedEra={selectedEra} setSelectedEra={setSelectedEra} selectedJourney={selectedJourney} setSelectedJourney={setSelectedJourney} />
+          <MapsContent theme={theme} bottomPad={bottomPad} selectedEra={selectedEra} setSelectedEra={setSelectedEra} selectedJourney={selectedJourney} setSelectedJourney={setSelectedJourney} />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -243,9 +212,10 @@ export default function MapsTimelineScreen() {
   );
 }
 
+const MAX_PLATE_HEIGHT = 310;
+
 function MapsContent({
   theme,
-  isDark,
   bottomPad,
   selectedEra,
   setSelectedEra,
@@ -253,31 +223,15 @@ function MapsContent({
   setSelectedJourney,
 }: {
   theme: typeof Colors.light;
-  isDark: boolean;
   bottomPad: number;
   selectedEra: EraFilter;
   setSelectedEra: (e: EraFilter) => void;
   selectedJourney: JourneyFilter;
   setSelectedJourney: (j: JourneyFilter) => void;
 }) {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchFocused, setSearchFocused] = useState(false);
-
-  const { data: locations, isLoading } = useQuery<Location[]>({
-    queryKey: ["/api/location"],
-  });
-
-  const { data: linkedVerses } = useQuery<LinkedVerse[]>({
-    queryKey: [`/api/location/${selectedLocation?.id}/verses`],
-    enabled: !!selectedLocation,
-  });
-
-  const eraFilteredNames = useMemo(() => {
-    if (selectedEra === "All") return null;
-    const eraLocs = getLocationsByEra(selectedEra);
-    return new Set(eraLocs.map((l) => l.name.toLowerCase()));
-  }, [selectedEra]);
 
   const eraHasJourneys = selectedEra === "Early Church" || selectedEra === "Exodus";
 
@@ -297,6 +251,16 @@ function MapsContent({
     }
     return getPlateForEra(selectedEra);
   }, [selectedEra, journeyActive, selectedJourney]);
+
+  const plateContainerWidth = screenWidth - 32;
+  const plateHeight = useMemo(() => {
+    const naturalHeight = plateContainerWidth / currentPlate.aspectRatio;
+    return Math.min(naturalHeight, MAX_PLATE_HEIGHT);
+  }, [currentPlate.aspectRatio, plateContainerWidth]);
+
+  const curatedLocations = useMemo(() => {
+    return getLocationsByEra(selectedEra);
+  }, [selectedEra]);
 
   const handleHotspotPress = useCallback((hotspot: AtlasHotspot) => {
     switch (hotspot.targetType) {
@@ -353,67 +317,15 @@ function MapsContent({
     }
   }, [selectedEra, selectedJourney]);
 
-  const navigateToLocationDetail = useCallback((loc: Location) => {
-    const enriched = getLocationByName(loc.name);
-    if (enriched) {
-      router.push({ pathname: `/location/${enriched.id}`, params: { mode: "biblical", era: selectedEra, journey: selectedJourney } } as any);
-    } else {
-      setSelectedLocation(loc);
-    }
+  const navigateToLocation = useCallback((loc: BiblicalLocation) => {
+    router.push({ pathname: `/location/${loc.id}`, params: { mode: "biblical", era: selectedEra, journey: selectedJourney } } as any);
   }, [selectedEra, selectedJourney]);
-
-  const handleListPress = useCallback(
-    (loc: Location) => {
-      navigateToLocationDetail(loc);
-    },
-    [navigateToLocationDetail]
-  );
-
-  const clearSelection = useCallback(() => {
-    setSelectedLocation(null);
-  }, []);
-
-  const filteredLocations = useMemo(() => {
-    if (!locations) return [];
-    if (!eraFilteredNames) return locations;
-    return locations.filter((l) => eraFilteredNames.has(l.name.toLowerCase()));
-  }, [locations, eraFilteredNames]);
-
-  const grouped = useMemo(() => {
-    const g: Record<string, Location[]> = {};
-    for (const loc of filteredLocations) {
-      const type = loc.locationType || "other";
-      if (!g[type]) g[type] = [];
-      g[type].push(loc);
-    }
-    return g;
-  }, [filteredLocations]);
-
-  const typeOrder = ["city", "region", "mountain", "body_of_water", "other"];
-
-  const getSubtitleForLocation = useCallback((loc: Location): string => {
-    const enriched = getLocationByName(loc.name);
-    if (enriched) {
-      const parts = [enriched.ancientRegion];
-      if (enriched.eras.length > 0) parts.push(enriched.eras.length <= 2 ? enriched.eras.join(" to ") : `${enriched.eras[0]} to ${enriched.eras[enriched.eras.length - 1]}`);
-      return parts.join(" \u00B7 ");
-    }
-    return loc.era || "";
-  }, []);
 
   const journeyRoutesForEra = useMemo(() => {
     if (!eraHasJourneys) return [];
     if (selectedEra === "Exodus") return BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === "exodus-route");
     return BIBLICAL_JOURNEY_ROUTES.filter((r) => r.category === "Early Church");
   }, [eraHasJourneys, selectedEra]);
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.accent} />
-      </View>
-    );
-  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -560,53 +472,21 @@ function MapsContent({
         )}
       </View>
 
-      <View style={[styles.mapContainer, journeyActive && { height: 280 }]}>
+      <View style={[styles.mapContainer, { height: plateHeight }]}>
         <AtlasPlate
           key={currentPlate.id}
           plate={currentPlate}
           onHotspotPress={handleHotspotPress}
         />
+      </View>
 
-        {selectedLocation && (
-          <View style={[styles.mapOverlayCard, { backgroundColor: isDark ? "#1A1A2E" : "#fff" }]}>
-            <Pressable onPress={clearSelection} style={styles.overlayClose}>
-              <Ionicons name="close-circle" size={24} color={theme.textMuted} />
-            </Pressable>
-            <View style={styles.overlayHeader}>
-              <View style={[styles.overlayIcon, { backgroundColor: (MARKER_COLORS[selectedLocation.locationType || "city"] || "#C9933A") + "25" }]}>
-                <Ionicons
-                  name={TYPE_ICONS[selectedLocation.locationType || "city"] || "location-outline"}
-                  size={20}
-                  color={MARKER_COLORS[selectedLocation.locationType || "city"] || "#C9933A"}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.overlayTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                  {selectedLocation.name}
-                </Text>
-                <Text style={[styles.overlaySubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {(() => { const e = getLocationByName(selectedLocation.name); return e ? `Region: ${e.ancientRegion}` : (selectedLocation.era || ""); })()}
-                </Text>
-              </View>
-            </View>
-            {selectedLocation.description && (
-              <Text
-                style={[styles.overlayDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
-                numberOfLines={3}
-              >
-                {selectedLocation.description}
-              </Text>
-            )}
-            {selectedLocation.era && (
-              <View style={[styles.eraBadge, { backgroundColor: theme.accent + "18" }]}>
-                <Ionicons name="time-outline" size={12} color={theme.accent} />
-                <Text style={[styles.eraText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                  {selectedLocation.era}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+      <View style={styles.plateSubtitleRow}>
+        <Text style={[styles.plateSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+          {currentPlate.subtitle}
+        </Text>
+        <Text style={[styles.plateAttribution, { color: theme.textMuted }]}>
+          Headwaters
+        </Text>
       </View>
 
       <ScrollView
@@ -614,254 +494,110 @@ function MapsContent({
         contentContainerStyle={[styles.locationListContent, { paddingBottom: bottomPad + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {selectedLocation ? (
-          <View style={styles.detailSection}>
-            <Pressable onPress={clearSelection} style={styles.backRow}>
-              <Ionicons name="chevron-back" size={16} color={theme.accent} />
-              <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                All Locations
-              </Text>
-            </Pressable>
-
-            {selectedLocation.description && (
-              <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard }]}>
-                <View style={styles.cardHeaderRow}>
-                  <Ionicons name="information-circle-outline" size={16} color={theme.accent} />
-                  <Text style={[styles.cardHeaderLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    Description
-                  </Text>
-                </View>
-                <Text style={[styles.cardBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  {selectedLocation.description}
+        <View style={styles.tabContent}>
+          {eraHasJourneys && (
+            <>
+              {selectedJourney === "all" && journeyRoutesForEra.length > 1 && (
+                <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                  Journey Routes
                 </Text>
-              </View>
-            )}
-
-            {selectedLocation.latitude && selectedLocation.longitude && (
-              <View style={[styles.coordBadge, { backgroundColor: theme.backgroundCard }]}>
-                <Ionicons name="navigate-outline" size={14} color={theme.textMuted} />
-                <Text style={[styles.coordText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {parseFloat(selectedLocation.latitude).toFixed(4)}, {parseFloat(selectedLocation.longitude).toFixed(4)}
-                </Text>
-              </View>
-            )}
-
-            {linkedVerses && linkedVerses.length > 0 && (
-              <View style={[styles.detailCard, { backgroundColor: theme.backgroundCard }]}>
-                <View style={styles.cardHeaderRow}>
-                  <Ionicons name="book-outline" size={16} color={theme.bookmarkBlue} />
-                  <Text style={[styles.cardHeaderLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                    Referenced Verses ({linkedVerses.length})
-                  </Text>
-                </View>
-                {linkedVerses.map((v) => (
-                  <View key={v.verseId} style={[styles.verseRow, { borderColor: theme.border }]}>
-                    <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                      {v.bookName} {v.chapter}:{v.verse}
-                    </Text>
-                    <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                      {v.text}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        ) : eraHasJourneys ? (
-          <View style={styles.tabContent}>
-            {selectedJourney === "all" && (
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {`${journeyRoutesForEra.length} Journey Route${journeyRoutesForEra.length !== 1 ? "s" : ""}`}
-              </Text>
-            )}
-            {(selectedJourney === "all"
-              ? journeyRoutesForEra
-              : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney)
-            ).map((jr) => (
-              <Pressable
-                key={jr.id}
-                onPress={() => router.push({ pathname: `/journey-route/${jr.id}`, params: { mode: "biblical", era: selectedEra, journey: jr.id } } as any)}
-                style={({ pressed }) => [
-                  styles.regionCard,
-                  {
-                    backgroundColor: theme.backgroundCard,
-                    opacity: pressed ? 0.75 : 1,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.regionIcon,
-                    { backgroundColor: (JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A") + "18" },
+              )}
+              {(selectedJourney === "all"
+                ? journeyRoutesForEra
+                : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney)
+              ).map((jr) => (
+                <Pressable
+                  key={jr.id}
+                  onPress={() => router.push({ pathname: `/journey-route/${jr.id}`, params: { mode: "biblical", era: selectedEra, journey: jr.id } } as any)}
+                  style={({ pressed }) => [
+                    styles.regionCard,
+                    {
+                      backgroundColor: theme.backgroundCard,
+                      opacity: pressed ? 0.75 : 1,
+                    },
                   ]}
                 >
-                  <Ionicons name="trail-sign-outline" size={22} color={JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A"} />
-                </View>
-                <View style={[styles.regionInfo, { flex: 1 }]}>
-                  <Text
-                    style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                  <View
+                    style={[
+                      styles.regionIcon,
+                      { backgroundColor: (JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A") + "18" },
+                    ]}
                   >
-                    {jr.title}
-                  </Text>
-                  <Text
-                    style={[styles.regionPlaces, { color: JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A", fontFamily: "Inter_500Medium" }]}
-                    numberOfLines={1}
-                  >
-                    {jr.category} -- {jr.stopLocationIds.length} stops
-                  </Text>
-                  <Text
-                    style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
-                    numberOfLines={2}
-                  >
-                    {jr.shortDescription}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-              </Pressable>
-            ))}
+                    <Ionicons name="trail-sign-outline" size={22} color={JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A"} />
+                  </View>
+                  <View style={[styles.regionInfo, { flex: 1 }]}>
+                    <Text
+                      style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
+                    >
+                      {jr.title}
+                    </Text>
+                    <Text
+                      style={[styles.regionPlaces, { color: JOURNEY_ROUTE_COLORS[jr.id] || "#C9933A", fontFamily: "Inter_500Medium" }]}
+                      numberOfLines={1}
+                    >
+                      {jr.stopLocationIds.length} stops
+                    </Text>
+                    <Text
+                      style={[styles.pgDescPreview, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+                      numberOfLines={2}
+                    >
+                      {jr.shortDescription}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </Pressable>
+              ))}
+            </>
+          )}
 
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginTop: 8 }]}>
-              {`${filteredLocations.length} Biblical Location${filteredLocations.length !== 1 ? "s" : ""}`}
-            </Text>
-            {typeOrder.map((type) => {
-              const locs = grouped[type];
-              if (!locs || locs.length === 0) return null;
-              return (
-                <React.Fragment key={type}>
-                  <Text
-                    style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}
+          {curatedLocations.length > 0 && (
+            <>
+              <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold", marginTop: eraHasJourneys ? 6 : 0 }]}>
+                {selectedEra === "All" ? "Key Locations" : `${selectedEra} Locations`}
+              </Text>
+              {curatedLocations.map((loc) => (
+                <Pressable
+                  key={loc.id}
+                  onPress={() => navigateToLocation(loc)}
+                  style={({ pressed }) => [
+                    styles.regionCard,
+                    {
+                      backgroundColor: theme.backgroundCard,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.regionIcon,
+                      { backgroundColor: "#C9933A18" },
+                    ]}
                   >
-                    {TYPE_LABELS[type] || type}
-                  </Text>
-                  {locs.map((loc) => (
-                    <Pressable
-                      key={loc.id}
-                      onPress={() => handleListPress(loc)}
-                      style={({ pressed }) => [
-                        styles.regionCard,
-                        {
-                          backgroundColor: theme.backgroundCard,
-                          opacity: pressed ? 0.75 : 1,
-                        },
-                      ]}
+                    <Ionicons
+                      name="location-outline"
+                      size={22}
+                      color="#C9933A"
+                    />
+                  </View>
+                  <View style={styles.regionInfo}>
+                    <Text
+                      style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
                     >
-                      <View
-                        style={[
-                          styles.regionIcon,
-                          { backgroundColor: (MARKER_COLORS[type] || "#C9933A") + "18" },
-                        ]}
-                      >
-                        <Ionicons
-                          name={TYPE_ICONS[type] || "location-outline"}
-                          size={22}
-                          color={MARKER_COLORS[type] || "#C9933A"}
-                        />
-                      </View>
-                      <View style={styles.regionInfo}>
-                        <Text
-                          style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
-                        >
-                          {loc.name}
-                        </Text>
-                        <Text
-                          style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
-                          numberOfLines={1}
-                        >
-                          {getSubtitleForLocation(loc)}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-                    </Pressable>
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.tabContent}>
-            {filteredLocations.length === 0 && selectedEra !== "All" ? (
-              <View style={[styles.emptyStateCard, { backgroundColor: theme.backgroundCard }]}>
-                <Text style={[styles.emptyStateTitle, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
-                  No matching places yet
-                </Text>
-                <Text style={[styles.emptyStateBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Try another era or use the search bar above.
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  {filteredLocations.length > 0
-                    ? `${filteredLocations.length} Biblical Location${filteredLocations.length !== 1 ? "s" : ""}${selectedEra !== "All" ? ` \u00B7 ${selectedEra}` : ""}`
-                    : "Loading..."}
-                </Text>
-                {filteredLocations.length > 0 && filteredLocations.length <= 2 && selectedEra !== "All" && (
-                  <Text style={[styles.contextHelper, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {selectedEra === "Patriarchs" ? "Places connected to the earliest biblical world."
-                      : selectedEra === "Exodus" ? "Tracing the Exodus world through key locations."
-                      : selectedEra === "Exile" ? "Key places connected to exile and return."
-                      : selectedEra === "Kingdom" ? "Places tied to the divided kingdom period."
-                      : selectedEra === "Early Church" ? "Locations significant to the early Christian movement."
-                      : `Key places from the ${selectedEra} period.`}
-                  </Text>
-                )}
-              </>
-            )}
-            {typeOrder.map((type) => {
-              const locs = grouped[type];
-              if (!locs || locs.length === 0) return null;
-              return (
-                <React.Fragment key={type}>
-                  <Text
-                    style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}
-                  >
-                    {TYPE_LABELS[type] || type}
-                  </Text>
-                  {locs.map((loc) => (
-                    <Pressable
-                      key={loc.id}
-                      onPress={() => handleListPress(loc)}
-                      style={({ pressed }) => [
-                        styles.regionCard,
-                        {
-                          backgroundColor: theme.backgroundCard,
-                          opacity: pressed ? 0.75 : 1,
-                        },
-                      ]}
+                      {loc.name}
+                    </Text>
+                    <Text
+                      style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+                      numberOfLines={1}
                     >
-                      <View
-                        style={[
-                          styles.regionIcon,
-                          { backgroundColor: (MARKER_COLORS[type] || "#C9933A") + "18" },
-                        ]}
-                      >
-                        <Ionicons
-                          name={TYPE_ICONS[type] || "location-outline"}
-                          size={22}
-                          color={MARKER_COLORS[type] || "#C9933A"}
-                        />
-                      </View>
-                      <View style={styles.regionInfo}>
-                        <Text
-                          style={[styles.regionName, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}
-                        >
-                          {loc.name}
-                        </Text>
-                        <Text
-                          style={[styles.regionPlaces, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
-                          numberOfLines={1}
-                        >
-                          {getSubtitleForLocation(loc)}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-                    </Pressable>
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </View>
-        )}
+                      {loc.ancientRegion}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </Pressable>
+              ))}
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -1068,69 +804,36 @@ const styles = StyleSheet.create({
   content: { padding: 20 },
   tabContent: { gap: 12 },
   mapContainer: {
-    height: 260,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
     marginHorizontal: 16,
-    marginBottom: 4,
+    marginBottom: 0,
+    backgroundColor: "rgba(255,255,255,0.03)",
   },
-  mapOverlayCard: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    right: 12,
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  overlayClose: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 1,
-  },
-  overlayHeader: {
+  plateSubtitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingRight: 28,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 6,
   },
-  overlayIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  plateSubtitle: {
+    fontSize: 11,
+    flex: 1,
   },
-  overlayTitle: { fontSize: 16 },
-  overlaySubtitle: { fontSize: 12, marginTop: 2 },
-  overlayDesc: { fontSize: 13, lineHeight: 20 },
-  eraBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+  plateAttribution: {
+    fontSize: 9,
+    opacity: 0.4,
+    fontFamily: "Inter_400Regular",
+    marginLeft: 8,
   },
-  eraText: { fontSize: 11 },
   locationList: {
     flex: 1,
   },
   locationListContent: {
     paddingHorizontal: 16,
     paddingTop: 2,
-  },
-  detailSection: { gap: 12 },
-  sectionTitle: {
-    fontSize: 14,
-    marginBottom: 2,
   },
   sectionLabel: {
     fontSize: 11,
@@ -1156,15 +859,6 @@ const styles = StyleSheet.create({
   regionInfo: { flex: 1 },
   regionName: { fontSize: 15, marginBottom: 3 },
   regionPlaces: { fontSize: 12 },
-  coordBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  coordText: { fontSize: 12 },
   timelineRow: { flexDirection: "row", gap: 14 },
   spineLine: { alignItems: "center", width: 16, paddingTop: 14 },
   spineDot: { width: 12, height: 12, borderRadius: 6 },
@@ -1287,24 +981,5 @@ const styles = StyleSheet.create({
   },
   searchEmptyText: {
     fontSize: 14,
-  },
-  emptyStateCard: {
-    borderRadius: 14,
-    padding: 20,
-    alignItems: "center" as const,
-    gap: 6,
-  },
-  emptyStateTitle: {
-    fontSize: 14,
-  },
-  emptyStateBody: {
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center" as const,
-  },
-  contextHelper: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 2,
   },
 });

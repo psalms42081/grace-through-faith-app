@@ -2,10 +2,12 @@ import React, { useState, useCallback } from "react";
 import {
   View,
   Image,
+  Text,
   Pressable,
   StyleSheet,
   LayoutChangeEvent,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import type { AtlasPlate as AtlasPlateType, AtlasHotspot } from "@/constants/atlas-plates";
 
 interface AtlasPlateProps {
@@ -56,6 +58,28 @@ export default function AtlasPlate({ plate, onHotspotPress }: AtlasPlateProps) {
         style={styles.image}
         resizeMode="contain"
       />
+      {imageLayout && (
+        <View
+          style={[
+            styles.titleOverlay,
+            {
+              left: imageLayout.offsetX,
+              right: imageLayout.offsetX,
+              bottom: imageLayout.offsetY,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.55)"]}
+            style={styles.titleGradient}
+          >
+            <Text style={styles.titleText} numberOfLines={1}>
+              {plate.title}
+            </Text>
+          </LinearGradient>
+        </View>
+      )}
       {imageLayout &&
         plate.hotspots.map((hotspot) => {
           const radiusMult = hotspot.radius || 1;
@@ -95,6 +119,23 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  titleOverlay: {
+    position: "absolute",
+    overflow: "hidden",
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+  titleGradient: {
+    paddingHorizontal: 12,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  titleText: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.3,
   },
   hotspot: {
     position: "absolute",
