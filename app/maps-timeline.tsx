@@ -452,21 +452,39 @@ function MapsContent({
     return NEAR_EAST_FALLBACK;
   }, [overlay, routeLines, kingdomMarkers, tribeMarkers, selectedEra, selectedJourney]);
 
-  const isJourneySelected = overlay === "journey-routes" && selectedJourney !== "all";
-  const quietMarkers = overlay === "none" || (overlay === "journey-routes" && selectedJourney === "all");
+  const eraHasJourneys = selectedEra === "Early Church" || selectedEra === "Exodus";
+
+  useEffect(() => {
+    if (isBiblical) {
+      if (selectedEra === "Life of Christ") setSelectedEra("Kingdom");
+      if (!eraHasJourneys && selectedJourney !== "all") setSelectedJourney("all");
+      if (selectedEra === "Exodus" && selectedJourney !== "all" && selectedJourney !== "exodus-route") setSelectedJourney("all");
+      if (selectedEra === "Early Church" && selectedJourney === "exodus-route") setSelectedJourney("all");
+    }
+  }, [isBiblical, selectedEra, selectedJourney, eraHasJourneys]);
+
+  const showJourneyChips = isBiblical ? eraHasJourneys : overlay === "journey-routes";
+  const biblicalJourneyActive = isBiblical && eraHasJourneys && selectedJourney !== "all";
+
+  const effectiveOverlay = isBiblical
+    ? (eraHasJourneys ? "journey-routes" : "none")
+    : overlay;
+
+  const isJourneySelected = effectiveOverlay === "journey-routes" && selectedJourney !== "all";
+  const quietMarkers = effectiveOverlay === "none" || (effectiveOverlay === "journey-routes" && selectedJourney === "all");
 
   const currentPlate = useMemo(() => {
-    if (overlay === "journey-routes" && selectedJourney !== "all") {
+    if (biblicalJourneyActive) {
       const journeyPlate = getPlateForJourney(selectedJourney);
       if (journeyPlate) return journeyPlate;
     }
     return getPlateForEra(selectedEra);
-  }, [selectedEra, overlay, selectedJourney]);
+  }, [selectedEra, biblicalJourneyActive, selectedJourney]);
 
   const handleHotspotPress = useCallback((hotspot: AtlasHotspot) => {
     switch (hotspot.targetType) {
       case "location":
-        router.push({ pathname: `/location/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney, kingdom: selectedKingdom, tribe: selectedTribe } } as any);
+        router.push({ pathname: `/location/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay: effectiveOverlay, journey: selectedJourney, kingdom: selectedKingdom, tribe: selectedTribe } } as any);
         break;
       case "journey":
         router.push({ pathname: `/journey-route/${hotspot.targetId}`, params: { mode: mapMode, era: selectedEra, overlay: "journey-routes", journey: hotspot.targetId } } as any);
@@ -478,7 +496,7 @@ function MapsContent({
   }, [mapMode, selectedEra, overlay, selectedJourney, selectedKingdom, selectedTribe]);
 
   const displayLocations = useMemo(() => {
-    if (overlay === "journey-routes" && selectedJourney !== "all") {
+    if (effectiveOverlay === "journey-routes" && selectedJourney !== "all") {
       const route = BIBLICAL_JOURNEY_ROUTES.find((r) => r.id === selectedJourney);
       if (route) {
         const stopNames = new Set(
@@ -639,7 +657,15 @@ function MapsContent({
         {(["modern", "biblical"] as MapMode[]).map((m) => (
           <Pressable
             key={m}
-            onPress={() => setMapMode(m)}
+            onPress={() => {
+              setMapMode(m);
+              if (m === "biblical" && selectedEra === "Life of Christ") {
+                setSelectedEra("Kingdom");
+              }
+              if (m === "biblical") {
+                setSelectedJourney("all");
+              }
+            }}
             style={[
               styles.modeBtn,
               { backgroundColor: mapMode === m ? theme.accent : theme.backgroundSecondary },
@@ -672,10 +698,13 @@ function MapsContent({
         style={styles.eraScrollRow}
         contentContainerStyle={styles.eraScrollContent}
       >
-        {ERA_OPTIONS.map((era) => (
+        {ERA_OPTIONS.filter((era) => !isBiblical || era !== "Life of Christ").map((era) => (
           <Pressable
             key={era}
-            onPress={() => setSelectedEra(era)}
+            onPress={() => {
+              setSelectedEra(era);
+              if (isBiblical) setSelectedJourney("all");
+            }}
             style={[
               styles.eraChip,
               {
@@ -700,59 +729,67 @@ function MapsContent({
         ))}
       </ScrollView>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.overlayScrollRow}
-        contentContainerStyle={styles.overlayScrollContent}
-      >
-        {OVERLAY_OPTIONS.map((opt) => {
-          const shortLabels: Record<string, string> = {
-            "none": "None",
-            "people-groups": "People",
-            "prophecy": "Prophecy",
-            "journey-routes": "Journeys",
-            "kingdoms": "Kingdoms",
-            "tribes": "Tribes",
-          };
-          const isActive = overlay === opt.value;
-          return (
-            <Pressable
-              key={opt.value}
-              onPress={() => setOverlay(opt.value)}
-              style={[
-                styles.overlayPill,
-                {
-                  backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
-                  borderColor: isActive ? theme.accent : "transparent",
-                },
-              ]}
-            >
-              <Text
-                numberOfLines={1}
+      {!isBiblical && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.overlayScrollRow}
+          contentContainerStyle={styles.overlayScrollContent}
+        >
+          {OVERLAY_OPTIONS.map((opt) => {
+            const shortLabels: Record<string, string> = {
+              "none": "None",
+              "people-groups": "People",
+              "prophecy": "Prophecy",
+              "journey-routes": "Journeys",
+              "kingdoms": "Kingdoms",
+              "tribes": "Tribes",
+            };
+            const isActive = overlay === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setOverlay(opt.value)}
                 style={[
-                  styles.overlayPillText,
+                  styles.overlayPill,
                   {
-                    color: isActive ? "#fff" : theme.textMuted,
-                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                    backgroundColor: isActive ? theme.accent : theme.backgroundSecondary,
+                    borderColor: isActive ? theme.accent : "transparent",
                   },
                 ]}
               >
-                {shortLabels[opt.value] || opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.overlayPillText,
+                    {
+                      color: isActive ? "#fff" : theme.textMuted,
+                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                    },
+                  ]}
+                >
+                  {shortLabels[opt.value] || opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
-      {overlay === "journey-routes" && (
+      {showJourneyChips && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.journeyScrollRow}
           contentContainerStyle={styles.journeyScrollContent}
         >
-          {JOURNEY_FILTER_OPTIONS.map((opt) => {
+          {JOURNEY_FILTER_OPTIONS.filter((opt) => {
+            if (!isBiblical) return true;
+            if (opt.value === "all") return true;
+            if (selectedEra === "Exodus" && opt.value === "exodus-route") return true;
+            if (selectedEra === "Early Church" && opt.value !== "exodus-route") return true;
+            return false;
+          }).map((opt) => {
             const isActive = selectedJourney === opt.value;
             return (
               <Pressable
@@ -980,7 +1017,7 @@ function MapsContent({
               </View>
             )}
           </View>
-        ) : overlay === "people-groups" ? (
+        ) : !isBiblical && effectiveOverlay === "people-groups" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {`${filteredPeopleGroups.length} People Groups`}
@@ -1028,7 +1065,7 @@ function MapsContent({
               </Pressable>
             ))}
           </View>
-        ) : overlay === "prophecy" ? (
+        ) : !isBiblical && overlay === "prophecy" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {`${filteredProphecyLinks.length} Prophecy Connections`}
@@ -1076,20 +1113,26 @@ function MapsContent({
               </Pressable>
             ))}
           </View>
-        ) : overlay === "journey-routes" ? (
+        ) : effectiveOverlay === "journey-routes" ? (
           <View style={styles.tabContent}>
             {selectedJourney === "all" && (
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {`${BIBLICAL_JOURNEY_ROUTES.length} Journey Routes`}
+                {isBiblical
+                  ? `${selectedEra === "Exodus" ? 1 : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.category === "Early Church").length} Journey Routes`
+                  : `${BIBLICAL_JOURNEY_ROUTES.length} Journey Routes`}
               </Text>
             )}
             {(selectedJourney === "all"
-              ? BIBLICAL_JOURNEY_ROUTES
+              ? (isBiblical
+                  ? BIBLICAL_JOURNEY_ROUTES.filter((r) =>
+                      selectedEra === "Exodus" ? r.id === "exodus-route" : r.category === "Early Church"
+                    )
+                  : BIBLICAL_JOURNEY_ROUTES)
               : BIBLICAL_JOURNEY_ROUTES.filter((r) => r.id === selectedJourney)
             ).map((jr) => (
               <Pressable
                 key={jr.id}
-                onPress={() => router.push({ pathname: `/journey-route/${jr.id}`, params: { mode: mapMode, era: selectedEra, overlay, journey: selectedJourney } } as any)}
+                onPress={() => router.push({ pathname: `/journey-route/${jr.id}`, params: { mode: mapMode, era: selectedEra, overlay: effectiveOverlay, journey: selectedJourney } } as any)}
                 style={({ pressed }) => [
                   styles.regionCard,
                   {
@@ -1129,7 +1172,7 @@ function MapsContent({
               </Pressable>
             ))}
           </View>
-        ) : overlay === "kingdoms" ? (
+        ) : !isBiblical && overlay === "kingdoms" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {`${BIBLICAL_KINGDOM_OVERLAYS.length} Kingdoms & Empires`}
@@ -1179,7 +1222,7 @@ function MapsContent({
               </Pressable>
             ))}
           </View>
-        ) : overlay === "tribes" ? (
+        ) : !isBiblical && overlay === "tribes" ? (
           <View style={styles.tabContent}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {`${BIBLICAL_TRIBE_OVERLAYS.length} Tribes of Israel`}
