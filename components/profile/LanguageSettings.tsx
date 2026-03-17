@@ -3,44 +3,29 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
-import { CONTENT_LANGUAGE_OPTIONS, type ContentLanguageOption } from "@/lib/content-language";
 
 interface LanguageSettingsProps {
   theme: typeof Colors.dark;
   isDark: boolean;
   currentLang: string;
-  contentLangOption: ContentLanguageOption;
   langPickerOpen: boolean;
-  contentLangPickerOpen: boolean;
   onToggleLangPicker: () => void;
-  onToggleContentLangPicker: () => void;
   onLanguageChange: (code: string) => void;
   onUseDeviceLang: () => void;
-  onContentLangChange: (code: ContentLanguageOption) => void;
   languageLabel: string;
-  contentLanguageLabel: string;
-  contentLangSub: string;
   useDeviceLanguageLabel: string;
-  sameAsAppLabel: string;
 }
 
 export default function LanguageSettings({
   theme,
   isDark,
   currentLang,
-  contentLangOption,
   langPickerOpen,
-  contentLangPickerOpen,
   onToggleLangPicker,
-  onToggleContentLangPicker,
   onLanguageChange,
   onUseDeviceLang,
-  onContentLangChange,
   languageLabel,
-  contentLanguageLabel,
-  contentLangSub,
   useDeviceLanguageLabel,
-  sameAsAppLabel,
 }: LanguageSettingsProps) {
   return (
     <>
@@ -91,53 +76,6 @@ export default function LanguageSettings({
               >
                 <Text style={[styles.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                   {lang.label}
-                </Text>
-                {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      <Pressable
-        onPress={onToggleContentLangPicker}
-        style={({ pressed }) => [
-          styles.linkRow,
-          { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
-        ]}
-      >
-        <View style={[styles.linkIcon, { backgroundColor: "#10B98115" }]}>
-          <Ionicons name="document-text" size={18} color="#10B981" />
-        </View>
-        <Text style={[styles.linkTitle, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-          {contentLanguageLabel}
-        </Text>
-        <Text style={[styles.langCurrentLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {CONTENT_LANGUAGE_OPTIONS.find((o) => o.code === contentLangOption)?.label || "Same as App"}
-        </Text>
-        <Ionicons name={contentLangPickerOpen ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
-      </Pressable>
-
-      <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, paddingHorizontal: 16, paddingBottom: 10, paddingTop: 2, lineHeight: 19 }}>
-        {contentLangSub}
-      </Text>
-
-      {contentLangPickerOpen && (
-        <View style={[styles.langPicker, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", borderColor: theme.border }]}>
-          {CONTENT_LANGUAGE_OPTIONS.map((opt) => {
-            const isActive = contentLangOption === opt.code;
-            return (
-              <Pressable
-                key={opt.code}
-                onPress={() => onContentLangChange(opt.code)}
-                style={({ pressed }) => [
-                  styles.langOption,
-                  { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
-                  isActive && { backgroundColor: theme.accent + "10" },
-                ]}
-              >
-                <Text style={[styles.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                  {opt.code === "same" ? sameAsAppLabel : opt.label}
                 </Text>
                 {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
               </Pressable>

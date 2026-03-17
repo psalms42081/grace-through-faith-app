@@ -18,8 +18,6 @@ import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
-import { useContentLanguage } from "@/contexts/ContentLanguageContext";
-import { type ContentLanguageOption } from "@/lib/content-language";
 import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
@@ -56,9 +54,7 @@ export default function ProfileScreen() {
   const uid = user?.id || "guest";
 
   const [langPickerOpen, setLangPickerOpen] = useState(false);
-  const [contentLangPickerOpen, setContentLangPickerOpen] = useState(false);
   const currentLang = i18n.language?.split("-")[0] || "en";
-  const { contentLangOption, setContentLang } = useContentLanguage();
 
   const handleLanguageChange = useCallback(async (code: string) => {
     await setLanguage(code);
@@ -69,11 +65,6 @@ export default function ProfileScreen() {
     await useDeviceLanguage();
     setLangPickerOpen(false);
   }, []);
-
-  const handleContentLangChange = useCallback(async (code: ContentLanguageOption) => {
-    await setContentLang(code);
-    setContentLangPickerOpen(false);
-  }, [setContentLang]);
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
     queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
@@ -278,19 +269,12 @@ export default function ProfileScreen() {
           theme={theme}
           isDark={isDark}
           currentLang={currentLang}
-          contentLangOption={contentLangOption}
           langPickerOpen={langPickerOpen}
-          contentLangPickerOpen={contentLangPickerOpen}
           onToggleLangPicker={() => setLangPickerOpen(!langPickerOpen)}
-          onToggleContentLangPicker={() => setContentLangPickerOpen(!contentLangPickerOpen)}
           onLanguageChange={handleLanguageChange}
           onUseDeviceLang={handleUseDeviceLang}
-          onContentLangChange={handleContentLangChange}
           languageLabel={t("profile.language")}
-          contentLanguageLabel={t("profile.contentLanguage")}
-          contentLangSub={t("profile.contentLangSub")}
           useDeviceLanguageLabel={t("profile.useDeviceLanguage")}
-          sameAsAppLabel={t("profile.sameAsApp")}
         />
 
         <View style={{ height: 12 }} />
