@@ -2,7 +2,6 @@ import React, { useState, useCallback } from "react";
 import {
   View,
   Image,
-  Text,
   Pressable,
   StyleSheet,
   LayoutChangeEvent,
@@ -71,13 +70,9 @@ export default function AtlasPlate({ plate, onHotspotPress }: AtlasPlateProps) {
           pointerEvents="none"
         >
           <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.55)"]}
+            colors={["transparent", "rgba(20,18,14,0.45)"]}
             style={styles.titleGradient}
-          >
-            <Text style={styles.titleText} numberOfLines={1}>
-              {plate.title}
-            </Text>
-          </LinearGradient>
+          />
         </View>
       )}
       {imageLayout &&
@@ -131,12 +126,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 24,
     paddingBottom: 10,
-  },
-  titleText: {
-    color: "rgba(255,255,255,0.92)",
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.2,
   },
   hotspot: {
     position: "absolute",

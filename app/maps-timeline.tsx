@@ -494,7 +494,7 @@ function MapsContent({
           {currentPlate.subtitle}
         </Text>
         <Text style={[styles.plateAttribution, { color: theme.textMuted }]}>
-          Headwaters
+          Grace Through Faith Atlas
         </Text>
       </View>
 

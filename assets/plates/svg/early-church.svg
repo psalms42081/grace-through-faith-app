@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000">
+<defs>
+  <linearGradient id="parchBg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#F5EAD6"/>
+    <stop offset="100%" stop-color="#F0E2C8"/>
+  </linearGradient>
+  <linearGradient id="waterGrad" x1="0" y1="0" x2="0.3" y2="1">
+    <stop offset="0%" stop-color="#BDCDD8"/>
+    <stop offset="100%" stop-color="#9AB4C8"/>
+  </linearGradient>
+  <radialGradient id="terrain0" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D8C8A0" stop-opacity="0.2"/>
+    <stop offset="100%" stop-color="#F0E2C8" stop-opacity="0"/>
+  </radialGradient>
+<radialGradient id="terrain1" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#D8C8A0" stop-opacity="0.2"/>
+    <stop offset="100%" stop-color="#F0E2C8" stop-opacity="0"/>
+  </radialGradient>
+  <clipPath id="mapClip"><rect x="0" y="0" width="1600" height="1000" rx="0"/></clipPath>
+</defs>
+<g clip-path="url(#mapClip)">
+  <rect width="1600" height="1000" fill="url(#parchBg)"/>
+  <path d="M-833.7,-331.3 L1966.9,-331.3 L1593.5,127.3 L986.7,156.0 L963.4,184.7 L846.7,213.3 L870.0,299.3 L870.0,356.7 L916.7,414.0 L986.7,442.7 L1080.1,425.5 L1173.4,442.7 L1243.4,425.5 L1290.1,442.7 L1313.4,459.9 L1308.8,500.0 L1304.1,557.3 L1290.1,586.0 L1271.4,643.3 L1266.8,654.8 L1257.4,689.2 L1243.4,712.1 L1220.1,740.8 L1150.1,758.0 L1103.4,735.1 L1056.7,758.0 L1010.0,729.3 L916.7,740.8 L800.0,729.3 L566.6,758.0 L99.9,643.3 L-366.9,528.7 L-833.7,414.0 L-833.7,-331.3 Z" fill="#BDCDD8" stroke="#9B8B70" stroke-width="0.8"/>
+<path d="M893.4,-102.0 L1593.5,-102.0 L1593.5,127.3 L1546.8,156.0 L1500.1,184.7 L1360.1,184.7 L1220.1,173.2 L1126.7,156.0 L1033.4,167.5 L986.7,173.2 L963.4,156.0 L940.0,127.3 L893.4,127.3 L893.4,-102.0 Z" fill="#BDCDD8" stroke="#9B8B70" stroke-width="0.8"/>
+  <path d="M566.6,127.3 L846.7,127.3 L846.7,184.7 L800.0,213.3 L753.3,242.0 L706.6,213.3 L683.3,242.0 L706.6,270.7 L706.6,299.3 L730.0,328.0 L753.3,356.7 L730.0,368.1 L706.6,385.3 L683.3,414.0 L683.3,442.7 L660.0,414.0 L636.6,385.3 L636.6,356.7 L613.3,328.0 L590.0,299.3 L566.6,270.7 L566.6,242.0 L566.6,213.3 L566.6,127.3 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M-40.2,-102.0 L239.9,-102.0 L193.2,-16.0 L216.6,12.7 L286.6,70.0 L333.2,127.3 L426.6,184.7 L473.3,213.3 L496.6,242.0 L426.6,270.7 L403.3,299.3 L403.3,328.0 L379.9,356.7 L356.6,356.7 L379.9,328.0 L379.9,299.3 L356.6,242.0 L286.6,184.7 L239.9,156.0 L169.9,127.3 L99.9,70.0 L29.8,12.7 L-40.2,-102.0 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M239.9,339.5 L216.6,356.7 L239.9,385.3 L286.6,414.0 L333.2,414.0 L356.6,385.3 L356.6,356.7 L333.2,339.5 L286.6,328.0 L239.9,339.5 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M1126.7,505.7 L1150.1,494.3 L1196.7,500.0 L1220.1,517.2 L1243.4,534.4 L1196.7,545.9 L1150.1,545.9 L1126.7,528.7 L1126.7,505.7 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M730.0,500.0 L776.7,511.5 L800.0,517.2 L846.7,528.7 L846.7,517.2 L800.0,505.7 L753.3,500.0 L730.0,494.3 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M846.7,127.3 L1593.5,127.3 L1500.1,184.7 L1406.8,213.3 L1313.4,242.0 L1266.8,270.7 L1266.8,328.0 L1243.4,356.7 L1220.1,385.3 L1196.7,414.0 L1243.4,425.5 L1173.4,442.7 L1080.1,425.5 L986.7,442.7 L916.7,414.0 L870.0,356.7 L870.0,299.3 L846.7,213.3 L846.7,127.3 Z" fill="#F0E2C8" stroke="none"/>
+<path d="M800.0,729.3 L916.7,740.8 L1010.0,729.3 L1056.7,758.0 L1103.4,735.1 L1150.1,758.0 L1220.1,740.8 L1220.1,1388.7 L800.0,1388.7 L800.0,729.3 Z" fill="#F0E2C8" stroke="none"/>
+  <ellipse cx="1126.7" cy="356.7" rx="100" ry="60" fill="url(#terrain0)"/>
+<ellipse cx="1266.8" cy="758.0" rx="40" ry="50" fill="url(#terrain1)"/>
+  <path d="M1173.4,1159.3 Q1173.4,1159.3 1168.7,1130.7 Q1164.1,1102.0 1157.1,1073.3 Q1150.1,1044.7 1133.7,1016.0 Q1117.4,987.3 1103.4,958.7 Q1089.4,930.0 1084.7,901.3 Q1080.1,872.7 1080.1,844.0 Q1080.1,815.3 1084.7,801.0 Q1089.4,786.7 1096.4,772.3 L1103.4,758.0" fill="none" stroke="#A0BCD0" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M1294.8,631.9 Q1294.8,631.9 1293.6,640.5 Q1292.4,649.1 1292.4,654.8 Q1292.4,660.5 1291.3,672.0 Q1290.1,683.5 1288.9,696.4 L1287.8,709.3" fill="none" stroke="#A0BCD0" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <text x="1126.7" y="299.3" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">ASIA MINOR</text>
+<text x="706.6" y="184.7" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="13" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">MACEDONIA</text>
+<text x="660.0" y="356.7" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="12" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">ACHAIA</text>
+<text x="1033.4" y="844.0" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">EGYPT</text>
+<text x="1360.1" y="528.7" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="13" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">SYRIA</text>
+<text x="216.6" y="127.3" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="13" font-style="italic" fill="#7B6B58" letter-spacing="4" opacity="0.5">ITALIA</text>
+  <circle cx="1277.5" cy="713.9" r="5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="1277.5" y="742.9" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#3D2B1F">Jerusalem</text>
+<circle cx="1320.9" cy="459.9" r="5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="1331.9" y="467.6" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#3D2B1F">Antioch</text>
+<circle cx="909.2" cy="360.1" r="5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="909.2" y="389.1" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#3D2B1F">Ephesus</text>
+<circle cx="701.0" cy="361.8" r="5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="701.0" y="390.8" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#3D2B1F">Corinth</text>
+<circle cx="216.6" cy="133.1" r="5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="227.6" y="140.8" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#3D2B1F">Rome</text>
+<circle cx="703.8" cy="205.9" r="3.5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="703.8" y="196.4" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="normal" fill="#3D2B1F">Thessalonica</text>
+<circle cx="766.9" cy="184.1" r="3.5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="766.9" y="174.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="normal" fill="#3D2B1F">Philippi</text>
+<circle cx="740.3" cy="358.4" r="3.5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="730.8" y="364.3" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="normal" fill="#3D2B1F">Athens</text>
+<circle cx="1029.6" cy="746.5" r="3.5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="1029.6" y="769.0" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="normal" fill="#3D2B1F">Alexandria</text>
+<circle cx="1261.6" cy="672.0" r="3.5" fill="#3D2B1F" stroke="#F0E2C8" stroke-width="1.5"/>
+<text x="1252.1" y="678.0" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="normal" fill="#3D2B1F">Caesarea</text>
+  <text x="80" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="38" font-weight="bold" fill="#2A1F14">World of the Early Church</text>
+</g>
+</svg>
