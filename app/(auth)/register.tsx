@@ -36,6 +36,13 @@ export default function RegisterScreen() {
       setError("Please enter your email");
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,63}$/;
+    const tldRegex = /\.([a-zA-Z]+)$/;
+    const tldMatch = email.trim().match(tldRegex);
+    if (!emailRegex.test(email.trim()) || (tldMatch && tldMatch[1].length > 6)) {
+      setError("Please check your email address for typos");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
