@@ -109,9 +109,9 @@ function buildHtml(props: {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%;overflow:hidden}
-body{background:#3a3428}
-.leaflet-container{background:#3a3428!important}
-.leaflet-tile-pane{filter:brightness(0.72) contrast(1.1) sepia(0.6) saturate(0.4) hue-rotate(-12deg)}
+body{background:#2c2418}
+.leaflet-container{background:#2c2418!important}
+.leaflet-tile-pane{filter:brightness(0.55) contrast(1.15) sepia(0.5) saturate(0.5)}
 .leaflet-control-zoom{display:none!important}
 .leaflet-control-attribution{font-size:7px!important;background:rgba(50,45,35,0.5)!important;color:rgba(140,130,110,0.35)!important;padding:1px 4px!important}
 .leaflet-control-attribution a{color:rgba(140,130,110,0.35)!important;text-decoration:none!important}
@@ -120,7 +120,7 @@ body{background:#3a3428}
 <script>
 function p(d){window.ReactNativeWebView?window.ReactNativeWebView.postMessage(JSON.stringify(d)):window.parent.postMessage(JSON.stringify(d),'*')}
 var _ts=${Date.now()};var map=L.map('map',{zoomControl:false,attributionControl:true,maxZoom:10,minZoom:3});
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxZoom:13,attribution:'Esri'}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:8,attribution:'Esri'}).addTo(map);
 ${fitJs}
 ${kingdomJs}${tribeJs}${routeJs}${markersJs}
 <\/script></body></html>`;
@@ -241,5 +241,5 @@ export default function BibleMap({
 
 const s = StyleSheet.create({
   container: { width: "100%", height: "100%", borderRadius: 16, overflow: "hidden" },
-  map: { width: "100%", height: "100%", backgroundColor: "#3a3428" },
+  map: { width: "100%", height: "100%", backgroundColor: "#2c2418" },
 });
