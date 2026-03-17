@@ -234,7 +234,7 @@ export default function StudyScreen() {
           Study
         </Text>
         <Text style={[st.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Explore Bible themes, doctrines, and study tools.
+          Scripture, Sabbath School, and tools for deeper growth.
         </Text>
       </View>
 
@@ -256,7 +256,7 @@ export default function StudyScreen() {
           <TopicImageCard
             id="guided-study"
             title="Guided Study"
-            subtitle="Choose a passage, then study it with an AI tutor"
+            subtitle="Choose a passage and explore it with guided questions"
             onPress={() => router.push("/study-guide" as any)}
             testID="study-mode-guided_study"
           />
@@ -267,6 +267,27 @@ export default function StudyScreen() {
             badge="4-Layer"
             onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
             testID="study-mode-deep_study"
+          />
+        </View>
+
+        <View style={{ height: 24 }} />
+
+        <SectionLabel label="Sabbath School & Prayer" theme={theme} />
+
+        <View style={st.topicImageCards}>
+          <TopicImageCard
+            id="fundamental-beliefs"
+            title="Sabbath School"
+            subtitle="This week's lesson, discussion questions, and insights"
+            onPress={() => router.push("/sabbath-school" as any)}
+            testID="sabbath-school-entry"
+          />
+          <TopicImageCard
+            id="prayer"
+            title="Prayer Journal"
+            subtitle="Record, track, and reflect on your prayer life"
+            onPress={() => router.push("/prayer-journal" as any)}
+            testID="prayer-journal-entry"
           />
         </View>
 
@@ -312,10 +333,10 @@ export default function StudyScreen() {
 
         <View style={{ height: 24 }} />
 
-        <SectionLabel label="Spiritual Themes" theme={theme} />
+        <SectionLabel label="Adventist Studies" theme={theme} />
 
         <View style={st.topicImageCards}>
-          {SPIRITUAL_THEMES.map((item) => (
+          {ADVENTIST_STUDIES.map((item) => (
             <TopicImageCard
               key={item.id}
               id={item.id}
@@ -329,10 +350,10 @@ export default function StudyScreen() {
 
         <View style={{ height: 24 }} />
 
-        <SectionLabel label="Adventist Studies" theme={theme} />
+        <SectionLabel label="Spiritual Themes" theme={theme} />
 
         <View style={st.topicImageCards}>
-          {ADVENTIST_STUDIES.map((item) => (
+          {SPIRITUAL_THEMES.map((item) => (
             <TopicImageCard
               key={item.id}
               id={item.id}

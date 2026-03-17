@@ -286,7 +286,7 @@ export default function FamilyDashboard() {
             Free During Beta
           </Text>
           <Text style={[styles.proGateSubtitle, { color: theme.textSecondary, marginTop: 4 }]}>
-            Track your children's progress, see their growth, and get AI-powered conversation starters.
+            Track your children's progress, see their growth, and get conversation starters for family worship.
           </Text>
           <Pressable
             style={[styles.proGateButton, { backgroundColor: theme.accent }]}

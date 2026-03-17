@@ -342,7 +342,7 @@ export default function StudyGuideScreen() {
                 Choose a Chapter
               </Text>
               <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 8 }]}>
-                Your AI tutor will guide you through this passage
+                Walk through this passage step by step
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 12, backgroundColor: theme.accent + "10", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: "center" }}>
                 <Ionicons name="sparkles" size={11} color={theme.accent} />
@@ -380,7 +380,7 @@ export default function StudyGuideScreen() {
                   Start a Guided Study
                 </Text>
                 <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Choose a passage and your AI tutor will walk you through observation, meaning, and response.
+                  Choose a passage and walk through observation, meaning, and response.
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, backgroundColor: theme.accent + "10", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" }}>
                   <Ionicons name="sparkles" size={11} color={theme.accent} />

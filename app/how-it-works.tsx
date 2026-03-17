@@ -34,8 +34,8 @@ const SECTIONS = [
   {
     icon: "chatbubbles" as const,
     color: "#8B5CF6",
-    title: "Socratic AI Guide",
-    body: "Our AI guide asks thoughtful questions to help you think critically about Scripture. It doesn\u2019t tell you what to believe\u2014it helps you discover insights on your own.",
+    title: "Guided Study",
+    body: "Thoughtful questions help you think critically about Scripture. This tool doesn\u2019t tell you what to believe\u2014it helps you discover insights on your own.",
   },
   {
     icon: "people" as const,

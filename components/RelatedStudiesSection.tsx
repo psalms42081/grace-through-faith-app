@@ -97,7 +97,7 @@ export default function RelatedStudiesSection({
       icon: "chatbubbles-outline",
       iconColor: "#8B5CF6",
       title: "Start Guided Study",
-      subtitle: parsed ? `AI tutor on ${keyPassages[0]}` : "No passages available",
+      subtitle: parsed ? `Guided study on ${keyPassages[0]}` : "No passages available",
       disabled: !parsed,
       onPress: () => {
         if (parsed) {
