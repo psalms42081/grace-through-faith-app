@@ -53,7 +53,7 @@ const CATEGORIES = [
   },
   {
     id: "adventist-studies",
-    title: "Adventist Essentials",
+    title: "Essentials",
     subtitle: "Three Angels' Messages, Health Message",
     icon: "school" as const,
   },

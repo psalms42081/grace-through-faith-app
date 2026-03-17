@@ -106,7 +106,7 @@ const CATEGORY_META: Record<string, { title: string; subtitle: string }> = {
   "sabbath-prayer": { title: "Sabbath School & Prayer", subtitle: "Weekly lessons and your prayer life" },
   "learning-paths": { title: "Learning Paths", subtitle: "Structured plans for spiritual growth" },
   "study-tools": { title: "Study Tools", subtitle: "Maps, timeline, and historic commentary" },
-  "adventist-studies": { title: "Adventist Essentials", subtitle: "Core Adventist teachings and distinctive beliefs" },
+  "adventist-studies": { title: "Essentials", subtitle: "Core Adventist teachings and distinctive beliefs" },
   "spiritual-themes": { title: "Spiritual Themes", subtitle: "Explore Scripture by theme" },
 };
 
