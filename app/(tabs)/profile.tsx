@@ -17,15 +17,13 @@ import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTutorial } from "@/contexts/TutorialContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
 import { type ContentLanguageOption } from "@/lib/content-language";
 import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
-import BadgesGrid from "@/components/profile/BadgesGrid";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
-import ActivitySections from "@/components/profile/ActivitySections";
 import LanguageSettings from "@/components/profile/LanguageSettings";
+import SpiritualRings from "@/components/SpiritualRings";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -33,14 +31,6 @@ interface WeeklyStreakData {
   currentStreak: number;
   longestStreak: number;
   lastReadDate: string | null;
-}
-
-interface TodayResponse {
-  today: { dayNumber: number; title: string; passageLabel: string | null } | null;
-  enrollment?: { planId: string };
-  completedCount?: number;
-  totalDays?: number;
-  planComplete?: boolean;
 }
 
 interface GrowthData {
@@ -61,7 +51,6 @@ export default function ProfileScreen() {
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated, logout } = useAuth();
-  const { resetAllTutorials } = useTutorial();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -91,49 +80,15 @@ export default function ProfileScreen() {
     queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
   });
 
-  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string; readAt: string }[]>({
-    queryKey: [`/api/reading-history/recent?userId=${uid}`],
-  });
-
-  const { data: todayData } = useQuery<TodayResponse>({
-    queryKey: [`/api/devotionals/today?userId=${uid}`],
-  });
-
-  const { data: prayerCount } = useQuery<{ id: string }[]>({
-    queryKey: [`/api/prayers?userId=${uid}`],
-  });
-
   const { data: growthData } = useQuery<GrowthData>({
     queryKey: [`/api/analytics/growth?userId=${uid}`],
-  });
-
-  interface RevisitEntry {
-    bookId: number;
-    chapter: number;
-    bookName: string;
-    lastEdited: string;
-    excerpt: string;
-    layer: string;
-    sectionKey: string;
-  }
-
-  const { data: revisitEntries } = useQuery<RevisitEntry[]>({
-    queryKey: [`/api/study-journal/revisit?userId=${uid}`],
   });
 
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
   const streak = weeklyData?.currentStreak ?? 0;
   const longestStreak = weeklyData?.longestStreak ?? 0;
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
-  const totalReads = recentReads?.length ?? 0;
   const todayIdx = new Date().getDay();
-
-  const earnedBadges = new Set<string>();
-  if (totalReads > 0) earnedBadges.add("first-read");
-  if (streak >= 7) earnedBadges.add("week-streak");
-  if (todayData?.enrollment) earnedBadges.add("plan-starter");
-  if (prayerCount && prayerCount.length >= 5) earnedBadges.add("prayer-warrior");
-  if (perfectWeeks > 0) earnedBadges.add("perfect-week");
 
   const studyMinutes = growthData?.deepStudyMinutes ?? 0;
   const wordsLearned = growthData?.wordsLearned ?? 0;
@@ -187,7 +142,7 @@ export default function ProfileScreen() {
 
       <View style={st.sectionPad}>
         <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Your Journey
+          Your Growth
         </Text>
       </View>
 
@@ -244,7 +199,11 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+      <View style={{ height: 16 }} />
+
+      <SpiritualRings theme={theme} isDark={isDark} />
+
+      <View style={{ height: 16 }} />
 
       <GrowthAnalytics
         studyMinutes={studyMinutes}
@@ -258,7 +217,7 @@ export default function ProfileScreen() {
         socraticLabel={t("profile.socraticSessions")}
       />
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+      <View style={{ height: 16 }} />
 
       <View style={[st.heatmapSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
         <View style={st.heatmapHeaderRow}>
@@ -282,37 +241,6 @@ export default function ProfileScreen() {
             </Text>
           </View>
         )}
-      </View>
-
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
-
-      <BadgesGrid
-        earnedBadges={earnedBadges}
-        theme={theme}
-        isDark={isDark}
-        sectionTitle={t("profile.badges")}
-      />
-
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
-
-      <ActivitySections
-        recentReads={recentReads}
-        revisitEntries={revisitEntries}
-        theme={theme}
-        isDark={isDark}
-        recentActivityTitle={t("profile.recentActivity")}
-        revisitTitle={t("profile.revisitReflections")}
-        revisitSubtitle={t("profile.revisitSubtitle")}
-      />
-
-      <View style={{ marginHorizontal: 20, marginTop: 4, marginBottom: 12 }}>
-        <ListItem
-          icon="trending-up"
-          iconColor="#4ECCA3"
-          title="Growth Map"
-          onPress={() => router.push("/growth-map" as any)}
-          style={{ marginBottom: 0 }}
-        />
       </View>
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
@@ -376,7 +304,6 @@ export default function ProfileScreen() {
           ...(user?.role === "admin" || user?.role === "editor" ? [
             { title: "Content Pipeline", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
-          { title: t("profile.howItWorks"), icon: "information-circle" as const, color: "#5B86E5", route: "/how-it-works" },
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
         ].map((link) => (
           <ListItem
@@ -388,13 +315,6 @@ export default function ProfileScreen() {
             style={{ marginBottom: 6 }}
           />
         ))}
-        <ListItem
-          icon="refresh"
-          iconColor="#C9933A"
-          title="Replay Tutorials"
-          onPress={resetAllTutorials}
-          style={{ marginBottom: 6 }}
-        />
       </View>
     </ScrollView>
     </>
