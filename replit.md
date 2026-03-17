@@ -44,7 +44,7 @@ The application features a mobile-first architecture with a frontend built using
 - **28 Fundamental Beliefs UX:** Interactive belief cards with scripture navigation.
 - **Great Controversy Timeline Engine:** Immersive vertical timeline.
 - **Study Screen Architecture:** Structured Study tab with hero sections, learning paths, prophecy, and reference sections.
-- **Bible Maps System:** Advanced interactive map with overlays for Biblical locations, people groups, prophecy links, journey routes, kingdoms & empires, and tribes of Israel. Features search, focus system, and detail screens with related studies integration.
+- **Bible Maps System:** Curated biblical atlas experience using static Headwaters atlas plates (CC BY-NC-SA 4.0) with tappable hotspots. Single-mode design (no Modern/Biblical toggle) — always shows atlas plates. Supports era filtering (All, Patriarchs, Exodus, Kingdom, Exile, Early Church) and contextual journey chips (Exodus Route for Exodus era; Paul's Journeys for Early Church). Search spans locations, people groups, prophecy, journeys, kingdoms, and tribes. Detail screens with related studies integration. Atlas plate images in `assets/plates/`, plate definitions in `constants/atlas-plates.ts`.
 - **Related Studies Integration Layer:** Reusable component (`RelatedStudiesSection`) for contextual study actions (e.g., Read Passages, Start Guided Study, Open Historic Voices) across all Bible Maps detail screens.
 - **Guided Study Passage Picker:** Inline book/chapter picker for AI tutor sessions.
 - **Content Engine & Study Resources:** Two-stage content pipeline with review workflow and versioning.
@@ -66,5 +66,5 @@ The application features a mobile-first architecture with a frontend built using
 - **jsonwebtoken:** JWT token generation and verification.
 - **LiveKit Cloud:** Real-time video/audio conferencing.
 - **react-native-webview:** Loads LiveKit room HTML on native.
-- **react-native-maps@1.18.0:** Interactive maps on native platforms.
-- **OpenStreetMap:** Embedded tile maps on the web platform.
+- **react-native-maps@1.18.0:** Available for native map views (currently unused by Bible Maps, which uses atlas plates).
+- **Headwaters Bible Maps:** Static atlas plate images (CC BY-NC-SA 4.0) for the Bible Maps screen.
