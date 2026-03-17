@@ -110,34 +110,10 @@ router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/auth/reset-password", authLimiter, requireAuth, async (req, res) => {
-  try {
-    const userId = req.authUserId!;
-    const { newPassword } = req.body;
-
-    if (!newPassword) {
-      return res.status(400).json({ error: "New password is required" });
-    }
-
-    const cleanPassword = newPassword.trim();
-
-    if (cleanPassword.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
-    }
-
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) {
-      return res.status(404).json({ error: "Account not found" });
-    }
-
-    const hashedPassword = await bcrypt.hash(cleanPassword, 10);
-    await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
-
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("Reset password error:", err);
-    return res.status(500).json({ error: "Failed to reset password" });
-  }
+router.post("/api/auth/reset-password", authLimiter, (_req, res) => {
+  return res.status(501).json({
+    error: "Password reset is not available. Please contact support or create a new account.",
+  });
 });
 
 const VALID_ROLES = ["member", "student", "church_leader", "editor", "admin"];
