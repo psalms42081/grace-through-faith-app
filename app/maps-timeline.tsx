@@ -222,8 +222,8 @@ const EDITORIAL_PRESETS: Record<string, { latitude: number; longitude: number }[
     { latitude: 33.0, longitude: 36.0 },
   ],
   "paul-journey-1": [
-    { latitude: 33.5, longitude: 30.0 },
-    { latitude: 39.5, longitude: 37.0 },
+    { latitude: 32.0, longitude: 28.0 },
+    { latitude: 40.0, longitude: 38.0 },
   ],
   "paul-journey-2": [
     { latitude: 33.0, longitude: 20.0 },

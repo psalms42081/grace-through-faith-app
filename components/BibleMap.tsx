@@ -70,18 +70,18 @@ function buildHtml(props: {
     : `map.setView([${center[0]},${center[1]}],${zoom});`;
 
   const markersJs = locations.map((loc) => {
-    const sz = loc.selected ? 10 : 6;
-    const col = loc.selected ? "#C9933A" : loc.quiet ? "#8B8B8B" : "#C9933A";
-    const op = loc.selected ? 1.0 : loc.quiet ? 0.5 : 0.75;
-    const bdr = loc.selected ? "2.5px solid #fff" : "1px solid rgba(0,0,0,0.3)";
-    const shd = loc.selected ? "0 0 8px rgba(201,147,58,0.6)" : "none";
+    const sz = loc.selected ? 7 : 4;
+    const col = loc.selected ? "#C9933A" : loc.quiet ? "#9a8e7a" : "#b8a070";
+    const op = loc.selected ? 1.0 : loc.quiet ? 0.4 : 0.6;
+    const bdr = loc.selected ? "2px solid rgba(255,255,255,0.85)" : "1px solid rgba(60,50,35,0.4)";
+    const shd = loc.selected ? "0 0 6px rgba(201,147,58,0.4)" : "none";
     const zi = loc.selected ? 1000 : 100;
     return `(function(){var i=L.divIcon({className:'',html:'<div style="width:${sz*2}px;height:${sz*2}px;border-radius:50%;background:${col};border:${bdr};opacity:${op};box-shadow:${shd}"></div>',iconSize:[${sz*2},${sz*2}],iconAnchor:[${sz},${sz}]});var m=L.marker([${loc.lat},${loc.lon}],{icon:i,zIndexOffset:${zi}}).addTo(map);${loc.selected?`L.tooltip({permanent:true,direction:'top',offset:[0,-${sz+3}],className:'loc-tip'}).setContent('${esc(loc.name)}').setLatLng([${loc.lat},${loc.lon}]).addTo(map);`:''}m.on('click',function(){p({t:'m',id:'${esc(loc.id)}'})});})();`;
   }).join("");
 
   const routeJs = routeLines.map((r) => {
     const cs = r.coords.map(c => `[${c[0]},${c[1]}]`).join(",");
-    return `L.polyline([${cs}],{color:'${r.color}',weight:${r.highlight?3:1.5},opacity:${r.highlight?0.8:0.35},dashArray:'${r.highlight?"":"6 4"}',lineCap:'round',lineJoin:'round'}).addTo(map);`;
+    return `L.polyline([${cs}],{color:'${r.color}',weight:${r.highlight?2.5:1},opacity:${r.highlight?0.65:0.25},dashArray:'${r.highlight?"":"5 4"}',lineCap:'round',lineJoin:'round'}).addTo(map);`;
   }).join("");
 
   const kingdomJs = kingdoms.map((k) => {
@@ -109,19 +109,19 @@ function buildHtml(props: {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%;overflow:hidden}
-body{background:#2a2520}
-.leaflet-container{background:#2a2520!important}
-.leaflet-tile-pane{filter:brightness(0.35) contrast(1.15) sepia(0.35) saturate(0.7)}
+body{background:#3a3428}
+.leaflet-container{background:#3a3428!important}
+.leaflet-tile-pane{filter:brightness(0.85) contrast(1.05) sepia(0.55) saturate(0.45) hue-rotate(-10deg)}
 .leaflet-control-zoom{display:none!important}
-.leaflet-control-attribution{font-size:8px!important;background:rgba(20,18,14,0.55)!important;color:rgba(160,150,130,0.45)!important;padding:1px 4px!important}
-.leaflet-control-attribution a{color:rgba(160,150,130,0.45)!important;text-decoration:none!important}
-.loc-tip{background:rgba(20,18,14,0.78)!important;border:1px solid rgba(201,147,58,0.35)!important;color:#C9933A!important;font-family:Georgia,serif!important;font-size:11px!important;font-weight:600!important;letter-spacing:0.5px!important;padding:2px 7px!important;border-radius:4px!important;box-shadow:0 2px 6px rgba(0,0,0,0.4)!important}
+.leaflet-control-attribution{font-size:7px!important;background:rgba(50,45,35,0.5)!important;color:rgba(140,130,110,0.35)!important;padding:1px 4px!important}
+.leaflet-control-attribution a{color:rgba(140,130,110,0.35)!important;text-decoration:none!important}
+.loc-tip{background:rgba(45,40,30,0.82)!important;border:1px solid rgba(180,150,90,0.3)!important;color:#c4a55a!important;font-family:Georgia,serif!important;font-size:10px!important;font-weight:600!important;letter-spacing:0.5px!important;padding:2px 7px!important;border-radius:3px!important;box-shadow:0 1px 4px rgba(0,0,0,0.3)!important}
 </style></head><body><div id="map"></div>
 <script>
 function p(d){window.ReactNativeWebView?window.ReactNativeWebView.postMessage(JSON.stringify(d)):window.parent.postMessage(JSON.stringify(d),'*')}
 var map=L.map('map',{zoomControl:false,attributionControl:true,maxZoom:10,minZoom:3});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{maxZoom:13,attribution:'Esri'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:16,attribution:'CARTO',opacity:0.5,pane:'overlayPane'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:16,attribution:'CARTO',opacity:0.18,pane:'overlayPane'}).addTo(map);
 ${fitJs}
 ${kingdomJs}${tribeJs}${routeJs}${markersJs}
 <\/script></body></html>`;
@@ -242,5 +242,5 @@ export default function BibleMap({
 
 const s = StyleSheet.create({
   container: { width: "100%", height: "100%", borderRadius: 16, overflow: "hidden" },
-  map: { width: "100%", height: "100%", backgroundColor: "#2a2520" },
+  map: { width: "100%", height: "100%", backgroundColor: "#3a3428" },
 });
