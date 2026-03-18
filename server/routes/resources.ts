@@ -181,6 +181,7 @@ router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
       return res.status(404).json({ error: "Resource not found" });
     }
 
+    let isBookmarked = false;
     if (userId !== "guest") {
       await db
         .insert(resourceProgress)
@@ -195,12 +196,20 @@ router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
           target: [resourceProgress.userId, resourceProgress.resourceId],
           set: { lastAccessedAt: new Date() },
         });
+
+      const bookmark = await db
+        .select({ id: resourceBookmarks.id })
+        .from(resourceBookmarks)
+        .where(and(eq(resourceBookmarks.userId, userId), eq(resourceBookmarks.resourceId, resource.id)))
+        .limit(1);
+      isBookmarked = bookmark.length > 0;
     }
 
     return res.json({
       ...resource,
       isTeaser: false,
       requiresPro: false,
+      isBookmarked,
     });
   } catch (err) {
     console.error("Get resource error:", err);

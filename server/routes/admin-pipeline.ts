@@ -860,8 +860,30 @@ router.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (req
     const { generateSabbathSchoolCompanion } = await import("../services/content-engine");
 
     if (lessonId) {
+      const lessonSourceCondition = sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
+      const existing = await db
+        .select({ id: resources.id, status: resources.status, contentJson: resources.contentJson })
+        .from(resources)
+        .where(and(lessonSourceCondition, sql`${resources.status} != 'archived'`))
+        .orderBy(desc(resources.createdAt));
+
+      const published = existing.find(r => r.status === "published");
+      const staleDraft = existing.find(r => r.status === "draft" && r.id !== published?.id);
+
+      if (staleDraft) {
+        await db.delete(resources).where(eq(resources.id, staleDraft.id));
+      }
+
       const resourceId = await generateSabbathSchoolCompanion(lessonId, {});
-      return res.json({ success: true, resourceId, mode: "single" });
+
+      if (published) {
+        await db.update(resources).set({
+          supersedesResourceId: published.id,
+          previousContentJson: published.contentJson,
+        }).where(eq(resources.id, resourceId));
+      }
+
+      return res.json({ success: true, resourceId, mode: "single", supersedes: published?.id || null });
     }
 
     const result = await generateQuarterCompanions(quarterCode, { force: force !== false });
