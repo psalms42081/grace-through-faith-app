@@ -61,23 +61,13 @@ async function fetchText(url: string): Promise<string | null> {
   }
 }
 
-export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
-  const quarterCode = getCurrentQuarterCode();
-  console.log(`[SabbathSchool] Syncing quarter ${quarterCode} (${lang})...`);
+async function syncQuarter(quarterCodeToSync: string, lang: string = "en", generateCompanions: boolean = true): Promise<string | null> {
+  const infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCodeToSync}/info.yml`);
+  if (!infoYml) return null;
 
-  let activeQuarterCode = quarterCode;
-  let infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCode}/info.yml`);
-  if (!infoYml) {
-    console.warn(`[SabbathSchool] No quarterly found for ${quarterCode}. Trying previous quarter...`);
-    const prev = getPreviousQuarterCode(quarterCode);
-    infoYml = await fetchText(`${BASE_URL}/${lang}/${prev}/info.yml`);
-    if (!infoYml) {
-      console.warn(`[SabbathSchool] No quarterly found for ${prev} either. Skipping sync.`);
-      return;
-    }
-    activeQuarterCode = prev;
-    console.log(`[SabbathSchool] Using previous quarter ${prev}`);
-  }
+  console.log(`[SabbathSchool] Syncing quarter ${quarterCodeToSync} (${lang})...`);
+
+  const activeQuarterCode = quarterCodeToSync;
 
   const rawInfo = infoYml.replace(/^---\s*\n/, "");
   const info = YAML.parse(rawInfo);
@@ -237,9 +227,71 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
 
   console.log(`[SabbathSchool] Sync complete for ${activeQuarterCode}`);
 
-  buildAndGenerateCompanions(quarterlyId, updatedLessonIds).catch((err) => {
-    console.error("[content:pipeline] Source packet + generation pipeline failed:", err);
-  });
+  if (generateCompanions) {
+    buildAndGenerateCompanions(quarterlyId, updatedLessonIds).catch((err) => {
+      console.error("[content:pipeline] Source packet + generation pipeline failed:", err);
+    });
+  }
+
+  return quarterlyId;
+}
+
+export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
+  const quarterCode = getCurrentQuarterCode();
+
+  let result = await syncQuarter(quarterCode, lang, true);
+  if (!result) {
+    console.warn(`[SabbathSchool] No quarterly found for ${quarterCode}. Trying previous quarter...`);
+    const prev = getPreviousQuarterCode(quarterCode);
+    result = await syncQuarter(prev, lang, true);
+    if (!result) {
+      console.warn(`[SabbathSchool] No quarterly found for ${prev} either. Skipping sync.`);
+    }
+  }
+}
+
+function getNextQuarterCode(code: string): string {
+  const [yearStr, qStr] = code.split("-");
+  let year = parseInt(yearStr);
+  let q = parseInt(qStr);
+  q++;
+  if (q > 4) {
+    q = 1;
+    year++;
+  }
+  return `${year}-${String(q).padStart(2, "0")}`;
+}
+
+async function syncAdjacentQuarters(lang: string = "en", pastCount: number = 8): Promise<void> {
+  const currentCode = getCurrentQuarterCode();
+
+  const existingQuarters = await db
+    .select({ quarterCode: sabbathSchoolQuarterlies.quarterCode })
+    .from(sabbathSchoolQuarterlies);
+  const existingCodes = new Set(existingQuarters.map(q => q.quarterCode));
+
+  const codesToSync: string[] = [];
+
+  const next = getNextQuarterCode(currentCode);
+  if (!existingCodes.has(next)) codesToSync.push(next);
+
+  let prev = getPreviousQuarterCode(currentCode);
+  for (let i = 0; i < pastCount; i++) {
+    if (!existingCodes.has(prev)) codesToSync.push(prev);
+    prev = getPreviousQuarterCode(prev);
+  }
+
+  let synced = 0;
+  for (const code of codesToSync) {
+    const result = await syncQuarter(code, lang, false);
+    if (result) synced++;
+  }
+
+  if (synced > 0) {
+    console.log(`[SabbathSchool] Synced ${synced} adjacent quarter(s)`);
+  } else {
+    console.log(`[SabbathSchool] No new quarters found to sync`);
+  }
 }
 
 async function buildAndGenerateCompanions(quarterlyId: string, lessonIds: string[]): Promise<void> {
@@ -456,6 +508,10 @@ export async function initSabbathSchoolSync(): Promise<void> {
   }
 
   await attemptSync(1);
+
+  syncAdjacentQuarters("en", 8).catch((err) => {
+    console.error("[SabbathSchool] Adjacent quarters sync failed:", err);
+  });
 
   setInterval(
     async () => {
