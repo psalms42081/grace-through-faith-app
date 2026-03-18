@@ -44,10 +44,10 @@ const LAYER_GUIDANCE: Record<Tab, string> = {
 };
 
 const LAYER_PURPOSE: Record<Tab, string> = {
-  word: "Slow down and read closely. Before interpreting, notice what is actually there -- words, patterns, repetitions, contrasts, and images.",
-  context: "Every passage was written in a specific time, place, and situation. Understanding the background changes how you read the text.",
-  voices: "Hear from commentators across church history, then draw out the theological meaning and biblical principles you see.",
-  application: "Move from understanding to action. Let the passage shape a specific response in your thinking, behavior, and prayer.",
+  word: "Read slowly. What stands out to you?",
+  context: "Who wrote this, and why? How does that change what you see?",
+  voices: "What does this passage teach? Let trusted voices sharpen your reading.",
+  application: "What will you do with what you've learned?",
 };
 
 const DEPTH_INFO: Record<string, { encouragement: string; description: string }> = {
@@ -314,8 +314,6 @@ function StudyCompletionScreen({
     ...insightFilled.map((s) => ({ ...s, content: insightJournalMap.get(s.key) ?? "", layerLabel: "Insight" })),
     ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Respond" })),
   ];
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
-
   const summaryText = useMemo(
     () => formatStudySummary(reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel),
     [reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel]
@@ -340,6 +338,13 @@ function StudyCompletionScreen({
     } catch {}
   }, [summaryText]);
 
+  const WRAP_UP_LABELS: Record<string, string> = {
+    Observe: "What you noticed",
+    Context: "What the context clarified",
+    Insight: "What truth stood out",
+    Respond: "What you will carry forward",
+  };
+
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -356,107 +361,58 @@ function StudyCompletionScreen({
         <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
       </Pressable>
       <View style={{ alignItems: "center" as const, marginBottom: 24 }}>
-        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 16, marginTop: 12 }}>
-          <Ionicons name="ribbon" size={32} color={theme.accent} />
+        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 14, marginTop: 8 }}>
+          <Ionicons name="ribbon" size={28} color={theme.accent} />
         </View>
-        <Text style={{ fontSize: 22, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 6 }}>
+        <Text style={{ fontSize: 20, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 4 }}>
           Study Complete
         </Text>
-        <Text style={{ fontSize: 16, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 8 }}>
+        <Text style={{ fontSize: 15, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 10 }}>
           {reference}
         </Text>
-        <Text style={{ fontSize: 14, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 21, maxWidth: 300, marginBottom: 12 }}>
-          You studied this passage through all four layers -- from observation to personal response.
-        </Text>
-        <View style={{ backgroundColor: theme.accent + "10", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}>
-          <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, fontStyle: "italic" as const, lineHeight: 20 }}>
-            Well done. Scripture has shaped your thinking today.
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 16 }}>
-        <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 14 }}>
-          LAYERS COMPLETED
-        </Text>
-        {LAYER_ORDER.map((layer, i) => {
-          const done = completedLayers.has(layer);
-          return (
-            <View key={layer} style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, paddingVertical: 8, borderTopWidth: i > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: theme.border }}>
-              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: done ? theme.accent : theme.backgroundSecondary, alignItems: "center" as const, justifyContent: "center" as const }}>
-                {done ? (
-                  <Ionicons name="checkmark" size={14} color="#fff" />
-                ) : (
-                  <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>{i + 1}</Text>
-                )}
-              </View>
-              <Text style={{ flex: 1, fontSize: 15, color: done ? theme.text : theme.textMuted, fontFamily: done ? "Inter_600SemiBold" : "Inter_400Regular" }}>
-                {LAYER_LABELS[layer]}
-              </Text>
-              {done && <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_500Medium" }}>Done</Text>}
-            </View>
-          );
-        })}
         {depthLabel && (
-          <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
-            <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 8 }}>
-              <Ionicons
-                name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
-                size={14}
-                color={depthColor}
-              />
-              <Text style={{ fontSize: 13, color: depthColor, fontFamily: "Inter_600SemiBold" }}>
-                Study Depth: {depthLabel}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 10 }}>
-              {DEPTH_INFO[depthLabel]?.encouragement}
-            </Text>
-            <View style={{ flexDirection: "row" as const, gap: 6 }}>
-              {DEPTH_LEVELS.map((level) => {
-                const isReached = DEPTH_LEVELS.indexOf(depthLabel) >= DEPTH_LEVELS.indexOf(level);
-                return (
-                  <View key={level} style={{ flex: 1, alignItems: "center" as const, gap: 4 }}>
-                    <View style={{ height: 3, borderRadius: 2, width: "100%", backgroundColor: isReached ? depthColor : theme.border }} />
-                    <Text style={{ fontSize: 9, color: isReached ? depthColor : theme.textMuted, fontFamily: isReached ? "Inter_600SemiBold" : "Inter_400Regular" }}>
-                      {level}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19 }}>
+            {DEPTH_INFO[depthLabel]?.encouragement?.replace("\n", " ")}
+          </Text>
         )}
       </View>
 
-      {allEntries.length > 0 && (
-        <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 16 }}>
-          <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 12 }}>
-            YOUR REFLECTIONS ({allEntries.length})
-          </Text>
-          {allEntries.map((entry) => (
-            <Pressable
-              key={entry.key}
-              onPress={() => setExpandedEntry(expandedEntry === entry.key ? null : entry.key)}
-              style={{ paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}
-            >
-              <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
-                <Ionicons name={(entry.icon ?? "create-outline") as any} size={14} color={(entry.color ?? theme.accent) as string} />
-                <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: "Inter_500Medium" }} numberOfLines={1}>
-                  {entry.title}
-                </Text>
-                <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
-                  {entry.layerLabel}
-                </Text>
-                <Ionicons name={expandedEntry === entry.key ? "chevron-up" : "chevron-down"} size={14} color={theme.textMuted} />
+      <View style={{ flexDirection: "row" as const, gap: 6, marginBottom: 20 }}>
+        {LAYER_ORDER.map((layer) => {
+          const done = completedLayers.has(layer);
+          return (
+            <View key={layer} style={{ flex: 1, alignItems: "center" as const, gap: 4 }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: done ? theme.accent : theme.backgroundSecondary, alignItems: "center" as const, justifyContent: "center" as const }}>
+                {done ? <Ionicons name="checkmark" size={13} color="#fff" /> : <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.textMuted + "40" }} />}
               </View>
-              {expandedEntry === entry.key && (
-                <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 20, marginTop: 8, marginLeft: 22 }}>
-                  {entry.content}
+              <Text style={{ fontSize: 10, color: done ? theme.text : theme.textMuted, fontFamily: done ? "Inter_600SemiBold" : "Inter_400Regular" }}>
+                {LAYER_LABELS[layer]}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {allEntries.length > 0 && (
+        <View style={{ marginBottom: 20 }}>
+          {(["Observe", "Context", "Insight", "Respond"] as const).map((layerLabel) => {
+            const layerEntries = allEntries.filter((e) => e.layerLabel === layerLabel);
+            if (layerEntries.length === 0) return null;
+            return (
+              <View key={layerLabel} style={{ backgroundColor: theme.backgroundCard, borderRadius: 12, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5, textTransform: "uppercase" as const, marginBottom: 10 }}>
+                  {WRAP_UP_LABELS[layerLabel] ?? layerLabel}
                 </Text>
-              )}
-            </Pressable>
-          ))}
+                {layerEntries.map((entry, i) => (
+                  <View key={entry.key} style={{ marginBottom: i < layerEntries.length - 1 ? 10 : 0 }}>
+                    <Text style={{ fontSize: 14, lineHeight: 21, color: theme.text, fontFamily: "Inter_400Regular" }}>
+                      {entry.content}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -1561,27 +1517,25 @@ interface PromptSection {
 }
 
 const OBSERVE_SECTIONS: PromptSection[] = [
-  { key: "observations", title: "Your Observations", icon: "eye-outline", color: "#C9933A", placeholder: "Write the words, phrases, repetitions, contrasts, or images that stand out to you..." },
-  { key: "questions_raised", title: "Questions Raised", icon: "help-circle-outline", color: "#3B6CB5", placeholder: "What questions does the text raise in your mind? What puzzles or surprises you?" },
+  { key: "observations", title: "What stands out?", icon: "eye-outline", color: "#C9933A", placeholder: "What repeats, surprises, or feels important?" },
+  { key: "questions_raised", title: "Questions", icon: "help-circle-outline", color: "#3B6CB5", placeholder: "What questions come to mind?" },
 ];
 
 const CONTEXT_SECTIONS: PromptSection[] = [
-  { key: "context_notes", title: "What the Context Reveals", icon: "compass-outline", color: "#C9933A", placeholder: "Write what you notice about the author, audience, setting, purpose, or historical background..." },
-  { key: "context_changes", title: "How Context Changes Your Reading", icon: "swap-horizontal-outline", color: "#8B5CF6", placeholder: "How does knowing the context change the way you understand this passage?" },
+  { key: "context_notes", title: "What the context reveals", icon: "compass-outline", color: "#C9933A", placeholder: "What do you notice about the author, audience, or setting?" },
+  { key: "context_changes", title: "How it changes your reading", icon: "swap-horizontal-outline", color: "#8B5CF6", placeholder: "How does knowing this context change what you see in the passage?" },
 ];
 
 const INSIGHT_SECTIONS: PromptSection[] = [
-  { key: "theological_themes", title: "Theological Themes", icon: "prism-outline", color: "#C9933A", placeholder: "What theological themes emerge from this passage?" },
-  { key: "revelation_of_god", title: "Revelation of God", icon: "eye-outline", color: "#3B6CB5", placeholder: "What does this passage reveal about God's character or nature?" },
-  { key: "revelation_of_humanity", title: "Revelation of Humanity", icon: "people-outline", color: "#2E7D32", placeholder: "What does this teach about humanity's condition or calling?" },
-  { key: "narrative_connection", title: "Biblical Narrative Connection", icon: "git-merge-outline", color: "#8B5CF6", placeholder: "How does this connect to the larger biblical story?" },
+  { key: "revelation_of_god", title: "What does this reveal about God?", icon: "eye-outline", color: "#3B6CB5", placeholder: "What does this passage show about God's character?" },
+  { key: "revelation_of_humanity", title: "What does this reveal about us?", icon: "people-outline", color: "#2E7D32", placeholder: "What does this teach about the human condition?" },
+  { key: "narrative_connection", title: "What biblical theme stands out?", icon: "git-merge-outline", color: "#8B5CF6", placeholder: "How does this connect to the larger biblical story?" },
 ];
 
 const TRANSFORMATION_SECTIONS: PromptSection[] = [
-  { key: "belief_challenged", title: "What Challenged You", icon: "bulb-outline", color: "#C9933A", placeholder: "What belief or assumption does this passage challenge?" },
-  { key: "habit_shaped", title: "How You'll Respond", icon: "footsteps-outline", color: "#2E7D32", placeholder: "What habit or practice could this shape in your life?" },
-  { key: "conversation_impacted", title: "Who This Affects", icon: "chatbubbles-outline", color: "#3B6CB5", placeholder: "How might this change a conversation or relationship?" },
-  { key: "prayer_response", title: "Your Prayer", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
+  { key: "belief_challenged", title: "What is God calling me to notice or change?", icon: "bulb-outline", color: "#C9933A", placeholder: "What conviction or challenge do you sense?" },
+  { key: "habit_shaped", title: "What will I do this week?", icon: "footsteps-outline", color: "#2E7D32", placeholder: "One specific step you will take..." },
+  { key: "prayer_response", title: "A short prayer", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
 ];
 
 function JournalPromptCard({
@@ -1603,89 +1557,95 @@ function JournalPromptCard({
 }) {
   const savedContent = journalMap.get(section.key) ?? "";
   const [text, setText] = useState(savedContent);
-  const [editing, setEditing] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
   const hasContent = savedContent.length > 0;
+  const textDirty = text.trim() !== savedContent.trim();
 
   useEffect(() => {
-    setText(journalMap.get(section.key) ?? "");
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!focused) setText(journalMap.get(section.key) ?? "");
   }, [journalMap, section.key]);
 
-  const handleSave = () => {
-    onSave(section.key, text);
-    setEditing(false);
-  };
+  const doAutoSave = useCallback((value: string) => {
+    if (value.trim() === savedContent.trim()) return;
+    if (!mountedRef.current) return;
+    setSaveStatus("saving");
+    onSave(section.key, value);
+    statusTimerRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+      setSaveStatus("saved");
+      fadeTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setSaveStatus("idle");
+      }, 1500);
+    }, 400);
+  }, [section.key, savedContent, onSave]);
+
+  const handleTextChange = useCallback((value: string) => {
+    setText(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doAutoSave(value), 1200);
+  }, [doAutoSave]);
+
+  const handleBlur = useCallback(() => {
+    setFocused(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (textDirty) doAutoSave(text);
+  }, [text, textDirty, doAutoSave]);
 
   return (
-    <View style={[jpStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+    <View style={[jpStyles.card, { backgroundColor: theme.backgroundCard, borderColor: focused ? theme.accent + "60" : theme.border }]}>
       <View style={jpStyles.header}>
         <View style={[jpStyles.iconWrap, { backgroundColor: section.color + "18" }]}>
-          <Ionicons name={section.icon} size={16} color={section.color} />
+          <Ionicons name={section.icon} size={14} color={section.color} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[jpStyles.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {section.title}
-          </Text>
-        </View>
-        {hasContent && !editing && (
-          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: theme.accent + "14", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-            <Ionicons name="checkmark-circle" size={13} color={theme.accent} />
-            <Text style={{ fontSize: 10, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Saved</Text>
-          </View>
+        <Text style={[jpStyles.title, { color: theme.text, fontFamily: "Inter_600SemiBold", flex: 1 }]}>
+          {section.title}
+        </Text>
+        {saveStatus === "saving" && (
+          <ActivityIndicator size="small" color={theme.accent} style={{ width: 16, height: 16 }} />
+        )}
+        {saveStatus === "saved" && (
+          <Ionicons name="checkmark-circle" size={16} color={theme.accent} />
+        )}
+        {saveStatus === "idle" && hasContent && !focused && (
+          <Ionicons name="checkmark-circle" size={16} color={theme.accent + "60"} />
         )}
       </View>
 
-      {editing || !hasContent ? (
-        <View>
-          <TextInput
-            style={[
-              jpStyles.input,
-              {
-                color: theme.text,
-                backgroundColor: theme.background,
-                borderColor: theme.border,
-                fontFamily: "Inter_400Regular",
-              },
-            ]}
-            placeholder={section.placeholder}
-            placeholderTextColor={theme.textMuted}
-            multiline
-            value={text}
-            onChangeText={setText}
-            textAlignVertical="top"
-          />
-          <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 6, fontStyle: "italic" as const, lineHeight: 16, opacity: 0.7 }}>
-            Your response is saved to this study and included in your final summary.
-          </Text>
-          <View style={jpStyles.actions}>
-            {hasContent && (
-              <Pressable onPress={() => { setText(savedContent); setEditing(false); }}>
-                <Text style={[jpStyles.actionText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                  Cancel
-                </Text>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={handleSave}
-              disabled={isSaving || text.trim().length === 0}
-              style={[jpStyles.saveBtn, { backgroundColor: theme.accent, opacity: isSaving || text.trim().length === 0 ? 0.5 : 1 }]}
-            >
-              <Ionicons name="save-outline" size={13} color="#fff" />
-              <Text style={[jpStyles.saveBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                {isSaving ? "Saving..." : "Save Response"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <Pressable onPress={() => setEditing(true)}>
-          <Text style={[jpStyles.savedContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {savedContent}
-          </Text>
-          <Text style={[jpStyles.editHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Tap to edit
-          </Text>
-        </Pressable>
-      )}
+      <TextInput
+        style={[
+          jpStyles.input,
+          {
+            color: theme.text,
+            backgroundColor: focused ? theme.background : (hasContent ? "transparent" : theme.background),
+            borderColor: focused ? theme.accent + "30" : (hasContent ? "transparent" : theme.border),
+            fontFamily: "Inter_400Regular",
+            minHeight: focused || !hasContent ? 72 : 36,
+          },
+        ]}
+        placeholder={section.placeholder}
+        placeholderTextColor={theme.textMuted}
+        multiline
+        value={text}
+        onChangeText={handleTextChange}
+        onFocus={() => setFocused(true)}
+        onBlur={handleBlur}
+        textAlignVertical="top"
+      />
 
       {showPrayerLink && section.key === "prayer_response" && hasContent && (
         <Pressable
@@ -3697,11 +3657,13 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
   });
 
   const hasCommentary = commentaryData && commentaryData.length > 0;
+  const [showAllCommentary, setShowAllCommentary] = useState(false);
   const [comGenAttempted, setComGenAttempted] = useState<string | null>(null);
   const comKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
 
   useEffect(() => {
     setActiveCommentator(null);
+    setShowAllCommentary(false);
   }, [selectedBook?.id, selectedChapter]);
 
   useEffect(() => {
@@ -3892,11 +3854,42 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
             </ScrollView>
           )}
 
-          {hasCommentary && commentaryData!
-            .filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator)
-            .map((cr) => (
-            <CommentaryCard key={cr.entry.id} cr={cr} theme={theme} />
-          ))}
+          {hasCommentary && (() => {
+            const filtered = commentaryData!.filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator);
+            const featured = filtered.slice(0, 2);
+            const remaining = filtered.slice(2);
+            return (
+              <>
+                {featured.map((cr) => (
+                  <CommentaryCard key={cr.entry.id} cr={cr} theme={theme} />
+                ))}
+                {remaining.length > 0 && !showAllCommentary && (
+                  <Pressable
+                    onPress={() => setShowAllCommentary(true)}
+                    style={({ pressed }) => ({
+                      flexDirection: "row" as const,
+                      alignItems: "center" as const,
+                      justifyContent: "center" as const,
+                      gap: 6,
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      backgroundColor: theme.backgroundSecondary,
+                      marginBottom: 16,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color={theme.accent} />
+                    <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+                      {remaining.length} more commentary {remaining.length === 1 ? "voice" : "voices"}
+                    </Text>
+                  </Pressable>
+                )}
+                {showAllCommentary && remaining.map((cr) => (
+                  <CommentaryCard key={cr.entry.id} cr={cr} theme={theme} />
+                ))}
+              </>
+            );
+          })()}
 
           {generateCommentaryMutation.isPending && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -3969,6 +3962,87 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
         </>
       )}
     </View>
+  );
+}
+
+function RespondContent({ template, theme }: { template: AppTemplate; theme: typeof Colors.light }) {
+  const [bgExpanded, setBgExpanded] = useState(false);
+
+  return (
+    <>
+      {template.keyTheme && (
+        <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" as const }]}>
+          <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            {template.keyTheme}
+          </Text>
+        </View>
+      )}
+
+      {template.nowApplication && (
+        <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, padding: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 15, lineHeight: 24, color: theme.text, fontFamily: "Lora_400Regular" }}>
+            {template.nowApplication.split(/\n\n+/)[0]?.trim()}
+          </Text>
+        </View>
+      )}
+
+      {(template.thenContext || (template.nowApplication && template.nowApplication.split(/\n\n+/).length > 1)) && (
+        <Pressable
+          onPress={() => setBgExpanded(!bgExpanded)}
+          style={({ pressed }) => ({
+            flexDirection: "row" as const,
+            alignItems: "center" as const,
+            justifyContent: "center" as const,
+            gap: 6,
+            paddingVertical: 10,
+            borderRadius: 10,
+            backgroundColor: theme.backgroundSecondary,
+            marginBottom: 16,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Ionicons name={bgExpanded ? "chevron-up" : "book-outline"} size={14} color={theme.textMuted} />
+          <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>
+            {bgExpanded ? "Hide background" : "Then & Now background"}
+          </Text>
+        </Pressable>
+      )}
+
+      {bgExpanded && (
+        <>
+          {template.thenContext && (
+            <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.appCardHeader}>
+                <Ionicons name="time-outline" size={16} color={theme.accent} />
+                <Text style={[styles.appCardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  Then
+                </Text>
+              </View>
+              <ContextParagraphs text={template.thenContext} theme={theme} />
+            </View>
+          )}
+          {template.nowApplication && template.nowApplication.split(/\n\n+/).length > 1 && (
+            <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={styles.appCardHeader}>
+                <Ionicons name="today-outline" size={16} color={theme.success} />
+                <Text style={[styles.appCardLabel, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
+                  Now
+                </Text>
+              </View>
+              <ContextParagraphs text={template.nowApplication.split(/\n\n+/).slice(1).join("\n\n")} theme={theme} />
+            </View>
+          )}
+        </>
+      )}
+
+      {template.prayerPrompt && (
+        <View style={{ backgroundColor: theme.primary + "08", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: theme.primary + "40" }}>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Lora_400Regular", fontStyle: "italic" as const, lineHeight: 20 }}>
+            {template.prayerPrompt}
+          </Text>
+        </View>
+      )}
+    </>
   );
 }
 
@@ -4137,70 +4211,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
           )}
 
           {template && (
-            <>
-              {template.keyTheme && (
-                <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" }]}>
-                  <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    {template.keyTheme}
-                  </Text>
-                </View>
-              )}
-
-              <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-                <View style={styles.appCardHeader}>
-                  <Ionicons name="time-outline" size={16} color={theme.accent} />
-                  <Text style={[styles.appCardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    Then (Historical Context)
-                  </Text>
-                </View>
-                <ContextParagraphs text={template.thenContext} theme={theme} />
-              </View>
-
-              <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-                <View style={styles.appCardHeader}>
-                  <Ionicons name="today-outline" size={16} color={theme.success} />
-                  <Text style={[styles.appCardLabel, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
-                    Now (Modern Application)
-                  </Text>
-                </View>
-                <ContextParagraphs text={template.nowApplication} theme={theme} />
-              </View>
-
-              {template.reflectionQuestions && template.reflectionQuestions.length > 0 && (
-                <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-                  <View style={styles.appCardHeader}>
-                    <Ionicons name="help-circle-outline" size={16} color={theme.bookmarkBlue} />
-                    <Text style={[styles.appCardLabel, { color: theme.bookmarkBlue, fontFamily: "Inter_600SemiBold" }]}>
-                      Reflection Questions
-                    </Text>
-                  </View>
-                  {template.reflectionQuestions.map((q, i) => (
-                    <View key={i} style={styles.questionRow}>
-                      <Text style={[styles.questionNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                        {i + 1}.
-                      </Text>
-                      <Text style={[styles.questionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                        {q}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {template.prayerPrompt && (
-                <View style={[styles.appCard, { backgroundColor: theme.primary + "12", borderColor: theme.primary + "30" }]}>
-                  <View style={styles.appCardHeader}>
-                    <Ionicons name="hand-left-outline" size={16} color={theme.primary} />
-                    <Text style={[styles.appCardLabel, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-                      Prayer Prompt
-                    </Text>
-                  </View>
-                  <Text style={[styles.appCardBody, { color: theme.text, fontFamily: "Lora_400Regular", fontStyle: "italic" as const }]}>
-                    {template.prayerPrompt}
-                  </Text>
-                </View>
-              )}
-            </>
+            <RespondContent template={template} theme={theme} />
           )}
 
           {isError && (
