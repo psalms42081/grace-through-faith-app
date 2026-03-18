@@ -37,10 +37,17 @@ const LAYER_LABELS: Record<Tab, string> = {
 };
 
 const LAYER_GUIDANCE: Record<Tab, string> = {
-  word: "Read the passage carefully. Notice what stands out.",
-  context: "Discover when, where, and why this was written.",
-  voices: "Hear from voices across church history.",
-  application: "Let Scripture shape your life today.",
+  word: "Notice what the passage says.",
+  context: "Understand when, why, and to whom it was written.",
+  voices: "Discern what the passage teaches.",
+  application: "Let Scripture shape your life and prayer.",
+};
+
+const LAYER_PURPOSE: Record<Tab, string> = {
+  word: "Slow down and read closely. Before interpreting, notice what is actually there -- words, patterns, repetitions, contrasts, and images.",
+  context: "Every passage was written in a specific time, place, and situation. Understanding the background changes how you read the text.",
+  voices: "Hear from commentators across church history, then draw out the theological meaning and biblical principles you see.",
+  application: "Move from understanding to action. Let the passage shape a specific response in your thinking, behavior, and prayer.",
 };
 
 const DEPTH_INFO: Record<string, { encouragement: string; description: string }> = {
@@ -265,6 +272,8 @@ function StudyCompletionScreen({
   reference,
   completedLayers,
   depthLabel,
+  observeJournalMap,
+  contextJournalMap,
   insightJournalMap,
   transformJournalMap,
   onStudyAnother,
@@ -278,6 +287,8 @@ function StudyCompletionScreen({
   reference: string;
   completedLayers: Set<string>;
   depthLabel: string | null;
+  observeJournalMap: Map<string, string>;
+  contextJournalMap: Map<string, string>;
   insightJournalMap: Map<string, string>;
   transformJournalMap: Map<string, string>;
   onStudyAnother: () => void;
@@ -288,22 +299,26 @@ function StudyCompletionScreen({
   hasNextChapter: boolean;
   theme: typeof Colors.light;
 }) {
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
 
+  const observeFilled = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
+  const contextFilled = CONTEXT_SECTIONS.filter((s) => contextJournalMap.has(s.key));
   const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
   const transformFilled = TRANSFORMATION_SECTIONS.filter((s) => transformJournalMap.has(s.key));
   const allEntries = [
+    ...observeFilled.map((s) => ({ ...s, content: observeJournalMap.get(s.key) ?? "", layerLabel: "Observe" })),
+    ...contextFilled.map((s) => ({ ...s, content: contextJournalMap.get(s.key) ?? "", layerLabel: "Context" })),
     ...insightFilled.map((s) => ({ ...s, content: insightJournalMap.get(s.key) ?? "", layerLabel: "Insight" })),
     ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Respond" })),
   ];
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
   const summaryText = useMemo(
-    () => formatStudySummary(reference, completedLayers, insightJournalMap, transformJournalMap, depthLabel),
-    [reference, completedLayers, insightJournalMap, transformJournalMap, depthLabel]
+    () => formatStudySummary(reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel),
+    [reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel]
   );
 
   const handleCopy = useCallback(async () => {
@@ -1216,6 +1231,8 @@ const LAYER_FULL_NAMES: Record<Tab, string> = {
 function formatStudySummary(
   reference: string,
   allCompletedLayers: Set<string>,
+  observeJournalMap: Map<string, string>,
+  contextJournalMap: Map<string, string>,
   insightJournalMap: Map<string, string>,
   transformJournalMap: Map<string, string>,
   depthLabel: string | null,
@@ -1234,6 +1251,28 @@ function formatStudySummary(
 
   if (depthLabel) {
     lines.push(`Study Depth: ${depthLabel}`);
+    lines.push("");
+  }
+
+  const filledObserve = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
+  if (filledObserve.length > 0) {
+    lines.push("OBSERVE");
+    for (const section of filledObserve) {
+      const content = observeJournalMap.get(section.key) ?? "";
+      lines.push(`  ${section.title}:`);
+      lines.push(`    ${content.trim()}`);
+    }
+    lines.push("");
+  }
+
+  const filledContext = CONTEXT_SECTIONS.filter((s) => contextJournalMap.has(s.key));
+  if (filledContext.length > 0) {
+    lines.push("CONTEXT");
+    for (const section of filledContext) {
+      const content = contextJournalMap.get(section.key) ?? "";
+      lines.push(`  ${section.title}:`);
+      lines.push(`    ${content.trim()}`);
+    }
     lines.push("");
   }
 
@@ -1274,6 +1313,8 @@ function formatStudySummary(
 function DeepSessionSummary({
   completedDuring,
   allCompletedLayers,
+  observeJournalMap,
+  contextJournalMap,
   insightJournalMap,
   transformJournalMap,
   startedAt,
@@ -1286,6 +1327,8 @@ function DeepSessionSummary({
 }: {
   completedDuring: string[];
   allCompletedLayers: Set<string>;
+  observeJournalMap: Map<string, string>;
+  contextJournalMap: Map<string, string>;
   insightJournalMap: Map<string, string>;
   transformJournalMap: Map<string, string>;
   startedAt: number;
@@ -1298,19 +1341,23 @@ function DeepSessionSummary({
 }) {
   const elapsed = Math.round((Date.now() - startedAt) / 60000);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  const observeFilled = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
+  const contextFilled = CONTEXT_SECTIONS.filter((s) => contextJournalMap.has(s.key));
   const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
   const transformFilled = TRANSFORMATION_SECTIONS.filter((s) => transformJournalMap.has(s.key));
   const allEntries = [
+    ...observeFilled.map((s) => ({ ...s, content: observeJournalMap.get(s.key) ?? "", layerLabel: "Observe" })),
+    ...contextFilled.map((s) => ({ ...s, content: contextJournalMap.get(s.key) ?? "", layerLabel: "Context" })),
     ...insightFilled.map((s) => ({ ...s, content: insightJournalMap.get(s.key) ?? "", layerLabel: "Insight" })),
-    ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Transformation" })),
+    ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Respond" })),
   ];
 
   const summaryText = useMemo(
-    () => formatStudySummary(reference, allCompletedLayers, insightJournalMap, transformJournalMap, depthLabel),
-    [reference, allCompletedLayers, insightJournalMap, transformJournalMap, depthLabel]
+    () => formatStudySummary(reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel),
+    [reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel]
   );
 
   const handleCopy = useCallback(async () => {
@@ -1513,6 +1560,16 @@ interface PromptSection {
   placeholder: string;
 }
 
+const OBSERVE_SECTIONS: PromptSection[] = [
+  { key: "observations", title: "Your Observations", icon: "eye-outline", color: "#C9933A", placeholder: "Write the words, phrases, repetitions, contrasts, or images that stand out to you..." },
+  { key: "questions_raised", title: "Questions Raised", icon: "help-circle-outline", color: "#3B6CB5", placeholder: "What questions does the text raise in your mind? What puzzles or surprises you?" },
+];
+
+const CONTEXT_SECTIONS: PromptSection[] = [
+  { key: "context_notes", title: "What the Context Reveals", icon: "compass-outline", color: "#C9933A", placeholder: "Write what you notice about the author, audience, setting, purpose, or historical background..." },
+  { key: "context_changes", title: "How Context Changes Your Reading", icon: "swap-horizontal-outline", color: "#8B5CF6", placeholder: "How does knowing the context change the way you understand this passage?" },
+];
+
 const INSIGHT_SECTIONS: PromptSection[] = [
   { key: "theological_themes", title: "Theological Themes", icon: "prism-outline", color: "#C9933A", placeholder: "What theological themes emerge from this passage?" },
   { key: "revelation_of_god", title: "Revelation of God", icon: "eye-outline", color: "#3B6CB5", placeholder: "What does this passage reveal about God's character or nature?" },
@@ -1564,11 +1621,16 @@ function JournalPromptCard({
         <View style={[jpStyles.iconWrap, { backgroundColor: section.color + "18" }]}>
           <Ionicons name={section.icon} size={16} color={section.color} />
         </View>
-        <Text style={[jpStyles.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {section.title}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[jpStyles.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {section.title}
+          </Text>
+        </View>
         {hasContent && !editing && (
-          <Ionicons name="checkmark-circle" size={18} color={theme.accent} style={jpStyles.check} />
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: theme.accent + "14", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Ionicons name="checkmark-circle" size={13} color={theme.accent} />
+            <Text style={{ fontSize: 10, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Saved</Text>
+          </View>
         )}
       </View>
 
@@ -1591,6 +1653,9 @@ function JournalPromptCard({
             onChangeText={setText}
             textAlignVertical="top"
           />
+          <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 6, fontStyle: "italic" as const, lineHeight: 16, opacity: 0.7 }}>
+            Your response is saved to this study and included in your final summary.
+          </Text>
           <View style={jpStyles.actions}>
             {hasContent && (
               <Pressable onPress={() => { setText(savedContent); setEditing(false); }}>
@@ -1604,9 +1669,9 @@ function JournalPromptCard({
               disabled={isSaving || text.trim().length === 0}
               style={[jpStyles.saveBtn, { backgroundColor: theme.accent, opacity: isSaving || text.trim().length === 0 ? 0.5 : 1 }]}
             >
-              <Ionicons name="bookmark-outline" size={13} color="#fff" />
+              <Ionicons name="save-outline" size={13} color="#fff" />
               <Text style={[jpStyles.saveBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-                {isSaving ? "Saving..." : "Keep"}
+                {isSaving ? "Saving..." : "Save Response"}
               </Text>
             </Pressable>
           </View>
@@ -2018,6 +2083,28 @@ export default function StudyScreen() {
     setShowSummary(true);
   }, [setDeepSession]);
 
+  const observeJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=word`;
+  const { data: observeEntries } = useQuery<JournalEntry[]>({
+    queryKey: [observeJournalKey],
+    enabled: canTrack,
+  });
+  const observeJournalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (observeEntries ?? []).forEach((e) => map.set(e.sectionKey, e.content));
+    return map;
+  }, [observeEntries]);
+
+  const contextJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=context`;
+  const { data: contextEntries } = useQuery<JournalEntry[]>({
+    queryKey: [contextJournalKey],
+    enabled: canTrack,
+  });
+  const contextJournalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (contextEntries ?? []).forEach((e) => map.set(e.sectionKey, e.content));
+    return map;
+  }, [contextEntries]);
+
   const insightJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=voices`;
   const { data: insightEntries } = useQuery<JournalEntry[]>({
     queryKey: [insightJournalKey],
@@ -2044,6 +2131,16 @@ export default function StudyScreen() {
 
   const layerProgress = useMemo(() => {
     const map = new Map<Tab, LayerProgress>();
+    map.set("word", {
+      layer: "word",
+      filledSections: observeJournalMap.size,
+      totalSections: OBSERVE_SECTIONS.length,
+    });
+    map.set("context", {
+      layer: "context",
+      filledSections: contextJournalMap.size,
+      totalSections: CONTEXT_SECTIONS.length,
+    });
     map.set("voices", {
       layer: "voices",
       filledSections: insightJournalMap.size,
@@ -2055,7 +2152,7 @@ export default function StudyScreen() {
       totalSections: TRANSFORMATION_SECTIONS.length,
     });
     return map;
-  }, [insightJournalMap, transformJournalMap]);
+  }, [observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]);
 
   const nextStepText = useMemo(
     () => computeNextStep(completedLayers, layerProgress, activeTab),
@@ -2065,20 +2162,22 @@ export default function StudyScreen() {
   const studyDepthLabel = useMemo(() => {
     const l1l2Done = completedLayers.has("word") && completedLayers.has("context");
     const l3l4Done = completedLayers.has("voices") && completedLayers.has("application");
+    const allPromptsCount = observeJournalMap.size + contextJournalMap.size + insightJournalMap.size + transformJournalMap.size;
     const insightCount = insightJournalMap.size;
-    const allPromptsCount = insightJournalMap.size + transformJournalMap.size;
-    if (l1l2Done && l3l4Done && allPromptsCount >= 8) return "Transforming";
-    if (l1l2Done && l3l4Done && allPromptsCount >= 4) return "Deep";
+    if (l1l2Done && l3l4Done && allPromptsCount >= 10) return "Transforming";
+    if (l1l2Done && l3l4Done && allPromptsCount >= 5) return "Deep";
     if (l1l2Done && insightCount >= 2) return "Growing";
     if (completedLayers.size > 0 || allPromptsCount > 0) return "Emerging";
     return null;
-  }, [completedLayers, insightJournalMap, transformJournalMap]);
+  }, [completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]);
 
   const activeLayerHasEntries = useMemo(() => {
+    if (activeTab === "word") return observeJournalMap.size > 0;
+    if (activeTab === "context") return contextJournalMap.size > 0;
     if (activeTab === "voices") return insightJournalMap.size > 0;
     if (activeTab === "application") return transformJournalMap.size > 0;
     return true;
-  }, [activeTab, insightJournalMap, transformJournalMap]);
+  }, [activeTab, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]);
 
   const handleSavePrayerFromSummary = useCallback(async () => {
     if (!prayerContent) return;
@@ -2166,6 +2265,8 @@ export default function StudyScreen() {
         <DeepSessionSummary
           completedDuring={deepSession.completedLayersDuringSession}
           allCompletedLayers={completedLayers}
+          observeJournalMap={observeJournalMap}
+          contextJournalMap={contextJournalMap}
           insightJournalMap={insightJournalMap}
           transformJournalMap={transformJournalMap}
           startedAt={deepSession.startedAt}
@@ -2188,6 +2289,8 @@ export default function StudyScreen() {
           reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "This Passage"}
           completedLayers={completedLayers}
           depthLabel={studyDepthLabel}
+          observeJournalMap={observeJournalMap}
+          contextJournalMap={contextJournalMap}
           insightJournalMap={insightJournalMap}
           transformJournalMap={transformJournalMap}
           onStudyAnother={() => {
@@ -2503,10 +2606,25 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
 
   const verses = passageQuery.data?.verses ?? [];
 
+  const { userId } = useAuth();
+  const observeBookId = selectedBook?.id ?? null;
+  const { journalMap: observeJournalMap, handleSave: handleObserveSave, isSaving: isObserveSaving } = useJournalEntries(
+    userId, observeBookId, selectedChapter, "word"
+  );
+
   if (isDeepSession && selectedBook && selectedChapter) {
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
+        <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            OBSERVE
+          </Text>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+            {LAYER_PURPOSE.word}
+          </Text>
+        </View>
+
         <View style={{ marginBottom: 20 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
@@ -2522,11 +2640,6 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               ))}
             </Text>
           )}
-        </View>
-        <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border, paddingTop: 14, marginBottom: 20 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", fontStyle: "italic" as const }}>
-            Read the passage slowly. What words, phrases, or patterns stand out to you?
-          </Text>
         </View>
 
         <Pressable
@@ -2671,6 +2784,25 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             )}
           </View>
         )}
+
+        <View style={jpStyles.sectionDivider}>
+          <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+          <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+            Your Observations
+          </Text>
+          <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+        </View>
+
+        {OBSERVE_SECTIONS.map((section) => (
+          <JournalPromptCard
+            key={section.key}
+            section={section}
+            journalMap={observeJournalMap}
+            onSave={handleObserveSave}
+            isSaving={isObserveSaving}
+            theme={theme}
+          />
+        ))}
       </View>
     );
   }
@@ -2695,9 +2827,12 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             </Text>
           )}
         </View>
-        <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border, paddingTop: 14, marginBottom: 20 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", fontStyle: "italic" as const }}>
-            Read the passage slowly. What words, phrases, or patterns stand out to you?
+        <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            OBSERVE
+          </Text>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+            {LAYER_PURPOSE.word}
           </Text>
         </View>
 
@@ -2999,6 +3134,25 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             </Text>
           </Pressable>
         )}
+
+        <View style={jpStyles.sectionDivider}>
+          <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+          <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+            Your Observations
+          </Text>
+          <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+        </View>
+
+        {OBSERVE_SECTIONS.map((section) => (
+          <JournalPromptCard
+            key={section.key}
+            section={section}
+            journalMap={observeJournalMap}
+            onSave={handleObserveSave}
+            isSaving={isObserveSaving}
+            theme={theme}
+          />
+        ))}
       </View>
     );
   }
@@ -3104,6 +3258,11 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
   const selectedChapter = sharedChapter;
   const setSelectedBook = onBookChange;
   const setSelectedChapter = onChapterChange;
+  const { userId } = useAuth();
+  const ctxBookId = selectedBook?.id ?? null;
+  const { journalMap: contextJournalMap, handleSave: handleContextSave, isSaving: isContextSaving } = useJournalEntries(
+    userId, ctxBookId, selectedChapter, "context"
+  );
 
   const books = allBooks;
 
@@ -3243,6 +3402,15 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
             {selectedBook.name} {selectedChapter}
           </Text>
 
+          <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+              CONTEXT
+            </Text>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {LAYER_PURPOSE.context}
+            </Text>
+          </View>
+
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
@@ -3367,6 +3535,25 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
               )}
             </View>
           )}
+
+          <View style={jpStyles.sectionDivider}>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+            <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+              Your Context Notes
+            </Text>
+            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+          </View>
+
+          {CONTEXT_SECTIONS.map((section) => (
+            <JournalPromptCard
+              key={section.key}
+              section={section}
+              journalMap={contextJournalMap}
+              onSave={handleContextSave}
+              isSaving={isContextSaving}
+              theme={theme}
+            />
+          ))}
 
         </>
       )}
@@ -3657,6 +3844,15 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
             {selectedBook.name} {selectedChapter}
           </Text>
 
+          <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+              INSIGHT
+            </Text>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {LAYER_PURPOSE.voices}
+            </Text>
+          </View>
+
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
@@ -3923,6 +4119,15 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
           <Text style={[styles.pickerBookName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             {selectedBook.name} {selectedChapter}
           </Text>
+
+          <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+              RESPOND
+            </Text>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {LAYER_PURPOSE.application}
+            </Text>
+          </View>
 
           {isLoading && (
             <View style={styles.loadingBox}>
