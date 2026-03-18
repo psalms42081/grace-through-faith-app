@@ -45,7 +45,7 @@ const companionSchema = z.object({
   })).min(3).max(7),
 });
 
-const COMPANION_PROMPT_VERSION = "v2.1";
+const COMPANION_PROMPT_VERSION = "v3.0";
 
 function createOpenAIClient(): OpenAI {
   const client = new OpenAI({

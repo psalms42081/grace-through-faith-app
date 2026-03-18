@@ -247,9 +247,12 @@ router.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/resources/:id/bookmark", requireAuth, async (req, res) => {
+router.post("/api/resources/:id/bookmark", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId!;
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Sign in to save to Library", requiresAuth: true });
+    }
     const { id } = req.params;
 
     const existing = await db

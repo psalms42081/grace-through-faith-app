@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -954,6 +954,8 @@ export default function ResourceDetailScreen() {
     enabled: !!slug,
   });
 
+  const [authToast, setAuthToast] = useState(false);
+
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
       if (!resource) return;
@@ -965,6 +967,13 @@ export default function ResourceDetailScreen() {
       if (!resource?.isBookmarked) {
         setBookmarkToast(true);
         setTimeout(() => setBookmarkToast(false), 2000);
+      }
+    },
+    onError: (err: any) => {
+      const msg = err?.message || "";
+      if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("Sign in")) {
+        setAuthToast(true);
+        setTimeout(() => setAuthToast(false), 3000);
       }
     },
   });
@@ -1080,6 +1089,13 @@ export default function ResourceDetailScreen() {
         <View style={styles.bookmarkToast}>
           <Ionicons name="bookmark" size={14} color="#C9933A" />
           <Text style={styles.bookmarkToastText}>Saved to Library</Text>
+        </View>
+      )}
+
+      {authToast && (
+        <View style={[styles.bookmarkToast, { backgroundColor: "rgba(30,30,40,0.96)" }]}>
+          <Ionicons name="log-in-outline" size={14} color="#C9933A" />
+          <Text style={styles.bookmarkToastText}>Sign in to save to Library</Text>
         </View>
       )}
 

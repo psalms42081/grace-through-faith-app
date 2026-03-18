@@ -848,4 +848,28 @@ router.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAcc
   }
 });
 
+router.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { lessonId, quarterCode, force } = req.body;
+
+    if (!lessonId && !quarterCode) {
+      return res.status(400).json({ error: "Provide lessonId or quarterCode" });
+    }
+
+    const { generateQuarterCompanions } = await import("../services/batch-generator");
+    const { generateSabbathSchoolCompanion } = await import("../services/content-engine");
+
+    if (lessonId) {
+      const resourceId = await generateSabbathSchoolCompanion(lessonId, {});
+      return res.json({ success: true, resourceId, mode: "single" });
+    }
+
+    const result = await generateQuarterCompanions(quarterCode, { force: force !== false });
+    return res.json({ success: true, result, mode: "quarter" });
+  } catch (err: any) {
+    console.error("Admin regenerate companion error:", err);
+    return res.status(500).json({ error: err.message || "Regeneration failed" });
+  }
+});
+
 export default router;
