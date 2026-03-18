@@ -22,6 +22,7 @@ interface LessonInfo {
   title: string;
   startDate: string | null;
   endDate: string | null;
+  companion: { slug: string; title: string } | null;
 }
 
 interface QuarterlyInfo {
@@ -104,6 +105,22 @@ export default function SabbathSchoolQuarterScreen() {
                     {lesson.startDate} — {lesson.endDate}
                   </Text>
                 )}
+                {lesson.companion && (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      router.push(`/resource-detail?slug=${lesson.companion!.slug}` as any);
+                    }}
+                    style={({ pressed }) => [
+                      styles.companionBadge,
+                      { opacity: pressed ? 0.7 : 1 },
+                    ]}
+                  >
+                    <Ionicons name="book" size={12} color="#8B5CF6" />
+                    <Text style={styles.companionBadgeText}>Companion</Text>
+                    <Ionicons name="chevron-forward" size={12} color="#8B5CF6" />
+                  </Pressable>
+                )}
               </Pressable>
             ))}
           </View>
@@ -176,5 +193,21 @@ const styles = StyleSheet.create({
   lessonDates: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
+  },
+  companionBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    marginTop: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(139, 92, 246, 0.08)",
+    borderRadius: 8,
+    alignSelf: "flex-start" as const,
+  },
+  companionBadgeText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: "#8B5CF6",
   },
 });

@@ -6,8 +6,9 @@ import {
   sabbathSchoolDays,
   sabbathSchoolUserProgress,
   sabbathSchoolDiscussionPrep,
+  resources,
 } from "../../shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { requireAuth, getAuthUserId } from "../middleware/auth";
 import { generateDiscussionPrep } from "../services/ai-engine";
@@ -18,6 +19,52 @@ import {
 } from "../services/sabbath-school-sync";
 
 const router = Router();
+
+async function findCompanionForLesson(lessonId: string) {
+  const [companion] = await db
+    .select({
+      id: resources.id,
+      slug: resources.slug,
+      title: resources.title,
+      description: resources.description,
+    })
+    .from(resources)
+    .where(
+      and(
+        eq(resources.resourceType, "sabbath-school-companion"),
+        eq(resources.status, "published"),
+        sql`${resources.sourceRef}->>'lessonId' = ${lessonId}`
+      )
+    )
+    .limit(1);
+  return companion || null;
+}
+
+async function findCompanionsForQuarterly(quarterlyId: string) {
+  const companions = await db
+    .select({
+      id: resources.id,
+      slug: resources.slug,
+      title: resources.title,
+      sourceRef: resources.sourceRef,
+    })
+    .from(resources)
+    .where(
+      and(
+        eq(resources.resourceType, "sabbath-school-companion"),
+        eq(resources.status, "published"),
+        sql`${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
+      )
+    );
+  const map: Record<string, { slug: string; title: string }> = {};
+  for (const c of companions) {
+    const ref = c.sourceRef as any;
+    if (ref?.lessonId) {
+      map[ref.lessonId] = { slug: c.slug, title: c.title };
+    }
+  }
+  return map;
+}
 
 router.get("/api/sabbath-school/current", async (req, res) => {
   try {
@@ -77,6 +124,8 @@ router.get("/api/sabbath-school/current", async (req, res) => {
     const todayStr = `${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${now.getUTCFullYear()}`;
     const todayDayNumber = daysWithProgress.find((d) => d.date === todayStr)?.dayNumber || null;
 
+    const companion = await findCompanionForLesson(currentLesson.id);
+
     return res.json({
       quarterly: q,
       currentLesson: {
@@ -87,6 +136,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
       totalLessons: lessons.length,
       completedDays: daysWithProgress.filter((d) => d.completed).length,
       todayDayNumber,
+      companion,
     });
   } catch (err) {
     console.error("Sabbath School current error:", err);
@@ -199,7 +249,14 @@ router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
       .where(eq(sabbathSchoolLessons.quarterlyId, quarterly.id))
       .orderBy(sabbathSchoolLessons.lessonNumber);
 
-    return res.json({ quarterly, lessons });
+    const companionMap = await findCompanionsForQuarterly(quarterly.id);
+
+    const lessonsWithCompanions = lessons.map((l) => ({
+      ...l,
+      companion: companionMap[l.id] || null,
+    }));
+
+    return res.json({ quarterly, lessons: lessonsWithCompanions });
   } catch (err) {
     console.error("Sabbath School quarter detail error:", err);
     return res.status(500).json({ error: "Failed to fetch quarter detail" });

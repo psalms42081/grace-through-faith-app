@@ -1099,6 +1099,7 @@ function AdultHomeScreen() {
     currentLesson: { title: string; lessonNumber: number } | null;
     completedDays: number;
     currentLessonNumber: number;
+    companion: { id: string; slug: string; title: string; description: string | null } | null;
   }>({
     queryKey: [`/api/sabbath-school/current?userId=${userId}`],
   });
@@ -1249,9 +1250,39 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
-          <AnimatedSection index={5}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={6}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={7}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          {ssData?.companion && (
+            <AnimatedSection index={5}>
+              <Pressable
+                onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
+                style={({ pressed }) => [
+                  homeStyles.companionHomeCard,
+                  {
+                    backgroundColor: isDark ? "rgba(139, 92, 246, 0.08)" : "rgba(139, 92, 246, 0.05)",
+                    borderColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.12)",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <View style={homeStyles.companionHomeRow}>
+                  <View style={homeStyles.companionHomeIcon}>
+                    <Ionicons name="book" size={16} color="#8B5CF6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
+                      This Week's Companion Lesson
+                    </Text>
+                    <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
+                      {ssData.companion.title}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </View>
+              </Pressable>
+            </AnimatedSection>
+          )}
+          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={7}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       ) : (
         <>
@@ -1283,9 +1314,39 @@ function AdultHomeScreen() {
               />
             </AnimatedSection>
           )}
-          <AnimatedSection index={4}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={5}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={6}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          {ssData?.companion && (
+            <AnimatedSection index={4}>
+              <Pressable
+                onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
+                style={({ pressed }) => [
+                  homeStyles.companionHomeCard,
+                  {
+                    backgroundColor: isDark ? "rgba(139, 92, 246, 0.08)" : "rgba(139, 92, 246, 0.05)",
+                    borderColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.12)",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <View style={homeStyles.companionHomeRow}>
+                  <View style={homeStyles.companionHomeIcon}>
+                    <Ionicons name="book" size={16} color="#8B5CF6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
+                      This Week's Companion Lesson
+                    </Text>
+                    <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
+                      {ssData.companion.title}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+                </View>
+              </Pressable>
+            </AnimatedSection>
+          )}
+          <AnimatedSection index={5}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={6}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={7}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
         </>
       )}
 
@@ -1384,4 +1445,38 @@ const s = StyleSheet.create({
     borderRadius: 12,
   },
   perfectText: { fontSize: 12 },
+});
+
+const homeStyles = StyleSheet.create({
+  companionHomeCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  companionHomeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  companionHomeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(139, 92, 246, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  companionHomeLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: "uppercase" as const,
+  },
+  companionHomeTitle: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 1,
+  },
 });

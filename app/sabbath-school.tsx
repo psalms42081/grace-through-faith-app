@@ -40,6 +40,13 @@ interface LessonData {
   days: DayData[];
 }
 
+interface CompanionData {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+}
+
 interface QuarterlyData {
   id: string;
   title: string;
@@ -65,6 +72,7 @@ export default function SabbathSchoolScreen() {
     totalLessons: number;
     completedDays: number;
     todayDayNumber: number | null;
+    companion: CompanionData | null;
   }>({
     queryKey: [`/api/sabbath-school/current?userId=${userId}`],
   });
@@ -79,6 +87,7 @@ export default function SabbathSchoolScreen() {
   const days = lesson?.days || [];
   const completedCount = data?.completedDays || 0;
   const todayDayNumber = data?.todayDayNumber || null;
+  const companion = data?.companion || null;
 
   const pastQuarters = (archiveData?.quarters || []).filter(
     (q) => quarterly && q.id !== quarterly.id
@@ -215,6 +224,40 @@ export default function SabbathSchoolScreen() {
               );
             })}
           </View>
+
+          {companion && (
+            <Pressable
+              onPress={() => router.push(`/resource-detail?slug=${companion.slug}` as any)}
+              style={({ pressed }) => [
+                styles.companionCard,
+                {
+                  backgroundColor: isDark ? "rgba(139, 92, 246, 0.1)" : "rgba(139, 92, 246, 0.06)",
+                  borderColor: isDark ? "rgba(139, 92, 246, 0.25)" : "rgba(139, 92, 246, 0.15)",
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View style={styles.companionCardHeader}>
+                <View style={styles.companionCardIcon}>
+                  <Ionicons name="book" size={18} color="#8B5CF6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.companionCardLabel, { color: "#8B5CF6" }]}>
+                    {t("sabbathSchool.companionLesson", { defaultValue: "Companion Lesson" })}
+                  </Text>
+                  <Text style={[styles.companionCardTitle, { color: theme.text }]} numberOfLines={2}>
+                    {companion.title}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+              </View>
+              {companion.description && (
+                <Text style={[styles.companionCardDesc, { color: theme.textSecondary }]} numberOfLines={2}>
+                  {companion.description}
+                </Text>
+              )}
+            </Pressable>
+          )}
 
           <Pressable
             onPress={() =>
@@ -422,6 +465,43 @@ const styles = StyleSheet.create({
   dayDate: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
+  },
+  companionCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  companionCardHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  companionCardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(139, 92, 246, 0.12)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  companionCardLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: "uppercase" as const,
+  },
+  companionCardTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 15,
+    lineHeight: 21,
+    marginTop: 2,
+  },
+  companionCardDesc: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    marginLeft: 48,
   },
   discussionBtn: {
     flexDirection: "row",
