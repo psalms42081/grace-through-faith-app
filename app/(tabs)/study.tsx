@@ -2771,6 +2771,15 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     const allVerses = passageQuery.data?.verses ?? [];
     return (
       <View style={styles.tabContent}>
+        <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            OBSERVE
+          </Text>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+            {LAYER_PURPOSE.word}
+          </Text>
+        </View>
+
         <View style={{ marginBottom: 20 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
@@ -2786,14 +2795,6 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               ))}
             </Text>
           )}
-        </View>
-        <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
-            OBSERVE
-          </Text>
-          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
-            {LAYER_PURPOSE.word}
-          </Text>
         </View>
 
         <Pressable
