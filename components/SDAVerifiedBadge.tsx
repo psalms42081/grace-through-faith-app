@@ -10,7 +10,7 @@ export default function SDAVerifiedBadge({ variant = "full" }: Props) {
     return (
       <View style={styles.compactContainer}>
         <Ionicons name="shield-checkmark" size={11} color="#2E7D32" />
-        <Text style={styles.compactText}>SDA Verified</Text>
+        <Text style={styles.compactText}>Aligned with SDA Beliefs</Text>
       </View>
     );
   }
@@ -19,10 +19,10 @@ export default function SDAVerifiedBadge({ variant = "full" }: Props) {
     <View style={styles.container}>
       <View style={styles.iconRow}>
         <Ionicons name="shield-checkmark" size={14} color="#2E7D32" />
-        <Text style={styles.label}>Verified SDA Framework</Text>
+        <Text style={styles.label}>Aligned with SDA Beliefs</Text>
       </View>
       <Text style={styles.subtitle}>
-        Aligned with the 28 Fundamental Beliefs
+        Built for Seventh-day Adventist study use
       </Text>
     </View>
   );

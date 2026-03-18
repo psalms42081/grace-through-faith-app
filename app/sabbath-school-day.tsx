@@ -417,7 +417,7 @@ export default function SabbathSchoolDayScreen() {
                 >
                   <Ionicons name="chatbubbles-outline" size={18} color="#8B5CF6" />
                   <Text style={[styles.completionActionText, { color: "#8B5CF6" }]}>
-                    Companion Discussion
+                    Lesson Discussion Guide
                   </Text>
                 </Pressable>
 

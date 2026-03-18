@@ -67,7 +67,7 @@ export default function SabbathSchoolDiscussionScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>
-            Companion Discussion
+            Lesson Discussion Guide
           </Text>
         </View>
         <Pressable
@@ -109,7 +109,7 @@ export default function SabbathSchoolDiscussionScreen() {
             <View style={styles.aiDisclaimer}>
               <Ionicons name="information-circle-outline" size={14} color={theme.textMuted} />
               <Text style={[styles.aiDisclaimerText, { color: theme.textMuted }]}>
-                Official Sabbath School lesson content via Adventech. Discussion prompts and summaries are companion study aids.
+                Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
               </Text>
             </View>
           </View>
@@ -145,7 +145,7 @@ export default function SabbathSchoolDiscussionScreen() {
             <View style={[styles.aiBanner, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
               <Ionicons name="library-outline" size={14} color={theme.accent} />
               <Text style={[styles.aiBannerText, { color: theme.textMuted }]}>
-                Official Sabbath School lesson content via Adventech. Discussion prompts are companion study aids.
+                Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
               </Text>
             </View>
 
