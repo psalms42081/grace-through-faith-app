@@ -836,10 +836,45 @@ function PreviewModal({
                 </View>
               ))}
 
-              {fullContent?.overview && (
+              {fullContent?.introduction && (
                 <>
-                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Full Overview</Text>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Introduction</Text>
+                  <Text style={[styles.previewBody, { color: theme.text }]}>{fullContent.introduction}</Text>
+                </>
+              )}
+
+              {fullContent?.overview && !fullContent?.introduction && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Overview</Text>
                   <Text style={[styles.previewBody, { color: theme.text }]}>{fullContent.overview}</Text>
+                </>
+              )}
+
+              {fullContent?.historicalContext && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Historical Context</Text>
+                  <Text style={[styles.previewBody, { color: theme.text }]}>{fullContent.historicalContext}</Text>
+                </>
+              )}
+
+              {fullContent?.scriptureFoundation && Array.isArray(fullContent.scriptureFoundation) && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Scripture Foundation</Text>
+                  {fullContent.scriptureFoundation.map((s: any, i: number) => (
+                    <View key={i} style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                      <Text style={[styles.dayTitle, { color: theme.accent }]}>
+                        {s.reference || s.passage || `Passage ${i + 1}`}
+                      </Text>
+                      <Text style={[styles.previewBody, { color: theme.text }]}>
+                        {s.text || s.content || ""}
+                      </Text>
+                      {s.explanation && (
+                        <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4 }]}>
+                          {s.explanation}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
                 </>
               )}
 
@@ -854,13 +889,30 @@ function PreviewModal({
                       style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                     >
                       <Text style={[styles.dayTitle, { color: theme.accent }]}>
-                        {day.day || `Day ${i + 1}`}
+                        {day.dayTitle || day.day ? `Day ${typeof day.day === 'number' ? day.day : i + 1}${day.dayTitle ? ': ' + day.dayTitle : ''}` : `Day ${i + 1}`}
                       </Text>
-                      <Text style={[styles.previewBody, { color: theme.text }]}>{day.passage || ""}</Text>
-                      <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4 }]}>
-                        {day.reflection || day.prompt || ""}
+                      {(day.focusText || day.passage) ? (
+                        <Text style={[styles.previewBody, { color: theme.accent, marginBottom: 4 }]}>
+                          {day.focusText || day.passage}
+                        </Text>
+                      ) : null}
+                      <Text style={[styles.previewBody, { color: theme.text }]}>
+                        {day.studyPrompt || day.keyInsight || day.reflection || day.prompt || ""}
                       </Text>
                     </View>
+                  ))}
+                </>
+              )}
+
+              {fullContent?.applicationQuestions && Array.isArray(fullContent.applicationQuestions) && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    Application Questions
+                  </Text>
+                  {fullContent.applicationQuestions.map((q: any, i: number) => (
+                    <Text key={i} style={[styles.previewBody, { color: theme.text, marginBottom: 8 }]}>
+                      {i + 1}. {typeof q === "string" ? q : q.question || q.text || JSON.stringify(q)}
+                    </Text>
                   ))}
                 </>
               )}
@@ -878,6 +930,28 @@ function PreviewModal({
                 </>
               )}
 
+              {fullContent?.prayerPrompts && Array.isArray(fullContent.prayerPrompts) && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Prayer Prompts</Text>
+                  {fullContent.prayerPrompts.map((p: any, i: number) => (
+                    <Text key={i} style={[styles.previewBody, { color: theme.text, marginBottom: 8 }]}>
+                      {typeof p === "string" ? p : p.prompt || p.text || JSON.stringify(p)}
+                    </Text>
+                  ))}
+                </>
+              )}
+
+              {fullContent?.furtherStudy && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>Further Study</Text>
+                  <Text style={[styles.previewBody, { color: theme.text }]}>
+                    {typeof fullContent.furtherStudy === "string"
+                      ? fullContent.furtherStudy
+                      : JSON.stringify(fullContent.furtherStudy)}
+                  </Text>
+                </>
+              )}
+
               {fullContent?.memoryVerseGuide && (
                 <>
                   <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
@@ -887,13 +961,20 @@ function PreviewModal({
                     {fullContent.memoryVerseGuide.reference}
                   </Text>
                   <Text style={[styles.previewBody, { color: theme.text, marginTop: 4 }]}>
-                    {fullContent.memoryVerseGuide.text || ""}
+                    {fullContent.memoryVerseGuide.verse || fullContent.memoryVerseGuide.text || ""}
                   </Text>
-                  {fullContent.memoryVerseGuide.techniques && (
-                    <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4 }]}>
-                      {Array.isArray(fullContent.memoryVerseGuide.techniques)
-                        ? fullContent.memoryVerseGuide.techniques.join(", ")
-                        : fullContent.memoryVerseGuide.techniques}
+                  {fullContent.memoryVerseGuide.meditationSteps && Array.isArray(fullContent.memoryVerseGuide.meditationSteps) && (
+                    <View style={{ marginTop: 8 }}>
+                      {fullContent.memoryVerseGuide.meditationSteps.map((step: string, i: number) => (
+                        <Text key={i} style={[styles.previewBody, { color: theme.textSecondary, marginBottom: 4 }]}>
+                          {i + 1}. {step}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                  {fullContent.memoryVerseGuide.applicationPrompt && (
+                    <Text style={[styles.previewBody, { color: theme.textSecondary, marginTop: 4, fontStyle: "italic" }]}>
+                      {fullContent.memoryVerseGuide.applicationPrompt}
                     </Text>
                   )}
                 </>
@@ -910,10 +991,36 @@ function PreviewModal({
                       style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
                     >
                       <Text style={[styles.dayTitle, { color: theme.accent }]}>
-                        {conn.source || conn.book || `Connection ${i + 1}`}
+                        {conn.topic || conn.source || conn.book || `Connection ${i + 1}`}
+                      </Text>
+                      {conn.bookReference && (
+                        <Text style={[styles.previewBody, { color: theme.accent, fontSize: 12, marginBottom: 4 }]}>
+                          {conn.bookReference}
+                        </Text>
+                      )}
+                      <Text style={[styles.previewBody, { color: theme.text }]}>
+                        {conn.relevance || conn.quote || conn.excerpt || conn.text || ""}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {fullContent?.days && Array.isArray(fullContent.days) && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 20 }]}>
+                    {fullContent.theme || "Daily Content"}
+                  </Text>
+                  {fullContent.days.map((day: any, i: number) => (
+                    <View
+                      key={i}
+                      style={[styles.dayCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.dayTitle, { color: theme.accent }]}>
+                        {day.title || day.dayTitle || `Day ${i + 1}`}
                       </Text>
                       <Text style={[styles.previewBody, { color: theme.text }]}>
-                        {conn.quote || conn.excerpt || conn.text || ""}
+                        {day.content || day.devotional || day.reflection || ""}
                       </Text>
                     </View>
                   ))}

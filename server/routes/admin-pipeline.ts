@@ -379,14 +379,32 @@ router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, as
     const generationMeta = contentJson?._generation || null;
 
     const contentSections: Array<{ key: string; label: string; preview: string }> = [];
+    if (contentJson?.introduction) {
+      contentSections.push({ key: "introduction", label: "Introduction", preview: String(contentJson.introduction).substring(0, 300) });
+    }
     if (contentJson?.overview) {
       contentSections.push({ key: "overview", label: "Overview", preview: String(contentJson.overview).substring(0, 300) });
+    }
+    if (contentJson?.historicalContext) {
+      contentSections.push({ key: "historicalContext", label: "Historical Context", preview: String(contentJson.historicalContext).substring(0, 300) });
+    }
+    if (contentJson?.scriptureFoundation && Array.isArray(contentJson.scriptureFoundation)) {
+      contentSections.push({ key: "scriptureFoundation", label: "Scripture Foundation", preview: `${contentJson.scriptureFoundation.length} passages` });
     }
     if (contentJson?.dailyStudyPrompts) {
       contentSections.push({ key: "dailyStudyPrompts", label: "Daily Study Prompts", preview: `${contentJson.dailyStudyPrompts.length} days` });
     }
+    if (contentJson?.applicationQuestions && Array.isArray(contentJson.applicationQuestions)) {
+      contentSections.push({ key: "applicationQuestions", label: "Application Questions", preview: `${contentJson.applicationQuestions.length} questions` });
+    }
     if (contentJson?.discussionQuestions) {
       contentSections.push({ key: "discussionQuestions", label: "Discussion Questions", preview: `${contentJson.discussionQuestions.length} questions` });
+    }
+    if (contentJson?.prayerPrompts && Array.isArray(contentJson.prayerPrompts)) {
+      contentSections.push({ key: "prayerPrompts", label: "Prayer Prompts", preview: `${contentJson.prayerPrompts.length} prompts` });
+    }
+    if (contentJson?.furtherStudy) {
+      contentSections.push({ key: "furtherStudy", label: "Further Study", preview: String(contentJson.furtherStudy).substring(0, 200) });
     }
     if (contentJson?.memoryVerseGuide) {
       contentSections.push({ key: "memoryVerseGuide", label: "Memory Verse Guide", preview: contentJson.memoryVerseGuide.reference || "" });
@@ -396,6 +414,9 @@ router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, as
     }
     if (contentJson?.egwConnections) {
       contentSections.push({ key: "egwConnections", label: "EGW Connections", preview: `${contentJson.egwConnections.length} connections` });
+    }
+    if (contentJson?.days && Array.isArray(contentJson.days)) {
+      contentSections.push({ key: "days", label: contentJson.theme || "Daily Content", preview: `${contentJson.days.length} days` });
     }
 
     let predecessorData = null;
