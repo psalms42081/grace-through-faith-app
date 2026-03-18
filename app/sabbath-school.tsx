@@ -160,6 +160,12 @@ export default function SabbathSchoolScreen() {
             </Text>
           </View>
 
+          <View style={styles.dailyStudyHeader}>
+            <Text style={[styles.dailyStudyLabel, { color: theme.textSecondary }]}>
+              {t("sabbathSchool.dailyStudy", { defaultValue: "Daily Study Guide" })}
+            </Text>
+          </View>
+
           <View style={styles.daysGrid}>
             {days.map((day, index) => {
               const isToday = todayDayNumber === day.dayNumber;
@@ -430,6 +436,16 @@ const styles = StyleSheet.create({
   progressText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
+  },
+  dailyStudyHeader: {
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  dailyStudyLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   daysGrid: { gap: 8 },
   dayCard: {
