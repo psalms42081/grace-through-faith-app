@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { buildSourcePacket, type SourcePacketJson } from "./source-packet-builder";
 
 const companionSchema = z.object({
-  overview: z.string().min(400),
+  overview: z.string().min(50),
   dailyStudyPrompts: z.array(z.object({
     day: z.number(),
     dayTitle: z.string().min(5),
@@ -22,8 +22,8 @@ const companionSchema = z.object({
     keyInsight: z.string().min(30),
   })).min(5).max(7),
   discussionQuestions: z.array(z.object({
-    question: z.string().min(20),
-    context: z.string().min(20),
+    question: z.string().min(15),
+    context: z.string().min(10),
     depth: z.enum(["surface", "intermediate", "deep"]),
   })).min(6).max(10),
   memoryVerseGuide: z.object({
@@ -179,7 +179,7 @@ export async function generateSabbathSchoolCompanion(
       },
       {
         role: "user",
-        content: `Generate a comprehensive Sabbath School companion resource for the following lesson:
+        content: `Generate a Sabbath School Lesson Companion for the following lesson:
 
 Quarter: "${src.quarterMeta.title}" (${src.quarterMeta.humanDate || src.quarterMeta.quarterCode})
 Title: "${src.lessonTitle}" (Week ${src.weekNumber})
@@ -190,7 +190,7 @@ ${daysContent}
 
 Return a JSON object with this exact structure:
 {
-  "overview": "Write 2-3 separate paragraphs (separated by \\n\\n). First paragraph: the lesson's core theme and why it matters for Adventists today. Second paragraph: how this connects to the broader Philippians/Colossians narrative arc. Third paragraph (optional): relevance to the Three Angels' Messages or the Great Controversy theme.",
+  "overview": "Write a concise 2-3 sentence summary: what is this week's core theme and why does it matter for everyday Adventist life? Keep it warm, clear, and brief — this orients the reader, not teaches the lesson. No more than 4 sentences.",
   "dailyStudyPrompts": [
     {
       "day": 1,
@@ -202,8 +202,8 @@ Return a JSON object with this exact structure:
   ],
   "discussionQuestions": [
     {
-      "question": "a substantive discussion question that could sustain 5-10 minutes of group conversation",
-      "context": "1-2 sentences explaining why this question matters for spiritual formation — what tension or growth opportunity does it surface?",
+      "question": "Write conversational, concise questions that sound natural in Sabbath School. Preferred style: 'What does loving discipline look like in a Christian home?' or 'Why is it hard to speak truth with grace?' Avoid academic or generic phrasing. Each question should work for personal reflection, couples, families, small groups, or class.",
+      "context": "One short sentence starting with a verb — what this question helps surface. Example: 'Helps connect the lesson to real family conversations.' or 'Opens honest reflection about grace and truth.' Keep it under 15 words.",
       "depth": "surface|intermediate|deep"
     }
   ],
@@ -228,18 +228,20 @@ Return a JSON object with this exact structure:
   "egwConnections": [
     {
       "topic": "the specific lesson theme being connected",
-      "bookReference": "Prefer major EGW works: The Desire of Ages, Steps to Christ, The Great Controversy, Patriarchs and Prophets, Christ's Object Lessons, The Ministry of Healing, Education, The Acts of the Apostles. Use 'Book Title, Chapter X' format consistently — avoid page numbers unless the work is a devotional compilation.",
-      "relevance": "2-3 sentences explaining the specific connection — what does EGW add to the biblical discussion that enriches understanding?"
+      "bookReference": "Prefer major EGW works: The Desire of Ages, Steps to Christ, The Great Controversy, Patriarchs and Prophets, Christ's Object Lessons, The Ministry of Healing, Education, The Acts of the Apostles. Use 'Book Title, Chapter X' format consistently.",
+      "relevance": "1-2 sentences explaining the specific connection — what does EGW add to the biblical discussion?"
     }
   ]
 }
 
 Requirements:
 - Generate exactly 7 daily study prompts (one per day, matching the lesson's day structure)
-- Generate 7-8 discussion questions: 2 surface, 3 intermediate, 2-3 deep
+- Generate 7-8 discussion questions: 2 surface (Starter), 3 intermediate (Group Discussion), 2-3 deep (Go Deeper)
+- Discussion questions MUST sound conversational and natural — the kind of question a thoughtful Sabbath School teacher would ask, not a textbook
+- Each question's "context" field must be a short one-line helper (under 15 words), not a paragraph
 - Generate 4-5 EGW connections from well-known major works
 - Generate exactly 5 meditation steps that are actionable and progressive
-- The overview MUST be 2-3 distinct paragraphs
+- The overview MUST be concise (2-4 sentences max) — orient the reader, don't lecture
 - Key insights should be distinctively Adventist where possible, not generic Christian observations`,
       },
     ],

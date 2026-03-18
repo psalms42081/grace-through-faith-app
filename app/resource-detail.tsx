@@ -133,11 +133,17 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
 }) {
   if (!content) return null;
 
+  const DEPTH_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+    surface: { label: "Starter", color: "#C9933A", bg: "rgba(201,147,58,0.15)" },
+    intermediate: { label: "Group Discussion", color: "#1E88E5", bg: "rgba(30,136,229,0.15)" },
+    deep: { label: "Go Deeper", color: "#8B5CF6", bg: "rgba(139,92,246,0.15)" },
+  };
+
   return (
     <>
       {content.overview && (
         <SectionCard
-          title="Overview"
+          title="This Week's Big Picture"
           icon="book-outline"
           iconColor="#C9933A"
           theme={theme}
@@ -149,15 +155,9 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           previewText={content.overview}
           isCurrent={firstIncompleteKey === "overview"}
         >
-          <View style={sStyles.guidanceBlock}>
-            <View style={sStyles.guidanceHeader}>
-              <Ionicons name="reader-outline" size={14} color={theme.accent} />
-              <Text style={[sStyles.guidanceLabel, { color: theme.accent }]}>Read through this week's theme</Text>
-            </View>
-            <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {content.overview}
-            </Text>
-          </View>
+          <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+            {content.overview}
+          </Text>
         </SectionCard>
       )}
 
@@ -196,7 +196,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
             <View style={sStyles.guidanceBlock}>
               <View style={sStyles.guidanceHeader}>
                 <Ionicons name="chatbubble-ellipses-outline" size={14} color="#8B5CF6" />
-                <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Reflect on this</Text>
+                <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Pause and reflect</Text>
               </View>
               <Text style={[sStyles.promptText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
                 {prompt}
@@ -235,37 +235,35 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           <View style={sStyles.guidanceBlock}>
             <View style={sStyles.guidanceHeader}>
               <Ionicons name="people-outline" size={14} color="#8B5CF6" />
-              <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Discuss together or reflect personally</Text>
+              <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>For class, small group, or personal study</Text>
             </View>
-            <Text style={[sStyles.guidanceHint, { color: theme.textMuted }]}>
-              Work through these questions with your study group. Allow 5-10 minutes per question.
-            </Text>
           </View>
           {content.discussionQuestions.map((q: any, i: number) => {
             const questionText = typeof q === "string" ? q : q.question || "";
             const contextText = typeof q === "object" && q.context ? q.context : null;
             const depth = typeof q === "object" && q.depth ? q.depth : null;
+            const depthInfo = depth ? DEPTH_LABELS[depth] || null : null;
             return (
               <View key={i} style={sStyles.questionBlock}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                <View style={{ flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 8 }}>
                   <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                     {i + 1}.
                   </Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[sStyles.bodyText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
                       {questionText}
                     </Text>
                     {contextText && (
-                      <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Lora_400Regular_Italic", fontSize: 13, marginTop: 4, opacity: 0.7 }]}>
-                        {contextText}
+                      <Text style={[sStyles.whyMattersText, { color: theme.textMuted }]}>
+                        Why this matters: {contextText}
                       </Text>
                     )}
                   </View>
                 </View>
-                {depth && (
-                  <View style={[sStyles.depthBadge, { backgroundColor: depth === "deep" ? "rgba(139,92,246,0.15)" : depth === "intermediate" ? "rgba(30,136,229,0.15)" : "rgba(201,147,58,0.15)" }]}>
-                    <Text style={[sStyles.depthText, { color: depth === "deep" ? "#8B5CF6" : depth === "intermediate" ? "#1E88E5" : "#C9933A" }]}>
-                      {depth === "deep" ? "Deep dive" : depth === "intermediate" ? "Going deeper" : "Getting started"}
+                {depthInfo && (
+                  <View style={[sStyles.depthBadge, { backgroundColor: depthInfo.bg }]}>
+                    <Text style={[sStyles.depthText, { color: depthInfo.color }]}>
+                      {depthInfo.label}
                     </Text>
                   </View>
                 )}
@@ -279,7 +277,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
         const mv = content.memoryVerseGuide || content.memoryVerseMeditation;
         return (
           <SectionCard
-            title="Memory Verse Meditation"
+            title="Memory Verse"
             icon="sparkles-outline"
             iconColor="#E65100"
             theme={theme}
@@ -307,13 +305,13 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                   <View style={sStyles.guidanceBlock}>
                     <View style={sStyles.guidanceHeader}>
                       <Ionicons name="heart-outline" size={14} color="#E65100" />
-                      <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>This week's verse to memorize</Text>
+                      <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>This week's verse</Text>
                     </View>
                     <View style={sStyles.verseCard}>
-                      <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_600SemiBold", textAlign: "center" }]}>
+                      <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_600SemiBold", textAlign: "center" as const }]}>
                         "{mv.verse}"
                       </Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, textAlign: "center", marginTop: 4 }}>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, textAlign: "center" as const, marginTop: 4 }}>
                         {mv.reference}
                       </Text>
                     </View>
@@ -323,7 +321,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                   <View style={sStyles.guidanceBlock}>
                     <View style={sStyles.guidanceHeader}>
                       <Ionicons name="walk-outline" size={14} color="#8B5CF6" />
-                      <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Follow these meditation steps</Text>
+                      <Text style={[sStyles.guidanceLabel, { color: "#8B5CF6" }]}>Steps for meditation</Text>
                     </View>
                     {mv.meditationSteps.map((step: string, i: number) => (
                       <View key={i} style={sStyles.numberedStep}>
@@ -356,7 +354,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
 
       {content.familyWorshipAdaptation && (
         <SectionCard
-          title="Family Worship Adaptation"
+          title="For Family Worship"
           icon="people-outline"
           iconColor="#2E7D32"
           theme={theme}
@@ -384,7 +382,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                 <View style={sStyles.guidanceBlock}>
                   <View style={sStyles.guidanceHeader}>
                     <Ionicons name="book-outline" size={14} color="#2E7D32" />
-                    <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>Read this story to the children</Text>
+                    <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>For the children</Text>
                   </View>
                   <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                     {content.familyWorshipAdaptation.kidsVersion}
@@ -395,7 +393,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                 <View style={sStyles.guidanceBlock}>
                   <View style={sStyles.guidanceHeader}>
                     <Ionicons name="color-palette-outline" size={14} color="#E65100" />
-                    <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>Do this activity together</Text>
+                    <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>Activity idea</Text>
                   </View>
                   <Text style={[sStyles.bodyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                     {content.familyWorshipAdaptation.activityIdea}
@@ -438,7 +436,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
 
       {content.egwConnections?.length > 0 && (
         <SectionCard
-          title="Ellen G. White Connections"
+          title="Ellen White Insights"
           icon="library-outline"
           iconColor="#6A1B9A"
           theme={theme}
@@ -450,15 +448,6 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           previewText={Array.isArray(content.egwConnections) && content.egwConnections[0]?.topic ? content.egwConnections[0].topic : ""}
           isCurrent={firstIncompleteKey === "egw"}
         >
-          <View style={sStyles.guidanceBlock}>
-            <View style={sStyles.guidanceHeader}>
-              <Ionicons name="library-outline" size={14} color="#6A1B9A" />
-              <Text style={[sStyles.guidanceLabel, { color: "#6A1B9A" }]}>Explore these Spirit of Prophecy connections</Text>
-            </View>
-            <Text style={[sStyles.guidanceHint, { color: theme.textMuted }]}>
-              Read the referenced passages alongside your Bible study for deeper understanding.
-            </Text>
-          </View>
           {Array.isArray(content.egwConnections) ? (
             content.egwConnections.map((conn: any, i: number) => (
               <View key={i} style={sStyles.egwItem}>
@@ -956,6 +945,7 @@ export default function ResourceDetailScreen() {
   const qc = useQueryClient();
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
   const [expandedOverrides, setExpandedOverrides] = useState<Record<string, boolean>>({});
+  const [bookmarkToast, setBookmarkToast] = useState(false);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -972,6 +962,10 @@ export default function ResourceDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [`/api/resources/${slug}`] });
       qc.invalidateQueries({ queryKey: ["/api/resources/bookmarks"] });
+      if (!resource?.isBookmarked) {
+        setBookmarkToast(true);
+        setTimeout(() => setBookmarkToast(false), 2000);
+      }
     },
   });
 
@@ -1056,11 +1050,15 @@ export default function ResourceDetailScreen() {
 
   const content = resource.contentJson;
   const bookmarkIcon = resource.isBookmarked ? "bookmark" : "bookmark-outline";
+  const isCompanion = resource.resourceType === "sabbath-school-companion";
+  const headerTitle = isCompanion ? "Lesson Companion" : resource.title;
+  const heroTitle = isCompanion ? resource.title.replace(/^Companion:\s*/i, "") : resource.title;
+  const totalSections = getTotalSections(resource);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScreenHeader
-        title={resource.title}
+        title={headerTitle}
         testID="resource-detail-header"
         rightAction={
           <Pressable
@@ -1078,16 +1076,23 @@ export default function ResourceDetailScreen() {
         }
       />
 
+      {bookmarkToast && (
+        <View style={styles.bookmarkToast}>
+          <Ionicons name="bookmark" size={14} color="#C9933A" />
+          <Text style={styles.bookmarkToastText}>Saved to Library</Text>
+        </View>
+      )}
+
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.heroCard, { backgroundColor: theme.primary }]}>
           <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>
-            {resource.title}
+            {heroTitle}
           </Text>
           {resource.description && (
-            <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]} numberOfLines={4}>
               {resource.description}
             </Text>
           )}
@@ -1100,27 +1105,35 @@ export default function ResourceDetailScreen() {
                 </Text>
               </View>
             )}
+            {isCompanion && totalSections > 0 && (
+              <View style={styles.heroMetaItem}>
+                <Ionicons name="layers-outline" size={14} color="rgba(237,229,213,0.65)" />
+                <Text style={[styles.heroMetaText, { fontFamily: "Inter_400Regular" }]}>
+                  {totalSections} sections
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {completedSections.size > 0 && (
-          <View style={styles.progressSection}>
-            <View style={[styles.progressBar, { backgroundColor: "rgba(201,147,58,0.15)" }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    backgroundColor: "#C9933A",
-                    width: `${Math.round((completedSections.size / Math.max(getTotalSections(resource), 1)) * 100)}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.progressText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              {completedSections.size} of {getTotalSections(resource)} sections complete
-            </Text>
+        <View style={styles.progressSection}>
+          <View style={[styles.progressBar, { backgroundColor: "rgba(201,147,58,0.15)" }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  backgroundColor: "#C9933A",
+                  width: `${Math.round((completedSections.size / Math.max(totalSections, 1)) * 100)}%`,
+                },
+              ]}
+            />
           </View>
-        )}
+          <Text style={[styles.progressText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+            {completedSections.size > 0
+              ? `Completed ${completedSections.size} of ${totalSections} sections`
+              : `${totalSections} sections to explore`}
+          </Text>
+        </View>
 
         {resource.resourceType === "sabbath-school-companion" && (
           <SabbathSchoolContent
@@ -1280,6 +1293,26 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 12,
+  },
+  bookmarkToast: {
+    position: "absolute" as const,
+    top: 100,
+    alignSelf: "center" as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    backgroundColor: "rgba(201, 147, 58, 0.15)",
+    borderColor: "rgba(201, 147, 58, 0.3)",
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    zIndex: 100,
+  },
+  bookmarkToastText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: "#C9933A",
   },
 });
 
@@ -1453,5 +1486,13 @@ const sStyles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.06)",
+  },
+  whyMattersText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+    marginTop: 4,
+    fontStyle: "italic" as const,
+    opacity: 0.6,
   },
 });
