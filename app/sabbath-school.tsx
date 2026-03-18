@@ -252,7 +252,7 @@ export default function SabbathSchoolScreen() {
                     {t("sabbathSchool.companionLesson", { defaultValue: "Companion Lesson" })}
                   </Text>
                   <Text style={[styles.companionCardTitle, { color: theme.text }]} numberOfLines={2}>
-                    {companion.title}
+                    {companion.title.replace(/^Companion:\s*/i, "")}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
@@ -283,7 +283,7 @@ export default function SabbathSchoolScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.discussionBtnTitle}>{t("sabbathSchool.lessonDiscussionGuide", { defaultValue: "Lesson Discussion Guide" })}</Text>
               <Text style={styles.discussionBtnSub}>
-                {t("sabbathSchool.discussionGuideSubtitle", { defaultValue: "Group questions, key themes, and teaching prompts" })}
+                {t("sabbathSchool.discussionGuideSubtitle", { defaultValue: "Discussion questions, key themes, and talk prompts" })}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#050507" />
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
     gap: 6,
-    marginTop: 8,
+    marginTop: 20,
     paddingHorizontal: 2,
   },
   sourceFooterText: {
