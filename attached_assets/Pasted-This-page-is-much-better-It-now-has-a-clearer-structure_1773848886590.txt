@@ -1,0 +1,100 @@
+This page is much better.
+
+It now has a clearer structure:
+
+official weekly lesson at the top
+
+daily guide in the middle
+
+companion lesson and discussion mode below
+
+archive at the bottom
+
+
+That is the right hierarchy.
+
+A few things still stand out though.
+
+The strongest part: The Companion Lesson card makes sense here. This is exactly where it should live. Users can now see that there is an added companion tied to the weekly lesson instead of it being hidden somewhere else.
+
+The part that still needs work: Discussion Mode still feels vague.
+
+“Sabbath morning companion” is soft language, but it does not tell the user what actually happens when they tap it. It sounds nice, but not clear.
+
+I would rename or reframe it more directly, something like:
+
+Discussion Companion
+Subtitle: Talking points and group questions for this week’s lesson
+
+Lesson Discussion Guide
+Subtitle: Group questions, key themes, and teaching prompts
+
+Sabbath Discussion Prep
+Subtitle: Prepare for class, family worship, or small group discussion
+
+
+Of those, Lesson Discussion Guide is probably the clearest.
+
+The small source note also still needs tightening.
+
+Current: “Lesson content from Adventech ... Discussion prep is AI-generated.”
+
+Better: Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
+
+That wording is cleaner and safer.
+
+My view on each section:
+
+Daily Study Guide
+Good where it is. This is the main thing most users will open.
+
+Companion Lesson
+Good placement. Keep it directly under the week flow. It feels connected to the lesson.
+
+Discussion Mode
+Needs a clearer title and clearer promise. Right now it is still a bit abstract.
+
+Browse Past Quarters
+Good at the bottom. That is where archive belongs.
+
+Verified SDA Framework
+I understand why it is there, but I would be careful. If that badge implies official denominational approval, it could create confusion. If this is your own internal doctrinal alignment check, label it more modestly, such as:
+
+Aligned with SDA beliefs
+
+Doctrinal alignment review completed
+
+Built for SDA study use
+
+
+“Verified SDA Framework” sounds more formal than it probably is.
+
+My recommended final wording pass for this screen:
+
+Companion Lesson stays
+
+Discussion Mode becomes Lesson Discussion Guide
+
+subtitle becomes Group questions, key themes, and teaching prompts
+
+source note becomes
+Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
+
+badge becomes Aligned with SDA beliefs
+
+
+So overall: the page layout is now solid, but the remaining issue is mostly language clarity, not structure.
+
+The page should communicate three things instantly:
+
+1. This is the official weekly lesson
+
+
+2. This is the added companion material
+
+
+3. This is where I go to prepare for discussion
+
+
+
+Right now it is close. It just needs that final naming cleanup.

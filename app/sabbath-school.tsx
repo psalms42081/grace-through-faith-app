@@ -281,9 +281,9 @@ export default function SabbathSchoolScreen() {
           >
             <Ionicons name="chatbubbles" size={22} color="#050507" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.discussionBtnTitle}>{t("sabbathSchool.discussionMode")}</Text>
+              <Text style={styles.discussionBtnTitle}>{t("sabbathSchool.companionDiscussion", { defaultValue: "Companion Discussion" })}</Text>
               <Text style={styles.discussionBtnSub}>
-                {t("sabbathSchool.sabbathCompanion")}
+                {t("sabbathSchool.guidedStudyAid", { defaultValue: "Guided study aid for this week's lesson" })}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#050507" />

@@ -51,9 +51,11 @@
     "loading": "Loading this week's lesson...",
     "syncing": "Sabbath School content is being synced. Please check back shortly.",
     "daysCompleted": "{{completed}} of {{total}} days completed",
-    "discussionMode": "Discussion Mode",
+    "discussionMode": "Companion Discussion",
+    "companionDiscussion": "Companion Discussion",
     "sabbathCompanion": "Sabbath morning companion",
-    "sourceAttribution": "Lesson content from Adventech (sabbath-school.adventech.io). Discussion prep is AI-generated.",
+    "guidedStudyAid": "Guided study aid for this week's lesson",
+    "sourceAttribution": "Official Sabbath School lesson content via Adventech. Discussion prompts are companion study aids.",
     "archive": "Past Quarters",
     "viewArchive": "Browse Past Quarters",
     "noArchive": "No past quarters available yet."

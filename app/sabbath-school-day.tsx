@@ -202,11 +202,13 @@ export default function SabbathSchoolDayScreen() {
 
   const [journalText, setJournalText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
+  const [showCompletionState, setShowCompletionState] = useState(false);
 
   React.useEffect(() => {
     if (day) {
       setIsCompleted(day.completed);
-      if (day.journalEntry) setJournalText(day.journalEntry);
+      setShowCompletionState(false);
+      setJournalText(day.journalEntry || "");
     }
   }, [day?.id]);
 
@@ -220,6 +222,7 @@ export default function SabbathSchoolDayScreen() {
     },
     onSuccess: () => {
       setIsCompleted(true);
+      setShowCompletionState(true);
       queryClient.invalidateQueries({
         queryKey: [queryPath],
       });
@@ -230,6 +233,10 @@ export default function SabbathSchoolDayScreen() {
   });
 
   const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sabbath"];
+  const currentDayName = DAY_NAMES[dayNumber - 1] || `Day ${dayNumber}`;
+  const hasNextDay = dayNumber < totalDays;
+  const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
+  const newCompletedCount = isCompleted ? Math.max(completedDays, (data?.lesson?.days?.filter(d => d.completed || d.dayNumber === dayNumber).length || 0)) : completedDays;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -331,37 +338,123 @@ export default function SabbathSchoolDayScreen() {
             />
           </View>
 
-          <Pressable
-            onPress={() => completeMutation.mutate()}
-            disabled={isCompleted || completeMutation.isPending}
-            style={({ pressed }) => [
-              styles.completeBtn,
-              {
-                backgroundColor: isCompleted
-                  ? "rgba(34, 197, 94, 0.15)"
-                  : theme.accent,
-                opacity: pressed && !isCompleted ? 0.85 : 1,
-              },
-            ]}
-          >
-            {completeMutation.isPending ? (
-              <ActivityIndicator size="small" color={isCompleted ? "#22C55E" : "#050507"} />
-            ) : (
-              <Ionicons
-                name={isCompleted ? "checkmark-circle" : "checkmark-circle-outline"}
-                size={22}
-                color={isCompleted ? "#22C55E" : "#050507"}
-              />
-            )}
-            <Text
-              style={[
-                styles.completeBtnText,
-                { color: isCompleted ? "#22C55E" : "#050507" },
+          {!showCompletionState ? (
+            <Pressable
+              onPress={() => {
+                if (isCompleted) {
+                  setShowCompletionState(true);
+                } else {
+                  completeMutation.mutate();
+                }
+              }}
+              disabled={completeMutation.isPending}
+              style={({ pressed }) => [
+                styles.completeBtn,
+                {
+                  backgroundColor: isCompleted
+                    ? "rgba(34, 197, 94, 0.15)"
+                    : theme.accent,
+                  opacity: pressed ? 0.85 : 1,
+                },
               ]}
             >
-              {isCompleted ? "Completed" : "Mark as Complete"}
-            </Text>
-          </Pressable>
+              {completeMutation.isPending ? (
+                <ActivityIndicator size="small" color="#050507" />
+              ) : (
+                <Ionicons
+                  name={isCompleted ? "checkmark-circle" : "checkmark-circle-outline"}
+                  size={22}
+                  color={isCompleted ? "#22C55E" : "#050507"}
+                />
+              )}
+              <Text
+                style={[
+                  styles.completeBtnText,
+                  { color: isCompleted ? "#22C55E" : "#050507" },
+                ]}
+              >
+                {isCompleted ? "Completed" : "Mark as Complete"}
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.completionCard, { backgroundColor: "rgba(34, 197, 94, 0.06)", borderColor: "rgba(34, 197, 94, 0.2)" }]}>
+              <View style={styles.completionHeader}>
+                <Ionicons name="checkmark-circle" size={28} color="#22C55E" />
+                <Text style={[styles.completionTitle, { color: theme.text }]}>
+                  {currentDayName} Completed
+                </Text>
+              </View>
+
+              <View style={[styles.completionProgress, { backgroundColor: theme.backgroundCard }]}>
+                <View style={styles.completionProgressBar}>
+                  <View style={[styles.completionProgressFill, { width: `${(newCompletedCount / totalDays) * 100}%` }]} />
+                </View>
+                <Text style={[styles.completionProgressText, { color: theme.textMuted }]}>
+                  {newCompletedCount} of {totalDays} days completed
+                </Text>
+              </View>
+
+              {journalText.trim().length > 0 && (
+                <View style={[styles.completionReflectionSaved, { backgroundColor: "rgba(139, 92, 246, 0.08)" }]}>
+                  <Ionicons name="journal-outline" size={14} color="#8B5CF6" />
+                  <Text style={[styles.completionReflectionText, { color: "#8B5CF6" }]}>
+                    Reflection saved
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.completionActions}>
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      `/sabbath-school-discussion?lessonId=${data?.lesson?.id}&lessonTitle=${encodeURIComponent(data?.lesson?.title || "")}` as any
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.completionActionBtn,
+                    { backgroundColor: "rgba(139, 92, 246, 0.12)", borderColor: "rgba(139, 92, 246, 0.25)", opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  <Ionicons name="chatbubbles-outline" size={18} color="#8B5CF6" />
+                  <Text style={[styles.completionActionText, { color: "#8B5CF6" }]}>
+                    Companion Discussion
+                  </Text>
+                </Pressable>
+
+                {hasNextDay && (
+                  <Pressable
+                    onPress={() =>
+                      router.replace(
+                        `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.completionActionBtn,
+                      { backgroundColor: theme.accent, borderColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    <Ionicons name="arrow-forward" size={18} color="#050507" />
+                    <Text style={[styles.completionActionText, { color: "#050507" }]}>
+                      Continue to {DAY_NAMES[dayNumber] || `Day ${dayNumber + 1}`}
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Pressable
+                  onPress={() => router.back()}
+                  style={({ pressed }) => [
+                    styles.completionActionBtn,
+                    { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <Ionicons name="arrow-back" size={18} color={theme.textMuted} />
+                  <Text style={[styles.completionActionText, { color: theme.textSecondary }]}>
+                    Return to Lesson {lessonNumber}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
@@ -468,5 +561,69 @@ const styles = StyleSheet.create({
   completeBtnText: {
     fontFamily: "Inter_700Bold",
     fontSize: 15,
+  },
+  completionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    marginTop: 12,
+    gap: 16,
+  },
+  completionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  completionTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 18,
+  },
+  completionProgress: {
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  completionProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    overflow: "hidden" as const,
+  },
+  completionProgressFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#22C55E",
+  },
+  completionProgressText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  completionReflectionSaved: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  completionReflectionText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  completionActions: {
+    gap: 8,
+  },
+  completionActionBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+  },
+  completionActionText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
   },
 });
