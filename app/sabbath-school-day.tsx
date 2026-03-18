@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,46 @@ interface LessonResponse {
   quarterly: {
     title: string;
   };
+}
+
+const REFLECTION_PROMPTS: Record<string, string[]> = {
+  prayer: [
+    "What challenged your prayer life today?",
+    "Who comes to mind as someone you should pray for?",
+    "What will you take into prayer from this lesson?",
+  ],
+  relationship: [
+    "What relationship needs more grace or patience?",
+    "What part of this lesson feels most personal today?",
+    "What change could strengthen your home or church relationships?",
+  ],
+  faith: [
+    "What truth from today's lesson do you want to carry into the day?",
+    "What practical step stands out most?",
+    "What is God asking you to do with what you read?",
+  ],
+  study: [
+    "What insight from this passage surprised you?",
+    "How does this connect to your experience this week?",
+    "What would it look like to live this truth out today?",
+  ],
+  default: [
+    "What stood out to you most in today's reading?",
+    "What is one thing you want to remember from this lesson?",
+    "How does today's lesson speak to where you are right now?",
+  ],
+};
+
+function getReflectionPrompt(title: string | null, dayNumber: number): string {
+  const t = (title || "").toLowerCase();
+  let category = "default";
+  if (/pray|prayer|intercession|supplication/.test(t)) category = "prayer";
+  else if (/family|marriage|husband|wife|children|parent|relationship|living with/.test(t)) category = "relationship";
+  else if (/faith|trust|believe|confidence|hope|standing/.test(t)) category = "faith";
+  else if (/study|wisdom|knowledge|truth|scripture|word/.test(t)) category = "study";
+
+  const prompts = REFLECTION_PROMPTS[category];
+  return prompts[(dayNumber - 1) % prompts.length];
 }
 
 function MarkdownRenderer({
@@ -238,6 +278,11 @@ export default function SabbathSchoolDayScreen() {
   const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
   const newCompletedCount = isCompleted ? Math.max(completedDays, (data?.lesson?.days?.filter(d => d.completed || d.dayNumber === dayNumber).length || 0)) : completedDays;
 
+  const reflectionPrompt = useMemo(
+    () => getReflectionPrompt(day?.title || data?.lesson?.title || null, dayNumber),
+    [day?.title, data?.lesson?.title, dayNumber]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
@@ -309,7 +354,7 @@ export default function SabbathSchoolDayScreen() {
           <View style={[styles.sourceAttribution, { borderTopColor: theme.border }]}>
             <Ionicons name="library-outline" size={13} color={theme.textMuted} />
             <Text style={[styles.sourceText, { color: theme.textMuted }]}>
-              Lesson content provided by Adventech / Sabbath School Lessons (sabbath-school.adventech.io). Used under open-source license.
+              Official Sabbath School lesson content provided via Adventech.
             </Text>
           </View>
 
@@ -329,7 +374,7 @@ export default function SabbathSchoolDayScreen() {
                   borderColor: theme.border,
                 },
               ]}
-              placeholder="What stood out to you today?"
+              placeholder={reflectionPrompt}
               placeholderTextColor={theme.textMuted}
               multiline
               value={journalText}
@@ -377,82 +422,91 @@ export default function SabbathSchoolDayScreen() {
               </Text>
             </Pressable>
           ) : (
-            <View style={[styles.completionCard, { backgroundColor: "rgba(34, 197, 94, 0.06)", borderColor: "rgba(34, 197, 94, 0.2)" }]}>
-              <View style={styles.completionHeader}>
-                <Ionicons name="checkmark-circle" size={28} color="#22C55E" />
+            <View style={[styles.completionCard, { borderColor: "rgba(34, 197, 94, 0.2)" }]}>
+              <View style={styles.completionTop}>
+                <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
                 <Text style={[styles.completionTitle, { color: theme.text }]}>
                   {currentDayName} Completed
                 </Text>
               </View>
 
-              <View style={[styles.completionProgress, { backgroundColor: theme.backgroundCard }]}>
-                <View style={styles.completionProgressBar}>
-                  <View style={[styles.completionProgressFill, { width: `${(newCompletedCount / totalDays) * 100}%` }]} />
-                </View>
-                <Text style={[styles.completionProgressText, { color: theme.textMuted }]}>
-                  {newCompletedCount} of {totalDays} days completed
-                </Text>
-              </View>
-
-              {journalText.trim().length > 0 && (
-                <View style={[styles.completionReflectionSaved, { backgroundColor: "rgba(139, 92, 246, 0.08)" }]}>
-                  <Ionicons name="journal-outline" size={14} color="#8B5CF6" />
-                  <Text style={[styles.completionReflectionText, { color: "#8B5CF6" }]}>
-                    Reflection saved
+              <View style={styles.completionMeta}>
+                {journalText.trim().length > 0 && (
+                  <View style={styles.completionMetaItem}>
+                    <Ionicons name="journal-outline" size={13} color="#8B5CF6" />
+                    <Text style={[styles.completionMetaText, { color: "#8B5CF6" }]}>
+                      Reflection saved
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.completionMetaItem}>
+                  <View style={styles.completionMiniBar}>
+                    <View style={[styles.completionMiniFill, { width: `${(newCompletedCount / totalDays) * 100}%` }]} />
+                  </View>
+                  <Text style={[styles.completionMetaText, { color: theme.textMuted }]}>
+                    {newCompletedCount} of {totalDays} days
                   </Text>
                 </View>
-              )}
+              </View>
 
-              <View style={styles.completionActions}>
+              {hasNextDay ? (
                 <Pressable
                   onPress={() =>
-                    router.push(
-                      `/sabbath-school-discussion?lessonId=${data?.lesson?.id}&lessonTitle=${encodeURIComponent(data?.lesson?.title || "")}` as any
+                    router.replace(
+                      `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
                     )
                   }
                   style={({ pressed }) => [
-                    styles.completionActionBtn,
-                    { backgroundColor: "rgba(139, 92, 246, 0.12)", borderColor: "rgba(139, 92, 246, 0.25)", opacity: pressed ? 0.8 : 1 },
+                    styles.completionPrimaryBtn,
+                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
                   ]}
                 >
-                  <Ionicons name="chatbubbles-outline" size={18} color="#8B5CF6" />
-                  <Text style={[styles.completionActionText, { color: "#8B5CF6" }]}>
-                    Lesson Discussion Guide
+                  <Text style={styles.completionPrimaryText}>
+                    Continue to {DAY_NAMES[dayNumber] || `Day ${dayNumber + 1}`}
                   </Text>
+                  <Ionicons name="arrow-forward" size={16} color="#050507" />
                 </Pressable>
-
-                {hasNextDay && (
-                  <Pressable
-                    onPress={() =>
-                      router.replace(
-                        `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
-                      )
-                    }
-                    style={({ pressed }) => [
-                      styles.completionActionBtn,
-                      { backgroundColor: theme.accent, borderColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-                    ]}
-                  >
-                    <Ionicons name="arrow-forward" size={18} color="#050507" />
-                    <Text style={[styles.completionActionText, { color: "#050507" }]}>
-                      Continue to {DAY_NAMES[dayNumber] || `Day ${dayNumber + 1}`}
-                    </Text>
-                  </Pressable>
-                )}
-
+              ) : (
                 <Pressable
                   onPress={() => router.back()}
                   style={({ pressed }) => [
-                    styles.completionActionBtn,
-                    { backgroundColor: theme.backgroundCard, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+                    styles.completionPrimaryBtn,
+                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
                   ]}
                 >
-                  <Ionicons name="arrow-back" size={18} color={theme.textMuted} />
-                  <Text style={[styles.completionActionText, { color: theme.textSecondary }]}>
-                    Return to Lesson {lessonNumber}
+                  <Text style={styles.completionPrimaryText}>
+                    Back to Weekly Lesson
                   </Text>
                 </Pressable>
-              </View>
+              )}
+
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/sabbath-school-discussion?lessonId=${data?.lesson?.id}&lessonTitle=${encodeURIComponent(data?.lesson?.title || "")}` as any
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.completionSecondaryBtn,
+                  { borderColor: "rgba(139, 92, 246, 0.25)", opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Ionicons name="chatbubbles-outline" size={16} color="#8B5CF6" />
+                <Text style={[styles.completionSecondaryText, { color: "#8B5CF6" }]}>
+                  Open Lesson Discussion Guide
+                </Text>
+              </Pressable>
+
+              {hasNextDay && (
+                <Pressable
+                  onPress={() => router.back()}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: "center" as const, paddingVertical: 6 })}
+                >
+                  <Text style={[styles.completionLinkText, { color: theme.textMuted }]}>
+                    Back to Lesson {lessonNumber}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         </ScrollView>
@@ -563,67 +617,75 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   completionCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 20,
-    marginTop: 12,
-    gap: 16,
+    marginTop: 16,
+    gap: 14,
+    padding: 16,
+    backgroundColor: "rgba(34, 197, 94, 0.04)",
   },
-  completionHeader: {
+  completionTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   completionTitle: {
     fontFamily: "Lora_600SemiBold",
-    fontSize: 18,
+    fontSize: 17,
   },
-  completionProgress: {
-    borderRadius: 10,
-    padding: 12,
+  completionMeta: {
     gap: 8,
   },
-  completionProgressBar: {
-    height: 6,
-    borderRadius: 3,
+  completionMetaItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  completionMetaText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  completionMiniBar: {
+    width: 60,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: "rgba(34, 197, 94, 0.15)",
     overflow: "hidden" as const,
   },
-  completionProgressFill: {
-    height: 6,
-    borderRadius: 3,
+  completionMiniFill: {
+    height: 4,
+    borderRadius: 2,
     backgroundColor: "#22C55E",
   },
-  completionProgressText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-  },
-  completionReflectionSaved: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  completionReflectionText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-  },
-  completionActions: {
-    gap: 8,
-  },
-  completionActionBtn: {
+  completionPrimaryBtn: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     gap: 8,
     borderRadius: 12,
     paddingVertical: 14,
+  },
+  completionPrimaryText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#050507",
+  },
+  completionSecondaryBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
     borderWidth: 1,
   },
-  completionActionText: {
+  completionSecondaryText: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontSize: 13,
+  },
+  completionLinkText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    textDecorationLine: "underline" as const,
   },
 });

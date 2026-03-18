@@ -1269,10 +1269,10 @@ function AdultHomeScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
-                      This Week's Companion Lesson
+                      Lesson Companion
                     </Text>
                     <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
-                      {ssData.companion.title}
+                      {ssData.companion.title.replace(/^Companion:\s*/i, "")}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
@@ -1333,10 +1333,10 @@ function AdultHomeScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
-                      This Week's Companion Lesson
+                      Lesson Companion
                     </Text>
                     <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
-                      {ssData.companion.title}
+                      {ssData.companion.title.replace(/^Companion:\s*/i, "")}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />

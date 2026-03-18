@@ -383,7 +383,7 @@ router.post(
       });
     } catch (err) {
       console.error("Discussion prep error:", err);
-      return res.status(500).json({ error: "Failed to generate discussion prep" });
+      return res.status(500).json({ error: "Failed to generate discussion guide" });
     }
   }
 );

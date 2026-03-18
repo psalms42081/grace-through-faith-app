@@ -170,6 +170,8 @@ export default function SabbathSchoolScreen() {
             {days.map((day, index) => {
               const isToday = todayDayNumber === day.dayNumber;
               const dayLabel = DAY_LABELS[index] || `Day ${day.dayNumber}`;
+              const isCompleted = day.completed;
+              const isPast = todayDayNumber !== null && day.dayNumber < todayDayNumber && !isCompleted;
 
               return (
                 <Pressable
@@ -183,11 +185,16 @@ export default function SabbathSchoolScreen() {
                     styles.dayCard,
                     {
                       backgroundColor: isToday
-                        ? "rgba(201, 147, 58, 0.12)"
-                        : theme.backgroundCard,
+                        ? "rgba(201, 147, 58, 0.15)"
+                        : isCompleted
+                          ? "rgba(34, 197, 94, 0.06)"
+                          : theme.backgroundCard,
                       borderColor: isToday
-                        ? "rgba(201, 147, 58, 0.3)"
-                        : theme.border,
+                        ? "rgba(201, 147, 58, 0.5)"
+                        : isCompleted
+                          ? "rgba(34, 197, 94, 0.2)"
+                          : theme.border,
+                      borderWidth: isToday ? 1.5 : 1,
                       opacity: pressed ? 0.7 : 1,
                     },
                   ]}
@@ -198,7 +205,7 @@ export default function SabbathSchoolScreen() {
                         style={[
                           styles.dayLabel,
                           {
-                            color: isToday ? theme.accent : theme.textMuted,
+                            color: isToday ? theme.accent : isCompleted ? "#22C55E" : theme.textMuted,
                             fontFamily: isToday ? "Inter_700Bold" : "Inter_600SemiBold",
                           },
                         ]}
@@ -206,17 +213,21 @@ export default function SabbathSchoolScreen() {
                         {dayLabel}
                       </Text>
                       {isToday && (
-                        <View style={[styles.todayDot, { backgroundColor: theme.accent }]} />
+                        <View style={styles.todayBadge}>
+                          <Text style={styles.todayBadgeText}>Today</Text>
+                        </View>
                       )}
                     </View>
-                    {day.completed ? (
+                    {isCompleted ? (
                       <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                    ) : isToday ? (
+                      <Ionicons name="arrow-forward-circle" size={20} color={theme.accent} />
                     ) : (
                       <Ionicons name="ellipse-outline" size={20} color={theme.border} />
                     )}
                   </View>
                   <Text
-                    style={[styles.dayTitle, { color: theme.text }]}
+                    style={[styles.dayTitle, { color: isCompleted ? theme.textSecondary : theme.text }]}
                     numberOfLines={2}
                   >
                     {day.title || `Day ${day.dayNumber}`}
@@ -249,7 +260,7 @@ export default function SabbathSchoolScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.companionCardLabel, { color: "#8B5CF6" }]}>
-                    {t("sabbathSchool.companionLesson", { defaultValue: "Companion Lesson" })}
+                    Lesson Companion
                   </Text>
                   <Text style={[styles.companionCardTitle, { color: theme.text }]} numberOfLines={2}>
                     {companion.title.replace(/^Companion:\s*/i, "")}
@@ -257,11 +268,9 @@ export default function SabbathSchoolScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
               </View>
-              {companion.description && (
-                <Text style={[styles.companionCardDesc, { color: theme.textSecondary }]} numberOfLines={2}>
-                  {companion.description}
-                </Text>
-              )}
+              <Text style={[styles.companionCardSub, { color: theme.textSecondary }]}>
+                A practical companion for deeper weekly study
+              </Text>
             </Pressable>
           )}
 
@@ -281,9 +290,9 @@ export default function SabbathSchoolScreen() {
           >
             <Ionicons name="chatbubbles" size={22} color="#050507" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.discussionBtnTitle}>{t("sabbathSchool.lessonDiscussionGuide", { defaultValue: "Lesson Discussion Guide" })}</Text>
+              <Text style={styles.discussionBtnTitle}>Lesson Discussion Guide</Text>
               <Text style={styles.discussionBtnSub}>
-                {t("sabbathSchool.discussionGuideSubtitle", { defaultValue: "Discussion questions, key themes, and talk prompts" })}
+                Discussion questions, key themes, and talk prompts
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#050507" />
@@ -451,7 +460,6 @@ const styles = StyleSheet.create({
   dayCard: {
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1,
     gap: 4,
   },
   dayCardTop: {
@@ -462,16 +470,24 @@ const styles = StyleSheet.create({
   dayLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   dayLabel: {
     fontSize: 12,
     letterSpacing: 0.3,
   },
-  todayDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  todayBadge: {
+    backgroundColor: "rgba(201, 147, 58, 0.2)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  todayBadgeText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 9,
+    color: "#C9933A",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   dayTitle: {
     fontFamily: "Inter_500Medium",
@@ -513,10 +529,10 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 2,
   },
-  companionCardDesc: {
+  companionCardSub: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
     marginLeft: 48,
   },
   discussionBtn: {

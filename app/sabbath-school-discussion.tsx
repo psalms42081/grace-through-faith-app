@@ -40,7 +40,6 @@ export default function SabbathSchoolDiscussionScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [data, setData] = useState<DiscussionData | null>(null);
-  const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
   const [largeFontMode, setLargeFontMode] = useState(false);
 
   const generateMutation = useMutation({
@@ -93,7 +92,10 @@ export default function SabbathSchoolDiscussionScreen() {
         </Text>
 
         {!data && !generateMutation.isPending && (
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: 14 }}>
+            <Text style={[styles.guideIntro, { color: theme.textSecondary }]}>
+              Prepare for Sabbath School class, family worship, or small group discussion with a structured guide for this week's lesson.
+            </Text>
             <Pressable
               onPress={() => generateMutation.mutate()}
               style={({ pressed }) => [
@@ -101,14 +103,14 @@ export default function SabbathSchoolDiscussionScreen() {
                 { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              <Ionicons name="sparkles" size={22} color="#050507" />
+              <Ionicons name="chatbubbles" size={20} color="#050507" />
               <Text style={styles.generateBtnText}>
-                Generate Discussion Prep
+                Prepare Discussion Guide
               </Text>
             </Pressable>
-            <View style={styles.aiDisclaimer}>
+            <View style={styles.sourceNote}>
               <Ionicons name="information-circle-outline" size={14} color={theme.textMuted} />
-              <Text style={[styles.aiDisclaimerText, { color: theme.textMuted }]}>
+              <Text style={[styles.sourceNoteText, { color: theme.textMuted }]}>
                 Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
               </Text>
             </View>
@@ -119,7 +121,7 @@ export default function SabbathSchoolDiscussionScreen() {
           <View style={styles.loadingBlock}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-              Preparing discussion content...
+              Preparing your discussion guide...
             </Text>
           </View>
         )}
@@ -127,7 +129,7 @@ export default function SabbathSchoolDiscussionScreen() {
         {generateMutation.isError && (
           <View style={[styles.errorBlock, { borderColor: "#EF4444" }]}>
             <Text style={{ color: "#EF4444", fontFamily: "Inter_500Medium", fontSize: 14 }}>
-              Could not generate discussion prep. Please try again.
+              Could not generate discussion guide. Please try again.
             </Text>
             <Pressable
               onPress={() => generateMutation.mutate()}
@@ -142,18 +144,18 @@ export default function SabbathSchoolDiscussionScreen() {
 
         {data && (
           <>
-            <View style={[styles.aiBanner, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
+            <View style={[styles.sourceBanner, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
               <Ionicons name="library-outline" size={14} color={theme.accent} />
-              <Text style={[styles.aiBannerText, { color: theme.textMuted }]}>
+              <Text style={[styles.sourceBannerText, { color: theme.textMuted }]}>
                 Official Sabbath School lesson content provided via Adventech. Companion discussion material is an added study aid.
               </Text>
             </View>
 
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="document-text-outline" size={18} color={theme.accent} />
+                <Ionicons name="bulb-outline" size={18} color={theme.accent} />
                 <Text style={[styles.sectionTitle, { color: theme.accent }]}>
-                  Lesson Overview
+                  Big Idea
                 </Text>
               </View>
               <Text
@@ -174,22 +176,13 @@ export default function SabbathSchoolDiscussionScreen() {
                 </Text>
               </View>
               {data.keyQuestions.map((question, index) => (
-                <Pressable
+                <View
                   key={index}
-                  onPress={() =>
-                    setExpandedQuestion(expandedQuestion === index ? null : index)
-                  }
                   style={[
                     styles.questionCard,
                     {
-                      backgroundColor:
-                        expandedQuestion === index
-                          ? "rgba(201, 147, 58, 0.1)"
-                          : theme.backgroundCard,
-                      borderColor:
-                        expandedQuestion === index
-                          ? "rgba(201, 147, 58, 0.25)"
-                          : theme.border,
+                      backgroundColor: theme.backgroundCard,
+                      borderColor: theme.border,
                     },
                   ]}
                 >
@@ -208,7 +201,7 @@ export default function SabbathSchoolDiscussionScreen() {
                       {question}
                     </Text>
                   </View>
-                </Pressable>
+                </View>
               ))}
             </View>
 
@@ -216,7 +209,7 @@ export default function SabbathSchoolDiscussionScreen() {
               <View style={styles.sectionHeader}>
                 <Ionicons name="heart-outline" size={18} color="#8B5CF6" />
                 <Text style={[styles.sectionTitle, { color: "#8B5CF6" }]}>
-                  Personal Reflection
+                  Life Application
                 </Text>
               </View>
               {data.reflectionPrompts.map((prompt, index) => (
@@ -272,19 +265,24 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 20 },
-  aiDisclaimer: {
+  guideIntro: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  sourceNote: {
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
     gap: 6,
     paddingHorizontal: 4,
   },
-  aiDisclaimerText: {
+  sourceNoteText: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     lineHeight: 16,
     flex: 1,
   },
-  aiBanner: {
+  sourceBanner: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
@@ -293,7 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  aiBannerText: {
+  sourceBannerText: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     lineHeight: 17,

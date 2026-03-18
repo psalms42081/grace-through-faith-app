@@ -1646,28 +1646,32 @@ export async function generateDiscussionPrep(params: {
     messages: [
       {
         role: "system",
-        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator. Generate discussion prep content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
+        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator preparing a Lesson Discussion Guide. Generate content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
 
 Return ONLY valid JSON in this format:
 {
+  "aiSummary": "The Big Idea — a ${depth === "quick" ? "concise 1-paragraph" : depth === "deep" ? "rich 3-4 paragraph" : "focused 2-paragraph"} summary capturing the core theme and why it matters for daily Adventist life.",
   "keyQuestions": ["question1", "question2", ...],
-  "aiSummary": "A ${depth === "quick" ? "brief 1-paragraph" : depth === "deep" ? "detailed 3-4 paragraph" : "2-3 paragraph"} overview of the lesson's main themes and theological significance.",
   "reflectionPrompts": ["prompt1", "prompt2", ...]
-}`,
+}
+
+For keyQuestions: Write ${questionCount} open-ended discussion questions suitable for Sabbath School class, small group, or family worship. Each should invite personal reflection and practical application, not just factual recall.
+
+For reflectionPrompts: Write ${promptCount} Life Application prompts — practical, personal challenges or encouragements the reader can act on this week. Frame them as invitations, not commands.`,
       },
       {
         role: "user",
-        content: `Generate Sabbath School discussion preparation for this week's lesson.
+        content: `Generate a Lesson Discussion Guide for this week's Sabbath School lesson.
 
 Lesson Title: "${lessonTitle}"
 
 Lesson Content (all daily readings):
 ${daysContent.substring(0, 6000)}
 
-Generate:
-- ${questionCount} discussion questions that encourage deep thinking and personal application
-- A summary of the lesson's main themes
-- ${promptCount} personal reflection prompts for journaling`,
+Produce:
+1. Big Idea — the central theme and its significance
+2. ${questionCount} discussion questions for class or small group use
+3. ${promptCount} life application prompts for personal growth`,
       },
     ],
   });
@@ -1682,7 +1686,7 @@ Generate:
     console.error("Failed to parse discussion prep AI response:", raw.substring(0, 500));
     return {
       keyQuestions: ["What is the central theme of this week's lesson?"],
-      aiSummary: "Discussion prep could not be generated at this time.",
+      aiSummary: "Discussion guide could not be generated at this time.",
       reflectionPrompts: ["How does this lesson apply to your daily life?"],
     };
   }
