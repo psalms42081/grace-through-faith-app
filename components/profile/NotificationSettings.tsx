@@ -23,6 +23,7 @@ const TIME_OPTIONS = [
   { label: "9:00 AM", hour: 9, minute: 0 },
   { label: "12:00 PM", hour: 12, minute: 0 },
   { label: "6:00 PM", hour: 18, minute: 0 },
+  { label: "7:30 PM", hour: 19, minute: 30 },
   { label: "9:00 PM", hour: 21, minute: 0 },
 ];
 
@@ -170,6 +171,9 @@ export default function NotificationSettings({
                       );
                     })}
                   </View>
+                  <Text style={[styles.confirmText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    You'll be reminded at {TIME_OPTIONS.find(o => o.hour === hour && o.minute === minute)?.label || `${hour}:${String(minute).padStart(2, "0")}`} daily
+                  </Text>
                 </View>
               )}
             </>
@@ -253,5 +257,11 @@ const styles = StyleSheet.create({
   },
   timeChipText: {
     fontSize: 13,
+  },
+  confirmText: {
+    fontSize: 12,
+    marginTop: 12,
+    fontStyle: "italic" as const,
+    opacity: 0.8,
   },
 });
