@@ -20,22 +20,11 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/query-client";
-// Temporarily disabled for crash debugging
-// import BibleHeatmap from "@/components/profile/BibleHeatmap";
-// import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
-// import LanguageSettings from "@/components/profile/LanguageSettings";
-// let NotificationSettings: React.ComponentType<any> | null = null;
-// try { NotificationSettings = require("@/components/profile/NotificationSettings").default; } catch {}
-
-type BookMapEntry = {
-  id: number;
-  name: string;
-  abbreviation: string;
-  testament: string;
-  chapterCount: number;
-  chaptersRead: number;
-  explored: boolean;
-};
+import BibleHeatmap from "@/components/profile/BibleHeatmap";
+import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
+import LanguageSettings from "@/components/profile/LanguageSettings";
+import NotificationSettings from "@/components/profile/NotificationSettings";
+import type { BookMapEntry } from "@/components/profile/BibleHeatmap";
 
 class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -308,13 +297,11 @@ function ProfileScreenInner() {
           style={{ marginBottom: 6 }}
         />
 
-        {NotificationSettings ? (
-          <NotificationSettings
-            theme={theme}
-            expanded={notifSettingsOpen}
-            onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
-          />
-        ) : null}
+        <NotificationSettings
+          theme={theme}
+          expanded={notifSettingsOpen}
+          onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
+        />
 
         <LanguageSettings
           theme={theme}
@@ -362,15 +349,9 @@ function ProfileScreenInner() {
 
 export default function ProfileScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0D0D15" }}>
-      <Ionicons name="person" size={48} color="#C9933A" />
-      <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700" as const, marginTop: 16 }}>
-        Profile Test
-      </Text>
-      <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, marginTop: 8 }}>
-        If you can see this, the tab works.
-      </Text>
-    </View>
+    <ProfileErrorBoundary>
+      <ProfileScreenInner />
+    </ProfileErrorBoundary>
   );
 }
 
