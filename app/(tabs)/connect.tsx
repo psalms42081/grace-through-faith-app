@@ -118,7 +118,7 @@ export default function ConnectScreen() {
         <VisualCard
           imageKey="broadcasts"
           title={t("connect.watchAndListen")}
-          subtitle="SDA Speakers, Broadcasts, Christian Radio"
+          subtitle="Sermons, live broadcasts, and radio from trusted Adventist voices"
           onPress={() => router.push({ pathname: "/connect-media" } as any)}
           theme={theme}
           compact
