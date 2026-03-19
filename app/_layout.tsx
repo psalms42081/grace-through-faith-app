@@ -2,6 +2,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
+import { Platform, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -160,7 +161,7 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !onboardingChecked || !i18nReady) return null;
 
-  return (
+  const appContent = (
     <ErrorBoundary>
       <PersistQueryClientProvider
         client={queryClient}
@@ -191,4 +192,16 @@ export default function RootLayout() {
       </PersistQueryClientProvider>
     </ErrorBoundary>
   );
+
+  if (Platform.OS === "web") {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#0D0D15", alignItems: "center" }}>
+        <View style={{ flex: 1, width: "100%", maxWidth: 480 }}>
+          {appContent}
+        </View>
+      </View>
+    );
+  }
+
+  return appContent;
 }
