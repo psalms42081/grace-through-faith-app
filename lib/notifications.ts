@@ -40,29 +40,37 @@ export type PermissionResult = {
 
 export async function getNotificationPermissionStatus(): Promise<PermissionResult> {
   if (Platform.OS === "web") return { granted: false, canAskAgain: false };
-  const mod = await loadModule();
-  if (!mod) return { granted: false, canAskAgain: false };
+  try {
+    const mod = await loadModule();
+    if (!mod) return { granted: false, canAskAgain: false };
 
-  const perm = await mod.getPermissionsAsync();
-  return {
-    granted: perm.status === "granted",
-    canAskAgain: perm.canAskAgain !== false,
-  };
+    const perm = await mod.getPermissionsAsync();
+    return {
+      granted: perm.status === "granted",
+      canAskAgain: perm.canAskAgain !== false,
+    };
+  } catch {
+    return { granted: false, canAskAgain: false };
+  }
 }
 
 export async function requestNotificationPermission(): Promise<PermissionResult> {
   if (Platform.OS === "web") return { granted: false, canAskAgain: false };
-  const mod = await loadModule();
-  if (!mod) return { granted: false, canAskAgain: false };
+  try {
+    const mod = await loadModule();
+    if (!mod) return { granted: false, canAskAgain: false };
 
-  const existing = await mod.getPermissionsAsync();
-  if (existing.status === "granted") return { granted: true, canAskAgain: true };
+    const existing = await mod.getPermissionsAsync();
+    if (existing.status === "granted") return { granted: true, canAskAgain: true };
 
-  const result = await mod.requestPermissionsAsync();
-  return {
-    granted: result.status === "granted",
-    canAskAgain: result.canAskAgain !== false,
-  };
+    const result = await mod.requestPermissionsAsync();
+    return {
+      granted: result.status === "granted",
+      canAskAgain: result.canAskAgain !== false,
+    };
+  } catch {
+    return { granted: false, canAskAgain: false };
+  }
 }
 
 export async function hasNotificationPermission(): Promise<boolean> {

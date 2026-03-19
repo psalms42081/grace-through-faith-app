@@ -42,11 +42,11 @@ export default function NotificationSettings({
       setEnabled(settings.enabled);
       setHour(settings.hour);
       setMinute(settings.minute);
-    });
+    }).catch(() => {});
     if (Platform.OS !== "web") {
       getNotificationPermissionStatus().then(p => {
         if (!p.granted && !p.canAskAgain) setPermDenied(true);
-      });
+      }).catch(() => {});
     }
   }, []);
 
