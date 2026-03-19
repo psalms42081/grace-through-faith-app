@@ -367,9 +367,12 @@ router.delete("/api/bookmarks/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/prayers", requireAuth, async (req, res) => {
+router.post("/api/prayers", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId!;
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required to save prayers" });
+    }
     const { title, content, category = "personal" } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     const [prayer] = await db
@@ -383,9 +386,9 @@ router.post("/api/prayers", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/api/prayers/:id", requireAuth, async (req, res) => {
+router.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId!;
+    const userId = getEffectiveUserId(req);
     const { id } = req.params;
     const [existing] = await db
       .select({ userId: prayerRequests.userId })
@@ -416,9 +419,9 @@ router.patch("/api/prayers/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/api/prayers/:id", requireAuth, async (req, res) => {
+router.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId!;
+    const userId = getEffectiveUserId(req);
     const { id } = req.params;
     const [existing] = await db
       .select({ userId: prayerRequests.userId })

@@ -92,7 +92,7 @@ export default function SabbathSchoolDiscussionScreen() {
         </Text>
 
         {!data && !generateMutation.isPending && (
-          <View style={{ gap: 14 }}>
+          <View style={{ gap: 18 }}>
             <Text style={[styles.guideIntro, { color: theme.textSecondary }]}>
               Prepare for Sabbath School class, family worship, or small group discussion with a structured guide for this week's lesson.
             </Text>
@@ -108,6 +108,25 @@ export default function SabbathSchoolDiscussionScreen() {
                 Prepare Discussion Guide
               </Text>
             </Pressable>
+
+            <View style={[styles.previewFeatures, { borderColor: theme.border }]}>
+              <Text style={[styles.previewFeaturesTitle, { color: theme.text }]}>
+                Your guide will include:
+              </Text>
+              {[
+                { icon: "bulb-outline" as const, text: "Key discussion questions drawn from the lesson" },
+                { icon: "document-text-outline" as const, text: "A concise summary of the week's themes" },
+                { icon: "heart-outline" as const, text: "Reflection prompts for personal application" },
+              ].map((item, i) => (
+                <View key={i} style={styles.previewFeatureRow}>
+                  <Ionicons name={item.icon} size={18} color={theme.accent} />
+                  <Text style={[styles.previewFeatureText, { color: theme.textSecondary }]}>
+                    {item.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
             <View style={styles.sourceNote}>
               <Ionicons name="information-circle-outline" size={14} color={theme.textMuted} />
               <Text style={[styles.sourceNoteText, { color: theme.textMuted }]}>
@@ -314,6 +333,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 15,
     color: "#050507",
+  },
+  previewFeatures: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    gap: 14,
+  },
+  previewFeaturesTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  previewFeatureRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 12,
+  },
+  previewFeatureText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
   },
   loadingBlock: {
     alignItems: "center",

@@ -9,25 +9,15 @@ I prefer iterative development with clear communication on significant changes. 
 ## System Architecture
 The application features a mobile-first architecture with a frontend built using Expo (React Native) and a backend using Express.js. Data persistence is handled by PostgreSQL with Drizzle ORM. TanStack Query manages server state with offline persistence, and React context manages shared UI state. AI generation functions are centralized. Devotional content is presented without tradition-based filtering, specifically designed for Seventh-day Adventists.
 
-**Backend Route Structure:** Routes are split into focused domain routers under `server/routes/`:
-- `strongs.ts` — Strong's concordance search, lookup, and AI word study generation
-- `commentary.ts` — Commentary retrieval and generation (EGW + external HelloAO sources)
-- `context.ts` — Context cards, chapter context, chapter summaries, application templates
-- `locations-timeline.ts` — Biblical locations and timeline events with verse mappings
-- `study-guide.ts` — Socratic AI study guide (start, respond, sessions, completion)
-- `verse-tools.ts` — Verse maps, verse explanations, quick insights, devotional completion
-- `deep-study.ts` — Layer completions, study journal, topic reflections, passage sections, growth analytics
-- `search.ts` — Semantic search and recent search history
-
 **UI/UX Decisions:**
 - **Color Scheme:** Deep dark mode (`#050507`) with a warm gold accent (`#C9933A`), distinct palettes for Kids Mode, and a specific Sabbath theme.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.
 - **Design Philosophy:** Borderless, immersive dark theme for readability and clear information hierarchy.
-- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer with Cinematic and Interactive modes.
-- **Visual Design System:** Premium image-based cards replace icons throughout the app, utilizing specific image assets and AI-generated classical Renaissance-style paintings for Bible book covers.
+- **Kids Club UI:** Playful, vibrant design with custom elements, animations, larger touch targets, and a scene-based story viewer.
+- **Visual Design System:** Premium image-based cards replace icons, utilizing specific image assets and AI-generated classical Renaissance-style paintings for Bible book covers.
 
 **Technical Implementations & Feature Specifications:**
-- **Deep Dive (formerly 4-Layer Study):** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels. Deep Dive supports a Study Focus Picker: Single Verse, Short Passage (AI-generated chapter sections), or Whole Chapter. Verse ranges are threaded through journal entries, layer completions, and passage display. AI passage sections are cached in `chapter_passage_sections` table. Repeat users see a compact intro (breadcrumb + focus picker only); first-time users see the full 4-layer explainer. Insight tab shows journal prompts above commentary (limited to 2 visible, expandable). Respond tab uses skeleton loading placeholders. Completion screen includes emotional payoff line. All UI naming unified to "Deep Dive" across the app.
+- **Deep Dive:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels, supporting various study focus options.
 - **AI Integration:** Uses OpenAI's `gpt-4o-mini` for on-demand content generation (Socratic AI Study Guide, Dynamic AI Reading Plans) with an AI Ethics & Transparency Layer.
 - **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech`.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
@@ -36,40 +26,32 @@ The application features a mobile-first architecture with a frontend built using
 - **Formation System:** Curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle.
 - **Church Connect:** Global SDA church finder.
 - **Spiritual Rings:** Apple Watch-style concentric SVG rings tracking daily spiritual disciplines.
-- **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next`.
+- **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next` for 6 languages.
 - **Contextual Tutorial System:** Full-screen walkthroughs for major features.
 - **Supporter/Mission System:** Mission-driven donation model.
-- **Live Fellowship:** Community feature for structured group experiences with real-time video/audio powered by LiveKit Cloud.
+- **Live Fellowship:** Community feature for structured group experiences with real-time video/audio.
 - **SDA Speakers Experience:** In-app browsing of curated SDA speakers/ministries with embedded YouTube playback.
 - **Broadcasts:** 5 SDA broadcast networks with live streaming.
 - **Kids Star Shop & Daily Quests:** Cosmetic rewards store and daily quests for children.
-- **Feedback System:** Dedicated in-app feedback screen.
-- **In-App Sermon Player:** Dedicated screen for playing YouTube sermons.
 - **Prophecy Explorer:** Interactive Daniel & Revelation study with a horizontal timeline.
 - **Spiritual Growth Map:** Visual spiritual journey tracking 5 dimensions with 4 levels each.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
 - **Dynamic Topic Content:** AI-generated daily reflections and shuffled verses/media for 14 topics.
 - **Insight & Voices:** Commentary screen with Adventist-first content ordering, including AI-generated Ellen G. White perspectives.
-- **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content.
+- **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content, including companion lessons.
 - **28 Fundamental Beliefs UX:** Interactive belief cards with scripture navigation.
 - **Great Controversy Timeline Engine:** Immersive vertical timeline.
-- **Study Screen Architecture:** Structured Study tab with hero sections, learning paths, prophecy, and reference sections.
-- **Bible Maps System:** Curated biblical atlas experience with 9 Bible Mapper maps (biblemapper.com). Maps: All = The World of the Bible, Patriarchs = The World of the Patriarchs, Exodus = The Route of the Exodus, Kingdom = The Kingdoms of Saul David and Solomon, Exile = Judah Is Exiled to Babylon, Early Church = The World of the Bible, Paul 1/2/3 = Paul's First/Second/Third Missionary Journey. Optimized JPGs (1600px max dimension, 230-530KB each) in `assets/plates/`. Plate definitions with per-map aspect ratios in `constants/atlas-plates.ts`. Single-mode design — always shows atlas plates. Supports era filtering (All, Patriarchs, Exodus, Kingdom, Exile, Early Church) and contextual journey chips (Exodus Route for Exodus era; Paul's Journeys for Early Church). Each era state includes a contextual description and curated location cards with 2-line descriptions. Search spans locations, people groups, prophecy, journeys, kingdoms, and tribes. Location data from curated constants in `constants/biblical-locations.ts` (not DB-dependent). Attribution: "Bible Mapper".
-- **Related Studies Integration Layer:** Reusable component (`RelatedStudiesSection`) for contextual study actions (e.g., Read Passages, Start Guided Study, Open Historic Voices) across all Bible Maps detail screens.
-- **Guided Study Passage Picker:** Inline book/chapter picker for AI tutor sessions.
+- **Bible Maps System:** Curated biblical atlas experience with 9 Bible Mapper maps, supporting era filtering and contextual location data.
 - **Content Engine & Study Resources:** Two-stage content pipeline with review workflow and versioning.
-- **Role System:** Supports "member," "student," "church_leader_pending," "church_leader," "editor," and "admin" roles with role-gated middleware. Pipeline read access available to church_leader, editor, and admin. Write/approve actions restricted to editor and admin. Registration collects a `profileType` (member/student/church_leader/exploring) as metadata — student gets the student role immediately, church_leader selections start as `church_leader_pending` requiring admin approval, all others default to member.
-- **Auth:** JWT-based (90-day tokens), bcrypt passwords (6-char minimum). Password reset requires authentication (available from profile settings). Rate-limited auth endpoints. Forgot Password on login screen directs users to create a new account or reset after signing in. Session completion endpoint enforces ownership check (users can only complete their own sessions). Guest-to-user data migration: on login/register, all data created under the device UUID is re-parented to the new authenticated userId via `/api/auth/migrate-guest-data`.
-- **Guest Identity:** Unauthenticated users get a persistent device UUID (`device-xxx`) stored in AsyncStorage and sent as `X-Device-Id` header. Server uses this as userId for all data writes, making guest data per-device and migratable. The `extractUserId` function in auth middleware resolves: JWT user > device header > "guest" fallback.
-- **Security:** CORS localhost bypass restricted to development mode only. Topic reflection cache persisted to DB (`search_cache` table) instead of in-memory Map, surviving restarts and working across instances.
-- **Cache Warmup:** Background job runs 30s after server start, pre-generating context cards, application templates, chapter context, and passage sections for 32 popular chapters (Genesis 1-3, Psalm 23, John 3, Romans 8, Revelation 21, etc.). Self-healing: skips chapters that already have cached content.
-- **Sabbath Overlay:** Full-screen welcome overlay fires automatically the first time the user opens the app after Friday sunset. Animated candle flame, weekly-rotating blessing verse, and "tap to enter" dismissal. Closing overlay (distinct warm tone, Havdalah-flavored verse, "carry the Sabbath peace into your week") fires during closing phase (last 2 hours before Saturday sunset). Both tracked independently via AsyncStorage date keys anchored to Friday's date. Component: `components/home/SabbathOverlay.tsx`.
-- **Sabbath School Companion Lessons:** Published companion lessons surface directly in the Sabbath School flow. Named "Lesson Companion" (purple card) and "Lesson Discussion Guide" (gold card). The Lesson Companion screen uses "Lesson Companion" as header title, strips "Companion:" prefix from hero title, and shows sections: "This Week's Big Picture" (overview), daily study prompts with "Pause and Reflect" labels, "Discussion Questions" with "Starter/Group Discussion/Go Deeper" depth badges and short "Why this matters:" helpers, "Memory Verse", "For Family Worship", and "Ellen White Insights". Always-visible progress bar. Bookmark shows "Saved to Library" toast. Backend API (`/api/sabbath-school/current` and `/quarter/:quarterCode`) includes companion data when a published `sabbath-school-companion` resource exists for a lesson, linked via `sourceRef.lessonId`.
-- **Devotional Onboarding:** First-visit modal on the devotionals screen (not home). 3-step flow: pick category (foundations/thematic/prophetic), see 2-3 matching plans, tap to enroll. Works for guests. AsyncStorage key is user-scoped (`@grace-through-faith/devotionals-onboarding-complete:<userId>`). Skippable. On enrollment, navigates to Day 1. Components: `components/devotionals/DevotionalOnboarding.tsx`, `OnboardingCategoryCard.tsx`, `OnboardingPlanCard.tsx`. Plans have a `category` column in `devotionalPlans` schema (foundations/thematic/prophetic).
-- **Daily Reading Reminders:** Local push notifications via `expo-notifications`. On first plan enrollment, users are prompted to enable daily reminders via Alert. Reminder time is configurable from Profile > Settings > Daily Reminders (8 preset times: 6 AM through 9 PM including 7:30 PM, default 8 AM). Notification service in `lib/notifications.ts` handles permission requests, scheduling, cancellation, and AsyncStorage persistence. Time picker uses tap-to-select chips with confirmation text ("You'll be reminded at X daily"). Web shows "mobile only" fallback. Settings component: `components/profile/NotificationSettings.tsx`.
-- **Web Desktop Layout:** Production web build constrained to 480px max-width centered on dark background with subtle border styling. Custom `web/index.html` template applied during build via `scripts/build.js` post-build patching. `getApiUrl()` in `lib/query-client.ts` falls back to `window.location.origin` in production when `EXPO_PUBLIC_DOMAIN` is not set.
-- **Sabbath School Archive:** Past quarters browsable via "Browse Past Quarters" toggle in Sabbath School screen.
-- **Internationalization (i18n):** 6 languages (EN, ES, FR, PT, FIL, ZH). Covers tabs, home greetings, auth screens, read tab, Sabbath School, connect, broadcasts, profile, study, and common strings.
+- **Role System:** Supports various user roles (`member`, `student`, `church_leader_pending`, `church_leader`, `editor`, `admin`) with role-gated middleware for content access and modification.
+- **Auth:** JWT-based (90-day tokens), bcrypt passwords, with rate-limited endpoints and guest-to-user data migration on login/registration.
+- **Guest Identity:** Unauthenticated users get a persistent device UUID for data storage and migration.
+- **Cache Warmup:** Background job for pre-generating context cards and templates for popular chapters.
+- **Sabbath Overlay:** Full-screen welcome and closing overlays displayed automatically around Sabbath times.
+- **Devotional Onboarding:** A 3-step first-visit modal for new users on the devotionals screen.
+- **Daily Reading Reminders:** Local push notifications via `expo-notifications` with configurable times.
+- **Web Desktop Layout:** Production web build constrained to 480px max-width, centered on a dark background.
+- **Sabbath School Archive:** Browsable past quarters for Sabbath School lessons.
 
 ## External Dependencies
 
@@ -87,5 +69,4 @@ The application features a mobile-first architecture with a frontend built using
 - **jsonwebtoken:** JWT token generation and verification.
 - **LiveKit Cloud:** Real-time video/audio conferencing.
 - **react-native-webview:** Loads LiveKit room HTML on native.
-- **react-native-maps@1.18.0:** Available for native map views (currently unused by Bible Maps, which uses atlas plates).
 - **sharp:** SVG-to-PNG conversion for custom atlas map plate generation.
