@@ -67,31 +67,34 @@ export default function DevotionalsScreen() {
     enabled: !!selectedPlan,
   });
 
+  const onboardingStorageKey = `${ONBOARDING_KEY}:${userId || "guest"}`;
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY)
+    AsyncStorage.getItem(onboardingStorageKey)
       .then(v => setShowOnboarding(v !== "true"))
       .catch(() => setShowOnboarding(true));
-  }, []);
+  }, [onboardingStorageKey]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const handleOnboardingComplete = async (planId: string) => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {});
+    await AsyncStorage.setItem(onboardingStorageKey, "true").catch(() => {});
     try {
       await apiRequest("POST", "/api/devotionals/enroll", {
         userId,
         planId,
       });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
-    } catch {}
-    setTimeout(() => {
+      setTimeout(() => {
+        setShowOnboarding(false);
+        router.push(`/devotional-day?planId=${planId}`);
+      }, 200);
+    } catch {
       setShowOnboarding(false);
-      router.push(`/devotional-day?planId=${planId}`);
-    }, 200);
+    }
   };
 
   const handleOnboardingSkip = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {});
+    await AsyncStorage.setItem(onboardingStorageKey, "true").catch(() => {});
     setShowOnboarding(false);
   };
 
