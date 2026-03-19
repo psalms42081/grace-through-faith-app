@@ -212,7 +212,7 @@ export default function StudyGuideScreen() {
       setCheckingResume(false);
       setShowPersonaPicker(true);
     })();
-  }, [params.verseReference, params.verseText]);
+  }, [params.verseReference, params.verseText, userId]);
 
   const handleRetry = () => {
     setStartError(false);

@@ -205,7 +205,7 @@ export default function RelatedStudiesSection({
       onPress: () => {
         router.push({
           pathname: "/maps-timeline",
-          params: { tab: "maps", ...timelineParams },
+          params: { tab: "timeline", ...timelineParams },
         } as any);
       },
     });

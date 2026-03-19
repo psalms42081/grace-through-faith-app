@@ -1079,6 +1079,14 @@ router.get("/api/study-guide/sessions", async (req, res) => {
 
 router.post("/api/study-guide/complete/:id", async (req, res) => {
   try {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
+    const [session] = await db.select({ userId: studyGuideSessions.userId })
+      .from(studyGuideSessions)
+      .where(eq(studyGuideSessions.id, String(req.params.id)))
+      .limit(1);
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.userId !== userId) return res.status(403).json({ error: "Not your session" });
     await db
       .update(studyGuideSessions)
       .set({ completedAt: new Date(), phase: "complete" })
@@ -1625,17 +1633,18 @@ router.get("/api/study-journal/revisit", async (req, res) => {
   }
 });
 
-const topicReflectionCache = new Map<string, { data: unknown; date: string }>();
-
 router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
   try {
     const { topicId } = req.params;
     const today = new Date().toISOString().split("T")[0];
-    const cacheKey = `${topicId}-${today}`;
+    const queryHash = `topic-reflection-${topicId}-${today}`;
 
-    const cached = topicReflectionCache.get(cacheKey);
-    if (cached && cached.date === today) {
-      return res.json(cached.data);
+    const [cached] = await db.select().from(searchCache)
+      .where(eq(searchCache.queryHash, queryHash))
+      .limit(1);
+
+    if (cached && cached.expiresAt > new Date()) {
+      return res.json(cached.results);
     }
 
     const client = new (await import("openai")).default({
@@ -1667,7 +1676,25 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     const data = JSON.parse(cleaned);
 
-    topicReflectionCache.set(cacheKey, { data, date: today });
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    if (cached) {
+      await db.update(searchCache)
+        .set({ results: data, expiresAt: tomorrow })
+        .where(eq(searchCache.queryHash, queryHash));
+    } else {
+      await db.insert(searchCache).values({
+        queryText: `topic-reflection:${topicId}`,
+        queryHash,
+        results: data,
+        expiresAt: tomorrow,
+      }).onConflictDoUpdate({
+        target: searchCache.queryHash,
+        set: { results: data, expiresAt: tomorrow },
+      });
+    }
 
     return res.json(data);
   } catch (err) {
