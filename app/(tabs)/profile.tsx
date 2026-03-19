@@ -20,10 +20,24 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/query-client";
-import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
+import BibleHeatmap from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
-import NotificationSettings from "@/components/profile/NotificationSettings";
+
+let NotificationSettings: React.ComponentType<any> | null = null;
+try {
+  NotificationSettings = require("@/components/profile/NotificationSettings").default;
+} catch {}
+
+type BookMapEntry = {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+  chaptersRead: number;
+  explored: boolean;
+};
 
 class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -296,11 +310,13 @@ function ProfileScreenInner() {
           style={{ marginBottom: 6 }}
         />
 
-        <NotificationSettings
-          theme={theme}
-          expanded={notifSettingsOpen}
-          onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
-        />
+        {NotificationSettings ? (
+          <NotificationSettings
+            theme={theme}
+            expanded={notifSettingsOpen}
+            onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
+          />
+        ) : null}
 
         <LanguageSettings
           theme={theme}
@@ -347,11 +363,43 @@ function ProfileScreenInner() {
 }
 
 export default function ProfileScreen() {
-  return (
-    <ProfileErrorBoundary>
-      <ProfileScreenInner />
-    </ProfileErrorBoundary>
-  );
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  if (renderError) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "#0D0D15" }}>
+        <Ionicons name="bug-outline" size={48} color="#C9933A" />
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" as const, marginTop: 16, textAlign: "center" }}>
+          Profile Debug Info
+        </Text>
+        <Text selectable style={{ color: "#FF6B6B", fontSize: 12, marginTop: 12, textAlign: "left", fontFamily: Platform.OS === "web" ? "monospace" : undefined, maxWidth: "90%" as any }}>
+          {renderError}
+        </Text>
+        <Pressable
+          onPress={() => setRenderError(null)}
+          style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: "#C9933A", borderRadius: 10 }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" as const }}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  try {
+    return (
+      <ProfileErrorBoundary>
+        <ProfileScreenInner />
+      </ProfileErrorBoundary>
+    );
+  } catch (e: any) {
+    const msg = e?.message || e?.toString() || "Unknown render error";
+    setTimeout(() => setRenderError(msg), 0);
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0D0D15" }}>
+        <Text style={{ color: "#C9933A", fontSize: 16 }}>Loading profile...</Text>
+      </View>
+    );
+  }
 }
 
 const st = StyleSheet.create({
