@@ -54,7 +54,7 @@ const CATEGORIES = [
   {
     id: "adventist-studies",
     title: "Essentials",
-    subtitle: "Three Angels' Messages, Health Message",
+    subtitle: "Core Adventist beliefs and distinctive doctrines",
     icon: "school" as const,
   },
   {
@@ -69,11 +69,13 @@ function CategoryCard({
   id,
   title,
   subtitle,
+  badge,
   onPress,
 }: {
   id: string;
   title: string;
   subtitle: string;
+  badge?: string;
   onPress: () => void;
 }) {
   return (
@@ -95,9 +97,16 @@ function CategoryCard({
       >
         <View style={st.categoryContent}>
           <View style={{ flex: 1 }}>
-            <Text style={[st.categoryTitle, { fontFamily: "Inter_600SemiBold" }]}>
-              {title}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={[st.categoryTitle, { fontFamily: "Inter_600SemiBold" }]}>
+                {title}
+              </Text>
+              {badge && (
+                <View style={st.badge}>
+                  <Text style={[st.badgeText, { fontFamily: "Inter_600SemiBold" }]}>{badge}</Text>
+                </View>
+              )}
+            </View>
             <Text style={[st.categorySub, { fontFamily: "Inter_400Regular" }]}>
               {subtitle}
             </Text>
@@ -189,6 +198,7 @@ export default function StudyScreen() {
               id={cat.id}
               title={cat.title}
               subtitle={cat.subtitle}
+              badge={cat.id === "study-scripture" ? "Start here" : undefined}
               onPress={() => router.push({ pathname: "/study-category", params: { category: cat.id } } as any)}
             />
           ))}
@@ -248,6 +258,18 @@ const st = StyleSheet.create({
   categorySub: {
     color: "rgba(255,255,255,0.65)",
     fontSize: 13,
+  },
+  badge: {
+    backgroundColor: "rgba(201,147,58,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.4)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    color: "#C9933A",
+    fontSize: 10,
   },
 
   enrolledCard: {
