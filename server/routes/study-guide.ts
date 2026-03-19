@@ -194,6 +194,7 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =>
     if (stageData && quality === "meaningful") {
       if (currentPhase === "observe") {
         const resolvedCat = category && category !== "other" ? category : inferObserveCategory(userResponse);
+        console.log(`[study-guide] observe: resolvedCat=${resolvedCat} existing=${JSON.stringify(stageData.categories)} duplicate=${stageData.categories.includes(resolvedCat)}`);
         if (!stageData.categories.includes(resolvedCat)) {
           stageData.categories.push(resolvedCat);
           stageData.meaningfulCount++;
@@ -202,6 +203,7 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =>
         stageData.meaningfulCount++;
       }
     }
+    console.log(`[study-guide] phase=${currentPhase} quality=${quality} meaningfulCount=${stageData?.meaningfulCount || 0} categories=${JSON.stringify(stageData?.categories || [])}`);
 
     const threshold = STAGE_THRESHOLDS[currentPhase] || 2;
     let shouldAdvance = false;

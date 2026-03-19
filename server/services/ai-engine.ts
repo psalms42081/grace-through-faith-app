@@ -522,14 +522,16 @@ function hasPersonalReflection(text: string): boolean {
 export function inferObserveCategory(userResponse: string): string {
   const lower = userResponse.toLowerCase();
   const patterns: [string, string[]][] = [
-    ["speaker", ["who is speaking", "the speaker", "god is the", "paul is", "jesus said", "author", "writer", "subject here", "active agent"]],
-    ["people", ["who else", "mentioned", "people", "names", "audience", "readers", "sosthenes", "timothy"]],
-    ["titles", ["title", "calls himself", "apostle", "servant", "lord", "master", "christ"]],
-    ["actions", ["action", "verb", "created", "made", "said", "commands", "doing", "performs", "acts"]],
-    ["authority", ["authority", "by the will", "source of", "calling", "commissioned", "sent by", "appointed"]],
-    ["repeated", ["repeated", "repetition", "emphasis", "again and again", "keeps saying"]],
-    ["contrasts", ["contrast", "but", "however", "opposite", "difference", "compared", "versus"]],
-    ["structure", ["structure", "merism", "literary", "phrase", "beginning", "opening", "closing", "order", "pattern", "totality", "heaven and earth"]],
+    ["character", ["who is speaking", "the speaker", "god is the", "paul is", "jesus said", "author", "writer", "subject here", "active agent", "job ", "moses", "david", "abraham", "peter", "john", "mary", "satan", "devil", "he was", "she was", "they were", "this man", "this woman", "the man", "the woman"]],
+    ["people", ["who else", "mentioned", "people", "names", "audience", "readers", "sosthenes", "timothy", "family", "children", "sons", "daughters", "wife", "husband", "friends", "servants", "nation"]],
+    ["titles", ["title", "calls himself", "apostle", "servant", "lord", "master", "christ", "king", "priest", "prophet", "blameless", "upright", "righteous", "faithful"]],
+    ["actions", ["action", "verb", "created", "made", "said", "commands", "doing", "performs", "acts", "prayed", "worshipped", "sacrificed", "offered", "gave", "went", "came", "took", "stayed", "remained", "loyal", "faithful", "tested", "suffered", "lost"]],
+    ["setting", ["land", "place", "where", "location", "city", "country", "region", "uz", "east", "lived", "dwelling"]],
+    ["theme", ["theme", "about", "message", "teaches", "shows", "reveals", "lesson", "point", "meaning", "purpose", "suffering", "faith", "trust", "obedience", "loyalty", "patience", "testing", "trial"]],
+    ["authority", ["authority", "by the will", "source of", "calling", "commissioned", "sent by", "appointed", "god allowed", "god permitted", "god said"]],
+    ["repeated", ["repeated", "repetition", "emphasis", "again and again", "keeps saying", "notice that", "interesting that"]],
+    ["contrasts", ["contrast", "but", "however", "opposite", "difference", "compared", "versus", "despite", "even though", "no matter what", "yet he", "still he", "still she"]],
+    ["structure", ["structure", "merism", "literary", "phrase", "beginning", "opening", "closing", "order", "pattern", "totality", "heaven and earth", "first", "then", "after"]],
   ];
   for (const [cat, keywords] of patterns) {
     if (keywords.some((kw) => lower.includes(kw))) return cat;
@@ -575,7 +577,7 @@ export function parseEvaluationTag(
     const words = userResponse.trim().split(/\s+/);
     const len = userResponse.trim().length;
 
-    if (len < 10 || words.length < 3) {
+    if (len < 8 || words.length < 2) {
       resolvedQuality = "off_topic";
     } else {
       const lower = cleanText.toLowerCase();
@@ -583,17 +585,19 @@ export function parseEvaluationTag(
       if (redirectPhrases.some((p) => lower.includes(p))) {
         resolvedQuality = "off_topic";
       } else {
-        const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted"];
-        if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + "."))) {
-          if (len > 20 && words.length > 5) {
+        const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted", "yes", "absolutely", "indeed", "that's right", "you're right", "excellent", "wonderful", "interesting", "thoughtful", "you've picked up", "you've touched"];
+        if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + ".") || lower.includes(p + ",") || lower.includes(p + "!"))) {
+          if (len > 15 && words.length > 3) {
             resolvedQuality = "meaningful";
           }
-        } else if (len > 30 && words.length > 8) {
+        } else if (len > 20 && words.length > 4) {
           resolvedQuality = "meaningful";
         }
       }
     }
   }
+
+  console.log(`[study-guide] parseEvaluation: aiTag=${aiQuality || "none"} resolved=${resolvedQuality} category=${category || "none"} userLen=${userResponse?.length || 0} userWords=${userResponse?.trim().split(/\s+/).length || 0}`);
 
   if (userResponse && currentPhase === "apply" && resolvedQuality === "meaningful") {
     if (!hasPersonalReflection(userResponse)) {
