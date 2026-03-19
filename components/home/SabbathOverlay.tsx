@@ -20,6 +20,7 @@ import Animated, {
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { onSabbathTestTrigger } from "@/lib/sabbath-test-events";
 
 const WELCOME_KEY = "@grace-through-faith/sabbath-welcome-shown";
 const CLOSING_KEY = "@grace-through-faith/sabbath-closing-shown";
@@ -198,6 +199,15 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
     opacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
     contentY.value = withDelay(200, withTiming(0, { duration: 600, easing: Easing.out(Easing.ease) }));
   };
+
+  useEffect(() => {
+    return onSabbathTestTrigger(async (testMode) => {
+      const dateKey = getSabbathDateKey();
+      const key = testMode === "welcome" ? WELCOME_KEY : CLOSING_KEY;
+      await AsyncStorage.setItem(key, dateKey).catch(() => {});
+      showOverlay(testMode);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isSabbath || isClosingPhase || welcomeCheckedRef.current) return;

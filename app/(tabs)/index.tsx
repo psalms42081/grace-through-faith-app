@@ -1163,12 +1163,10 @@ function AdultHomeScreen() {
 
   return (
     <>
-    {isSabbathMode && (
-      <SabbathOverlay
-        isSabbath={sabbath.isSabbath}
-        isClosingPhase={sabbath.closingReflectionActive}
-      />
-    )}
+    <SabbathOverlay
+      isSabbath={sabbath.isSabbath}
+      isClosingPhase={sabbath.closingReflectionActive}
+    />
     <ScrollView
       style={[s.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[

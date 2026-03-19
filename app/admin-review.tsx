@@ -1317,7 +1317,7 @@ export default function AdminReviewScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test">("overview");
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [filterHasNotes, setFilterHasNotes] = useState(false);
@@ -1495,17 +1495,19 @@ export default function AdminReviewScreen() {
           },
         ]}
       >
-        {(["overview", "pending", "quarter"] as const).map((tab) => (
+        {(["overview", "pending", "quarter", ...(isAdmin ? ["sabbath-test" as const] : [])] as const).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => setActiveTab(tab as typeof activeTab)}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? theme.accent : theme.textSecondary }]}>
               {tab === "overview"
                 ? "Overview"
                 : tab === "pending"
                 ? `Review (${pendingCount})`
+                : tab === "sabbath-test"
+                ? "Sabbath"
                 : "Quarter"}
             </Text>
           </Pressable>
@@ -1575,6 +1577,10 @@ export default function AdminReviewScreen() {
             reviewLoading={reviewMutation.isPending}
             theme={theme}
           />
+        )}
+
+        {activeTab === "sabbath-test" && isAdmin && (
+          <SabbathTestTab theme={theme} />
         )}
       </ScrollView>
 
@@ -1685,6 +1691,182 @@ export default function AdminReviewScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function SabbathTestTab({ theme }: { theme: any }) {
+  const [status, setStatus] = useState<string | null>(null);
+
+  const clearAndTrigger = async (mode: "welcome" | "closing") => {
+    const { emitSabbathTestTrigger } = await import("@/lib/sabbath-test-events");
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    const WELCOME_KEY = "@grace-through-faith/sabbath-welcome-shown";
+    const CLOSING_KEY = "@grace-through-faith/sabbath-closing-shown";
+
+    if (mode === "welcome") {
+      await AsyncStorage.removeItem(WELCOME_KEY).catch(() => {});
+      setStatus("Welcome key cleared & triggered. Switch to the Home tab — the overlay is waiting.");
+    } else {
+      await AsyncStorage.removeItem(CLOSING_KEY).catch(() => {});
+      setStatus("Closing key cleared & triggered. Switch to the Home tab — the overlay is waiting.");
+    }
+    setTimeout(() => emitSabbathTestTrigger(mode), 300);
+  };
+
+  const resetAll = async () => {
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    await AsyncStorage.removeItem("@grace-through-faith/sabbath-welcome-shown").catch(() => {});
+    await AsyncStorage.removeItem("@grace-through-faith/sabbath-closing-shown").catch(() => {});
+    setStatus("Both keys cleared. Tonight's real overlays will fire fresh.");
+  };
+
+  return (
+    <View style={{ padding: 20, gap: 20 }}>
+      <View style={{ gap: 6 }}>
+        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: theme.text }}>
+          Sabbath Test Mode
+        </Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: theme.textSecondary, lineHeight: 20 }}>
+          Test the Sabbath overlays without waiting for sunset. Each button clears the relevant AsyncStorage key and force-triggers the overlay on the Home screen.
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={() => clearAndTrigger("welcome")}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          backgroundColor: "#1C1810",
+          borderWidth: 1,
+          borderColor: "#D4A24540",
+          borderRadius: 14,
+          padding: 16,
+          opacity: pressed ? 0.8 : 1,
+        })}
+      >
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: "#D4A24520",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <Ionicons name="sunny" size={20} color="#D4A245" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
+            Trigger Welcome Overlay
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+            Clears this week's welcome key, fires Shabbat Shalom
+          </Text>
+        </View>
+      </Pressable>
+
+      <Pressable
+        onPress={() => clearAndTrigger("closing")}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          backgroundColor: "#1C1410",
+          borderWidth: 1,
+          borderColor: "#C8875A40",
+          borderRadius: 14,
+          padding: 16,
+          opacity: pressed ? 0.8 : 1,
+        })}
+      >
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: "#C8875A20",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <Ionicons name="moon" size={20} color="#C8875A" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
+            Trigger Closing Overlay
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+            Clears this week's closing key, fires Sabbath Closing
+          </Text>
+        </View>
+      </Pressable>
+
+      <Pressable
+        onPress={resetAll}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          backgroundColor: theme.backgroundCard,
+          borderWidth: 1,
+          borderColor: theme.border,
+          borderRadius: 14,
+          padding: 16,
+          opacity: pressed ? 0.8 : 1,
+        })}
+      >
+        <View style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: "rgba(100,100,100,0.15)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <Ionicons name="refresh" size={20} color={theme.textSecondary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
+            Reset Sabbath State
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+            Clears both keys so tonight's real triggers fire fresh
+          </Text>
+        </View>
+      </Pressable>
+
+      {status && (
+        <View style={{
+          backgroundColor: "rgba(201, 147, 58, 0.1)",
+          borderRadius: 10,
+          padding: 14,
+          borderWidth: 1,
+          borderColor: "rgba(201, 147, 58, 0.2)",
+        }}>
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: theme.accent, lineHeight: 20 }}>
+            {status}
+          </Text>
+        </View>
+      )}
+
+      <View style={{ marginTop: 8, gap: 10 }}>
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: theme.textSecondary }}>
+          What to verify:
+        </Text>
+        {[
+          "Overlay appears with correct verse and copy",
+          "Candle animation runs smoothly",
+          "Tapping anywhere dismisses it",
+          "After dismissing, overlay doesn't reappear on next app open",
+          "Closing overlay looks visually distinct from welcome",
+        ].map((item, i) => (
+          <View key={i} style={{ flexDirection: "row", gap: 8, paddingLeft: 4 }}>
+            <Ionicons name="checkmark-circle-outline" size={16} color={theme.textMuted} />
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: theme.textSecondary, flex: 1, lineHeight: 19 }}>
+              {item}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
