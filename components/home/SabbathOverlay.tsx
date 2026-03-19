@@ -21,6 +21,7 @@ import Animated, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { onSabbathTestTrigger } from "@/lib/sabbath-test-events";
+import Svg, { Path, Rect, Defs, RadialGradient, Stop } from "react-native-svg";
 
 const WELCOME_KEY = "@grace-through-faith/sabbath-welcome-shown";
 const CLOSING_KEY = "@grace-through-faith/sabbath-closing-shown";
@@ -81,94 +82,113 @@ interface FlameProps {
   size: number;
 }
 
+const AnimatedView = Animated.View;
+
 function CandleFlame({ size }: FlameProps) {
   const flicker = useSharedValue(1);
   const sway = useSharedValue(0);
-  const innerGlow = useSharedValue(0.6);
+  const glowPulse = useSharedValue(0.12);
 
   useEffect(() => {
     flicker.value = withRepeat(
       withSequence(
-        withTiming(0.85, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.9, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.88, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.92, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       false
     );
     sway.value = withRepeat(
       withSequence(
-        withTiming(-3, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(3, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-2.5, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(2.5, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true
     );
-    innerGlow.value = withRepeat(
+    glowPulse.value = withRepeat(
       withSequence(
-        withTiming(0.4, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.7, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.06, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.15, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true
     );
   }, []);
 
-  const outerStyle = useAnimatedStyle(() => ({
+  const flameStyle = useAnimatedStyle(() => ({
     transform: [
       { scaleY: flicker.value },
       { rotate: `${sway.value}deg` },
     ],
-    opacity: interpolate(flicker.value, [0.85, 1], [0.7, 1]),
+    opacity: interpolate(flicker.value, [0.88, 1], [0.8, 1]),
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: innerGlow.value,
+    opacity: glowPulse.value,
   }));
 
-  const h = size;
-  const w = size * 0.55;
+  const svgW = 80;
+  const svgH = 160;
+  const scale = size / 60;
 
   return (
-    <View style={{ alignItems: "center", height: h + 40, justifyContent: "flex-end" }}>
-      <Animated.View style={[glowStyle, {
+    <View style={{ alignItems: "center", width: svgW * scale, height: svgH * scale }}>
+      <AnimatedView style={[glowStyle, {
         position: "absolute",
-        width: size * 2.5,
-        height: size * 2.5,
-        borderRadius: size * 1.25,
+        width: 120 * scale,
+        height: 120 * scale,
+        borderRadius: 60 * scale,
+        top: 10 * scale,
+        left: (svgW * scale - 120 * scale) / 2,
         backgroundColor: "#D4A245",
-        bottom: 20,
       }]} />
-      <Animated.View style={[outerStyle, {
-        width: w,
-        height: h,
-        borderTopLeftRadius: w / 2,
-        borderTopRightRadius: w / 2,
-        borderBottomLeftRadius: w * 0.4,
-        borderBottomRightRadius: w * 0.4,
-        backgroundColor: "#F0A830",
-        alignItems: "center",
-        justifyContent: "center",
-        transformOrigin: "bottom",
+
+      <Svg
+        width={svgW * scale}
+        height={svgH * scale}
+        viewBox={`0 0 ${svgW} ${svgH}`}
+      >
+        <Rect x="34" y="88" width="12" height="60" rx="3" fill="#F5ECD7" />
+        <Rect x="37" y="82" width="6" height="10" rx="1" fill="#555" />
+      </Svg>
+
+      <AnimatedView style={[flameStyle, {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: svgW * scale,
+        height: svgH * scale,
       }]}>
-        <View style={{
-          width: w * 0.45,
-          height: h * 0.55,
-          borderTopLeftRadius: w * 0.22,
-          borderTopRightRadius: w * 0.22,
-          borderBottomLeftRadius: w * 0.15,
-          borderBottomRightRadius: w * 0.15,
-          backgroundColor: "#FFE4A0",
-        }} />
-      </Animated.View>
-      <View style={{
-        width: 6,
-        height: 20,
-        backgroundColor: "#8B7355",
-        borderBottomLeftRadius: 2,
-        borderBottomRightRadius: 2,
-      }} />
+        <Svg
+          width={svgW * scale}
+          height={svgH * scale}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+        >
+          <Defs>
+            <RadialGradient id="outerFlame" cx="50%" cy="60%" rx="50%" ry="50%">
+              <Stop offset="0%" stopColor="#FFD070" stopOpacity="1" />
+              <Stop offset="50%" stopColor="#F0A830" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#E08A20" stopOpacity="0.9" />
+            </RadialGradient>
+            <RadialGradient id="innerFlame" cx="50%" cy="65%" rx="40%" ry="50%">
+              <Stop offset="0%" stopColor="#FFFDE8" stopOpacity="1" />
+              <Stop offset="60%" stopColor="#FFE4A0" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#FFD060" stopOpacity="0.8" />
+            </RadialGradient>
+          </Defs>
+          <Path
+            d="M40 18 C40 18, 54 45, 54 62 C54 72, 48 82, 40 82 C32 82, 26 72, 26 62 C26 45, 40 18, 40 18 Z"
+            fill="url(#outerFlame)"
+          />
+          <Path
+            d="M40 35 C40 35, 48 52, 48 62 C48 69, 45 76, 40 76 C35 76, 32 69, 32 62 C32 52, 40 35, 40 35 Z"
+            fill="url(#innerFlame)"
+          />
+        </Svg>
+      </AnimatedView>
     </View>
   );
 }
