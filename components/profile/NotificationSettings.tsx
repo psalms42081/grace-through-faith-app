@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Switch, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Text, Switch, Pressable, StyleSheet, Platform, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import {
   getReminderSettings,
   setReminderEnabled,
   setReminderTime,
+  getNotificationPermissionStatus,
+  openAppSettings,
 } from "@/lib/notifications";
 
 interface NotificationSettingsProps {
@@ -24,12 +26,6 @@ const TIME_OPTIONS = [
   { label: "9:00 PM", hour: 21, minute: 0 },
 ];
 
-function formatTime(hour: number, minute: number): string {
-  const period = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${displayHour}:${minute.toString().padStart(2, "0")} ${period}`;
-}
-
 export default function NotificationSettings({
   theme,
   expanded,
@@ -39,6 +35,7 @@ export default function NotificationSettings({
   const [hour, setHour] = useState(8);
   const [minute, setMinute] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [permDenied, setPermDenied] = useState(false);
 
   useEffect(() => {
     getReminderSettings().then(settings => {
@@ -46,13 +43,32 @@ export default function NotificationSettings({
       setHour(settings.hour);
       setMinute(settings.minute);
     });
+    if (Platform.OS !== "web") {
+      getNotificationPermissionStatus().then(p => {
+        if (!p.granted && !p.canAskAgain) setPermDenied(true);
+      });
+    }
   }, []);
 
   const handleToggle = async (value: boolean) => {
     setLoading(true);
     const result = await setReminderEnabled(value);
-    if (result) {
+    if (result.success) {
       setEnabled(value);
+      setPermDenied(false);
+    } else if (result.permissionDenied) {
+      setEnabled(false);
+      if (!result.canAskAgain) {
+        setPermDenied(true);
+        Alert.alert(
+          "Notifications Blocked",
+          "You previously denied notification access. To enable reminders, open your device settings and allow notifications for this app.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: openAppSettings },
+          ]
+        );
+      }
     }
     setLoading(false);
   };
@@ -106,6 +122,18 @@ export default function NotificationSettings({
                   testID="reminder-toggle"
                 />
               </View>
+
+              {permDenied && !enabled && (
+                <Pressable
+                  onPress={openAppSettings}
+                  style={[styles.settingsLink, { backgroundColor: theme.accent + "12" }]}
+                >
+                  <Ionicons name="settings-outline" size={14} color={theme.accent} />
+                  <Text style={[styles.settingsText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                    Open device settings to allow notifications
+                  </Text>
+                </Pressable>
+              )}
 
               {enabled && (
                 <View style={styles.timeSection}>
@@ -192,6 +220,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
     marginRight: 12,
+  },
+  settingsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  settingsText: {
+    fontSize: 13,
   },
   timeSection: {
     marginTop: 12,

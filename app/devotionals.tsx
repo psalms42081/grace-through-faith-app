@@ -20,7 +20,7 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import DevotionalOnboarding from "@/components/devotionals/DevotionalOnboarding";
-import { getReminderSettings, setReminderEnabled } from "@/lib/notifications";
+import { getReminderSettings, setReminderEnabled, openAppSettings } from "@/lib/notifications";
 
 const ONBOARDING_KEY = "@grace-through-faith/devotionals-onboarding-complete";
 
@@ -89,7 +89,19 @@ export default function DevotionalsScreen() {
           { text: "Not now", style: "cancel" },
           {
             text: "Enable",
-            onPress: () => setReminderEnabled(true),
+            onPress: async () => {
+              const result = await setReminderEnabled(true);
+              if (result.permissionDenied && !result.canAskAgain) {
+                Alert.alert(
+                  "Notifications Blocked",
+                  "To enable reminders, allow notifications in your device settings.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Open Settings", onPress: openAppSettings },
+                  ]
+                );
+              }
+            },
           },
         ]
       );

@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const REMINDER_ENABLED_KEY = "@grace-through-faith/reminder-enabled";
@@ -22,25 +22,58 @@ async function loadModule() {
   return Notifications;
 }
 
-export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === "web") return false;
+async function ensureAndroidChannel() {
+  if (Platform.OS !== "android") return;
   const mod = await loadModule();
-  if (!mod) return false;
+  if (!mod) return;
+  await mod.setNotificationChannelAsync("daily-reminders", {
+    name: "Daily Reading Reminders",
+    importance: mod.AndroidImportance.HIGH,
+    sound: "default",
+  });
+}
 
-  const { status: existingStatus } = await mod.getPermissionsAsync();
-  if (existingStatus === "granted") return true;
+export type PermissionResult = {
+  granted: boolean;
+  canAskAgain: boolean;
+};
 
-  const { status } = await mod.requestPermissionsAsync();
-  return status === "granted";
+export async function getNotificationPermissionStatus(): Promise<PermissionResult> {
+  if (Platform.OS === "web") return { granted: false, canAskAgain: false };
+  const mod = await loadModule();
+  if (!mod) return { granted: false, canAskAgain: false };
+
+  const perm = await mod.getPermissionsAsync();
+  return {
+    granted: perm.status === "granted",
+    canAskAgain: perm.canAskAgain !== false,
+  };
+}
+
+export async function requestNotificationPermission(): Promise<PermissionResult> {
+  if (Platform.OS === "web") return { granted: false, canAskAgain: false };
+  const mod = await loadModule();
+  if (!mod) return { granted: false, canAskAgain: false };
+
+  const existing = await mod.getPermissionsAsync();
+  if (existing.status === "granted") return { granted: true, canAskAgain: true };
+
+  const result = await mod.requestPermissionsAsync();
+  return {
+    granted: result.status === "granted",
+    canAskAgain: result.canAskAgain !== false,
+  };
 }
 
 export async function hasNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === "web") return false;
-  const mod = await loadModule();
-  if (!mod) return false;
+  const { granted } = await getNotificationPermissionStatus();
+  return granted;
+}
 
-  const { status } = await mod.getPermissionsAsync();
-  return status === "granted";
+export function openAppSettings(): void {
+  if (Platform.OS !== "web") {
+    Linking.openSettings().catch(() => {});
+  }
 }
 
 export async function getReminderSettings(): Promise<{
@@ -64,20 +97,21 @@ export async function getReminderSettings(): Promise<{
   }
 }
 
-export async function setReminderEnabled(enabled: boolean): Promise<boolean> {
+export async function setReminderEnabled(enabled: boolean): Promise<{ success: boolean; permissionDenied?: boolean; canAskAgain?: boolean }> {
   await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(enabled));
   if (enabled) {
-    const granted = await requestNotificationPermission();
-    if (!granted) {
+    const result = await requestNotificationPermission();
+    if (!result.granted) {
       await AsyncStorage.setItem(REMINDER_ENABLED_KEY, "false");
-      return false;
+      return { success: false, permissionDenied: true, canAskAgain: result.canAskAgain };
     }
+    await ensureAndroidChannel();
     const { hour, minute } = await getReminderSettings();
     await scheduleDailyReminder(hour, minute);
-    return true;
+    return { success: true };
   } else {
     await cancelReminder();
-    return true;
+    return { success: true };
   }
 }
 
@@ -99,12 +133,14 @@ export async function scheduleDailyReminder(
   if (!mod) return;
 
   await cancelReminder();
+  await ensureAndroidChannel();
 
   const id = await mod.scheduleNotificationAsync({
     content: {
       title: "Your reading plan is waiting",
       body: "Take a few minutes with today's passage.",
       sound: true,
+      ...(Platform.OS === "android" ? { channelId: "daily-reminders" } : {}),
     },
     trigger: {
       type: mod.SchedulableTriggerInputTypes.DAILY,
