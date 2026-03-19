@@ -1,0 +1,27 @@
+Strong screens. Honest feedback:
+
+**Connect tab overall**
+
+The visual language is consistent with the rest of the app — warm photography, dark background, gold accents. The section subtitle "Stay connected to your local church, grow together in small groups, and tune into trusted Adventist media" is well written and sets expectations clearly.
+
+**The mission statement card at the bottom (image 2)**
+
+This is genuinely one of the best design decisions in the entire app. "This app is designed to support your local church, Sabbath School class, small group, or school — not replace them." Putting that on the Connect tab specifically is exactly right — it's the tab most likely to be misread as trying to replace in-person community. It's honest, it builds trust, and it differentiates the app from generic social platforms. Don't move it, don't remove it.
+
+**Image quality mismatch**
+
+The "Watch & Listen" card photo (broadcast control room with blue lighting) feels jarring next to the warm, intimate photography of the other three cards. The church exterior, small group gathering, and family worship images all have the same warm amber/golden tone. The control room is cold, corporate, and blue-tinted. It breaks the visual mood of the entire tab. Replace it with something warmer — a person listening through headphones in a peaceful setting, or someone watching a sermon on a phone in a home environment. The content category is fine, the image choice is wrong.
+
+**"Family Worship" card**
+
+The teddy bear and children's items in the foreground work well — it reads "family" immediately. Good image choice.
+
+**Watch & Listen subtitle**
+
+"SDA Speakers, Broadcasts, Christian Radio" is accurate but it's a list, not a benefit. Consider "Sermons, live broadcasts, and radio from trusted Adventist voices" — same information, reads as a value rather than a feature inventory.
+
+**One structural concern**
+
+Four cards of equal visual weight with no hierarchy means a user doesn't know where to start. "Find a Church" and "Small Groups" are the two highest-value community features — they deserve slightly more prominence than "Family Worship" and "Watch & Listen." Even just ordering them so the two community-first features are at the top (which they are) and making them slightly taller than the media cards would communicate priority. Right now all four cards are the same height and weight.
+
+The WEB text wrapping fix and this image swap are the two most visible polish issues across everything you've shown me so far. Send more screens when ready.
