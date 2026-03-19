@@ -2002,6 +2002,9 @@ export default function StudyScreen() {
   const handleSharedChapterChange = useCallback((ch: number | null) => {
     setSharedChapter(ch);
     setAutoCompletionShown(false);
+    if (ch !== null) {
+      setShowDeepIntro(true);
+    }
   }, []);
 
   const bookId = sharedBook?.id ?? null;
@@ -2102,6 +2105,7 @@ export default function StudyScreen() {
             studyFocus: raw.studyFocus ?? "chapter",
           };
           if (parsed.bookId === bookId && parsed.chapter === chapter) {
+            setShowDeepIntro(false);
             if (parsed.active) {
               setDeepSession(parsed);
               setActiveTab(LAYER_ORDER[parsed.layerIndex]);
@@ -2372,7 +2376,7 @@ export default function StudyScreen() {
             setSharedBook(null);
             setSharedChapter(null);
           }}
-          onContinue={() => setShowLayerIntro(false)}
+          onContinue={() => { setShowLayerIntro(false); setShowDeepIntro(true); }}
         />
       </View>
     );

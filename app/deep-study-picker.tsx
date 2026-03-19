@@ -48,7 +48,7 @@ export default function DeepStudyPickerScreen() {
 
   const handleBookSelect = (book: BibleBook) => {
     if (book.chapterCount === 1) {
-      router.push({ pathname: "/(tabs)/study", params: { bookId: String(book.id), chapter: "1", _t: String(Date.now()) } } as any);
+      router.push({ pathname: "/(tabs)/study", params: { bookId: String(book.id), chapter: "1", showIntro: "true", _t: String(Date.now()) } } as any);
     } else {
       setSelectedBook(book);
     }
@@ -56,7 +56,7 @@ export default function DeepStudyPickerScreen() {
 
   const handleChapterSelect = (chapter: number) => {
     if (!selectedBook) return;
-    router.push({ pathname: "/(tabs)/study", params: { bookId: String(selectedBook.id), chapter: String(chapter), _t: String(Date.now()) } } as any);
+    router.push({ pathname: "/(tabs)/study", params: { bookId: String(selectedBook.id), chapter: String(chapter), showIntro: "true", _t: String(Date.now()) } } as any);
   };
 
   if (selectedBook) {
