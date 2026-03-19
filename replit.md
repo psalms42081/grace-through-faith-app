@@ -9,6 +9,16 @@ I prefer iterative development with clear communication on significant changes. 
 ## System Architecture
 The application features a mobile-first architecture with a frontend built using Expo (React Native) and a backend using Express.js. Data persistence is handled by PostgreSQL with Drizzle ORM. TanStack Query manages server state with offline persistence, and React context manages shared UI state. AI generation functions are centralized. Devotional content is presented without tradition-based filtering, specifically designed for Seventh-day Adventists.
 
+**Backend Route Structure:** Routes are split into focused domain routers under `server/routes/`:
+- `strongs.ts` — Strong's concordance search, lookup, and AI word study generation
+- `commentary.ts` — Commentary retrieval and generation (EGW + external HelloAO sources)
+- `context.ts` — Context cards, chapter context, chapter summaries, application templates
+- `locations-timeline.ts` — Biblical locations and timeline events with verse mappings
+- `study-guide.ts` — Socratic AI study guide (start, respond, sessions, completion)
+- `verse-tools.ts` — Verse maps, verse explanations, quick insights, devotional completion
+- `deep-study.ts` — Layer completions, study journal, topic reflections, passage sections, growth analytics
+- `search.ts` — Semantic search and recent search history
+
 **UI/UX Decisions:**
 - **Color Scheme:** Deep dark mode (`#050507`) with a warm gold accent (`#C9933A`), distinct palettes for Kids Mode, and a specific Sabbath theme.
 - **Typography:** Lora (serif) for scripture and headings, Inter (sans-serif) for UI elements.

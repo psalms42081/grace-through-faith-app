@@ -1,0 +1,554 @@
+import { Router } from "express";
+import { db } from "../db";
+import { aiGenerationLimiter } from "../middleware/rate-limit";
+import { getErrorStatusCode } from "../services/ai-semaphore";
+import {
+  bibleBooks,
+  bibleVerses,
+  layerCompletions,
+  studyJournalEntries,
+  chapterPassageSections,
+  searchCache,
+  studyGuideSessions,
+  verseStrongMaps,
+  readingHistory,
+} from "../../shared/schema";
+import { eq, and, sql, desc, asc, countDistinct } from "drizzle-orm";
+import { getAuthUserId } from "../middleware/auth";
+
+const router = Router();
+
+router.get("/api/layer-completions", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
+    const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
+
+    let conditions = [eq(layerCompletions.userId, userId)];
+    if (bookId !== undefined) conditions.push(eq(layerCompletions.bookId, bookId));
+    if (chapter !== undefined) conditions.push(eq(layerCompletions.chapter, chapter));
+    conditions.push(eq(layerCompletions.verseStart, verseStart));
+    conditions.push(eq(layerCompletions.verseEnd, verseEnd));
+
+    const rows = await db
+      .select({
+        bookId: layerCompletions.bookId,
+        chapter: layerCompletions.chapter,
+        layer: layerCompletions.layer,
+        verseStart: layerCompletions.verseStart,
+        verseEnd: layerCompletions.verseEnd,
+        completedAt: layerCompletions.completedAt,
+      })
+      .from(layerCompletions)
+      .where(and(...conditions));
+
+    return res.json(rows);
+  } catch (err) {
+    console.error("Layer completions fetch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/layer-completions", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const { bookId, chapter, layer, verseStart, verseEnd } = req.body;
+    if (bookId == null || chapter == null || !layer) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const validLayers = ["word", "context", "voices", "application"];
+    if (!validLayers.includes(layer)) {
+      return res.status(400).json({ error: "Invalid layer" });
+    }
+
+    await db
+      .insert(layerCompletions)
+      .values({
+        userId,
+        bookId: Number(bookId),
+        chapter: Number(chapter),
+        layer: String(layer),
+        verseStart: verseStart != null ? Number(verseStart) : 0,
+        verseEnd: verseEnd != null ? Number(verseEnd) : 0,
+      })
+      .onConflictDoNothing();
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Layer completion save error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/layer-completions/book-summary", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const bookId = Number(req.query.bookId);
+    if (!bookId) return res.status(400).json({ error: "bookId required" });
+
+    const [bookInfo] = await db
+      .select({ chapterCount: bibleBooks.chapterCount })
+      .from(bibleBooks)
+      .where(eq(bibleBooks.id, bookId));
+
+    if (!bookInfo) return res.json({ word: 0, context: 0, voices: 0, application: 0 });
+
+    const totalChapters = bookInfo.chapterCount;
+    const completions = await db
+      .select({ layer: layerCompletions.layer, chapters: countDistinct(layerCompletions.chapter) })
+      .from(layerCompletions)
+      .where(and(eq(layerCompletions.userId, userId), eq(layerCompletions.bookId, bookId)))
+      .groupBy(layerCompletions.layer);
+
+    const summary: Record<string, number> = { word: 0, context: 0, voices: 0, application: 0 };
+    for (const row of completions) {
+      const pct = Math.round((Number(row.chapters) / totalChapters) * 100);
+      summary[row.layer] = Math.min(pct, 100);
+    }
+
+    return res.json(summary);
+  } catch (err) {
+    console.error("Book layer summary error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/study-journal", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const bookId = Number(req.query.bookId);
+    const chapter = Number(req.query.chapter);
+    const layer = req.query.layer ? String(req.query.layer) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
+
+    if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
+
+    let conditions = [
+      eq(studyJournalEntries.userId, userId),
+      eq(studyJournalEntries.bookId, bookId),
+      eq(studyJournalEntries.chapter, chapter),
+    ];
+    if (layer) conditions.push(eq(studyJournalEntries.layer, layer));
+    conditions.push(eq(studyJournalEntries.verseStart, verseStart));
+    conditions.push(eq(studyJournalEntries.verseEnd, verseEnd));
+
+    const rows = await db
+      .select({
+        id: studyJournalEntries.id,
+        sectionKey: studyJournalEntries.sectionKey,
+        layer: studyJournalEntries.layer,
+        content: studyJournalEntries.content,
+        updatedAt: studyJournalEntries.updatedAt,
+      })
+      .from(studyJournalEntries)
+      .where(and(...conditions));
+
+    return res.json(rows);
+  } catch (err) {
+    console.error("Study journal fetch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/api/study-journal", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const { bookId, chapter, layer, sectionKey, content, verseStart, verseEnd } = req.body;
+    if (bookId == null || chapter == null || !layer || !sectionKey) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const vs = verseStart != null ? Number(verseStart) : 0;
+    const ve = verseEnd != null ? Number(verseEnd) : 0;
+
+    const matchConditions = [
+      eq(studyJournalEntries.userId, userId),
+      eq(studyJournalEntries.bookId, Number(bookId)),
+      eq(studyJournalEntries.chapter, Number(chapter)),
+      eq(studyJournalEntries.layer, String(layer)),
+      eq(studyJournalEntries.sectionKey, String(sectionKey)),
+      eq(studyJournalEntries.verseStart, vs),
+      eq(studyJournalEntries.verseEnd, ve),
+    ];
+
+    if (!content || content.trim().length === 0) {
+      await db
+        .delete(studyJournalEntries)
+        .where(and(...matchConditions));
+      return res.json({ success: true, deleted: true });
+    }
+
+    const existing = await db
+      .select({ id: studyJournalEntries.id })
+      .from(studyJournalEntries)
+      .where(and(...matchConditions));
+
+    if (existing.length > 0) {
+      await db
+        .update(studyJournalEntries)
+        .set({ content: String(content).trim(), updatedAt: new Date() })
+        .where(eq(studyJournalEntries.id, existing[0].id));
+    } else {
+      await db
+        .insert(studyJournalEntries)
+        .values({
+          userId,
+          bookId: Number(bookId),
+          chapter: Number(chapter),
+          layer: String(layer),
+          sectionKey: String(sectionKey),
+          verseStart: vs,
+          verseEnd: ve,
+          content: String(content).trim(),
+        });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Study journal save error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/study-journal/revisit", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+    const limit = Math.min(Number(req.query.limit) || 10, 20);
+
+    const entries = await db
+      .select({
+        bookId: studyJournalEntries.bookId,
+        chapter: studyJournalEntries.chapter,
+        layer: studyJournalEntries.layer,
+        sectionKey: studyJournalEntries.sectionKey,
+        content: studyJournalEntries.content,
+        updatedAt: studyJournalEntries.updatedAt,
+      })
+      .from(studyJournalEntries)
+      .where(eq(studyJournalEntries.userId, userId))
+      .orderBy(desc(studyJournalEntries.updatedAt))
+      .limit(limit * 2);
+
+    const bookIds = [...new Set(entries.map(e => e.bookId))];
+    const bookNames = new Map<number, string>();
+    if (bookIds.length > 0) {
+      const books = await db
+        .select({ id: bibleBooks.id, name: bibleBooks.name })
+        .from(bibleBooks)
+        .where(sql`${bibleBooks.id} IN ${bookIds}`);
+      books.forEach(b => bookNames.set(b.id, b.name));
+    }
+
+    const seen = new Set<string>();
+    const grouped: {
+      bookId: number;
+      chapter: number;
+      bookName: string;
+      lastEdited: string;
+      excerpt: string;
+      layer: string;
+      sectionKey: string;
+    }[] = [];
+
+    for (const entry of entries) {
+      const key = `${entry.bookId}-${entry.chapter}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      grouped.push({
+        bookId: entry.bookId,
+        chapter: entry.chapter,
+        bookName: bookNames.get(entry.bookId) || `Book ${entry.bookId}`,
+        lastEdited: entry.updatedAt?.toISOString() || new Date().toISOString(),
+        excerpt: (entry.content || "").substring(0, 120),
+        layer: entry.layer,
+        sectionKey: entry.sectionKey,
+      });
+
+      if (grouped.length >= limit) break;
+    }
+
+    return res.json(grouped);
+  } catch (err) {
+    console.error("Revisit entries error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { topicId } = req.params;
+    const today = new Date().toISOString().split("T")[0];
+    const queryHash = `topic-reflection-${topicId}-${today}`;
+
+    const [cached] = await db.select().from(searchCache)
+      .where(eq(searchCache.queryHash, queryHash))
+      .limit(1);
+
+    if (cached && cached.expiresAt > new Date()) {
+      return res.json(cached.results);
+    }
+
+    const client = new (await import("openai")).default({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a Seventh-day Adventist Bible teacher. Generate a fresh daily reflection for the topic "${topicId}". Include:
+1. A thought-provoking reflection (3-4 sentences) connecting the topic to daily life
+2. A discussion question for small groups or personal journaling
+3. A practical application challenge for today
+4. A lesser-known Bible verse related to this topic (different from common ones)
+Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`,
+        },
+        {
+          role: "user",
+          content: `Generate today's reflection for the topic: ${topicId}. Today is ${today}. Make it unique and fresh.`,
+        },
+      ],
+      temperature: 0.9,
+    });
+
+    const raw = response.choices[0]?.message?.content || "{}";
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const data = JSON.parse(cleaned);
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    if (cached) {
+      await db.update(searchCache)
+        .set({ results: data, expiresAt: tomorrow })
+        .where(eq(searchCache.queryHash, queryHash));
+    } else {
+      await db.insert(searchCache).values({
+        queryText: `topic-reflection:${topicId}`,
+        queryHash,
+        results: data,
+        expiresAt: tomorrow,
+      }).onConflictDoUpdate({
+        target: searchCache.queryHash,
+        set: { results: data, expiresAt: tomorrow },
+      });
+    }
+
+    return res.json(data);
+  } catch (err) {
+    console.error("Topic reflection error:", err);
+    return res.status(500).json({ error: "Failed to generate reflection" });
+  }
+});
+
+router.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
+  try {
+    const bookId = Number(req.query.bookId);
+    const chapter = Number(req.query.chapter);
+    if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
+
+    const cached = await db
+      .select({ sections: chapterPassageSections.sections })
+      .from(chapterPassageSections)
+      .where(and(eq(chapterPassageSections.bookId, bookId), eq(chapterPassageSections.chapter, chapter)));
+
+    if (cached.length > 0) {
+      return res.json(cached[0].sections);
+    }
+
+    const verses = await db
+      .select({ verse: bibleVerses.verse, text: bibleVerses.text })
+      .from(bibleVerses)
+      .where(and(eq(bibleVerses.bookId, bookId), eq(bibleVerses.chapter, chapter)))
+      .orderBy(bibleVerses.verse);
+
+    if (verses.length === 0) return res.json([]);
+
+    const [bookInfo] = await db
+      .select({ name: bibleBooks.name })
+      .from(bibleBooks)
+      .where(eq(bibleBooks.id, bookId));
+
+    const bookName = bookInfo?.name ?? `Book ${bookId}`;
+    const totalVerses = verses.length;
+
+    const chapterText = verses.map(v => `${v.verse} ${v.text}`).join(" ");
+
+    const OpenAI = (await import("openai")).default;
+    const client = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+
+Rules:
+- Sections must be contiguous and non-overlapping
+- Together they must cover every verse (1 through ${totalVerses})
+- Aim for 2-5 sections depending on chapter length
+- Each section should be a coherent narrative or thematic unit
+- Labels should be short descriptions (5-8 words max)
+- For very short chapters (under 10 verses), return 1-2 sections`,
+        },
+        {
+          role: "user",
+          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+
+Chapter text:
+${chapterText.substring(0, 4000)}
+
+Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`,
+        },
+      ],
+    });
+
+    let sections: { verseStart: number; verseEnd: number; label: string }[] = [];
+    try {
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      const cleaned = raw.replace(/```json?\s*/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+      } else {
+        const valid = parsed.every((s: any) =>
+          typeof s.verseStart === "number" && typeof s.verseEnd === "number" &&
+          s.verseStart >= 1 && s.verseEnd <= totalVerses && s.verseStart <= s.verseEnd &&
+          typeof s.label === "string"
+        );
+        if (valid) {
+          sections = parsed;
+        } else {
+          sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+        }
+      }
+    } catch {
+      sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+    }
+
+    await db
+      .insert(chapterPassageSections)
+      .values({ bookId, chapter, sections })
+      .onConflictDoNothing();
+
+    return res.json(sections);
+  } catch (err) {
+    console.error("Passage sections error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/analytics/growth", async (req, res) => {
+  try {
+    const userId = getAuthUserId(req) || "guest";
+
+    const sessions = await db
+      .select({
+        createdAt: studyGuideSessions.createdAt,
+        completedAt: studyGuideSessions.completedAt,
+      })
+      .from(studyGuideSessions)
+      .where(eq(studyGuideSessions.userId, userId));
+
+    let deepStudyMinutes = 0;
+    for (const s of sessions) {
+      if (s.completedAt && s.createdAt) {
+        const mins = (new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime()) / 60000;
+        if (mins > 0 && mins < 480) deepStudyMinutes += mins;
+      } else if (s.createdAt) {
+        deepStudyMinutes += 5;
+      }
+    }
+    deepStudyMinutes = Math.round(deepStudyMinutes);
+
+    const userChapters = await db
+      .select({
+        bookId: readingHistory.bookId,
+        chapter: readingHistory.chapter,
+      })
+      .from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .groupBy(readingHistory.bookId, readingHistory.chapter);
+
+    let wordsLearned = 0;
+    if (userChapters.length > 0) {
+      const conditions = userChapters.map(
+        (ch) => sql`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
+      );
+      const [wordsResult] = await db
+        .select({ total: countDistinct(verseStrongMaps.strongId) })
+        .from(verseStrongMaps)
+        .innerJoin(bibleVerses, eq(verseStrongMaps.verseId, bibleVerses.id))
+        .where(sql`(${sql.join(conditions, sql` OR `)})`);
+      wordsLearned = wordsResult?.total ?? 0;
+    }
+
+    const booksRead = await db
+      .select({ bookId: readingHistory.bookId })
+      .from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .groupBy(readingHistory.bookId);
+
+    const exploredBookIds = booksRead.map((r) => r.bookId);
+
+    const allBooks = await db
+      .select({
+        id: bibleBooks.id,
+        name: bibleBooks.name,
+        abbreviation: bibleBooks.abbreviation,
+        testament: bibleBooks.testament,
+        chapterCount: bibleBooks.chapterCount,
+        orderIndex: bibleBooks.orderIndex,
+      })
+      .from(bibleBooks)
+      .orderBy(asc(bibleBooks.orderIndex));
+
+    const chaptersPerBook = await db
+      .select({
+        bookId: readingHistory.bookId,
+        chaptersRead: countDistinct(readingHistory.chapter),
+      })
+      .from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .groupBy(readingHistory.bookId);
+
+    const chaptersMap = new Map(
+      chaptersPerBook.map((r) => [r.bookId, Number(r.chaptersRead)])
+    );
+
+    const bibleMap = allBooks.map((book) => ({
+      id: book.id,
+      name: book.name,
+      abbreviation: book.abbreviation,
+      testament: book.testament,
+      chapterCount: book.chapterCount,
+      chaptersRead: chaptersMap.get(book.id) ?? 0,
+      explored: exploredBookIds.includes(book.id),
+    }));
+
+    return res.json({
+      deepStudyMinutes,
+      totalSessions: sessions.length,
+      wordsLearned,
+      bibleMap,
+      booksExplored: exploredBookIds.length,
+      totalBooks: allBooks.length,
+    });
+  } catch (err) {
+    console.error("Growth analytics error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;
