@@ -23,6 +23,7 @@ import { apiRequest, queryClient } from "@/lib/query-client";
 import BibleHeatmap, { type BookMapEntry } from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
+import NotificationSettings from "@/components/profile/NotificationSettings";
 
 interface WeeklyStreakData {
   daysRead: boolean[];
@@ -56,6 +57,7 @@ export default function ProfileScreen() {
   const uid = user?.id || "guest";
 
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [notifSettingsOpen, setNotifSettingsOpen] = useState(false);
   const currentLang = i18n.language?.split("-")[0] || "en";
 
   const handleLanguageChange = useCallback(async (code: string) => {
@@ -265,6 +267,12 @@ export default function ProfileScreen() {
           title={t("profile.parentControls")}
           onPress={() => router.push("/parent-controls" as any)}
           style={{ marginBottom: 6 }}
+        />
+
+        <NotificationSettings
+          theme={theme}
+          expanded={notifSettingsOpen}
+          onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
         />
 
         <LanguageSettings

@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router, Stack } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
@@ -19,6 +20,7 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import DevotionalOnboarding from "@/components/devotionals/DevotionalOnboarding";
+import { getReminderSettings, setReminderEnabled } from "@/lib/notifications";
 
 const ONBOARDING_KEY = "@grace-through-faith/devotionals-onboarding-complete";
 
@@ -76,6 +78,24 @@ export default function DevotionalsScreen() {
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const promptForReminders = () => {
+    if (Platform.OS === "web") return;
+    getReminderSettings().then(({ enabled }) => {
+      if (enabled) return;
+      Alert.alert(
+        "Daily Reminders",
+        "Would you like a daily reminder so you don't miss a day?",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Enable",
+            onPress: () => setReminderEnabled(true),
+          },
+        ]
+      );
+    });
+  };
+
   const handleOnboardingComplete = async (planId: string) => {
     await AsyncStorage.setItem(onboardingStorageKey, "true").catch(() => {});
     try {
@@ -87,6 +107,7 @@ export default function DevotionalsScreen() {
       setTimeout(() => {
         setShowOnboarding(false);
         router.push(`/devotional-day?planId=${planId}`);
+        setTimeout(promptForReminders, 1000);
       }, 200);
     } catch {
       setShowOnboarding(false);
@@ -110,6 +131,7 @@ export default function DevotionalsScreen() {
       safeGoBack(router);
       setTimeout(() => {
         router.push(`/devotional-day?planId=${planId}`);
+        setTimeout(promptForReminders, 1000);
       }, 300);
     } catch {
       setEnrolling(false);
