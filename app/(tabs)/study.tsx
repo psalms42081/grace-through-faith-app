@@ -417,7 +417,7 @@ function StudyCompletionScreen({
         >
           <Ionicons name="document-text-outline" size={16} color={theme.accent} />
           <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: "Inter_600SemiBold" }}>
-            Full Written Summary
+            Full Study Record
           </Text>
           <Ionicons name={summaryExpanded ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
         </Pressable>
@@ -889,7 +889,7 @@ function DeepStudyIntro({
       </View>
 
       {hasSeenIntro && (
-        <View style={{ flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 16, justifyContent: "center" as const }}>
+        <View style={{ alignItems: "center" as const, gap: 8, marginBottom: 16 }}>
           <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: theme.backgroundCard, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }}>
             <Ionicons name="layers-outline" size={13} color={theme.textMuted} />
             <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Observe</Text>
@@ -900,6 +900,14 @@ function DeepStudyIntro({
             <Text style={{ fontSize: 10, color: theme.textMuted }}>{">"}</Text>
             <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Respond</Text>
           </View>
+          <Pressable
+            onPress={() => { AsyncStorage.removeItem(DEEP_INTRO_SEEN_KEY).catch(() => {}); setHasSeenIntro(false); }}
+            hitSlop={8}
+          >
+            <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", textDecorationLine: "underline" as const }}>
+              How Deep Dive works
+            </Text>
+          </Pressable>
         </View>
       )}
 
@@ -1563,7 +1571,7 @@ function DeepSessionSummary({
         >
           <Ionicons name="document-text-outline" size={16} color={theme.accent} />
           <Text style={[dsStyles.summaryCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", flex: 1, marginBottom: 0 }]}>
-            Full Written Summary
+            Full Study Record
           </Text>
           <Ionicons name={summaryExpanded ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
         </Pressable>
@@ -2152,12 +2160,14 @@ export default function StudyScreen() {
     setShowDeepIntro(false);
   }, [bookId, chapter, completedLayers, persistSession]);
 
-  const exitDeepSession = useCallback((abandon?: boolean) => {
+  const exitDeepSession = useCallback((fromDone?: boolean) => {
     const current = deepSessionRef.current;
-    if (abandon) {
+    if (fromDone) {
       persistSession({ active: false, layerIndex: 0, startedAt: 0, completedLayersDuringSession: [], bookId: null, chapter: null, verseStart: null, verseEnd: null, studyFocus: "passage" }, true);
       setShowSummary(false);
       setPausedLayerIndex(null);
+      setActiveTab("word");
+      setAutoCompletionShown(true);
     } else {
       setPausedLayerIndex(current.layerIndex);
       persistSession({ ...current, active: false });
@@ -3699,19 +3709,25 @@ const COMMENTATOR_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; c
 };
 
 function extractLeadInsight(content: string): { lead: string; rest: string } {
-  const paragraphs = content.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  if (paragraphs.length <= 1) {
-    const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g);
-    if (sentences && sentences.length > 3) {
-      const lead = sentences.slice(0, 2).join("").trim();
-      const rest = sentences.slice(2).join("").trim();
-      return { lead, rest };
+  const full = content.trim();
+  const MAX_LEAD = 150;
+  if (full.length <= MAX_LEAD) return { lead: full, rest: "" };
+  const sentences = full.match(/[^.!?]+[.!?]+(?:\s|$)/g);
+  if (sentences) {
+    let lead = "";
+    let cutIdx = 0;
+    for (let i = 0; i < sentences.length; i++) {
+      const next = lead + sentences[i];
+      if (next.length > MAX_LEAD && lead.length > 0) break;
+      lead = next;
+      cutIdx = i + 1;
     }
-    return { lead: content.trim(), rest: "" };
+    const rest = sentences.slice(cutIdx).join("").trim();
+    return { lead: lead.trim(), rest };
   }
-  const lead = paragraphs[0];
-  const rest = paragraphs.slice(1).join("\n\n");
-  return { lead, rest };
+  const spaceIdx = full.lastIndexOf(" ", MAX_LEAD);
+  const cut = spaceIdx > 80 ? spaceIdx : MAX_LEAD;
+  return { lead: full.substring(0, cut).trim() + "...", rest: full.substring(cut).trim() };
 }
 
 function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Colors.light }) {
@@ -3781,7 +3797,7 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
           }]}
         >
           <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
-            {expanded ? "Show Less" : "Continue Reading"}
+            {expanded ? "Less" : "Read More"}
           </Text>
           <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={theme.accent} />
         </Pressable>
