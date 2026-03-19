@@ -38,7 +38,7 @@ export function getApiUrl(): string {
     return window.location.origin + "/";
   }
 
-  return "/";
+  throw new Error("EXPO_PUBLIC_DOMAIN is not set and no window.location available");
 }
 
 async function throwIfResNotOk(res: Response) {
