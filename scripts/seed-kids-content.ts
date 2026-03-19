@@ -28,6 +28,7 @@ async function seed() {
         "Discover the wonderful world God created! From the stars in the sky to the fish in the sea, learn how God made it all with love.",
       ageGroup: "little_lambs",
       icon: "flower",
+      imageUrl: "/assets/kids-scenes/creation-collection-cover.png",
       storyCount: 5,
       orderIndex: 0,
       published: true,
@@ -115,6 +116,7 @@ async function seed() {
       ageGroup: "little_lambs",
       collectionId: godMade.id,
       orderInCollection: 0,
+      imageUrl: "/assets/kids-scenes/creation-light-scene-0.png",
       storyText:
         "A long, long time ago, before there were trees or animals or people, there was nothing at all. It was very, very dark everywhere. But God was there! God is always there.\n\nGod looked at the darkness and He had a wonderful idea. He said, 'Let there be light!' And guess what happened? Light appeared! Bright, beautiful, warm light filled everything. It was like the biggest sunrise you have ever seen, but even more amazing.\n\nGod looked at the light and He smiled. 'This is good,' God said. He loved what He had made. God called the light 'Day' and the darkness 'Night.' When the light shone, it was daytime. When it was dark, it was nighttime — perfect for sleeping!\n\nDo you know what is so special about this? God made light just by speaking! He did not need a flashlight or a lamp. He just said the words, and it happened. That is how powerful God is.\n\nEvery morning when you see the sun come up and the sky turns pink and orange, you can remember that God made the very first light. He made it because He wanted to share something beautiful with you. God loves making wonderful things, and He made light so you could see all the other amazing things He created.\n\nWhen you turn on a light at night and the darkness goes away, think about God. He is the one who made light. And just like light chases away the dark, God is always with you, even when you feel afraid.",
       memoryVerse: "God said, 'Let there be light,' and there was light.",
@@ -138,6 +140,7 @@ async function seed() {
       ageGroup: "little_lambs",
       collectionId: godMade.id,
       orderInCollection: 1,
+      imageUrl: "/assets/kids-scenes/creation-animals-scene-0.png",
       storyText:
         "After God made the sky and the land and the oceans and the plants, He had another wonderful idea. He wanted to fill the world with animals!\n\nFirst, God made all the fish and the sea creatures. Big whales that splash in the ocean. Tiny little fish with shiny scales. Funny octopuses with eight wiggly arms. Dolphins that jump and play in the waves. God filled the whole ocean with amazing creatures!\n\nThen God made all the birds. Eagles that fly so high they almost touch the clouds. Little hummingbirds that flutter their wings super fast. Owls that hoot at nighttime. Colorful parrots and tiny sparrows. God filled the sky with beautiful birds!\n\nNext, God made all the land animals. Big elephants with long trunks. Fluffy rabbits that hop, hop, hop. Tall giraffes that can eat leaves from the tops of trees. Cuddly puppies and soft kittens. Roaring lions and gentle lambs. Wiggly worms and buzzy bees!\n\nGod looked at all the animals He had made — the swimmers, the flyers, and the walkers — and He said, 'This is good!' God loved every single one of them.\n\nDo you have a favorite animal? God made that animal! He thought of every spot on a ladybug, every stripe on a zebra, and every feather on a peacock. God is so creative and so loving. He made animals because He wanted the world to be full of life and joy.\n\nEvery time you see a bird singing or a puppy wagging its tail, remember that God made it. He made all the animals, and He made them good.",
       memoryVerse: "God made the wild animals and everything that creeps on the ground. And God saw that it was good.",
@@ -161,6 +164,7 @@ async function seed() {
       ageGroup: "little_lambs",
       collectionId: godMade.id,
       orderInCollection: 2,
+      imageUrl: "/assets/kids-scenes/creation-people-scene-0.png",
       storyText:
         "After God made the light, the sky, the land, the oceans, the plants, and all the animals, He saved the very best for last. Do you know what that was? People! God made people — and that includes you!\n\nGod said something very special: 'Let us make people in our image.' That means God made you to be like Him in some wonderful ways. You can think and feel. You can love and be kind. You can create and imagine. You can talk to God!\n\nGod took extra special care when He made people. He did not just speak them into being like the stars or the fish. The Bible tells us that God formed the first person with His own hands, gently and carefully, the way an artist makes something very precious.\n\nAnd when God looked at everything He had made — the stars, the oceans, the animals, and especially the people — He did not just say it was good. He said it was VERY good!\n\nDo you know what that means? It means that you are very good. God made you on purpose. He chose the color of your eyes and the sound of your laugh. He knows how many hairs are on your head! You are not an accident. You are a masterpiece made by the greatest artist ever — God Himself.\n\nEvery single person you see — your family, your friends, people at the store — they are all made by God too. That is why we treat everyone with kindness and love. Because every person is special to God.\n\nYou are loved. You are wanted. You are made in the image of God. And that makes you very, very special.",
       memoryVerse: "God created man in His own image.",
@@ -184,6 +188,7 @@ async function seed() {
       ageGroup: "little_lambs",
       collectionId: godMade.id,
       orderInCollection: 3,
+      imageUrl: "/assets/kids-scenes/creation-flowers-scene-0.png",
       storyText:
         "After God made the dry land and the oceans, the land looked very bare and brown. There were no flowers, no trees, no grass — nothing green at all. But God had a beautiful plan!\n\nGod said, 'Let the land grow plants and trees!' And right away, the most wonderful things started to happen. Green grass pushed up out of the ground. Tiny flowers began to bloom in every color you can think of — red, yellow, purple, blue, pink, and white!\n\nTrees grew tall and strong with big green leaves. Some trees grew apples. Some grew oranges. Some grew bananas and peaches and cherries. Yummy! God made fruit trees so people and animals would have delicious food to eat.\n\nGod also made bushes with berries, vines with grapes, and fields of wheat that could be made into bread. He made giant sunflowers that turn their faces toward the sun. He made tiny daisies and roses that smell so sweet.\n\nHave you ever held a flower up close and looked at it really carefully? Each petal is so soft and perfectly shaped. The colors are so beautiful. That is because God designed every single one. He painted every petal. He shaped every leaf.\n\nGod looked at all the plants and flowers and trees and said, 'This is good.' The whole earth was becoming a beautiful garden, all because of God's love and creativity.\n\nThe next time you see a pretty flower or a big tall tree, remember — God made that! He made the whole world beautiful because He loves beauty, and He loves you.",
       memoryVerse: "Then God said, 'Let the land produce plants.' And it was so.",
@@ -207,6 +212,7 @@ async function seed() {
       ageGroup: "little_lambs",
       collectionId: godMade.id,
       orderInCollection: 4,
+      imageUrl: "/assets/kids-scenes/creation-stars-scene-0.png",
       storyText:
         "Have you ever looked up at the sky at night? What do you see? Stars! Lots and lots of twinkling stars. And the big, bright moon shining down. God made all of those!\n\nOn the fourth day of creation, God made the sun, the moon, and all the stars. The sun is a giant ball of light that keeps us warm and helps plants grow. Without the sun, the world would be cold and dark. God knew we needed it!\n\nGod also made the moon. The moon is like a nightlight in the sky. Sometimes it is a big round circle, and sometimes it is just a tiny sliver. But it is always there, shining gently in the darkness.\n\nAnd then there are the stars! God made more stars than anyone could ever count. Billions and billions of them! Some are so far away that their light takes years and years to reach your eyes. Every twinkle you see is a star that God placed in the sky.\n\nThe Bible says that God knows every single star by name. He calls each one! If God cares about every star in the sky, just imagine how much He cares about you. You are worth more to God than all the stars put together.\n\nGod made the sun to rule the day and the moon to rule the night. He set them in the sky like a giant clock, marking days and seasons and years. God thinks of everything!\n\nTonight, if it is clear outside, ask a grown-up to take you out and look at the stars. As you look up at that big sky full of lights, remember that the same God who hung every star in space loves you and is watching over you right now.",
       memoryVerse: "He counts the number of the stars; He calls them all by name.",
