@@ -2202,9 +2202,11 @@ export default function StudyScreen() {
     const currentLayer = LAYER_ORDER[ds.layerIndex];
     if (!visited.includes(currentLayer)) visited.push(currentLayer);
     const final = { ...ds, active: false, completedLayersDuringSession: visited };
+    setAutoCompletionShown(true);
+    setShowStudyComplete(false);
+    setShowSummary(true);
     setDeepSession(final);
     AsyncStorage.removeItem(DEEP_SESSION_KEY);
-    setShowSummary(true);
   }, [setDeepSession]);
 
   const vsJournalParam = dsVs > 0 ? `&verseStart=${dsVs}` : "";
