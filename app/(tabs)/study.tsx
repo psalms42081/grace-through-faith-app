@@ -216,54 +216,48 @@ function NextLayerCTA({
   const isReflectiveLayer = activeTab === "voices" || activeTab === "application";
   const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
+  const isLastLayer = !hasNext;
+  const actionLabel = allDone
+    ? "Complete Study"
+    : !isCompleted
+    ? (hasNext ? `Continue to ${nextLabel}` : "Complete Study")
+    : (hasNext ? `Continue to ${nextLabel}` : "Complete Study");
+
+  const handlePress = () => {
+    if (allDone) {
+      onAllComplete();
+    } else if (!isCompleted) {
+      onMarkComplete();
+      if (hasNext) {
+        setTimeout(() => onNextLayer(), 200);
+      } else {
+        setTimeout(() => onAllComplete(), 200);
+      }
+    } else if (hasNext) {
+      onNextLayer();
+    } else {
+      onAllComplete();
+    }
+  };
+
   if (!canComplete) return null;
 
   return (
     <View style={ctaStyles.container}>
-      {allDone ? (
-        <Pressable
-          onPress={onAllComplete}
-          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
-          testID="view-study-complete"
-        >
-          <Ionicons name="ribbon-outline" size={18} color="#fff" />
-          <Text style={ctaStyles.btnText}>View Study Summary</Text>
-        </Pressable>
-      ) : !isCompleted ? (
-        <>
-          {isReflectiveLayer && !hasEntries && (
-            <Text style={[ctaStyles.gentleNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Depth increases when you write a response.
-            </Text>
-          )}
-          <Pressable
-            onPress={onMarkComplete}
-            style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
-            testID="mark-layer-complete"
-          >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-            <Text style={ctaStyles.btnText}>Mark Layer Complete</Text>
-          </Pressable>
-        </>
-      ) : hasNext ? (
-        <Pressable
-          onPress={onNextLayer}
-          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
-          testID="next-layer"
-        >
-          <Text style={ctaStyles.btnText}>Next Layer: {nextLabel}</Text>
-          <Ionicons name="arrow-forward" size={18} color="#fff" />
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={onAllComplete}
-          style={[ctaStyles.btn, { backgroundColor: theme.accent }]}
-          testID="view-study-complete"
-        >
-          <Ionicons name="ribbon-outline" size={18} color="#fff" />
-          <Text style={ctaStyles.btnText}>View Study Summary</Text>
-        </Pressable>
+      {!isCompleted && isReflectiveLayer && !hasEntries && (
+        <Text style={[ctaStyles.gentleNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Your study deepens when you write a response.
+        </Text>
       )}
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [ctaStyles.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.88 : 1 }]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        testID={allDone || isLastLayer ? "view-study-complete" : isCompleted ? "next-layer" : "mark-layer-complete"}
+      >
+        <Text style={ctaStyles.btnText}>{actionLabel}</Text>
+        <Ionicons name={allDone || isLastLayer ? "checkmark-done" : "arrow-forward"} size={18} color="#fff" />
+      </Pressable>
     </View>
   );
 }
@@ -299,7 +293,7 @@ function StudyCompletionScreen({
   hasNextChapter: boolean;
   theme: typeof Colors.light;
 }) {
-  const [summaryExpanded, setSummaryExpanded] = useState(true);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
@@ -423,7 +417,7 @@ function StudyCompletionScreen({
         >
           <Ionicons name="document-text-outline" size={16} color={theme.accent} />
           <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: "Inter_600SemiBold" }}>
-            Study Summary
+            Full Written Summary
           </Text>
           <Ionicons name={summaryExpanded ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
         </Pressable>
@@ -1150,26 +1144,22 @@ function DeepSessionAdvanceButton({
   isCompleted: boolean;
   theme: typeof Colors.light;
 }) {
+  const handlePress = () => {
+    if (!isCompleted) onMarkComplete();
+    if (isLastLayer) onFinish();
+    else onAdvance();
+  };
+
   return (
     <View style={dsStyles.advanceContainer}>
-      {!isCompleted && (
-        <Pressable
-          onPress={onMarkComplete}
-          style={({ pressed }) => [dsStyles.advanceSecondary, { borderColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
-        >
-          <Ionicons name="checkmark-circle-outline" size={16} color={theme.accent} />
-          <Text style={[dsStyles.advanceSecondaryText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-            Mark Complete
-          </Text>
-        </Pressable>
-      )}
       <Pressable
-        onPress={isLastLayer ? onFinish : onAdvance}
-        style={({ pressed }) => [dsStyles.advanceBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+        onPress={handlePress}
+        style={({ pressed }) => [dsStyles.advanceBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.88 : 1 }]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         testID="deep-study-advance"
       >
         <Text style={[dsStyles.advanceBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-          {isLastLayer ? "Finish Session" : `Continue to ${LAYER_LABELS[LAYER_ORDER[layerIndex + 1]]}`}
+          {isLastLayer ? "Complete Study" : `Continue to ${LAYER_LABELS[LAYER_ORDER[layerIndex + 1]]}`}
         </Text>
         <Ionicons name={isLastLayer ? "checkmark-done" : "arrow-forward"} size={18} color="#fff" />
       </Pressable>
@@ -1297,7 +1287,7 @@ function DeepSessionSummary({
 }) {
   const elapsed = Math.round((Date.now() - startedAt) / 60000);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [summaryExpanded, setSummaryExpanded] = useState(true);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const observeFilled = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
@@ -1437,7 +1427,7 @@ function DeepSessionSummary({
         >
           <Ionicons name="document-text-outline" size={16} color={theme.accent} />
           <Text style={[dsStyles.summaryCardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", flex: 1, marginBottom: 0 }]}>
-            Study Summary
+            Full Written Summary
           </Text>
           <Ionicons name={summaryExpanded ? "chevron-up" : "chevron-down"} size={16} color={theme.textMuted} />
         </Pressable>
@@ -3966,48 +3956,31 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
   );
 }
 
-function RespondContent({ template, theme }: { template: AppTemplate; theme: typeof Colors.light }) {
+function RespondBackground({ template, theme }: { template: AppTemplate; theme: typeof Colors.light }) {
   const [bgExpanded, setBgExpanded] = useState(false);
 
   return (
     <>
-      {template.keyTheme && (
-        <View style={[styles.categoryBadge, { backgroundColor: theme.accent + "18", alignSelf: "flex-start" as const }]}>
-          <Text style={[styles.categoryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {template.keyTheme}
-          </Text>
-        </View>
-      )}
-
-      {template.nowApplication && (
-        <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 15, lineHeight: 24, color: theme.text, fontFamily: "Lora_400Regular" }}>
-            {template.nowApplication.split(/\n\n+/)[0]?.trim()}
-          </Text>
-        </View>
-      )}
-
-      {(template.thenContext || (template.nowApplication && template.nowApplication.split(/\n\n+/).length > 1)) && (
-        <Pressable
-          onPress={() => setBgExpanded(!bgExpanded)}
-          style={({ pressed }) => ({
-            flexDirection: "row" as const,
-            alignItems: "center" as const,
-            justifyContent: "center" as const,
-            gap: 6,
-            paddingVertical: 10,
-            borderRadius: 10,
-            backgroundColor: theme.backgroundSecondary,
-            marginBottom: 16,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Ionicons name={bgExpanded ? "chevron-up" : "book-outline"} size={14} color={theme.textMuted} />
-          <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>
-            {bgExpanded ? "Hide background" : "Then & Now background"}
-          </Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={() => setBgExpanded(!bgExpanded)}
+        style={({ pressed }) => ({
+          flexDirection: "row" as const,
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+          gap: 6,
+          paddingVertical: 10,
+          borderRadius: 10,
+          backgroundColor: theme.backgroundSecondary,
+          marginTop: 6,
+          marginBottom: 12,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Ionicons name={bgExpanded ? "chevron-up" : "book-outline"} size={14} color={theme.textMuted} />
+        <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>
+          {bgExpanded ? "Hide background" : "Then & Now background"}
+        </Text>
+      </Pressable>
 
       {bgExpanded && (
         <>
@@ -4034,14 +4007,6 @@ function RespondContent({ template, theme }: { template: AppTemplate; theme: typ
             </View>
           )}
         </>
-      )}
-
-      {template.prayerPrompt && (
-        <View style={{ backgroundColor: theme.primary + "08", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: theme.primary + "40" }}>
-          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Lora_400Regular", fontStyle: "italic" as const, lineHeight: 20 }}>
-            {template.prayerPrompt}
-          </Text>
-        </View>
       )}
     </>
   );
@@ -4211,8 +4176,20 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
             </View>
           )}
 
-          {template && (
-            <RespondContent template={template} theme={theme} />
+          {template?.nowApplication && (
+            <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, padding: 14, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, lineHeight: 22, color: theme.text, fontFamily: "Lora_400Regular" }}>
+                {template.nowApplication.split(/\n\n+/)[0]?.trim()}
+              </Text>
+            </View>
+          )}
+
+          {template?.prayerPrompt && (
+            <View style={{ backgroundColor: theme.primary + "08", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: theme.primary + "40" }}>
+              <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Lora_400Regular", fontStyle: "italic" as const, lineHeight: 20 }}>
+                {template.prayerPrompt}
+              </Text>
+            </View>
           )}
 
           {isError && (
@@ -4297,6 +4274,10 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
               userId={userId}
             />
           ))}
+
+          {template && (template.thenContext || (template.nowApplication && template.nowApplication.split(/\n\n+/).length > 1)) && (
+            <RespondBackground template={template} theme={theme} />
+          )}
         </>
       )}
     </View>
@@ -4755,16 +4736,17 @@ const lpStyles = StyleSheet.create({
 const ctaStyles = StyleSheet.create({
   container: {
     paddingHorizontal: 4,
-    paddingTop: 22,
-    paddingBottom: 10,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   btn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    paddingVertical: 15,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 14,
+    minHeight: 52,
   },
   btnText: {
     color: "#fff",
@@ -4795,39 +4777,39 @@ const ctaStyles = StyleSheet.create({
 
 const jpStyles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 10,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
   iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
   },
   check: {
     marginLeft: 4,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    padding: 12,
     fontSize: 14,
     lineHeight: 21,
-    minHeight: 80,
-    maxHeight: 160,
+    minHeight: 64,
+    maxHeight: 150,
   },
   actions: {
     flexDirection: "row",
@@ -4977,8 +4959,9 @@ const dsStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 14,
+    minHeight: 52,
   },
   advanceBtnText: {
     color: "#fff",
