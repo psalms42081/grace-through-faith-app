@@ -44,6 +44,7 @@ import { useResumeJourney } from "@/hooks/useResumeJourney";
 
 import DevotionalCard from "@/components/home/DevotionalCard";
 import SabbathBanner from "@/components/home/SabbathBanner";
+import SabbathOverlay from "@/components/home/SabbathOverlay";
 import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
@@ -1162,6 +1163,12 @@ function AdultHomeScreen() {
 
   return (
     <>
+    {isSabbathMode && (
+      <SabbathOverlay
+        isSabbath={sabbath.isSabbath}
+        isClosingPhase={sabbath.closingReflectionActive}
+      />
+    )}
     <ScrollView
       style={[s.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
