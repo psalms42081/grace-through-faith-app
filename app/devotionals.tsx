@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import DevotionalOnboarding from "@/components/devotionals/DevotionalOnboarding";
+
+const ONBOARDING_KEY = "@grace-through-faith/devotionals-onboarding-complete";
 
 interface Plan {
   id: string;
@@ -24,6 +28,7 @@ interface Plan {
   description: string;
   totalDays: number;
   theme: string | null;
+  category: string | null;
   targetGoals: string[] | null;
   difficultyLevel: string | null;
   estimatedMinutesPerDay: number | null;
@@ -51,6 +56,7 @@ export default function DevotionalsScreen() {
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [enrolling, setEnrolling] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   const { data: plans, isLoading } = useQuery<Plan[]>({
     queryKey: ["/api/devotionals/plans?traditionKey=all"],
@@ -61,7 +67,33 @@ export default function DevotionalsScreen() {
     enabled: !!selectedPlan,
   });
 
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then(v => setShowOnboarding(v !== "true"))
+      .catch(() => setShowOnboarding(true));
+  }, []);
+
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const handleOnboardingComplete = async (planId: string) => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {});
+    try {
+      await apiRequest("POST", "/api/devotionals/enroll", {
+        userId,
+        planId,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
+    } catch {}
+    setTimeout(() => {
+      setShowOnboarding(false);
+      router.push(`/devotional-day?planId=${planId}`);
+    }, 200);
+  };
+
+  const handleOnboardingSkip = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, "true").catch(() => {});
+    setShowOnboarding(false);
+  };
 
   const handleEnroll = async (planId: string) => {
     setEnrolling(true);
@@ -211,6 +243,26 @@ export default function DevotionalsScreen() {
               </>
             )}
           </Pressable>
+        </ScrollView>
+      </>
+    );
+  }
+
+  if (showOnboarding && plans && plans.length > 0) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Get Started" }} />
+        <ScrollView
+          style={[styles.container, { backgroundColor: theme.background }]}
+          contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <DevotionalOnboarding
+            plans={plans}
+            theme={theme}
+            onComplete={handleOnboardingComplete}
+            onSkip={handleOnboardingSkip}
+          />
         </ScrollView>
       </>
     );

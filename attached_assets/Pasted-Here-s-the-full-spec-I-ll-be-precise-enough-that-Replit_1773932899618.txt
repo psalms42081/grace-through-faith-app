@@ -1,0 +1,41 @@
+Here's the full spec. I'll be precise enough that Replit can build it without ambiguity.
+
+What we're building
+A first-visit onboarding flow on the devotionals screen that gets a new user enrolled in a reading plan in under 30 seconds. It appears once, feels like guidance not interruption, and ends with the user having made a concrete commitment.
+
+Trigger logic
+AsyncStorage key: devotionals_onboarding_complete. Check on mount of the devotionals screen. If the key doesn't exist, show the onboarding flow instead of the normal plan list. On completion (plan selected) or explicit skip, write "true" to the key and never show again. Works for guests and authenticated users alike — no API call needed to decide whether to show it.
+
+The flow — 3 steps, one screen
+Don't use a modal. Render the onboarding inline where the plan list would normally appear. This feels like the screen is helping you, not interrupting you.
+Step 1 — Category picker
+Heading: "What would you like to focus on?"
+Subheading: "We'll suggest a plan to get you started."
+Three cards, full width, stacked vertically, each with a short label and one-line description:
+
+"Foundations" — Core biblical truths for new and returning believers
+"Thematic study" — Go deep on one topic: faith, prayer, prophecy, hope
+"Prophetic" — Daniel, Revelation, and the Adventist understanding of history
+
+Each card has a subtle icon (no emoji — use Ionicons), tappable, and highlights on selection. Tapping one immediately advances to step 2 — no "next" button needed.
+Step 2 — Plan selection
+Show exactly 2-3 plans filtered by the chosen category. Each plan card shows: title, number of days, and one sentence description. A "Start this plan" button on each card. Tapping enrolls the user and advances to step 3.
+Keep this simple — don't show all plans, don't add filtering. The goal is to reduce choice, not increase it.
+Step 3 — Confirmation
+Not a separate screen — just a brief in-place animation. The plan card the user tapped expands slightly, shows a checkmark, displays "You're enrolled — Day 1 starts today", and after 1.2 seconds the onboarding flow dissolves and the normal devotionals screen appears with their new plan at the top.
+A small "Skip for now" text link sits below the cards on steps 1 and 2 — right-aligned, muted color, small font. Tapping it dismisses the onboarding and shows the full plan list. No guilt, no confirmation dialog.
+
+Component structure
+components/devotionals/
+  DevotionalOnboarding.tsx     — the full 3-step flow
+  OnboardingCategoryCard.tsx   — reusable category card
+  OnboardingPlanCard.tsx       — reusable plan card with enroll button
+DevotionalOnboarding manages step state locally (useState for current step and selected category). It receives onComplete(planId) and onSkip() as props. The parent devotionals screen passes those handlers and conditionally renders either the onboarding or the normal plan list based on the AsyncStorage flag.
+
+Data requirements
+The plan list for step 2 needs category tags. Your existing plans in the DB need a category field with values foundations, thematic, prophetic. Before building the UI, seed at least 2 plans per category with the correct tag — otherwise the picker has nothing to show.
+Check what's already in your devotional_plans table and either add a category column if it doesn't exist or use the existing theme or traditionKey field if one of those already maps cleanly. Don't build the UI until the data is confirmed.
+
+What to tell Replit
+Start with the data layer — confirm the plans table has enough tagged plans before touching any UI. Then build DevotionalOnboarding.tsx with hardcoded step state first (no AsyncStorage, no API calls) to get the layout right. Wire the real data and persistence last. This order means you can see and adjust the UX before anything is connected.
+The skip link is not optional — include it from the start. An onboarding flow with no escape hatch will get abandoned by users who already know what they want.
