@@ -112,6 +112,7 @@ function RootLayoutNav() {
       <Stack.Screen name="resource-detail" options={{ headerShown: false }} />
       <Stack.Screen name="feedback" options={{ headerShown: false }} />
       <Stack.Screen name="sermon-player" options={{ headerShown: false }} />
+      <Stack.Screen name="study-category" options={{ headerShown: false }} />
     </Stack>
   );
 }

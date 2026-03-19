@@ -74,7 +74,7 @@ export default function LanguageSettings({
                   isActive && { backgroundColor: theme.accent + "10" },
                 ]}
               >
-                <Text style={[styles.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                <Text numberOfLines={1} style={[styles.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                   {lang.label}
                 </Text>
                 {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
