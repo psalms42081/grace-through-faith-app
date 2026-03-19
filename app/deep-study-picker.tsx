@@ -71,7 +71,7 @@ export default function DeepStudyPickerScreen() {
               {selectedBook.name}
             </Text>
             <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-              Select a chapter for Deep Study
+              Select a chapter for Deep Dive
             </Text>
           </View>
         </View>
@@ -114,15 +114,15 @@ export default function DeepStudyPickerScreen() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Deep Study
+            Deep Dive
           </Text>
           <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-            Choose a passage for 4-Layer study
+            Choose a passage to explore
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: theme.accent + "18" }]}>
           <Ionicons name="layers" size={14} color={theme.accent} />
-          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>4-Layer</Text>
+          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Deep Dive</Text>
         </View>
       </View>
 

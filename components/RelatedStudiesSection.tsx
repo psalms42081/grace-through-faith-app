@@ -97,7 +97,7 @@ export default function RelatedStudiesSection({
       icon: "chatbubbles-outline",
       iconColor: "#8B5CF6",
       title: "Start Guided Study",
-      subtitle: parsed ? `Guided study on ${keyPassages[0]}` : "No passages available",
+      subtitle: parsed ? `Guided session on ${keyPassages[0]}` : "No passages available",
       disabled: !parsed,
       onPress: () => {
         if (parsed) {
@@ -119,8 +119,8 @@ export default function RelatedStudiesSection({
       id: "deep",
       icon: "layers-outline",
       iconColor: "#C9933A",
-      title: "Start Deep Study",
-      subtitle: parsed ? `4-Layer study on ${keyPassages[0]}` : "No passages available",
+      title: "Start Deep Dive",
+      subtitle: parsed ? `Deep Dive on ${keyPassages[0]}` : "No passages available",
       disabled: !parsed,
       onPress: () => {
         if (parsed) {

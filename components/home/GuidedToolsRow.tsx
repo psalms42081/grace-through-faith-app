@@ -17,7 +17,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
         onPress={() => router.push({ pathname: "/(tabs)/study", params: { showIntro: "true" } })}
         style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
         accessibilityRole="button"
-        accessibilityLabel="Open 4-Layer Study"
+        accessibilityLabel="Open Deep Dive"
       >
         <LinearGradient
           colors={isDark ? ["#14172E", "#0D1028"] : ["#1A1F3C", "#141833"]}
@@ -28,7 +28,7 @@ export default function GuidedToolsRow({ theme, isDark }: GuidedToolsRowProps) {
           <View style={styles.guidedIconWrap}>
             <Ionicons name="layers" size={20} color={theme.accent} />
           </View>
-          <Text style={[styles.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>4-Layer Study</Text>
+          <Text style={[styles.guidedTitle, { fontFamily: "Inter_600SemiBold" }]}>Deep Dive</Text>
           <Text style={[styles.guidedSub, { fontFamily: "Inter_400Regular" }]}>Guided formation through Scripture</Text>
         </LinearGradient>
       </Pressable>

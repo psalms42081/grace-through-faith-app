@@ -30,7 +30,7 @@ const CATEGORIES = [
   {
     id: "study-scripture",
     title: "Study Scripture",
-    subtitle: "Quick Read, Guided Study, Deep Study",
+    subtitle: "Quick Read, Guided Study, Deep Dive",
     icon: "book" as const,
   },
   {

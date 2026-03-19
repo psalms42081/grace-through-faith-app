@@ -22,8 +22,8 @@ const SECTIONS = [
   {
     icon: "layers" as const,
     color: "#5B86E5",
-    title: "4-Layer Study Model",
-    body: "Each passage can be explored through four lenses: Observation, Interpretation, Application, and Reflection\u2014a proven method for thorough, personal Bible study.",
+    title: "Deep Dive Study",
+    body: "Each passage can be explored through four layers: Observe, Context, Insight, and Respond\u2014a guided method for thorough, personal Bible study.",
   },
   {
     icon: "school" as const,

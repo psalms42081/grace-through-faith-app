@@ -564,7 +564,7 @@ function DeepStudyEntryButton({
         <Ionicons name={isPaused ? "play-circle-outline" : "compass-outline"} size={20} color="#fff" />
         <View style={dsStyles.entryBtnTextWrap}>
           <Text style={[dsStyles.entryBtnTitle, { fontFamily: "Inter_600SemiBold" }]}>
-            {isPaused ? "Resume Guided Mode" : "Start Guided Mode"}
+            {isPaused ? "Resume Deep Dive" : "Start Deep Dive"}
           </Text>
           <Text style={[dsStyles.entryBtnSub, { fontFamily: "Inter_400Regular" }]}>
             {isPaused ? "Continue where you left off" : `Step-by-step walkthrough  ${timeEst}`}
@@ -585,6 +585,8 @@ interface ChapterSummaryData {
   doctrinalAnchor: string | null;
   narrativePlacement: string | null;
 }
+
+const DEEP_INTRO_SEEN_KEY = "@grace-through-faith/deep-intro-seen";
 
 const FOUR_LAYERS = [
   {
@@ -624,6 +626,20 @@ function FourLayerIntro({
   onPickPassage: () => void;
   onContinue: () => void;
 }) {
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(DEEP_INTRO_SEEN_KEY).then(v => {
+      if (v === "true" && hasPassage) {
+        onContinue();
+      } else {
+        setChecked(true);
+      }
+    }).catch(() => setChecked(true));
+  }, []);
+
+  if (!checked) return null;
+
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -653,7 +669,7 @@ function FourLayerIntro({
             marginBottom: 8,
           }}
         >
-          4-Layer Bible Study
+          Deep Dive
         </Text>
         <Text
           style={{
@@ -665,7 +681,6 @@ function FourLayerIntro({
             maxWidth: 320,
           }}
         >
-
           Study any passage through four progressive layers at your own pace. Explore freely, mark layers complete as you go, and return anytime.
         </Text>
       </View>
@@ -804,11 +819,6 @@ function DeepStudyIntro({
   theme: typeof Colors.light;
 }) {
   const canFetch = bookId !== null && chapter !== null;
-  const { data: summaryData, isLoading: summaryLoading } = useQuery<ChapterSummaryData | null>({
-    queryKey: [`/api/chapter-summary?bookId=${bookId}&chapter=${chapter}`],
-    enabled: canFetch,
-  });
-
   const { data: passageSections, isLoading: sectionsLoading } = useQuery<PassageSection[]>({
     queryKey: [`/api/passage-sections?bookId=${bookId}&chapter=${chapter}`],
     enabled: canFetch,
@@ -817,6 +827,11 @@ function DeepStudyIntro({
   const [studyFocus, setStudyFocus] = useState<StudyFocus>("passage");
   const [selectedSectionIdx, setSelectedSectionIdx] = useState(0);
   const [singleVerse, setSingleVerse] = useState(1);
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(DEEP_INTRO_SEEN_KEY).then(v => setHasSeenIntro(v === "true")).catch(() => setHasSeenIntro(false));
+  }, []);
 
   const sections = passageSections ?? [];
   const selectedSection = sections[selectedSectionIdx] ?? null;
@@ -830,6 +845,7 @@ function DeepStudyIntro({
   }, [studyFocus, singleVerse, selectedSection]);
 
   const handleBegin = useCallback(() => {
+    AsyncStorage.setItem(DEEP_INTRO_SEEN_KEY, "true").catch(() => {});
     if (studyFocus === "chapter") {
       onBegin("chapter", null, null);
     } else if (studyFocus === "single") {
@@ -847,12 +863,7 @@ function DeepStudyIntro({
     { id: "chapter", label: "Whole Chapter", icon: "layers-outline" },
   ];
 
-  const layers = [
-    { icon: "book-outline" as const, title: "Observe", desc: "Read the passage carefully and notice what stands out" },
-    { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
-    { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from theologians and historic voices" },
-    { icon: "heart-outline" as const, title: "Respond", desc: "Apply the passage through reflection and prayer" },
-  ];
+  if (hasSeenIntro === null) return null;
 
   return (
     <ScrollView
@@ -865,25 +876,44 @@ function DeepStudyIntro({
           <Ionicons name="compass" size={28} color={theme.accent} />
         </View>
         <Text style={[introStyles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Guided Mode
+          Deep Dive
         </Text>
         <Text style={[introStyles.reference, { color: theme.accent, fontFamily: "Lora_600SemiBold" }]}>
           {reference}
         </Text>
-        <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19, maxWidth: 300, marginTop: 6 }}>
-          Walk through the same 4 layers in order, with reflection prompts and journaling at each step.
-        </Text>
+        {!hasSeenIntro && (
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19, maxWidth: 300, marginTop: 6 }}>
+            Four layers of study, each building on the last, taking you from reading to response.
+          </Text>
+        )}
       </View>
+
+      {hasSeenIntro && (
+        <View style={{ flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginBottom: 16, justifyContent: "center" as const }}>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: theme.backgroundCard, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }}>
+            <Ionicons name="layers-outline" size={13} color={theme.textMuted} />
+            <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Observe</Text>
+            <Text style={{ fontSize: 10, color: theme.textMuted }}>{">"}</Text>
+            <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Context</Text>
+            <Text style={{ fontSize: 10, color: theme.textMuted }}>{">"}</Text>
+            <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Insight</Text>
+            <Text style={{ fontSize: 10, color: theme.textMuted }}>{">"}</Text>
+            <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>Respond</Text>
+          </View>
+        </View>
+      )}
 
       <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
         <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
           STUDY FOCUS
         </Text>
-        <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", marginBottom: 12, lineHeight: 18 }}>
-          Choose how much Scripture to study in this session.
-        </Text>
+        {!hasSeenIntro && (
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", marginBottom: 12, lineHeight: 18 }}>
+            Choose how much Scripture to study in this session.
+          </Text>
+        )}
 
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, marginTop: hasSeenIntro ? 8 : 0 }}>
           {focusOptions.map((opt) => (
             <Pressable
               key={opt.id}
@@ -984,88 +1014,33 @@ function DeepStudyIntro({
         )}
       </View>
 
-      {summaryLoading && canFetch && (
-        <ActivityIndicator size="small" color={theme.accent} style={{ marginBottom: 16 }} />
-      )}
-
-      {summaryData ? (
-        <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          {summaryData.thesisStatement ? (
-            <>
-              <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                THESIS
-              </Text>
-              <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                {summaryData.thesisStatement}
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                BIG IDEA
-              </Text>
-              <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                {summaryData.bigIdea}
-              </Text>
-            </>
-          )}
-
-          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold", marginTop: 14 }]}>
-            NARRATIVE PLACEMENT
+      {!hasSeenIntro && (
+        <>
+          <Text style={[introStyles.layersHeading, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            The Four Layers
           </Text>
-          <Text style={[introStyles.focusLine, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            {summaryData.narrativePlacement || summaryData.narrativeRole}
-          </Text>
-
-          {summaryData.focusThemes.length > 0 && (
-            <View style={introStyles.themesRow}>
-              {summaryData.focusThemes.map((t, i) => (
-                <View key={i} style={[introStyles.themeTag, { backgroundColor: theme.accent + "14" }]}>
-                  <Text style={[introStyles.themeTagText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                    {t}
-                  </Text>
-                </View>
-              ))}
+          {[
+            { icon: "book-outline" as const, title: "Observe", desc: "Read the passage carefully and notice what stands out" },
+            { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
+            { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from theologians and historic voices" },
+            { icon: "heart-outline" as const, title: "Respond", desc: "Apply the passage through reflection and prayer" },
+          ].map((layer, i) => (
+            <View key={i} style={[introStyles.layerRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+              <View style={[introStyles.layerIcon, { backgroundColor: theme.accent + "12" }]}>
+                <Ionicons name={layer.icon} size={18} color={theme.accent} />
+              </View>
+              <View style={introStyles.layerInfo}>
+                <Text style={[introStyles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  {i + 1}. {layer.title}
+                </Text>
+                <Text style={[introStyles.layerDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                  {layer.desc}
+                </Text>
+              </View>
             </View>
-          )}
-
-          <Text style={[introStyles.pastoralText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-            {summaryData.pastoralFrame}
-          </Text>
-        </View>
-      ) : !summaryLoading ? (
-        <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            YOUR SESSION
-          </Text>
-          <Text style={[introStyles.bigIdeaText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-            You will move through four layers of study, each building on the last, to take you from reading to transformation.
-          </Text>
-          <Text style={[introStyles.focusLine, { color: theme.textMuted, fontFamily: "Inter_400Regular", fontStyle: "italic" }]}>
-            Orientation summary coming soon.
-          </Text>
-        </View>
-      ) : null}
-
-      <Text style={[introStyles.layersHeading, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-        The Four Layers
-      </Text>
-
-      {layers.map((layer, i) => (
-        <View key={i} style={[introStyles.layerRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={[introStyles.layerIcon, { backgroundColor: theme.accent + "12" }]}>
-            <Ionicons name={layer.icon} size={18} color={theme.accent} />
-          </View>
-          <View style={introStyles.layerInfo}>
-            <Text style={[introStyles.layerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              {i + 1}. {layer.title}
-            </Text>
-            <Text style={[introStyles.layerDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-              {layer.desc}
-            </Text>
-          </View>
-        </View>
-      ))}
+          ))}
+        </>
+      )}
 
       <Pressable
         onPress={handleBegin}
@@ -1074,13 +1049,13 @@ function DeepStudyIntro({
       >
         <Ionicons name="book-outline" size={18} color="#fff" />
         <Text style={[introStyles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-          Begin with Observe ({focusLabel})
+          Begin Study ({focusLabel})
         </Text>
       </Pressable>
 
       <Pressable onPress={onCancel} hitSlop={8} style={introStyles.cancelBtn}>
         <Text style={[introStyles.cancelText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-          Cancel
+          Study Without Guide
         </Text>
       </Pressable>
     </ScrollView>
@@ -1250,7 +1225,7 @@ function DeepSessionBar({
         <View style={[dsStyles.sessionBadge, { backgroundColor: theme.accent + "18" }]}>
           <Ionicons name="compass" size={12} color={theme.accent} />
           <Text style={[dsStyles.sessionBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            GUIDED MODE
+            DEEP DIVE
           </Text>
         </View>
         <View style={dsStyles.sessionDots}>
@@ -1492,10 +1467,13 @@ function DeepSessionSummary({
       <View style={dsStyles.summaryHeader}>
         <Ionicons name="compass" size={28} color={theme.accent} />
         <Text style={[dsStyles.summaryTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Guided Mode Complete
+          Deep Dive Complete
         </Text>
         <Text style={[dsStyles.summarySubtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Guided session finished"}
+          {elapsed > 0 ? `${elapsed} minute${elapsed !== 1 ? "s" : ""} of focused study` : "Session complete"}
+        </Text>
+        <Text style={{ fontSize: 14, color: theme.text, fontFamily: "Lora_400Regular", fontStyle: "italic" as const, textAlign: "center" as const, lineHeight: 21, marginTop: 6, maxWidth: 280 }}>
+          You moved from reading to response. Scripture shaped both your understanding and your next step.
         </Text>
         {reference ? (
           <Text style={[dsStyles.summaryRef, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
@@ -2475,7 +2453,7 @@ export default function StudyScreen() {
                 {sharedBook?.name} {chapter}
               </Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                4-Layer Study
+                Deep Dive
               </Text>
             </View>
             <Pressable
@@ -2501,7 +2479,7 @@ export default function StudyScreen() {
               </Text>
             </Pressable>
             <Text style={[styles.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              4-Layer Study
+              Deep Dive
             </Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               Choose a passage to begin
@@ -2517,13 +2495,13 @@ export default function StudyScreen() {
             <Pressable
               onPress={() => { setShowDepthPicker(false); startDeepSession(); }}
               testID="start-guided-session"
-              accessibilityLabel={pausedLayerIndex !== null ? "Resume Guided Mode" : "Start Guided Mode"}
+              accessibilityLabel={pausedLayerIndex !== null ? "Resume Deep Dive" : "Start Deep Dive"}
               style={{ flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 10, paddingHorizontal: 16, marginHorizontal: 16, marginTop: 6, marginBottom: 4, borderRadius: 10, borderWidth: 1, borderColor: theme.accent + "40", gap: 10 }}
             >
               <Ionicons name="compass-outline" size={18} color={theme.accent} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
-                  {pausedLayerIndex !== null ? "Resume Guided Mode" : "Start Guided Mode"}
+                  {pausedLayerIndex !== null ? "Resume Deep Dive" : "Start Deep Dive"}
                 </Text>
                 <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
                   {pausedLayerIndex !== null ? "Continue your structured session" : "Step-by-step walkthrough with prompts"}
@@ -2551,7 +2529,7 @@ export default function StudyScreen() {
         >
           <Ionicons name="play-circle" size={18} color={theme.accent} />
           <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
-            Resume Guided Mode
+            Resume Deep Dive
           </Text>
           <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
             Layer {(pausedLayerIndex ?? 0) + 1} of 4
@@ -4045,6 +4023,27 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
             </ScrollView>
           )}
 
+          {INSIGHT_SECTIONS.map((section) => (
+            <JournalPromptCard
+              key={section.key}
+              section={section}
+              journalMap={journalMap}
+              onSave={handleJournalSave}
+              isSaving={isJournalSaving}
+              theme={theme}
+            />
+          ))}
+
+          {(hasCommentary || generateCommentaryMutation.isPending || isLoading) && (
+            <View style={jpStyles.sectionDivider}>
+              <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+              <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                Historic Voices
+              </Text>
+              <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
+            </View>
+          )}
+
           {hasCommentary && (() => {
             const filtered = commentaryData!.filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator);
             const featured = filtered.slice(0, 2);
@@ -4071,7 +4070,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                   >
                     <Ionicons name="add-circle-outline" size={16} color={theme.accent} />
                     <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
-                      {remaining.length} more commentary {remaining.length === 1 ? "voice" : "voices"}
+                      {remaining.length} more {remaining.length === 1 ? "voice" : "voices"}
                     </Text>
                   </Pressable>
                 )}
@@ -4131,25 +4130,6 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
               )}
             </View>
           )}
-
-          <View style={jpStyles.sectionDivider}>
-            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
-            <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-              Your Insights
-            </Text>
-            <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
-          </View>
-
-          {INSIGHT_SECTIONS.map((section) => (
-            <JournalPromptCard
-              key={section.key}
-              section={section}
-              journalMap={journalMap}
-              onSave={handleJournalSave}
-              isSaving={isJournalSaving}
-              theme={theme}
-            />
-          ))}
         </>
       )}
     </View>
@@ -4369,10 +4349,25 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
             </Text>
           </View>
 
-          {isLoading && (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Preparing application guide...</Text>
+          {(isLoading || generateAppMutation.isPending) && !template && (
+            <View style={{ gap: 12 }}>
+              <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, padding: 14 }}>
+                <View style={{ height: 10, width: "60%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 10 }} />
+                <View style={{ height: 10, width: "90%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 8 }} />
+                <View style={{ height: 10, width: "75%", backgroundColor: theme.border, borderRadius: 5 }} />
+              </View>
+              <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: theme.primary + "20" }}>
+                <View style={{ height: 10, width: "80%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 8 }} />
+                <View style={{ height: 10, width: "55%", backgroundColor: theme.border, borderRadius: 5 }} />
+              </View>
+              <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, padding: 14 }}>
+                <View style={{ height: 10, width: "45%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 10 }} />
+                <View style={{ height: 10, width: "85%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 8 }} />
+                <View style={{ height: 10, width: "70%", backgroundColor: theme.border, borderRadius: 5 }} />
+              </View>
+              <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" as const, marginTop: 4 }}>
+                Preparing reflections...
+              </Text>
             </View>
           )}
 
@@ -4400,18 +4395,6 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
               </Text>
               <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 Could not fetch application data for this chapter. Please check your connection and try again.
-              </Text>
-            </View>
-          )}
-
-          {generateAppMutation.isPending && (
-            <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-              <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                Preparing Reflections
-              </Text>
-              <Text style={[styles.emptyBody, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Crafting personal application for {selectedBook.name} {selectedChapter}
               </Text>
             </View>
           )}

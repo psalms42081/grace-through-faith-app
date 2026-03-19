@@ -88,7 +88,7 @@ export default function RelatedContent({
           Study {bookName} {chapter}
         </Text>
         <Text style={[relatedStyles.headerSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Dive deeper with the 4-Layer Study Model
+          Dive deeper with a guided Deep Dive
         </Text>
       </View>
 

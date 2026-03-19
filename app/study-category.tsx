@@ -168,9 +168,9 @@ export default function StudyCategoryScreen() {
             />
             <TopicImageCard
               id="deep-study"
-              title="Deep Study"
+              title="Deep Dive"
               subtitle={deepStudyState.sub}
-              badge="4-Layer"
+              badge="Guided"
               onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
             />
           </>
