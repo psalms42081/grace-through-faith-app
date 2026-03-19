@@ -21,7 +21,7 @@ import { Router } from "express";
     userPlanProgress,
   } from "../../shared/schema";
   import { eq, and, ilike, sql, desc } from "drizzle-orm";
-  import { generateCode, requireAuth, optionalAuth, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
+  import { generateCode, requireAuth, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
 
   const router = Router();
@@ -88,7 +88,7 @@ router.post("/api/family/join", requireAuth, async (req, res) => {
 
 router.get("/api/family/info", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
     if (!user?.familyId) {
       return res.json({ family: null });
@@ -112,7 +112,7 @@ router.get("/api/family/info", async (req, res) => {
 
 router.get("/api/family/members", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
     if (!user?.familyId) return res.json({ members: [] });
 
@@ -206,7 +206,7 @@ router.post("/api/groups/join", requireAuth, async (req, res) => {
 
 router.get("/api/groups", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const memberships = await db.select({ groupId: prayerGroupMembers.groupId })
       .from(prayerGroupMembers).where(eq(prayerGroupMembers.userId, userId));
 
@@ -676,7 +676,7 @@ router.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
 
 router.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { id } = req.params;
     const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
     if (!group) return res.status(404).json({ error: "Group not found" });
@@ -957,7 +957,7 @@ router.post("/api/streams/:id/end", requireAuth, async (req, res) => {
 
 router.get("/api/sabbath/reflections", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const date = String(req.query.date || "");
     if (!date) return res.status(400).json({ error: "date is required" });
 

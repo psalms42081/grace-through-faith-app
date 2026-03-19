@@ -4,15 +4,27 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 let _authTokenGetter: (() => string | null) | null = null;
+let _deviceIdGetter: (() => string | null) | null = null;
 
 export function setAuthTokenGetter(getter: () => string | null) {
   _authTokenGetter = getter;
 }
 
+export function setDeviceIdGetter(getter: () => string | null) {
+  _deviceIdGetter = getter;
+}
+
 function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
   const token = _authTokenGetter?.();
-  if (token) return { Authorization: `Bearer ${token}` };
-  return {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const deviceId = _deviceIdGetter?.();
+  if (deviceId) {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
 }
 
 export function getApiUrl(): string {

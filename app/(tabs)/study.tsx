@@ -592,25 +592,25 @@ const FOUR_LAYERS = [
   {
     icon: "book-outline" as const,
     title: "Observe",
-    desc: "Read the passage carefully. Notice repeated words, themes, and what stands out.",
+    desc: "Read the passage closely. What words stand out? What patterns emerge? Start with what the text actually says.",
     color: "#C9933A",
   },
   {
     icon: "time-outline" as const,
     title: "Context",
-    desc: "Understand the historical and cultural setting of the passage.",
+    desc: "Who wrote this, and why? What was happening historically? Context transforms how you understand each verse.",
     color: "#3B6CB5",
   },
   {
     icon: "chatbubble-ellipses-outline" as const,
     title: "Insight",
-    desc: "Hear from theologians and historic voices across church history.",
+    desc: "What does this passage reveal about God? About us? Draw on commentary, word studies, and the broader story of Scripture.",
     color: "#7C3AED",
   },
   {
     icon: "heart-outline" as const,
     title: "Respond",
-    desc: "Apply Scripture to your life through guided reflection and prayer.",
+    desc: "Let what you have studied shape how you live. Write your response, your prayer, and one thing you will do this week.",
     color: "#E8456B",
   },
 ];
@@ -681,7 +681,7 @@ function FourLayerIntro({
             maxWidth: 320,
           }}
         >
-          Study any passage through four progressive layers at your own pace. Explore freely, mark layers complete as you go, and return anytime.
+          Go beyond surface reading. Four layers guide you from observation to personal response, building real understanding of any passage.
         </Text>
       </View>
 

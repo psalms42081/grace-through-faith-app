@@ -14,13 +14,13 @@ import {
   readingHistory,
 } from "../../shared/schema";
 import { eq, and, sql, desc, asc, countDistinct } from "drizzle-orm";
-import { getAuthUserId } from "../middleware/auth";
+import { extractUserId } from "../middleware/auth";
 
 const router = Router();
 
 router.get("/api/layer-completions", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
     const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
     const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
@@ -53,7 +53,7 @@ router.get("/api/layer-completions", async (req, res) => {
 
 router.post("/api/layer-completions", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { bookId, chapter, layer, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -84,7 +84,7 @@ router.post("/api/layer-completions", async (req, res) => {
 
 router.get("/api/layer-completions/book-summary", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
     if (!bookId) return res.status(400).json({ error: "bookId required" });
 
@@ -117,7 +117,7 @@ router.get("/api/layer-completions/book-summary", async (req, res) => {
 
 router.get("/api/study-journal", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     const layer = req.query.layer ? String(req.query.layer) : undefined;
@@ -155,7 +155,7 @@ router.get("/api/study-journal", async (req, res) => {
 
 router.post("/api/study-journal", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { bookId, chapter, layer, sectionKey, content, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer || !sectionKey) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -215,7 +215,7 @@ router.post("/api/study-journal", async (req, res) => {
 
 router.get("/api/study-journal/revisit", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const limit = Math.min(Number(req.query.limit) || 10, 20);
 
     const entries = await db
@@ -451,7 +451,7 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
 
 router.get("/api/analytics/growth", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
 
     const sessions = await db
       .select({

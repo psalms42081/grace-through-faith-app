@@ -4,7 +4,7 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
 import { studyGuideSessions } from "../../shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
-import { getAuthUserId } from "../middleware/auth";
+import { extractUserId } from "../middleware/auth";
 import {
   generateStudyGuideStart,
   generateStudyGuideResponse,
@@ -17,7 +17,7 @@ const router = Router();
 
 router.get("/api/study-guide/active", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const verseReference = String(req.query.verseReference || "");
     if (!verseReference) {
       return res.status(400).json({ error: "verseReference is required" });
@@ -59,7 +59,7 @@ router.get("/api/study-guide/active", async (req, res) => {
 router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
     const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "scholarly" } = req.body;
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     if (!verseReference || !verseText) {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
@@ -133,7 +133,7 @@ const STAGE_ORDER = ["observe", "interpret", "apply"];
 router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) => {
   try {
     const { sessionId, userResponse } = req.body;
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     if (!sessionId || !userResponse) {
       return res.status(400).json({ error: "sessionId and userResponse are required" });
     }
@@ -283,7 +283,7 @@ router.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =>
 
 router.get("/api/study-guide/sessions", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const sessions = await db.select().from(studyGuideSessions)
       .where(eq(studyGuideSessions.userId, userId))
       .orderBy(desc(studyGuideSessions.createdAt))

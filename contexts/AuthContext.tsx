@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest, setAuthTokenGetter, getApiUrl } from "@/lib/query-client";
+import { apiRequest, setAuthTokenGetter, setDeviceIdGetter, getApiUrl } from "@/lib/query-client";
 import { queryClient } from "@/lib/query-client";
 import { fetch } from "expo/fetch";
 
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [deviceId, setDeviceId] = useState<string>("guest");
   const tokenRef = useRef<string | null>(null);
+  const deviceIdRef = useRef<string>("guest");
 
   useEffect(() => {
     tokenRef.current = token;
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setAuthTokenGetter(() => tokenRef.current);
+    setDeviceIdGetter(() => deviceIdRef.current);
   }, []);
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem(DEVICE_UUID_KEY, storedDeviceId);
       }
       setDeviceId(storedDeviceId);
+      deviceIdRef.current = storedDeviceId;
 
       const savedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
       if (savedToken) {
@@ -116,6 +119,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const migrateGuestData = useCallback(async (authToken: string) => {
+    try {
+      const currentDeviceId = deviceIdRef.current;
+      if (!currentDeviceId || currentDeviceId === "guest") return;
+      const baseUrl = getApiUrl();
+      const url = new URL("/api/auth/migrate-guest-data", baseUrl);
+      await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${authToken}`,
+          "X-Device-Id": currentDeviceId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+    } catch {}
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       const res = await apiRequest("POST", "/api/auth/login", { email, password });
@@ -128,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setAuthTokenGetter(() => data.token);
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      await migrateGuestData(data.token);
       queryClient.clear();
       return { success: true };
     } catch (err: any) {
@@ -140,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: errorText || "Login failed" };
       }
     }
-  }, []);
+  }, [migrateGuestData]);
 
   const register = useCallback(async (email: string, password: string, displayName: string, profileType?: string) => {
     try {
@@ -154,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setAuthTokenGetter(() => data.token);
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      await migrateGuestData(data.token);
       queryClient.clear();
       return { success: true };
     } catch (err: any) {
@@ -166,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: errorText || "Registration failed" };
       }
     }
-  }, []);
+  }, [migrateGuestData]);
 
   const resetPassword = useCallback(async (email: string, _newPassword: string) => {
     try {

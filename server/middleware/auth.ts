@@ -27,9 +27,19 @@ export function getAuthUserId(req: Request): string | null {
   return null;
 }
 
+export function getDeviceId(req: Request): string | null {
+  const deviceHeader = req.headers["x-device-id"];
+  if (typeof deviceHeader === "string" && deviceHeader.startsWith("device-") && deviceHeader.length > 10) {
+    return deviceHeader;
+  }
+  return null;
+}
+
 export function extractUserId(req: Request): string {
   const authId = getAuthUserId(req);
   if (authId) return authId;
+  const deviceId = getDeviceId(req);
+  if (deviceId) return deviceId;
   return "guest";
 }
 
@@ -54,6 +64,8 @@ export function getEffectiveUserId(req: Request): string {
   if (req.authUserId) return req.authUserId;
   const authId = getAuthUserId(req);
   if (authId) return authId;
+  const deviceId = getDeviceId(req);
+  if (deviceId) return deviceId;
   return "guest";
 }
 

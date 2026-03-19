@@ -11,14 +11,14 @@ import {
 } from "../../shared/schema";
 import { eq, and, sql, desc, or } from "drizzle-orm";
 import * as crypto from "crypto";
-import { getAuthUserId } from "../middleware/auth";
+import { extractUserId } from "../middleware/auth";
 import { generateSemanticSearch } from "../services/ai-engine";
 
 const router = Router();
 
 router.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { query } = req.body;
     if (!query || typeof query !== "string" || query.trim().length < 3) {
       return res.status(400).json({ error: "A search query of at least 3 characters is required" });

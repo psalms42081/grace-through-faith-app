@@ -2,9 +2,31 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "../db";
-import { users } from "../../shared/schema";
-import { eq } from "drizzle-orm";
-import { JWT_SECRET, requireAuth, getAuthUserId } from "../middleware/auth";
+import {
+  users,
+  readingHistory,
+  readingStreaks,
+  layerCompletions,
+  studyJournalEntries,
+  studyGuideSessions,
+  userNotes,
+  userHighlights,
+  userBookmarks,
+  userActivityCounters,
+  prayerRequests,
+  sabbathSchoolUserProgress,
+  sabbathReflections,
+  progressTracks,
+  progressLessons,
+  userPlanEnrollments,
+  kidsPurchases,
+  kidsProgress,
+  kidsStreaks,
+  kidsDailyQuests,
+  kidsUserBadges,
+} from "../../shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId } from "../middleware/auth";
 import { validate, authRegisterSchema, authLoginSchema } from "../middleware/validate";
 import { authLimiter } from "../middleware/rate-limit";
 
@@ -116,6 +138,58 @@ router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Delete account error:", err);
     return res.status(500).json({ error: "Failed to delete account" });
+  }
+});
+
+router.post("/api/auth/migrate-guest-data", requireAuth, async (req, res) => {
+  try {
+    const newUserId = req.authUserId!;
+    const deviceId = getDeviceId(req);
+    if (!deviceId) {
+      return res.json({ migrated: false, reason: "no-device-id" });
+    }
+
+    const tables = [
+      { table: readingHistory, col: readingHistory.userId },
+      { table: readingStreaks, col: readingStreaks.userId },
+      { table: layerCompletions, col: layerCompletions.userId },
+      { table: studyJournalEntries, col: studyJournalEntries.userId },
+      { table: studyGuideSessions, col: studyGuideSessions.userId },
+      { table: userNotes, col: userNotes.userId },
+      { table: userHighlights, col: userHighlights.userId },
+      { table: userBookmarks, col: userBookmarks.userId },
+      { table: userActivityCounters, col: userActivityCounters.userId },
+      { table: prayerRequests, col: prayerRequests.userId },
+      { table: sabbathSchoolUserProgress, col: sabbathSchoolUserProgress.userId },
+      { table: sabbathReflections, col: sabbathReflections.userId },
+      { table: progressTracks, col: progressTracks.userId },
+      { table: progressLessons, col: progressLessons.userId },
+      { table: userPlanEnrollments, col: userPlanEnrollments.userId },
+      { table: kidsPurchases, col: kidsPurchases.userId },
+      { table: kidsProgress, col: kidsProgress.userId },
+      { table: kidsStreaks, col: kidsStreaks.userId },
+      { table: kidsDailyQuests, col: kidsDailyQuests.userId },
+      { table: kidsUserBadges, col: kidsUserBadges.userId },
+    ];
+
+    let totalMigrated = 0;
+
+    for (const { table, col } of tables) {
+      try {
+        const result = await db
+          .update(table)
+          .set({ userId: newUserId } as any)
+          .where(eq(col, deviceId));
+        totalMigrated += (result as any).rowCount || 0;
+      } catch {
+      }
+    }
+
+    console.log(`[guest-migration] Migrated ${totalMigrated} rows from ${deviceId} to ${newUserId}`);
+    return res.json({ migrated: true, rowCount: totalMigrated });
+  } catch (err) {
+    console.error("Guest data migration error:", err);
+    return res.json({ migrated: false, reason: "error" });
   }
 });
 

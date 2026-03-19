@@ -10,7 +10,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
-import { requireAuth, getAuthUserId } from "../middleware/auth";
+import { requireAuth, extractUserId } from "../middleware/auth";
 import { generateDiscussionPrep } from "../services/ai-engine";
 import {
   getCurrentLessonNumber,
@@ -68,7 +68,7 @@ async function findCompanionsForQuarterly(quarterlyId: string) {
 
 router.get("/api/sabbath-school/current", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
 
     let q = await getMostRecentQuarterly();
 
@@ -146,7 +146,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
 
 router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const lessonNumber = parseInt(req.params.lessonNumber);
     const quarterCode = req.query.quarterCode as string | undefined;
 
@@ -230,7 +230,7 @@ router.get("/api/sabbath-school/quarters", async (req, res) => {
 
 router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { quarterCode } = req.params;
 
     const [quarterly] = await db
@@ -265,7 +265,7 @@ router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
 
 router.post("/api/sabbath-school/complete", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { dayId, journalEntry } = req.body;
 
     if (!dayId) {
