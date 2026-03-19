@@ -8,7 +8,7 @@ import {
   Platform,
   Image,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -286,6 +286,7 @@ export default function StudyCategoryScreen() {
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={[st.headerBar, { paddingTop: topPad + 8 }]}>
         <Pressable onPress={() => router.back()} style={st.backBtn} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={theme.text} />

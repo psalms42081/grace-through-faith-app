@@ -213,6 +213,13 @@ export default function SpiritualRings({
           <View style={styles.centerContent}>
             {allClosed ? (
               <Ionicons name="checkmark-done-circle" size={28} color="#4ECCA3" />
+            ) : studyProgress + prayerProgress + engageProgress === 0 ? (
+              <>
+                <Ionicons name="flame-outline" size={20} color={theme.accent} />
+                <Text style={[styles.centerStart, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+                  Start{"\n"}today
+                </Text>
+              </>
             ) : (
               <>
                 <Ionicons name="flame" size={22} color={theme.accent} />
@@ -291,6 +298,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   centerPercent: { fontSize: 16 },
+  centerStart: { fontSize: 12, textAlign: "center", lineHeight: 15 },
   labelsCol: {
     flex: 1,
     gap: 8,
