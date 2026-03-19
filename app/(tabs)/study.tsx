@@ -1823,8 +1823,10 @@ function JournalPromptCard({
 function useJournalEntries(userId: string, bookId: number | null, chapter: number | null, layer: string, verseStart?: number | null, verseEnd?: number | null) {
   const queryClient = useQueryClient();
   const canFetch = bookId !== null && chapter !== null;
-  const vsParam = verseStart != null ? `&verseStart=${verseStart}` : "";
-  const veParam = verseEnd != null ? `&verseEnd=${verseEnd}` : "";
+  const vs = verseStart ?? 0;
+  const ve = verseEnd ?? 0;
+  const vsParam = vs > 0 ? `&verseStart=${vs}` : "";
+  const veParam = ve > 0 ? `&verseEnd=${ve}` : "";
   const queryKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=${layer}${vsParam}${veParam}`;
 
   const { data: entries } = useQuery<JournalEntry[]>({
@@ -1847,8 +1849,8 @@ function useJournalEntries(userId: string, bookId: number | null, chapter: numbe
         layer,
         sectionKey,
         content,
-        verseStart: verseStart ?? null,
-        verseEnd: verseEnd ?? null,
+        verseStart: vs,
+        verseEnd: ve,
       });
       return res.json();
     },
@@ -2024,10 +2026,10 @@ export default function StudyScreen() {
     studyFocus: "passage",
   });
 
-  const dsVs = deepSession.verseStart;
-  const dsVe = deepSession.verseEnd;
-  const vsCompParam = dsVs != null ? `&verseStart=${dsVs}` : "";
-  const veCompParam = dsVe != null ? `&verseEnd=${dsVe}` : "";
+  const dsVs = deepSession.verseStart ?? 0;
+  const dsVe = deepSession.verseEnd ?? 0;
+  const vsCompParam = dsVs > 0 ? `&verseStart=${dsVs}` : "";
+  const veCompParam = dsVe > 0 ? `&verseEnd=${dsVe}` : "";
   const completionKey = `/api/layer-completions?userId=${userId}&bookId=${bookId}&chapter=${chapter}${vsCompParam}${veCompParam}`;
   const { data: completions } = useQuery<LayerCompletionEntry[]>({
     queryKey: [completionKey],
@@ -2213,8 +2215,8 @@ export default function StudyScreen() {
     setShowSummary(true);
   }, [setDeepSession]);
 
-  const vsJournalParam = dsVs != null ? `&verseStart=${dsVs}` : "";
-  const veJournalParam = dsVe != null ? `&verseEnd=${dsVe}` : "";
+  const vsJournalParam = dsVs > 0 ? `&verseStart=${dsVs}` : "";
+  const veJournalParam = dsVe > 0 ? `&verseEnd=${dsVe}` : "";
   const observeJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=word${vsJournalParam}${veJournalParam}`;
   const { data: observeEntries } = useQuery<JournalEntry[]>({
     queryKey: [observeJournalKey],
@@ -2746,7 +2748,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
 
   if (isDeepSession && selectedBook && selectedChapter) {
     const allVerses = passageQuery.data?.verses ?? [];
-    const filteredVerses = (verseStart != null && verseEnd != null)
+    const filteredVerses = (verseStart && verseStart > 0 && verseEnd && verseEnd > 0)
       ? allVerses.filter(v => v.verse >= verseStart && v.verse <= verseEnd)
       : allVerses;
     return (
@@ -2760,7 +2762,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
           </Text>
         </View>
 
-        {verseStart != null && verseEnd != null && (
+        {verseStart != null && verseStart > 0 && verseEnd != null && verseEnd > 0 && (
           <View style={{ backgroundColor: theme.accent + "0C", borderRadius: 8, padding: 10, marginBottom: 12, flexDirection: "row", alignItems: "center" as const, gap: 8 }}>
             <Ionicons name="filter-outline" size={14} color={theme.accent} />
             <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_500Medium" }}>

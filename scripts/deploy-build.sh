@@ -7,6 +7,9 @@ npm run server:build
 echo "=== Reconciling constraint names ==="
 npx tsx scripts/reconcile-constraints.ts || true
 
+echo "=== Pre-migration: normalize verse columns ==="
+npx tsx scripts/normalize-verse-columns.ts || true
+
 echo "=== Pushing schema ==="
 if npx drizzle-kit push --force 2>&1; then
   echo "Schema push complete via drizzle-kit"

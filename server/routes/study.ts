@@ -1368,16 +1368,14 @@ router.get("/api/layer-completions", async (req, res) => {
     const userId = getAuthUserId(req) || "guest";
     const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
     const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
-    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : undefined;
-    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
 
     let conditions = [eq(layerCompletions.userId, userId)];
     if (bookId !== undefined) conditions.push(eq(layerCompletions.bookId, bookId));
     if (chapter !== undefined) conditions.push(eq(layerCompletions.chapter, chapter));
-    if (verseStart !== undefined) conditions.push(eq(layerCompletions.verseStart, verseStart));
-    else conditions.push(sql`${layerCompletions.verseStart} IS NULL`);
-    if (verseEnd !== undefined) conditions.push(eq(layerCompletions.verseEnd, verseEnd));
-    else conditions.push(sql`${layerCompletions.verseEnd} IS NULL`);
+    conditions.push(eq(layerCompletions.verseStart, verseStart));
+    conditions.push(eq(layerCompletions.verseEnd, verseEnd));
 
     const rows = await db
       .select({
@@ -1417,8 +1415,8 @@ router.post("/api/layer-completions", async (req, res) => {
         bookId: Number(bookId),
         chapter: Number(chapter),
         layer: String(layer),
-        verseStart: verseStart != null ? Number(verseStart) : null,
-        verseEnd: verseEnd != null ? Number(verseEnd) : null,
+        verseStart: verseStart != null ? Number(verseStart) : 0,
+        verseEnd: verseEnd != null ? Number(verseEnd) : 0,
       })
       .onConflictDoNothing();
 
@@ -1470,8 +1468,8 @@ router.get("/api/study-journal", async (req, res) => {
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     const layer = req.query.layer ? String(req.query.layer) : undefined;
-    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : undefined;
-    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
 
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
 
@@ -1481,10 +1479,8 @@ router.get("/api/study-journal", async (req, res) => {
       eq(studyJournalEntries.chapter, chapter),
     ];
     if (layer) conditions.push(eq(studyJournalEntries.layer, layer));
-    if (verseStart !== undefined) conditions.push(eq(studyJournalEntries.verseStart, verseStart));
-    else conditions.push(sql`${studyJournalEntries.verseStart} IS NULL`);
-    if (verseEnd !== undefined) conditions.push(eq(studyJournalEntries.verseEnd, verseEnd));
-    else conditions.push(sql`${studyJournalEntries.verseEnd} IS NULL`);
+    conditions.push(eq(studyJournalEntries.verseStart, verseStart));
+    conditions.push(eq(studyJournalEntries.verseEnd, verseEnd));
 
     const rows = await db
       .select({
@@ -1512,8 +1508,8 @@ router.post("/api/study-journal", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const vs = verseStart != null ? Number(verseStart) : null;
-    const ve = verseEnd != null ? Number(verseEnd) : null;
+    const vs = verseStart != null ? Number(verseStart) : 0;
+    const ve = verseEnd != null ? Number(verseEnd) : 0;
 
     const matchConditions = [
       eq(studyJournalEntries.userId, userId),
@@ -1521,8 +1517,8 @@ router.post("/api/study-journal", async (req, res) => {
       eq(studyJournalEntries.chapter, Number(chapter)),
       eq(studyJournalEntries.layer, String(layer)),
       eq(studyJournalEntries.sectionKey, String(sectionKey)),
-      vs !== null ? eq(studyJournalEntries.verseStart, vs) : sql`${studyJournalEntries.verseStart} IS NULL`,
-      ve !== null ? eq(studyJournalEntries.verseEnd, ve) : sql`${studyJournalEntries.verseEnd} IS NULL`,
+      eq(studyJournalEntries.verseStart, vs),
+      eq(studyJournalEntries.verseEnd, ve),
     ];
 
     if (!content || content.trim().length === 0) {

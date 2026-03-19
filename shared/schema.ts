@@ -1067,11 +1067,19 @@ export const layerCompletions = pgTable(
     bookId: integer("book_id").notNull(),
     chapter: integer("chapter").notNull(),
     layer: varchar("layer", { length: 20 }).notNull(),
-    verseStart: integer("verse_start"),
-    verseEnd: integer("verse_end"),
+    verseStart: integer("verse_start").notNull().default(0),
+    verseEnd: integer("verse_end").notNull().default(0),
     completedAt: timestamp("completed_at").defaultNow().notNull(),
   },
   (table) => ({
+    userBookChapterLayerVerse: uniqueIndex("layer_completions_unique").on(
+      table.userId,
+      table.bookId,
+      table.chapter,
+      table.layer,
+      table.verseStart,
+      table.verseEnd
+    ),
     userBookIdx: index("layer_user_book_idx").on(table.userId, table.bookId),
   })
 );
@@ -1091,13 +1099,22 @@ export const studyJournalEntries = pgTable(
     chapter: integer("chapter").notNull(),
     layer: varchar("layer", { length: 20 }).notNull(),
     sectionKey: varchar("section_key", { length: 60 }).notNull(),
-    verseStart: integer("verse_start"),
-    verseEnd: integer("verse_end"),
+    verseStart: integer("verse_start").notNull().default(0),
+    verseEnd: integer("verse_end").notNull().default(0),
     content: text("content").notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
+    userChapterSectionVerse: uniqueIndex("journal_entries_unique").on(
+      table.userId,
+      table.bookId,
+      table.chapter,
+      table.layer,
+      table.sectionKey,
+      table.verseStart,
+      table.verseEnd
+    ),
     userBookIdx: index("journal_user_book_idx").on(table.userId, table.bookId),
   })
 );
