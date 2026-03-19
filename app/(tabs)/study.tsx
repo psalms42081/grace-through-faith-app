@@ -507,6 +507,8 @@ function StudyCompletionScreen({
 
 const DEEP_SESSION_KEY = "@grace-through-faith/deep-session";
 
+type StudyFocus = "single" | "passage" | "chapter";
+
 interface DeepSessionState {
   active: boolean;
   layerIndex: number;
@@ -514,6 +516,9 @@ interface DeepSessionState {
   completedLayersDuringSession: string[];
   bookId: number | null;
   chapter: number | null;
+  verseStart: number | null;
+  verseEnd: number | null;
+  studyFocus: StudyFocus;
 }
 
 function estimateSessionTime(completedLayers: Set<string>): string {
@@ -777,6 +782,12 @@ function FourLayerIntro({
   );
 }
 
+interface PassageSection {
+  verseStart: number;
+  verseEnd: number;
+  label: string;
+}
+
 function DeepStudyIntro({
   reference,
   bookId,
@@ -788,7 +799,7 @@ function DeepStudyIntro({
   reference: string;
   bookId: number | null;
   chapter: number | null;
-  onBegin: () => void;
+  onBegin: (focus: StudyFocus, verseStart: number | null, verseEnd: number | null) => void;
   onCancel: () => void;
   theme: typeof Colors.light;
 }) {
@@ -797,6 +808,44 @@ function DeepStudyIntro({
     queryKey: [`/api/chapter-summary?bookId=${bookId}&chapter=${chapter}`],
     enabled: canFetch,
   });
+
+  const { data: passageSections, isLoading: sectionsLoading } = useQuery<PassageSection[]>({
+    queryKey: [`/api/passage-sections?bookId=${bookId}&chapter=${chapter}`],
+    enabled: canFetch,
+  });
+
+  const [studyFocus, setStudyFocus] = useState<StudyFocus>("passage");
+  const [selectedSectionIdx, setSelectedSectionIdx] = useState(0);
+  const [singleVerse, setSingleVerse] = useState(1);
+
+  const sections = passageSections ?? [];
+  const selectedSection = sections[selectedSectionIdx] ?? null;
+  const maxVerse = sections.length > 0 ? Math.max(...sections.map(s => s.verseEnd)) : 176;
+
+  const focusLabel = useMemo(() => {
+    if (studyFocus === "chapter") return "Whole Chapter";
+    if (studyFocus === "single") return `Verse ${singleVerse}`;
+    if (selectedSection) return `vv. ${selectedSection.verseStart}-${selectedSection.verseEnd}`;
+    return "Short Passage";
+  }, [studyFocus, singleVerse, selectedSection]);
+
+  const handleBegin = useCallback(() => {
+    if (studyFocus === "chapter") {
+      onBegin("chapter", null, null);
+    } else if (studyFocus === "single") {
+      onBegin("single", singleVerse, singleVerse);
+    } else if (selectedSection) {
+      onBegin("passage", selectedSection.verseStart, selectedSection.verseEnd);
+    } else {
+      onBegin("chapter", null, null);
+    }
+  }, [studyFocus, singleVerse, selectedSection, onBegin]);
+
+  const focusOptions: { id: StudyFocus; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
+    { id: "passage", label: "Short Passage", icon: "document-text-outline" },
+    { id: "single", label: "Single Verse", icon: "create-outline" },
+    { id: "chapter", label: "Whole Chapter", icon: "layers-outline" },
+  ];
 
   const layers = [
     { icon: "book-outline" as const, title: "Observe", desc: "Read the passage carefully and notice what stands out" },
@@ -824,6 +873,115 @@ function DeepStudyIntro({
         <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19, maxWidth: 300, marginTop: 6 }}>
           Walk through the same 4 layers in order, with reflection prompts and journaling at each step.
         </Text>
+      </View>
+
+      <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          STUDY FOCUS
+        </Text>
+        <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", marginBottom: 12, lineHeight: 18 }}>
+          Choose how much Scripture to study in this session.
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {focusOptions.map((opt) => (
+            <Pressable
+              key={opt.id}
+              onPress={() => setStudyFocus(opt.id)}
+              style={[
+                {
+                  flex: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 6,
+                  borderRadius: 10,
+                  alignItems: "center" as const,
+                  borderWidth: 1.5,
+                  borderColor: studyFocus === opt.id ? theme.accent : theme.border,
+                  backgroundColor: studyFocus === opt.id ? theme.accent + "14" : "transparent",
+                },
+              ]}
+            >
+              <Ionicons name={opt.icon} size={18} color={studyFocus === opt.id ? theme.accent : theme.textMuted} />
+              <Text style={{ fontSize: 11, color: studyFocus === opt.id ? theme.accent : theme.textSecondary, fontFamily: "Inter_500Medium", marginTop: 4, textAlign: "center" as const }}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {studyFocus === "passage" && (
+          sectionsLoading ? (
+            <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 8 }} />
+          ) : sections.length > 0 ? (
+            <View style={{ gap: 6 }}>
+              {sections.map((sec, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => setSelectedSectionIdx(i)}
+                  style={[
+                    {
+                      flexDirection: "row",
+                      alignItems: "center" as const,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: selectedSectionIdx === i ? theme.accent : theme.border,
+                      backgroundColor: selectedSectionIdx === i ? theme.accent + "10" : "transparent",
+                      gap: 10,
+                    },
+                  ]}
+                >
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: selectedSectionIdx === i ? theme.accent : theme.textMuted + "30", alignItems: "center" as const, justifyContent: "center" as const }}>
+                    <Text style={{ fontSize: 12, color: selectedSectionIdx === i ? "#fff" : theme.textMuted, fontFamily: "Inter_600SemiBold" }}>
+                      {i + 1}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, color: theme.text, fontFamily: "Inter_500Medium" }}>
+                      vv. {sec.verseStart}-{sec.verseEnd}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: "Inter_400Regular" }} numberOfLines={1}>
+                      {sec.label}
+                    </Text>
+                  </View>
+                  {selectedSectionIdx === i && (
+                    <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          ) : null
+        )}
+
+        {studyFocus === "single" && (
+          <View style={{ flexDirection: "row", alignItems: "center" as const, gap: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular" }}>
+              Verse:
+            </Text>
+            <Pressable
+              onPress={() => setSingleVerse(Math.max(1, singleVerse - 1))}
+              style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const }}
+            >
+              <Ionicons name="remove" size={18} color={theme.accent} />
+            </Pressable>
+            <Text style={{ fontSize: 18, color: theme.text, fontFamily: "Inter_600SemiBold", minWidth: 32, textAlign: "center" as const }}>
+              {singleVerse}
+            </Text>
+            <Pressable
+              onPress={() => setSingleVerse(Math.min(maxVerse, singleVerse + 1))}
+              style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const }}
+            >
+              <Ionicons name="add" size={18} color={theme.accent} />
+            </Pressable>
+          </View>
+        )}
+
+        {studyFocus === "chapter" && (
+          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", fontStyle: "italic" }}>
+            Study every verse in the chapter -- best for shorter chapters.
+          </Text>
+        )}
       </View>
 
       {summaryLoading && canFetch && (
@@ -910,13 +1068,13 @@ function DeepStudyIntro({
       ))}
 
       <Pressable
-        onPress={onBegin}
+        onPress={handleBegin}
         style={({ pressed }) => [introStyles.beginBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
         testID="begin-deep-study"
       >
         <Ionicons name="book-outline" size={18} color="#fff" />
         <Text style={[introStyles.beginBtnText, { fontFamily: "Inter_600SemiBold" }]}>
-          Begin with Observe
+          Begin with Observe ({focusLabel})
         </Text>
       </Pressable>
 
@@ -1662,10 +1820,12 @@ function JournalPromptCard({
   );
 }
 
-function useJournalEntries(userId: string, bookId: number | null, chapter: number | null, layer: string) {
+function useJournalEntries(userId: string, bookId: number | null, chapter: number | null, layer: string, verseStart?: number | null, verseEnd?: number | null) {
   const queryClient = useQueryClient();
   const canFetch = bookId !== null && chapter !== null;
-  const queryKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=${layer}`;
+  const vsParam = verseStart != null ? `&verseStart=${verseStart}` : "";
+  const veParam = verseEnd != null ? `&verseEnd=${verseEnd}` : "";
+  const queryKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=${layer}${vsParam}${veParam}`;
 
   const { data: entries } = useQuery<JournalEntry[]>({
     queryKey: [queryKey],
@@ -1687,6 +1847,8 @@ function useJournalEntries(userId: string, bookId: number | null, chapter: numbe
         layer,
         sectionKey,
         content,
+        verseStart: verseStart ?? null,
+        verseEnd: verseEnd ?? null,
       });
       return res.json();
     },
@@ -1850,7 +2012,23 @@ export default function StudyScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [activeTab]);
 
-  const completionKey = `/api/layer-completions?userId=${userId}&bookId=${bookId}&chapter=${chapter}`;
+  const [deepSession, setDeepSessionRaw] = useState<DeepSessionState>({
+    active: false,
+    layerIndex: 0,
+    startedAt: 0,
+    completedLayersDuringSession: [],
+    bookId: null,
+    chapter: null,
+    verseStart: null,
+    verseEnd: null,
+    studyFocus: "passage",
+  });
+
+  const dsVs = deepSession.verseStart;
+  const dsVe = deepSession.verseEnd;
+  const vsCompParam = dsVs != null ? `&verseStart=${dsVs}` : "";
+  const veCompParam = dsVe != null ? `&verseEnd=${dsVe}` : "";
+  const completionKey = `/api/layer-completions?userId=${userId}&bookId=${bookId}&chapter=${chapter}${vsCompParam}${veCompParam}`;
   const { data: completions } = useQuery<LayerCompletionEntry[]>({
     queryKey: [completionKey],
     enabled: canTrack,
@@ -1868,6 +2046,8 @@ export default function StudyScreen() {
         bookId,
         chapter,
         layer,
+        verseStart: dsVs,
+        verseEnd: dsVe,
       });
       return res.json();
     },
@@ -1888,15 +2068,6 @@ export default function StudyScreen() {
       setActiveTab(LAYER_ORDER[idx + 1]);
     }
   }, [activeTab]);
-
-  const [deepSession, setDeepSessionRaw] = useState<DeepSessionState>({
-    active: false,
-    layerIndex: 0,
-    startedAt: 0,
-    completedLayersDuringSession: [],
-    bookId: null,
-    chapter: null,
-  });
   const deepSessionRef = useRef(deepSession);
   const setDeepSession = useCallback((s: DeepSessionState) => {
     deepSessionRef.current = s;
@@ -1921,7 +2092,13 @@ export default function StudyScreen() {
       try {
         const saved = await AsyncStorage.getItem(DEEP_SESSION_KEY);
         if (saved) {
-          const parsed = JSON.parse(saved) as DeepSessionState;
+          const raw = JSON.parse(saved);
+          const parsed: DeepSessionState = {
+            ...raw,
+            verseStart: raw.verseStart ?? null,
+            verseEnd: raw.verseEnd ?? null,
+            studyFocus: raw.studyFocus ?? "chapter",
+          };
           if (parsed.bookId === bookId && parsed.chapter === chapter) {
             if (parsed.active) {
               setDeepSession(parsed);
@@ -1970,7 +2147,7 @@ export default function StudyScreen() {
     setShowDeepIntro(true);
   }, [bookId, chapter, persistSession, pausedLayerIndex]);
 
-  const beginDeepSessionFromIntro = useCallback(() => {
+  const beginDeepSessionFromIntro = useCallback((focus: StudyFocus, vs: number | null, ve: number | null) => {
     const firstIncomplete = LAYER_ORDER.findIndex((l) => !completedLayers.has(l));
     const startIdx = firstIncomplete >= 0 ? firstIncomplete : 0;
     const state: DeepSessionState = {
@@ -1980,6 +2157,9 @@ export default function StudyScreen() {
       completedLayersDuringSession: [],
       bookId,
       chapter,
+      verseStart: vs,
+      verseEnd: ve,
+      studyFocus: focus,
     };
     persistSession(state);
     setActiveTab(LAYER_ORDER[startIdx]);
@@ -1991,7 +2171,7 @@ export default function StudyScreen() {
   const exitDeepSession = useCallback((abandon?: boolean) => {
     const current = deepSessionRef.current;
     if (abandon) {
-      persistSession({ active: false, layerIndex: 0, startedAt: 0, completedLayersDuringSession: [], bookId: null, chapter: null }, true);
+      persistSession({ active: false, layerIndex: 0, startedAt: 0, completedLayersDuringSession: [], bookId: null, chapter: null, verseStart: null, verseEnd: null, studyFocus: "passage" }, true);
       setShowSummary(false);
       setPausedLayerIndex(null);
     } else {
@@ -2033,7 +2213,9 @@ export default function StudyScreen() {
     setShowSummary(true);
   }, [setDeepSession]);
 
-  const observeJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=word`;
+  const vsJournalParam = dsVs != null ? `&verseStart=${dsVs}` : "";
+  const veJournalParam = dsVe != null ? `&verseEnd=${dsVe}` : "";
+  const observeJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=word${vsJournalParam}${veJournalParam}`;
   const { data: observeEntries } = useQuery<JournalEntry[]>({
     queryKey: [observeJournalKey],
     enabled: canTrack,
@@ -2044,7 +2226,7 @@ export default function StudyScreen() {
     return map;
   }, [observeEntries]);
 
-  const contextJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=context`;
+  const contextJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=context${vsJournalParam}${veJournalParam}`;
   const { data: contextEntries } = useQuery<JournalEntry[]>({
     queryKey: [contextJournalKey],
     enabled: canTrack,
@@ -2055,7 +2237,7 @@ export default function StudyScreen() {
     return map;
   }, [contextEntries]);
 
-  const insightJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=voices`;
+  const insightJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=voices${vsJournalParam}${veJournalParam}`;
   const { data: insightEntries } = useQuery<JournalEntry[]>({
     queryKey: [insightJournalKey],
     enabled: canTrack,
@@ -2066,7 +2248,7 @@ export default function StudyScreen() {
     return map;
   }, [insightEntries]);
 
-  const transformJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=application`;
+  const transformJournalKey = `/api/study-journal?userId=${userId}&bookId=${bookId}&chapter=${chapter}&layer=application${vsJournalParam}${veJournalParam}`;
   const { data: transformEntries } = useQuery<JournalEntry[]>({
     queryKey: [transformJournalKey],
     enabled: canTrack,
@@ -2445,10 +2627,10 @@ export default function StudyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} isDeepSession={deepSession.active} allBooks={allBooks} />}
-        {activeTab === "context" && <ContextTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
-        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
-        {activeTab === "application" && <ApplicationTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} />}
+        {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} isDeepSession={deepSession.active} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
+        {activeTab === "context" && <ContextTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
+        {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
+        {activeTab === "application" && <ApplicationTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
 
         {deepSession.active ? (
           <DeepSessionAdvanceButton
@@ -2486,7 +2668,7 @@ interface BibleBook {
   chapterCount: number;
 }
 
-function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, initialVerse, initialVerseId, initialVerseText, isDeepSession, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; isDeepSession?: boolean; allBooks?: BibleBook[] }) {
+function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, initialVerse, initialVerseId, initialVerseText, isDeepSession, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; isDeepSession?: boolean; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
   const [studyMode, setStudyMode] = useState<"verse" | "concordance">("verse");
   const [lexicalExpanded, setLexicalExpanded] = useState(false);
   const selectedBook = sharedBook;
@@ -2559,11 +2741,14 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
   const { userId } = useAuth();
   const observeBookId = selectedBook?.id ?? null;
   const { journalMap: observeJournalMap, handleSave: handleObserveSave, isSaving: isObserveSaving } = useJournalEntries(
-    userId, observeBookId, selectedChapter, "word"
+    userId, observeBookId, selectedChapter, "word", verseStart, verseEnd
   );
 
   if (isDeepSession && selectedBook && selectedChapter) {
     const allVerses = passageQuery.data?.verses ?? [];
+    const filteredVerses = (verseStart != null && verseEnd != null)
+      ? allVerses.filter(v => v.verse >= verseStart && v.verse <= verseEnd)
+      : allVerses;
     return (
       <View style={styles.tabContent}>
         <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
@@ -2575,12 +2760,21 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
           </Text>
         </View>
 
+        {verseStart != null && verseEnd != null && (
+          <View style={{ backgroundColor: theme.accent + "0C", borderRadius: 8, padding: 10, marginBottom: 12, flexDirection: "row", alignItems: "center" as const, gap: 8 }}>
+            <Ionicons name="filter-outline" size={14} color={theme.accent} />
+            <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_500Medium" }}>
+              Studying verses {verseStart}{verseEnd !== verseStart ? `-${verseEnd}` : ""}
+            </Text>
+          </View>
+        )}
+
         <View style={{ marginBottom: 20 }}>
           {passageQuery.isLoading ? (
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 20 }} />
           ) : (
             <Text style={{ fontSize: 17, lineHeight: 30, color: theme.text, fontFamily: "Lora_400Regular" }}>
-              {allVerses.map((v) => (
+              {filteredVerses.map((v) => (
                 <React.Fragment key={v.id}>
                   <Text style={{ color: theme.accent + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
                     {v.verse}{" "}
@@ -3203,7 +3397,7 @@ function ContextParagraphs({ text, theme }: { text: string; theme: typeof Colors
   );
 }
 
-function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
+function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
   const { depth } = useStudyDepth();
   const selectedBook = sharedBook;
   const selectedChapter = sharedChapter;
@@ -3212,7 +3406,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
   const { userId } = useAuth();
   const ctxBookId = selectedBook?.id ?? null;
   const { journalMap: contextJournalMap, handleSave: handleContextSave, isSaving: isContextSaving } = useJournalEntries(
-    userId, ctxBookId, selectedChapter, "context"
+    userId, ctxBookId, selectedChapter, "context", verseStart, verseEnd
   );
 
   const books = allBooks;
@@ -3612,7 +3806,7 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
   );
 }
 
-function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; commentators: Commentator[]; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
+function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; commentators: Commentator[]; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
   const selectedBook = sharedBook;
   const selectedChapter = sharedChapter;
   const setSelectedBook = onBookChange;
@@ -3621,7 +3815,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
   const { userId } = useAuth();
   const bookId = selectedBook?.id ?? null;
   const { journalMap, handleSave: handleJournalSave, isSaving: isJournalSaving } = useJournalEntries(
-    userId, bookId, selectedChapter, "voices"
+    userId, bookId, selectedChapter, "voices", verseStart, verseEnd
   );
 
   const books = allBooks;
@@ -4012,7 +4206,7 @@ function RespondBackground({ template, theme }: { template: AppTemplate; theme: 
   );
 }
 
-function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[] }) {
+function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
   const { depth } = useStudyDepth();
   const selectedBook = sharedBook;
   const selectedChapter = sharedChapter;
@@ -4021,7 +4215,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
   const { userId } = useAuth();
   const appBookId = selectedBook?.id ?? null;
   const { journalMap, handleSave: handleJournalSave, isSaving: isJournalSaving } = useJournalEntries(
-    userId, appBookId, selectedChapter, "application"
+    userId, appBookId, selectedChapter, "application", verseStart, verseEnd
   );
 
   const books = allBooks;

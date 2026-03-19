@@ -21,6 +21,7 @@ import { getErrorStatusCode } from "../services/ai-semaphore";
     chapterSummaries,
     layerCompletions,
     studyJournalEntries,
+    chapterPassageSections,
     readingHistory,
     userPlanProgress,
     searchCache,
@@ -1367,16 +1368,24 @@ router.get("/api/layer-completions", async (req, res) => {
     const userId = getAuthUserId(req) || "guest";
     const bookId = req.query.bookId ? Number(req.query.bookId) : undefined;
     const chapter = req.query.chapter ? Number(req.query.chapter) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : undefined;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : undefined;
 
     let conditions = [eq(layerCompletions.userId, userId)];
     if (bookId !== undefined) conditions.push(eq(layerCompletions.bookId, bookId));
     if (chapter !== undefined) conditions.push(eq(layerCompletions.chapter, chapter));
+    if (verseStart !== undefined) conditions.push(eq(layerCompletions.verseStart, verseStart));
+    else conditions.push(sql`${layerCompletions.verseStart} IS NULL`);
+    if (verseEnd !== undefined) conditions.push(eq(layerCompletions.verseEnd, verseEnd));
+    else conditions.push(sql`${layerCompletions.verseEnd} IS NULL`);
 
     const rows = await db
       .select({
         bookId: layerCompletions.bookId,
         chapter: layerCompletions.chapter,
         layer: layerCompletions.layer,
+        verseStart: layerCompletions.verseStart,
+        verseEnd: layerCompletions.verseEnd,
         completedAt: layerCompletions.completedAt,
       })
       .from(layerCompletions)
@@ -1392,7 +1401,7 @@ router.get("/api/layer-completions", async (req, res) => {
 router.post("/api/layer-completions", async (req, res) => {
   try {
     const userId = getAuthUserId(req) || "guest";
-    const { bookId, chapter, layer } = req.body;
+    const { bookId, chapter, layer, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -1403,7 +1412,14 @@ router.post("/api/layer-completions", async (req, res) => {
 
     await db
       .insert(layerCompletions)
-      .values({ userId, bookId: Number(bookId), chapter: Number(chapter), layer: String(layer) })
+      .values({
+        userId,
+        bookId: Number(bookId),
+        chapter: Number(chapter),
+        layer: String(layer),
+        verseStart: verseStart != null ? Number(verseStart) : null,
+        verseEnd: verseEnd != null ? Number(verseEnd) : null,
+      })
       .onConflictDoNothing();
 
     return res.json({ success: true });
@@ -1454,6 +1470,8 @@ router.get("/api/study-journal", async (req, res) => {
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     const layer = req.query.layer ? String(req.query.layer) : undefined;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : undefined;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : undefined;
 
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
 
@@ -1463,6 +1481,10 @@ router.get("/api/study-journal", async (req, res) => {
       eq(studyJournalEntries.chapter, chapter),
     ];
     if (layer) conditions.push(eq(studyJournalEntries.layer, layer));
+    if (verseStart !== undefined) conditions.push(eq(studyJournalEntries.verseStart, verseStart));
+    else conditions.push(sql`${studyJournalEntries.verseStart} IS NULL`);
+    if (verseEnd !== undefined) conditions.push(eq(studyJournalEntries.verseEnd, verseEnd));
+    else conditions.push(sql`${studyJournalEntries.verseEnd} IS NULL`);
 
     const rows = await db
       .select({
@@ -1485,38 +1507,35 @@ router.get("/api/study-journal", async (req, res) => {
 router.post("/api/study-journal", async (req, res) => {
   try {
     const userId = getAuthUserId(req) || "guest";
-    const { bookId, chapter, layer, sectionKey, content } = req.body;
+    const { bookId, chapter, layer, sectionKey, content, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer || !sectionKey) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const vs = verseStart != null ? Number(verseStart) : null;
+    const ve = verseEnd != null ? Number(verseEnd) : null;
+
+    const matchConditions = [
+      eq(studyJournalEntries.userId, userId),
+      eq(studyJournalEntries.bookId, Number(bookId)),
+      eq(studyJournalEntries.chapter, Number(chapter)),
+      eq(studyJournalEntries.layer, String(layer)),
+      eq(studyJournalEntries.sectionKey, String(sectionKey)),
+      vs !== null ? eq(studyJournalEntries.verseStart, vs) : sql`${studyJournalEntries.verseStart} IS NULL`,
+      ve !== null ? eq(studyJournalEntries.verseEnd, ve) : sql`${studyJournalEntries.verseEnd} IS NULL`,
+    ];
+
     if (!content || content.trim().length === 0) {
       await db
         .delete(studyJournalEntries)
-        .where(
-          and(
-            eq(studyJournalEntries.userId, userId),
-            eq(studyJournalEntries.bookId, Number(bookId)),
-            eq(studyJournalEntries.chapter, Number(chapter)),
-            eq(studyJournalEntries.layer, String(layer)),
-            eq(studyJournalEntries.sectionKey, String(sectionKey))
-          )
-        );
+        .where(and(...matchConditions));
       return res.json({ success: true, deleted: true });
     }
 
     const existing = await db
       .select({ id: studyJournalEntries.id })
       .from(studyJournalEntries)
-      .where(
-        and(
-          eq(studyJournalEntries.userId, userId),
-          eq(studyJournalEntries.bookId, Number(bookId)),
-          eq(studyJournalEntries.chapter, Number(chapter)),
-          eq(studyJournalEntries.layer, String(layer)),
-          eq(studyJournalEntries.sectionKey, String(sectionKey))
-        )
-      );
+      .where(and(...matchConditions));
 
     if (existing.length > 0) {
       await db
@@ -1532,6 +1551,8 @@ router.post("/api/study-journal", async (req, res) => {
           chapter: Number(chapter),
           layer: String(layer),
           sectionKey: String(sectionKey),
+          verseStart: vs,
+          verseEnd: ve,
           content: String(content).trim(),
         });
     }
@@ -1807,6 +1828,109 @@ router.get("/api/search/recent", async (req, res) => {
     return res.json(recent);
   } catch (err) {
     console.error("Recent searches error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── PASSAGE SECTIONS (AI-generated chapter breakdowns for Deep Study) ─────
+
+router.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
+  try {
+    const bookId = Number(req.query.bookId);
+    const chapter = Number(req.query.chapter);
+    if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
+
+    const cached = await db
+      .select({ sections: chapterPassageSections.sections })
+      .from(chapterPassageSections)
+      .where(and(eq(chapterPassageSections.bookId, bookId), eq(chapterPassageSections.chapter, chapter)));
+
+    if (cached.length > 0) {
+      return res.json(cached[0].sections);
+    }
+
+    const verses = await db
+      .select({ verse: bibleVerses.verse, text: bibleVerses.text })
+      .from(bibleVerses)
+      .where(and(eq(bibleVerses.bookId, bookId), eq(bibleVerses.chapter, chapter)))
+      .orderBy(bibleVerses.verse);
+
+    if (verses.length === 0) return res.json([]);
+
+    const [bookInfo] = await db
+      .select({ name: bibleBooks.name })
+      .from(bibleBooks)
+      .where(eq(bibleBooks.id, bookId));
+
+    const bookName = bookInfo?.name ?? `Book ${bookId}`;
+    const totalVerses = verses.length;
+
+    const chapterText = verses.map(v => `${v.verse} ${v.text}`).join(" ");
+
+    const OpenAI = (await import("openai")).default;
+    const client = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+
+Rules:
+- Sections must be contiguous and non-overlapping
+- Together they must cover every verse (1 through ${totalVerses})
+- Aim for 2-5 sections depending on chapter length
+- Each section should be a coherent narrative or thematic unit
+- Labels should be short descriptions (5-8 words max)
+- For very short chapters (under 10 verses), return 1-2 sections`,
+        },
+        {
+          role: "user",
+          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+
+Chapter text:
+${chapterText.substring(0, 4000)}
+
+Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`,
+        },
+      ],
+    });
+
+    let sections: { verseStart: number; verseEnd: number; label: string }[] = [];
+    try {
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      const cleaned = raw.replace(/```json?\s*/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+      } else {
+        const valid = parsed.every((s: any) =>
+          typeof s.verseStart === "number" && typeof s.verseEnd === "number" &&
+          s.verseStart >= 1 && s.verseEnd <= totalVerses && s.verseStart <= s.verseEnd &&
+          typeof s.label === "string"
+        );
+        if (valid) {
+          sections = parsed;
+        } else {
+          sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+        }
+      }
+    } catch {
+      sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+    }
+
+    await db
+      .insert(chapterPassageSections)
+      .values({ bookId, chapter, sections })
+      .onConflictDoNothing();
+
+    return res.json(sections);
+  } catch (err) {
+    console.error("Passage sections error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1067,15 +1067,11 @@ export const layerCompletions = pgTable(
     bookId: integer("book_id").notNull(),
     chapter: integer("chapter").notNull(),
     layer: varchar("layer", { length: 20 }).notNull(),
+    verseStart: integer("verse_start"),
+    verseEnd: integer("verse_end"),
     completedAt: timestamp("completed_at").defaultNow().notNull(),
   },
   (table) => ({
-    userBookChapterLayer: uniqueIndex("layer_user_book_chapter_layer").on(
-      table.userId,
-      table.bookId,
-      table.chapter,
-      table.layer
-    ),
     userBookIdx: index("layer_user_book_idx").on(table.userId, table.bookId),
   })
 );
@@ -1095,23 +1091,41 @@ export const studyJournalEntries = pgTable(
     chapter: integer("chapter").notNull(),
     layer: varchar("layer", { length: 20 }).notNull(),
     sectionKey: varchar("section_key", { length: 60 }).notNull(),
+    verseStart: integer("verse_start"),
+    verseEnd: integer("verse_end"),
     content: text("content").notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    userChapterSection: uniqueIndex("journal_user_chapter_section").on(
-      table.userId,
-      table.bookId,
-      table.chapter,
-      table.layer,
-      table.sectionKey
-    ),
     userBookIdx: index("journal_user_book_idx").on(table.userId, table.bookId),
   })
 );
 
 export type StudyJournalEntry = typeof studyJournalEntries.$inferSelect;
+
+// ─── CHAPTER PASSAGE SECTIONS ─────────────────────────────────────────────
+
+export const chapterPassageSections = pgTable(
+  "chapter_passage_sections",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    sections: jsonb("sections").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    bookChapter: uniqueIndex("passage_sections_book_chapter").on(
+      table.bookId,
+      table.chapter
+    ),
+  })
+);
+
+export type ChapterPassageSection = typeof chapterPassageSections.$inferSelect;
 
 // ─── CHAPTER SUMMARIES (Deep Study Orientation) ──────────────────────────────
 

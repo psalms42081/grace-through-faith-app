@@ -17,7 +17,7 @@ The application features a mobile-first architecture with a frontend built using
 - **Visual Design System:** Premium image-based cards replace icons throughout the app, utilizing specific image assets and AI-generated classical Renaissance-style paintings for Bible book covers.
 
 **Technical Implementations & Feature Specifications:**
-- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels.
+- **4-Layer Study Model:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels. Guided Mode (Deep Dive) supports a Study Focus Picker: Single Verse, Short Passage (AI-generated chapter sections), or Whole Chapter. Verse ranges are threaded through journal entries, layer completions, and passage display. AI passage sections are cached in `chapter_passage_sections` table.
 - **AI Integration:** Uses OpenAI's `gpt-4o-mini` for on-demand content generation (Socratic AI Study Guide, Dynamic AI Reading Plans) with an AI Ethics & Transparency Layer.
 - **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech`.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
