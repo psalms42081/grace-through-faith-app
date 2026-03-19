@@ -546,6 +546,20 @@ async function main() {
   console.log("Updating manifests and creating landing page...");
   updateManifests(manifests, timestamp, baseUrl, assetsByHash);
 
+  const customHtmlPath = path.resolve(process.cwd(), "web/index.html");
+  const distHtmlPath = path.resolve(process.cwd(), "dist/index.html");
+  if (fs.existsSync(customHtmlPath) && fs.existsSync(distHtmlPath)) {
+    console.log("Applying custom web/index.html styles...");
+    const customHtml = fs.readFileSync(customHtmlPath, "utf-8");
+    const distHtml = fs.readFileSync(distHtmlPath, "utf-8");
+    const customStyle = customHtml.match(/<style id="expo-reset">([\s\S]*?)<\/style>/);
+    if (customStyle) {
+      const patched = distHtml.replace(/<style id="expo-reset">[\s\S]*?<\/style>/, `<style id="expo-reset">${customStyle[1]}</style>`);
+      fs.writeFileSync(distHtmlPath, patched);
+      console.log("Custom web styles applied to dist/index.html");
+    }
+  }
+
   console.log("Build complete! Deploy to:", baseUrl);
 
   if (metroProcess) {

@@ -30,13 +30,15 @@ function getAuthHeaders(): Record<string, string> {
 export function getApiUrl(): string {
   let host = process.env.EXPO_PUBLIC_DOMAIN;
 
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  if (host) {
+    return new URL(`https://${host}`).href;
   }
 
-  let url = new URL(`https://${host}`);
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin + "/";
+  }
 
-  return url.href;
+  return "/";
 }
 
 async function throwIfResNotOk(res: Response) {
