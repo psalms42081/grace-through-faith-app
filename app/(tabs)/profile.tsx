@@ -175,9 +175,13 @@ function ProfileScreenInner() {
           <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.currentStreak")}</Text>
         </Pressable>
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
-          <Ionicons name="trending-up" size={22} color={theme.accent} />
-          <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.longestStreak")}</Text>
+          <Ionicons name={streak >= longestStreak && longestStreak > 0 ? "trophy" : "trending-up"} size={22} color={theme.accent} />
+          <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+            {streak >= longestStreak && longestStreak > 0 ? longestStreak : longestStreak > 0 ? `${longestStreak - streak} to go` : "--"}
+          </Text>
+          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {streak >= longestStreak && longestStreak > 0 ? t("profile.longestStreak") : longestStreak > 0 ? "Beat your best" : t("profile.longestStreak")}
+          </Text>
         </Pressable>
         <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
           <Ionicons name="trophy" size={22} color="#E8456B" />
@@ -223,17 +227,26 @@ function ProfileScreenInner() {
 
       <View style={{ height: 16 }} />
 
-      <GrowthAnalytics
-        studyMinutes={studyMinutes}
-        wordsLearned={wordsLearned}
-        totalSessions={totalSessions}
-        theme={theme}
-        isDark={isDark}
-        headerText={t("profile.growthAnalytics")}
-        deepStudyLabel={t("profile.deepStudyMinutes")}
-        greekHebrewLabel={t("profile.greekHebrewWords")}
-        socraticLabel={t("profile.socraticSessions")}
-      />
+      {(studyMinutes > 0 || wordsLearned > 0 || totalSessions > 0) ? (
+        <GrowthAnalytics
+          studyMinutes={studyMinutes}
+          wordsLearned={wordsLearned}
+          totalSessions={totalSessions}
+          theme={theme}
+          isDark={isDark}
+          headerText={t("profile.growthAnalytics")}
+          deepStudyLabel={t("profile.deepStudyMinutes")}
+          greekHebrewLabel={t("profile.greekHebrewWords")}
+          socraticLabel={t("profile.socraticSessions")}
+        />
+      ) : (
+        <View style={[st.analyticsInvite, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+          <Ionicons name="analytics-outline" size={32} color={theme.textMuted} />
+          <Text style={[st.analyticsInviteText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Complete your first Deep Dive to unlock your growth stats
+          </Text>
+        </View>
+      )}
 
       <View style={{ height: 16 }} />
 
@@ -318,10 +331,10 @@ function ProfileScreenInner() {
         <View style={{ height: 12 }} />
 
         {[
-          ...(user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader" ? [
+          ...(isAuthenticated && (user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader") ? [
             { title: "Admin Dashboard", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
-          ...(user?.role === "church_leader_pending" ? [
+          ...(isAuthenticated && user?.role === "church_leader_pending" ? [
             { title: "Leader Access", icon: "hourglass" as const, color: "#F59E0B", route: "pending-leader" },
           ] : []),
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
@@ -458,6 +471,14 @@ const st = StyleSheet.create({
     gap: 12,
   },
   heatmapEmptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
+  analyticsInvite: {
+    marginHorizontal: 20,
+    borderRadius: 22,
+    padding: 28,
+    alignItems: "center",
+    gap: 12,
+  },
+  analyticsInviteText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
   sectionPad: {
     paddingHorizontal: 24,
     marginBottom: 24,
