@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { Component, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,33 @@ import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 
+class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "#0D0D15" }}>
+          <Ionicons name="alert-circle-outline" size={48} color="#C9933A" />
+          <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", marginTop: 16, textAlign: "center" }}>
+            Something went wrong
+          </Text>
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginTop: 8, textAlign: "center" }}>
+            {this.state.error.message}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ error: null })}
+            style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: "#C9933A", borderRadius: 10 }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Try Again</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 interface WeeklyStreakData {
   daysRead: boolean[];
   perfectWeeks: number;
@@ -44,7 +71,7 @@ interface GrowthData {
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export default function ProfileScreen() {
+function ProfileScreenInner() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
@@ -316,6 +343,14 @@ export default function ProfileScreen() {
       </View>
     </ScrollView>
     </>
+  );
+}
+
+export default function ProfileScreen() {
+  return (
+    <ProfileErrorBoundary>
+      <ProfileScreenInner />
+    </ProfileErrorBoundary>
   );
 }
 
