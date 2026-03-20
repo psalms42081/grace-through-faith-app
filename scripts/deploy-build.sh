@@ -76,6 +76,9 @@ echo "Flagship stories seed: OK"
 echo "=== Backfilling creation story images ==="
 npx tsx scripts/backfill-creation-images.ts
 
+echo "=== Backfilling YD and Teen story scenes ==="
+npx tsx scripts/backfill-yd-teen-images.ts
+
 echo "=== Deduplicating kids content (post-seed) ==="
 npx tsx scripts/dedup-kids-content.ts
 
