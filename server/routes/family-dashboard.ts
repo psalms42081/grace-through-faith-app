@@ -25,7 +25,24 @@ import { Router, Request } from "express";
 
   const router = Router();
 
-  router.get("/api/family/children", requireAuth, async (req, res) => {
+  async function ensureDeviceUserExists(deviceId: string): Promise<void> {
+    if (!deviceId.startsWith("device-")) return;
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, deviceId))
+      .limit(1);
+    if (existing) return;
+    await db.insert(users).values({
+      id: deviceId,
+      username: deviceId,
+      password: "device-no-login",
+      displayName: "Guest Parent",
+      role: "member",
+    }).onConflictDoNothing();
+  }
+
+  router.get("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const parentId = getEffectiveUserId(req);
     const children = await db
@@ -43,10 +60,14 @@ import { Router, Request } from "express";
 router.post("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required" });
+    }
     const { name, avatarUrl, ageGroup } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Child name is required" });
     }
+    await ensureDeviceUserExists(userId);
     const validAgeGroups = ["little_lambs", "young_disciples", "young_disciples_plus"];
     const [child] = await db
       .insert(childProfiles)
