@@ -442,6 +442,17 @@ export default function VerseReaderScreen() {
                 </Text>
               </View>
 
+              <View style={styles.chapterCompleteRow}>
+                <View style={[styles.chapterCompleteLine, { backgroundColor: theme.border }]} />
+                <View style={[styles.chapterCompleteBadge, { backgroundColor: isDark ? theme.backgroundElevated : "#F5F0E6" }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={theme.accent} />
+                  <Text style={[styles.chapterCompleteText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Chapter Complete
+                  </Text>
+                </View>
+                <View style={[styles.chapterCompleteLine, { backgroundColor: theme.border }]} />
+              </View>
+
               <RelatedContent
                 bookId={Number(bookId)}
                 bookName={bookName}
@@ -533,5 +544,28 @@ const styles = StyleSheet.create({
   verseNum: {
     fontSize: 11,
     lineHeight: 34,
+  },
+  chapterCompleteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 32,
+    marginBottom: 8,
+    gap: 12,
+  },
+  chapterCompleteLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  chapterCompleteBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  chapterCompleteText: {
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
 });
