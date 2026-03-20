@@ -73,6 +73,9 @@ echo "Seeding remaining flagship stories..."
 npx tsx scripts/seed-flagship-stories.ts
 echo "Flagship stories seed: OK"
 
+echo "=== Backfilling creation story images ==="
+npx tsx scripts/backfill-creation-images.ts
+
 echo "=== Deduplicating kids content (post-seed) ==="
 npx tsx scripts/dedup-kids-content.ts
 
