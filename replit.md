@@ -19,7 +19,7 @@ The application features a mobile-first architecture with a frontend built using
 **Technical Implementations & Feature Specifications:**
 - **Deep Dive:** Integrates Bible text with historical context, classic commentaries, and AI-generated application content across three study depth levels, supporting various study focus options.
 - **AI Integration:** Uses OpenAI's `gpt-4o-mini` for on-demand content generation (Socratic AI Study Guide, Dynamic AI Reading Plans) with an AI Ethics & Transparency Layer.
-- **Text-to-Speech (TTS):** Employs ElevenLabs for high-quality voices, with fallback to `expo-speech`.
+- **Text-to-Speech (TTS):** Two narrator voices via ElevenLabs — George (male, `JBFqnCBsd6RMkjVDRZzb`) and Sarah (female, `EXAVITQu4vr4xnSDxMaL`). Default is George. Preference persists in AsyncStorage and syncs to `preferred_narrator` column via `PUT /api/user/preferences`. Fallback to `expo-speech` when ElevenLabs fails.
 - **Offline Support:** React Query persistence via AsyncStorage ensures an offline-first experience.
 - **User Features:** Notes, highlights, bookmarks, prayer journal, reading history, and a unified "Saved" screen.
 - **Semantic Search:** AI-powered natural language Bible search.
