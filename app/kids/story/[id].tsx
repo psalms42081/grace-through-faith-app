@@ -94,7 +94,7 @@ async function getBestDeviceVoice(gender: "male" | "female"): Promise<Speech.Voi
   return picked || undefined;
 }
 
-type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY";
+type SceneMood = "AWE" | "PEACE" | "TENSION" | "JOY" | "LOVE";
 
 interface VideoTimecodeSegment {
   startMs: number;
@@ -648,6 +648,12 @@ const MOOD_PARTICLES: Record<SceneMood, { icons: string[]; colors: string[]; cou
     count: 8,
     speed: 5000,
   },
+  LOVE: {
+    icons: ["heart", "heart-circle", "flower"],
+    colors: ["#F472B6", "#FB7185", "#FDA4AF", "#E879F9"],
+    count: 7,
+    speed: 7000,
+  },
 };
 
 function MoodParticle({
@@ -719,15 +725,16 @@ function MoodParticle({
 }
 
 function MoodParticleOverlay({ mood, isActive }: { mood: SceneMood; isActive: boolean }) {
-  const config = MOOD_PARTICLES[mood];
+  const config = MOOD_PARTICLES[mood] ?? MOOD_PARTICLES.PEACE;
   const particles = useMemo(() => {
-    return Array.from({ length: config.count }).map((_, i) => ({
+    const c = MOOD_PARTICLES[mood] ?? MOOD_PARTICLES.PEACE;
+    return Array.from({ length: c.count }).map((_, i) => ({
       id: i,
-      icon: config.icons[i % config.icons.length],
-      color: config.colors[i % config.colors.length],
-      delay: i * (config.speed / config.count),
+      icon: c.icons[i % c.icons.length],
+      color: c.colors[i % c.colors.length],
+      delay: i * (c.speed / c.count),
       startX: 20 + Math.random() * (SCREEN_WIDTH - 40),
-      speed: config.speed + (Math.random() - 0.5) * 2000,
+      speed: c.speed + (Math.random() - 0.5) * 2000,
     }));
   }, [mood]);
 
@@ -768,7 +775,7 @@ function TapReactionOverlay({
     }, 1200);
   };
 
-  const config = MOOD_PARTICLES[mood];
+  const config = MOOD_PARTICLES[mood] ?? MOOD_PARTICLES.PEACE;
   const tapIcon = config.icons[0];
   const tapColor = config.colors[0];
 
@@ -801,7 +808,7 @@ function TapRippleEffect({
   const ringOpacity = useSharedValue(0.8);
   const burstItems = useMemo(() => {
     const count = mood === "JOY" ? 6 : mood === "AWE" ? 5 : 4;
-    const config = MOOD_PARTICLES[mood];
+    const config = MOOD_PARTICLES[mood] ?? MOOD_PARTICLES.PEACE;
     return Array.from({ length: count }).map((_, i) => {
       const angle = (i / count) * Math.PI * 2;
       return {
@@ -915,6 +922,7 @@ const MOOD_CONFIG: Record<SceneMood, { icon: string; color: string; label: strin
   PEACE: { icon: "leaf", color: "#7EDCB5", label: "Peace" },
   TENSION: { icon: "flash", color: "#F97316", label: "Tension" },
   JOY: { icon: "sunny", color: "#FBBF24", label: "Joy" },
+  LOVE: { icon: "heart", color: "#F472B6", label: "Love" },
 };
 
 const FALLBACK_MOOD_GRADIENTS: Record<SceneMood, string[]> = {
@@ -922,6 +930,7 @@ const FALLBACK_MOOD_GRADIENTS: Record<SceneMood, string[]> = {
   PEACE: ["#064E3B", "#166534", "#6EE7B7"],
   TENSION: ["#7C2D12", "#C2410C", "#FDBA74"],
   JOY: ["#78350F", "#D97706", "#FDE68A"],
+  LOVE: ["#831843", "#BE185D", "#F9A8D4"],
 };
 
 const FALLBACK_MOOD_ICONS: Record<SceneMood, { name: string; color: string }> = {
@@ -929,6 +938,7 @@ const FALLBACK_MOOD_ICONS: Record<SceneMood, { name: string; color: string }> = 
   PEACE: { name: "leaf", color: "#A7F3D0" },
   TENSION: { name: "flame", color: "#FED7AA" },
   JOY: { name: "sunny", color: "#FEF3C7" },
+  LOVE: { name: "heart", color: "#FDA4AF" },
 };
 
 function SceneIllustrationPlaceholder({ mood, loading }: { mood: SceneMood; loading: boolean }) {
