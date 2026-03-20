@@ -38,7 +38,159 @@ const SCENE_IMAGES: Record<string, Record<number, string>> = {
     4: "/assets/kids-scenes/creation-light-scene-4.png",
     5: "/assets/kids-scenes/creation-light-scene-5.png",
   },
+  "God Made the Stars and Moon": {
+    0: "/assets/kids-scenes/creation-stars-scene-0.png",
+    1: "/assets/kids-scenes/creation-stars-scene-1.png",
+    2: "/assets/kids-scenes/creation-stars-scene-2.png",
+    3: "/assets/kids-scenes/creation-stars-scene-3.png",
+    4: "/assets/kids-scenes/creation-stars-scene-4.png",
+    5: "/assets/kids-scenes/creation-stars-scene-5.png",
+  },
+  "God Made the Flowers and Trees": {
+    0: "/assets/kids-scenes/creation-flowers-scene-0.png",
+    1: "/assets/kids-scenes/creation-flowers-scene-1.png",
+    2: "/assets/kids-scenes/creation-flowers-scene-2.png",
+    3: "/assets/kids-scenes/creation-flowers-scene-3.png",
+    4: "/assets/kids-scenes/creation-flowers-scene-4.png",
+    5: "/assets/kids-scenes/creation-flowers-scene-5.png",
+  },
 };
+
+type SceneData = {
+  sceneIndex: number;
+  narration: string;
+  illustrationPrompt: string;
+  imageUrl: string;
+  mood: string;
+};
+
+const ME_SCENES: SceneData[] = [
+  {
+    sceneIndex: 0,
+    narration: "God made the light, the sky, and the oceans. He made the plants and the animals. But the best thing He made was people! And that means you! Can you believe it? You are a special creation of God!",
+    illustrationPrompt: "Soft watercolor, 2D animation style, warm earth tones, biblically inspired. A bright, sunny scene with a blue sky, fluffy clouds, and a sparkling ocean.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-0.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 1,
+    narration: "God said, 'Let us make people in our image!' That means we can think and feel, love and be kind. Look at how special you are! You can talk to God every day!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Smiling children of diverse backgrounds gathered around in a circle, their faces filled with joy and wonder.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-1.png",
+    mood: "JOY",
+  },
+  {
+    sceneIndex: 2,
+    narration: "When God made the first person, He didn't just say the words. He took His time, forming him with His own hands. God was gentle and careful, like an artist with beautiful clay.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A loving image of God kneeling down, carefully shaping a figure from soft clay. Warm light and colors.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-2.png",
+    mood: "AWE",
+  },
+  {
+    sceneIndex: 3,
+    narration: "After creating everything, God looked around. He saw the stars, the oceans, the animals, and people. And He didn't just say it was good. He said it was VERY good! Can you imagine that?",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Panoramic view of beautiful created world: stars, oceans, forests, diverse people in a vibrant meadow under sunset.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-3.png",
+    mood: "JOY",
+  },
+  {
+    sceneIndex: 4,
+    narration: "You are special! God made you with love. He chose the color of your eyes and the sound of your laugh. You are not an accident. You are His masterpiece!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A joyful child looking in a mirror with a big smile. Vibrant colors and sparkles around them. Sunlight streams through window.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-4.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 5,
+    narration: "Every person you meet is made by God too! That's why we should be kind and loving. Everyone is special, just like you! Remember, you are loved and wanted!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A park scene with children of different backgrounds holding hands, playing games, sharing smiles. Trees and flowers bloom.",
+    imageUrl: "/assets/kids-scenes/creation-me-scene-5.png",
+    mood: "JOY",
+  },
+];
+
+const ANIMALS_SCENES: SceneData[] = [
+  {
+    sceneIndex: 0,
+    narration: "On the fifth day, God made all the sea creatures! Big whales and tiny fish, octopuses and sea horses, all swimming in the beautiful blue oceans God had made.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Colorful underwater scene with whales, fish, octopuses, and seahorses swimming in blue ocean.",
+    imageUrl: "/assets/kids-scenes/creation-animals-scene-0.png",
+    mood: "AWE",
+  },
+  {
+    sceneIndex: 1,
+    narration: "Then God filled the sky with birds! Eagles soaring high, tiny hummingbirds zipping around flowers, colorful parrots, and friendly robins. The sky was alive with singing!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Blue sky filled with colorful birds - eagles soaring, hummingbirds near flowers, parrots and robins.",
+    imageUrl: "/assets/kids-scenes/creation-animals-scene-1.png",
+    mood: "JOY",
+  },
+  {
+    sceneIndex: 2,
+    narration: "On the sixth day, God made the land animals! Big elephants, tall giraffes, bouncy rabbits, and cuddly kittens. Every animal is special and unique!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A meadow with elephants, giraffes, rabbits, and kittens playing together in sunshine.",
+    imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png",
+    mood: "JOY",
+  },
+  {
+    sceneIndex: 3,
+    narration: "God even made the tiny creatures - ladybugs with their pretty spots, butterflies with colorful wings, and busy little ants working together. God cares about the smallest things!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Close-up garden scene with ladybugs, butterflies, and ants among flowers and leaves. Warm sunshine.",
+    imageUrl: "/assets/kids-scenes/creation-animals-scene-3.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 4,
+    narration: "God asked people to take care of all the animals. We are their helpers! We can feed them, be kind to them, and love them. Every animal is a gift from God!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A child gently petting a lamb while other animals gather around - a dog, a rabbit, birds perching nearby.",
+    imageUrl: "/assets/kids-scenes/creation-animals-scene-4.png",
+    mood: "LOVE",
+  },
+];
+
+const LIGHT_SCENES: SceneData[] = [
+  {
+    sceneIndex: 0,
+    narration: "A long, long time ago, there was nothing at all. No trees, no animals, and no people. It was very, very dark. But guess what? God was there, watching over the emptiness. He is always there.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A vast dark void with soft shadows. A gentle glowing light starts to shimmer, symbolizing God's presence.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-0.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 1,
+    narration: "God looked at the darkness. He had a bright idea! With a joyful voice, He said, 'Let there be light!' Suddenly, beautiful light burst into existence! It filled every corner, like the biggest sunrise you've ever seen.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Radiant light spreading across the scene, illuminating the dark with soft gold and yellow hues.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-1.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 2,
+    narration: "God looked at the light and smiled. 'This is good!' He said. God loved the light He had made. He named the light 'Day' and the dark 'Night.' Day was for playing, and Night was for sleeping.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Split scene showing bright sunny day on one side and peaceful starry night on the other.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-2.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 3,
+    narration: "Do you know what's amazing? God made light just by speaking! He didn't need a flashlight or a lamp. With just a few words, He created the light. That shows how powerful God is.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Sparkles of light radiating outward, creating a magical effect against illuminated background.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-3.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 4,
+    narration: "Every morning, when the sun rises, remember that God made the very first light! He made it to share something beautiful with you. God loves making wonderful things, just like light!",
+    illustrationPrompt: "Soft watercolor, 2D animation style. Bright sun rising over a calm landscape with pink and orange sky. Children playing in the light.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-4.png",
+    mood: "PEACE",
+  },
+  {
+    sceneIndex: 5,
+    narration: "When you turn on a light at night, think about God. He made light to chase away the darkness. Just like the light, God is always with you, even when you feel scared.",
+    illustrationPrompt: "Soft watercolor, 2D animation style. A child turning on a small lamp in a cozy room. Light pours from the lamp, warm and comforting.",
+    imageUrl: "/assets/kids-scenes/creation-light-scene-5.png",
+    mood: "PEACE",
+  },
+];
 
 const STARS_SCENES = [
   {
@@ -164,47 +316,29 @@ async function backfill() {
     );
   }
 
-  console.log("[backfill] Updating existing scene images...");
-  for (const [storyTitle, scenes] of Object.entries(SCENE_IMAGES)) {
+  const ALL_STORY_SCENES: Record<string, SceneData[]> = {
+    "God Made Me": ME_SCENES,
+    "God Made the Animals": ANIMALS_SCENES,
+    "God Made the Light": LIGHT_SCENES,
+    "God Made the Stars and Moon": STARS_SCENES,
+    "God Made the Flowers and Trees": FLOWERS_SCENES,
+  };
+
+  console.log("[backfill] Replacing all creation story scenes with curated content...");
+  for (const [storyTitle, scenes] of Object.entries(ALL_STORY_SCENES)) {
     const storyRows = await db
       .select({ id: kidsStories.id })
       .from(kidsStories)
       .where(eq(kidsStories.title, storyTitle));
     if (!storyRows.length) {
-      console.log(`  Story not found: ${storyTitle}`);
+      console.log(`  Story not found (skipped): ${storyTitle}`);
       continue;
     }
     const storyId = storyRows[0].id;
-    for (const [idx, imageUrl] of Object.entries(scenes)) {
-      await db
-        .update(kidsStoryScenes)
-        .set({ imageUrl })
-        .where(
-          and(
-            eq(kidsStoryScenes.storyId, storyId),
-            eq(kidsStoryScenes.sceneIndex, Number(idx))
-          )
-        );
-    }
-    console.log(
-      `  Updated ${Object.keys(scenes).length} scene images for: ${storyTitle}`
-    );
-  }
-
-  console.log("[backfill] Creating missing scenes for Stars and Moon...");
-  const starsRows = await db
-    .select({ id: kidsStories.id })
-    .from(kidsStories)
-    .where(eq(kidsStories.title, "God Made the Stars and Moon"));
-  if (starsRows.length) {
-    const storyId = starsRows[0].id;
-    const existingScenes = await db
-      .select({ sceneIndex: kidsStoryScenes.sceneIndex })
-      .from(kidsStoryScenes)
+    await db
+      .delete(kidsStoryScenes)
       .where(eq(kidsStoryScenes.storyId, storyId));
-    const existingIndexes = new Set(existingScenes.map((s) => s.sceneIndex));
-    for (const scene of STARS_SCENES) {
-      if (existingIndexes.has(scene.sceneIndex)) continue;
+    for (const scene of scenes) {
       await db.insert(kidsStoryScenes).values({
         id: randomUUID(),
         storyId,
@@ -216,36 +350,7 @@ async function backfill() {
       });
     }
     console.log(
-      `  Created ${STARS_SCENES.length - existingIndexes.size} scenes for Stars and Moon`
-    );
-  }
-
-  console.log("[backfill] Creating missing scenes for Flowers and Trees...");
-  const flowersRows = await db
-    .select({ id: kidsStories.id })
-    .from(kidsStories)
-    .where(eq(kidsStories.title, "God Made the Flowers and Trees"));
-  if (flowersRows.length) {
-    const storyId = flowersRows[0].id;
-    const existingScenes = await db
-      .select({ sceneIndex: kidsStoryScenes.sceneIndex })
-      .from(kidsStoryScenes)
-      .where(eq(kidsStoryScenes.storyId, storyId));
-    const existingIndexes = new Set(existingScenes.map((s) => s.sceneIndex));
-    for (const scene of FLOWERS_SCENES) {
-      if (existingIndexes.has(scene.sceneIndex)) continue;
-      await db.insert(kidsStoryScenes).values({
-        id: randomUUID(),
-        storyId,
-        sceneIndex: scene.sceneIndex,
-        narration: scene.narration,
-        illustrationPrompt: scene.illustrationPrompt,
-        imageUrl: scene.imageUrl,
-        mood: scene.mood,
-      });
-    }
-    console.log(
-      `  Created ${FLOWERS_SCENES.length - existingIndexes.size} scenes for Flowers and Trees`
+      `  Replaced with ${scenes.length} curated scenes for: ${storyTitle}`
     );
   }
 
