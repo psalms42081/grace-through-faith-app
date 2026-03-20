@@ -47,6 +47,7 @@ export interface UseBibleAudioReturn {
   deviceVoices: DeviceVoice[];
   isLoadingAudio: boolean;
   usingFallback: boolean;
+  fallbackReason: string | null;
   isActive: boolean;
   currentVoiceLabel: string;
   setShowSpeedPicker: (v: boolean) => void;
@@ -82,6 +83,7 @@ export default function useBibleAudio(
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoice[]>([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   const sessionRef = useRef(0);
   const currentIndexRef = useRef(-1);
@@ -166,6 +168,7 @@ export default function useBibleAudio(
     setSpeakingVerseIndex(-1);
     setIsLoadingAudio(false);
     setUsingFallback(false);
+    setFallbackReason(null);
     currentIndexRef.current = -1;
     audioCtxRef.current.clearSession();
   }, [cleanupPlayer]);
@@ -406,9 +409,11 @@ export default function useBibleAudio(
         speakVerseAI(batchEnd, session);
       }
     } catch (err: any) {
-      console.log("[TTS speakVerseAI] Error, falling back:", err?.message || err);
+      const reason = err?.message || String(err);
+      console.log("[TTS speakVerseAI] Error, falling back:", reason);
       if (session !== sessionRef.current) return;
       setUsingFallback(true);
+      setFallbackReason(reason);
       setIsLoadingAudio(false);
       speakVerseFallback(index, session);
     }
@@ -455,6 +460,7 @@ export default function useBibleAudio(
     setIsSpeaking(true);
     setIsPaused(false);
     setUsingFallback(false);
+    setFallbackReason(null);
     speakVerseAI(0, session);
   }, [isPaused, usingFallback, speakVerseAI, speakVerseFallback, bookId, bookName, chapter, translation]);
 
@@ -536,6 +542,7 @@ export default function useBibleAudio(
     deviceVoices,
     isLoadingAudio,
     usingFallback,
+    fallbackReason,
     isActive,
     currentVoiceLabel,
     setShowSpeedPicker,

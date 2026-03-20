@@ -120,18 +120,20 @@ export default function TTSPlayerBar({
       )}
 
       {audio.isActive && (
-        <View style={[styles.audioStatusBar, { backgroundColor: theme.backgroundCard }]}>
+        <View style={[styles.audioStatusBar, { backgroundColor: audio.usingFallback ? "#3a2200" : theme.backgroundCard }]}>
           {audio.isLoadingAudio ? (
             <ActivityIndicator size="small" color={theme.accent} />
           ) : (
-            <Ionicons name="volume-high" size={14} color={theme.accent} />
+            <Ionicons name={audio.usingFallback ? "alert-circle" : "volume-high"} size={14} color={audio.usingFallback ? "#ff9800" : theme.accent} />
           )}
-          <Text style={[styles.audioStatusText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+          <Text style={[styles.audioStatusText, { color: audio.usingFallback ? "#ff9800" : theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
             {audio.isLoadingAudio
               ? "Loading..."
-              : audio.isPaused
-                ? "Paused"
-                : `Verse ${verses[audio.speakingVerseIndex]?.verse ?? ""}`}
+              : audio.usingFallback
+                ? `Device voice (${audio.fallbackReason?.slice(0, 40) || "AI voice unavailable"})`
+                : audio.isPaused
+                  ? "Paused"
+                  : `Verse ${verses[audio.speakingVerseIndex]?.verse ?? ""}`}
           </Text>
         </View>
       )}
