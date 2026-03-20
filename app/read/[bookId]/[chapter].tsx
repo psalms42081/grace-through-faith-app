@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getApiUrl, apiRequest, queryClient } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -24,7 +24,7 @@ import useBibleAudio from "@/hooks/useBibleAudio";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 
-const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB"];
+const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
 
 const TRANSLATION_LABELS: Record<string, string> = {
   KJV: "King James Version",
@@ -291,18 +291,6 @@ export default function VerseReaderScreen() {
                   </Text>
                 </View>
               </Pressable>
-              <Pressable
-                hitSlop={8}
-                style={styles.headerBtn}
-                onPress={() =>
-                  router.push(
-                    `/passage-context?bookId=${bookId}&chapter=${chapter}&bookName=${encodeURIComponent(bookName)}`
-                  )
-                }
-                accessibilityLabel="View passage context"
-              >
-                <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
-              </Pressable>
             </View>
           ),
         }}
@@ -390,7 +378,7 @@ export default function VerseReaderScreen() {
                 >
                   <Ionicons name="hand-left-outline" size={16} color={theme.accent} />
                   <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
-                    Tap any verse to study deeper, highlight, or bookmark
+                    Tap any verse to copy, highlight, or bookmark
                   </Text>
                   <Ionicons name="close" size={14} color={theme.textMuted} />
                 </Pressable>

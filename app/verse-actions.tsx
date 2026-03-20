@@ -11,7 +11,6 @@ import { router, useLocalSearchParams, Stack } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import * as Clipboard from "expo-clipboard";
@@ -29,7 +28,7 @@ export default function VerseActionsSheet() {
       verseId: string;
       translation: string;
     }>();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -37,71 +36,10 @@ export default function VerseActionsSheet() {
   const reference = `${bookName} ${chapter}:${verse}`;
   const txLabel = translation || "KJV";
 
-  const navigateTo = useCallback((pathname: string, params?: Record<string, string>) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    safeGoBack(router);
-    setTimeout(() => {
-      if (params) {
-        router.push({ pathname: pathname as any, params });
-      } else {
-        router.push(pathname as any);
-      }
-    }, 300);
-  }, []);
-
   const handleCopy = useCallback(async () => {
     await Clipboard.setStringAsync(`${text}\n\u2014 ${reference} (${txLabel})`);
     safeGoBack(router);
   }, [text, reference, txLabel]);
-
-  const handleStudy = useCallback(() => {
-    navigateTo("/passage-context", {
-      bookId: bookId || "",
-      chapter: chapter || "",
-      bookName: bookName || "",
-    });
-  }, [bookId, chapter, bookName, navigateTo]);
-
-  const handleWordStudy = useCallback(() => {
-    navigateTo("/word-study", {
-      bookId: bookId || "",
-      chapter: chapter || "",
-      verse: verse || "",
-      verseId: canonicalVerseId,
-      verseText: text || "",
-      bookName: bookName || "",
-    });
-  }, [canonicalVerseId, bookName, chapter, verse, text, bookId, navigateTo]);
-
-  const handleHistoricVoices = useCallback(() => {
-    navigateTo("/historic-voices", {
-      bookId: bookId || "",
-      chapter: chapter || "",
-      bookName: bookName || "",
-    });
-  }, [bookId, chapter, bookName, navigateTo]);
-
-  const handleVerseMap = useCallback(() => {
-    navigateTo("/verse-map", {
-      verseId: canonicalVerseId,
-      verseText: text || "",
-      verseReference: reference,
-      bookName: bookName || "",
-      bookId: bookId || "",
-      chapter: chapter || "",
-      verse: verse || "",
-    });
-  }, [canonicalVerseId, text, reference, bookName, bookId, chapter, verse, navigateTo]);
-
-  const handleSocraticStudy = useCallback(() => {
-    navigateTo("/study-guide", {
-      verseReference: reference,
-      verseText: text || "",
-      bookName: bookName || "",
-      chapter: chapter || "",
-      verse: verse || "",
-    });
-  }, [reference, text, bookName, chapter, verse, navigateTo]);
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
@@ -207,81 +145,11 @@ export default function VerseActionsSheet() {
           STUDY DEEPER
         </Text>
 
-        <View style={styles.actionsGrid}>
-          <ActionButton
-            icon="language-outline"
-            label="Words"
-            theme={theme}
-            onPress={handleWordStudy}
-            color="#3B5998"
-          />
-          <ActionButton
-            icon="time-outline"
-            label="Context"
-            theme={theme}
-            onPress={handleStudy}
-            color="#2E7D32"
-          />
-          <ActionButton
-            icon="chatbubble-ellipses-outline"
-            label="Insight"
-            theme={theme}
-            onPress={handleHistoricVoices}
-            color="#3B6CB5"
-          />
-          <ActionButton
-            icon="map-outline"
-            label="Verse Map"
-            theme={theme}
-            onPress={handleVerseMap}
-            color="#8B5CF6"
-          />
-          <ActionButton
-            icon="school-outline"
-            label="Study Guide"
-            theme={theme}
-            onPress={handleSocraticStudy}
-            color="#C9933A"
-          />
-        </View>
+        <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", paddingHorizontal: 20, paddingBottom: 12, lineHeight: 18 }}>
+          Finish the chapter to access study tools — Context, Insight, Word Study, and more.
+        </Text>
       </ScrollView>
     </>
-  );
-}
-
-function ActionButton({
-  icon,
-  label,
-  theme,
-  onPress,
-  color,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  theme: typeof Colors.light;
-  onPress: () => void;
-  color?: string;
-}) {
-  const iconColor = color ?? theme.text;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionBtn,
-        {
-          backgroundColor: theme.backgroundCard,
-          borderColor: theme.border,
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <View style={[styles.actionIcon, { backgroundColor: (color ?? theme.textMuted) + "18" }]}>
-        <Ionicons name={icon} size={22} color={iconColor} />
-      </View>
-      <Text style={[styles.actionLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -359,28 +227,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 12,
   },
-  actionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  actionBtn: {
-    width: "47%",
-    flexGrow: 1,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: "center" as const,
-    gap: 8,
-  },
-  actionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  actionLabel: { fontSize: 13 },
   feedbackBanner: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
