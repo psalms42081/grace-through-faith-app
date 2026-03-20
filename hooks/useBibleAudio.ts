@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView } from "react-native";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import * as FileSystem from "expo-file-system";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -325,9 +326,23 @@ export default function useBibleAudio(
       cleanupPlayer();
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
-      console.log("[TTS speakVerseAI] Creating player with URI:", audioUri);
+      let playerSource: string = audioUri;
 
-      const player = createAudioPlayer(audioUri);
+      if (isMobile && FileSystem.cacheDirectory) {
+        console.log("[TTS speakVerseAI] Native platform — downloading audio to local file");
+        const localPath = `${FileSystem.cacheDirectory}tts_${audioId}.mp3`;
+        const dlResult = await FileSystem.downloadAsync(audioUri, localPath);
+        if (dlResult.status === 200) {
+          playerSource = dlResult.uri;
+          console.log("[TTS speakVerseAI] Downloaded to:", playerSource, "size:", dlResult.headers?.["content-length"] || "unknown");
+        } else {
+          console.log("[TTS speakVerseAI] Download failed, status:", dlResult.status, "— using remote URL");
+        }
+      }
+
+      console.log("[TTS speakVerseAI] Creating player with source:", playerSource);
+
+      const player = createAudioPlayer(playerSource);
       console.log("[TTS speakVerseAI] Player created");
       try {
         player.setPlaybackRate(speechRateRef.current);
