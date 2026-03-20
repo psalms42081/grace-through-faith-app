@@ -30,6 +30,8 @@ const TRANSLATION_LABELS: Record<string, string> = {
   KJV: "King James Version",
   ASV: "American Standard",
   WEB: "World English Bible",
+  BBE: "Bible in Basic English",
+  YLT: "Young's Literal Translation",
   RV1909: "Reina Valera 1909",
   LSG: "Louis Segond 1910",
   ARC: "Almeida Revista e Corrigida",
