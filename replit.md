@@ -33,6 +33,7 @@ The application features a mobile-first architecture with a frontend built using
 - **SDA Speakers Experience:** In-app browsing of curated SDA speakers/ministries with embedded YouTube playback.
 - **Broadcasts:** 5 SDA broadcast networks with live streaming.
 - **Kids Star Shop & Daily Quests:** Cosmetic rewards store and daily quests for children.
+- **Kids Story Scene Images:** Pre-generated watercolor illustrations stored in `assets/kids-scenes/` for all creation stories (Light, Me, Animals, Stars/Moon, Flowers/Trees) plus collection covers. Backfill script (`scripts/backfill-creation-images.ts`) updates DB image URLs and creates missing scenes during deploy.
 - **Prophecy Explorer:** Interactive Daniel & Revelation study with a horizontal timeline.
 - **Spiritual Growth Map:** Visual spiritual journey tracking 5 dimensions with 4 levels each.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
