@@ -25,6 +25,7 @@ __export(schema_exports, {
   bibleTranslations: () => bibleTranslations,
   bibleVerses: () => bibleVerses,
   chapterContextCache: () => chapterContextCache,
+  chapterPassageSections: () => chapterPassageSections,
   chapterSummaries: () => chapterSummaries,
   childProfiles: () => childProfiles,
   commentaryEntries: () => commentaryEntries,
@@ -53,7 +54,9 @@ __export(schema_exports, {
   insertUserSchema: () => insertUserSchema,
   kidsBadges: () => kidsBadges,
   kidsCollections: () => kidsCollections,
+  kidsDailyQuests: () => kidsDailyQuests,
   kidsProgress: () => kidsProgress,
+  kidsPurchases: () => kidsPurchases,
   kidsQuizQuestions: () => kidsQuizQuestions,
   kidsStories: () => kidsStories,
   kidsStoryScenes: () => kidsStoryScenes,
@@ -114,7 +117,7 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, bibleTranslations, bibleBooks, bibleVerses, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback;
+var users, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, bibleTranslations, bibleBooks, bibleVerses, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -125,7 +128,8 @@ var init_schema = __esm({
       displayName: text("display_name"),
       email: text("email").unique(),
       familyId: varchar("family_id"),
-      role: varchar("role", { length: 16 }).default("user").notNull(),
+      role: varchar("role", { length: 24 }).default("member").notNull(),
+      profileType: varchar("profile_type", { length: 24 }),
       isPro: boolean("is_pro").default(false).notNull(),
       isPatron: boolean("is_patron").default(false),
       donationAmount: integer("donation_amount").default(0),
@@ -411,6 +415,7 @@ var init_schema = __esm({
       targetGoals: jsonb("target_goals").$type(),
       difficultyLevel: varchar("difficulty_level", { length: 20 }),
       estimatedMinutesPerDay: integer("estimated_minutes_per_day"),
+      category: varchar("category", { length: 20 }).default("thematic"),
       traditionKey: varchar("tradition_key", { length: 30 }).default("core").notNull(),
       isPublished: boolean("is_published").default(false),
       isAiGenerated: boolean("is_ai_generated").default(false),
@@ -701,6 +706,39 @@ var init_schema = __esm({
         childIdx: index("dinner_topic_child_idx").on(table.childProfileId)
       })
     );
+    kidsPurchases = pgTable(
+      "kids_purchase",
+      {
+        id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+        userId: varchar("user_id").notNull(),
+        childProfileId: varchar("child_profile_id").references(() => childProfiles.id),
+        itemId: varchar("item_id", { length: 60 }).notNull(),
+        category: varchar("category", { length: 30 }).notNull(),
+        starCost: integer("star_cost").notNull(),
+        equipped: boolean("equipped").default(false),
+        purchasedAt: timestamp("purchased_at").defaultNow().notNull()
+      },
+      (table) => ({
+        userChildIdx: index("kids_purchase_user_child_idx").on(table.userId, table.childProfileId)
+      })
+    );
+    kidsDailyQuests = pgTable(
+      "kids_daily_quest",
+      {
+        id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+        userId: varchar("user_id").notNull(),
+        childProfileId: varchar("child_profile_id").references(() => childProfiles.id),
+        questDate: varchar("quest_date", { length: 10 }).notNull(),
+        readStory: boolean("read_story").default(false),
+        practiceVerse: boolean("practice_verse").default(false),
+        takeQuiz: boolean("take_quiz").default(false),
+        bonusClaimed: boolean("bonus_claimed").default(false),
+        createdAt: timestamp("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        userDateIdx: index("kids_quest_user_date_idx").on(table.userId, table.childProfileId, table.questDate)
+      })
+    );
     prayerRequests = pgTable(
       "prayer_request",
       {
@@ -810,14 +848,18 @@ var init_schema = __esm({
         bookId: integer("book_id").notNull(),
         chapter: integer("chapter").notNull(),
         layer: varchar("layer", { length: 20 }).notNull(),
+        verseStart: integer("verse_start").notNull().default(0),
+        verseEnd: integer("verse_end").notNull().default(0),
         completedAt: timestamp("completed_at").defaultNow().notNull()
       },
       (table) => ({
-        userBookChapterLayer: uniqueIndex("layer_user_book_chapter_layer").on(
+        userBookChapterLayerVerse: uniqueIndex("layer_completions_unique").on(
           table.userId,
           table.bookId,
           table.chapter,
-          table.layer
+          table.layer,
+          table.verseStart,
+          table.verseEnd
         ),
         userBookIdx: index("layer_user_book_idx").on(table.userId, table.bookId)
       })
@@ -831,19 +873,39 @@ var init_schema = __esm({
         chapter: integer("chapter").notNull(),
         layer: varchar("layer", { length: 20 }).notNull(),
         sectionKey: varchar("section_key", { length: 60 }).notNull(),
+        verseStart: integer("verse_start").notNull().default(0),
+        verseEnd: integer("verse_end").notNull().default(0),
         content: text("content").notNull(),
         updatedAt: timestamp("updated_at").defaultNow().notNull(),
         createdAt: timestamp("created_at").defaultNow().notNull()
       },
       (table) => ({
-        userChapterSection: uniqueIndex("journal_user_chapter_section").on(
+        userChapterSectionVerse: uniqueIndex("journal_entries_unique").on(
           table.userId,
           table.bookId,
           table.chapter,
           table.layer,
-          table.sectionKey
+          table.sectionKey,
+          table.verseStart,
+          table.verseEnd
         ),
         userBookIdx: index("journal_user_book_idx").on(table.userId, table.bookId)
+      })
+    );
+    chapterPassageSections = pgTable(
+      "chapter_passage_sections",
+      {
+        id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+        bookId: integer("book_id").notNull(),
+        chapter: integer("chapter").notNull(),
+        sections: jsonb("sections").notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        bookChapter: uniqueIndex("passage_sections_book_chapter").on(
+          table.bookId,
+          table.chapter
+        )
       })
     );
     chapterSummaries = pgTable(
@@ -1258,6 +1320,10 @@ var init_schema = __esm({
       userId: varchar("user_id").notNull(),
       topic: varchar("topic", { length: 32 }).notNull(),
       message: text("message").notNull(),
+      context: text("context"),
+      email: varchar("email", { length: 255 }),
+      appVersion: varchar("app_version", { length: 32 }),
+      platform: varchar("platform", { length: 16 }),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
   }
@@ -1611,7 +1677,7 @@ async function generateContextCards(params) {
     messages: [
       {
         role: "system",
-        content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions. ${depthGuide}`
+        content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`
       },
       {
         role: "user",
@@ -1669,7 +1735,7 @@ async function generateApplicationStudy(params) {
     messages: [
       {
         role: "system",
-        content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions. ${depthGuide}`
+        content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`
       },
       {
         role: "user",
@@ -1855,14 +1921,16 @@ function hasPersonalReflection(text2) {
 function inferObserveCategory(userResponse) {
   const lower = userResponse.toLowerCase();
   const patterns = [
-    ["speaker", ["who is speaking", "the speaker", "god is the", "paul is", "jesus said", "author", "writer", "subject here", "active agent"]],
-    ["people", ["who else", "mentioned", "people", "names", "audience", "readers", "sosthenes", "timothy"]],
-    ["titles", ["title", "calls himself", "apostle", "servant", "lord", "master", "christ"]],
-    ["actions", ["action", "verb", "created", "made", "said", "commands", "doing", "performs", "acts"]],
-    ["authority", ["authority", "by the will", "source of", "calling", "commissioned", "sent by", "appointed"]],
-    ["repeated", ["repeated", "repetition", "emphasis", "again and again", "keeps saying"]],
-    ["contrasts", ["contrast", "but", "however", "opposite", "difference", "compared", "versus"]],
-    ["structure", ["structure", "merism", "literary", "phrase", "beginning", "opening", "closing", "order", "pattern", "totality", "heaven and earth"]]
+    ["character", ["who is speaking", "the speaker", "god is the", "paul is", "jesus said", "author", "writer", "subject here", "active agent", "job ", "moses", "david", "abraham", "peter", "john", "mary", "satan", "devil", "he was", "she was", "they were", "this man", "this woman", "the man", "the woman"]],
+    ["people", ["who else", "mentioned", "people", "names", "audience", "readers", "sosthenes", "timothy", "family", "children", "sons", "daughters", "wife", "husband", "friends", "servants", "nation"]],
+    ["titles", ["title", "calls himself", "apostle", "servant", "lord", "master", "christ", "king", "priest", "prophet", "blameless", "upright", "righteous", "faithful"]],
+    ["actions", ["action", "verb", "created", "made", "said", "commands", "doing", "performs", "acts", "prayed", "worshipped", "sacrificed", "offered", "gave", "went", "came", "took", "stayed", "remained", "loyal", "faithful", "tested", "suffered", "lost"]],
+    ["setting", ["land", "place", "where", "location", "city", "country", "region", "uz", "east", "lived", "dwelling"]],
+    ["theme", ["theme", "about", "message", "teaches", "shows", "reveals", "lesson", "point", "meaning", "purpose", "suffering", "faith", "trust", "obedience", "loyalty", "patience", "testing", "trial"]],
+    ["authority", ["authority", "by the will", "source of", "calling", "commissioned", "sent by", "appointed", "god allowed", "god permitted", "god said"]],
+    ["repeated", ["repeated", "repetition", "emphasis", "again and again", "keeps saying", "notice that", "interesting that"]],
+    ["contrasts", ["contrast", "but", "however", "opposite", "difference", "compared", "versus", "despite", "even though", "no matter what", "yet he", "still he", "still she"]],
+    ["structure", ["structure", "merism", "literary", "phrase", "beginning", "opening", "closing", "order", "pattern", "totality", "heaven and earth", "first", "then", "after"]]
   ];
   for (const [cat, keywords] of patterns) {
     if (keywords.some((kw) => lower.includes(kw))) return cat;
@@ -1896,7 +1964,7 @@ function parseEvaluationTag(response, userResponse, verseText, currentPhase) {
   if (!aiQuality && userResponse) {
     const words = userResponse.trim().split(/\s+/);
     const len = userResponse.trim().length;
-    if (len < 10 || words.length < 3) {
+    if (len < 8 || words.length < 2) {
       resolvedQuality = "off_topic";
     } else {
       const lower = cleanText.toLowerCase();
@@ -1904,17 +1972,18 @@ function parseEvaluationTag(response, userResponse, verseText, currentPhase) {
       if (redirectPhrases.some((p) => lower.includes(p))) {
         resolvedQuality = "off_topic";
       } else {
-        const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted"];
-        if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + "."))) {
-          if (len > 20 && words.length > 5) {
+        const affirmPhrases = ["good", "right", "correct", "exactly", "well noted", "nice observation", "great point", "you've identified", "you noticed", "insightful", "that's a key", "you've highlighted", "yes", "absolutely", "indeed", "that's right", "you're right", "excellent", "wonderful", "interesting", "thoughtful", "you've picked up", "you've touched"];
+        if (affirmPhrases.some((p) => lower.startsWith(p) || lower.includes(p + ".") || lower.includes(p + ",") || lower.includes(p + "!"))) {
+          if (len > 15 && words.length > 3) {
             resolvedQuality = "meaningful";
           }
-        } else if (len > 30 && words.length > 8) {
+        } else if (len > 20 && words.length > 4) {
           resolvedQuality = "meaningful";
         }
       }
     }
   }
+  console.log(`[study-guide] parseEvaluation: aiTag=${aiQuality || "none"} resolved=${resolvedQuality} category=${category || "none"} userLen=${userResponse?.length || 0} userWords=${userResponse?.trim().split(/\s+/).length || 0}`);
   if (userResponse && currentPhase === "apply" && resolvedQuality === "meaningful") {
     if (!hasPersonalReflection(userResponse)) {
       resolvedQuality = "shallow";
@@ -2711,28 +2780,32 @@ async function generateDiscussionPrep(params) {
     messages: [
       {
         role: "system",
-        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator. Generate discussion prep content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
+        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator preparing a Lesson Discussion Guide. Generate content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
 
 Return ONLY valid JSON in this format:
 {
+  "aiSummary": "The Big Idea \u2014 a ${depth === "quick" ? "concise 1-paragraph" : depth === "deep" ? "rich 3-4 paragraph" : "focused 2-paragraph"} summary capturing the core theme and why it matters for daily Adventist life.",
   "keyQuestions": ["question1", "question2", ...],
-  "aiSummary": "A ${depth === "quick" ? "brief 1-paragraph" : depth === "deep" ? "detailed 3-4 paragraph" : "2-3 paragraph"} overview of the lesson's main themes and theological significance.",
   "reflectionPrompts": ["prompt1", "prompt2", ...]
-}`
+}
+
+For keyQuestions: Write ${questionCount} open-ended discussion questions suitable for Sabbath School class, small group, or family worship. Each should invite personal reflection and practical application, not just factual recall.
+
+For reflectionPrompts: Write ${promptCount} Life Application prompts \u2014 practical, personal challenges or encouragements the reader can act on this week. Frame them as invitations, not commands.`
       },
       {
         role: "user",
-        content: `Generate Sabbath School discussion preparation for this week's lesson.
+        content: `Generate a Lesson Discussion Guide for this week's Sabbath School lesson.
 
 Lesson Title: "${lessonTitle}"
 
 Lesson Content (all daily readings):
 ${daysContent.substring(0, 6e3)}
 
-Generate:
-- ${questionCount} discussion questions that encourage deep thinking and personal application
-- A summary of the lesson's main themes
-- ${promptCount} personal reflection prompts for journaling`
+Produce:
+1. Big Idea \u2014 the central theme and its significance
+2. ${questionCount} discussion questions for class or small group use
+3. ${promptCount} life application prompts for personal growth`
       }
     ]
   });
@@ -2745,7 +2818,7 @@ Generate:
     console.error("Failed to parse discussion prep AI response:", raw.substring(0, 500));
     return {
       keyQuestions: ["What is the central theme of this week's lesson?"],
-      aiSummary: "Discussion prep could not be generated at this time.",
+      aiSummary: "Discussion guide could not be generated at this time.",
       reflectionPrompts: ["How does this lesson apply to your daily life?"]
     };
   }
@@ -2877,7 +2950,7 @@ var init_ai_engine = __esm({
 
 // server/services/source-packet-builder.ts
 import { createHash as createHash2 } from "crypto";
-import { eq as eq12 } from "drizzle-orm";
+import { eq as eq19 } from "drizzle-orm";
 function extractScriptureRefs(text2) {
   const pattern = /(?:[1-3]\s)?(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation)\s+\d+(?::\d+(?:[–-]\d+)?)?/gi;
   const matches = text2.match(pattern) || [];
@@ -2913,15 +2986,15 @@ function computeHash(data) {
   return createHash2("sha256").update(JSON.stringify(data)).digest("hex");
 }
 async function buildSourcePacket(lessonId) {
-  const lesson = await db.select().from(sabbathSchoolLessons).where(eq12(sabbathSchoolLessons.id, lessonId)).limit(1);
+  const lesson = await db.select().from(sabbathSchoolLessons).where(eq19(sabbathSchoolLessons.id, lessonId)).limit(1);
   if (lesson.length === 0) {
     throw new Error(`Lesson not found: ${lessonId}`);
   }
-  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq12(sabbathSchoolQuarterlies.id, lesson[0].quarterlyId)).limit(1);
+  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq19(sabbathSchoolQuarterlies.id, lesson[0].quarterlyId)).limit(1);
   if (quarterly.length === 0) {
     throw new Error(`Quarterly not found for lesson: ${lessonId}`);
   }
-  const days = await db.select().from(sabbathSchoolDays).where(eq12(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
+  const days = await db.select().from(sabbathSchoolDays).where(eq19(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
   const [yearStr, qStr] = (quarterly[0].quarterCode || "2025-02").split("-");
   const allContent = days.map((d) => d.contentMarkdown || "").join("\n");
   const sourceJson = {
@@ -2949,7 +3022,7 @@ async function buildSourcePacket(lessonId) {
     doctrinalThemes: detectDoctrinalThemes(allContent)
   };
   const sourceHash = computeHash(sourceJson);
-  const existing = await db.select().from(lessonSourcePackets).where(eq12(lessonSourcePackets.lessonId, lessonId)).limit(1);
+  const existing = await db.select().from(lessonSourcePackets).where(eq19(lessonSourcePackets.lessonId, lessonId)).limit(1);
   if (existing.length > 0) {
     if (existing[0].sourceHash === sourceHash) {
       return { id: existing[0].id, isNew: false, changed: false };
@@ -2959,7 +3032,7 @@ async function buildSourcePacket(lessonId) {
       sourceHash,
       status: "normalized",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq12(lessonSourcePackets.id, existing[0].id));
+    }).where(eq19(lessonSourcePackets.id, existing[0].id));
     console.log(`[source-packet] Updated packet for "${lesson[0].title}" (hash changed)`);
     return { id: existing[0].id, isNew: false, changed: true };
   }
@@ -3006,7 +3079,7 @@ __export(content_engine_exports, {
 });
 import OpenAI2 from "openai";
 import { z as z3 } from "zod";
-import { eq as eq13 } from "drizzle-orm";
+import { eq as eq20 } from "drizzle-orm";
 function createOpenAIClient2() {
   const client = new OpenAI2({
     apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -3028,7 +3101,7 @@ async function generateSabbathSchoolCompanion(lessonId, options) {
   let packetId = options?.sourcePacketId;
   let sourcePacket;
   if (packetId) {
-    const existing = await db.select().from(lessonSourcePackets).where(eq13(lessonSourcePackets.id, packetId)).limit(1);
+    const existing = await db.select().from(lessonSourcePackets).where(eq20(lessonSourcePackets.id, packetId)).limit(1);
     if (existing.length === 0) throw new Error(`Source packet ${packetId} not found`);
     sourcePacket = {
       id: existing[0].id,
@@ -3039,7 +3112,7 @@ async function generateSabbathSchoolCompanion(lessonId, options) {
   } else {
     const result = await buildSourcePacket(lessonId);
     packetId = result.id;
-    const packet = await db.select().from(lessonSourcePackets).where(eq13(lessonSourcePackets.id, packetId)).limit(1);
+    const packet = await db.select().from(lessonSourcePackets).where(eq20(lessonSourcePackets.id, packetId)).limit(1);
     sourcePacket = {
       id: packet[0].id,
       sourceJson: packet[0].sourceJson,
@@ -3064,7 +3137,7 @@ Memory verse for this lesson: ${src.memoryVerse}` : "";
       },
       {
         role: "user",
-        content: `Generate a comprehensive Sabbath School companion resource for the following lesson:
+        content: `Generate a Sabbath School Lesson Companion for the following lesson:
 
 Quarter: "${src.quarterMeta.title}" (${src.quarterMeta.humanDate || src.quarterMeta.quarterCode})
 Title: "${src.lessonTitle}" (Week ${src.weekNumber})
@@ -3075,7 +3148,7 @@ ${daysContent}
 
 Return a JSON object with this exact structure:
 {
-  "overview": "Write 2-3 separate paragraphs (separated by \\n\\n). First paragraph: the lesson's core theme and why it matters for Adventists today. Second paragraph: how this connects to the broader Philippians/Colossians narrative arc. Third paragraph (optional): relevance to the Three Angels' Messages or the Great Controversy theme.",
+  "overview": "Write a concise 2-3 sentence summary: what is this week's core theme and why does it matter for everyday Adventist life? Keep it warm, clear, and brief \u2014 this orients the reader, not teaches the lesson. No more than 4 sentences.",
   "dailyStudyPrompts": [
     {
       "day": 1,
@@ -3087,8 +3160,8 @@ Return a JSON object with this exact structure:
   ],
   "discussionQuestions": [
     {
-      "question": "a substantive discussion question that could sustain 5-10 minutes of group conversation",
-      "context": "1-2 sentences explaining why this question matters for spiritual formation \u2014 what tension or growth opportunity does it surface?",
+      "question": "Write conversational, concise questions that sound natural in Sabbath School. Preferred style: 'What does loving discipline look like in a Christian home?' or 'Why is it hard to speak truth with grace?' Avoid academic or generic phrasing. Each question should work for personal reflection, couples, families, small groups, or class.",
+      "context": "One short sentence starting with a verb \u2014 what this question helps surface. Example: 'Helps connect the lesson to real family conversations.' or 'Opens honest reflection about grace and truth.' Keep it under 15 words.",
       "depth": "surface|intermediate|deep"
     }
   ],
@@ -3113,18 +3186,20 @@ Return a JSON object with this exact structure:
   "egwConnections": [
     {
       "topic": "the specific lesson theme being connected",
-      "bookReference": "Prefer major EGW works: The Desire of Ages, Steps to Christ, The Great Controversy, Patriarchs and Prophets, Christ's Object Lessons, The Ministry of Healing, Education, The Acts of the Apostles. Use 'Book Title, Chapter X' format consistently \u2014 avoid page numbers unless the work is a devotional compilation.",
-      "relevance": "2-3 sentences explaining the specific connection \u2014 what does EGW add to the biblical discussion that enriches understanding?"
+      "bookReference": "Prefer major EGW works: The Desire of Ages, Steps to Christ, The Great Controversy, Patriarchs and Prophets, Christ's Object Lessons, The Ministry of Healing, Education, The Acts of the Apostles. Use 'Book Title, Chapter X' format consistently.",
+      "relevance": "1-2 sentences explaining the specific connection \u2014 what does EGW add to the biblical discussion?"
     }
   ]
 }
 
 Requirements:
 - Generate exactly 7 daily study prompts (one per day, matching the lesson's day structure)
-- Generate 7-8 discussion questions: 2 surface, 3 intermediate, 2-3 deep
+- Generate 7-8 discussion questions: 2 surface (Starter), 3 intermediate (Group Discussion), 2-3 deep (Go Deeper)
+- Discussion questions MUST sound conversational and natural \u2014 the kind of question a thoughtful Sabbath School teacher would ask, not a textbook
+- Each question's "context" field must be a short one-line helper (under 15 words), not a paragraph
 - Generate 4-5 EGW connections from well-known major works
 - Generate exactly 5 meditation steps that are actionable and progressive
-- The overview MUST be 2-3 distinct paragraphs
+- The overview MUST be concise (2-4 sentences max) \u2014 orient the reader, don't lecture
 - Key insights should be distinctively Adventist where possible, not generic Christian observations`
       }
     ],
@@ -3381,7 +3456,7 @@ var init_content_engine = __esm({
     init_schema();
     init_source_packet_builder();
     companionSchema = z3.object({
-      overview: z3.string().min(400),
+      overview: z3.string().min(50),
       dailyStudyPrompts: z3.array(z3.object({
         day: z3.number(),
         dayTitle: z3.string().min(5),
@@ -3390,8 +3465,8 @@ var init_content_engine = __esm({
         keyInsight: z3.string().min(30)
       })).min(5).max(7),
       discussionQuestions: z3.array(z3.object({
-        question: z3.string().min(20),
-        context: z3.string().min(20),
+        question: z3.string().min(15),
+        context: z3.string().min(10),
         depth: z3.enum(["surface", "intermediate", "deep"])
       })).min(6).max(10),
       memoryVerseGuide: z3.object({
@@ -3412,7 +3487,7 @@ var init_content_engine = __esm({
         relevance: z3.string().min(30)
       })).min(3).max(7)
     });
-    COMPANION_PROMPT_VERSION = "v2.1";
+    COMPANION_PROMPT_VERSION = "v3.0";
     SDA_SYSTEM_PROMPT = `You are a Seventh-day Adventist Bible study content generator. All content must:
 - Be doctrinally sound from an SDA perspective
 - Uphold the authority of Scripture as the Word of God
@@ -3436,7 +3511,7 @@ __export(sabbath_school_sync_exports, {
   shouldSync: () => shouldSync,
   syncCurrentQuarter: () => syncCurrentQuarter
 });
-import { eq as eq14, and as and10, desc as desc7, inArray, sql as sql10 } from "drizzle-orm";
+import { eq as eq21, and as and15, desc as desc9, inArray, sql as sql14 } from "drizzle-orm";
 import YAML from "yaml";
 function getCurrentQuarterCode() {
   const now = /* @__PURE__ */ new Date();
@@ -3480,25 +3555,14 @@ async function fetchText(url) {
     return null;
   }
 }
-async function syncCurrentQuarter(lang = "en") {
-  const quarterCode = getCurrentQuarterCode();
-  console.log(`[SabbathSchool] Syncing quarter ${quarterCode} (${lang})...`);
-  let activeQuarterCode = quarterCode;
-  let infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCode}/info.yml`);
-  if (!infoYml) {
-    console.warn(`[SabbathSchool] No quarterly found for ${quarterCode}. Trying previous quarter...`);
-    const prev = getPreviousQuarterCode(quarterCode);
-    infoYml = await fetchText(`${BASE_URL}/${lang}/${prev}/info.yml`);
-    if (!infoYml) {
-      console.warn(`[SabbathSchool] No quarterly found for ${prev} either. Skipping sync.`);
-      return;
-    }
-    activeQuarterCode = prev;
-    console.log(`[SabbathSchool] Using previous quarter ${prev}`);
-  }
+async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = true) {
+  const infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCodeToSync}/info.yml`);
+  if (!infoYml) return null;
+  console.log(`[SabbathSchool] Syncing quarter ${quarterCodeToSync} (${lang})...`);
+  const activeQuarterCode = quarterCodeToSync;
   const rawInfo = infoYml.replace(/^---\s*\n/, "");
   const info = YAML.parse(rawInfo);
-  const existing = await db.select().from(sabbathSchoolQuarterlies).where(eq14(sabbathSchoolQuarterlies.quarterCode, activeQuarterCode)).limit(1);
+  const existing = await db.select().from(sabbathSchoolQuarterlies).where(eq21(sabbathSchoolQuarterlies.quarterCode, activeQuarterCode)).limit(1);
   let quarterlyId;
   if (existing.length > 0) {
     quarterlyId = existing[0].id;
@@ -3510,7 +3574,7 @@ async function syncCurrentQuarter(lang = "en") {
       endDate: info.end_date || null,
       colorPrimary: info.color_primary || null,
       lastSyncedAt: /* @__PURE__ */ new Date()
-    }).where(eq14(sabbathSchoolQuarterlies.id, quarterlyId));
+    }).where(eq21(sabbathSchoolQuarterlies.id, quarterlyId));
   } else {
     const [inserted] = await db.insert(sabbathSchoolQuarterlies).values({
       quarterCode: activeQuarterCode,
@@ -3536,9 +3600,9 @@ async function syncCurrentQuarter(lang = "en") {
     const rawLessonInfo = lessonInfoYml.replace(/^---\s*\n/, "");
     const lessonInfo = YAML.parse(rawLessonInfo);
     const existingLesson = await db.select().from(sabbathSchoolLessons).where(
-      and10(
-        eq14(sabbathSchoolLessons.quarterlyId, quarterlyId),
-        eq14(sabbathSchoolLessons.lessonNumber, lessonNum)
+      and15(
+        eq21(sabbathSchoolLessons.quarterlyId, quarterlyId),
+        eq21(sabbathSchoolLessons.lessonNumber, lessonNum)
       )
     ).limit(1);
     let lessonId;
@@ -3548,7 +3612,7 @@ async function syncCurrentQuarter(lang = "en") {
         title: lessonInfo.title || `Lesson ${lessonNum}`,
         startDate: lessonInfo.start_date || null,
         endDate: lessonInfo.end_date || null
-      }).where(eq14(sabbathSchoolLessons.id, lessonId));
+      }).where(eq21(sabbathSchoolLessons.id, lessonId));
       updatedLessonIds.push(lessonId);
     } else {
       const [insertedLesson] = await db.insert(sabbathSchoolLessons).values({
@@ -3581,9 +3645,9 @@ async function syncCurrentQuarter(lang = "en") {
         contentBody = frontmatterMatch[2];
       }
       const existingDay = await db.select().from(sabbathSchoolDays).where(
-        and10(
-          eq14(sabbathSchoolDays.lessonId, lessonId),
-          eq14(sabbathSchoolDays.dayNumber, dayNum)
+        and15(
+          eq21(sabbathSchoolDays.lessonId, lessonId),
+          eq21(sabbathSchoolDays.dayNumber, dayNum)
         )
       ).limit(1);
       if (existingDay.length > 0) {
@@ -3592,7 +3656,7 @@ async function syncCurrentQuarter(lang = "en") {
           title: dayTitle,
           date: dayDate,
           contentMarkdown: contentBody
-        }).where(eq14(sabbathSchoolDays.id, existingDay[0].id));
+        }).where(eq21(sabbathSchoolDays.id, existingDay[0].id));
         if (contentChanged && !updatedLessonIds.includes(lessonId)) {
           updatedLessonIds.push(lessonId);
         }
@@ -3611,9 +3675,58 @@ async function syncCurrentQuarter(lang = "en") {
     await invalidateDiscussionCache(updatedLessonIds);
   }
   console.log(`[SabbathSchool] Sync complete for ${activeQuarterCode}`);
-  buildAndGenerateCompanions(quarterlyId, updatedLessonIds).catch((err) => {
-    console.error("[content:pipeline] Source packet + generation pipeline failed:", err);
-  });
+  if (generateCompanions) {
+    buildAndGenerateCompanions(quarterlyId, updatedLessonIds).catch((err) => {
+      console.error("[content:pipeline] Source packet + generation pipeline failed:", err);
+    });
+  }
+  return quarterlyId;
+}
+async function syncCurrentQuarter(lang = "en") {
+  const quarterCode = getCurrentQuarterCode();
+  let result = await syncQuarter(quarterCode, lang, true);
+  if (!result) {
+    console.warn(`[SabbathSchool] No quarterly found for ${quarterCode}. Trying previous quarter...`);
+    const prev = getPreviousQuarterCode(quarterCode);
+    result = await syncQuarter(prev, lang, true);
+    if (!result) {
+      console.warn(`[SabbathSchool] No quarterly found for ${prev} either. Skipping sync.`);
+    }
+  }
+}
+function getNextQuarterCode(code) {
+  const [yearStr, qStr] = code.split("-");
+  let year = parseInt(yearStr);
+  let q = parseInt(qStr);
+  q++;
+  if (q > 4) {
+    q = 1;
+    year++;
+  }
+  return `${year}-${String(q).padStart(2, "0")}`;
+}
+async function syncAdjacentQuarters(lang = "en", pastCount = 8) {
+  const currentCode = getCurrentQuarterCode();
+  const existingQuarters = await db.select({ quarterCode: sabbathSchoolQuarterlies.quarterCode }).from(sabbathSchoolQuarterlies);
+  const existingCodes = new Set(existingQuarters.map((q) => q.quarterCode));
+  const codesToSync = [];
+  const next = getNextQuarterCode(currentCode);
+  if (!existingCodes.has(next)) codesToSync.push(next);
+  let prev = getPreviousQuarterCode(currentCode);
+  for (let i = 0; i < pastCount; i++) {
+    if (!existingCodes.has(prev)) codesToSync.push(prev);
+    prev = getPreviousQuarterCode(prev);
+  }
+  let synced = 0;
+  for (const code of codesToSync) {
+    const result = await syncQuarter(code, lang, false);
+    if (result) synced++;
+  }
+  if (synced > 0) {
+    console.log(`[SabbathSchool] Synced ${synced} adjacent quarter(s)`);
+  } else {
+    console.log(`[SabbathSchool] No new quarters found to sync`);
+  }
 }
 async function buildAndGenerateCompanions(quarterlyId, lessonIds) {
   if (lessonIds.length === 0) return;
@@ -3631,7 +3744,7 @@ async function buildAndGenerateCompanions(quarterlyId, lessonIds) {
 }
 async function getCurrentLessonNumber(quarterlyId) {
   const today = todayUTCMidnight();
-  const lessons = await db.select().from(sabbathSchoolLessons).where(eq14(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+  const lessons = await db.select().from(sabbathSchoolLessons).where(eq21(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
   if (lessons.length === 0) return 1;
   for (const lesson of lessons) {
     if (lesson.startDate && lesson.endDate) {
@@ -3662,7 +3775,7 @@ async function getCurrentLessonNumber(quarterlyId) {
 }
 async function shouldSync() {
   const quarterCode = getCurrentQuarterCode();
-  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where(eq14(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where(eq21(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (currentQ.length > 0) {
     const lastSynced2 = currentQ[0].lastSyncedAt;
     if (lastSynced2) {
@@ -3671,7 +3784,7 @@ async function shouldSync() {
     }
     return true;
   }
-  const anyQ = await db.select().from(sabbathSchoolQuarterlies).orderBy(desc7(sabbathSchoolQuarterlies.lastSyncedAt)).limit(1);
+  const anyQ = await db.select().from(sabbathSchoolQuarterlies).orderBy(desc9(sabbathSchoolQuarterlies.lastSyncedAt)).limit(1);
   if (anyQ.length === 0) return true;
   const lastSynced = anyQ[0].lastSyncedAt;
   if (!lastSynced) return true;
@@ -3680,23 +3793,23 @@ async function shouldSync() {
 }
 async function getMostRecentQuarterly() {
   const quarterCode = getCurrentQuarterCode();
-  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where(eq14(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where(eq21(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (currentQ.length > 0) return currentQ[0];
-  const fallback = await db.select().from(sabbathSchoolQuarterlies).orderBy(desc7(sabbathSchoolQuarterlies.quarterCode)).limit(1);
+  const fallback = await db.select().from(sabbathSchoolQuarterlies).orderBy(desc9(sabbathSchoolQuarterlies.quarterCode)).limit(1);
   return fallback[0] || null;
 }
 async function triggerCompanionGeneration(quarterlyId, packets) {
   if (packets.length === 0) return;
   const { generateSabbathSchoolCompanion: generateSabbathSchoolCompanion2 } = await Promise.resolve().then(() => (init_content_engine(), content_engine_exports));
   for (const { lessonId, packetId, changed } of packets) {
-    const lessonSourceCondition = sql10`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
+    const lessonSourceCondition = sql14`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
     const activeCompanions = await db.select({
       id: resources.id,
       status: resources.status,
       sourcePacketId: resources.sourcePacketId,
       contentJson: resources.contentJson,
       supersedesResourceId: resources.supersedesResourceId
-    }).from(resources).where(and10(lessonSourceCondition, sql10`${resources.status} != 'archived'`)).orderBy(desc7(resources.createdAt));
+    }).from(resources).where(and15(lessonSourceCondition, sql14`${resources.status} != 'archived'`)).orderBy(desc9(resources.createdAt));
     const publishedCompanion = activeCompanions.find((r) => r.status === "published");
     const pendingDraft = activeCompanions.find((r) => r.status === "draft" && r.supersedesResourceId);
     const existing = publishedCompanion || activeCompanions[0];
@@ -3704,7 +3817,7 @@ async function triggerCompanionGeneration(quarterlyId, packets) {
       continue;
     }
     if (pendingDraft) {
-      await db.delete(resources).where(eq14(resources.id, pendingDraft.id));
+      await db.delete(resources).where(eq21(resources.id, pendingDraft.id));
       console.log(`[content:sync] Removed stale pending draft ${pendingDraft.id} for lesson ${lessonId}`);
     }
     const supersedesTarget = publishedCompanion || activeCompanions.find((r) => r.id !== pendingDraft?.id);
@@ -3722,7 +3835,7 @@ async function triggerCompanionGeneration(quarterlyId, packets) {
         updateData.supersedesResourceId = supersedesId;
       }
       if (Object.keys(updateData).length > 0) {
-        await db.update(resources).set(updateData).where(eq14(resources.id, resourceId));
+        await db.update(resources).set(updateData).where(eq21(resources.id, resourceId));
         console.log(`[content:sync] Linked new draft to superseded resource ${supersedesId}`);
       }
       console.log(`[content:sync] Companion created: ${resourceId} (${reason})`);
@@ -3762,6 +3875,9 @@ async function initSabbathSchoolSync() {
     }
   }
   await attemptSync(1);
+  syncAdjacentQuarters("en", 8).catch((err) => {
+    console.error("[SabbathSchool] Adjacent quarters sync failed:", err);
+  });
   setInterval(
     async () => {
       try {
@@ -3794,12 +3910,12 @@ __export(batch_generator_exports, {
   generateQuarterCompanions: () => generateQuarterCompanions,
   getAvailableQuarters: () => getAvailableQuarters
 });
-import { eq as eq17, and as and13, sql as sql12, desc as desc10 } from "drizzle-orm";
+import { eq as eq24, and as and18, sql as sql17, desc as desc12 } from "drizzle-orm";
 async function generateQuarterCompanions(quarterCode, options = {}) {
   const { force = false, dryRun = false } = options;
   const startedAt = /* @__PURE__ */ new Date();
   console.log(`[batch] Starting batch generation for quarter ${quarterCode} (force=${force}, dryRun=${dryRun})`);
-  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq17(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq24(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (quarterly.length === 0) {
     throw new Error(`Quarter ${quarterCode} not found in database`);
   }
@@ -3812,7 +3928,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
     id: sabbathSchoolLessons.id,
     title: sabbathSchoolLessons.title,
     lessonNumber: sabbathSchoolLessons.lessonNumber
-  }).from(sabbathSchoolLessons).where(eq17(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+  }).from(sabbathSchoolLessons).where(eq24(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
   let packetsCreated = 0, packetsUpdated = 0, packetsUnchanged = 0;
   for (const lesson of lessons) {
     try {
@@ -3833,8 +3949,8 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
     const packetInfo = perLessonPackets.get(lesson.id);
     const packetId = packetInfo?.id;
     const contentChanged = packetInfo?.changed ?? false;
-    const lessonSourceCondition = sql12`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`;
-    const activeCompanions = await db.select({ id: resources.id, status: resources.status, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson, supersedesResourceId: resources.supersedesResourceId }).from(resources).where(and13(lessonSourceCondition, sql12`${resources.status} != 'archived'`)).orderBy(desc10(resources.createdAt));
+    const lessonSourceCondition = sql17`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`;
+    const activeCompanions = await db.select({ id: resources.id, status: resources.status, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson, supersedesResourceId: resources.supersedesResourceId }).from(resources).where(and18(lessonSourceCondition, sql17`${resources.status} != 'archived'`)).orderBy(desc12(resources.createdAt));
     const publishedCompanion = activeCompanions.find((r) => r.status === "published");
     const pendingDraft = activeCompanions.find((r) => r.status === "draft" && r.supersedesResourceId);
     const existing = publishedCompanion || activeCompanions[0];
@@ -3866,7 +3982,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
       continue;
     }
     if (pendingDraft) {
-      await db.delete(resources).where(eq17(resources.id, pendingDraft.id));
+      await db.delete(resources).where(eq24(resources.id, pendingDraft.id));
       console.log(`[batch] Removed stale pending draft ${pendingDraft.id} for lesson ${lesson.lessonNumber}`);
     }
     const supersedesTarget = publishedCompanion || activeCompanions.find((r) => r.id !== pendingDraft?.id);
@@ -3885,7 +4001,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
         updateData.supersedesResourceId = supersedesId;
       }
       if (Object.keys(updateData).length > 0) {
-        await db.update(resources).set(updateData).where(eq17(resources.id, resourceId));
+        await db.update(resources).set(updateData).where(eq24(resources.id, resourceId));
         console.log(`[batch] Linked new draft to superseded resource ${supersedesId}, preserved previous content for diff`);
       }
       console.log(`[batch] Companion created: ${resourceId}`);
@@ -3935,9 +4051,9 @@ async function getAvailableQuarters() {
   }).from(sabbathSchoolQuarterlies).orderBy(sabbathSchoolQuarterlies.quarterCode);
   const result = [];
   for (const q of quarters) {
-    const lessons = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where(eq17(sabbathSchoolLessons.quarterlyId, q.id));
+    const lessons = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where(eq24(sabbathSchoolLessons.quarterlyId, q.id));
     const companions = await db.select({ id: resources.id }).from(resources).where(
-      sql12`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${q.id}`
+      sql17`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${q.id}`
     );
     result.push({
       id: q.id,
@@ -4061,12 +4177,12 @@ var seed_formation_exports = {};
 __export(seed_formation_exports, {
   seedFormationData: () => seedFormationData
 });
-import { count as count2 } from "drizzle-orm";
+import { count } from "drizzle-orm";
 function id(prefix, n) {
   return `${prefix}-${String(n).padStart(3, "0")}`;
 }
 async function seedFormationData(db2) {
-  const [existing] = await db2.select({ c: count2() }).from(formationTracks);
+  const [existing] = await db2.select({ c: count() }).from(formationTracks);
   if (existing && existing.c > 0) return;
   console.log("Seeding formation tracks...");
   const trackBeliefs = "track-beliefs";
@@ -7871,9 +7987,9 @@ var seed_beliefs_wave1_exports = {};
 __export(seed_beliefs_wave1_exports, {
   seedBeliefsWave1: () => seedBeliefsWave1
 });
-import { eq as eq20 } from "drizzle-orm";
+import { eq as eq27 } from "drizzle-orm";
 async function seedBeliefsWave1(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq20(formationLessons.id, "w1l-1-2")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq27(formationLessons.id, "w1l-1-2")).limit(1);
   if (check) {
     return;
   }
@@ -7888,7 +8004,7 @@ async function seedBeliefsWave1(db2) {
     "bmod-007"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq20(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq27(formationModules.id, mid));
   }
   const allLessons = [
     ...belief1Lessons,
@@ -10097,16 +10213,16 @@ var seed_beliefs_wave2_exports = {};
 __export(seed_beliefs_wave2_exports, {
   seedBeliefsWave2: () => seedBeliefsWave2
 });
-import { eq as eq21 } from "drizzle-orm";
+import { eq as eq28 } from "drizzle-orm";
 async function seedBeliefsWave2(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq21(formationLessons.id, "w2l-8-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq28(formationLessons.id, "w2l-8-1")).limit(1);
   if (check) {
     return;
   }
   console.log("Seeding Wave 2 beliefs content (Beliefs 8-11)...");
   const moduleIds = ["bmod-008", "bmod-009", "bmod-010", "bmod-011"];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq21(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq28(formationModules.id, mid));
   }
   const allLessons = [
     ...belief8Lessons,
@@ -13994,9 +14110,9 @@ var seed_beliefs_wave3_exports = {};
 __export(seed_beliefs_wave3_exports, {
   seedBeliefsWave3: () => seedBeliefsWave3
 });
-import { eq as eq22 } from "drizzle-orm";
+import { eq as eq29 } from "drizzle-orm";
 async function seedBeliefsWave3(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq22(formationLessons.id, "w3l-12-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq29(formationLessons.id, "w3l-12-1")).limit(1);
   if (check) {
     return;
   }
@@ -14011,7 +14127,7 @@ async function seedBeliefsWave3(db2) {
     "bmod-018"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq22(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq29(formationModules.id, mid));
   }
   const allLessons = [
     ...belief12Lessons,
@@ -19976,9 +20092,9 @@ var seed_beliefs_wave4_exports = {};
 __export(seed_beliefs_wave4_exports, {
   seedBeliefsWave4: () => seedBeliefsWave4
 });
-import { eq as eq23 } from "drizzle-orm";
+import { eq as eq30 } from "drizzle-orm";
 async function seedBeliefsWave4(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq23(formationLessons.id, "w4l-19-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq30(formationLessons.id, "w4l-19-1")).limit(1);
   if (check) {
     return;
   }
@@ -19996,7 +20112,7 @@ async function seedBeliefsWave4(db2) {
     "bmod-028"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq23(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq30(formationModules.id, mid));
   }
   const allLessons = [
     ...belief19Lessons,
@@ -20082,7 +20198,7 @@ var seed_global_churches_exports = {};
 __export(seed_global_churches_exports, {
   seedGlobalChurches: () => seedGlobalChurches
 });
-import { eq as eq24 } from "drizzle-orm";
+import { eq as eq31 } from "drizzle-orm";
 async function seedGlobalChurches() {
   try {
     const auChurches = GLOBAL_CHURCHES.filter(
@@ -20090,7 +20206,7 @@ async function seedGlobalChurches() {
     );
     if (auChurches.length > 0) {
       await db.transaction(async (tx) => {
-        await tx.delete(sdaChurches).where(eq24(sdaChurches.country, "Australia"));
+        await tx.delete(sdaChurches).where(eq31(sdaChurches.country, "Australia"));
         for (let i = 0; i < auChurches.length; i += 100) {
           const batch = auChurches.slice(i, i + 100).map((c) => ({
             name: c.name,
@@ -32010,6 +32126,191 @@ var init_seed_resources = __esm({
   }
 });
 
+// server/services/cache-warmup.ts
+var cache_warmup_exports = {};
+__export(cache_warmup_exports, {
+  runCacheWarmup: () => runCacheWarmup
+});
+import { eq as eq33, and as and20 } from "drizzle-orm";
+async function warmContextCards(bookId, chapter, bookName) {
+  const existing = await db.select({ id: contextCards.id }).from(contextCards).where(and20(eq33(contextCards.bookId, bookId), eq33(contextCards.chapter, chapter))).limit(1);
+  if (existing.length > 0) return false;
+  const result = await generateContextCards({ bookId, chapter, bookName, depth: "standard" });
+  await db.insert(contextCards).values({
+    bookId,
+    chapter,
+    title: result.title,
+    content: result.content,
+    historicalBackground: result.historicalBackground,
+    culturalNotes: result.culturalNotes,
+    authorInfo: result.authorInfo,
+    dateWritten: result.dateWritten,
+    audience: result.audience,
+    themes: result.themes
+  });
+  return true;
+}
+async function warmApplicationTemplates(bookId, chapter, bookName) {
+  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where(and20(eq33(applicationTemplates.bookId, bookId), eq33(applicationTemplates.chapter, chapter))).limit(1);
+  if (existing.length > 0) return false;
+  const result = await generateApplicationStudy({ bookId, chapter, bookName, depth: "standard" });
+  await db.insert(applicationTemplates).values({
+    bookId,
+    chapter,
+    thenContext: result.thenContext,
+    nowApplication: result.nowApplication,
+    reflectionQuestions: result.reflectionQuestions,
+    prayerPrompt: result.prayerPrompt,
+    keyTheme: result.keyTheme
+  });
+  return true;
+}
+async function warmChapterContext(bookId, chapter, bookName) {
+  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where(and20(eq33(chapterContextCache.bookId, bookId), eq33(chapterContextCache.chapter, chapter))).limit(1);
+  if (existing.length > 0) return false;
+  const result = await generateChapterContext({ bookId, chapter, bookName });
+  await db.insert(chapterContextCache).values({
+    bookId,
+    chapter,
+    locations: JSON.stringify(result.locations || []),
+    timelineEvents: JSON.stringify(result.timelineEvents || []),
+    keyFigures: JSON.stringify(result.keyFigures || []),
+    culturalInsights: result.culturalInsights || null,
+    geographicalNotes: result.geographicalNotes || null
+  });
+  return true;
+}
+async function warmPassageSections(bookId, chapter, bookName) {
+  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where(and20(eq33(chapterPassageSections.bookId, bookId), eq33(chapterPassageSections.chapter, chapter))).limit(1);
+  if (existing.length > 0) return false;
+  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where(and20(eq33(bibleVerses.bookId, bookId), eq33(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+  if (verses.length === 0) return false;
+  const totalVerses = verses.length;
+  const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
+  const OpenAI3 = (await import("openai")).default;
+  const client = new OpenAI3({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+  });
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.3,
+    messages: [
+      {
+        role: "system",
+        content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+
+Rules:
+- Sections must be contiguous and non-overlapping
+- Together they must cover every verse (1 through ${totalVerses})
+- Aim for 2-5 sections depending on chapter length
+- Each section should be a coherent narrative or thematic unit
+- Labels should be short descriptions (5-8 words max)
+- For very short chapters (under 10 verses), return 1-2 sections`
+      },
+      {
+        role: "user",
+        content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+
+Chapter text:
+${chapterText.substring(0, 4e3)}
+
+Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`
+      }
+    ]
+  });
+  let sections = [];
+  const raw = completion.choices[0]?.message?.content ?? "[]";
+  const cleaned = raw.replace(/```json?\s*/g, "").replace(/```/g, "").trim();
+  const parsed = JSON.parse(cleaned);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+  } else {
+    const valid = parsed.every(
+      (s) => typeof s.verseStart === "number" && typeof s.verseEnd === "number" && s.verseStart >= 1 && s.verseEnd <= totalVerses && s.verseStart <= s.verseEnd && typeof s.label === "string"
+    );
+    sections = valid ? parsed : [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+  }
+  await db.insert(chapterPassageSections).values({ bookId, chapter, sections }).onConflictDoNothing();
+  return true;
+}
+async function runCacheWarmup() {
+  console.log(`[cache-warmup] Starting background warm-up for ${POPULAR_CHAPTERS.length} popular chapters...`);
+  const allBooks = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks);
+  const bookNameMap = new Map(allBooks.map((b) => [b.id, b.name]));
+  let generated = 0;
+  let skipped = 0;
+  let errors = 0;
+  for (const { bookId, chapter } of POPULAR_CHAPTERS) {
+    const bookName = bookNameMap.get(bookId);
+    if (!bookName) continue;
+    const warmers = [
+      { name: "context", fn: () => warmContextCards(bookId, chapter, bookName) },
+      { name: "application", fn: () => warmApplicationTemplates(bookId, chapter, bookName) },
+      { name: "chapter-context", fn: () => warmChapterContext(bookId, chapter, bookName) },
+      { name: "passage-sections", fn: () => warmPassageSections(bookId, chapter, bookName) }
+    ];
+    for (const warmer of warmers) {
+      try {
+        const wasGenerated = await warmer.fn();
+        if (wasGenerated) {
+          generated++;
+          console.log(`[cache-warmup] Generated ${warmer.name} for ${bookName} ${chapter}`);
+        } else {
+          skipped++;
+        }
+      } catch (err) {
+        errors++;
+        console.error(`[cache-warmup] Error generating ${warmer.name} for ${bookName} ${chapter}:`, err.message?.substring(0, 100));
+      }
+    }
+  }
+  console.log(`[cache-warmup] Complete: ${generated} generated, ${skipped} already cached, ${errors} errors`);
+}
+var POPULAR_CHAPTERS;
+var init_cache_warmup = __esm({
+  "server/services/cache-warmup.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_ai_engine();
+    POPULAR_CHAPTERS = [
+      { bookId: 1, chapter: 1 },
+      { bookId: 1, chapter: 2 },
+      { bookId: 1, chapter: 3 },
+      { bookId: 2, chapter: 14 },
+      { bookId: 2, chapter: 20 },
+      { bookId: 5, chapter: 6 },
+      { bookId: 19, chapter: 1 },
+      { bookId: 19, chapter: 23 },
+      { bookId: 19, chapter: 91 },
+      { bookId: 19, chapter: 119 },
+      { bookId: 20, chapter: 3 },
+      { bookId: 23, chapter: 40 },
+      { bookId: 23, chapter: 53 },
+      { bookId: 27, chapter: 2 },
+      { bookId: 27, chapter: 7 },
+      { bookId: 40, chapter: 5 },
+      { bookId: 40, chapter: 6 },
+      { bookId: 40, chapter: 24 },
+      { bookId: 43, chapter: 1 },
+      { bookId: 43, chapter: 3 },
+      { bookId: 43, chapter: 14 },
+      { bookId: 44, chapter: 2 },
+      { bookId: 45, chapter: 8 },
+      { bookId: 45, chapter: 12 },
+      { bookId: 46, chapter: 13 },
+      { bookId: 48, chapter: 5 },
+      { bookId: 49, chapter: 6 },
+      { bookId: 50, chapter: 4 },
+      { bookId: 58, chapter: 11 },
+      { bookId: 66, chapter: 1 },
+      { bookId: 66, chapter: 14 },
+      { bookId: 66, chapter: 21 }
+    ];
+  }
+});
+
 // server/env.ts
 import { z } from "zod";
 var envSchema = z.object({
@@ -32063,7 +32364,7 @@ import express from "express";
 init_db();
 init_schema();
 import { createServer } from "node:http";
-import { eq as eq25 } from "drizzle-orm";
+import { eq as eq32 } from "drizzle-orm";
 
 // server/middleware/auth.ts
 init_db();
@@ -32071,7 +32372,7 @@ init_schema();
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 var JWT_SECRET = env.JWT_SECRET;
-function getAuthUserId(req) {
+function getAuthUserId2(req) {
   try {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
@@ -32083,8 +32384,22 @@ function getAuthUserId(req) {
   }
   return null;
 }
+function getDeviceId(req) {
+  const deviceHeader = req.headers["x-device-id"];
+  if (typeof deviceHeader === "string" && deviceHeader.startsWith("device-") && deviceHeader.length > 10) {
+    return deviceHeader;
+  }
+  return null;
+}
+function extractUserId(req) {
+  const authId = getAuthUserId2(req);
+  if (authId) return authId;
+  const deviceId = getDeviceId(req);
+  if (deviceId) return deviceId;
+  return "guest";
+}
 function requireAuth(req, res, next) {
-  const userId = getAuthUserId(req);
+  const userId = getAuthUserId2(req);
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -32092,7 +32407,7 @@ function requireAuth(req, res, next) {
   next();
 }
 function optionalAuth(req, res, next) {
-  const userId = getAuthUserId(req);
+  const userId = getAuthUserId2(req);
   if (userId) {
     req.authUserId = userId;
   }
@@ -32100,13 +32415,15 @@ function optionalAuth(req, res, next) {
 }
 function getEffectiveUserId(req) {
   if (req.authUserId) return req.authUserId;
-  const authId = getAuthUserId(req);
+  const authId = getAuthUserId2(req);
   if (authId) return authId;
+  const deviceId = getDeviceId(req);
+  if (deviceId) return deviceId;
   return "guest";
 }
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
-    const userId = getAuthUserId(req);
+    const userId = getAuthUserId2(req);
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
@@ -32125,6 +32442,8 @@ function requireRole(...allowedRoles) {
 }
 var requireEditor = requireRole("editor", "admin");
 var requireAdmin = requireRole("admin");
+var requireChurchLeader = requireRole("church_leader", "admin");
+var requirePipelineAccess = requireRole("editor", "church_leader", "admin");
 async function checkProStatus(req, res, next) {
   try {
     const userId = getEffectiveUserId(req);
@@ -32133,7 +32452,7 @@ async function checkProStatus(req, res, next) {
     }
     const [user] = await db.select({ isPro: users.isPro }).from(users).where(eq(users.id, userId));
     if (!user || !user.isPro) {
-      return res.status(403).json({ error: "This feature is available to supporters. Support the mission to access Deep Study layers." });
+      return res.status(403).json({ error: "This feature requires an active account. All features are free during beta." });
     }
     req.authUserId = userId;
     next();
@@ -32153,7 +32472,7 @@ function generateCode() {
 }
 
 // server/routes.ts
-import { sql as sql14 } from "drizzle-orm";
+import { sql as sql19 } from "drizzle-orm";
 init_ai_semaphore();
 
 // server/middleware/response-cache.ts
@@ -32245,8 +32564,9 @@ function validate(schema) {
 }
 var authRegisterSchema = z2.object({
   email: z2.string().email("Invalid email address"),
-  password: z2.string().min(8, "Password must be at least 8 characters"),
-  displayName: z2.string().min(1, "Display name is required").max(100)
+  password: z2.string().min(6, "Password must be at least 6 characters"),
+  displayName: z2.string().min(1, "Display name is required").max(100),
+  profileType: z2.enum(["member", "student", "church_leader", "exploring"]).optional().default("member")
 });
 var authLoginSchema = z2.object({
   email: z2.string().email("Invalid email address"),
@@ -32278,7 +32598,7 @@ var prayerSchema = z2.object({
 // server/middleware/rate-limit.ts
 import rateLimit from "express-rate-limit";
 function safeKeyGenerator(req) {
-  const userId = getAuthUserId(req);
+  const userId = getAuthUserId2(req);
   if (userId) return `user:${userId}`;
   return req.ip || "unknown";
 }
@@ -32314,14 +32634,19 @@ var authLimiter = rateLimit({
 var router = Router();
 router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), async (req, res) => {
   try {
-    const { email, password, displayName } = req.body;
+    const { email, password, displayName, profileType } = req.body;
     if (!email || !password || !displayName) {
       return res.status(400).json({ error: "Email, password, and display name are required" });
     }
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
-    if (cleanPassword.length < 4) {
-      return res.status(400).json({ error: "Password must be at least 4 characters" });
+    const validProfileTypes = ["member", "student", "church_leader", "exploring"];
+    const cleanProfileType = validProfileTypes.includes(profileType) ? profileType : "member";
+    let assignedRole = "member";
+    if (cleanProfileType === "student") assignedRole = "student";
+    else if (cleanProfileType === "church_leader") assignedRole = "church_leader_pending";
+    if (cleanPassword.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
     const existing = await db.select().from(users).where(eq2(users.email, cleanEmail));
     if (existing.length > 0) {
@@ -32334,6 +32659,8 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
       password: hashedPassword,
       displayName: displayName.trim(),
       email: cleanEmail,
+      role: assignedRole,
+      profileType: cleanProfileType,
       isPro: true
     }).returning();
     const token = jwt2.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: "90d" });
@@ -32397,12 +32724,93 @@ router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to delete account" });
   }
 });
-router.post("/api/auth/reset-password", async (_req, res) => {
-  return res.status(501).json({ error: "Password reset is not available. Please contact support for account recovery." });
+router.post("/api/auth/migrate-guest-data", requireAuth, async (req, res) => {
+  try {
+    const newUserId = req.authUserId;
+    const deviceId = getDeviceId(req);
+    if (!deviceId) {
+      return res.json({ migrated: false, reason: "no-device-id" });
+    }
+    const tables = [
+      { table: readingHistory, col: readingHistory.userId },
+      { table: readingStreaks, col: readingStreaks.userId },
+      { table: layerCompletions, col: layerCompletions.userId },
+      { table: studyJournalEntries, col: studyJournalEntries.userId },
+      { table: studyGuideSessions, col: studyGuideSessions.userId },
+      { table: userNotes, col: userNotes.userId },
+      { table: userHighlights, col: userHighlights.userId },
+      { table: userBookmarks, col: userBookmarks.userId },
+      { table: userActivityCounters, col: userActivityCounters.userId },
+      { table: prayerRequests, col: prayerRequests.userId },
+      { table: sabbathSchoolUserProgress, col: sabbathSchoolUserProgress.userId },
+      { table: sabbathReflections, col: sabbathReflections.userId },
+      { table: progressTracks, col: progressTracks.userId },
+      { table: progressLessons, col: progressLessons.userId },
+      { table: userPlanEnrollments, col: userPlanEnrollments.userId },
+      { table: kidsPurchases, col: kidsPurchases.userId },
+      { table: kidsProgress, col: kidsProgress.userId },
+      { table: kidsStreaks, col: kidsStreaks.userId },
+      { table: kidsDailyQuests, col: kidsDailyQuests.userId },
+      { table: kidsUserBadges, col: kidsUserBadges.userId }
+    ];
+    let totalMigrated = 0;
+    for (const { table, col } of tables) {
+      try {
+        const result = await db.update(table).set({ userId: newUserId }).where(eq2(col, deviceId));
+        totalMigrated += result.rowCount || 0;
+      } catch {
+      }
+    }
+    console.log(`[guest-migration] Migrated ${totalMigrated} rows from ${deviceId} to ${newUserId}`);
+    return res.json({ migrated: true, rowCount: totalMigrated });
+  } catch (err) {
+    console.error("Guest data migration error:", err);
+    return res.json({ migrated: false, reason: "error" });
+  }
+});
+router.post("/api/auth/reset-password", authLimiter, (_req, res) => {
+  return res.status(501).json({
+    error: "Password reset is not available. Please contact support or create a new account."
+  });
+});
+var VALID_ROLES = ["member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
+router.post("/api/auth/update-role", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const { role } = req.body;
+    if (!role || !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+    if (role === "admin" || role === "editor" || role === "church_leader") {
+      const [currentUser] = await db.select({ role: users.role }).from(users).where(eq2(users.id, userId));
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Only admins can assign privileged roles" });
+      }
+    }
+    if (role === "church_leader_pending") {
+      return res.status(400).json({ error: "Cannot directly assign pending status" });
+    }
+    await db.update(users).set({ role }).where(eq2(users.id, userId));
+    const [updated] = await db.select().from(users).where(eq2(users.id, userId));
+    return res.json({
+      user: {
+        id: updated.id,
+        displayName: updated.displayName,
+        email: updated.email,
+        familyId: updated.familyId,
+        isPro: updated.isPro,
+        isPatron: updated.isPatron,
+        role: updated.role
+      }
+    });
+  } catch (err) {
+    console.error("Update role error:", err);
+    return res.status(500).json({ error: "Failed to update role" });
+  }
 });
 router.get("/api/auth/me", async (req, res) => {
   try {
-    const userId = getAuthUserId(req);
+    const userId = getAuthUserId2(req);
     if (!userId) {
       return res.json({ user: null, isGuest: true });
     }
@@ -32433,7 +32841,7 @@ var auth_default = router;
 init_db();
 init_schema();
 import { Router as Router2 } from "express";
-import { eq as eq3, and, sql as sql2, desc } from "drizzle-orm";
+import { eq as eq3, and, sql as sql3, desc } from "drizzle-orm";
 var router2 = Router2();
 router2.post("/api/user/start-trial", requireAuth, async (req, res) => {
   try {
@@ -32494,7 +32902,7 @@ router2.post("/api/user/track-activity", optionalAuth, async (req, res) => {
     ));
     if (existing) {
       await db.update(userActivityCounters).set({
-        useCount: sql2`${userActivityCounters.useCount} + 1`,
+        useCount: sql3`${userActivityCounters.useCount} + 1`,
         lastUsedAt: /* @__PURE__ */ new Date()
       }).where(eq3(userActivityCounters.id, existing.id));
     } else {
@@ -32691,9 +33099,12 @@ router2.get("/api/prayers", optionalAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router2.post("/api/prayers", requireAuth, async (req, res) => {
+router2.post("/api/prayers", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId;
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required to save prayers" });
+    }
     const { title, content, category = "personal" } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     const [prayer] = await db.insert(prayerRequests).values({ userId, title, content, category }).returning();
@@ -32703,9 +33114,9 @@ router2.post("/api/prayers", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router2.patch("/api/prayers/:id", requireAuth, async (req, res) => {
+router2.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId;
+    const userId = getEffectiveUserId(req);
     const { id: id2 } = req.params;
     const [existing] = await db.select({ userId: prayerRequests.userId }).from(prayerRequests).where(eq3(prayerRequests.id, id2));
     if (!existing) return res.status(404).json({ error: "Not found" });
@@ -32727,9 +33138,9 @@ router2.patch("/api/prayers/:id", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router2.delete("/api/prayers/:id", requireAuth, async (req, res) => {
+router2.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId;
+    const userId = getEffectiveUserId(req);
     const { id: id2 } = req.params;
     const [existing] = await db.select({ userId: prayerRequests.userId }).from(prayerRequests).where(eq3(prayerRequests.id, id2));
     if (!existing) return res.status(404).json({ error: "Not found" });
@@ -32837,7 +33248,7 @@ router2.get("/api/reading-streaks/weekly", optionalAuth, async (req, res) => {
     const reads = await db.select({ readAt: readingHistory.readAt }).from(readingHistory).where(
       and(
         eq3(readingHistory.userId, userId),
-        sql2`${readingHistory.readAt} >= ${startOfWeek.toISOString()}::timestamp`
+        sql3`${readingHistory.readAt} >= ${startOfWeek.toISOString()}::timestamp`
       )
     );
     const daysRead = [false, false, false, false, false, false, false];
@@ -32845,7 +33256,7 @@ router2.get("/api/reading-streaks/weekly", optionalAuth, async (req, res) => {
       const d = new Date(r.readAt).getDay();
       daysRead[d] = true;
     }
-    const perfectWeekResult = await db.execute(sql2`
+    const perfectWeekResult = await db.execute(sql3`
       SELECT COUNT(*) as count FROM (
         SELECT date_trunc('week', ${readingHistory.readAt}) as week_start
         FROM ${readingHistory}
@@ -32880,11 +33291,11 @@ router2.get("/api/spiritual-rings", optionalAuth, async (req, res) => {
     }
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const studyRows = await db.select({ cnt: sql2`COUNT(DISTINCT (${readingHistory.bookId}::text || ':' || ${readingHistory.chapter}::text))` }).from(readingHistory).where(and(eq3(readingHistory.userId, userId), sql2`${readingHistory.readAt} >= ${today}`));
+    const studyRows = await db.select({ cnt: sql3`COUNT(DISTINCT (${readingHistory.bookId}::text || ':' || ${readingHistory.chapter}::text))` }).from(readingHistory).where(and(eq3(readingHistory.userId, userId), sql3`${readingHistory.readAt} >= ${today}`));
     const chaptersRead = Number(studyRows[0]?.cnt ?? 0);
-    const prayerRows = await db.select({ cnt: sql2`COUNT(*)` }).from(prayerRequests).where(and(eq3(prayerRequests.userId, userId), sql2`${prayerRequests.createdAt} >= ${today}`));
+    const prayerRows = await db.select({ cnt: sql3`COUNT(*)` }).from(prayerRequests).where(and(eq3(prayerRequests.userId, userId), sql3`${prayerRequests.createdAt} >= ${today}`));
     const prayerCount = Number(prayerRows[0]?.cnt ?? 0);
-    const journalResult = await db.execute(sql2`
+    const journalResult = await db.execute(sql3`
       SELECT COUNT(*) as cnt FROM (
         SELECT id FROM study_journal_entries WHERE user_id = ${userId} AND created_at >= ${today}
         UNION ALL
@@ -32912,7 +33323,7 @@ var user_default = router2;
 init_db();
 init_schema();
 import { Router as Router3 } from "express";
-import { eq as eq4, and as and2, ilike, sql as sql3 } from "drizzle-orm";
+import { eq as eq4, and as and2, ilike, sql as sql4 } from "drizzle-orm";
 var router3 = Router3();
 router3.get("/api/passage", async (req, res) => {
   try {
@@ -33014,7 +33425,7 @@ router3.get("/api/search", async (req, res) => {
         ilike(bibleVerses.text, `%${query}%`)
       )
     ).orderBy(bibleBooks.orderIndex, bibleVerses.chapter, bibleVerses.verse).limit(resultLimit);
-    const countResult = await db.select({ count: sql3`count(*)` }).from(bibleVerses).where(
+    const countResult = await db.select({ count: sql4`count(*)` }).from(bibleVerses).where(
       and2(
         eq4(bibleVerses.translationId, translationRecord[0].id),
         ilike(bibleVerses.text, `%${query}%`)
@@ -33062,14 +33473,13 @@ router3.get("/api/search/reference", async (req, res) => {
 });
 var bible_default = router3;
 
-// server/routes/study.ts
+// server/routes/strongs.ts
 init_db();
 import { Router as Router4 } from "express";
 init_ai_semaphore();
 init_schema();
-import { eq as eq5, and as and3, sql as sql4, desc as desc2, asc as asc2, countDistinct, or } from "drizzle-orm";
-import * as crypto from "crypto";
 init_ai_engine();
+import { eq as eq5, and as and3, sql as sql5 } from "drizzle-orm";
 var router4 = Router4();
 router4.get("/api/strong/search", async (req, res) => {
   try {
@@ -33079,7 +33489,7 @@ router4.get("/api/strong/search", async (req, res) => {
     }
     const searchTerm = `%${String(q).trim().toLowerCase()}%`;
     const conditions = [
-      sql4`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`
+      sql5`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`
     ];
     if (language && (language === "he" || language === "gr")) {
       conditions.push(eq5(strongEntries.language, String(language)));
@@ -33093,11 +33503,9 @@ router4.get("/api/strong/search", async (req, res) => {
 });
 router4.get("/api/strong/:id", async (req, res) => {
   try {
-    const entry = await db.select().from(strongEntries).where(eq5(strongEntries.id, String(req.params.id))).limit(1);
-    if (!entry.length) {
-      return res.status(404).json({ error: "Strong's entry not found" });
-    }
-    return res.json(entry[0]);
+    const [entry] = await db.select().from(strongEntries).where(eq5(strongEntries.id, String(req.params.id))).limit(1);
+    if (!entry) return res.status(404).json({ error: "Strong's entry not found" });
+    return res.json(entry);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -33110,13 +33518,13 @@ router4.get("/api/strong/verse/:verseId", async (req, res) => {
       entry: strongEntries
     }).from(verseStrongMaps).leftJoin(strongEntries, eq5(verseStrongMaps.strongId, strongEntries.id)).where(eq5(verseStrongMaps.verseId, String(req.params.verseId))).orderBy(verseStrongMaps.wordPosition);
     const seen = /* @__PURE__ */ new Set();
-    const deduped = maps.filter((row) => {
+    const unique = maps.filter((row) => {
       const key = `${row.map.strongId}-${row.map.wordPosition}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-    return res.json(deduped);
+    return res.json(unique);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -33179,90 +33587,15 @@ router4.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
     return res.status(500).json({ error: "Failed to generate word study" });
   }
 });
-router4.get("/api/context", async (req, res) => {
-  try {
-    const { book, chapter } = req.query;
-    if (!book) {
-      return res.status(400).json({ error: "book is required" });
-    }
-    const cards = await db.select().from(contextCards).where(
-      chapter ? and3(
-        eq5(contextCards.bookId, Number(book)),
-        eq5(contextCards.chapter, Number(chapter))
-      ) : eq5(contextCards.bookId, Number(book))
-    );
-    return res.json(cards);
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
-});
-router4.post("/api/context/generate", aiGenerationLimiter, async (req, res) => {
-  try {
-    const { bookId, chapter } = req.body;
-    if (!bookId || !chapter) {
-      return res.status(400).json({ error: "bookId and chapter are required" });
-    }
-    const existing = await db.select().from(contextCards).where(
-      and3(
-        eq5(contextCards.bookId, Number(bookId)),
-        eq5(contextCards.chapter, Number(chapter))
-      )
-    );
-    if (existing.length > 0) {
-      return res.json(existing);
-    }
-    const bookRows = await db.select().from(bibleBooks).where(eq5(bibleBooks.id, Number(bookId)));
-    if (bookRows.length === 0) {
-      return res.status(404).json({ error: "Book not found" });
-    }
-    const bookName = bookRows[0].name;
-    const depth = req.body.depth || req.query.depth || "standard";
-    let parsed;
-    try {
-      parsed = await generateContextCards({ bookId: Number(bookId), chapter: Number(chapter), bookName, depth });
-    } catch {
-      return res.status(500).json({ error: "Failed to parse AI response" });
-    }
-    const [inserted] = await db.insert(contextCards).values({
-      bookId: Number(bookId),
-      chapter: Number(chapter),
-      title: parsed.title,
-      content: parsed.content,
-      historicalBackground: parsed.historicalBackground,
-      culturalNotes: parsed.culturalNotes,
-      authorInfo: parsed.authorInfo,
-      dateWritten: parsed.dateWritten,
-      audience: parsed.audience,
-      themes: parsed.themes
-    }).returning();
-    return res.json([inserted]);
-  } catch (err) {
-    console.error("Context generation error:", err);
-    return res.status(500).json({ error: "Failed to generate context" });
-  }
-});
-router4.get("/api/commentary", async (req, res) => {
-  try {
-    const { book, chapter } = req.query;
-    if (!book || !chapter) {
-      return res.status(400).json({ error: "book and chapter are required" });
-    }
-    const entries = await db.select({
-      entry: commentaryEntries,
-      commentator: commentators
-    }).from(commentaryEntries).leftJoin(commentators, eq5(commentaryEntries.commentatorId, commentators.id)).where(
-      and3(
-        eq5(commentaryEntries.bookId, Number(book)),
-        eq5(commentaryEntries.chapter, Number(chapter))
-      )
-    );
-    return res.json(entries);
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
-});
+var strongs_default = router4;
+
+// server/routes/commentary.ts
+init_db();
+import { Router as Router5 } from "express";
+init_ai_semaphore();
+init_schema();
+import { eq as eq6, and as and4 } from "drizzle-orm";
+var router5 = Router5();
 var BOOK_ID_TO_API = {
   1: "GEN",
   2: "EXO",
@@ -33396,16 +33729,41 @@ async function fetchRealCommentary(apiId, bookCode, ch) {
     return null;
   }
 }
-router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) => {
+router5.get("/api/commentary", async (req, res) => {
+  try {
+    const { book, chapter } = req.query;
+    if (!book || !chapter) {
+      return res.status(400).json({ error: "book and chapter are required" });
+    }
+    const entries = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, eq6(commentaryEntries.commentatorId, commentators.id)).where(
+      and4(
+        eq6(commentaryEntries.bookId, Number(book)),
+        eq6(commentaryEntries.chapter, Number(chapter))
+      )
+    );
+    const seen = /* @__PURE__ */ new Set();
+    const deduped = entries.filter((e) => {
+      const key = `${e.entry.commentatorId}_${e.entry.bookId}_${e.entry.chapter}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return res.json(deduped);
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) => {
   try {
     const { bookId, chapter } = req.body;
     if (!bookId || !chapter) {
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
-    const existing = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, eq5(commentaryEntries.commentatorId, commentators.id)).where(
-      and3(
-        eq5(commentaryEntries.bookId, Number(bookId)),
-        eq5(commentaryEntries.chapter, Number(chapter))
+    const existing = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, eq6(commentaryEntries.commentatorId, commentators.id)).where(
+      and4(
+        eq6(commentaryEntries.bookId, Number(bookId)),
+        eq6(commentaryEntries.chapter, Number(chapter))
       )
     );
     if (existing.length > 0) {
@@ -33415,7 +33773,7 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     if (!bookCode) {
       return res.status(400).json({ error: "Invalid book ID" });
     }
-    const bookRows = await db.select().from(bibleBooks).where(eq5(bibleBooks.id, Number(bookId)));
+    const bookRows = await db.select().from(bibleBooks).where(eq6(bibleBooks.id, Number(bookId)));
     if (bookRows.length === 0) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -33433,6 +33791,18 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     }
     const results = [];
     for (const src of COMMENTARY_SOURCES) {
+      const existingSrc = await db.select().from(commentaryEntries).where(
+        and4(
+          eq6(commentaryEntries.commentatorId, src.dbId),
+          eq6(commentaryEntries.bookId, Number(bookId)),
+          eq6(commentaryEntries.chapter, Number(chapter))
+        )
+      ).limit(1);
+      if (existingSrc.length > 0) {
+        const cRow2 = await db.select().from(commentators).where(eq6(commentators.id, src.dbId)).limit(1);
+        results.push({ entry: existingSrc[0], commentator: cRow2[0] || null });
+        continue;
+      }
       const data = await fetchRealCommentary(src.apiId, bookCode, Number(chapter));
       if (!data || data.verses.length === 0) continue;
       const fullText = data.verses.map((v) => v.content.trim()).join("\n\n");
@@ -33444,7 +33814,7 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         content: trimmed,
         title: `${bookName} ${chapter} \u2014 ${src.name}`
       }).returning();
-      const cRow = await db.select().from(commentators).where(eq5(commentators.id, src.dbId)).limit(1);
+      const cRow = await db.select().from(commentators).where(eq6(commentators.id, src.dbId)).limit(1);
       results.push({ entry: inserted, commentator: cRow[0] || null });
     }
     if (!commentatorMap[EGW_COMMENTATOR.dbId]) {
@@ -33455,13 +33825,13 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         tradition: EGW_COMMENTATOR.tradition
       }).onConflictDoNothing();
     }
-    const existingEgw = await db.select().from(commentaryEntries).where(and3(
-      eq5(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
-      eq5(commentaryEntries.bookId, Number(bookId)),
-      eq5(commentaryEntries.chapter, Number(chapter))
+    const existingEgw = await db.select().from(commentaryEntries).where(and4(
+      eq6(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
+      eq6(commentaryEntries.bookId, Number(bookId)),
+      eq6(commentaryEntries.chapter, Number(chapter))
     )).limit(1);
     if (existingEgw.length > 0) {
-      const egwRow = await db.select().from(commentators).where(eq5(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+      const egwRow = await db.select().from(commentators).where(eq6(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
       results.unshift({ entry: existingEgw[0], commentator: egwRow[0] || null });
     } else {
       const egwContent = await generateEgwInsight(bookName, Number(chapter));
@@ -33473,7 +33843,7 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
           content: egwContent,
           title: `${bookName} ${chapter} \u2014 ${EGW_COMMENTATOR.name}`
         }).returning();
-        const egwRow = await db.select().from(commentators).where(eq5(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+        const egwRow = await db.select().from(commentators).where(eq6(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
         results.unshift({ entry: egwInserted, commentator: egwRow[0] || null });
       }
     }
@@ -33483,17 +33853,166 @@ router4.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     return res.status(500).json({ error: "Failed to fetch commentary" });
   }
 });
-router4.get("/api/application", async (req, res) => {
+var commentary_default = router5;
+
+// server/routes/context.ts
+init_db();
+import { Router as Router6 } from "express";
+init_ai_semaphore();
+init_schema();
+import { eq as eq7, and as and5 } from "drizzle-orm";
+init_ai_engine();
+var router6 = Router6();
+router6.get("/api/context", async (req, res) => {
+  try {
+    const { book, chapter } = req.query;
+    if (!book) {
+      return res.status(400).json({ error: "book is required" });
+    }
+    const cards = await db.select().from(contextCards).where(
+      chapter ? and5(
+        eq7(contextCards.bookId, Number(book)),
+        eq7(contextCards.chapter, Number(chapter))
+      ) : eq7(contextCards.bookId, Number(book))
+    );
+    const seen = /* @__PURE__ */ new Set();
+    const deduped = cards.filter((c) => {
+      const key = `${c.bookId}_${c.chapter}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return res.json(deduped);
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+router6.post("/api/context/generate", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { bookId, chapter } = req.body;
+    if (!bookId || !chapter) {
+      return res.status(400).json({ error: "bookId and chapter are required" });
+    }
+    const existing = await db.select().from(contextCards).where(
+      and5(
+        eq7(contextCards.bookId, Number(bookId)),
+        eq7(contextCards.chapter, Number(chapter))
+      )
+    );
+    if (existing.length > 0) {
+      return res.json(existing);
+    }
+    const bookRows = await db.select().from(bibleBooks).where(eq7(bibleBooks.id, Number(bookId)));
+    if (bookRows.length === 0) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    const bookName = bookRows[0].name;
+    const depth = req.body.depth || req.query.depth || "standard";
+    let parsed;
+    try {
+      parsed = await generateContextCards({ bookId: Number(bookId), chapter: Number(chapter), bookName, depth });
+    } catch {
+      return res.status(500).json({ error: "Failed to parse AI response" });
+    }
+    const [inserted] = await db.insert(contextCards).values({
+      bookId: Number(bookId),
+      chapter: Number(chapter),
+      title: parsed.title,
+      content: parsed.content,
+      historicalBackground: parsed.historicalBackground,
+      culturalNotes: parsed.culturalNotes,
+      authorInfo: parsed.authorInfo,
+      dateWritten: parsed.dateWritten,
+      audience: parsed.audience,
+      themes: parsed.themes
+    }).returning();
+    return res.json([inserted]);
+  } catch (err) {
+    console.error("Context generation error:", err);
+    return res.status(500).json({ error: "Failed to generate context" });
+  }
+});
+router6.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, res) => {
+  try {
+    const bookId = parseInt(String(req.params.bookId));
+    const chapter = parseInt(String(req.params.chapter));
+    const [cached] = await db.select().from(chapterContextCache).where(and5(
+      eq7(chapterContextCache.bookId, bookId),
+      eq7(chapterContextCache.chapter, chapter)
+    )).limit(1);
+    if (cached) {
+      return res.json({
+        locations: JSON.parse(cached.locations),
+        timelineEvents: JSON.parse(cached.timelineEvents),
+        keyFigures: JSON.parse(cached.keyFigures),
+        culturalInsights: cached.culturalInsights,
+        geographicalNotes: cached.geographicalNotes
+      });
+    }
+    const [book] = await db.select().from(bibleBooks).where(eq7(bibleBooks.id, bookId)).limit(1);
+    const bookName = book?.name || "Unknown";
+    const result = await generateChapterContext({ bookId, chapter, bookName });
+    await db.insert(chapterContextCache).values({
+      bookId,
+      chapter,
+      locations: JSON.stringify(result.locations || []),
+      timelineEvents: JSON.stringify(result.timelineEvents || []),
+      keyFigures: JSON.stringify(result.keyFigures || []),
+      culturalInsights: result.culturalInsights || null,
+      geographicalNotes: result.geographicalNotes || null
+    });
+    return res.json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+router6.get("/api/chapter-summary", async (req, res) => {
+  try {
+    const bookId = parseInt(String(req.query.bookId));
+    const chapter = parseInt(String(req.query.chapter));
+    if (!bookId || !chapter) {
+      return res.status(400).json({ error: "bookId and chapter are required" });
+    }
+    const [summary] = await db.select().from(chapterSummaries).where(
+      and5(
+        eq7(chapterSummaries.bookId, bookId),
+        eq7(chapterSummaries.chapter, chapter)
+      )
+    ).limit(1);
+    if (!summary) {
+      return res.json(null);
+    }
+    return res.json({
+      id: summary.id,
+      bookId: summary.bookId,
+      chapter: summary.chapter,
+      bigIdea: summary.bigIdea,
+      narrativeRole: summary.narrativeRole,
+      focusThemes: JSON.parse(summary.focusThemes),
+      pastoralFrame: summary.pastoralFrame,
+      thesisStatement: summary.thesisStatement || null,
+      doctrinalAnchor: summary.doctrinalAnchor || null,
+      narrativePlacement: summary.narrativePlacement || null,
+      version: summary.version
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+router6.get("/api/application", async (req, res) => {
   try {
     const { book, chapter } = req.query;
     if (!book) {
       return res.status(400).json({ error: "book is required" });
     }
     const templates = await db.select().from(applicationTemplates).where(
-      chapter ? and3(
-        eq5(applicationTemplates.bookId, Number(book)),
-        eq5(applicationTemplates.chapter, Number(chapter))
-      ) : eq5(applicationTemplates.bookId, Number(book))
+      chapter ? and5(
+        eq7(applicationTemplates.bookId, Number(book)),
+        eq7(applicationTemplates.chapter, Number(chapter))
+      ) : eq7(applicationTemplates.bookId, Number(book))
     );
     return res.json(templates);
   } catch (err) {
@@ -33501,22 +34020,22 @@ router4.get("/api/application", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/application/generate", aiGenerationLimiter, async (req, res) => {
+router6.post("/api/application/generate", aiGenerationLimiter, async (req, res) => {
   try {
     const { bookId, chapter } = req.body;
     if (!bookId || !chapter) {
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
     const existing = await db.select().from(applicationTemplates).where(
-      and3(
-        eq5(applicationTemplates.bookId, Number(bookId)),
-        eq5(applicationTemplates.chapter, Number(chapter))
+      and5(
+        eq7(applicationTemplates.bookId, Number(bookId)),
+        eq7(applicationTemplates.chapter, Number(chapter))
       )
     );
     if (existing.length > 0) {
       return res.json(existing);
     }
-    const bookRows = await db.select().from(bibleBooks).where(eq5(bibleBooks.id, Number(bookId)));
+    const bookRows = await db.select().from(bibleBooks).where(eq7(bibleBooks.id, Number(bookId)));
     if (bookRows.length === 0) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -33543,7 +34062,16 @@ router4.post("/api/application/generate", aiGenerationLimiter, async (req, res) 
     return res.status(500).json({ error: "Failed to generate application data" });
   }
 });
-router4.get("/api/location", async (req, res) => {
+var context_default = router6;
+
+// server/routes/locations-timeline.ts
+init_db();
+init_ai_semaphore();
+init_schema();
+import { Router as Router7 } from "express";
+import { eq as eq8 } from "drizzle-orm";
+var router7 = Router7();
+router7.get("/api/location", async (req, res) => {
   try {
     const allLocations = await db.select().from(locations);
     return res.json(allLocations);
@@ -33552,9 +34080,9 @@ router4.get("/api/location", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/location/:id", async (req, res) => {
+router7.get("/api/location/:id", async (req, res) => {
   try {
-    const location = await db.select().from(locations).where(eq5(locations.id, String(req.params.id))).limit(1);
+    const location = await db.select().from(locations).where(eq8(locations.id, String(req.params.id))).limit(1);
     if (!location.length) {
       return res.status(404).json({ error: "Location not found" });
     }
@@ -33564,7 +34092,7 @@ router4.get("/api/location/:id", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/timeline", async (req, res) => {
+router7.get("/api/timeline", async (req, res) => {
   try {
     const events = await db.select().from(timelineEvents).orderBy(timelineEvents.yearApprox);
     return res.json(events);
@@ -33573,7 +34101,7 @@ router4.get("/api/timeline", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/location/:id/verses", async (req, res) => {
+router7.get("/api/location/:id/verses", async (req, res) => {
   try {
     const rows = await db.select({
       verseId: locationVerseMaps.verseId,
@@ -33583,14 +34111,14 @@ router4.get("/api/location/:id/verses", async (req, res) => {
       verse: bibleVerses.verse,
       text: bibleVerses.text,
       bookName: bibleBooks.name
-    }).from(locationVerseMaps).innerJoin(bibleVerses, eq5(locationVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, eq5(bibleVerses.bookId, bibleBooks.id)).where(eq5(locationVerseMaps.locationId, String(req.params.id)));
+    }).from(locationVerseMaps).innerJoin(bibleVerses, eq8(locationVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, eq8(bibleVerses.bookId, bibleBooks.id)).where(eq8(locationVerseMaps.locationId, String(req.params.id)));
     return res.json(rows);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/timeline/:id/verses", async (req, res) => {
+router7.get("/api/timeline/:id/verses", async (req, res) => {
   try {
     const rows = await db.select({
       verseId: eventVerseMaps.verseId,
@@ -33599,73 +34127,35 @@ router4.get("/api/timeline/:id/verses", async (req, res) => {
       verse: bibleVerses.verse,
       text: bibleVerses.text,
       bookName: bibleBooks.name
-    }).from(eventVerseMaps).innerJoin(bibleVerses, eq5(eventVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, eq5(bibleVerses.bookId, bibleBooks.id)).where(eq5(eventVerseMaps.eventId, String(req.params.id)));
+    }).from(eventVerseMaps).innerJoin(bibleVerses, eq8(eventVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, eq8(bibleVerses.bookId, bibleBooks.id)).where(eq8(eventVerseMaps.eventId, String(req.params.id)));
     return res.json(rows);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/verses/explain", async (req, res) => {
+var locations_timeline_default = router7;
+
+// server/routes/study-guide.ts
+init_db();
+import { Router as Router8 } from "express";
+init_ai_semaphore();
+init_schema();
+import { eq as eq9, and as and6, sql as sql6, desc as desc2 } from "drizzle-orm";
+init_ai_engine();
+var router8 = Router8();
+router8.get("/api/study-guide/active", async (req, res) => {
   try {
-    const { reference, lessonContext } = req.body;
-    if (!reference || typeof reference !== "string" || reference.trim().length < 3) {
-      return res.status(400).json({ error: "A valid Scripture reference is required" });
-    }
-    const { generateVerseExplanation: generateVerseExplanation2 } = await Promise.resolve().then(() => (init_ai_engine(), ai_engine_exports));
-    const explanation = await generateVerseExplanation2({
-      reference: reference.trim(),
-      lessonContext: lessonContext?.trim()
-    });
-    return res.json({ explanation });
-  } catch (err) {
-    console.error("Verse explanation error:", err);
-    return res.json({
-      explanation: "Unable to generate an explanation at this time. Please try again later."
-    });
-  }
-});
-router4.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
-  try {
-    const { passage, theme } = req.body;
-    if (!passage || typeof passage !== "string" || passage.trim().length < 3) {
-      return res.status(400).json({ error: "A valid passage reference is required" });
-    }
-    const insight = await generateQuickInsight({
-      passage: passage.trim(),
-      theme: theme?.trim()
-    });
-    return res.json(insight);
-  } catch (err) {
-    console.error("Quick insight generation error:", err);
-    return res.status(500).json({ error: "Failed to generate quick insight" });
-  }
-});
-router4.post("/api/devotionals/complete", async (req, res) => {
-  try {
-    const { enrollmentId, dayId, journalEntry } = req.body;
-    if (!enrollmentId || !dayId) {
-      return res.status(400).json({ error: "enrollmentId and dayId are required" });
-    }
-    const progress = await db.insert(userPlanProgress).values({ enrollmentId, dayId, journalEntry }).onConflictDoNothing().returning();
-    return res.json({ progress: progress[0] ?? null });
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
-});
-router4.get("/api/study-guide/active", async (req, res) => {
-  try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const verseReference = String(req.query.verseReference || "");
     if (!verseReference) {
       return res.status(400).json({ error: "verseReference is required" });
     }
     const [activeSession] = await db.select().from(studyGuideSessions).where(
-      and3(
-        eq5(studyGuideSessions.userId, userId),
-        eq5(studyGuideSessions.verseReference, verseReference),
-        sql4`${studyGuideSessions.completedAt} IS NULL`
+      and6(
+        eq9(studyGuideSessions.userId, userId),
+        eq9(studyGuideSessions.verseReference, verseReference),
+        sql6`${studyGuideSessions.completedAt} IS NULL`
       )
     ).orderBy(desc2(studyGuideSessions.createdAt)).limit(1);
     if (!activeSession) {
@@ -33686,10 +34176,10 @@ router4.get("/api/study-guide/active", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
+router8.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
     const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "scholarly" } = req.body;
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     if (!verseReference || !verseText) {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
@@ -33697,10 +34187,10 @@ router4.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => 
     const resolvedPersona = validPersonas.includes(persona) ? persona : "scholarly";
     if (!forceNew) {
       const [existingActive] = await db.select().from(studyGuideSessions).where(
-        and3(
-          eq5(studyGuideSessions.userId, userId),
-          eq5(studyGuideSessions.verseReference, verseReference),
-          sql4`${studyGuideSessions.completedAt} IS NULL`
+        and6(
+          eq9(studyGuideSessions.userId, userId),
+          eq9(studyGuideSessions.verseReference, verseReference),
+          sql6`${studyGuideSessions.completedAt} IS NULL`
         )
       ).orderBy(desc2(studyGuideSessions.createdAt)).limit(1);
       if (existingActive) {
@@ -33745,14 +34235,14 @@ router4.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => 
 });
 var STAGE_THRESHOLDS = { observe: 2, interpret: 2, apply: 1 };
 var STAGE_ORDER = ["observe", "interpret", "apply"];
-router4.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) => {
+router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) => {
   try {
     const { sessionId, userResponse } = req.body;
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     if (!sessionId || !userResponse) {
       return res.status(400).json({ error: "sessionId and userResponse are required" });
     }
-    const [session] = await db.select().from(studyGuideSessions).where(eq5(studyGuideSessions.id, sessionId)).limit(1);
+    const [session] = await db.select().from(studyGuideSessions).where(eq9(studyGuideSessions.id, sessionId)).limit(1);
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
@@ -33799,6 +34289,7 @@ router4.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
     if (stageData && quality === "meaningful") {
       if (currentPhase === "observe") {
         const resolvedCat = category && category !== "other" ? category : inferObserveCategory(userResponse);
+        console.log(`[study-guide] observe: resolvedCat=${resolvedCat} existing=${JSON.stringify(stageData.categories)} duplicate=${stageData.categories.includes(resolvedCat)}`);
         if (!stageData.categories.includes(resolvedCat)) {
           stageData.categories.push(resolvedCat);
           stageData.meaningfulCount++;
@@ -33807,6 +34298,7 @@ router4.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
         stageData.meaningfulCount++;
       }
     }
+    console.log(`[study-guide] phase=${currentPhase} quality=${quality} meaningfulCount=${stageData?.meaningfulCount || 0} categories=${JSON.stringify(stageData?.categories || [])}`);
     const threshold = STAGE_THRESHOLDS[currentPhase] || 2;
     let shouldAdvance = false;
     let nextPhase = currentPhase;
@@ -33856,7 +34348,7 @@ router4.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
       phase: resolvedPhase,
       progression: JSON.stringify(progression),
       ...resolvedPhase === "complete" ? { completedAt: /* @__PURE__ */ new Date(), summary } : {}
-    }).where(eq5(studyGuideSessions.id, sessionId));
+    }).where(eq9(studyGuideSessions.id, sessionId));
     return res.json({
       aiMessage: finalAiText,
       phase: resolvedPhase,
@@ -33870,28 +34362,33 @@ router4.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/study-guide/sessions", async (req, res) => {
+router8.get("/api/study-guide/sessions", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const sessions = await db.select().from(studyGuideSessions).where(eq5(studyGuideSessions.userId, userId)).orderBy(desc2(studyGuideSessions.createdAt)).limit(20);
+    const userId = extractUserId(req);
+    const sessions = await db.select().from(studyGuideSessions).where(eq9(studyGuideSessions.userId, userId)).orderBy(desc2(studyGuideSessions.createdAt)).limit(20);
     return res.json(sessions);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/study-guide/complete/:id", async (req, res) => {
+router8.post("/api/study-guide/complete/:id", async (req, res) => {
   try {
-    await db.update(studyGuideSessions).set({ completedAt: /* @__PURE__ */ new Date(), phase: "complete" }).where(eq5(studyGuideSessions.id, String(req.params.id)));
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
+    const [session] = await db.select({ userId: studyGuideSessions.userId }).from(studyGuideSessions).where(eq9(studyGuideSessions.id, String(req.params.id))).limit(1);
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.userId !== userId) return res.status(403).json({ error: "Not your session" });
+    await db.update(studyGuideSessions).set({ completedAt: /* @__PURE__ */ new Date(), phase: "complete" }).where(eq9(studyGuideSessions.id, String(req.params.id)));
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/study-guide/session/:id", async (req, res) => {
+router8.get("/api/study-guide/session/:id", async (req, res) => {
   try {
-    const [session] = await db.select().from(studyGuideSessions).where(eq5(studyGuideSessions.id, String(req.params.id))).limit(1);
+    const [session] = await db.select().from(studyGuideSessions).where(eq9(studyGuideSessions.id, String(req.params.id))).limit(1);
     if (!session) return res.status(404).json({ error: "Session not found" });
     return res.json({ ...session, messages: JSON.parse(session.messages) });
   } catch (err) {
@@ -33899,13 +34396,23 @@ router4.get("/api/study-guide/session/:id", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/verse-map/:verseId", async (req, res) => {
+var study_guide_default = router8;
+
+// server/routes/verse-tools.ts
+init_db();
+import { Router as Router9 } from "express";
+init_ai_semaphore();
+init_schema();
+init_ai_engine();
+import { eq as eq10 } from "drizzle-orm";
+var router9 = Router9();
+router9.get("/api/verse-map/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);
     const rawWords = await db.select({
       map: verseStrongMaps,
       entry: strongEntries
-    }).from(verseStrongMaps).leftJoin(strongEntries, eq5(verseStrongMaps.strongId, strongEntries.id)).where(eq5(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
+    }).from(verseStrongMaps).leftJoin(strongEntries, eq10(verseStrongMaps.strongId, strongEntries.id)).where(eq10(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
     const seen = /* @__PURE__ */ new Set();
     const words = rawWords.filter((row) => {
       const key = `${row.map.strongId}-${row.map.wordPosition}`;
@@ -33913,7 +34420,7 @@ router4.get("/api/verse-map/:verseId", async (req, res) => {
       seen.add(key);
       return true;
     });
-    const [cached] = await db.select().from(verseMapCache).where(eq5(verseMapCache.verseId, String(verseId))).limit(1);
+    const [cached] = await db.select().from(verseMapCache).where(eq10(verseMapCache.verseId, String(verseId))).limit(1);
     const crossReferences = cached ? JSON.parse(cached.crossReferences) : [];
     const contextSnippet = cached?.contextSnippet || null;
     return res.json({ words, crossReferences, contextSnippet, hasCachedData: !!cached });
@@ -33922,13 +34429,13 @@ router4.get("/api/verse-map/:verseId", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => {
+router9.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => {
   try {
     const { verseId, verseText, verseReference, bookName, chapter, verse } = req.body;
     if (!verseId || !verseText || !verseReference) {
       return res.status(400).json({ error: "verseId, verseText, and verseReference are required" });
     }
-    const [existing] = await db.select().from(verseMapCache).where(eq5(verseMapCache.verseId, String(verseId))).limit(1);
+    const [existing] = await db.select().from(verseMapCache).where(eq10(verseMapCache.verseId, String(verseId))).limit(1);
     if (existing) {
       return res.json({ crossReferences: JSON.parse(existing.crossReferences), contextSnippet: existing.contextSnippet });
     }
@@ -33950,167 +34457,92 @@ router4.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) =>
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req, res) => {
+router9.post("/api/verses/explain", async (req, res) => {
   try {
-    const bookId = parseInt(String(req.params.bookId));
-    const chapter = parseInt(String(req.params.chapter));
-    const [cached] = await db.select().from(chapterContextCache).where(and3(
-      eq5(chapterContextCache.bookId, bookId),
-      eq5(chapterContextCache.chapter, chapter)
-    )).limit(1);
-    if (cached) {
-      return res.json({
-        locations: JSON.parse(cached.locations),
-        timelineEvents: JSON.parse(cached.timelineEvents),
-        keyFigures: JSON.parse(cached.keyFigures),
-        culturalInsights: cached.culturalInsights,
-        geographicalNotes: cached.geographicalNotes
-      });
+    const { reference, lessonContext } = req.body;
+    if (!reference || typeof reference !== "string" || reference.trim().length < 3) {
+      return res.status(400).json({ error: "A valid Scripture reference is required" });
     }
-    const [book] = await db.select().from(bibleBooks).where(eq5(bibleBooks.id, bookId)).limit(1);
-    const bookName = book?.name || "Unknown";
-    const result = await generateChapterContext({ bookId, chapter, bookName });
-    await db.insert(chapterContextCache).values({
-      bookId,
-      chapter,
-      locations: JSON.stringify(result.locations || []),
-      timelineEvents: JSON.stringify(result.timelineEvents || []),
-      keyFigures: JSON.stringify(result.keyFigures || []),
-      culturalInsights: result.culturalInsights || null,
-      geographicalNotes: result.geographicalNotes || null
+    const { generateVerseExplanation: generateVerseExplanation2 } = await Promise.resolve().then(() => (init_ai_engine(), ai_engine_exports));
+    const explanation = await generateVerseExplanation2({
+      reference: reference.trim(),
+      lessonContext: lessonContext?.trim()
     });
-    return res.json(result);
+    return res.json({ explanation });
+  } catch (err) {
+    console.error("Verse explanation error:", err);
+    return res.json({
+      explanation: "Unable to generate an explanation at this time. Please try again later."
+    });
+  }
+});
+router9.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { passage, theme } = req.body;
+    if (!passage || typeof passage !== "string" || passage.trim().length < 3) {
+      return res.status(400).json({ error: "A valid passage reference is required" });
+    }
+    const insight = await generateQuickInsight({
+      passage: passage.trim(),
+      theme: theme?.trim()
+    });
+    return res.json(insight);
+  } catch (err) {
+    console.error("Quick insight generation error:", err);
+    return res.status(500).json({ error: "Failed to generate quick insight" });
+  }
+});
+router9.post("/api/devotionals/complete", async (req, res) => {
+  try {
+    const { enrollmentId, dayId, journalEntry } = req.body;
+    if (!enrollmentId || !dayId) {
+      return res.status(400).json({ error: "enrollmentId and dayId are required" });
+    }
+    const progress = await db.insert(userPlanProgress).values({ enrollmentId, dayId, journalEntry }).onConflictDoNothing().returning();
+    return res.json({ progress: progress[0] ?? null });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/chapter-summary", async (req, res) => {
+var verse_tools_default = router9;
+
+// server/routes/deep-study.ts
+init_db();
+import { Router as Router10 } from "express";
+init_schema();
+import { eq as eq11, and as and7, sql as sql7, desc as desc3, asc as asc2, countDistinct } from "drizzle-orm";
+var router10 = Router10();
+router10.get("/api/layer-completions", async (req, res) => {
   try {
-    const bookId = parseInt(String(req.query.bookId));
-    const chapter = parseInt(String(req.query.chapter));
-    if (!bookId || !chapter) {
-      return res.status(400).json({ error: "bookId and chapter are required" });
-    }
-    const [summary] = await db.select().from(chapterSummaries).where(
-      and3(
-        eq5(chapterSummaries.bookId, bookId),
-        eq5(chapterSummaries.chapter, chapter)
-      )
-    ).limit(1);
-    if (!summary) {
-      return res.json(null);
-    }
-    return res.json({
-      id: summary.id,
-      bookId: summary.bookId,
-      chapter: summary.chapter,
-      bigIdea: summary.bigIdea,
-      narrativeRole: summary.narrativeRole,
-      focusThemes: JSON.parse(summary.focusThemes),
-      pastoralFrame: summary.pastoralFrame,
-      thesisStatement: summary.thesisStatement || null,
-      doctrinalAnchor: summary.doctrinalAnchor || null,
-      narrativePlacement: summary.narrativePlacement || null,
-      version: summary.version
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
-});
-router4.get("/api/analytics/growth", async (req, res) => {
-  try {
-    const userId = getAuthUserId(req) || "guest";
-    const sessions = await db.select({
-      createdAt: studyGuideSessions.createdAt,
-      completedAt: studyGuideSessions.completedAt
-    }).from(studyGuideSessions).where(eq5(studyGuideSessions.userId, userId));
-    let deepStudyMinutes = 0;
-    for (const s of sessions) {
-      if (s.completedAt && s.createdAt) {
-        const mins = (new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime()) / 6e4;
-        if (mins > 0 && mins < 480) deepStudyMinutes += mins;
-      } else if (s.createdAt) {
-        deepStudyMinutes += 5;
-      }
-    }
-    deepStudyMinutes = Math.round(deepStudyMinutes);
-    const userChapters = await db.select({
-      bookId: readingHistory.bookId,
-      chapter: readingHistory.chapter
-    }).from(readingHistory).where(eq5(readingHistory.userId, userId)).groupBy(readingHistory.bookId, readingHistory.chapter);
-    let wordsLearned = 0;
-    if (userChapters.length > 0) {
-      const conditions = userChapters.map(
-        (ch) => sql4`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
-      );
-      const [wordsResult] = await db.select({ total: countDistinct(verseStrongMaps.strongId) }).from(verseStrongMaps).innerJoin(bibleVerses, eq5(verseStrongMaps.verseId, bibleVerses.id)).where(sql4`(${sql4.join(conditions, sql4` OR `)})`);
-      wordsLearned = wordsResult?.total ?? 0;
-    }
-    const booksRead = await db.select({ bookId: readingHistory.bookId }).from(readingHistory).where(eq5(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
-    const exploredBookIds = booksRead.map((r) => r.bookId);
-    const allBooks = await db.select({
-      id: bibleBooks.id,
-      name: bibleBooks.name,
-      abbreviation: bibleBooks.abbreviation,
-      testament: bibleBooks.testament,
-      chapterCount: bibleBooks.chapterCount,
-      orderIndex: bibleBooks.orderIndex
-    }).from(bibleBooks).orderBy(asc2(bibleBooks.orderIndex));
-    const chaptersPerBook = await db.select({
-      bookId: readingHistory.bookId,
-      chaptersRead: countDistinct(readingHistory.chapter)
-    }).from(readingHistory).where(eq5(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
-    const chaptersMap = new Map(
-      chaptersPerBook.map((r) => [r.bookId, Number(r.chaptersRead)])
-    );
-    const bibleMap = allBooks.map((book) => ({
-      id: book.id,
-      name: book.name,
-      abbreviation: book.abbreviation,
-      testament: book.testament,
-      chapterCount: book.chapterCount,
-      chaptersRead: chaptersMap.get(book.id) ?? 0,
-      explored: exploredBookIds.includes(book.id)
-    }));
-    return res.json({
-      deepStudyMinutes,
-      totalSessions: sessions.length,
-      wordsLearned,
-      bibleMap,
-      booksExplored: exploredBookIds.length,
-      totalBooks: allBooks.length
-    });
-  } catch (err) {
-    console.error("Growth analytics error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-router4.get("/api/layer-completions", async (req, res) => {
-  try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = req.query.bookId ? Number(req.query.bookId) : void 0;
     const chapter = req.query.chapter ? Number(req.query.chapter) : void 0;
-    let conditions = [eq5(layerCompletions.userId, userId)];
-    if (bookId !== void 0) conditions.push(eq5(layerCompletions.bookId, bookId));
-    if (chapter !== void 0) conditions.push(eq5(layerCompletions.chapter, chapter));
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
+    let conditions = [eq11(layerCompletions.userId, userId)];
+    if (bookId !== void 0) conditions.push(eq11(layerCompletions.bookId, bookId));
+    if (chapter !== void 0) conditions.push(eq11(layerCompletions.chapter, chapter));
+    conditions.push(eq11(layerCompletions.verseStart, verseStart));
+    conditions.push(eq11(layerCompletions.verseEnd, verseEnd));
     const rows = await db.select({
       bookId: layerCompletions.bookId,
       chapter: layerCompletions.chapter,
       layer: layerCompletions.layer,
+      verseStart: layerCompletions.verseStart,
+      verseEnd: layerCompletions.verseEnd,
       completedAt: layerCompletions.completedAt
-    }).from(layerCompletions).where(and3(...conditions));
+    }).from(layerCompletions).where(and7(...conditions));
     return res.json(rows);
   } catch (err) {
     console.error("Layer completions fetch error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/layer-completions", async (req, res) => {
+router10.post("/api/layer-completions", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const { bookId, chapter, layer } = req.body;
+    const userId = extractUserId(req);
+    const { bookId, chapter, layer, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -34118,22 +34550,29 @@ router4.post("/api/layer-completions", async (req, res) => {
     if (!validLayers.includes(layer)) {
       return res.status(400).json({ error: "Invalid layer" });
     }
-    await db.insert(layerCompletions).values({ userId, bookId: Number(bookId), chapter: Number(chapter), layer: String(layer) }).onConflictDoNothing();
+    await db.insert(layerCompletions).values({
+      userId,
+      bookId: Number(bookId),
+      chapter: Number(chapter),
+      layer: String(layer),
+      verseStart: verseStart != null ? Number(verseStart) : 0,
+      verseEnd: verseEnd != null ? Number(verseEnd) : 0
+    }).onConflictDoNothing();
     return res.json({ success: true });
   } catch (err) {
     console.error("Layer completion save error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/layer-completions/book-summary", async (req, res) => {
+router10.get("/api/layer-completions/book-summary", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
     if (!bookId) return res.status(400).json({ error: "bookId required" });
-    const [bookInfo] = await db.select({ chapterCount: bibleBooks.chapterCount }).from(bibleBooks).where(eq5(bibleBooks.id, bookId));
+    const [bookInfo] = await db.select({ chapterCount: bibleBooks.chapterCount }).from(bibleBooks).where(eq11(bibleBooks.id, bookId));
     if (!bookInfo) return res.json({ word: 0, context: 0, voices: 0, application: 0 });
     const totalChapters = bookInfo.chapterCount;
-    const completions = await db.select({ layer: layerCompletions.layer, chapters: countDistinct(layerCompletions.chapter) }).from(layerCompletions).where(and3(eq5(layerCompletions.userId, userId), eq5(layerCompletions.bookId, bookId))).groupBy(layerCompletions.layer);
+    const completions = await db.select({ layer: layerCompletions.layer, chapters: countDistinct(layerCompletions.chapter) }).from(layerCompletions).where(and7(eq11(layerCompletions.userId, userId), eq11(layerCompletions.bookId, bookId))).groupBy(layerCompletions.layer);
     const summary = { word: 0, context: 0, voices: 0, application: 0 };
     for (const row of completions) {
       const pct = Math.round(Number(row.chapters) / totalChapters * 100);
@@ -34145,62 +34584,61 @@ router4.get("/api/layer-completions/book-summary", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/study-journal", async (req, res) => {
+router10.get("/api/study-journal", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     const layer = req.query.layer ? String(req.query.layer) : void 0;
+    const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
+    const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
     let conditions = [
-      eq5(studyJournalEntries.userId, userId),
-      eq5(studyJournalEntries.bookId, bookId),
-      eq5(studyJournalEntries.chapter, chapter)
+      eq11(studyJournalEntries.userId, userId),
+      eq11(studyJournalEntries.bookId, bookId),
+      eq11(studyJournalEntries.chapter, chapter)
     ];
-    if (layer) conditions.push(eq5(studyJournalEntries.layer, layer));
+    if (layer) conditions.push(eq11(studyJournalEntries.layer, layer));
+    conditions.push(eq11(studyJournalEntries.verseStart, verseStart));
+    conditions.push(eq11(studyJournalEntries.verseEnd, verseEnd));
     const rows = await db.select({
       id: studyJournalEntries.id,
       sectionKey: studyJournalEntries.sectionKey,
       layer: studyJournalEntries.layer,
       content: studyJournalEntries.content,
       updatedAt: studyJournalEntries.updatedAt
-    }).from(studyJournalEntries).where(and3(...conditions));
+    }).from(studyJournalEntries).where(and7(...conditions));
     return res.json(rows);
   } catch (err) {
     console.error("Study journal fetch error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.post("/api/study-journal", async (req, res) => {
+router10.post("/api/study-journal", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const { bookId, chapter, layer, sectionKey, content } = req.body;
+    const userId = extractUserId(req);
+    const { bookId, chapter, layer, sectionKey, content, verseStart, verseEnd } = req.body;
     if (bookId == null || chapter == null || !layer || !sectionKey) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    const vs = verseStart != null ? Number(verseStart) : 0;
+    const ve = verseEnd != null ? Number(verseEnd) : 0;
+    const matchConditions = [
+      eq11(studyJournalEntries.userId, userId),
+      eq11(studyJournalEntries.bookId, Number(bookId)),
+      eq11(studyJournalEntries.chapter, Number(chapter)),
+      eq11(studyJournalEntries.layer, String(layer)),
+      eq11(studyJournalEntries.sectionKey, String(sectionKey)),
+      eq11(studyJournalEntries.verseStart, vs),
+      eq11(studyJournalEntries.verseEnd, ve)
+    ];
     if (!content || content.trim().length === 0) {
-      await db.delete(studyJournalEntries).where(
-        and3(
-          eq5(studyJournalEntries.userId, userId),
-          eq5(studyJournalEntries.bookId, Number(bookId)),
-          eq5(studyJournalEntries.chapter, Number(chapter)),
-          eq5(studyJournalEntries.layer, String(layer)),
-          eq5(studyJournalEntries.sectionKey, String(sectionKey))
-        )
-      );
+      await db.delete(studyJournalEntries).where(and7(...matchConditions));
       return res.json({ success: true, deleted: true });
     }
-    const existing = await db.select({ id: studyJournalEntries.id }).from(studyJournalEntries).where(
-      and3(
-        eq5(studyJournalEntries.userId, userId),
-        eq5(studyJournalEntries.bookId, Number(bookId)),
-        eq5(studyJournalEntries.chapter, Number(chapter)),
-        eq5(studyJournalEntries.layer, String(layer)),
-        eq5(studyJournalEntries.sectionKey, String(sectionKey))
-      )
-    );
+    const existing = await db.select({ id: studyJournalEntries.id }).from(studyJournalEntries).where(and7(...matchConditions));
     if (existing.length > 0) {
-      await db.update(studyJournalEntries).set({ content: String(content).trim(), updatedAt: /* @__PURE__ */ new Date() }).where(eq5(studyJournalEntries.id, existing[0].id));
+      await db.update(studyJournalEntries).set({ content: String(content).trim(), updatedAt: /* @__PURE__ */ new Date() }).where(eq11(studyJournalEntries.id, existing[0].id));
     } else {
       await db.insert(studyJournalEntries).values({
         userId,
@@ -34208,6 +34646,8 @@ router4.post("/api/study-journal", async (req, res) => {
         chapter: Number(chapter),
         layer: String(layer),
         sectionKey: String(sectionKey),
+        verseStart: vs,
+        verseEnd: ve,
         content: String(content).trim()
       });
     }
@@ -34217,9 +34657,9 @@ router4.post("/api/study-journal", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.get("/api/study-journal/revisit", async (req, res) => {
+router10.get("/api/study-journal/revisit", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const limit = Math.min(Number(req.query.limit) || 10, 20);
     const entries = await db.select({
       bookId: studyJournalEntries.bookId,
@@ -34228,11 +34668,11 @@ router4.get("/api/study-journal/revisit", async (req, res) => {
       sectionKey: studyJournalEntries.sectionKey,
       content: studyJournalEntries.content,
       updatedAt: studyJournalEntries.updatedAt
-    }).from(studyJournalEntries).where(eq5(studyJournalEntries.userId, userId)).orderBy(desc2(studyJournalEntries.updatedAt)).limit(limit * 2);
+    }).from(studyJournalEntries).where(eq11(studyJournalEntries.userId, userId)).orderBy(desc3(studyJournalEntries.updatedAt)).limit(limit * 2);
     const bookIds = [...new Set(entries.map((e) => e.bookId))];
     const bookNames = /* @__PURE__ */ new Map();
     if (bookIds.length > 0) {
-      const books = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks).where(sql4`${bibleBooks.id} IN ${bookIds}`);
+      const books = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks).where(sql7`${bibleBooks.id} IN ${bookIds}`);
       books.forEach((b) => bookNames.set(b.id, b.name));
     }
     const seen = /* @__PURE__ */ new Set();
@@ -34258,15 +34698,14 @@ router4.get("/api/study-journal/revisit", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var topicReflectionCache = /* @__PURE__ */ new Map();
-router4.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
+router10.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
   try {
     const { topicId } = req.params;
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const cacheKey = `${topicId}-${today}`;
-    const cached = topicReflectionCache.get(cacheKey);
-    if (cached && cached.date === today) {
-      return res.json(cached.data);
+    const queryHash = `topic-reflection-${topicId}-${today}`;
+    const [cached] = await db.select().from(searchCache).where(eq11(searchCache.queryHash, queryHash)).limit(1);
+    if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
+      return res.json(cached.results);
     }
     const client = new (await import("openai")).default({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -34294,23 +34733,190 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
     const raw = response.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     const data = JSON.parse(cleaned);
-    topicReflectionCache.set(cacheKey, { data, date: today });
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    if (cached) {
+      await db.update(searchCache).set({ results: data, expiresAt: tomorrow }).where(eq11(searchCache.queryHash, queryHash));
+    } else {
+      await db.insert(searchCache).values({
+        queryText: `topic-reflection:${topicId}`,
+        queryHash,
+        results: data,
+        expiresAt: tomorrow
+      }).onConflictDoUpdate({
+        target: searchCache.queryHash,
+        set: { results: data, expiresAt: tomorrow }
+      });
+    }
     return res.json(data);
   } catch (err) {
     console.error("Topic reflection error:", err);
     return res.status(500).json({ error: "Failed to generate reflection" });
   }
 });
-router4.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
+router10.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const bookId = Number(req.query.bookId);
+    const chapter = Number(req.query.chapter);
+    if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
+    const cached = await db.select({ sections: chapterPassageSections.sections }).from(chapterPassageSections).where(and7(eq11(chapterPassageSections.bookId, bookId), eq11(chapterPassageSections.chapter, chapter)));
+    if (cached.length > 0) {
+      return res.json(cached[0].sections);
+    }
+    const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where(and7(eq11(bibleVerses.bookId, bookId), eq11(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+    if (verses.length === 0) return res.json([]);
+    const [bookInfo] = await db.select({ name: bibleBooks.name }).from(bibleBooks).where(eq11(bibleBooks.id, bookId));
+    const bookName = bookInfo?.name ?? `Book ${bookId}`;
+    const totalVerses = verses.length;
+    const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
+    const OpenAI3 = (await import("openai")).default;
+    const client = new OpenAI3({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+    });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+
+Rules:
+- Sections must be contiguous and non-overlapping
+- Together they must cover every verse (1 through ${totalVerses})
+- Aim for 2-5 sections depending on chapter length
+- Each section should be a coherent narrative or thematic unit
+- Labels should be short descriptions (5-8 words max)
+- For very short chapters (under 10 verses), return 1-2 sections`
+        },
+        {
+          role: "user",
+          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+
+Chapter text:
+${chapterText.substring(0, 4e3)}
+
+Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`
+        }
+      ]
+    });
+    let sections = [];
+    try {
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      const cleaned = raw.replace(/```json?\s*/g, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+      } else {
+        const valid = parsed.every(
+          (s) => typeof s.verseStart === "number" && typeof s.verseEnd === "number" && s.verseStart >= 1 && s.verseEnd <= totalVerses && s.verseStart <= s.verseEnd && typeof s.label === "string"
+        );
+        if (valid) {
+          sections = parsed;
+        } else {
+          sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+        }
+      }
+    } catch {
+      sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
+    }
+    await db.insert(chapterPassageSections).values({ bookId, chapter, sections }).onConflictDoNothing();
+    return res.json(sections);
+  } catch (err) {
+    console.error("Passage sections error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+router10.get("/api/analytics/growth", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const sessions = await db.select({
+      createdAt: studyGuideSessions.createdAt,
+      completedAt: studyGuideSessions.completedAt
+    }).from(studyGuideSessions).where(eq11(studyGuideSessions.userId, userId));
+    let deepStudyMinutes = 0;
+    for (const s of sessions) {
+      if (s.completedAt && s.createdAt) {
+        const mins = (new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime()) / 6e4;
+        if (mins > 0 && mins < 480) deepStudyMinutes += mins;
+      } else if (s.createdAt) {
+        deepStudyMinutes += 5;
+      }
+    }
+    deepStudyMinutes = Math.round(deepStudyMinutes);
+    const userChapters = await db.select({
+      bookId: readingHistory.bookId,
+      chapter: readingHistory.chapter
+    }).from(readingHistory).where(eq11(readingHistory.userId, userId)).groupBy(readingHistory.bookId, readingHistory.chapter);
+    let wordsLearned = 0;
+    if (userChapters.length > 0) {
+      const conditions = userChapters.map(
+        (ch) => sql7`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
+      );
+      const [wordsResult] = await db.select({ total: countDistinct(verseStrongMaps.strongId) }).from(verseStrongMaps).innerJoin(bibleVerses, eq11(verseStrongMaps.verseId, bibleVerses.id)).where(sql7`(${sql7.join(conditions, sql7` OR `)})`);
+      wordsLearned = wordsResult?.total ?? 0;
+    }
+    const booksRead = await db.select({ bookId: readingHistory.bookId }).from(readingHistory).where(eq11(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
+    const exploredBookIds = booksRead.map((r) => r.bookId);
+    const allBooks = await db.select({
+      id: bibleBooks.id,
+      name: bibleBooks.name,
+      abbreviation: bibleBooks.abbreviation,
+      testament: bibleBooks.testament,
+      chapterCount: bibleBooks.chapterCount,
+      orderIndex: bibleBooks.orderIndex
+    }).from(bibleBooks).orderBy(asc2(bibleBooks.orderIndex));
+    const chaptersPerBook = await db.select({
+      bookId: readingHistory.bookId,
+      chaptersRead: countDistinct(readingHistory.chapter)
+    }).from(readingHistory).where(eq11(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
+    const chaptersMap = new Map(
+      chaptersPerBook.map((r) => [r.bookId, Number(r.chaptersRead)])
+    );
+    const bibleMap = allBooks.map((book) => ({
+      id: book.id,
+      name: book.name,
+      abbreviation: book.abbreviation,
+      testament: book.testament,
+      chapterCount: book.chapterCount,
+      chaptersRead: chaptersMap.get(book.id) ?? 0,
+      explored: exploredBookIds.includes(book.id)
+    }));
+    return res.json({
+      deepStudyMinutes,
+      totalSessions: sessions.length,
+      wordsLearned,
+      bibleMap,
+      booksExplored: exploredBookIds.length,
+      totalBooks: allBooks.length
+    });
+  } catch (err) {
+    console.error("Growth analytics error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+var deep_study_default = router10;
+
+// server/routes/search.ts
+init_db();
+import { Router as Router11 } from "express";
+init_schema();
+import { eq as eq12, and as and8, sql as sql8, desc as desc4, or } from "drizzle-orm";
+import * as crypto from "crypto";
+init_ai_engine();
+var router11 = Router11();
+router11.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
+  try {
+    const userId = extractUserId(req);
     const { query } = req.body;
     if (!query || typeof query !== "string" || query.trim().length < 3) {
       return res.status(400).json({ error: "A search query of at least 3 characters is required" });
     }
     const trimmedQuery = query.trim().toLowerCase();
     const queryHash = crypto.createHash("sha256").update(trimmedQuery).digest("hex");
-    const cached = await db.select().from(searchCache).where(and3(eq5(searchCache.queryHash, queryHash), sql4`${searchCache.expiresAt} > NOW()`)).limit(1);
+    const cached = await db.select().from(searchCache).where(and8(eq12(searchCache.queryHash, queryHash), sql8`${searchCache.expiresAt} > NOW()`)).limit(1);
     let verses;
     if (cached.length > 0) {
       verses = cached[0].results;
@@ -34340,12 +34946,12 @@ router4.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
         verse: bibleVerses.verse,
         verseText: bibleVerses.text,
         bookName: bibleBooks.name
-      }).from(userNotes).leftJoin(bibleVerses, eq5(userNotes.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq5(bibleVerses.bookId, bibleBooks.id)).where(
-        and3(
-          eq5(userNotes.userId, searchUserId),
-          sql4`LOWER(${userNotes.content}) LIKE ${searchTerm}`
+      }).from(userNotes).leftJoin(bibleVerses, eq12(userNotes.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq12(bibleVerses.bookId, bibleBooks.id)).where(
+        and8(
+          eq12(userNotes.userId, searchUserId),
+          sql8`LOWER(${userNotes.content}) LIKE ${searchTerm}`
         )
-      ).orderBy(desc2(userNotes.updatedAt)).limit(10);
+      ).orderBy(desc4(userNotes.updatedAt)).limit(10);
       highlights = await db.select({
         id: userHighlights.id,
         color: userHighlights.color,
@@ -34356,12 +34962,12 @@ router4.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
         verse: bibleVerses.verse,
         verseText: bibleVerses.text,
         bookName: bibleBooks.name
-      }).from(userHighlights).leftJoin(bibleVerses, eq5(userHighlights.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq5(bibleVerses.bookId, bibleBooks.id)).where(
-        and3(
-          eq5(userHighlights.userId, searchUserId),
-          sql4`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
+      }).from(userHighlights).leftJoin(bibleVerses, eq12(userHighlights.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq12(bibleVerses.bookId, bibleBooks.id)).where(
+        and8(
+          eq12(userHighlights.userId, searchUserId),
+          sql8`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
         )
-      ).orderBy(desc2(userHighlights.createdAt)).limit(10);
+      ).orderBy(desc4(userHighlights.createdAt)).limit(10);
       bookmarks = await db.select({
         id: userBookmarks.id,
         label: userBookmarks.label,
@@ -34372,15 +34978,15 @@ router4.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
         verse: bibleVerses.verse,
         verseText: bibleVerses.text,
         bookName: bibleBooks.name
-      }).from(userBookmarks).leftJoin(bibleVerses, eq5(userBookmarks.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq5(bibleVerses.bookId, bibleBooks.id)).where(
-        and3(
-          eq5(userBookmarks.userId, searchUserId),
+      }).from(userBookmarks).leftJoin(bibleVerses, eq12(userBookmarks.verseId, bibleVerses.id)).leftJoin(bibleBooks, eq12(bibleVerses.bookId, bibleBooks.id)).where(
+        and8(
+          eq12(userBookmarks.userId, searchUserId),
           or(
-            sql4`LOWER(${userBookmarks.label}) LIKE ${searchTerm}`,
-            sql4`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
+            sql8`LOWER(${userBookmarks.label}) LIKE ${searchTerm}`,
+            sql8`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
           )
         )
-      ).orderBy(desc2(userBookmarks.createdAt)).limit(10);
+      ).orderBy(desc4(userBookmarks.createdAt)).limit(10);
     }
     return res.json({
       verses,
@@ -34394,51 +35000,51 @@ router4.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
     return res.status(500).json({ error: "Failed to perform semantic search" });
   }
 });
-router4.get("/api/search/recent", async (req, res) => {
+router11.get("/api/search/recent", async (req, res) => {
   try {
     const recent = await db.select({
       queryText: searchCache.queryText,
       createdAt: searchCache.createdAt
-    }).from(searchCache).orderBy(desc2(searchCache.createdAt)).limit(10);
+    }).from(searchCache).orderBy(desc4(searchCache.createdAt)).limit(10);
     return res.json(recent);
   } catch (err) {
     console.error("Recent searches error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var study_default = router4;
+var search_default = router11;
 
 // server/routes/devotionals.ts
 init_db();
-import { Router as Router5 } from "express";
+import { Router as Router12 } from "express";
 init_ai_semaphore();
 init_schema();
-import { eq as eq6, and as and4, desc as desc3 } from "drizzle-orm";
-var router5 = Router5();
-router5.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => {
+import { eq as eq13, and as and9, desc as desc5 } from "drizzle-orm";
+var router12 = Router12();
+router12.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => {
   try {
     const traditionKey = String(req.query.traditionKey || "all");
-    const conditions = [eq6(devotionalPlans.isPublished, true)];
+    const conditions = [eq13(devotionalPlans.isPublished, true)];
     if (traditionKey !== "all") {
-      conditions.push(eq6(devotionalPlans.traditionKey, traditionKey));
+      conditions.push(eq13(devotionalPlans.traditionKey, traditionKey));
     }
-    const plans = await db.select().from(devotionalPlans).where(and4(...conditions));
+    const plans = await db.select().from(devotionalPlans).where(and9(...conditions));
     return res.json(plans);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
+router12.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
   try {
-    const days = await db.select().from(devotionalDays).where(eq6(devotionalDays.planId, String(req.params.planId))).orderBy(devotionalDays.dayNumber);
+    const days = await db.select().from(devotionalDays).where(eq13(devotionalDays.planId, String(req.params.planId))).orderBy(devotionalDays.dayNumber);
     return res.json(days);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
+router12.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { planId } = req.body;
@@ -34446,9 +35052,9 @@ router5.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "planId is required" });
     }
     const existing = await db.select().from(userPlanEnrollments).where(
-      and4(
-        eq6(userPlanEnrollments.userId, userId),
-        eq6(userPlanEnrollments.planId, planId)
+      and9(
+        eq13(userPlanEnrollments.userId, userId),
+        eq13(userPlanEnrollments.planId, planId)
       )
     ).limit(1);
     if (existing.length) {
@@ -34461,17 +35067,17 @@ router5.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => {
+router12.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const enrollments = await db.select().from(userPlanEnrollments).where(eq6(userPlanEnrollments.userId, userId));
+    const enrollments = await db.select().from(userPlanEnrollments).where(eq13(userPlanEnrollments.userId, userId));
     if (!enrollments.length) {
       return res.json([]);
     }
     const results = await Promise.all(
       enrollments.map(async (enrollment) => {
-        const allDays = await db.select().from(devotionalDays).where(eq6(devotionalDays.planId, enrollment.planId)).orderBy(devotionalDays.dayNumber);
-        const completedDays = await db.select().from(userPlanProgress).where(eq6(userPlanProgress.enrollmentId, enrollment.id));
+        const allDays = await db.select().from(devotionalDays).where(eq13(devotionalDays.planId, enrollment.planId)).orderBy(devotionalDays.dayNumber);
+        const completedDays = await db.select().from(userPlanProgress).where(eq13(userPlanProgress.enrollmentId, enrollment.id));
         return {
           planId: enrollment.planId,
           isActive: enrollment.isActive,
@@ -34486,30 +35092,30 @@ router5.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => 
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.get("/api/devotionals/today", optionalAuth, async (req, res) => {
+router12.get("/api/devotionals/today", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { planId, depth } = req.query;
     const conditions = [
-      eq6(userPlanEnrollments.userId, userId),
-      eq6(userPlanEnrollments.isActive, true)
+      eq13(userPlanEnrollments.userId, userId),
+      eq13(userPlanEnrollments.isActive, true)
     ];
     if (planId) {
-      conditions.push(eq6(userPlanEnrollments.planId, String(planId)));
+      conditions.push(eq13(userPlanEnrollments.planId, String(planId)));
     }
-    const activeEnrollment = await db.select().from(userPlanEnrollments).where(and4(...conditions)).orderBy(desc3(userPlanEnrollments.enrolledAt)).limit(1);
+    const activeEnrollment = await db.select().from(userPlanEnrollments).where(and9(...conditions)).orderBy(desc5(userPlanEnrollments.enrolledAt)).limit(1);
     if (!activeEnrollment.length) {
       return res.json({ today: null, message: "No active plan enrollment" });
     }
-    const completedDays = await db.select().from(userPlanProgress).where(eq6(userPlanProgress.enrollmentId, activeEnrollment[0].id));
+    const completedDays = await db.select().from(userPlanProgress).where(eq13(userPlanProgress.enrollmentId, activeEnrollment[0].id));
     const completedDayIds = new Set(completedDays.map((p) => p.dayId));
-    const allDays = await db.select().from(devotionalDays).where(eq6(devotionalDays.planId, activeEnrollment[0].planId)).orderBy(devotionalDays.dayNumber);
+    const allDays = await db.select().from(devotionalDays).where(eq13(devotionalDays.planId, activeEnrollment[0].planId)).orderBy(devotionalDays.dayNumber);
     const todayDay = allDays.find((d) => !completedDayIds.has(d.id));
     if (!todayDay) {
-      await db.update(userPlanEnrollments).set({ isActive: false }).where(eq6(userPlanEnrollments.id, activeEnrollment[0].id));
+      await db.update(userPlanEnrollments).set({ isActive: false }).where(eq13(userPlanEnrollments.id, activeEnrollment[0].id));
       return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
     }
-    const [plan] = await db.select({ title: devotionalPlans.title }).from(devotionalPlans).where(eq6(devotionalPlans.id, activeEnrollment[0].planId)).limit(1);
+    const [plan] = await db.select({ title: devotionalPlans.title }).from(devotionalPlans).where(eq13(devotionalPlans.id, activeEnrollment[0].planId)).limit(1);
     return res.json({
       today: todayDay,
       enrollment: {
@@ -34525,7 +35131,7 @@ router5.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router5.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
+router12.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
   const userId = getEffectiveUserId(req);
   if (userId === "guest") {
     return res.status(401).json({ error: "Authentication required for AI reflections" });
@@ -34553,7 +35159,7 @@ router5.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
     });
   }
 });
-router5.post("/api/reading-plans/generate", optionalAuth, async (req, res) => {
+router12.post("/api/reading-plans/generate", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { topic, durationDays, difficulty, depth } = req.body;
@@ -34600,17 +35206,17 @@ router5.post("/api/reading-plans/generate", optionalAuth, async (req, res) => {
     if (dayValues.length > 0) {
       await db.insert(devotionalDays).values(dayValues);
     }
-    const savedDays = await db.select().from(devotionalDays).where(eq6(devotionalDays.planId, savedPlan.id)).orderBy(devotionalDays.dayNumber);
+    const savedDays = await db.select().from(devotionalDays).where(eq13(devotionalDays.planId, savedPlan.id)).orderBy(devotionalDays.dayNumber);
     return res.json({ plan: savedPlan, days: savedDays });
   } catch (err) {
     console.error("Generate reading plan error:", err);
     return res.status(500).json({ error: err.message || "Failed to generate reading plan" });
   }
 });
-var devotionals_default = router5;
+var devotionals_default = router12;
 
 // server/routes/tts.ts
-import { Router as Router6 } from "express";
+import { Router as Router13 } from "express";
 import crypto2 from "crypto";
 
 // server/elevenlabs-tts.ts
@@ -34662,7 +35268,7 @@ async function textToSpeech(text2, voice = "george", format = "mp3") {
 }
 
 // server/routes/tts.ts
-var router6 = Router6();
+var router13 = Router13();
 var MAX_CACHE_ENTRIES = 100;
 var MAX_CACHE_BYTES = 50 * 1024 * 1024;
 var cacheTotalBytes = 0;
@@ -34691,7 +35297,7 @@ setInterval(() => {
     }
   }
 }, 60 * 1e3);
-router6.post("/api/tts", ttsLimiter, async (req, res) => {
+router13.post("/api/tts", ttsLimiter, async (req, res) => {
   try {
     const { text: text2, voice = "george" } = req.body;
     if (!text2 || typeof text2 !== "string") {
@@ -34731,7 +35337,7 @@ router6.post("/api/tts", ttsLimiter, async (req, res) => {
     return res.status(500).json({ error: "Text-to-speech failed" });
   }
 });
-router6.post("/api/tts/prepare", ttsLimiter, async (req, res) => {
+router13.post("/api/tts/prepare", ttsLimiter, async (req, res) => {
   try {
     const { text: text2, voice = "george" } = req.body;
     if (!text2 || typeof text2 !== "string") {
@@ -34764,7 +35370,7 @@ router6.post("/api/tts/prepare", ttsLimiter, async (req, res) => {
     return res.status(500).json({ error: "Text-to-speech preparation failed" });
   }
 });
-router6.get("/api/tts/audio/:id", (req, res) => {
+router13.get("/api/tts/audio/:id", (req, res) => {
   const cached = ttsCache.get(req.params.id);
   if (!cached) {
     return res.status(404).json({ error: "Audio not found or expired" });
@@ -34777,24 +35383,211 @@ router6.get("/api/tts/audio/:id", (req, res) => {
   });
   return res.send(cached.buffer);
 });
-var tts_default = router6;
+var tts_default = router13;
 
 // server/routes/kids.ts
 init_db();
-import { Router as Router7 } from "express";
+import { Router as Router14 } from "express";
 init_ai_semaphore();
 init_schema();
-import { eq as eq7, and as and5, sql as sql6, asc as asc4 } from "drizzle-orm";
+import { eq as eq14, and as and10, sql as sql10, asc as asc4 } from "drizzle-orm";
+
+// constants/kids-shop.ts
+var SHOP_ITEMS = [
+  {
+    id: "frame-golden-crown",
+    name: "Golden Crown",
+    description: "A shining golden crown for your profile",
+    category: "avatar_frame",
+    starCost: 10,
+    icon: "trophy",
+    color: "#FFD700"
+  },
+  {
+    id: "frame-angel-wings",
+    name: "Angel Wings",
+    description: "Beautiful angel wings around your picture",
+    category: "avatar_frame",
+    starCost: 15,
+    icon: "sparkles",
+    color: "#E8D5B7"
+  },
+  {
+    id: "frame-rainbow",
+    name: "Rainbow Glow",
+    description: "A colorful rainbow frame",
+    category: "avatar_frame",
+    starCost: 12,
+    icon: "rainbow",
+    color: "#FF6B6B"
+  },
+  {
+    id: "frame-shepherd-staff",
+    name: "Shepherd's Staff",
+    description: "The Good Shepherd's staff beside your name",
+    category: "avatar_frame",
+    starCost: 8,
+    icon: "leaf",
+    color: "#8B4513"
+  },
+  {
+    id: "frame-dove",
+    name: "Peace Dove",
+    description: "A gentle dove of peace",
+    category: "avatar_frame",
+    starCost: 10,
+    icon: "heart",
+    color: "#87CEEB"
+  },
+  {
+    id: "frame-star-burst",
+    name: "Star Burst",
+    description: "Twinkling stars around your profile",
+    category: "avatar_frame",
+    starCost: 20,
+    icon: "star",
+    color: "#9B59B6"
+  },
+  {
+    id: "theme-ocean-blue",
+    name: "Ocean Blue",
+    description: "Calming ocean waves theme",
+    category: "theme",
+    starCost: 15,
+    icon: "water",
+    color: "#2980B9",
+    previewColor: "#1A5276"
+  },
+  {
+    id: "theme-garden-green",
+    name: "Garden of Eden",
+    description: "Lush green garden theme",
+    category: "theme",
+    starCost: 15,
+    icon: "leaf",
+    color: "#27AE60",
+    previewColor: "#1E8449"
+  },
+  {
+    id: "theme-sunset-orange",
+    name: "Sunset Glow",
+    description: "Warm sunset sky theme",
+    category: "theme",
+    starCost: 15,
+    icon: "sunny",
+    color: "#E67E22",
+    previewColor: "#CA6F1E"
+  },
+  {
+    id: "theme-royal-purple",
+    name: "Royal Purple",
+    description: "Majestic purple kingdom theme",
+    category: "theme",
+    starCost: 20,
+    icon: "diamond",
+    color: "#8E44AD",
+    previewColor: "#6C3483"
+  },
+  {
+    id: "theme-starry-night",
+    name: "Starry Night",
+    description: "A beautiful night sky full of stars",
+    category: "theme",
+    starCost: 25,
+    icon: "moon",
+    color: "#2C3E50",
+    previewColor: "#1B2631"
+  },
+  {
+    id: "celebration-confetti",
+    name: "Confetti Burst",
+    description: "Colorful confetti when you complete stories",
+    category: "celebration",
+    starCost: 8,
+    icon: "bonfire",
+    color: "#E74C3C"
+  },
+  {
+    id: "celebration-fireworks",
+    name: "Fireworks",
+    description: "Sparkly fireworks for quiz victories",
+    category: "celebration",
+    starCost: 12,
+    icon: "flash",
+    color: "#F39C12"
+  },
+  {
+    id: "celebration-rainbow-rain",
+    name: "Rainbow Rain",
+    description: "Colorful rainbow drops falling from the sky",
+    category: "celebration",
+    starCost: 15,
+    icon: "rainy",
+    color: "#3498DB"
+  },
+  {
+    id: "celebration-dove-flight",
+    name: "Dove Flight",
+    description: "A dove flies across when you memorize a verse",
+    category: "celebration",
+    starCost: 18,
+    icon: "airplane",
+    color: "#1ABC9C"
+  },
+  {
+    id: "celebration-golden-glow",
+    name: "Golden Glow",
+    description: "Everything glows gold when you finish all daily quests",
+    category: "celebration",
+    starCost: 25,
+    icon: "sunny",
+    color: "#C9933A"
+  }
+];
+
+// server/routes/kids.ts
 init_ai_engine();
-var router7 = Router7();
-router7.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
+var router14 = Router14();
+async function autoCompleteQuest(userId, childId, questType) {
+  try {
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const conditions = [
+      eq14(kidsDailyQuests.userId, userId),
+      eq14(kidsDailyQuests.questDate, today)
+    ];
+    if (childId) conditions.push(eq14(kidsDailyQuests.childProfileId, childId));
+    const existing = await db.select().from(kidsDailyQuests).where(and10(...conditions));
+    let quest;
+    if (existing.length === 0) {
+      const [created] = await db.insert(kidsDailyQuests).values({
+        userId,
+        childProfileId: childId || null,
+        questDate: today
+      }).returning();
+      quest = created;
+    } else {
+      quest = existing[0];
+    }
+    const updateField = {};
+    if (questType === "read_story") updateField.readStory = true;
+    else if (questType === "practice_verse") updateField.practiceVerse = true;
+    else if (questType === "take_quiz") updateField.takeQuiz = true;
+    const [updated] = await db.update(kidsDailyQuests).set(updateField).where(eq14(kidsDailyQuests.id, quest.id)).returning();
+    if (updated.readStory && updated.practiceVerse && updated.takeQuiz && !updated.bonusClaimed) {
+      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where(eq14(kidsDailyQuests.id, quest.id));
+    }
+  } catch (err) {
+    console.error("Auto-complete quest error:", err);
+  }
+}
+router14.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
   try {
     const { ageGroup } = req.query;
-    const conditions = [eq7(kidsCollections.published, true)];
+    const conditions = [eq14(kidsCollections.published, true)];
     if (ageGroup) {
-      conditions.push(eq7(kidsCollections.ageGroup, String(ageGroup)));
+      conditions.push(eq14(kidsCollections.ageGroup, String(ageGroup)));
     }
-    const allCollections = await db.select().from(kidsCollections).where(and5(...conditions)).orderBy(kidsCollections.orderIndex);
+    const allCollections = await db.select().from(kidsCollections).where(and10(...conditions)).orderBy(kidsCollections.orderIndex);
     const seen = /* @__PURE__ */ new Map();
     for (const col of allCollections) {
       const key = `${col.title}::${col.ageGroup}`;
@@ -34805,10 +35598,10 @@ router7.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
     const collections = Array.from(seen.values());
     const collectionsWithCounts = await Promise.all(
       collections.map(async (col) => {
-        const [countResult] = await db.select({ count: sql6`count(*)::int` }).from(kidsStories).where(
-          and5(
-            eq7(kidsStories.collectionId, col.id),
-            eq7(kidsStories.published, true)
+        const [countResult] = await db.select({ count: sql10`count(*)::int` }).from(kidsStories).where(
+          and10(
+            eq14(kidsStories.collectionId, col.id),
+            eq14(kidsStories.published, true)
           )
         );
         return { ...col, storyCount: countResult?.count ?? col.storyCount ?? 0 };
@@ -34820,26 +35613,26 @@ router7.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/collections/all/stories", async (req, res) => {
+router14.get("/api/kids/collections/all/stories", async (req, res) => {
   try {
     const { ageGroup } = req.query;
-    const conditions = [eq7(kidsStories.published, true)];
+    const conditions = [eq14(kidsStories.published, true)];
     if (ageGroup) {
-      conditions.push(eq7(kidsStories.ageGroup, String(ageGroup)));
+      conditions.push(eq14(kidsStories.ageGroup, String(ageGroup)));
     }
-    const stories = await db.select().from(kidsStories).where(and5(...conditions)).orderBy(kidsStories.orderInCollection);
+    const stories = await db.select().from(kidsStories).where(and10(...conditions)).orderBy(kidsStories.orderInCollection);
     return res.json(stories);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/collections/:id/stories", async (req, res) => {
+router14.get("/api/kids/collections/:id/stories", async (req, res) => {
   try {
     const stories = await db.select().from(kidsStories).where(
-      and5(
-        eq7(kidsStories.collectionId, req.params.id),
-        eq7(kidsStories.published, true)
+      and10(
+        eq14(kidsStories.collectionId, req.params.id),
+        eq14(kidsStories.published, true)
       )
     ).orderBy(kidsStories.orderInCollection);
     return res.json(stories);
@@ -34848,9 +35641,9 @@ router7.get("/api/kids/collections/:id/stories", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/stories/:id", async (req, res) => {
+router14.get("/api/kids/stories/:id", async (req, res) => {
   try {
-    const story = await db.select().from(kidsStories).where(eq7(kidsStories.id, req.params.id)).limit(1);
+    const story = await db.select().from(kidsStories).where(eq14(kidsStories.id, req.params.id)).limit(1);
     if (!story.length) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -34860,9 +35653,9 @@ router7.get("/api/kids/stories/:id", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/stories/:id/quiz", async (req, res) => {
+router14.get("/api/kids/stories/:id/quiz", async (req, res) => {
   try {
-    const questions = await db.select().from(kidsQuizQuestions).where(eq7(kidsQuizQuestions.storyId, req.params.id));
+    const questions = await db.select().from(kidsQuizQuestions).where(eq14(kidsQuizQuestions.storyId, req.params.id));
     return res.json(questions);
   } catch (err) {
     console.error(err);
@@ -34872,17 +35665,17 @@ router7.get("/api/kids/stories/:id/quiz", async (req, res) => {
 async function checkAndAwardBadges(userId) {
   try {
     const allBadges = await db.select().from(kidsBadges);
-    const earned = await db.select({ badgeId: kidsUserBadges.badgeId }).from(kidsUserBadges).where(eq7(kidsUserBadges.userId, userId));
+    const earned = await db.select({ badgeId: kidsUserBadges.badgeId }).from(kidsUserBadges).where(eq14(kidsUserBadges.userId, userId));
     const earnedSet = new Set(earned.map((e) => e.badgeId));
-    const completedStories = await db.select({ count: sql6`count(*)::int` }).from(kidsProgress).where(and5(eq7(kidsProgress.userId, userId), eq7(kidsProgress.completed, true)));
+    const completedStories = await db.select({ count: sql10`count(*)::int` }).from(kidsProgress).where(and10(eq14(kidsProgress.userId, userId), eq14(kidsProgress.completed, true)));
     const storyCount = completedStories[0]?.count ?? 0;
-    const quizzes = await db.select({ count: sql6`count(*)::int` }).from(kidsProgress).where(and5(eq7(kidsProgress.userId, userId), sql6`${kidsProgress.quizScore} = 100`));
+    const quizzes = await db.select({ count: sql10`count(*)::int` }).from(kidsProgress).where(and10(eq14(kidsProgress.userId, userId), sql10`${kidsProgress.quizScore} = 100`));
     const perfectQuizCount = quizzes[0]?.count ?? 0;
-    const verses = await db.select({ count: sql6`count(*)::int` }).from(kidsProgress).where(and5(eq7(kidsProgress.userId, userId), eq7(kidsProgress.memoryVerseMemorized, true)));
+    const verses = await db.select({ count: sql10`count(*)::int` }).from(kidsProgress).where(and10(eq14(kidsProgress.userId, userId), eq14(kidsProgress.memoryVerseMemorized, true)));
     const verseCount = verses[0]?.count ?? 0;
-    const streakData = await db.select().from(kidsStreaks).where(eq7(kidsStreaks.userId, userId)).limit(1);
+    const streakData = await db.select().from(kidsStreaks).where(eq14(kidsStreaks.userId, userId)).limit(1);
     const longestStreak = streakData[0]?.longestStreak ?? 0;
-    const collectionProgress = await db.execute(sql6`
+    const collectionProgress = await db.execute(sql10`
       SELECT ks.collection_id, COUNT(*)::int as completed_count,
         (SELECT COUNT(*)::int FROM kids_story WHERE collection_id = ks.collection_id AND published = true) as total_count
       FROM kids_progress kp
@@ -34923,7 +35716,7 @@ async function checkAndAwardBadges(userId) {
     return 0;
   }
 }
-router7.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
+router14.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId } = req.body;
@@ -34931,9 +35724,9 @@ router7.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      and5(
-        eq7(kidsProgress.userId, userId),
-        eq7(kidsProgress.storyId, storyId)
+      and10(
+        eq14(kidsProgress.userId, userId),
+        eq14(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     const alreadyCompleted = existing.length > 0 && existing[0].completed === true;
@@ -34942,6 +35735,7 @@ router7.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
       set: { completed: true, completedAt: /* @__PURE__ */ new Date() }
     }).returning();
     const badgesAwarded = await checkAndAwardBadges(userId);
+    autoCompleteQuest(userId, req.body.childProfileId, "read_story");
     return res.json({ ...progress, firstCompletion: !alreadyCompleted, badgesAwarded });
   } catch (err) {
     console.error(err);
@@ -34950,9 +35744,9 @@ router7.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
 });
 async function triggerParentBridge(storyId, quizScore, childProfileId) {
   if (!childProfileId) return;
-  const [child] = await db.select().from(childProfiles).where(eq7(childProfiles.id, childProfileId)).limit(1);
+  const [child] = await db.select().from(childProfiles).where(eq14(childProfiles.id, childProfileId)).limit(1);
   if (!child) return;
-  const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq7(kidsStories.id, storyId)).limit(1);
+  const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq14(kidsStories.id, storyId)).limit(1);
   if (!story) return;
   const topicData = await generateDinnerTableTopic({
     childName: child.name,
@@ -34978,7 +35772,7 @@ async function triggerParentBridge(storyId, quizScore, childProfileId) {
   console.log(`   \u{1F37D}\uFE0F Dinner Question: ${topicData.dinnerQuestion}
 `);
 }
-router7.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
+router14.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId, score, childProfileId } = req.body;
@@ -34986,9 +35780,9 @@ router7.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId and score are required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      and5(
-        eq7(kidsProgress.userId, userId),
-        eq7(kidsProgress.storyId, storyId)
+      and10(
+        eq14(kidsProgress.userId, userId),
+        eq14(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     let result;
@@ -34999,19 +35793,20 @@ router7.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
     result = upserted;
     let verifiedChildProfileId;
     if (childProfileId) {
-      const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and5(eq7(childProfiles.id, childProfileId), eq7(childProfiles.parentId, userId))).limit(1);
+      const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and10(eq14(childProfiles.id, childProfileId), eq14(childProfiles.parentId, userId))).limit(1);
       if (owned) verifiedChildProfileId = childProfileId;
     }
     triggerParentBridge(storyId, score, verifiedChildProfileId).catch(
       (err) => console.error("Parent Bridge background error:", err)
     );
+    autoCompleteQuest(userId, childProfileId, "take_quiz");
     return res.json(result);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
+router14.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId } = req.body;
@@ -35019,32 +35814,33 @@ router7.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      and5(
-        eq7(kidsProgress.userId, userId),
-        eq7(kidsProgress.storyId, storyId)
+      and10(
+        eq14(kidsProgress.userId, userId),
+        eq14(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     const [upserted] = await db.insert(kidsProgress).values({ userId, storyId, memoryVerseMemorized: true }).onConflictDoUpdate({
       target: [kidsProgress.userId, kidsProgress.storyId],
       set: { memoryVerseMemorized: true }
     }).returning();
+    autoCompleteQuest(userId, req.body.childProfileId, "practice_verse");
     return res.json(upserted);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/progress", optionalAuth, async (req, res) => {
+router14.get("/api/kids/progress", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const progressRows = await db.select().from(kidsProgress).where(eq7(kidsProgress.userId, userId));
+    const progressRows = await db.select().from(kidsProgress).where(eq14(kidsProgress.userId, userId));
     return res.json(progressRows);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/badges", async (_req, res) => {
+router14.get("/api/kids/badges", async (_req, res) => {
   try {
     const badges = await db.select().from(kidsBadges);
     return res.json(badges);
@@ -35053,13 +35849,13 @@ router7.get("/api/kids/badges", async (_req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
+router14.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const userBadges = await db.select({
       userBadge: kidsUserBadges,
       badge: kidsBadges
-    }).from(kidsUserBadges).innerJoin(kidsBadges, eq7(kidsUserBadges.badgeId, kidsBadges.id)).where(eq7(kidsUserBadges.userId, userId));
+    }).from(kidsUserBadges).innerJoin(kidsBadges, eq14(kidsUserBadges.badgeId, kidsBadges.id)).where(eq14(kidsUserBadges.userId, userId));
     const flattened = userBadges.map((ub) => ({
       ...ub.badge,
       earnedAt: ub.userBadge.earnedAt
@@ -35070,10 +35866,10 @@ router7.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/streak", optionalAuth, async (req, res) => {
+router14.get("/api/kids/streak", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const streak = await db.select().from(kidsStreaks).where(eq7(kidsStreaks.userId, userId)).limit(1);
+    const streak = await db.select().from(kidsStreaks).where(eq14(kidsStreaks.userId, userId)).limit(1);
     if (!streak.length) {
       return res.json({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
     }
@@ -35083,11 +35879,11 @@ router7.get("/api/kids/streak", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
+router14.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const existing = await db.select().from(kidsStreaks).where(eq7(kidsStreaks.userId, userId)).limit(1);
+    const existing = await db.select().from(kidsStreaks).where(eq14(kidsStreaks.userId, userId)).limit(1);
     if (existing.length) {
       const streak = existing[0];
       if (streak.lastActivityDate === today) {
@@ -35101,7 +35897,7 @@ router7.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
         currentStreak: newCurrent,
         longestStreak: newLongest,
         lastActivityDate: today
-      }).where(eq7(kidsStreaks.id, streak.id)).returning();
+      }).where(eq14(kidsStreaks.id, streak.id)).returning();
       return res.json(updated[0]);
     }
     const newStreak = await db.insert(kidsStreaks).values({ userId, currentStreak: 1, longestStreak: 1, lastActivityDate: today }).returning();
@@ -35111,16 +35907,16 @@ router7.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/daily", async (req, res) => {
+router14.get("/api/kids/daily", async (req, res) => {
   try {
     const { ageGroup } = req.query;
     if (!ageGroup) {
       return res.status(400).json({ error: "ageGroup is required" });
     }
     const stories = await db.select().from(kidsStories).where(
-      and5(
-        eq7(kidsStories.ageGroup, String(ageGroup)),
-        eq7(kidsStories.published, true)
+      and10(
+        eq14(kidsStories.ageGroup, String(ageGroup)),
+        eq14(kidsStories.published, true)
       )
     ).orderBy(kidsStories.orderInCollection);
     if (!stories.length) {
@@ -35136,15 +35932,15 @@ router7.get("/api/kids/daily", async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/stories/:id/wonder", async (req, res) => {
+router14.get("/api/kids/stories/:id/wonder", async (req, res) => {
   try {
     const { id: storyId } = req.params;
     const ageGroup = String(req.query.ageGroup || "little_lambs");
-    const cached = await db.select().from(kidsWonderCache).where(and5(eq7(kidsWonderCache.storyId, storyId), eq7(kidsWonderCache.ageGroup, ageGroup))).limit(1);
+    const cached = await db.select().from(kidsWonderCache).where(and10(eq14(kidsWonderCache.storyId, storyId), eq14(kidsWonderCache.ageGroup, ageGroup))).limit(1);
     if (cached.length) {
       return res.json({ moments: cached[0].moments });
     }
-    const [story] = await db.select({ title: kidsStories.title, storyText: kidsStories.storyText }).from(kidsStories).where(eq7(kidsStories.id, storyId));
+    const [story] = await db.select({ title: kidsStories.title, storyText: kidsStories.storyText }).from(kidsStories).where(eq14(kidsStories.id, storyId));
     if (!story) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -35156,14 +35952,14 @@ router7.get("/api/kids/stories/:id/wonder", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
+router14.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId, momentIndex, childProfileId } = req.body;
     if (!storyId || momentIndex === void 0) {
       return res.status(400).json({ error: "storyId and momentIndex are required" });
     }
-    const existing = await db.select().from(kidsProgress).where(and5(eq7(kidsProgress.userId, userId), eq7(kidsProgress.storyId, storyId))).limit(1);
+    const existing = await db.select().from(kidsProgress).where(and10(eq14(kidsProgress.userId, userId), eq14(kidsProgress.storyId, storyId))).limit(1);
     let currentAnswers = [];
     let isNewAnswer = false;
     if (existing.length) {
@@ -35171,7 +35967,7 @@ router7.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
       if (!currentAnswers.includes(momentIndex)) {
         isNewAnswer = true;
         currentAnswers.push(momentIndex);
-        await db.update(kidsProgress).set({ wonderAnswers: currentAnswers }).where(eq7(kidsProgress.id, existing[0].id));
+        await db.update(kidsProgress).set({ wonderAnswers: currentAnswers }).where(eq14(kidsProgress.id, existing[0].id));
       }
     } else {
       isNewAnswer = true;
@@ -35186,12 +35982,12 @@ router7.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
       });
     }
     if (isNewAnswer && childProfileId) {
-      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and5(eq7(childProfiles.id, childProfileId), eq7(childProfiles.parentId, userId))).limit(1);
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and10(eq14(childProfiles.id, childProfileId), eq14(childProfiles.parentId, userId))).limit(1);
       if (ownedProfile) {
         await db.update(childProfiles).set({
-          totalPoints: sql6`${childProfiles.totalPoints} + 10`,
-          currentLevel: sql6`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`
-        }).where(eq7(childProfiles.id, childProfileId));
+          totalPoints: sql10`${childProfiles.totalPoints} + 10`,
+          currentLevel: sql10`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`
+        }).where(eq14(childProfiles.id, childProfileId));
       }
     }
     return res.json({ success: true, pointsAwarded: isNewAnswer ? 10 : 0, wonderAnswers: currentAnswers });
@@ -35200,24 +35996,24 @@ router7.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/story/:id/scenes", async (req, res) => {
+router14.get("/api/kids/story/:id/scenes", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const scenes = await db.select().from(kidsStoryScenes).where(eq7(kidsStoryScenes.storyId, id2)).orderBy(asc4(kidsStoryScenes.sceneIndex));
+    const scenes = await db.select().from(kidsStoryScenes).where(eq14(kidsStoryScenes.storyId, id2)).orderBy(asc4(kidsStoryScenes.sceneIndex));
     return res.json(scenes);
   } catch (err) {
     console.error("Get scenes error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
+router14.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const existing = await db.select().from(kidsStoryScenes).where(eq7(kidsStoryScenes.storyId, id2)).orderBy(asc4(kidsStoryScenes.sceneIndex));
+    const existing = await db.select().from(kidsStoryScenes).where(eq14(kidsStoryScenes.storyId, id2)).orderBy(asc4(kidsStoryScenes.sceneIndex));
     if (existing.length > 0) {
       return res.json(existing);
     }
-    const story = await db.select().from(kidsStories).where(eq7(kidsStories.id, id2)).limit(1);
+    const story = await db.select().from(kidsStories).where(eq14(kidsStories.id, id2)).limit(1);
     if (!story.length) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -35246,10 +36042,10 @@ router7.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, 
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
+router14.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const scene = await db.select().from(kidsStoryScenes).where(eq7(kidsStoryScenes.id, id2)).limit(1);
+    const scene = await db.select().from(kidsStoryScenes).where(eq14(kidsStoryScenes.id, id2)).limit(1);
     if (!scene.length) {
       return res.status(404).json({ error: "Scene not found" });
     }
@@ -35263,19 +36059,19 @@ router7.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLim
     if (!imageUrl) {
       return res.status(500).json({ error: "Image generation failed" });
     }
-    await db.update(kidsStoryScenes).set({ imageUrl }).where(eq7(kidsStoryScenes.id, id2));
+    await db.update(kidsStoryScenes).set({ imageUrl }).where(eq14(kidsStoryScenes.id, id2));
     return res.json({ imageUrl });
   } catch (err) {
     console.error("Scene image generation error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.post("/api/kids/scene/:id/attach-video", async (req, res) => {
+router14.post("/api/kids/scene/:id/attach-video", async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const { videoUrl, timecodes } = req.body;
     if (!videoUrl) return res.status(400).json({ error: "videoUrl is required" });
-    const scene = await db.select().from(kidsStoryScenes).where(eq7(kidsStoryScenes.id, id2)).limit(1);
+    const scene = await db.select().from(kidsStoryScenes).where(eq14(kidsStoryScenes.id, id2)).limit(1);
     if (!scene.length) return res.status(404).json({ error: "Scene not found" });
     let videoTimecodes = timecodes || null;
     if (!videoTimecodes && scene[0].narration) {
@@ -35296,14 +36092,14 @@ router7.post("/api/kids/scene/:id/attach-video", async (req, res) => {
       });
       videoTimecodes = { segments };
     }
-    await db.update(kidsStoryScenes).set({ videoUrl, videoTimecodes }).where(eq7(kidsStoryScenes.id, id2));
+    await db.update(kidsStoryScenes).set({ videoUrl, videoTimecodes }).where(eq14(kidsStoryScenes.id, id2));
     return res.json({ success: true, videoUrl, videoTimecodes });
   } catch (err) {
     console.error("Attach video error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/audio-assets", (_req, res) => {
+router14.get("/api/kids/audio-assets", (_req, res) => {
   res.json({
     AWE: {
       label: "Wonder & Awe",
@@ -35323,19 +36119,19 @@ router7.get("/api/kids/audio-assets", (_req, res) => {
     }
   });
 });
-router7.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
+router14.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId, childProfileId: providedProfileId, points = 25 } = req.body;
     let profileId = providedProfileId;
     if (profileId) {
-      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and5(eq7(childProfiles.id, profileId), eq7(childProfiles.parentId, userId))).limit(1);
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(and10(eq14(childProfiles.id, profileId), eq14(childProfiles.parentId, userId))).limit(1);
       if (!ownedProfile) {
         profileId = null;
       }
     }
     if (!profileId && userId !== "guest") {
-      const [directProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(eq7(childProfiles.id, userId)).limit(1);
+      const [directProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where(eq14(childProfiles.id, userId)).limit(1);
       if (directProfile) {
         profileId = directProfile.id;
       }
@@ -35343,13 +36139,13 @@ router7.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
     if (!profileId) {
       return res.json({ success: true, totalPoints: 0, currentLevel: 1, leveledUp: false });
     }
-    const before = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where(eq7(childProfiles.id, profileId)).limit(1);
+    const before = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where(eq14(childProfiles.id, profileId)).limit(1);
     const oldLevel = before[0]?.currentLevel ?? 1;
     await db.update(childProfiles).set({
-      totalPoints: sql6`${childProfiles.totalPoints} + ${points}`,
-      currentLevel: sql6`GREATEST(1, (${childProfiles.totalPoints} + ${points}) / 100 + 1)`
-    }).where(eq7(childProfiles.id, profileId));
-    const after = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where(eq7(childProfiles.id, profileId)).limit(1);
+      totalPoints: sql10`${childProfiles.totalPoints} + ${points}`,
+      currentLevel: sql10`GREATEST(1, (${childProfiles.totalPoints} + ${points}) / 100 + 1)`
+    }).where(eq14(childProfiles.id, profileId));
+    const after = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where(eq14(childProfiles.id, profileId)).limit(1);
     const newLevel = after[0]?.currentLevel ?? 1;
     const totalPoints = after[0]?.totalPoints ?? 0;
     return res.json({
@@ -35363,14 +36159,14 @@ router7.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router7.get("/api/kids/profile/stats", optionalAuth, async (req, res) => {
+router14.get("/api/kids/profile/stats", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const [profile] = await db.select({
       totalPoints: childProfiles.totalPoints,
       currentLevel: childProfiles.currentLevel,
       name: childProfiles.name
-    }).from(childProfiles).where(eq7(childProfiles.id, userId)).limit(1);
+    }).from(childProfiles).where(eq14(childProfiles.id, userId)).limit(1);
     if (profile) {
       return res.json({
         totalPoints: profile.totalPoints ?? 0,
@@ -35500,7 +36296,7 @@ var KIDS_SS_LESSONS = {
     }
   ]
 };
-router7.get("/api/kids/sabbath-school/current", async (req, res) => {
+router14.get("/api/kids/sabbath-school/current", async (req, res) => {
   try {
     const ageGroup = String(req.query.ageGroup || "little_lambs");
     const lessons = KIDS_SS_LESSONS[ageGroup] || KIDS_SS_LESSONS.little_lambs;
@@ -35509,9 +36305,9 @@ router7.get("/api/kids/sabbath-school/current", async (req, res) => {
     let linkedStory = null;
     if (lesson.linkedStorySearch) {
       const stories = await db.select({ id: kidsStories.id, title: kidsStories.title }).from(kidsStories).where(
-        and5(
-          eq7(kidsStories.published, true),
-          sql6`${kidsStories.title} ILIKE ${"%" + lesson.linkedStorySearch + "%"}`
+        and10(
+          eq14(kidsStories.published, true),
+          sql10`${kidsStories.title} ILIKE ${"%" + lesson.linkedStorySearch + "%"}`
         )
       ).limit(1);
       if (stories.length > 0) {
@@ -35525,13 +36321,173 @@ router7.get("/api/kids/sabbath-school/current", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-var kids_default = router7;
+router14.get("/api/kids/shop/purchases", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const childId = req.query.childId;
+    const where = childId ? and10(eq14(kidsPurchases.userId, userId), eq14(kidsPurchases.childProfileId, childId)) : eq14(kidsPurchases.userId, userId);
+    const purchases = await db.select().from(kidsPurchases).where(where);
+    res.json(purchases);
+  } catch (err) {
+    console.error("Shop purchases error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.post("/api/kids/shop/purchase", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { itemId, childId } = req.body;
+    if (!itemId) {
+      return res.status(400).json({ error: "itemId is required" });
+    }
+    const catalogItem = SHOP_ITEMS.find((i) => i.id === itemId);
+    if (!catalogItem) {
+      return res.status(400).json({ error: "Item not found in catalog" });
+    }
+    const existing = await db.select().from(kidsPurchases).where(
+      and10(
+        eq14(kidsPurchases.userId, userId),
+        eq14(kidsPurchases.itemId, itemId),
+        ...childId ? [eq14(kidsPurchases.childProfileId, childId)] : []
+      )
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "Already purchased" });
+    }
+    const progress = await db.select().from(kidsProgress).where(eq14(kidsProgress.userId, userId));
+    let totalStars = 0;
+    for (const p of progress) {
+      if (p.completed) totalStars += 1;
+      if (p.quizScore != null && p.quizScore > 0) {
+        if (p.quizScore === 100) totalStars += 3;
+        else if (p.quizScore >= 66) totalStars += 2;
+        else totalStars += 1;
+      }
+      if (p.memoryVerseMemorized) totalStars += 2;
+    }
+    const allPurchases = await db.select().from(kidsPurchases).where(eq14(kidsPurchases.userId, userId));
+    const spent = allPurchases.reduce((sum, p) => sum + p.starCost, 0);
+    const available = totalStars - spent;
+    if (available < catalogItem.starCost) {
+      return res.status(400).json({ error: "Not enough stars", available, needed: catalogItem.starCost });
+    }
+    const [purchase] = await db.insert(kidsPurchases).values({
+      userId,
+      childProfileId: childId || null,
+      itemId,
+      category: catalogItem.category,
+      starCost: catalogItem.starCost,
+      equipped: false
+    }).returning();
+    res.json(purchase);
+  } catch (err) {
+    console.error("Shop purchase error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.post("/api/kids/shop/equip", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { childId, itemId, category } = req.body;
+    await db.update(kidsPurchases).set({ equipped: false }).where(
+      and10(
+        eq14(kidsPurchases.userId, userId),
+        eq14(kidsPurchases.category, category),
+        ...childId ? [eq14(kidsPurchases.childProfileId, childId)] : []
+      )
+    );
+    if (itemId) {
+      await db.update(kidsPurchases).set({ equipped: true }).where(
+        and10(
+          eq14(kidsPurchases.userId, userId),
+          eq14(kidsPurchases.itemId, itemId),
+          ...childId ? [eq14(kidsPurchases.childProfileId, childId)] : []
+        )
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Shop equip error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+function getTodayDateStr() {
+  return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+}
+router14.get("/api/kids/quests/today", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const childId = req.query.childId;
+    const today = getTodayDateStr();
+    const existing = await db.select().from(kidsDailyQuests).where(
+      and10(
+        eq14(kidsDailyQuests.userId, userId),
+        eq14(kidsDailyQuests.questDate, today),
+        ...childId ? [eq14(kidsDailyQuests.childProfileId, childId)] : []
+      )
+    );
+    if (existing.length > 0) {
+      return res.json(existing[0]);
+    }
+    const [quest] = await db.insert(kidsDailyQuests).values({
+      userId,
+      childProfileId: childId || null,
+      questDate: today
+    }).returning();
+    res.json(quest);
+  } catch (err) {
+    console.error("Quest today error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.post("/api/kids/quests/complete", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { childId, questType } = req.body;
+    const today = getTodayDateStr();
+    const existing = await db.select().from(kidsDailyQuests).where(
+      and10(
+        eq14(kidsDailyQuests.userId, userId),
+        eq14(kidsDailyQuests.questDate, today),
+        ...childId ? [eq14(kidsDailyQuests.childProfileId, childId)] : []
+      )
+    );
+    let quest;
+    if (existing.length === 0) {
+      const [created] = await db.insert(kidsDailyQuests).values({
+        userId,
+        childProfileId: childId || null,
+        questDate: today
+      }).returning();
+      quest = created;
+    } else {
+      quest = existing[0];
+    }
+    const updateField = {};
+    if (questType === "read_story") updateField.readStory = true;
+    else if (questType === "practice_verse") updateField.practiceVerse = true;
+    else if (questType === "take_quiz") updateField.takeQuiz = true;
+    else return res.status(400).json({ error: "Invalid quest type" });
+    const [updated] = await db.update(kidsDailyQuests).set(updateField).where(eq14(kidsDailyQuests.id, quest.id)).returning();
+    const allDone = updated.readStory && updated.practiceVerse && updated.takeQuiz;
+    let bonusAwarded = false;
+    if (allDone && !updated.bonusClaimed) {
+      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where(eq14(kidsDailyQuests.id, quest.id));
+      bonusAwarded = true;
+    }
+    res.json({ ...updated, bonusClaimed: allDone, bonusAwarded });
+  } catch (err) {
+    console.error("Quest complete error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+var kids_default = router14;
 
 // server/routes/community.ts
 init_db();
-import { Router as Router8 } from "express";
+import { Router as Router15 } from "express";
 init_schema();
-import { eq as eq8, and as and6, sql as sql7, desc as desc5 } from "drizzle-orm";
+import { eq as eq15, and as and11, sql as sql11, desc as desc7 } from "drizzle-orm";
 init_ai_engine();
 
 // server/services/livekit.ts
@@ -35583,20 +36539,20 @@ async function generateToken(roomName, participantName, isHost = false) {
 
 // server/routes/community.ts
 import path from "path";
-var router8 = Router8();
-router8.post("/api/family/create", requireAuth, async (req, res) => {
+var router15 = Router15();
+router15.post("/api/family/create", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "Family name is required" });
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq8(users.id, userId));
+    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq15(users.id, userId));
     if (existingUser?.familyId) {
       return res.status(400).json({ error: "You are already in a family group" });
     }
     let inviteCode = generateCode();
     let attempts = 0;
     while (attempts < 5) {
-      const existing = await db.select().from(families).where(eq8(families.inviteCode, inviteCode));
+      const existing = await db.select().from(families).where(eq15(families.inviteCode, inviteCode));
       if (existing.length === 0) break;
       inviteCode = generateCode();
       attempts++;
@@ -35606,70 +36562,70 @@ router8.post("/api/family/create", requireAuth, async (req, res) => {
       inviteCode,
       createdBy: userId
     }).returning();
-    await db.update(users).set({ familyId: family.id }).where(eq8(users.id, userId));
+    await db.update(users).set({ familyId: family.id }).where(eq15(users.id, userId));
     return res.json({ family });
   } catch (err) {
     console.error("Family create error:", err);
     return res.status(500).json({ error: "Failed to create family" });
   }
 });
-router8.post("/api/family/join", requireAuth, async (req, res) => {
+router15.post("/api/family/join", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { inviteCode } = req.body;
     if (!inviteCode) return res.status(400).json({ error: "Invite code is required" });
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq8(users.id, userId));
+    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq15(users.id, userId));
     if (existingUser?.familyId) {
       return res.status(400).json({ error: "You are already in a family group" });
     }
-    const [family] = await db.select().from(families).where(eq8(families.inviteCode, inviteCode.toUpperCase()));
+    const [family] = await db.select().from(families).where(eq15(families.inviteCode, inviteCode.toUpperCase()));
     if (!family) {
       return res.status(404).json({ error: "Invalid invite code" });
     }
-    await db.update(users).set({ familyId: family.id }).where(eq8(users.id, userId));
+    await db.update(users).set({ familyId: family.id }).where(eq15(users.id, userId));
     return res.json({ family });
   } catch (err) {
     console.error("Family join error:", err);
     return res.status(500).json({ error: "Failed to join family" });
   }
 });
-router8.get("/api/family/info", async (req, res) => {
+router15.get("/api/family/info", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq8(users.id, userId));
+    const userId = extractUserId(req);
+    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq15(users.id, userId));
     if (!user?.familyId) {
       return res.json({ family: null });
     }
-    const [family] = await db.select().from(families).where(eq8(families.id, user.familyId));
+    const [family] = await db.select().from(families).where(eq15(families.id, user.familyId));
     if (!family) return res.json({ family: null });
     const members = await db.select({
       id: users.id,
       displayName: users.displayName,
       username: users.username
-    }).from(users).where(eq8(users.familyId, family.id));
+    }).from(users).where(eq15(users.familyId, family.id));
     return res.json({ family, members });
   } catch (err) {
     console.error("Family info error:", err);
     return res.status(500).json({ error: "Failed to get family info" });
   }
 });
-router8.get("/api/family/members", async (req, res) => {
+router15.get("/api/family/members", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq8(users.id, userId));
+    const userId = extractUserId(req);
+    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq15(users.id, userId));
     if (!user?.familyId) return res.json({ members: [] });
     const members = await db.select({
       id: users.id,
       displayName: users.displayName,
       username: users.username
-    }).from(users).where(eq8(users.familyId, user.familyId));
+    }).from(users).where(eq15(users.familyId, user.familyId));
     return res.json({ members });
   } catch (err) {
     console.error("Family members error:", err);
     return res.status(500).json({ error: "Failed to get family members" });
   }
 });
-router8.post("/api/groups/create", requireAuth, async (req, res) => {
+router15.post("/api/groups/create", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { name, description, groupType, isPublic } = req.body;
@@ -35677,12 +36633,12 @@ router8.post("/api/groups/create", requireAuth, async (req, res) => {
     let joinCode = generateCode();
     let attempts = 0;
     while (attempts < 5) {
-      const existing = await db.select().from(prayerGroups).where(eq8(prayerGroups.joinCode, joinCode));
+      const existing = await db.select().from(prayerGroups).where(eq15(prayerGroups.joinCode, joinCode));
       if (existing.length === 0) break;
       joinCode = generateCode();
       attempts++;
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const [group] = await db.insert(prayerGroups).values({
       name,
       description: description || null,
@@ -35703,41 +36659,41 @@ router8.post("/api/groups/create", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to create group" });
   }
 });
-router8.post("/api/groups/join", requireAuth, async (req, res) => {
+router15.post("/api/groups/join", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { joinCode } = req.body;
     if (!joinCode) return res.status(400).json({ error: "Join code is required" });
-    const [group] = await db.select().from(prayerGroups).where(eq8(prayerGroups.joinCode, joinCode.toUpperCase()));
+    const [group] = await db.select().from(prayerGroups).where(eq15(prayerGroups.joinCode, joinCode.toUpperCase()));
     if (!group) return res.status(404).json({ error: "Invalid join code" });
-    const existingMember = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, group.id), eq8(prayerGroupMembers.userId, userId)));
+    const existingMember = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, group.id), eq15(prayerGroupMembers.userId, userId)));
     if (existingMember.length > 0) {
       return res.status(400).json({ error: "You are already a member of this group" });
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     await db.insert(prayerGroupMembers).values({
       groupId: group.id,
       userId,
       displayName: user?.displayName || user?.username || "Member"
     });
     await db.update(prayerGroups).set({
-      memberCount: sql7`${prayerGroups.memberCount} + 1`
-    }).where(eq8(prayerGroups.id, group.id));
+      memberCount: sql11`${prayerGroups.memberCount} + 1`
+    }).where(eq15(prayerGroups.id, group.id));
     return res.json({ group: { ...group, memberCount: group.memberCount + 1 } });
   } catch (err) {
     console.error("Group join error:", err);
     return res.status(500).json({ error: "Failed to join group" });
   }
 });
-router8.get("/api/groups", async (req, res) => {
+router15.get("/api/groups", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const memberships = await db.select({ groupId: prayerGroupMembers.groupId }).from(prayerGroupMembers).where(eq8(prayerGroupMembers.userId, userId));
+    const userId = extractUserId(req);
+    const memberships = await db.select({ groupId: prayerGroupMembers.groupId }).from(prayerGroupMembers).where(eq15(prayerGroupMembers.userId, userId));
     if (memberships.length === 0) return res.json({ groups: [] });
     const groupIds = memberships.map((m) => m.groupId);
     const groups = [];
     for (const gid of groupIds) {
-      const [g] = await db.select().from(prayerGroups).where(eq8(prayerGroups.id, gid));
+      const [g] = await db.select().from(prayerGroups).where(eq15(prayerGroups.id, gid));
       if (g) groups.push(g);
     }
     return res.json({ groups });
@@ -35746,10 +36702,10 @@ router8.get("/api/groups", async (req, res) => {
     return res.status(500).json({ error: "Failed to list groups" });
   }
 });
-router8.get("/api/groups/public", async (req, res) => {
+router15.get("/api/groups/public", async (req, res) => {
   try {
     const { type, search } = req.query;
-    let groups = await db.select().from(prayerGroups).where(eq8(prayerGroups.isPublic, true));
+    let groups = await db.select().from(prayerGroups).where(eq15(prayerGroups.isPublic, true));
     if (type && type !== "all") {
       groups = groups.filter((g) => g.groupType === type);
     }
@@ -35763,20 +36719,20 @@ router8.get("/api/groups/public", async (req, res) => {
     return res.status(500).json({ error: "Failed to list public groups" });
   }
 });
-router8.get("/api/groups/:id", async (req, res) => {
+router15.get("/api/groups/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [group] = await db.select().from(prayerGroups).where(eq8(prayerGroups.id, id2));
+    const [group] = await db.select().from(prayerGroups).where(eq15(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
-    const members = await db.select().from(prayerGroupMembers).where(eq8(prayerGroupMembers.groupId, id2));
+    const members = await db.select().from(prayerGroupMembers).where(eq15(prayerGroupMembers.groupId, id2));
     let trackProgress = null;
     if (group.assignedTrackId) {
-      const [track] = await db.select().from(formationTracks).where(eq8(formationTracks.id, group.assignedTrackId));
+      const [track] = await db.select().from(formationTracks).where(eq15(formationTracks.id, group.assignedTrackId));
       if (track) {
         const memberIds = members.map((m) => m.userId);
         const progress = [];
         for (const mid of memberIds) {
-          const [pt] = await db.select().from(progressTracks).where(and6(eq8(progressTracks.userId, mid), eq8(progressTracks.trackId, group.assignedTrackId)));
+          const [pt] = await db.select().from(progressTracks).where(and11(eq15(progressTracks.userId, mid), eq15(progressTracks.trackId, group.assignedTrackId)));
           if (pt) progress.push(pt);
         }
         const avgPercent = progress.length > 0 ? Math.round(progress.reduce((s, p) => s + (p.percentComplete || 0), 0) / members.length) : 0;
@@ -35794,31 +36750,31 @@ router8.get("/api/groups/:id", async (req, res) => {
     return res.status(500).json({ error: "Failed to get group details" });
   }
 });
-router8.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    await db.delete(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    await db.delete(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     await db.update(prayerGroups).set({
-      memberCount: sql7`GREATEST(${prayerGroups.memberCount} - 1, 0)`
-    }).where(eq8(prayerGroups.id, id2));
+      memberCount: sql11`GREATEST(${prayerGroups.memberCount} - 1, 0)`
+    }).where(eq15(prayerGroups.id, id2));
     return res.json({ success: true });
   } catch (err) {
     console.error("Group leave error:", err);
     return res.status(500).json({ error: "Failed to leave group" });
   }
 });
-router8.get("/api/groups/:id/prayers", async (req, res) => {
+router15.get("/api/groups/:id/prayers", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const prayers = await db.select().from(prayerRequests).where(eq8(prayerRequests.groupId, id2)).orderBy(desc5(prayerRequests.createdAt));
+    const prayers = await db.select().from(prayerRequests).where(eq15(prayerRequests.groupId, id2)).orderBy(desc7(prayerRequests.createdAt));
     return res.json(prayers);
   } catch (err) {
     console.error("Group prayers error:", err);
     return res.status(500).json({ error: "Failed to get group prayers" });
   }
 });
-router8.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
@@ -35848,11 +36804,11 @@ router8.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to create prayer" });
   }
 });
-router8.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
+router15.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
   try {
     const { prayerId } = req.params;
     const { memberName } = req.body;
-    const [prayer] = await db.select().from(prayerRequests).where(eq8(prayerRequests.id, prayerId));
+    const [prayer] = await db.select().from(prayerRequests).where(eq15(prayerRequests.id, prayerId));
     if (!prayer) return res.status(404).json({ error: "Prayer not found" });
     const currentSupported = Array.isArray(prayer.supportedBy) ? prayer.supportedBy : [];
     const name = memberName || "Someone";
@@ -35860,48 +36816,48 @@ router8.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
       currentSupported.push(name);
     }
     await db.update(prayerRequests).set({
-      supportCount: sql7`${prayerRequests.supportCount} + 1`,
+      supportCount: sql11`${prayerRequests.supportCount} + 1`,
       supportedBy: currentSupported
-    }).where(eq8(prayerRequests.id, prayerId));
+    }).where(eq15(prayerRequests.id, prayerId));
     return res.json({ success: true, supportCount: (prayer.supportCount || 0) + 1 });
   } catch (err) {
     console.error("Group prayer support error:", err);
     return res.status(500).json({ error: "Failed to support prayer" });
   }
 });
-router8.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (req, res) => {
   try {
     const { prayerId } = req.params;
     await db.update(prayerRequests).set({
       answered: true,
       answeredAt: /* @__PURE__ */ new Date()
-    }).where(eq8(prayerRequests.id, prayerId));
+    }).where(eq15(prayerRequests.id, prayerId));
     return res.json({ success: true });
   } catch (err) {
     console.error("Group prayer answered error:", err);
     return res.status(500).json({ error: "Failed to mark prayer answered" });
   }
 });
-router8.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
     const { trackId } = req.body;
     if (!trackId) return res.status(400).json({ error: "Track ID is required" });
-    const [member] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can assign study plans" });
     }
-    const [track] = await db.select().from(formationTracks).where(eq8(formationTracks.id, trackId));
+    const [track] = await db.select().from(formationTracks).where(eq15(formationTracks.id, trackId));
     if (!track) return res.status(404).json({ error: "Track not found" });
-    await db.update(prayerGroups).set({ assignedTrackId: trackId }).where(eq8(prayerGroups.id, id2));
+    await db.update(prayerGroups).set({ assignedTrackId: trackId }).where(eq15(prayerGroups.id, id2));
     return res.json({ success: true, track });
   } catch (err) {
     console.error("Assign track error:", err);
     return res.status(500).json({ error: "Failed to assign track" });
   }
 });
-router8.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
@@ -35910,39 +36866,39 @@ router8.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
     if (!["leader", "moderator", "member"].includes(newRole)) {
       return res.status(400).json({ error: "Invalid role" });
     }
-    const [requester] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [requester] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!requester || requester.role !== "leader") {
       return res.status(403).json({ error: "Only leaders can change member roles" });
     }
-    await db.update(prayerGroupMembers).set({ role: newRole }).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, targetUserId)));
+    await db.update(prayerGroupMembers).set({ role: newRole }).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, targetUserId)));
     return res.json({ success: true });
   } catch (err) {
     console.error("Promote member error:", err);
     return res.status(500).json({ error: "Failed to update member role" });
   }
 });
-router8.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
+router15.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    const [membership] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to view discussions" });
-    const discussions = await db.select().from(groupDiscussions).where(eq8(groupDiscussions.groupId, id2)).orderBy(desc5(groupDiscussions.createdAt));
+    const discussions = await db.select().from(groupDiscussions).where(eq15(groupDiscussions.groupId, id2)).orderBy(desc7(groupDiscussions.createdAt));
     return res.json(discussions);
   } catch (err) {
     console.error("Group discussions error:", err);
     return res.status(500).json({ error: "Failed to get discussions" });
   }
 });
-router8.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to post discussions" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const [discussion] = await db.insert(groupDiscussions).values({
       groupId: id2,
       userId,
@@ -35955,25 +36911,25 @@ router8.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to create discussion" });
   }
 });
-router8.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
+router15.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
   try {
     const { discussionId } = req.params;
-    const replies = await db.select().from(groupDiscussionReplies).where(eq8(groupDiscussionReplies.discussionId, discussionId)).orderBy(groupDiscussionReplies.createdAt);
+    const replies = await db.select().from(groupDiscussionReplies).where(eq15(groupDiscussionReplies.discussionId, discussionId)).orderBy(groupDiscussionReplies.createdAt);
     return res.json(replies);
   } catch (err) {
     console.error("Discussion replies error:", err);
     return res.status(500).json({ error: "Failed to get replies" });
   }
 });
-router8.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2, discussionId } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to reply" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const [reply] = await db.insert(groupDiscussionReplies).values({
       discussionId,
       userId,
@@ -35981,35 +36937,35 @@ router8.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, asy
       content: content.trim()
     }).returning();
     await db.update(groupDiscussions).set({
-      replyCount: sql7`${groupDiscussions.replyCount} + 1`
-    }).where(eq8(groupDiscussions.id, discussionId));
+      replyCount: sql11`${groupDiscussions.replyCount} + 1`
+    }).where(eq15(groupDiscussions.id, discussionId));
     return res.json(reply);
   } catch (err) {
     console.error("Discussion reply error:", err);
     return res.status(500).json({ error: "Failed to post reply" });
   }
 });
-router8.get("/api/groups/:id/announcements", async (req, res) => {
+router15.get("/api/groups/:id/announcements", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const announcements = await db.select().from(groupAnnouncements).where(eq8(groupAnnouncements.groupId, id2)).orderBy(desc5(groupAnnouncements.createdAt));
+    const announcements = await db.select().from(groupAnnouncements).where(eq15(groupAnnouncements.groupId, id2)).orderBy(desc7(groupAnnouncements.createdAt));
     return res.json(announcements);
   } catch (err) {
     console.error("Group announcements error:", err);
     return res.status(500).json({ error: "Failed to get announcements" });
   }
 });
-router8.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
-    const [member] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can post announcements" });
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const [announcement] = await db.insert(groupAnnouncements).values({
       groupId: id2,
       userId,
@@ -36023,7 +36979,7 @@ router8.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to create announcement" });
   }
 });
-router8.get("/api/churches", cachedResponse(300), async (req, res) => {
+router15.get("/api/churches", cachedResponse(300), async (req, res) => {
   try {
     const { lat, lng, radius, city } = req.query;
     let allChurches = await db.select().from(sdaChurches);
@@ -36070,10 +37026,10 @@ router8.get("/api/churches", cachedResponse(300), async (req, res) => {
     return res.status(500).json({ error: "Failed to list churches" });
   }
 });
-router8.get("/api/churches/:id", async (req, res) => {
+router15.get("/api/churches/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [church] = await db.select().from(sdaChurches).where(eq8(sdaChurches.id, id2));
+    const [church] = await db.select().from(sdaChurches).where(eq15(sdaChurches.id, id2));
     if (!church) return res.status(404).json({ error: "Church not found" });
     return res.json(church);
   } catch (err) {
@@ -36081,47 +37037,47 @@ router8.get("/api/churches/:id", async (req, res) => {
     return res.status(500).json({ error: "Failed to get church details" });
   }
 });
-router8.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
     const { planId } = req.body;
     if (!planId) return res.status(400).json({ error: "Plan ID is required" });
-    const [member] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can assign devotional plans" });
     }
-    const [plan] = await db.select().from(devotionalPlans).where(eq8(devotionalPlans.id, planId));
+    const [plan] = await db.select().from(devotionalPlans).where(eq15(devotionalPlans.id, planId));
     if (!plan) return res.status(404).json({ error: "Plan not found" });
-    await db.update(prayerGroups).set({ groupPlanId: planId }).where(eq8(prayerGroups.id, id2));
+    await db.update(prayerGroups).set({ groupPlanId: planId }).where(eq15(prayerGroups.id, id2));
     return res.json({ success: true, plan });
   } catch (err) {
     console.error("Assign plan error:", err);
     return res.status(500).json({ error: "Failed to assign plan" });
   }
 });
-router8.get("/api/groups/:id/plan-progress", async (req, res) => {
+router15.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { id: id2 } = req.params;
-    const [group] = await db.select().from(prayerGroups).where(eq8(prayerGroups.id, id2));
+    const [group] = await db.select().from(prayerGroups).where(eq15(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
     if (!group.isPublic) {
-      const [membership] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+      const [membership] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
       if (!membership) return res.status(403).json({ error: "You must be a member to view group progress" });
     }
     if (!group.groupPlanId) return res.json({ plan: null, members: [] });
-    const [plan] = await db.select().from(devotionalPlans).where(eq8(devotionalPlans.id, group.groupPlanId));
+    const [plan] = await db.select().from(devotionalPlans).where(eq15(devotionalPlans.id, group.groupPlanId));
     if (!plan) return res.json({ plan: null, members: [] });
-    const days = await db.select().from(devotionalDays).where(eq8(devotionalDays.planId, plan.id));
+    const days = await db.select().from(devotionalDays).where(eq15(devotionalDays.planId, plan.id));
     const totalDays = days.length || plan.totalDays;
-    const members = await db.select().from(prayerGroupMembers).where(eq8(prayerGroupMembers.groupId, id2));
+    const members = await db.select().from(prayerGroupMembers).where(eq15(prayerGroupMembers.groupId, id2));
     const memberProgress = [];
     for (const member of members) {
-      const [enrollment] = await db.select().from(userPlanEnrollments).where(and6(eq8(userPlanEnrollments.userId, member.userId), eq8(userPlanEnrollments.planId, plan.id)));
+      const [enrollment] = await db.select().from(userPlanEnrollments).where(and11(eq15(userPlanEnrollments.userId, member.userId), eq15(userPlanEnrollments.planId, plan.id)));
       let completedDays = 0;
       if (enrollment) {
-        const progress = await db.select().from(userPlanProgress).where(eq8(userPlanProgress.enrollmentId, enrollment.id));
+        const progress = await db.select().from(userPlanProgress).where(eq15(userPlanProgress.enrollmentId, enrollment.id));
         completedDays = progress.length;
       }
       memberProgress.push({
@@ -36154,15 +37110,15 @@ router8.get("/api/groups/:id/plan-progress", async (req, res) => {
     return res.status(500).json({ error: "Failed to get plan progress" });
   }
 });
-router8.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) => {
+router15.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
     const { content, dayTitle, passageLabel } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, id2), eq8(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to share reflections" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const prefix = dayTitle ? `[${dayTitle}${passageLabel ? ` - ${passageLabel}` : ""}] ` : "";
     const fullContent = prefix + content.trim();
     const [discussion] = await db.insert(groupDiscussions).values({
@@ -36183,13 +37139,13 @@ function generateRoomName() {
   for (let i = 0; i < 12; i++) room += chars[Math.floor(Math.random() * chars.length)];
   return room;
 }
-router8.post("/api/streams/create", requireAuth, async (req, res) => {
+router15.post("/api/streams/create", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { title, groupId, churchId } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     if (groupId) {
-      const membership = await db.select().from(prayerGroupMembers).where(and6(eq8(prayerGroupMembers.groupId, groupId), eq8(prayerGroupMembers.userId, userId)));
+      const membership = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, groupId), eq15(prayerGroupMembers.userId, userId)));
       if (membership.length === 0) {
         return res.status(403).json({ error: "You are not a member of this group" });
       }
@@ -36198,7 +37154,7 @@ router8.post("/api/streams/create", requireAuth, async (req, res) => {
         return res.status(403).json({ error: "Only leaders and moderators can start live sessions" });
       }
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq8(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, userId));
     const roomName = generateRoomName();
     await createLiveKitRoom(roomName);
     const [session] = await db.insert(liveSessions).values({
@@ -36216,12 +37172,12 @@ router8.post("/api/streams/create", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to create stream" });
   }
 });
-router8.get("/api/streams/:id/token", async (req, res) => {
+router15.get("/api/streams/:id/token", async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
     const userId = getAuthUserId(req);
-    const [session] = await db.select().from(liveSessions).where(eq8(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
     const isHost = !!userId && userId === session.hostUserId;
@@ -36236,12 +37192,12 @@ router8.get("/api/streams/:id/token", async (req, res) => {
     return res.status(500).json({ error: "Failed to generate token" });
   }
 });
-router8.get("/api/streams/:id/room", async (req, res) => {
+router15.get("/api/streams/:id/room", async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
     const userId = getAuthUserId(req);
-    const [session] = await db.select().from(liveSessions).where(eq8(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).send("Session not found");
     if (session.status === "ended") return res.status(410).send("Session has ended");
     const isHost = !!userId && userId === session.hostUserId;
@@ -36261,14 +37217,14 @@ router8.get("/api/streams/:id/room", async (req, res) => {
     return res.status(500).send("Error loading room");
   }
 });
-router8.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
+router15.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
   try {
-    const sessions = await db.select().from(liveSessions).where(eq8(liveSessions.status, "live")).orderBy(desc5(liveSessions.startedAt));
+    const sessions = await db.select().from(liveSessions).where(eq15(liveSessions.status, "live")).orderBy(desc7(liveSessions.startedAt));
     const enriched = [];
     for (const session of sessions) {
       let groupName = null;
       if (session.groupId) {
-        const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq8(prayerGroups.id, session.groupId));
+        const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq15(prayerGroups.id, session.groupId));
         groupName = g?.name || null;
       }
       enriched.push({ ...session, groupName });
@@ -36279,14 +37235,14 @@ router8.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
     return res.status(500).json({ error: "Failed to get active streams" });
   }
 });
-router8.get("/api/streams/:id", async (req, res) => {
+router15.get("/api/streams/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [session] = await db.select().from(liveSessions).where(eq8(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     let groupName = null;
     if (session.groupId) {
-      const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq8(prayerGroups.id, session.groupId));
+      const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq15(prayerGroups.id, session.groupId));
       groupName = g?.name || null;
     }
     return res.json({ ...session, groupName });
@@ -36295,11 +37251,11 @@ router8.get("/api/streams/:id", async (req, res) => {
     return res.status(500).json({ error: "Failed to get stream" });
   }
 });
-router8.post("/api/streams/:id/end", requireAuth, async (req, res) => {
+router15.post("/api/streams/:id/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    const [session] = await db.select().from(liveSessions).where(eq8(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     if (session.hostUserId !== userId) {
       return res.status(403).json({ error: "Only the host can end this session" });
@@ -36310,7 +37266,7 @@ router8.post("/api/streams/:id/end", requireAuth, async (req, res) => {
     const [updated] = await db.update(liveSessions).set({
       status: "ended",
       endedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(liveSessions.id, id2)).returning();
+    }).where(eq15(liveSessions.id, id2)).returning();
     deleteLiveKitRoom(session.roomUrl).catch(() => {
     });
     return res.json(updated);
@@ -36319,15 +37275,15 @@ router8.post("/api/streams/:id/end", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to end stream" });
   }
 });
-router8.get("/api/sabbath/reflections", async (req, res) => {
+router15.get("/api/sabbath/reflections", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const date = String(req.query.date || "");
     if (!date) return res.status(400).json({ error: "date is required" });
     const rows = await db.select().from(sabbathReflections).where(
-      and6(
-        eq8(sabbathReflections.userId, userId),
-        eq8(sabbathReflections.date, date)
+      and11(
+        eq15(sabbathReflections.userId, userId),
+        eq15(sabbathReflections.date, date)
       )
     );
     return res.json(rows);
@@ -36336,7 +37292,7 @@ router8.get("/api/sabbath/reflections", async (req, res) => {
     return res.status(500).json({ error: "Failed to get reflections" });
   }
 });
-router8.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
+router15.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { date, prompt, response } = req.body;
@@ -36344,14 +37300,14 @@ router8.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "date, prompt, and response are required" });
     }
     const existing = await db.select().from(sabbathReflections).where(
-      and6(
-        eq8(sabbathReflections.userId, userId),
-        eq8(sabbathReflections.date, date),
-        eq8(sabbathReflections.prompt, prompt)
+      and11(
+        eq15(sabbathReflections.userId, userId),
+        eq15(sabbathReflections.date, date),
+        eq15(sabbathReflections.prompt, prompt)
       )
     );
     if (existing.length > 0) {
-      const [updated] = await db.update(sabbathReflections).set({ response }).where(eq8(sabbathReflections.id, existing[0].id)).returning();
+      const [updated] = await db.update(sabbathReflections).set({ response }).where(eq15(sabbathReflections.id, existing[0].id)).returning();
       return res.json(updated);
     }
     const [inserted] = await db.insert(sabbathReflections).values({ userId, date, prompt, response }).returning();
@@ -36361,34 +37317,50 @@ router8.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Failed to save reflection" });
   }
 });
-var community_default = router8;
+var community_default = router15;
 
 // server/routes/family-dashboard.ts
 init_db();
 init_ai_semaphore();
 init_schema();
 init_schema();
-import { Router as Router9 } from "express";
-import { eq as eq9, and as and7, sql as sql8, desc as desc6, asc as asc5 } from "drizzle-orm";
+import { Router as Router16 } from "express";
+import { eq as eq16, and as and12, sql as sql12, desc as desc8, asc as asc5 } from "drizzle-orm";
 init_ai_engine();
-var router9 = Router9();
-router9.get("/api/family/children", requireAuth, async (req, res) => {
+var router16 = Router16();
+async function ensureDeviceUserExists(deviceId) {
+  if (!deviceId.startsWith("device-")) return;
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq16(users.id, deviceId)).limit(1);
+  if (existing) return;
+  await db.insert(users).values({
+    id: deviceId,
+    username: deviceId,
+    password: "device-no-login",
+    displayName: "Guest Parent",
+    role: "member"
+  }).onConflictDoNothing();
+}
+router16.get("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const parentId = getEffectiveUserId(req);
-    const children = await db.select().from(childProfiles).where(eq9(childProfiles.parentId, parentId)).orderBy(asc5(childProfiles.createdAt));
+    const children = await db.select().from(childProfiles).where(eq16(childProfiles.parentId, parentId)).orderBy(asc5(childProfiles.createdAt));
     return res.json(children);
   } catch (err) {
     console.error("Family children error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/family/children", optionalAuth, async (req, res) => {
+router16.post("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required" });
+    }
     const { name, avatarUrl, ageGroup } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Child name is required" });
     }
+    await ensureDeviceUserExists(userId);
     const validAgeGroups = ["little_lambs", "young_disciples", "young_disciples_plus"];
     const [child] = await db.insert(childProfiles).values({
       parentId: userId,
@@ -36402,11 +37374,11 @@ router9.post("/api/family/children", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.patch("/api/family/children/:id", requireAuth, async (req, res) => {
+router16.patch("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { name, ageGroup } = req.body;
-    const [existing] = await db.select().from(childProfiles).where(and7(eq9(childProfiles.id, String(req.params.id)), eq9(childProfiles.parentId, userId)));
+    const [existing] = await db.select().from(childProfiles).where(and12(eq16(childProfiles.id, String(req.params.id)), eq16(childProfiles.parentId, userId)));
     if (!existing) {
       return res.status(404).json({ error: "Child profile not found" });
     }
@@ -36417,31 +37389,31 @@ router9.patch("/api/family/children/:id", requireAuth, async (req, res) => {
     if (Object.keys(updates).length === 0) {
       return res.json(existing);
     }
-    const [updated] = await db.update(childProfiles).set(updates).where(eq9(childProfiles.id, String(req.params.id))).returning();
+    const [updated] = await db.update(childProfiles).set(updates).where(eq16(childProfiles.id, String(req.params.id))).returning();
     return res.json(updated);
   } catch (err) {
     console.error("Update child error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.delete("/api/family/children/:id", requireAuth, async (req, res) => {
+router16.delete("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const [child] = await db.select().from(childProfiles).where(and7(eq9(childProfiles.id, String(req.params.id)), eq9(childProfiles.parentId, userId)));
+    const [child] = await db.select().from(childProfiles).where(and12(eq16(childProfiles.id, String(req.params.id)), eq16(childProfiles.parentId, userId)));
     if (!child) {
       return res.status(404).json({ error: "Child profile not found" });
     }
-    await db.delete(childProfiles).where(eq9(childProfiles.id, String(req.params.id)));
+    await db.delete(childProfiles).where(eq16(childProfiles.id, String(req.params.id)));
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete child error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) => {
+router16.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
-    const children = await db.select().from(childProfiles).where(eq9(childProfiles.parentId, parentId));
+    const children = await db.select().from(childProfiles).where(eq16(childProfiles.parentId, parentId));
     const childStats = await Promise.all(
       children.map(async (child) => {
         const progress = await db.select({
@@ -36449,17 +37421,17 @@ router9.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) =
           completed: kidsProgress.completed,
           quizScore: kidsProgress.quizScore,
           completedAt: kidsProgress.completedAt
-        }).from(kidsProgress).where(eq9(kidsProgress.userId, child.id));
+        }).from(kidsProgress).where(eq16(kidsProgress.userId, child.id));
         const completedStories = progress.filter((p) => p.completed);
         const badges = await db.select({
           badgeId: kidsUserBadges.badgeId,
           earnedAt: kidsUserBadges.earnedAt,
           name: kidsBadges.name,
           icon: kidsBadges.icon
-        }).from(kidsUserBadges).innerJoin(kidsBadges, eq9(kidsUserBadges.badgeId, kidsBadges.id)).where(eq9(kidsUserBadges.userId, child.id));
+        }).from(kidsUserBadges).innerJoin(kidsBadges, eq16(kidsUserBadges.badgeId, kidsBadges.id)).where(eq16(kidsUserBadges.userId, child.id));
         const storyDetails = await Promise.all(
           completedStories.slice(-5).map(async (p) => {
-            const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq9(kidsStories.id, p.storyId));
+            const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq16(kidsStories.id, p.storyId));
             return story || { title: "Unknown Story", scriptureRef: null };
           })
         );
@@ -36504,18 +37476,18 @@ router9.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) =
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.get("/api/family/conversation-starter/:childId", requireAuth, checkProStatus, async (req, res) => {
+router16.get("/api/family/conversation-starter/:childId", requireAuth, checkProStatus, async (req, res) => {
   try {
     const childId = String(req.params.childId);
     const userId = req.authUserId;
-    const [child] = await db.select().from(childProfiles).where(and7(eq9(childProfiles.id, childId), eq9(childProfiles.parentId, userId)));
+    const [child] = await db.select().from(childProfiles).where(and12(eq16(childProfiles.id, childId), eq16(childProfiles.parentId, userId)));
     if (!child) {
       return res.status(404).json({ error: "Child profile not found" });
     }
-    const completedProgress = await db.select({ storyId: kidsProgress.storyId }).from(kidsProgress).where(and7(eq9(kidsProgress.userId, childId), eq9(kidsProgress.completed, true)));
+    const completedProgress = await db.select({ storyId: kidsProgress.storyId }).from(kidsProgress).where(and12(eq16(kidsProgress.userId, childId), eq16(kidsProgress.completed, true)));
     const storyDetails = await Promise.all(
       completedProgress.slice(-5).map(async (p) => {
-        const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq9(kidsStories.id, p.storyId));
+        const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(eq16(kidsStories.id, p.storyId));
         return story || { title: "Unknown Story", scriptureRef: null };
       })
     );
@@ -36526,16 +37498,16 @@ router9.get("/api/family/conversation-starter/:childId", requireAuth, checkProSt
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res) => {
+router16.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
     const allBooks = await db.select().from(bibleBooks).orderBy(asc5(bibleBooks.id));
-    const children = await db.select().from(childProfiles).where(eq9(childProfiles.parentId, parentId));
+    const children = await db.select().from(childProfiles).where(eq16(childProfiles.parentId, parentId));
     const parentReading = await db.select({
       bookId: readingHistory.bookId,
       bookName: readingHistory.bookName,
       chapter: readingHistory.chapter
-    }).from(readingHistory).where(eq9(readingHistory.userId, parentId));
+    }).from(readingHistory).where(eq16(readingHistory.userId, parentId));
     const parentChaptersPerBook = {};
     for (const r of parentReading) {
       if (!parentChaptersPerBook[r.bookId]) parentChaptersPerBook[r.bookId] = /* @__PURE__ */ new Set();
@@ -36546,11 +37518,11 @@ router9.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res)
       const progress = await db.select({
         storyId: kidsProgress.storyId,
         completed: kidsProgress.completed
-      }).from(kidsProgress).where(and7(eq9(kidsProgress.userId, child.id), eq9(kidsProgress.completed, true)));
+      }).from(kidsProgress).where(and12(eq16(kidsProgress.userId, child.id), eq16(kidsProgress.completed, true)));
       const storyIds = progress.map((p) => p.storyId);
       const bookHits = {};
       if (storyIds.length > 0) {
-        const stories = await db.select({ id: kidsStories.id, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(sql8`${kidsStories.id} IN ${storyIds}`);
+        const stories = await db.select({ id: kidsStories.id, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(sql12`${kidsStories.id} IN ${storyIds}`);
         for (const story of stories) {
           if (story.scriptureRef) {
             const matchedBook = allBooks.find(
@@ -36606,17 +37578,17 @@ router9.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res)
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.get("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
+router16.get("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
   try {
     const familyId = req.authUserId;
-    const prayers = await db.select().from(prayerRequests).where(eq9(prayerRequests.familyId, familyId)).orderBy(desc6(prayerRequests.createdAt));
+    const prayers = await db.select().from(prayerRequests).where(eq16(prayerRequests.familyId, familyId)).orderBy(desc8(prayerRequests.createdAt));
     return res.json(prayers);
   } catch (err) {
     console.error("Family prayers fetch error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
+router16.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
   try {
     const { title, content, category, authorName } = req.body;
     if (!title || !title.trim()) {
@@ -36654,11 +37626,11 @@ router9.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, async (req, res) => {
+router16.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id2 = String(req.params.id);
     const memberName = String(req.body.memberName || req.authUserId);
-    const [prayer] = await db.select().from(prayerRequests).where(eq9(prayerRequests.id, id2));
+    const [prayer] = await db.select().from(prayerRequests).where(eq16(prayerRequests.id, id2));
     if (!prayer) {
       return res.status(404).json({ error: "Prayer not found" });
     }
@@ -36668,22 +37640,22 @@ router9.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, asy
     }
     const newSupported = [...currentSupported, memberName];
     const [updated] = await db.update(prayerRequests).set({
-      supportCount: sql8`${prayerRequests.supportCount} + 1`,
+      supportCount: sql12`${prayerRequests.supportCount} + 1`,
       supportedBy: newSupported,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq9(prayerRequests.id, id2)).returning();
+    }).where(eq16(prayerRequests.id, id2)).returning();
     return res.json({ success: true, supportCount: updated.supportCount });
   } catch (err) {
     console.error("Prayer support error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, async (req, res) => {
+router16.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id2 = String(req.params.id);
     const userId = req.authUserId;
     const answered = req.body.answered !== false;
-    const [prayer] = await db.select().from(prayerRequests).where(and7(eq9(prayerRequests.id, id2), eq9(prayerRequests.familyId, userId)));
+    const [prayer] = await db.select().from(prayerRequests).where(and12(eq16(prayerRequests.id, id2), eq16(prayerRequests.familyId, userId)));
     if (!prayer) {
       return res.status(404).json({ error: "Prayer not found" });
     }
@@ -36691,41 +37663,41 @@ router9.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, as
       answered,
       answeredAt: answered ? /* @__PURE__ */ new Date() : null,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq9(prayerRequests.id, id2)).returning();
+    }).where(eq16(prayerRequests.id, id2)).returning();
     return res.json(updated);
   } catch (err) {
     console.error("Prayer answered error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.get("/api/family/dinner-topics", requireAuth, checkProStatus, async (req, res) => {
+router16.get("/api/family/dinner-topics", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
-    const topics = await db.select().from(dinnerTableTopics).where(eq9(dinnerTableTopics.parentId, parentId)).orderBy(desc6(dinnerTableTopics.createdAt)).limit(20);
+    const topics = await db.select().from(dinnerTableTopics).where(eq16(dinnerTableTopics.parentId, parentId)).orderBy(desc8(dinnerTableTopics.createdAt)).limit(20);
     return res.json(topics);
   } catch (err) {
     console.error("Dinner topics fetch error:", err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProStatus, async (req, res) => {
+router16.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProStatus, async (req, res) => {
   try {
     const id2 = String(req.params.id);
     const userId = req.authUserId;
-    const [topic] = await db.select().from(dinnerTableTopics).where(and7(eq9(dinnerTableTopics.id, id2), eq9(dinnerTableTopics.parentId, userId))).limit(1);
+    const [topic] = await db.select().from(dinnerTableTopics).where(and12(eq16(dinnerTableTopics.id, id2), eq16(dinnerTableTopics.parentId, userId))).limit(1);
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     if (topic.discussed) {
       return res.json({ success: true, message: "Already discussed", bonusPoints: 0 });
     }
-    await db.update(dinnerTableTopics).set({ discussed: true, discussedAt: /* @__PURE__ */ new Date(), bonusPointsAwarded: true }).where(eq9(dinnerTableTopics.id, id2));
+    await db.update(dinnerTableTopics).set({ discussed: true, discussedAt: /* @__PURE__ */ new Date(), bonusPointsAwarded: true }).where(eq16(dinnerTableTopics.id, id2));
     let bonusPoints = 25;
     if (topic.childProfileId) {
       await db.update(childProfiles).set({
-        totalPoints: sql8`${childProfiles.totalPoints} + ${bonusPoints}`,
-        currentLevel: sql8`GREATEST(1, (${childProfiles.totalPoints} + ${bonusPoints}) / 100 + 1)`
-      }).where(eq9(childProfiles.id, topic.childProfileId));
+        totalPoints: sql12`${childProfiles.totalPoints} + ${bonusPoints}`,
+        currentLevel: sql12`GREATEST(1, (${childProfiles.totalPoints} + ${bonusPoints}) / 100 + 1)`
+      }).where(eq16(childProfiles.id, topic.childProfileId));
     }
     console.log(`
 \u2705 DINNER TOPIC DISCUSSED: "${topic.storyTitle}" for ${topic.childName}`);
@@ -36737,13 +37709,13 @@ router9.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProSta
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-var family_dashboard_default = router9;
+var family_dashboard_default = router16;
 
 // server/routes/formation.ts
 init_db();
-import { Router as Router10 } from "express";
+import { Router as Router17 } from "express";
 init_schema();
-import { eq as eq10, and as and8, sql as sql9, asc as asc6 } from "drizzle-orm";
+import { eq as eq17, and as and13, sql as sql13, asc as asc6 } from "drizzle-orm";
 
 // server/middleware/content-lang.ts
 init_schema();
@@ -36756,14 +37728,14 @@ function resolveContentLang(req) {
 }
 
 // server/routes/formation.ts
-var router10 = Router10();
-router10.get("/api/tracks", cachedResponse(120), async (req, res) => {
+var router17 = Router17();
+router17.get("/api/tracks", cachedResponse(120), async (req, res) => {
   try {
     const lang = resolveContentLang(req);
-    const tracks = await db.select().from(formationTracks).where(eq10(formationTracks.isPublished, true)).orderBy(asc6(formationTracks.sortOrder));
+    const tracks = await db.select().from(formationTracks).where(eq17(formationTracks.isPublished, true)).orderBy(asc6(formationTracks.sortOrder));
     const tracksWithCounts = await Promise.all(
       tracks.map(async (track) => {
-        const modules = await db.select().from(formationModules).where(eq10(formationModules.trackId, track.id));
+        const modules = await db.select().from(formationModules).where(eq17(formationModules.trackId, track.id));
         const modulesWithLessons = modules.filter((m) => (m.totalLessons ?? 0) > 0);
         const totalLessons = modules.reduce((sum, m) => sum + (m.totalLessons ?? 0), 0);
         return { ...track, modulesCount: modules.length, lessonsCount: totalLessons };
@@ -36775,13 +37747,13 @@ router10.get("/api/tracks", cachedResponse(120), async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/tracks/progress", async (req, res) => {
+router17.get("/api/tracks/progress", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
-    const progress = await db.select().from(progressTracks).where(eq10(progressTracks.userId, userId));
+    const userId = extractUserId(req);
+    const progress = await db.select().from(progressTracks).where(eq17(progressTracks.userId, userId));
     const enriched = await Promise.all(
       progress.map(async (p) => {
-        const [track] = await db.select().from(formationTracks).where(eq10(formationTracks.id, p.trackId));
+        const [track] = await db.select().from(formationTracks).where(eq17(formationTracks.id, p.trackId));
         return { ...p, track };
       })
     );
@@ -36791,43 +37763,43 @@ router10.get("/api/tracks/progress", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/tracks/:id", async (req, res) => {
+router17.get("/api/tracks/:id", async (req, res) => {
   try {
     const id2 = String(req.params.id);
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const lang = resolveContentLang(req);
-    const [track] = await db.select().from(formationTracks).where(eq10(formationTracks.id, id2));
+    const [track] = await db.select().from(formationTracks).where(eq17(formationTracks.id, id2));
     if (!track) {
       return res.status(404).json({ error: "Track not found" });
     }
-    const modules = await db.select().from(formationModules).where(eq10(formationModules.trackId, id2)).orderBy(asc6(formationModules.moduleOrder));
+    const modules = await db.select().from(formationModules).where(eq17(formationModules.trackId, id2)).orderBy(asc6(formationModules.moduleOrder));
     const allLessonIds = [];
     const modulesWithLessons = await Promise.all(
       modules.map(async (mod) => {
         let localizedMod = { ...mod };
         if (lang) {
-          const [modI18n] = await db.select().from(formationModuleI18n).where(and8(eq10(formationModuleI18n.moduleId, mod.id), eq10(formationModuleI18n.language, lang)));
+          const [modI18n] = await db.select().from(formationModuleI18n).where(and13(eq17(formationModuleI18n.moduleId, mod.id), eq17(formationModuleI18n.language, lang)));
           if (modI18n) {
             localizedMod = { ...mod, title: modI18n.title, description: modI18n.description ?? mod.description };
           }
         }
-        const lessons = await db.select().from(formationLessons).where(eq10(formationLessons.moduleId, mod.id)).orderBy(asc6(formationLessons.lessonOrder));
+        const lessons = await db.select().from(formationLessons).where(eq17(formationLessons.moduleId, mod.id)).orderBy(asc6(formationLessons.lessonOrder));
         const lessonsWithSections = await Promise.all(
           lessons.map(async (lesson) => {
             allLessonIds.push(lesson.id);
             let localizedLesson = { ...lesson };
             if (lang) {
-              const [lessonI18n] = await db.select().from(formationLessonI18n).where(and8(eq10(formationLessonI18n.lessonId, lesson.id), eq10(formationLessonI18n.language, lang)));
+              const [lessonI18n] = await db.select().from(formationLessonI18n).where(and13(eq17(formationLessonI18n.lessonId, lesson.id), eq17(formationLessonI18n.language, lang)));
               if (lessonI18n) {
                 localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
               }
             }
-            const sections = await db.select().from(lessonSections).where(eq10(lessonSections.lessonId, lesson.id)).orderBy(asc6(lessonSections.sortOrder));
+            const sections = await db.select().from(lessonSections).where(eq17(lessonSections.lessonId, lesson.id)).orderBy(asc6(lessonSections.sortOrder));
             let localizedSections = sections;
             if (lang) {
               localizedSections = await Promise.all(
                 sections.map(async (sec) => {
-                  const [secI18n] = await db.select().from(lessonSectionI18n).where(and8(eq10(lessonSectionI18n.sectionId, sec.id), eq10(lessonSectionI18n.language, lang)));
+                  const [secI18n] = await db.select().from(lessonSectionI18n).where(and13(eq17(lessonSectionI18n.sectionId, sec.id), eq17(lessonSectionI18n.language, lang)));
                   if (secI18n) {
                     return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
                   }
@@ -36843,7 +37815,7 @@ router10.get("/api/tracks/:id", async (req, res) => {
     );
     const completedLessonIds = [];
     if (allLessonIds.length > 0) {
-      const userLessonProgress = await db.select().from(progressLessons).where(eq10(progressLessons.userId, userId));
+      const userLessonProgress = await db.select().from(progressLessons).where(eq17(progressLessons.userId, userId));
       for (const p of userLessonProgress) {
         if (p.completedAt && allLessonIds.includes(p.lessonId)) {
           completedLessonIds.push(p.lessonId);
@@ -36856,27 +37828,27 @@ router10.get("/api/tracks/:id", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/lessons/:id", async (req, res) => {
+router17.get("/api/lessons/:id", async (req, res) => {
   try {
     const id2 = String(req.params.id);
     const lang = resolveContentLang(req);
-    const [lesson] = await db.select().from(formationLessons).where(eq10(formationLessons.id, id2));
+    const [lesson] = await db.select().from(formationLessons).where(eq17(formationLessons.id, id2));
     if (!lesson) {
       return res.status(404).json({ error: "Lesson not found" });
     }
     let localizedLesson = { ...lesson };
     if (lang) {
-      const [lessonI18n] = await db.select().from(formationLessonI18n).where(and8(eq10(formationLessonI18n.lessonId, id2), eq10(formationLessonI18n.language, lang)));
+      const [lessonI18n] = await db.select().from(formationLessonI18n).where(and13(eq17(formationLessonI18n.lessonId, id2), eq17(formationLessonI18n.language, lang)));
       if (lessonI18n) {
         localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
       }
     }
-    const sections = await db.select().from(lessonSections).where(eq10(lessonSections.lessonId, id2)).orderBy(asc6(lessonSections.sortOrder));
+    const sections = await db.select().from(lessonSections).where(eq17(lessonSections.lessonId, id2)).orderBy(asc6(lessonSections.sortOrder));
     let localizedSections = sections;
     if (lang) {
       localizedSections = await Promise.all(
         sections.map(async (sec) => {
-          const [secI18n] = await db.select().from(lessonSectionI18n).where(and8(eq10(lessonSectionI18n.sectionId, sec.id), eq10(lessonSectionI18n.language, lang)));
+          const [secI18n] = await db.select().from(lessonSectionI18n).where(and13(eq17(lessonSectionI18n.sectionId, sec.id), eq17(lessonSectionI18n.language, lang)));
           if (secI18n) {
             return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
           }
@@ -36884,15 +37856,15 @@ router10.get("/api/lessons/:id", async (req, res) => {
         })
       );
     }
-    const assessments = await db.select().from(formationAssessments).where(eq10(formationAssessments.lessonId, id2));
+    const assessments = await db.select().from(formationAssessments).where(eq17(formationAssessments.lessonId, id2));
     let assessment = null;
     if (assessments.length > 0) {
-      const items = await db.select().from(assessmentItems).where(eq10(assessmentItems.assessmentId, assessments[0].id));
+      const items = await db.select().from(assessmentItems).where(eq17(assessmentItems.assessmentId, assessments[0].id));
       let localizedItems = items;
       if (lang) {
         localizedItems = await Promise.all(
           items.map(async (item) => {
-            const [itemI18n] = await db.select().from(assessmentItemI18n).where(and8(eq10(assessmentItemI18n.itemId, item.id), eq10(assessmentItemI18n.language, lang)));
+            const [itemI18n] = await db.select().from(assessmentItemI18n).where(and13(eq17(assessmentItemI18n.itemId, item.id), eq17(assessmentItemI18n.language, lang)));
             if (itemI18n) {
               return { ...item, question: itemI18n.question, options: itemI18n.options, explanation: itemI18n.explanation ?? item.explanation };
             }
@@ -36902,11 +37874,11 @@ router10.get("/api/lessons/:id", async (req, res) => {
       }
       assessment = { ...assessments[0], items: localizedItems };
     }
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const [progressRow] = await db.select().from(progressLessons).where(
-      and8(
-        eq10(progressLessons.userId, userId),
-        eq10(progressLessons.lessonId, id2)
+      and13(
+        eq17(progressLessons.userId, userId),
+        eq17(progressLessons.lessonId, id2)
       )
     );
     return res.json({ lesson: localizedLesson, sections: localizedSections, assessment, progress: progressRow || null });
@@ -36915,27 +37887,27 @@ router10.get("/api/lessons/:id", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/tracks/enroll", async (req, res) => {
+router17.post("/api/tracks/enroll", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { trackId } = req.body;
     if (!trackId) {
       return res.status(400).json({ error: "trackId required" });
     }
     const existing = await db.select().from(progressTracks).where(
-      and8(
-        eq10(progressTracks.userId, userId),
-        eq10(progressTracks.trackId, trackId)
+      and13(
+        eq17(progressTracks.userId, userId),
+        eq17(progressTracks.trackId, trackId)
       )
     );
     if (existing.length > 0) {
       return res.json(existing[0]);
     }
-    const firstModule = await db.select().from(formationModules).where(eq10(formationModules.trackId, trackId)).orderBy(asc6(formationModules.moduleOrder)).limit(1);
+    const firstModule = await db.select().from(formationModules).where(eq17(formationModules.trackId, trackId)).orderBy(asc6(formationModules.moduleOrder)).limit(1);
     let currentModuleId = firstModule[0]?.id || null;
     let currentLessonId = null;
     if (currentModuleId) {
-      const firstLesson = await db.select().from(formationLessons).where(eq10(formationLessons.moduleId, currentModuleId)).orderBy(asc6(formationLessons.lessonOrder)).limit(1);
+      const firstLesson = await db.select().from(formationLessons).where(eq17(formationLessons.moduleId, currentModuleId)).orderBy(asc6(formationLessons.lessonOrder)).limit(1);
       currentLessonId = firstLesson[0]?.id || null;
     }
     const [row] = await db.insert(progressTracks).values({
@@ -36951,15 +37923,15 @@ router10.post("/api/tracks/enroll", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/lessons/:id/complete", async (req, res) => {
+router17.post("/api/lessons/:id/complete", async (req, res) => {
   try {
     const lessonId = String(req.params.id);
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { sectionsCompleted, assessmentScore, assessmentPassed } = req.body;
     const existingProgress = await db.select().from(progressLessons).where(
-      and8(
-        eq10(progressLessons.userId, userId),
-        eq10(progressLessons.lessonId, lessonId)
+      and13(
+        eq17(progressLessons.userId, userId),
+        eq17(progressLessons.lessonId, lessonId)
       )
     );
     let lessonProgress;
@@ -36969,7 +37941,7 @@ router10.post("/api/lessons/:id/complete", async (req, res) => {
         sectionsCompleted: sectionsCompleted || existingProgress[0].sectionsCompleted,
         assessmentScore: assessmentScore ?? existingProgress[0].assessmentScore,
         assessmentPassed: assessmentPassed ?? existingProgress[0].assessmentPassed
-      }).where(eq10(progressLessons.id, existingProgress[0].id)).returning();
+      }).where(eq17(progressLessons.id, existingProgress[0].id)).returning();
     } else {
       [lessonProgress] = await db.insert(progressLessons).values({
         userId,
@@ -36980,18 +37952,18 @@ router10.post("/api/lessons/:id/complete", async (req, res) => {
         assessmentPassed: assessmentPassed ?? null
       }).returning();
     }
-    const [lesson] = await db.select().from(formationLessons).where(eq10(formationLessons.id, lessonId));
+    const [lesson] = await db.select().from(formationLessons).where(eq17(formationLessons.id, lessonId));
     let moduleCompleted = null;
     let trackCompleted = null;
     if (lesson) {
-      const [mod] = await db.select().from(formationModules).where(eq10(formationModules.id, lesson.moduleId));
+      const [mod] = await db.select().from(formationModules).where(eq17(formationModules.id, lesson.moduleId));
       if (mod) {
-        const moduleLessons = await db.select().from(formationLessons).where(eq10(formationLessons.moduleId, mod.id));
+        const moduleLessons = await db.select().from(formationLessons).where(eq17(formationLessons.moduleId, mod.id));
         const moduleLessonIds = new Set(moduleLessons.map((l) => l.id));
         const moduleLessonProgress = await db.select().from(progressLessons).where(
-          and8(
-            eq10(progressLessons.userId, userId),
-            sql9`${progressLessons.completedAt} IS NOT NULL`
+          and13(
+            eq17(progressLessons.userId, userId),
+            sql13`${progressLessons.completedAt} IS NOT NULL`
           )
         );
         const completedModuleLessons = moduleLessonProgress.filter(
@@ -37008,19 +37980,19 @@ router10.post("/api/lessons/:id/complete", async (req, res) => {
             avgAssessmentScore: avgScore
           };
         }
-        const allModules = await db.select().from(formationModules).where(eq10(formationModules.trackId, mod.trackId));
+        const allModules = await db.select().from(formationModules).where(eq17(formationModules.trackId, mod.trackId));
         const allModuleIds = allModules.map((m) => m.id);
         const allLessons = [];
         for (const mId of allModuleIds) {
-          const lessons = await db.select().from(formationLessons).where(eq10(formationLessons.moduleId, mId));
+          const lessons = await db.select().from(formationLessons).where(eq17(formationLessons.moduleId, mId));
           allLessons.push(...lessons);
         }
         const totalLessons = allLessons.length;
         if (totalLessons > 0) {
           const completedLessons = await db.select().from(progressLessons).where(
-            and8(
-              eq10(progressLessons.userId, userId),
-              sql9`${progressLessons.completedAt} IS NOT NULL`
+            and13(
+              eq17(progressLessons.userId, userId),
+              sql13`${progressLessons.completedAt} IS NOT NULL`
             )
           );
           const completedLessonIds = new Set(completedLessons.map((cl) => cl.lessonId));
@@ -37032,13 +38004,13 @@ router10.post("/api/lessons/:id/complete", async (req, res) => {
             percentComplete: percent,
             completedAt: allDone ? /* @__PURE__ */ new Date() : null
           }).where(
-            and8(
-              eq10(progressTracks.userId, userId),
-              eq10(progressTracks.trackId, mod.trackId)
+            and13(
+              eq17(progressTracks.userId, userId),
+              eq17(progressTracks.trackId, mod.trackId)
             )
           );
           if (allDone) {
-            const [track] = await db.select().from(formationTracks).where(eq10(formationTracks.id, mod.trackId));
+            const [track] = await db.select().from(formationTracks).where(eq17(formationTracks.id, mod.trackId));
             if (track) {
               trackCompleted = {
                 trackId: track.id,
@@ -37057,22 +38029,22 @@ router10.post("/api/lessons/:id/complete", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/modules/:id/confidence", async (req, res) => {
+router17.post("/api/modules/:id/confidence", async (req, res) => {
   try {
     const moduleId = String(req.params.id);
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { rating } = req.body;
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "rating (1-5) required" });
     }
-    const [mod] = await db.select().from(formationModules).where(eq10(formationModules.id, moduleId));
+    const [mod] = await db.select().from(formationModules).where(eq17(formationModules.id, moduleId));
     if (!mod) {
       return res.status(404).json({ error: "Module not found" });
     }
     const [trackProgress] = await db.select().from(progressTracks).where(
-      and8(
-        eq10(progressTracks.userId, userId),
-        eq10(progressTracks.trackId, mod.trackId)
+      and13(
+        eq17(progressTracks.userId, userId),
+        eq17(progressTracks.trackId, mod.trackId)
       )
     );
     if (!trackProgress) {
@@ -37080,26 +38052,26 @@ router10.post("/api/modules/:id/confidence", async (req, res) => {
     }
     const existing = trackProgress.moduleConfidence || {};
     const updated = { ...existing, [moduleId]: rating };
-    await db.update(progressTracks).set({ moduleConfidence: updated }).where(eq10(progressTracks.id, trackProgress.id));
+    await db.update(progressTracks).set({ moduleConfidence: updated }).where(eq17(progressTracks.id, trackProgress.id));
     return res.json({ moduleId, rating, stored: true });
   } catch (err) {
     console.error("Module confidence error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/assessments/:id/submit", async (req, res) => {
+router17.post("/api/assessments/:id/submit", async (req, res) => {
   try {
     const assessmentId = String(req.params.id);
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const { answers } = req.body;
     if (!answers) {
       return res.status(400).json({ error: "answers required" });
     }
-    const [assessment] = await db.select().from(formationAssessments).where(eq10(formationAssessments.id, assessmentId));
+    const [assessment] = await db.select().from(formationAssessments).where(eq17(formationAssessments.id, assessmentId));
     if (!assessment) {
       return res.status(404).json({ error: "Assessment not found" });
     }
-    const items = await db.select().from(assessmentItems).where(eq10(assessmentItems.assessmentId, assessmentId));
+    const items = await db.select().from(assessmentItems).where(eq17(assessmentItems.assessmentId, assessmentId));
     let correct = 0;
     const results = items.map((item, i) => {
       const userAnswer = answers[i] ?? -1;
@@ -37116,13 +38088,13 @@ router10.post("/api/assessments/:id/submit", async (req, res) => {
     const score = items.length > 0 ? Math.round(correct / items.length * 100) : 0;
     const passed = score >= (assessment.passingScore ?? 70);
     const existingProgress = await db.select().from(progressLessons).where(
-      and8(
-        eq10(progressLessons.userId, userId),
-        eq10(progressLessons.lessonId, assessment.lessonId)
+      and13(
+        eq17(progressLessons.userId, userId),
+        eq17(progressLessons.lessonId, assessment.lessonId)
       )
     );
     if (existingProgress.length > 0) {
-      await db.update(progressLessons).set({ assessmentScore: score, assessmentPassed: passed }).where(eq10(progressLessons.id, existingProgress[0].id));
+      await db.update(progressLessons).set({ assessmentScore: score, assessmentPassed: passed }).where(eq17(progressLessons.id, existingProgress[0].id));
     } else {
       await db.insert(progressLessons).values({
         userId,
@@ -37137,13 +38109,13 @@ router10.post("/api/assessments/:id/submit", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var formation_default = router10;
+var formation_default = router17;
 
 // server/routes/great-controversy.ts
 init_db();
 init_schema();
-import { Router as Router11 } from "express";
-import { eq as eq11 } from "drizzle-orm";
+import { Router as Router18 } from "express";
+import { eq as eq18 } from "drizzle-orm";
 init_ai_engine();
 
 // data/great-controversy.ts
@@ -37233,8 +38205,8 @@ var GC_NODES = [
     subtitle: "God reveals the plan of salvation in symbol",
     period: "Israel",
     yearLabel: "c. 1500\u2013586 BC",
-    description: "Through the Exodus, God delivers His people and establishes the sanctuary system. The tabernacle services, feasts, and sacrificial system are a prophetic blueprint of the plan of salvation, pointing forward to Christ's ministry in both its earthly and heavenly dimensions.",
-    significance: "The earthly sanctuary is central to understanding the Great Controversy. It reveals how God deals with sin: through substitution, mediation, and judgment. The Day of Atonement (Leviticus 16) is a type of the final judgment. The sanctuary is the key that unlocks Adventist theology.",
+    description: "Through the Exodus, God delivers His people and establishes the sanctuary system. The tabernacle services and sacrificial system are a prophetic blueprint of salvation, pointing forward to Christ's ministry.",
+    significance: "The sanctuary reveals how God deals with sin: through substitution, mediation, and judgment. The Day of Atonement (Leviticus 16) is a type of the final judgment. The sanctuary is the key that unlocks Bible prophecy.",
     conflictThread: "The sanctuary is God's visual teaching tool in the conflict. It reveals His method of dealing with sin \u2014 not by ignoring it, but through substitutionary sacrifice and priestly mediation. Satan's strategy is to obscure the sanctuary truth, because it reveals both the cost of sin and God's plan to eradicate it.",
     egwLink: { title: "Patriarchs and Prophets, Ch. 30 \u2014 The Tabernacle and Its Services", url: "https://egwwritings.org/read/130.310" },
     icon: "home-outline",
@@ -37260,7 +38232,7 @@ var GC_NODES = [
     period: "Prophets",
     yearLabel: "c. 800\u2013400 BC",
     description: "Through the prophets, God calls Israel to faithfulness, warns of coming judgment, and reveals increasingly specific prophecies about the Messiah. Daniel's apocalyptic visions reveal the sweep of history from Babylon to the end of time.",
-    significance: "The prophetic books establish the historicist framework essential to Adventist theology. Daniel 2, 7, 8, and 9 provide the prophetic timeline that leads directly to 1844 and the investigative judgment. The prophets also reveal God's character of justice tempered by mercy.",
+    significance: "The prophetic books establish the historicist framework essential to understanding Bible prophecy. Daniel 2, 7, 8, and 9 provide the prophetic timeline that leads directly to 1844 and the investigative judgment. The prophets also reveal God's character of justice tempered by mercy.",
     conflictThread: "Through the prophets, God pulls back the curtain on the conflict. Daniel's visions reveal that earthly empires rise and fall under heaven's watch \u2014 Satan works through political powers to oppose God's people, but prophecy proves God is sovereign. The prophets are God's war correspondents in the cosmic battle.",
     egwLink: { title: "Prophets and Kings, Ch. 44 \u2014 In the Lion's Den", url: "https://egwwritings.org/read/88.484" },
     icon: "megaphone-outline",
@@ -37363,8 +38335,8 @@ var GC_NODES = [
     subtitle: "Truth is obscured and God's people persecuted",
     period: "Church History",
     yearLabel: "c. AD 100\u20131517",
-    description: "Gradually, the church departs from biblical truth. The Sabbath is replaced by Sunday worship, the state of the dead is replaced by the immortality of the soul, and the papacy rises to political and religious power. For 1,260 prophetic years, faithful believers are persecuted.",
-    significance: "The 1,260-day/year prophecy (Daniel 7:25, Revelation 12:6,14) finds precise fulfillment in this period. The Great Controversy intensifies as Satan works through institutional religion to obscure truth. Yet God preserves faithful witnesses throughout \u2014 the Waldenses, Hussites, and others.",
+    description: "The church gradually departs from biblical truth. The Sabbath is replaced by Sunday, and the papacy rises to political and religious power. For 1,260 prophetic years, faithful believers are persecuted.",
+    significance: "The 1,260-day/year prophecy (Daniel 7:25, Revelation 12:6,14) finds precise fulfillment here. Yet God preserves faithful witnesses throughout -- the Waldenses, Hussites, and others.",
     conflictThread: "This is Satan's most cunning strategy in the conflict: corrupting God's church from within. By substituting human traditions for biblical truth \u2014 Sunday for Sabbath, immortal soul for conditional immortality, human mediators for Christ's priesthood \u2014 Satan obscures the very truths that reveal God's character. Yet God always preserves a faithful remnant.",
     egwLink: { title: "The Great Controversy, Ch. 1 \u2014 The Destruction of Jerusalem", url: "https://egwwritings.org/read/132.17" },
     icon: "moon-outline",
@@ -37389,8 +38361,8 @@ var GC_NODES = [
     subtitle: "Light breaks through the darkness",
     period: "Church History",
     yearLabel: "AD 1517\u20131798",
-    description: "Luther, Calvin, Wycliffe, Huss, and other reformers begin recovering biblical truths: salvation by grace through faith, the authority of Scripture, the priesthood of all believers. Each generation recovers more light, preparing the way for the final restoration of all truth.",
-    significance: "The Reformation is not a single event but a progressive recovery of truth that continues through the Advent movement. Each reformer rediscovered part of what was lost during the apostasy. The principle of 'present truth' \u2014 that God reveals truth progressively \u2014 is central to Adventist identity.",
+    description: "Luther, Wycliffe, Huss, and other reformers recover biblical truths: salvation by grace through faith, the authority of Scripture, and the priesthood of all believers. Each generation recovers more light.",
+    significance: "The Reformation is a progressive recovery of truth that continues through the Advent movement. Each reformer rediscovered part of what was lost. The principle of 'present truth' -- that God reveals truth progressively -- is central to our mission today.",
     conflictThread: "The Reformation is God going on the offensive in the conflict. Truth suppressed for centuries begins breaking free. Satan responds with persecution and counter-reformation, but light cannot be permanently extinguished. Each reformer recovers another piece of truth, building toward the full restoration that comes with the Advent movement.",
     egwLink: { title: "The Great Controversy, Ch. 7 \u2014 Luther Before the Diet", url: "https://egwwritings.org/read/132.126" },
     icon: "bulb-outline",
@@ -37416,7 +38388,7 @@ var GC_NODES = [
     period: "Advent Movement",
     yearLabel: "AD 1798\u20131844",
     description: "The Millerite movement awakens thousands to the study of Daniel's prophecies. When Christ does not return in 1844 as expected, the Great Disappointment leads to deeper Bible study. The faithful discover that Daniel 8:14 points not to earth but to the heavenly sanctuary.",
-    significance: "1844 is the pivotal date in Adventist theology. The 2,300-day prophecy of Daniel 8:14, beginning in 457 BC, reaches its fulfillment. The investigative judgment begins in heaven. This discovery launches the Seventh-day Adventist movement and defines its unique contribution to Christianity.",
+    significance: "1844 is a pivotal date in prophetic history. The 2,300-day prophecy of Daniel 8:14, beginning in 457 BC, reaches fulfillment. The investigative judgment begins in heaven, and the sanctuary truth that defines our understanding of Christ's ministry is recovered.",
     conflictThread: "The 1844 movement marks a decisive moment in the conflict. God raises up a people who recover the sanctuary truth \u2014 the key to understanding how He deals with sin. Satan's centuries-long effort to bury this truth is countered as the Advent movement discovers that Christ is ministering in the heavenly sanctuary, preparing to close the conflict forever.",
     egwLink: { title: "The Great Controversy, Ch. 18 \u2014 An American Reformer", url: "https://egwwritings.org/read/132.345" },
     icon: "telescope-outline",
@@ -37441,8 +38413,8 @@ var GC_NODES = [
     subtitle: "Christ ministers as High Priest in heaven",
     period: "Advent Movement",
     yearLabel: "1844\u2013Present",
-    description: "Since 1844, Christ has been conducting a work of investigative judgment in the Most Holy Place of the heavenly sanctuary. This pre-advent judgment examines the records of all who have professed faith in God, vindicating the righteous and demonstrating God's justice before the universe.",
-    significance: "The investigative judgment answers the Great Controversy's central question: Is God fair? By reviewing every case openly before the watching universe, God demonstrates that His judgments are just and His mercy is genuine. This is not about God needing information \u2014 it's about vindicating His character before all creation.",
+    description: "Since 1844, Christ has been conducting a work of investigative judgment in the Most Holy Place of the heavenly sanctuary. This pre-advent judgment vindicates the righteous and demonstrates God's justice before the universe.",
+    significance: "The investigative judgment answers the Great Controversy's central question: Is God fair? By reviewing every case openly, God demonstrates that His judgments are just and His mercy genuine. This is about vindicating His character before all creation.",
     conflictThread: "The investigative judgment directly addresses the core accusation in the conflict: that God is unfair. By opening heaven's records before the watching universe, God proves His transparency. Every saved and lost case is reviewed openly. This is the pre-advent phase of God's final vindication \u2014 demonstrating that mercy and justice meet perfectly in Christ.",
     egwLink: { title: "The Great Controversy, Ch. 28 \u2014 Facing Life's Record", url: "https://egwwritings.org/read/132.486" },
     icon: "scale-outline",
@@ -37468,7 +38440,7 @@ var GC_NODES = [
     period: "Present Era",
     yearLabel: "1844\u2013Present",
     description: "The three angels of Revelation 14 proclaim God's final messages to humanity: the everlasting gospel and call to worship the Creator, the fall of spiritual Babylon, and the warning against the mark of the beast. The Sabbath emerges as the central issue in the final conflict.",
-    significance: "This is where we are now in the Great Controversy timeline. The three angels' messages define the Adventist mission mandate. They are not merely doctrinal statements but an urgent call to the world before Christ returns. The Sabbath-Sunday issue will become the decisive test of loyalty.",
+    significance: "This is where we are now in the Great Controversy timeline. The three angels' messages define our mission mandate. They are not merely doctrinal statements but an urgent call to the world before Christ returns. The Sabbath-Sunday issue will become the decisive test of loyalty.",
     conflictThread: "We are living in the final chapter of the conflict. The three angels' messages are God's last call to humanity before the conflict concludes. The first angel calls the world back to worshipping the Creator (Sabbath). The second exposes Satan's counterfeit religious system. The third warns against siding with the enemy. The Sabbath becomes the final loyalty test in the conflict.",
     egwLink: { title: "The Great Controversy, Ch. 25 \u2014 God's Law Immutable", url: "https://egwwritings.org/read/132.445" },
     icon: "megaphone-outline",
@@ -37519,8 +38491,8 @@ var GC_NODES = [
     subtitle: "God's love is vindicated for eternity",
     period: "Eternity",
     yearLabel: "The Age to Come",
-    description: "The saints spend 1,000 years in heaven reviewing God's judgments. At the end of the millennium, the New Jerusalem descends, the wicked are raised and destroyed in the lake of fire (the second death), and God creates a new heaven and new earth where sin will never rise again.",
-    significance: "The millennium is God's final act of transparency in the Great Controversy. The saints review every case and confirm that God was just. The destruction of the wicked is not eternal torment but the second death \u2014 complete annihilation. The Great Controversy ends with God's character fully vindicated and His universe eternally secure.",
+    description: "The saints spend 1,000 years in heaven reviewing God's judgments. At the end, the New Jerusalem descends, the wicked face the second death, and God creates a new heaven and new earth where sin will never rise again.",
+    significance: "The millennium is God's final act of transparency. The saints review every case and confirm God was just. The destruction of the wicked is the second death -- not eternal torment. The Great Controversy ends with God's character fully vindicated.",
     conflictThread: "The conflict ends here, completely and forever. During the millennium, the saints review God's judgments and confirm He was just in every case. At the end, even the wicked acknowledge God's justice before the second death. God creates a new earth where sin will never rise again. The universe is eternally secure because every being has seen the full truth about both God's love and sin's destruction.",
     egwLink: { title: "The Great Controversy, Ch. 42 \u2014 The Controversy Ended", url: "https://egwwritings.org/read/132.705" },
     icon: "sparkles-outline",
@@ -37541,8 +38513,8 @@ var GC_NODES = [
 ];
 
 // server/routes/great-controversy.ts
-var router11 = Router11();
-router11.post("/api/great-controversy/explore", aiGenerationLimiter, async (req, res) => {
+var router18 = Router18();
+router18.post("/api/great-controversy/explore", aiGenerationLimiter, async (req, res) => {
   try {
     const { nodeId } = req.body;
     if (!nodeId || typeof nodeId !== "string") {
@@ -37552,7 +38524,7 @@ router11.post("/api/great-controversy/explore", aiGenerationLimiter, async (req,
     if (!node) {
       return res.status(404).json({ error: "Node not found" });
     }
-    const existing = await db.select().from(gcExplorationCache).where(eq11(gcExplorationCache.nodeId, nodeId)).limit(1);
+    const existing = await db.select().from(gcExplorationCache).where(eq18(gcExplorationCache.nodeId, nodeId)).limit(1);
     if (existing.length > 0) {
       return res.json({
         nodeId: existing[0].nodeId,
@@ -37588,19 +38560,56 @@ router11.post("/api/great-controversy/explore", aiGenerationLimiter, async (req,
     return res.status(500).json({ error: "Failed to generate exploration content" });
   }
 });
-var great_controversy_default = router11;
+var great_controversy_default = router18;
 
 // server/routes/sabbath-school.ts
 init_db();
 init_schema();
-import { Router as Router12 } from "express";
-import { eq as eq15, and as and11 } from "drizzle-orm";
+import { Router as Router19 } from "express";
+import { eq as eq22, and as and16, desc as desc10, sql as sql15 } from "drizzle-orm";
 init_ai_engine();
 init_sabbath_school_sync();
-var router12 = Router12();
-router12.get("/api/sabbath-school/current", async (req, res) => {
+var router19 = Router19();
+async function findCompanionForLesson(lessonId) {
+  const [companion] = await db.select({
+    id: resources.id,
+    slug: resources.slug,
+    title: resources.title,
+    description: resources.description
+  }).from(resources).where(
+    and16(
+      eq22(resources.resourceType, "sabbath-school-companion"),
+      eq22(resources.status, "published"),
+      sql15`${resources.sourceRef}->>'lessonId' = ${lessonId}`
+    )
+  ).limit(1);
+  return companion || null;
+}
+async function findCompanionsForQuarterly(quarterlyId) {
+  const companions = await db.select({
+    id: resources.id,
+    slug: resources.slug,
+    title: resources.title,
+    sourceRef: resources.sourceRef
+  }).from(resources).where(
+    and16(
+      eq22(resources.resourceType, "sabbath-school-companion"),
+      eq22(resources.status, "published"),
+      sql15`${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
+    )
+  );
+  const map = {};
+  for (const c of companions) {
+    const ref = c.sourceRef;
+    if (ref?.lessonId) {
+      map[ref.lessonId] = { slug: c.slug, title: c.title };
+    }
+  }
+  return map;
+}
+router19.get("/api/sabbath-school/current", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     let q = await getMostRecentQuarterly();
     if (!q) {
       try {
@@ -37613,16 +38622,16 @@ router12.get("/api/sabbath-school/current", async (req, res) => {
       return res.json({ quarterly: null, currentLesson: null, message: "No quarterly available" });
     }
     const currentLessonNum = await getCurrentLessonNumber(q.id);
-    const lessons = await db.select().from(sabbathSchoolLessons).where(eq15(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+    const lessons = await db.select().from(sabbathSchoolLessons).where(eq22(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
     const currentLesson = lessons.find((l) => l.lessonNumber === currentLessonNum) || lessons[0];
     if (!currentLesson) {
       return res.json({ quarterly: q, currentLesson: null, lessons });
     }
-    const days = await db.select().from(sabbathSchoolDays).where(eq15(sabbathSchoolDays.lessonId, currentLesson.id)).orderBy(sabbathSchoolDays.dayNumber);
+    const days = await db.select().from(sabbathSchoolDays).where(eq22(sabbathSchoolDays.lessonId, currentLesson.id)).orderBy(sabbathSchoolDays.dayNumber);
     const dayIds = days.map((d) => d.id);
     let progress = [];
     if (dayIds.length > 0) {
-      const allProgress = await db.select().from(sabbathSchoolUserProgress).where(eq15(sabbathSchoolUserProgress.userId, userId));
+      const allProgress = await db.select().from(sabbathSchoolUserProgress).where(eq22(sabbathSchoolUserProgress.userId, userId));
       progress = allProgress.filter((p) => dayIds.includes(p.dayId));
     }
     const daysWithProgress = days.map((day) => ({
@@ -37633,6 +38642,7 @@ router12.get("/api/sabbath-school/current", async (req, res) => {
     const now = /* @__PURE__ */ new Date();
     const todayStr = `${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${now.getUTCFullYear()}`;
     const todayDayNumber = daysWithProgress.find((d) => d.date === todayStr)?.dayNumber || null;
+    const companion = await findCompanionForLesson(currentLesson.id);
     return res.json({
       quarterly: q,
       currentLesson: {
@@ -37642,35 +38652,44 @@ router12.get("/api/sabbath-school/current", async (req, res) => {
       currentLessonNumber: currentLessonNum,
       totalLessons: lessons.length,
       completedDays: daysWithProgress.filter((d) => d.completed).length,
-      todayDayNumber
+      todayDayNumber,
+      companion
     });
   } catch (err) {
     console.error("Sabbath School current error:", err);
     return res.status(500).json({ error: "Failed to fetch Sabbath School data" });
   }
 });
-router12.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
+router19.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const userId = extractUserId(req);
     const lessonNumber = parseInt(req.params.lessonNumber);
-    const quarterly = await getMostRecentQuarterly();
+    const quarterCode = req.query.quarterCode;
+    let quarterly = null;
+    if (quarterCode) {
+      const [q] = await db.select().from(sabbathSchoolQuarterlies).where(eq22(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+      quarterly = q || null;
+    }
+    if (!quarterly) {
+      quarterly = await getMostRecentQuarterly();
+    }
     if (!quarterly) {
       return res.status(404).json({ error: "Quarterly not found" });
     }
     const lesson = await db.select().from(sabbathSchoolLessons).where(
-      and11(
-        eq15(sabbathSchoolLessons.quarterlyId, quarterly.id),
-        eq15(sabbathSchoolLessons.lessonNumber, lessonNumber)
+      and16(
+        eq22(sabbathSchoolLessons.quarterlyId, quarterly.id),
+        eq22(sabbathSchoolLessons.lessonNumber, lessonNumber)
       )
     ).limit(1);
     if (lesson.length === 0) {
       return res.status(404).json({ error: "Lesson not found" });
     }
-    const days = await db.select().from(sabbathSchoolDays).where(eq15(sabbathSchoolDays.lessonId, lesson[0].id)).orderBy(sabbathSchoolDays.dayNumber);
+    const days = await db.select().from(sabbathSchoolDays).where(eq22(sabbathSchoolDays.lessonId, lesson[0].id)).orderBy(sabbathSchoolDays.dayNumber);
     const dayIds = days.map((d) => d.id);
     let progress = [];
     if (dayIds.length > 0) {
-      const allProgress = await db.select().from(sabbathSchoolUserProgress).where(eq15(sabbathSchoolUserProgress.userId, userId));
+      const allProgress = await db.select().from(sabbathSchoolUserProgress).where(eq22(sabbathSchoolUserProgress.userId, userId));
       progress = allProgress.filter((p) => dayIds.includes(p.dayId));
     }
     const daysWithProgress = days.map((day) => ({
@@ -37690,17 +38709,46 @@ router12.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch lesson" });
   }
 });
-router12.post("/api/sabbath-school/complete", async (req, res) => {
+router19.get("/api/sabbath-school/quarters", async (req, res) => {
   try {
-    const userId = getAuthUserId(req) || "guest";
+    const quarters = await db.select().from(sabbathSchoolQuarterlies).orderBy(desc10(sabbathSchoolQuarterlies.quarterCode));
+    return res.json({ quarters });
+  } catch (err) {
+    console.error("Sabbath School quarters error:", err);
+    return res.status(500).json({ error: "Failed to fetch quarters" });
+  }
+});
+router19.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const { quarterCode } = req.params;
+    const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where(eq22(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    if (!quarterly) {
+      return res.status(404).json({ error: "Quarter not found" });
+    }
+    const lessons = await db.select().from(sabbathSchoolLessons).where(eq22(sabbathSchoolLessons.quarterlyId, quarterly.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+    const companionMap = await findCompanionsForQuarterly(quarterly.id);
+    const lessonsWithCompanions = lessons.map((l) => ({
+      ...l,
+      companion: companionMap[l.id] || null
+    }));
+    return res.json({ quarterly, lessons: lessonsWithCompanions });
+  } catch (err) {
+    console.error("Sabbath School quarter detail error:", err);
+    return res.status(500).json({ error: "Failed to fetch quarter detail" });
+  }
+});
+router19.post("/api/sabbath-school/complete", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
     const { dayId, journalEntry } = req.body;
     if (!dayId) {
       return res.status(400).json({ error: "dayId is required" });
     }
     const existing = await db.select().from(sabbathSchoolUserProgress).where(
-      and11(
-        eq15(sabbathSchoolUserProgress.userId, userId),
-        eq15(sabbathSchoolUserProgress.dayId, dayId)
+      and16(
+        eq22(sabbathSchoolUserProgress.userId, userId),
+        eq22(sabbathSchoolUserProgress.dayId, dayId)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -37708,7 +38756,7 @@ router12.post("/api/sabbath-school/complete", async (req, res) => {
         completed: true,
         journalEntry: journalEntry || existing[0].journalEntry,
         completedAt: /* @__PURE__ */ new Date()
-      }).where(eq15(sabbathSchoolUserProgress.id, existing[0].id));
+      }).where(eq22(sabbathSchoolUserProgress.id, existing[0].id));
     } else {
       await db.insert(sabbathSchoolUserProgress).values({
         userId,
@@ -37724,7 +38772,7 @@ router12.post("/api/sabbath-school/complete", async (req, res) => {
     return res.status(500).json({ error: "Failed to save progress" });
   }
 });
-router12.post(
+router19.post(
   "/api/sabbath-school/discussion-prep",
   aiGenerationLimiter,
   async (req, res) => {
@@ -37734,9 +38782,9 @@ router12.post(
         return res.status(400).json({ error: "lessonId is required" });
       }
       const cached = await db.select().from(sabbathSchoolDiscussionPrep).where(
-        and11(
-          eq15(sabbathSchoolDiscussionPrep.lessonId, lessonId),
-          eq15(sabbathSchoolDiscussionPrep.depth, depth)
+        and16(
+          eq22(sabbathSchoolDiscussionPrep.lessonId, lessonId),
+          eq22(sabbathSchoolDiscussionPrep.depth, depth)
         )
       ).limit(1);
       if (cached.length > 0) {
@@ -37747,11 +38795,11 @@ router12.post(
           cached: true
         });
       }
-      const lesson = await db.select().from(sabbathSchoolLessons).where(eq15(sabbathSchoolLessons.id, lessonId)).limit(1);
+      const lesson = await db.select().from(sabbathSchoolLessons).where(eq22(sabbathSchoolLessons.id, lessonId)).limit(1);
       if (lesson.length === 0) {
         return res.status(404).json({ error: "Lesson not found" });
       }
-      const days = await db.select().from(sabbathSchoolDays).where(eq15(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
+      const days = await db.select().from(sabbathSchoolDays).where(eq22(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
       const daysContent = days.map((d) => `## Day ${d.dayNumber}: ${d.title || ""}
 ${d.contentMarkdown || ""}`).join("\n\n");
       const result = await generateDiscussionPrep({
@@ -37772,16 +38820,16 @@ ${d.contentMarkdown || ""}`).join("\n\n");
       });
     } catch (err) {
       console.error("Discussion prep error:", err);
-      return res.status(500).json({ error: "Failed to generate discussion prep" });
+      return res.status(500).json({ error: "Failed to generate discussion guide" });
     }
   }
 );
-var sabbath_school_default = router12;
+var sabbath_school_default = router19;
 
 // server/routes/analytics.ts
-import { Router as Router13 } from "express";
-var router13 = Router13();
-router13.post("/events", (req, res) => {
+import { Router as Router20 } from "express";
+var router20 = Router20();
+router20.post("/events", (req, res) => {
   try {
     const { events } = req.body;
     if (!Array.isArray(events)) {
@@ -37798,7 +38846,7 @@ router13.post("/events", (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router13.post("/error", (req, res) => {
+router20.post("/error", (req, res) => {
   try {
     const { error, componentStack, timestamp: timestamp2, platform } = req.body;
     console.error(`[CrashReport] ${error} (${platform || "unknown"}, ${new Date(timestamp2).toISOString()})`);
@@ -37811,15 +38859,15 @@ router13.post("/error", (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var analytics_default = router13;
+var analytics_default = router20;
 
 // server/routes/resources.ts
 init_db();
 init_schema();
-import { Router as Router14 } from "express";
-import { eq as eq16, and as and12, ilike as ilike4, sql as sql11, desc as desc9, or as or2 } from "drizzle-orm";
-var router14 = Router14();
-router14.get("/api/resources", cachedResponse(120), async (req, res) => {
+import { Router as Router21 } from "express";
+import { eq as eq23, and as and17, ilike as ilike3, sql as sql16, desc as desc11, or as or2 } from "drizzle-orm";
+var router21 = Router21();
+router21.get("/api/resources", cachedResponse(120), async (req, res) => {
   try {
     const {
       category,
@@ -37833,29 +38881,29 @@ router14.get("/api/resources", cachedResponse(120), async (req, res) => {
     const pageNum = Math.max(1, Number(page) || 1);
     const limitNum = Math.min(Math.max(1, Number(limitStr) || 20), 50);
     const offset = (pageNum - 1) * limitNum;
-    const conditions = [eq16(resources.status, "published")];
+    const conditions = [eq23(resources.status, "published")];
     if (category && category !== "all") {
-      conditions.push(eq16(resources.category, String(category)));
+      conditions.push(eq23(resources.category, String(category)));
     }
     if (type) {
-      conditions.push(eq16(resources.resourceType, String(type)));
+      conditions.push(eq23(resources.resourceType, String(type)));
     }
     if (tier) {
-      conditions.push(eq16(resources.tier, String(tier)));
+      conditions.push(eq23(resources.tier, String(tier)));
     }
     if (ageGroup) {
-      conditions.push(eq16(resources.ageGroup, String(ageGroup)));
+      conditions.push(eq23(resources.ageGroup, String(ageGroup)));
     }
     if (search) {
       const searchTerm = `%${String(search).trim()}%`;
       conditions.push(
         or2(
-          ilike4(resources.title, searchTerm),
-          ilike4(resources.description, searchTerm)
+          ilike3(resources.title, searchTerm),
+          ilike3(resources.description, searchTerm)
         )
       );
     }
-    const whereClause = and12(...conditions);
+    const whereClause = and17(...conditions);
     const items = await db.select({
       id: resources.id,
       slug: resources.slug,
@@ -37870,8 +38918,8 @@ router14.get("/api/resources", cachedResponse(120), async (req, res) => {
       tags: resources.tags,
       publishedAt: resources.publishedAt,
       createdAt: resources.createdAt
-    }).from(resources).where(whereClause).orderBy(desc9(resources.publishedAt)).limit(limitNum).offset(offset);
-    const countResult = await db.select({ count: sql11`count(*)` }).from(resources).where(whereClause);
+    }).from(resources).where(whereClause).orderBy(desc11(resources.publishedAt)).limit(limitNum).offset(offset);
+    const countResult = await db.select({ count: sql16`count(*)` }).from(resources).where(whereClause);
     const total = Number(countResult[0]?.count ?? 0);
     return res.json({
       items,
@@ -37884,7 +38932,7 @@ router14.get("/api/resources", cachedResponse(120), async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.get("/api/resources/bookmarks", requireAuth, async (req, res) => {
+router21.get("/api/resources/bookmarks", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const bookmarks = await db.select({
@@ -37900,14 +38948,14 @@ router14.get("/api/resources/bookmarks", requireAuth, async (req, res) => {
       estimatedMinutes: resources.estimatedMinutes,
       tags: resources.tags,
       bookmarkedAt: resourceBookmarks.createdAt
-    }).from(resourceBookmarks).innerJoin(resources, eq16(resourceBookmarks.resourceId, resources.id)).where(eq16(resourceBookmarks.userId, userId)).orderBy(desc9(resourceBookmarks.createdAt));
+    }).from(resourceBookmarks).innerJoin(resources, eq23(resourceBookmarks.resourceId, resources.id)).where(eq23(resourceBookmarks.userId, userId)).orderBy(desc11(resourceBookmarks.createdAt));
     return res.json(bookmarks);
   } catch (err) {
     console.error("List bookmarks error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.get("/api/resources/in-progress", requireAuth, async (req, res) => {
+router21.get("/api/resources/in-progress", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const inProgress = await db.select({
@@ -37925,27 +38973,28 @@ router14.get("/api/resources/in-progress", requireAuth, async (req, res) => {
       progressPercent: resourceProgress.progressPercent,
       completed: resourceProgress.completed,
       lastAccessedAt: resourceProgress.lastAccessedAt
-    }).from(resourceProgress).innerJoin(resources, eq16(resourceProgress.resourceId, resources.id)).where(
-      and12(
-        eq16(resourceProgress.userId, userId),
-        eq16(resourceProgress.started, true),
-        eq16(resourceProgress.completed, false)
+    }).from(resourceProgress).innerJoin(resources, eq23(resourceProgress.resourceId, resources.id)).where(
+      and17(
+        eq23(resourceProgress.userId, userId),
+        eq23(resourceProgress.started, true),
+        eq23(resourceProgress.completed, false)
       )
-    ).orderBy(desc9(resourceProgress.lastAccessedAt));
+    ).orderBy(desc11(resourceProgress.lastAccessedAt));
     return res.json(inProgress);
   } catch (err) {
     console.error("List in-progress error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.get("/api/resources/:slug", optionalAuth, async (req, res) => {
+router21.get("/api/resources/:slug", optionalAuth, async (req, res) => {
   try {
     const { slug } = req.params;
     const userId = getEffectiveUserId(req);
-    const [resource] = await db.select().from(resources).where(and12(eq16(resources.slug, slug), eq16(resources.status, "published"))).limit(1);
+    const [resource] = await db.select().from(resources).where(and17(eq23(resources.slug, slug), eq23(resources.status, "published"))).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
+    let isBookmarked = false;
     if (userId !== "guest") {
       await db.insert(resourceProgress).values({
         userId,
@@ -37957,18 +39006,21 @@ router14.get("/api/resources/:slug", optionalAuth, async (req, res) => {
         target: [resourceProgress.userId, resourceProgress.resourceId],
         set: { lastAccessedAt: /* @__PURE__ */ new Date() }
       });
+      const bookmark = await db.select({ id: resourceBookmarks.id }).from(resourceBookmarks).where(and17(eq23(resourceBookmarks.userId, userId), eq23(resourceBookmarks.resourceId, resource.id))).limit(1);
+      isBookmarked = bookmark.length > 0;
     }
     return res.json({
       ...resource,
       isTeaser: false,
-      requiresPro: false
+      requiresPro: false,
+      isBookmarked
     });
   } catch (err) {
     console.error("Get resource error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
+router21.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
@@ -37998,18 +39050,21 @@ router14.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.post("/api/resources/:id/bookmark", requireAuth, async (req, res) => {
+router21.post("/api/resources/:id/bookmark", optionalAuth, async (req, res) => {
   try {
-    const userId = req.authUserId;
+    const userId = getAuthUserId2(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Sign in to save to Library", requiresAuth: true });
+    }
     const { id: id2 } = req.params;
     const existing = await db.select().from(resourceBookmarks).where(
-      and12(
-        eq16(resourceBookmarks.userId, userId),
-        eq16(resourceBookmarks.resourceId, id2)
+      and17(
+        eq23(resourceBookmarks.userId, userId),
+        eq23(resourceBookmarks.resourceId, id2)
       )
     ).limit(1);
     if (existing.length > 0) {
-      await db.delete(resourceBookmarks).where(eq16(resourceBookmarks.id, existing[0].id));
+      await db.delete(resourceBookmarks).where(eq23(resourceBookmarks.id, existing[0].id));
       return res.json({ bookmarked: false });
     }
     await db.insert(resourceBookmarks).values({
@@ -38022,7 +39077,7 @@ router14.post("/api/resources/:id/bookmark", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.post("/api/resources/generate/sabbath-companion", requireAuth, aiGenerationLimiter, async (req, res) => {
+router21.post("/api/resources/generate/sabbath-companion", requireAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { lessonId } = req.body;
     if (!lessonId) {
@@ -38036,7 +39091,7 @@ router14.post("/api/resources/generate/sabbath-companion", requireAuth, aiGenera
     return res.status(500).json({ error: "Failed to generate companion resource" });
   }
 });
-router14.post("/api/resources/generate/topical", requireAuth, aiGenerationLimiter, async (req, res) => {
+router21.post("/api/resources/generate/topical", requireAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { topic, depth } = req.body;
     if (!topic) {
@@ -38050,7 +39105,7 @@ router14.post("/api/resources/generate/topical", requireAuth, aiGenerationLimite
     return res.status(500).json({ error: "Failed to generate topical study" });
   }
 });
-router14.post("/api/resources/generate/family-worship", requireAuth, aiGenerationLimiter, async (req, res) => {
+router21.post("/api/resources/generate/family-worship", requireAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { theme, daysCount } = req.body;
     if (!theme) {
@@ -38065,10 +39120,10 @@ router14.post("/api/resources/generate/family-worship", requireAuth, aiGeneratio
     return res.status(500).json({ error: "Failed to generate family worship plan" });
   }
 });
-router14.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
+router21.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [resource] = await db.select().from(resources).where(eq16(resources.id, id2)).limit(1);
+    const [resource] = await db.select().from(resources).where(eq23(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -38079,9 +39134,9 @@ router14.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
       reviewedAt: /* @__PURE__ */ new Date(),
       reviewedBy: req.authUserId,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq16(resources.id, id2)).returning();
+    }).where(eq23(resources.id, id2)).returning();
     if (resource.supersedesResourceId) {
-      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where(eq16(resources.id, resource.supersedesResourceId));
+      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where(eq23(resources.id, resource.supersedesResourceId));
       console.log(`[publish] Archived superseded resource ${resource.supersedesResourceId}`);
     }
     return res.json(updated);
@@ -38090,14 +39145,14 @@ router14.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.post("/api/resources/:id/review", requireEditor, async (req, res) => {
+router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const { action, notes } = req.body;
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
       return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
     }
-    const [resource] = await db.select().from(resources).where(eq16(resources.id, id2)).limit(1);
+    const [resource] = await db.select().from(resources).where(eq23(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -38115,7 +39170,7 @@ router14.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       updateData.status = "draft";
       updateData.publishedAt = null;
     }
-    const [updated] = await db.update(resources).set(updateData).where(eq16(resources.id, id2)).returning();
+    const [updated] = await db.update(resources).set(updateData).where(eq23(resources.id, id2)).returning();
     await db.insert(resourceReviewNotes).values({
       resourceId: id2,
       action,
@@ -38126,8 +39181,8 @@ router14.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       isSystem: false
     });
     if (action === "approved" && resource.supersedesResourceId) {
-      const [predecessorRow] = await db.select({ reviewStatus: resources.reviewStatus }).from(resources).where(eq16(resources.id, resource.supersedesResourceId)).limit(1);
-      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where(eq16(resources.id, resource.supersedesResourceId));
+      const [predecessorRow] = await db.select({ reviewStatus: resources.reviewStatus }).from(resources).where(eq23(resources.id, resource.supersedesResourceId)).limit(1);
+      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where(eq23(resources.id, resource.supersedesResourceId));
       await db.insert(resourceReviewNotes).values({
         resourceId: resource.supersedesResourceId,
         action: "archived",
@@ -38145,10 +39200,10 @@ router14.post("/api/resources/:id/review", requireEditor, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router14.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
+router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [current] = await db.select().from(resources).where(eq16(resources.id, id2)).limit(1);
+    const [current] = await db.select().from(resources).where(eq23(resources.id, id2)).limit(1);
     if (!current) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -38158,7 +39213,7 @@ router14.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
     if (!current.supersedesResourceId) {
       return res.status(400).json({ error: "No predecessor version to roll back to" });
     }
-    const [predecessor] = await db.select().from(resources).where(eq16(resources.id, current.supersedesResourceId)).limit(1);
+    const [predecessor] = await db.select().from(resources).where(eq23(resources.id, current.supersedesResourceId)).limit(1);
     if (!predecessor) {
       return res.status(404).json({ error: "Predecessor resource not found" });
     }
@@ -38175,7 +39230,7 @@ router14.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         reviewedAt: now,
         reviewedBy: req.authUserId,
         updatedAt: now
-      }).where(eq16(resources.id, current.id));
+      }).where(eq23(resources.id, current.id));
       await tx.insert(resourceReviewNotes).values({
         resourceId: current.id,
         action: "rollback_archived",
@@ -38193,7 +39248,7 @@ router14.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         reviewedAt: now,
         reviewedBy: req.authUserId,
         updatedAt: now
-      }).where(eq16(resources.id, predecessor.id)).returning();
+      }).where(eq23(resources.id, predecessor.id)).returning();
       await tx.insert(resourceReviewNotes).values({
         resourceId: predecessor.id,
         action: "rollback_restored",
@@ -38223,15 +39278,15 @@ router14.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var resources_default = router14;
+var resources_default = router21;
 
 // server/routes/admin-pipeline.ts
 init_db();
 init_schema();
-import { Router as Router15 } from "express";
-import { eq as eq18, and as and14, sql as sql13, desc as desc11, asc as asc8 } from "drizzle-orm";
-var router15 = Router15();
-router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => {
+import { Router as Router22 } from "express";
+import { eq as eq25, and as and19, sql as sql18, desc as desc13, asc as asc8 } from "drizzle-orm";
+var router22 = Router22();
+router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, res) => {
   try {
     const filterReviewStatus = req.query.reviewStatus;
     const filterGenStatus = req.query.generationStatus;
@@ -38244,27 +39299,27 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
     const sortOrderParam = req.query.sortOrder === "asc" ? "asc" : "desc";
     const packetStatusCounts = await db.select({
       status: lessonSourcePackets.status,
-      count: sql13`count(*)::int`
+      count: sql18`count(*)::int`
     }).from(lessonSourcePackets).groupBy(lessonSourcePackets.status);
-    const activeCompanionCondition = and14(
-      eq18(resources.resourceType, "sabbath-school-companion"),
-      sql13`${resources.status} != 'archived'`
+    const activeCompanionCondition = and19(
+      eq25(resources.resourceType, "sabbath-school-companion"),
+      sql18`${resources.status} != 'archived'`
     );
     const genStatusCounts = await db.select({
       generationStatus: resources.generationStatus,
-      count: sql13`count(*)::int`
+      count: sql18`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.generationStatus);
     const reviewStatusCounts = await db.select({
       reviewStatus: resources.reviewStatus,
-      count: sql13`count(*)::int`
+      count: sql18`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.reviewStatus);
     const promptVersionDist = await db.select({
       promptVersion: resources.promptVersion,
-      count: sql13`count(*)::int`
+      count: sql18`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.promptVersion);
-    const totalLessons = await db.select({ count: sql13`count(*)::int` }).from(sabbathSchoolLessons);
-    const lessonsWithCompanions = await db.select({ count: sql13`count(distinct ${resources.sourceRef}->>'lessonId')::int` }).from(resources).where(
-      sql13`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.status} != 'archived'`
+    const totalLessons = await db.select({ count: sql18`count(*)::int` }).from(sabbathSchoolLessons);
+    const lessonsWithCompanions = await db.select({ count: sql18`count(distinct ${resources.sourceRef}->>'lessonId')::int` }).from(resources).where(
+      sql18`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.status} != 'archived'`
     );
     const failedGenerations = await db.select({
       id: resources.id,
@@ -38272,36 +39327,36 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
       sourcePacketId: resources.sourcePacketId,
       updatedAt: resources.updatedAt
     }).from(resources).where(
-      and14(
-        eq18(resources.resourceType, "sabbath-school-companion"),
-        eq18(resources.generationStatus, "failed"),
-        sql13`${resources.status} != 'archived'`
+      and19(
+        eq25(resources.resourceType, "sabbath-school-companion"),
+        eq25(resources.generationStatus, "failed"),
+        sql18`${resources.status} != 'archived'`
       )
-    ).orderBy(desc11(resources.updatedAt)).limit(20);
+    ).orderBy(desc13(resources.updatedAt)).limit(20);
     const [presetCounts] = await db.select({
-      pendingReview: sql13`count(*) FILTER (WHERE ${resources.reviewStatus} = 'pending')::int`,
-      needsAttention: sql13`count(*) FILTER (WHERE ${resources.reviewStatus} = 'needs_revision')::int`,
-      regenerated: sql13`count(*) FILTER (WHERE ${resources.supersedesResourceId} IS NOT NULL AND ${resources.reviewStatus} = 'pending')::int`,
-      hasNotes: sql13`count(*) FILTER (WHERE ${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != '')::int`
-    }).from(resources).where(and14(
-      eq18(resources.resourceType, "sabbath-school-companion"),
-      sql13`${resources.status} != 'archived'`
+      pendingReview: sql18`count(*) FILTER (WHERE ${resources.reviewStatus} = 'pending')::int`,
+      needsAttention: sql18`count(*) FILTER (WHERE ${resources.reviewStatus} = 'needs_revision')::int`,
+      regenerated: sql18`count(*) FILTER (WHERE ${resources.supersedesResourceId} IS NOT NULL AND ${resources.reviewStatus} = 'pending')::int`,
+      hasNotes: sql18`count(*) FILTER (WHERE ${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != '')::int`
+    }).from(resources).where(and19(
+      eq25(resources.resourceType, "sabbath-school-companion"),
+      sql18`${resources.status} != 'archived'`
     ));
     let sourceChangedCount = 0;
     const allCompanions = await db.select({
       sourcePacketId: resources.sourcePacketId,
       sourceRef: resources.sourceRef
-    }).from(resources).where(and14(
-      eq18(resources.resourceType, "sabbath-school-companion"),
-      sql13`${resources.status} != 'archived'`,
-      sql13`${resources.sourcePacketId} IS NOT NULL`
+    }).from(resources).where(and19(
+      eq25(resources.resourceType, "sabbath-school-companion"),
+      sql18`${resources.status} != 'archived'`,
+      sql18`${resources.sourcePacketId} IS NOT NULL`
     ));
     if (allCompanions.length > 0) {
       const packetIds2 = [...new Set(allCompanions.map((c) => c.sourcePacketId).filter(Boolean))];
       const lessonIds2 = [...new Set(allCompanions.map((c) => c.sourceRef?.lessonId).filter(Boolean))];
       if (packetIds2.length > 0 && lessonIds2.length > 0) {
-        const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql13`${lessonSourcePackets.id} IN (${sql13.join(packetIds2.map((p) => sql13`${p}`), sql13`, `)})`);
-        const latestPackets = await db.select({ lessonId: lessonSourcePackets.lessonId, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql13`${lessonSourcePackets.lessonId} IN (${sql13.join(lessonIds2.map((l) => sql13`${l}`), sql13`, `)})`).orderBy(desc11(lessonSourcePackets.updatedAt));
+        const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql18`${lessonSourcePackets.id} IN (${sql18.join(packetIds2.map((p) => sql18`${p}`), sql18`, `)})`);
+        const latestPackets = await db.select({ lessonId: lessonSourcePackets.lessonId, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql18`${lessonSourcePackets.lessonId} IN (${sql18.join(lessonIds2.map((l) => sql18`${l}`), sql18`, `)})`).orderBy(desc13(lessonSourcePackets.updatedAt));
         const usedHashMap = Object.fromEntries(usedPackets.map((p) => [p.id, p.sourceHash]));
         const latestHashMap = {};
         for (const p of latestPackets) {
@@ -38316,34 +39371,34 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
       }
     }
     const listConditions = [
-      eq18(resources.resourceType, "sabbath-school-companion"),
-      sql13`${resources.status} != 'archived'`
+      eq25(resources.resourceType, "sabbath-school-companion"),
+      sql18`${resources.status} != 'archived'`
     ];
     if (filterReviewStatus && filterReviewStatus !== "all") {
-      listConditions.push(eq18(resources.reviewStatus, filterReviewStatus));
+      listConditions.push(eq25(resources.reviewStatus, filterReviewStatus));
     } else if (!filterReviewStatus) {
-      listConditions.push(eq18(resources.reviewStatus, "pending"));
+      listConditions.push(eq25(resources.reviewStatus, "pending"));
     }
     if (filterGenStatus) {
-      listConditions.push(eq18(resources.generationStatus, filterGenStatus));
+      listConditions.push(eq25(resources.generationStatus, filterGenStatus));
     }
     if (filterPromptVersion) {
-      listConditions.push(eq18(resources.promptVersion, filterPromptVersion));
+      listConditions.push(eq25(resources.promptVersion, filterPromptVersion));
     }
     if (filterQuarterCode) {
-      const qtr = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where(eq18(sabbathSchoolQuarterlies.quarterCode, filterQuarterCode)).limit(1);
+      const qtr = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where(eq25(sabbathSchoolQuarterlies.quarterCode, filterQuarterCode)).limit(1);
       if (qtr.length > 0) {
-        listConditions.push(sql13`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
+        listConditions.push(sql18`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
       }
     }
     if (filterHasNotes) {
-      listConditions.push(sql13`${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != ''`);
+      listConditions.push(sql18`${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != ''`);
     }
     if (filterIsRegenerated) {
-      listConditions.push(sql13`(${resources.supersedesResourceId} IS NOT NULL)`);
+      listConditions.push(sql18`(${resources.supersedesResourceId} IS NOT NULL)`);
     }
     const sortColumn = sortByParam === "title" ? resources.title : sortByParam === "updatedAt" ? resources.updatedAt : resources.createdAt;
-    const sortFn = sortOrderParam === "asc" ? asc8 : desc11;
+    const sortFn = sortOrderParam === "asc" ? asc8 : desc13;
     const filteredList = await db.select({
       id: resources.id,
       title: resources.title,
@@ -38359,8 +39414,8 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
       createdAt: resources.createdAt,
       updatedAt: resources.updatedAt,
       supersedesResourceId: resources.supersedesResourceId,
-      hasPreviousVersion: sql13`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version")
-    }).from(resources).where(and14(...listConditions)).orderBy(sortFn(sortColumn)).limit(50);
+      hasPreviousVersion: sql18`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version")
+    }).from(resources).where(and19(...listConditions)).orderBy(sortFn(sortColumn)).limit(50);
     const lessonIds = filteredList.map((r) => r.sourceRef?.lessonId).filter(Boolean);
     const latestPacketByLesson = /* @__PURE__ */ new Map();
     const resourcePacketHashes = /* @__PURE__ */ new Map();
@@ -38368,14 +39423,14 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
       const latestPackets = await db.select({
         lessonId: lessonSourcePackets.lessonId,
         sourceHash: lessonSourcePackets.sourceHash
-      }).from(lessonSourcePackets).where(sql13`${lessonSourcePackets.lessonId} IN (${sql13.join(lessonIds.map((id2) => sql13`${id2}`), sql13`, `)})`);
+      }).from(lessonSourcePackets).where(sql18`${lessonSourcePackets.lessonId} IN (${sql18.join(lessonIds.map((id2) => sql18`${id2}`), sql18`, `)})`);
       for (const p of latestPackets) {
         latestPacketByLesson.set(p.lessonId, p.sourceHash);
       }
     }
     const packetIds = filteredList.map((r) => r.sourcePacketId).filter(Boolean);
     if (packetIds.length > 0) {
-      const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql13`${lessonSourcePackets.id} IN (${sql13.join(packetIds.map((id2) => sql13`${id2}`), sql13`, `)})`);
+      const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(sql18`${lessonSourcePackets.id} IN (${sql18.join(packetIds.map((id2) => sql18`${id2}`), sql18`, `)})`);
       for (const p of usedPackets) {
         resourcePacketHashes.set(p.id, p.sourceHash);
       }
@@ -38442,7 +39497,7 @@ router15.get("/api/admin/pipeline/overview", requireEditor, async (req, res) => 
     return res.status(500).json({ error: "Failed to fetch pipeline overview" });
   }
 });
-router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (req, res) => {
+router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const [resource] = await db.select({
@@ -38469,7 +39524,7 @@ router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (r
       publishedAt: resources.publishedAt,
       previousContentJson: resources.previousContentJson,
       supersedesResourceId: resources.supersedesResourceId
-    }).from(resources).where(eq18(resources.id, id2)).limit(1);
+    }).from(resources).where(eq25(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -38483,25 +39538,43 @@ router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (r
         sourceHash: lessonSourcePackets.sourceHash,
         sourceVersion: lessonSourcePackets.sourceVersion,
         updatedAt: lessonSourcePackets.updatedAt
-      }).from(lessonSourcePackets).where(eq18(lessonSourcePackets.id, resource.sourcePacketId)).limit(1);
+      }).from(lessonSourcePackets).where(eq25(lessonSourcePackets.id, resource.sourcePacketId)).limit(1);
       sourcePacket = packet || null;
     }
     let reviewer = null;
     if (resource.reviewedBy) {
-      const [user] = await db.select({ id: users.id, displayName: users.displayName, email: users.email }).from(users).where(eq18(users.id, resource.reviewedBy)).limit(1);
+      const [user] = await db.select({ id: users.id, displayName: users.displayName, email: users.email }).from(users).where(eq25(users.id, resource.reviewedBy)).limit(1);
       reviewer = user || null;
     }
     const contentJson = resource.contentJson;
     const generationMeta = contentJson?._generation || null;
     const contentSections = [];
+    if (contentJson?.introduction) {
+      contentSections.push({ key: "introduction", label: "Introduction", preview: String(contentJson.introduction).substring(0, 300) });
+    }
     if (contentJson?.overview) {
       contentSections.push({ key: "overview", label: "Overview", preview: String(contentJson.overview).substring(0, 300) });
+    }
+    if (contentJson?.historicalContext) {
+      contentSections.push({ key: "historicalContext", label: "Historical Context", preview: String(contentJson.historicalContext).substring(0, 300) });
+    }
+    if (contentJson?.scriptureFoundation && Array.isArray(contentJson.scriptureFoundation)) {
+      contentSections.push({ key: "scriptureFoundation", label: "Scripture Foundation", preview: `${contentJson.scriptureFoundation.length} passages` });
     }
     if (contentJson?.dailyStudyPrompts) {
       contentSections.push({ key: "dailyStudyPrompts", label: "Daily Study Prompts", preview: `${contentJson.dailyStudyPrompts.length} days` });
     }
+    if (contentJson?.applicationQuestions && Array.isArray(contentJson.applicationQuestions)) {
+      contentSections.push({ key: "applicationQuestions", label: "Application Questions", preview: `${contentJson.applicationQuestions.length} questions` });
+    }
     if (contentJson?.discussionQuestions) {
       contentSections.push({ key: "discussionQuestions", label: "Discussion Questions", preview: `${contentJson.discussionQuestions.length} questions` });
+    }
+    if (contentJson?.prayerPrompts && Array.isArray(contentJson.prayerPrompts)) {
+      contentSections.push({ key: "prayerPrompts", label: "Prayer Prompts", preview: `${contentJson.prayerPrompts.length} prompts` });
+    }
+    if (contentJson?.furtherStudy) {
+      contentSections.push({ key: "furtherStudy", label: "Further Study", preview: String(contentJson.furtherStudy).substring(0, 200) });
     }
     if (contentJson?.memoryVerseGuide) {
       contentSections.push({ key: "memoryVerseGuide", label: "Memory Verse Guide", preview: contentJson.memoryVerseGuide.reference || "" });
@@ -38512,6 +39585,9 @@ router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (r
     if (contentJson?.egwConnections) {
       contentSections.push({ key: "egwConnections", label: "EGW Connections", preview: `${contentJson.egwConnections.length} connections` });
     }
+    if (contentJson?.days && Array.isArray(contentJson.days)) {
+      contentSections.push({ key: "days", label: contentJson.theme || "Daily Content", preview: `${contentJson.days.length} days` });
+    }
     let predecessorData = null;
     if (resource.supersedesResourceId) {
       const [pred] = await db.select({
@@ -38520,7 +39596,7 @@ router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (r
         promptVersion: resources.promptVersion,
         status: resources.status,
         createdAt: resources.createdAt
-      }).from(resources).where(eq18(resources.id, resource.supersedesResourceId)).limit(1);
+      }).from(resources).where(eq25(resources.id, resource.supersedesResourceId)).limit(1);
       if (pred) {
         predecessorData = pred;
       }
@@ -38564,7 +39640,7 @@ router15.get("/api/admin/pipeline/resource/:id/preview", requireEditor, async (r
     return res.status(500).json({ error: "Failed to fetch resource preview" });
   }
 });
-router15.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req, res) => {
+router22.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const [resource] = await db.select({
@@ -38577,13 +39653,13 @@ router15.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req,
       generationStatus: resources.generationStatus,
       reviewStatus: resources.reviewStatus,
       createdAt: resources.createdAt
-    }).from(resources).where(eq18(resources.id, id2)).limit(1);
+    }).from(resources).where(eq25(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
     let previousContent = resource.previousContentJson;
     if (!previousContent && resource.supersedesResourceId) {
-      const [superseded] = await db.select({ contentJson: resources.contentJson }).from(resources).where(eq18(resources.id, resource.supersedesResourceId)).limit(1);
+      const [superseded] = await db.select({ contentJson: resources.contentJson }).from(resources).where(eq25(resources.id, resource.supersedesResourceId)).limit(1);
       if (superseded) {
         previousContent = superseded.contentJson;
       }
@@ -38665,10 +39741,10 @@ router15.get("/api/admin/pipeline/resource/:id/diff", requireEditor, async (req,
     return res.status(500).json({ error: "Failed to generate diff" });
   }
 });
-router15.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (req, res) => {
+router22.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, async (req, res) => {
   try {
     const { quarterCode } = req.params;
-    const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq18(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    const quarterly = await db.select().from(sabbathSchoolQuarterlies).where(eq25(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (quarterly.length === 0) {
       return res.status(404).json({ error: `Quarter ${quarterCode} not found` });
     }
@@ -38677,14 +39753,14 @@ router15.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (r
       id: sabbathSchoolLessons.id,
       title: sabbathSchoolLessons.title,
       lessonNumber: sabbathSchoolLessons.lessonNumber
-    }).from(sabbathSchoolLessons).where(eq18(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+    }).from(sabbathSchoolLessons).where(eq25(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
     const packets = await db.select({
       id: lessonSourcePackets.id,
       lessonId: lessonSourcePackets.lessonId,
       status: lessonSourcePackets.status,
       sourceHash: lessonSourcePackets.sourceHash,
       updatedAt: lessonSourcePackets.updatedAt
-    }).from(lessonSourcePackets).where(eq18(lessonSourcePackets.quarterlyId, quarterlyId));
+    }).from(lessonSourcePackets).where(eq25(lessonSourcePackets.quarterlyId, quarterlyId));
     const companions = await db.select({
       id: resources.id,
       title: resources.title,
@@ -38698,7 +39774,7 @@ router15.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (r
       createdAt: resources.createdAt,
       publishedAt: resources.publishedAt
     }).from(resources).where(
-      sql13`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
+      sql18`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
     );
     const packetMap = new Map(packets.map((p) => [p.lessonId, p]));
     const companionMap = /* @__PURE__ */ new Map();
@@ -38754,13 +39830,13 @@ router15.get("/api/admin/pipeline/quarter/:quarterCode", requireEditor, async (r
     return res.status(500).json({ error: "Failed to fetch quarter pipeline data" });
   }
 });
-router15.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, res) => {
+router22.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, res) => {
   try {
     const { quarterCode, force, dryRun } = req.body;
     if (!quarterCode || typeof quarterCode !== "string") {
       return res.status(400).json({ error: "quarterCode is required" });
     }
-    const quarterly = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where(eq18(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    const quarterly = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where(eq25(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (quarterly.length === 0) {
       return res.status(404).json({ error: `Quarter ${quarterCode} not found in database` });
     }
@@ -38779,7 +39855,7 @@ router15.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, 
     return res.status(500).json({ error: "Failed to start batch generation" });
   }
 });
-router15.get("/api/admin/pipeline/quarters", requireEditor, async (_req, res) => {
+router22.get("/api/admin/pipeline/quarters", requirePipelineAccess, async (_req, res) => {
   try {
     const { getAvailableQuarters: getAvailableQuarters2 } = await Promise.resolve().then(() => (init_batch_generator(), batch_generator_exports));
     const quarters = await getAvailableQuarters2();
@@ -38789,21 +39865,21 @@ router15.get("/api/admin/pipeline/quarters", requireEditor, async (_req, res) =>
     return res.status(500).json({ error: "Failed to list quarters" });
   }
 });
-router15.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
+router22.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const { role } = req.body;
-    if (!role || !["user", "editor", "admin"].includes(role)) {
-      return res.status(400).json({ error: "role must be user, editor, or admin" });
+    if (!role || !["member", "student", "church_leader_pending", "church_leader", "editor", "admin"].includes(role)) {
+      return res.status(400).json({ error: "role must be member, student, church_leader_pending, church_leader, editor, or admin" });
     }
-    const [target] = await db.select({ id: users.id, displayName: users.displayName }).from(users).where(eq18(users.id, id2)).limit(1);
+    const [target] = await db.select({ id: users.id, displayName: users.displayName }).from(users).where(eq25(users.id, id2)).limit(1);
     if (!target) {
       return res.status(404).json({ error: "User not found" });
     }
     if (id2 === req.authUserId && role !== "admin") {
       return res.status(400).json({ error: "Cannot demote yourself" });
     }
-    const [updated] = await db.update(users).set({ role }).where(eq18(users.id, id2)).returning({
+    const [updated] = await db.update(users).set({ role }).where(eq25(users.id, id2)).returning({
       id: users.id,
       displayName: users.displayName,
       email: users.email,
@@ -38815,7 +39891,7 @@ router15.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: "Failed to update user role" });
   }
 });
-router15.get("/api/admin/pipeline/resource/:id/review-history", requireEditor, async (req, res) => {
+router22.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const notes = await db.select({
@@ -38828,12 +39904,12 @@ router15.get("/api/admin/pipeline/resource/:id/review-history", requireEditor, a
       createdBy: resourceReviewNotes.createdBy,
       isSystem: resourceReviewNotes.isSystem,
       createdAt: resourceReviewNotes.createdAt
-    }).from(resourceReviewNotes).where(eq18(resourceReviewNotes.resourceId, id2)).orderBy(desc11(resourceReviewNotes.createdAt));
+    }).from(resourceReviewNotes).where(eq25(resourceReviewNotes.resourceId, id2)).orderBy(desc13(resourceReviewNotes.createdAt));
     const userIds = [...new Set(notes.map((n) => n.createdBy))];
     const userMap = {};
     if (userIds.length > 0) {
       for (const uid of userIds) {
-        const [u] = await db.select({ displayName: users.displayName, email: users.email, role: users.role }).from(users).where(eq18(users.id, uid)).limit(1);
+        const [u] = await db.select({ displayName: users.displayName, email: users.email, role: users.role }).from(users).where(eq25(users.id, uid)).limit(1);
         if (u) userMap[uid] = u;
       }
     }
@@ -38847,7 +39923,39 @@ router15.get("/api/admin/pipeline/resource/:id/review-history", requireEditor, a
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-var admin_pipeline_default = router15;
+router22.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (req, res) => {
+  try {
+    const { lessonId, quarterCode, force } = req.body;
+    if (!lessonId && !quarterCode) {
+      return res.status(400).json({ error: "Provide lessonId or quarterCode" });
+    }
+    const { generateQuarterCompanions: generateQuarterCompanions2 } = await Promise.resolve().then(() => (init_batch_generator(), batch_generator_exports));
+    const { generateSabbathSchoolCompanion: generateSabbathSchoolCompanion2 } = await Promise.resolve().then(() => (init_content_engine(), content_engine_exports));
+    if (lessonId) {
+      const lessonSourceCondition = sql18`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
+      const existing = await db.select({ id: resources.id, status: resources.status, contentJson: resources.contentJson }).from(resources).where(and19(lessonSourceCondition, sql18`${resources.status} != 'archived'`)).orderBy(desc13(resources.createdAt));
+      const published = existing.find((r) => r.status === "published");
+      const staleDraft = existing.find((r) => r.status === "draft" && r.id !== published?.id);
+      if (staleDraft) {
+        await db.delete(resources).where(eq25(resources.id, staleDraft.id));
+      }
+      const resourceId = await generateSabbathSchoolCompanion2(lessonId, {});
+      if (published) {
+        await db.update(resources).set({
+          supersedesResourceId: published.id,
+          previousContentJson: published.contentJson
+        }).where(eq25(resources.id, resourceId));
+      }
+      return res.json({ success: true, resourceId, mode: "single", supersedes: published?.id || null });
+    }
+    const result = await generateQuarterCompanions2(quarterCode, { force: force !== false });
+    return res.json({ success: true, result, mode: "quarter" });
+  } catch (err) {
+    console.error("Admin regenerate companion error:", err);
+    return res.status(500).json({ error: err.message || "Regeneration failed" });
+  }
+});
+var admin_pipeline_default = router22;
 
 // server/routes.ts
 async function registerRoutes(app2) {
@@ -38891,7 +39999,14 @@ async function registerRoutes(app2) {
   app2.use(auth_default);
   app2.use(user_default);
   app2.use(bible_default);
-  app2.use(study_default);
+  app2.use(strongs_default);
+  app2.use(commentary_default);
+  app2.use(context_default);
+  app2.use(locations_timeline_default);
+  app2.use(study_guide_default);
+  app2.use(verse_tools_default);
+  app2.use(deep_study_default);
+  app2.use(search_default);
   app2.use(devotionals_default);
   app2.use(tts_default);
   app2.use(kids_default);
@@ -38910,13 +40025,13 @@ async function registerRoutes(app2) {
     let dbStatus = "ok";
     let resourceStats = { published: 0, draft: 0 };
     try {
-      await db.execute(sql14`SELECT 1`);
+      await db.execute(sql19`SELECT 1`);
     } catch {
       dbStatus = "unreachable";
     }
     if (dbStatus === "ok") {
       try {
-        const counts = await db.execute(sql14`
+        const counts = await db.execute(sql19`
           SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
         `);
         for (const row of counts.rows) {
@@ -38943,17 +40058,23 @@ async function registerRoutes(app2) {
   app2.post("/api/feedback", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const { topic, message } = req.body;
+      const { topic, message, context, email, appVersion, platform } = req.body;
       if (!message?.trim()) {
         return res.status(400).json({ error: "Message is required" });
       }
-      const allowedTopics = ["bug", "feature", "content", "other"];
+      const allowedTopics = ["bug", "feature", "content", "performance", "other"];
       const safeTopic = allowedTopics.includes(topic) ? topic : "other";
       const safeMessage = message.trim().substring(0, 5e3);
+      const safeContext = context?.trim()?.substring(0, 2e3) || null;
+      const safeEmail = email?.trim()?.substring(0, 255) || null;
       await db.insert(userFeedback).values({
         userId,
         topic: safeTopic,
-        message: safeMessage
+        message: safeMessage,
+        context: safeContext,
+        email: safeEmail,
+        appVersion: appVersion?.substring(0, 32) || null,
+        platform: platform?.substring(0, 16) || null
       });
       res.json({ success: true });
     } catch (err) {
@@ -38964,12 +40085,12 @@ async function registerRoutes(app2) {
   app2.get("/api/growth-map", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const prayerRows = await db.select().from(prayerRequests).where(eq25(prayerRequests.userId, userId));
-      const readingRows = await db.select().from(readingHistory).where(eq25(readingHistory.userId, userId));
-      const groupMemberRows = await db.select().from(prayerGroupMembers).where(eq25(prayerGroupMembers.userId, userId));
-      const discussionRows = await db.select().from(groupDiscussions).where(eq25(groupDiscussions.userId, userId));
-      const layerRows = await db.select().from(layerCompletions).where(eq25(layerCompletions.userId, userId));
-      const progressTrackRows = await db.select().from(progressTracks).where(eq25(progressTracks.userId, userId));
+      const prayerRows = await db.select().from(prayerRequests).where(eq32(prayerRequests.userId, userId));
+      const readingRows = await db.select().from(readingHistory).where(eq32(readingHistory.userId, userId));
+      const groupMemberRows = await db.select().from(prayerGroupMembers).where(eq32(prayerGroupMembers.userId, userId));
+      const discussionRows = await db.select().from(groupDiscussions).where(eq32(groupDiscussions.userId, userId));
+      const layerRows = await db.select().from(layerCompletions).where(eq32(layerCompletions.userId, userId));
+      const progressTrackRows = await db.select().from(progressTracks).where(eq32(progressTracks.userId, userId));
       const uniqueChapters = new Set(
         readingRows.map((r) => `${r.bookId}-${r.chapter}`)
       );
@@ -39020,7 +40141,7 @@ app.set("trust proxy", 1);
 var log = console.log;
 function setupCacheControl(app2) {
   app2.use((_req, res, next) => {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && !_req.path.startsWith("/assets/")) {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
@@ -39040,14 +40161,15 @@ function setupCors(app2) {
       });
     }
     const origin = req.header("origin");
-    const isLocalhost = origin?.startsWith("http://localhost:") || origin?.startsWith("http://127.0.0.1:");
+    const isDev = process.env.NODE_ENV === "development";
+    const isLocalhost = isDev && (origin?.startsWith("http://localhost:") || origin?.startsWith("http://127.0.0.1:"));
     if (origin && (origins.has(origin) || isLocalhost)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS"
       );
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id");
       res.header("Access-Control-Allow-Credentials", "true");
     }
     if (req.method === "OPTIONS") {
@@ -39147,6 +40269,11 @@ function configureExpoAndLanding(app2) {
   const appName = getAppName();
   const isDev = process.env.NODE_ENV === "development";
   log("Serving static Expo files with dynamic manifest routing");
+  app2.use("/assets/kids-scenes", express.static(path2.resolve(process.cwd(), "assets", "kids-scenes"), {
+    maxAge: "7d",
+    immutable: true,
+    etag: true
+  }));
   app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets"), {
     maxAge: "1h",
     etag: true
@@ -39172,24 +40299,44 @@ function configureExpoAndLanding(app2) {
     if (req.path.startsWith("/api")) {
       return next();
     }
-    if (req.path !== "/" && req.path !== "/manifest") {
-      return next();
-    }
-    const platform = req.header("expo-platform");
-    if (platform && (platform === "ios" || platform === "android")) {
-      return serveExpoManifest(platform, res);
-    }
-    if (req.path === "/") {
-      return serveLandingPage({
-        req,
-        res,
-        landingPageTemplate,
-        appName
-      });
+    if (req.path === "/manifest" || req.path === "/") {
+      const platform = req.header("expo-platform");
+      if (platform && (platform === "ios" || platform === "android")) {
+        return serveExpoManifest(platform, res);
+      }
     }
     next();
   });
   app2.use(express.static(path2.resolve(process.cwd(), "static-build")));
+  const webDistPath = path2.resolve(process.cwd(), "dist");
+  const webIndexPath = path2.join(webDistPath, "index.html");
+  const hasWebBuild = fs.existsSync(webIndexPath);
+  if (hasWebBuild) {
+    app2.use(express.static(webDistPath, { maxAge: "1h", index: false }));
+    app2.use((req, res, next) => {
+      if (req.path.startsWith("/api")) {
+        return next();
+      }
+      if (req.accepts("html")) {
+        return res.sendFile(webIndexPath);
+      }
+      next();
+    });
+    log("Serving Expo web build from dist/ for browser requests");
+  } else {
+    app2.use((req, res, next) => {
+      if (req.path === "/" && !req.path.startsWith("/api")) {
+        return serveLandingPage({
+          req,
+          res,
+          landingPageTemplate,
+          appName
+        });
+      }
+      next();
+    });
+    log("No web build found \u2014 serving landing page for browser requests");
+  }
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 function categorizeError(status) {
@@ -39240,6 +40387,14 @@ function setupErrorHandler(app2) {
       } catch (err) {
         console.error("Sabbath School sync init failed:", err);
       }
+      setTimeout(async () => {
+        try {
+          const { runCacheWarmup: runCacheWarmup2 } = await Promise.resolve().then(() => (init_cache_warmup(), cache_warmup_exports));
+          await runCacheWarmup2();
+        } catch (err) {
+          console.error("Cache warmup failed:", err);
+        }
+      }, 3e4);
     }
   );
 })();

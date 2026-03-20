@@ -45,6 +45,9 @@ import { Router, Request } from "express";
   router.get("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const parentId = getEffectiveUserId(req);
+    if (parentId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required" });
+    }
     const children = await db
       .select()
       .from(childProfiles)
