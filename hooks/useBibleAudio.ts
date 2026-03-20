@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView } from "react-native";
-import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
-import type { AudioPlayer } from "expo-audio";
-import * as FileSystem from "expo-file-system";
+import { Audio, AVPlaybackStatus } from "expo-av";
+import type { AVPlaybackStatusSuccess } from "expo-av";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -90,7 +89,7 @@ export default function useBibleAudio(
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
-  const playerRef = useRef<AudioPlayer | null>(null);
+  const playerRef = useRef<Audio.Sound | null>(null);
   const selectedVoiceRef = useRef("george");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -116,9 +115,10 @@ export default function useBibleAudio(
   }, []);
 
   useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: true,
     }).catch(() => {});
   }, []);
 
@@ -143,17 +143,17 @@ export default function useBibleAudio(
   const handlePauseRef = useRef(() => {});
   const handleStopRef = useRef(() => {});
 
-  const cleanupPlayer = useCallback(() => {
+  const cleanupPlayer = useCallback(async () => {
     if (playbackTimeoutRef.current) {
       clearTimeout(playbackTimeoutRef.current);
       playbackTimeoutRef.current = null;
     }
     if (playerRef.current) {
       try {
-        playerRef.current.pause();
+        await playerRef.current.stopAsync();
       } catch {}
       try {
-        playerRef.current.remove();
+        await playerRef.current.unloadAsync();
       } catch {}
       playerRef.current = null;
     }
@@ -323,57 +323,37 @@ export default function useBibleAudio(
         return;
       }
 
-      cleanupPlayer();
+      await cleanupPlayer();
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
-      let playerSource: string = audioUri;
+      console.log("[TTS speakVerseAI] Loading audio from:", audioUri);
 
-      if (isMobile && FileSystem.cacheDirectory) {
-        console.log("[TTS speakVerseAI] Native platform — downloading audio to local file");
-        const localPath = `${FileSystem.cacheDirectory}tts_${audioId}.mp3`;
-        const dlResult = await FileSystem.downloadAsync(audioUri, localPath);
-        if (dlResult.status === 200) {
-          playerSource = dlResult.uri;
-          console.log("[TTS speakVerseAI] Downloaded to:", playerSource, "size:", dlResult.headers?.["content-length"] || "unknown");
-        } else {
-          console.log("[TTS speakVerseAI] Download failed, status:", dlResult.status, "— using remote URL");
-        }
-      }
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: false, rate: speechRateRef.current, shouldCorrectPitch: true, progressUpdateIntervalMillis: 300 },
+      );
+      console.log("[TTS speakVerseAI] Sound loaded successfully");
 
-      console.log("[TTS speakVerseAI] Creating player with source:", playerSource);
-
-      const player = createAudioPlayer(playerSource);
-      console.log("[TTS speakVerseAI] Player created");
-      try {
-        player.setPlaybackRate(speechRateRef.current);
-        console.log("[TTS speakVerseAI] Playback rate set to:", speechRateRef.current);
-      } catch {
-        console.log("[TTS speakVerseAI] Could not set playback rate, using default");
-      }
-      playerRef.current = player;
-
+      playerRef.current = sound;
       batchInfoRef.current = { startIndex: index, endIndex: batchEnd, charOffsets };
-
       setIsLoadingAudio(false);
 
       const playFinished = await new Promise<boolean>((resolve) => {
         let resolved = false;
-        let loggedPlaying = false;
-        const subscription = player.addListener("playbackStatusUpdate", (status: any) => {
+
+        sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
           if (resolved) return;
           if (session !== sessionRef.current) {
             resolved = true;
-            subscription.remove();
             resolve(false);
             return;
           }
-          if (!loggedPlaying && status.playing) {
-            loggedPlaying = true;
-            console.log("[TTS speakVerseAI] Audio is playing");
-          }
 
-          if (status.playing && status.currentTime != null && status.duration && status.duration > 0) {
-            const progress = status.currentTime / status.duration;
+          if (!status.isLoaded) return;
+          const s = status as AVPlaybackStatusSuccess;
+
+          if (s.isPlaying && s.positionMillis != null && s.durationMillis && s.durationMillis > 0) {
+            const progress = s.positionMillis / s.durationMillis;
             const charPosition = progress * totalChars;
             const batch = batchInfoRef.current;
             if (batch) {
@@ -391,25 +371,27 @@ export default function useBibleAudio(
             }
           }
 
-          if (status.didJustFinish) {
+          if (s.didJustFinish) {
             resolved = true;
-            subscription.remove();
             resolve(true);
           }
         });
 
         const timeout = setTimeout(() => {
           if (!resolved) {
-            console.log("[TTS speakVerseAI] Audio playback timed out after 60s, falling back");
+            console.log("[TTS speakVerseAI] Audio playback timed out after 60s");
             resolved = true;
-            subscription.remove();
             resolve(false);
           }
         }, 60000);
         playbackTimeoutRef.current = timeout;
 
-        player.play();
-        console.log("[TTS speakVerseAI] player.play() called");
+        sound.playAsync().then(() => {
+          console.log("[TTS speakVerseAI] playAsync() started");
+        }).catch((e: any) => {
+          console.log("[TTS speakVerseAI] playAsync() error:", e.message);
+          if (!resolved) { resolved = true; resolve(false); }
+        });
       });
 
       playbackTimeoutRef.current = null;
@@ -457,7 +439,7 @@ export default function useBibleAudio(
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else if (playerRef.current) {
         try {
-          playerRef.current.play();
+          playerRef.current.playAsync();
           console.log("[TTS handlePlay] Resumed existing player");
         } catch {
           speakVerseAI(currentIndexRef.current, sessionRef.current);
@@ -489,7 +471,7 @@ export default function useBibleAudio(
     } else {
       try {
         if (playerRef.current) {
-          playerRef.current.pause();
+          playerRef.current.pauseAsync();
         }
       } catch {}
     }
