@@ -25,10 +25,10 @@ interface BibleBook {
   orderIndex: number;
 }
 
-const TRANSLATIONS = [
-  { id: "KJV", name: "King James Version", year: "1611" },
-  { id: "ASV", name: "American Standard Version", year: "1901" },
-  { id: "WEB", name: "World English Bible", year: "2000" },
+const DEFAULT_TRANSLATIONS = [
+  { id: "KJV", name: "King James Version" },
+  { id: "ASV", name: "American Standard Version" },
+  { id: "WEB", name: "World English Bible" },
 ];
 
 export default function BookPickerScreen() {
@@ -36,6 +36,13 @@ export default function BookPickerScreen() {
   const insets = useSafeAreaInsets();
   const { translation, setTranslation } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
+
+  const { data: apiTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string }[]>({
+    queryKey: ["/api/translations"],
+  });
+  const TRANSLATIONS = apiTranslations
+    ? apiTranslations.map((t) => ({ id: t.abbreviation, name: t.name }))
+    : DEFAULT_TRANSLATIONS;
 
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -89,9 +96,7 @@ export default function BookPickerScreen() {
                       <Text style={[styles.pickerOptionName, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>
                         {t.name}
                       </Text>
-                      <Text style={[styles.pickerOptionYear, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        Published {t.year}
-                      </Text>
+                      
                     </View>
                   </View>
                   {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}

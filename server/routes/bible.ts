@@ -7,6 +7,7 @@ import { Router } from "express";
   } from "../../shared/schema";
   import { eq, and, ilike, sql } from "drizzle-orm";
   import { cachedResponse } from "../middleware/response-cache";
+  import { getTranslationId } from "../services/languageAwareContent";
 
   const router = Router();
 
@@ -84,6 +85,44 @@ router.get("/api/books", cachedResponse(300), async (_req, res) => {
   }
 });
 
+// ─── TRANSLATIONS ──────────────────────────────────────────────────────────
+
+router.get("/api/translations", cachedResponse(600), async (_req, res) => {
+  try {
+    const translations = await db.select().from(bibleTranslations);
+    return res.json(translations);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/api/translation-for-language", async (req, res) => {
+  try {
+    const { lang = "en" } = req.query;
+    const translationAbbr = getTranslationId(String(lang));
+    const record = await db
+      .select()
+      .from(bibleTranslations)
+      .where(eq(bibleTranslations.abbreviation, translationAbbr))
+      .limit(1);
+
+    if (!record.length) {
+      const fallback = await db
+        .select()
+        .from(bibleTranslations)
+        .where(eq(bibleTranslations.abbreviation, "KJV"))
+        .limit(1);
+      return res.json(fallback[0] || { abbreviation: "KJV" });
+    }
+
+    return res.json(record[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── VERSE ──────────────────────────────────────────────────────────────────
 
 router.get("/api/verse", async (req, res) => {
@@ -91,6 +130,11 @@ router.get("/api/verse", async (req, res) => {
     const { book, chapter, verse, translation = "KJV" } = req.query;
     if (!book || !chapter || !verse) {
       return res.status(400).json({ error: "book, chapter, and verse are required" });
+    }
+
+    const chapterNum = Number(chapter);
+    if (isNaN(chapterNum) || chapterNum < 1) {
+      return res.status(400).json({ error: "chapter must be a positive number" });
     }
 
     const translationRecord = await db

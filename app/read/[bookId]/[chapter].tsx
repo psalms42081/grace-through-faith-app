@@ -24,8 +24,19 @@ import useBibleAudio from "@/hooks/useBibleAudio";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 
-const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
-type Translation = (typeof TRANSLATIONS)[number];
+const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB"];
+
+const TRANSLATION_LABELS: Record<string, string> = {
+  KJV: "King James Version",
+  ASV: "American Standard",
+  WEB: "World English Bible",
+  RV1909: "Reina Valera 1909",
+  LSG: "Louis Segond 1910",
+  ARC: "Almeida Revista e Corrigida",
+  TAGV: "Ang Biblia (Tagalog)",
+};
+
+type Translation = string;
 
 interface Verse {
   id: string;
@@ -45,14 +56,21 @@ export default function VerseReaderScreen() {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
-  const resolvedTx = TRANSLATIONS.includes(txParam as Translation) ? (txParam as Translation) : (TRANSLATIONS.includes(globalTranslation as Translation) ? (globalTranslation as Translation) : "KJV");
+  const { data: availableTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string }[]>({
+    queryKey: ["/api/translations"],
+  });
+  const translationList = availableTranslations
+    ? availableTranslations.map((t) => t.abbreviation)
+    : DEFAULT_TRANSLATIONS;
+
+  const resolvedTx = translationList.includes(txParam as string) ? (txParam as string) : (translationList.includes(globalTranslation) ? globalTranslation : "KJV");
   const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
 
   useEffect(() => {
-    if (!txParam && TRANSLATIONS.includes(globalTranslation as Translation) && globalTranslation !== translation) {
-      setTranslationLocal(globalTranslation as Translation);
+    if (!txParam && translationList.includes(globalTranslation) && globalTranslation !== translation) {
+      setTranslationLocal(globalTranslation);
     }
-  }, [globalTranslation]);
+  }, [globalTranslation, translationList]);
 
   const setTranslation = useCallback((t: Translation) => {
     setTranslationLocal(t);
@@ -314,7 +332,7 @@ export default function VerseReaderScreen() {
             >
               {showTranslationPicker && (
                 <View style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
-                  {TRANSLATIONS.map((t) => {
+                  {translationList.map((t) => {
                     const isActiveT = translation === t;
                     return (
                       <Pressable
@@ -335,7 +353,7 @@ export default function VerseReaderScreen() {
                           {t}
                         </Text>
                         <Text style={[styles.translationOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                          {t === "KJV" ? "King James Version" : t === "ASV" ? "American Standard" : "World English Bible"}
+                          {TRANSLATION_LABELS[t] || t}
                         </Text>
                       </Pressable>
                     );

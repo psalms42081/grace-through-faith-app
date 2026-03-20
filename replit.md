@@ -26,7 +26,8 @@ The application features a mobile-first architecture with a frontend built using
 - **Formation System:** Curriculum-based engine for spiritual formation with structured lessons, assessments, and progress tracking, including a Sabbath Mode UI toggle.
 - **Church Connect:** Global SDA church finder.
 - **Spiritual Rings:** Apple Watch-style concentric SVG rings tracking daily spiritual disciplines.
-- **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next` for 6 languages.
+- **Internationalization (i18n):** Comprehensive UI language system using `i18next` and `react-i18next` for 6 languages (en, es, fr, pt, fil, zh).
+- **Multilingual Bible:** 7 Bible translations stored in PostgreSQL covering all 6 app languages: KJV/ASV/WEB (English), RV1909 (Spanish), LSG (French), ARC (Portuguese), TAGV (Filipino). Translation map in `lib/bibleTranslationMap.ts`, language-aware content helpers in `server/services/languageAwareContent.ts`. Download script: `scripts/download-multilingual-translations.ts`, import script: `scripts/import-multilingual-translations.ts`. Reader UI dynamically shows all available translations via `/api/translations`.
 - **Contextual Tutorial System:** Full-screen walkthroughs for major features.
 - **Supporter/Mission System:** Mission-driven donation model.
 - **Live Fellowship:** Community feature for structured group experiences with real-time video/audio.
@@ -66,6 +67,7 @@ The application features a mobile-first architecture with a frontend built using
 - **Wikimedia Commons:** Source for historical images.
 - **HelloAO Bible API:** Provides public domain commentaries.
 - **Adventech/sabbath-school-lessons (GitHub):** Open-source quarterly content for Sabbath School.
+- **getbible.net API:** Source for multilingual Bible translations (RV1909, LSG, ARC, TAGV).
 - **bcryptjs:** Password hashing.
 - **jsonwebtoken:** JWT token generation and verification.
 - **LiveKit Cloud:** Real-time video/audio conferencing.
