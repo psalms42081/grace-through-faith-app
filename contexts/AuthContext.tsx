@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest, setAuthTokenGetter, setDeviceIdGetter, getApiUrl } from "@/lib/query-client";
+import { apiRequest, setAuthTokenGetter, setDeviceIdGetter, setContentLanguageGetter, getApiUrl } from "@/lib/query-client";
+import { resolveContentLang } from "@/lib/content-language";
+import i18n from "@/lib/i18n";
 import { queryClient } from "@/lib/query-client";
 import { fetch } from "expo/fetch";
 
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setAuthTokenGetter(() => tokenRef.current);
     setDeviceIdGetter(() => deviceIdRef.current);
+    setContentLanguageGetter(() => resolveContentLang(i18n.language || "en"));
   }, []);
 
   useEffect(() => {

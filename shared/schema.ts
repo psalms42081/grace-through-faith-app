@@ -30,6 +30,8 @@ export const users = pgTable("users", {
   isPatron: boolean("is_patron").default(false),
   donationAmount: integer("donation_amount").default(0),
   lastMissionInvite: timestamp("last_mission_invite"),
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
+  preferredBibleTranslation: varchar("preferred_bible_translation", { length: 10 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

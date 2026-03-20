@@ -325,7 +325,9 @@ router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
     let scripturalVerse = null;
     let scripturalNote = null;
     try {
-      const encouragement = await generateScripturalEncouragement(title, content || "");
+      const { normalizeLanguageCode } = await import("../services/languageAwareContent");
+      const contentLang = normalizeLanguageCode(req.headers["x-content-language"] as string);
+      const encouragement = await generateScripturalEncouragement(title, content || "", contentLang);
       scripturalVerse = encouragement.verse;
       scripturalNote = encouragement.note;
     } catch {}

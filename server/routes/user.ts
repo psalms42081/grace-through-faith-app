@@ -178,6 +178,49 @@ router.post("/api/user/dismiss-mission-invite", requireAuth, async (req, res) =>
   }
 });
 
+router.get("/api/user/preferences", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({ preferredLanguage: "en", preferredBibleTranslation: null });
+    }
+    const [user] = await db
+      .select({
+        preferredLanguage: users.preferredLanguage,
+        preferredBibleTranslation: users.preferredBibleTranslation,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    return res.json({
+      preferredLanguage: user?.preferredLanguage ?? "en",
+      preferredBibleTranslation: user?.preferredBibleTranslation ?? null,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/api/user/preferences", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const updates: Record<string, any> = {};
+    if (req.body.preferredLanguage !== undefined) {
+      updates.preferredLanguage = String(req.body.preferredLanguage).substring(0, 10);
+    }
+    if (req.body.preferredBibleTranslation !== undefined) {
+      const val = req.body.preferredBibleTranslation;
+      updates.preferredBibleTranslation = val ? String(val).substring(0, 10) : null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid preferences provided" });
+    }
+    await db.update(users).set(updates).where(eq(users.id, userId));
+    return res.json({ success: true, ...updates });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
   router.get("/api/notes/:userId", optionalAuth, async (req, res) => {
   try {

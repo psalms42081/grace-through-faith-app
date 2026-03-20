@@ -54,7 +54,7 @@ function setupCors(app: express.Application) {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS",
       );
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id, X-Content-Language");
       res.header("Access-Control-Allow-Credentials", "true");
     }
 

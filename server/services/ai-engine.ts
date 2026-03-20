@@ -1090,15 +1090,29 @@ export async function generateSceneImage(
 
 export async function generateScripturalEncouragement(
   prayerTitle: string,
-  prayerContent: string
+  prayerContent: string,
+  languageCode: string = "en"
 ): Promise<{ verse: string; note: string }> {
+  const LANGUAGE_NAMES: Record<string, string> = {
+    en: "English", es: "Spanish", fr: "French", pt: "Portuguese", fil: "Filipino", zh: "Chinese",
+  };
+  const TRANSLATION_DEFAULTS: Record<string, string> = {
+    en: "KJV", es: "RV1909", fr: "LSG", pt: "ARC", fil: "TAGV",
+  };
+  const baseLang = languageCode.split("-")[0];
+  const langName = LANGUAGE_NAMES[baseLang] || "English";
+  const translationName = TRANSLATION_DEFAULTS[baseLang] || "KJV";
+  const languageInstruction = baseLang !== "en"
+    ? `Always respond entirely in ${langName}. Use the ${translationName} Bible translation for verse text.`
+    : `Use the KJV Bible translation for verse text.`;
+
   const client = createOpenAIClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `You are a compassionate biblical counselor. Given a prayer request, respond with a single relevant Bible verse (KJV preferred) and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`,
+        content: `You are a compassionate biblical counselor. ${languageInstruction} Given a prayer request, respond with a single relevant Bible verse and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`,
       },
       {
         role: "user",

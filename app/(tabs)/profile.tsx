@@ -20,6 +20,7 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import BibleHeatmap from "@/components/profile/BibleHeatmap";
 import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
 import LanguageSettings from "@/components/profile/LanguageSettings";
@@ -90,11 +91,15 @@ function ProfileScreenInner() {
 
   const handleLanguageChange = useCallback(async (code: string) => {
     await setLanguage(code);
+    await AsyncStorage.removeItem("@grace-through-faith/translation-manual");
+    await AsyncStorage.removeItem("@grace-through-faith/translation");
     setLangPickerOpen(false);
   }, []);
 
   const handleUseDeviceLang = useCallback(async () => {
     await useDeviceLanguage();
+    await AsyncStorage.removeItem("@grace-through-faith/translation-manual");
+    await AsyncStorage.removeItem("@grace-through-faith/translation");
     setLangPickerOpen(false);
   }, []);
 

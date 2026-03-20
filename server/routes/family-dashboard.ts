@@ -418,7 +418,9 @@ router.post("/api/family/prayers", requireAuth, checkProStatus, async (req, res)
     let scripturalVerse: string | null = null;
     let scripturalNote: string | null = null;
     try {
-      const encouragement = await generateScripturalEncouragement(title, content || "");
+      const { normalizeLanguageCode } = await import("../services/languageAwareContent");
+      const contentLang = normalizeLanguageCode(req.headers["x-content-language"] as string);
+      const encouragement = await generateScripturalEncouragement(title, content || "", contentLang);
       scripturalVerse = encouragement.verse;
       scripturalNote = encouragement.note;
     } catch (aiErr) {

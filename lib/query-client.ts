@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 let _authTokenGetter: (() => string | null) | null = null;
 let _deviceIdGetter: (() => string | null) | null = null;
+let _contentLanguageGetter: (() => string | null) | null = null;
 
 export function setAuthTokenGetter(getter: () => string | null) {
   _authTokenGetter = getter;
@@ -12,6 +13,10 @@ export function setAuthTokenGetter(getter: () => string | null) {
 
 export function setDeviceIdGetter(getter: () => string | null) {
   _deviceIdGetter = getter;
+}
+
+export function setContentLanguageGetter(getter: () => string | null) {
+  _contentLanguageGetter = getter;
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -23,6 +28,10 @@ function getAuthHeaders(): Record<string, string> {
   const deviceId = _deviceIdGetter?.();
   if (deviceId) {
     headers["X-Device-Id"] = deviceId;
+  }
+  const lang = _contentLanguageGetter?.();
+  if (lang) {
+    headers["X-Content-Language"] = lang;
   }
   return headers;
 }

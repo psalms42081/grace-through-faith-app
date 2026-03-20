@@ -1,5 +1,7 @@
 import { TRANSLATION_MAP } from "../../lib/bibleTranslationMap";
 
+const SUPPORTED_LANGUAGES = new Set(["en", "es", "fr", "pt", "fil", "zh"]);
+
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
   es: "Spanish",
@@ -8,6 +10,12 @@ const LANGUAGE_NAMES: Record<string, string> = {
   fil: "Filipino",
   zh: "Chinese",
 };
+
+export function normalizeLanguageCode(raw: string | undefined | null): string {
+  if (!raw) return "en";
+  const base = String(raw).split("-")[0].toLowerCase().substring(0, 10);
+  return SUPPORTED_LANGUAGES.has(base) ? base : "en";
+}
 
 export function getTranslationId(languageCode: string): string {
   const base = languageCode.split("-")[0];
