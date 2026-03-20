@@ -2,12 +2,7 @@ import { fetchWithTimeout } from "./services/api-client";
 
 const ELEVENLABS_VOICES = {
   george: "JBFqnCBsd6RMkjVDRZzb",
-  callum: "N2lVS1w4EtoT3dr4eOWO",
-  daniel: "onwK4e9ZLuTAKqWW03F9",
-  brian: "nPczCjzI2devNBz1zQrb",
   sarah: "EXAVITQu4vr4xnSDxMaL",
-  lily: "pFZP5JQG7iQjIQuC4Bku",
-  alice: "Xb7hH8MSUJpSbSDYk0k2",
 } as const;
 
 export type TTSVoice = keyof typeof ELEVENLABS_VOICES;

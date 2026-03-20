@@ -56,52 +56,41 @@ export default function TTSPlayerBar({
     ]}>
       {audio.showVoicePicker && (
         <View style={[styles.voicePopup, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
-          <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-            {(["female", "male"] as const).map((gender) => {
-              const voices = AI_VOICE_OPTIONS.filter((v) => v.gender === gender);
-              if (voices.length === 0) return null;
-              const sectionLabel = gender === "female" ? "Female Voices" : "Male Voices";
-              return (
-                <View key={gender}>
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 4, textTransform: "uppercase" }}>
-                    {sectionLabel}
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 4, textTransform: "uppercase" }}>
+            Narrator
+          </Text>
+          {AI_VOICE_OPTIONS.map((v) => (
+            <Pressable
+              key={v.id}
+              onPress={() => audio.handleVoiceChange(v.id)}
+              style={[
+                styles.voiceOption,
+                audio.selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <Ionicons
+                  name={audio.selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
+                  size={18}
+                  color={audio.selectedVoice === v.id ? theme.accent : theme.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[
+                    styles.voiceOptionLabel,
+                    {
+                      color: audio.selectedVoice === v.id ? theme.accent : theme.text,
+                      fontFamily: audio.selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
+                    },
+                  ]}>
+                    {v.label}
                   </Text>
-                  {voices.map((v) => (
-                    <Pressable
-                      key={v.id}
-                      onPress={() => audio.handleVoiceChange(v.id)}
-                      style={[
-                        styles.voiceOption,
-                        audio.selectedVoice === v.id && { backgroundColor: theme.accent + "15" },
-                      ]}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                        <Ionicons
-                          name={audio.selectedVoice === v.id ? "radio-button-on" : "radio-button-off"}
-                          size={18}
-                          color={audio.selectedVoice === v.id ? theme.accent : theme.textMuted}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text style={[
-                            styles.voiceOptionLabel,
-                            {
-                              color: audio.selectedVoice === v.id ? theme.accent : theme.text,
-                              fontFamily: audio.selectedVoice === v.id ? "Inter_700Bold" : "Inter_500Medium",
-                            },
-                          ]}>
-                            {v.label}
-                          </Text>
-                          <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-                            {v.description}
-                          </Text>
-                        </View>
-                      </View>
-                    </Pressable>
-                  ))}
+                  <Text style={{ color: theme.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                    {v.description}
+                  </Text>
                 </View>
-              );
-            })}
-          </ScrollView>
+              </View>
+            </Pressable>
+          ))}
         </View>
       )}
 
@@ -130,47 +119,33 @@ export default function TTSPlayerBar({
         </View>
       )}
 
-      <View style={[styles.audioStatusBar, { backgroundColor: theme.backgroundCard }]}>
-        <View style={styles.audioStatusLeft}>
-          <Pressable
-            onPress={() => { audio.setShowVoicePicker(!audio.showVoicePicker); audio.setShowSpeedPicker(false); }}
-            style={[styles.voiceChip, { backgroundColor: theme.accent + "15" }]}
-            testID="voice-button"
-          >
-            <Ionicons name="mic-outline" size={13} color={theme.accent} />
-            <Text style={[styles.voiceChipText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {audio.currentVoiceLabel}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => { audio.setShowSpeedPicker(!audio.showSpeedPicker); audio.setShowVoicePicker(false); }}
-            style={[styles.speedChip, { backgroundColor: theme.accent + "15" }]}
-            testID="speed-button"
-          >
-            <Text style={[styles.speedChipText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {audio.speechRate}x
-            </Text>
-          </Pressable>
+      {audio.isActive && (
+        <View style={[styles.audioStatusBar, { backgroundColor: theme.backgroundCard }]}>
+          {audio.isLoadingAudio ? (
+            <ActivityIndicator size="small" color={theme.accent} />
+          ) : (
+            <Ionicons name="volume-high" size={14} color={theme.accent} />
+          )}
+          <Text style={[styles.audioStatusText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            {audio.isLoadingAudio
+              ? "Loading..."
+              : audio.isPaused
+                ? "Paused"
+                : `Verse ${verses[audio.speakingVerseIndex]?.verse ?? ""}`}
+          </Text>
         </View>
-        {audio.isActive && (
-          <View style={styles.audioStatusRight}>
-            {audio.isLoadingAudio ? (
-              <ActivityIndicator size="small" color={theme.accent} />
-            ) : (
-              <Ionicons name="volume-high" size={14} color={theme.accent} />
-            )}
-            <Text style={[styles.audioStatusText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-              {audio.isLoadingAudio
-                ? "Loading..."
-                : audio.isPaused
-                  ? "Paused"
-                  : `Verse ${verses[audio.speakingVerseIndex]?.verse ?? ""}`}
-            </Text>
-          </View>
-        )}
-      </View>
+      )}
 
       <View style={styles.navRow}>
+        <Pressable
+          onPress={() => { audio.setShowVoicePicker(!audio.showVoicePicker); audio.setShowSpeedPicker(false); }}
+          hitSlop={8}
+          testID="voice-button"
+          style={[styles.iconBtn, { backgroundColor: theme.accent + "15" }]}
+        >
+          <Ionicons name="mic-outline" size={18} color={theme.accent} />
+        </Pressable>
+
         <Pressable
           onPress={audio.isSpeaking ? audio.handlePause : audio.handlePlay}
           hitSlop={8}
@@ -213,6 +188,17 @@ export default function TTSPlayerBar({
             <Ionicons name="chevron-forward" size={20} color={theme.text} />
           </Pressable>
         </View>
+
+        <Pressable
+          onPress={() => { audio.setShowSpeedPicker(!audio.showSpeedPicker); audio.setShowVoicePicker(false); }}
+          hitSlop={8}
+          testID="speed-button"
+          style={[styles.speedChip, { backgroundColor: theme.accent + "15" }]}
+        >
+          <Text style={[styles.speedChipText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            {audio.speechRate}x
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -230,34 +216,11 @@ const styles = StyleSheet.create({
   audioStatusBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginBottom: 8,
-  },
-  audioStatusLeft: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  voiceChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  voiceChipText: { fontSize: 12 },
-  speedChip: {
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  speedChipText: { fontSize: 12 },
-  audioStatusRight: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 6,
   },
   audioStatusText: { fontSize: 12 },
@@ -265,6 +228,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
+    gap: 8,
+  },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
   playBtn: {
     width: 42,
@@ -279,14 +250,13 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
   },
   navCenter: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 20,
+    gap: 16,
   },
   navArrow: {
     width: 36,
@@ -296,8 +266,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   navChapterLabel: {
-    fontSize: 15,
+    fontSize: 14,
   },
+  speedChip: {
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  speedChipText: { fontSize: 12 },
   voicePopup: {
     borderRadius: 14,
     marginBottom: 8,

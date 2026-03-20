@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   lastMissionInvite: timestamp("last_mission_invite"),
   preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
   preferredBibleTranslation: varchar("preferred_bible_translation", { length: 10 }),
+  preferredNarrator: varchar("preferred_narrator", { length: 10 }).default("george"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

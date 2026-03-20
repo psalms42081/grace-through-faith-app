@@ -50,25 +50,15 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const KIDS_VOICE_KEY = "@grace-kids/narrator-voice";
 
-type NarratorVoice = "george" | "daniel" | "brian" | "callum" | "sarah" | "lily" | "alice";
+type NarratorVoice = "george" | "sarah";
 const NARRATOR_VOICES: { id: NarratorVoice; label: string; desc: string; gender: "male" | "female" }[] = [
   { id: "george", label: "George", desc: "Warm storyteller", gender: "male" },
-  { id: "daniel", label: "Daniel", desc: "Steady broadcaster", gender: "male" },
-  { id: "brian", label: "Brian", desc: "Deep & comforting", gender: "male" },
-  { id: "callum", label: "Callum", desc: "Husky & fun", gender: "male" },
   { id: "sarah", label: "Sarah", desc: "Reassuring & confident", gender: "female" },
-  { id: "lily", label: "Lily", desc: "Velvety actress", gender: "female" },
-  { id: "alice", label: "Alice", desc: "Clear educator", gender: "female" },
 ];
 
 const VOICE_PITCH_MAP: Record<NarratorVoice, { pitch: number; rate: number; gender: "male" | "female" }> = {
   george: { pitch: 0.9, rate: 0, gender: "male" },
-  daniel: { pitch: 1.0, rate: 0, gender: "male" },
-  brian: { pitch: 0.75, rate: 0, gender: "male" },
-  callum: { pitch: 0.85, rate: 0.05, gender: "male" },
   sarah: { pitch: 1.1, rate: 0, gender: "female" },
-  lily: { pitch: 1.0, rate: -0.05, gender: "female" },
-  alice: { pitch: 1.15, rate: 0.05, gender: "female" },
 };
 
 let cachedDeviceVoices: { male: Speech.Voice | null; female: Speech.Voice | null } | null = null;

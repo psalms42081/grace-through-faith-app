@@ -5,7 +5,7 @@ import type { AudioPlayer } from "expo-audio";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
-import { getApiUrl } from "@/lib/query-client";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAudioContext } from "@/contexts/AudioContext";
 
 const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
@@ -13,12 +13,7 @@ const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
 const AI_VOICE_OPTIONS = [
   { id: "george", label: "George", description: "Warm, captivating British storyteller", gender: "male" },
-  { id: "daniel", label: "Daniel", description: "Steady, authoritative British broadcaster", gender: "male" },
-  { id: "brian", label: "Brian", description: "Deep, resonant, comforting", gender: "male" },
-  { id: "callum", label: "Callum", description: "Husky, American", gender: "male" },
   { id: "sarah", label: "Sarah", description: "Mature, reassuring, confident", gender: "female" },
-  { id: "lily", label: "Lily", description: "Velvety, British actress", gender: "female" },
-  { id: "alice", label: "Alice", description: "Clear, engaging British educator", gender: "female" },
 ] as const;
 
 export type AIVoiceId = (typeof AI_VOICE_OPTIONS)[number]["id"];
@@ -512,6 +507,7 @@ export default function useBibleAudio(
     selectedVoiceRef.current = voiceId;
     setSelectedVoice(voiceId);
     AsyncStorage.setItem(VOICE_STORAGE_KEY, voiceId).catch(() => {});
+    apiRequest("PUT", "/api/user/preferences", { preferredNarrator: voiceId }).catch(() => {});
     if (isSpeaking && currentIndexRef.current >= 0) {
       Speech.stop();
       cleanupPlayer();
