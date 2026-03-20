@@ -293,14 +293,22 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
   return (
     <Animated.View
       style={[
-        StyleSheet.absoluteFill,
         overlayStyle,
-        { backgroundColor: bg, zIndex: 9999 },
+        {
+          position: "absolute",
+          top: Platform.OS === "web" ? -67 : 0,
+          left: 0,
+          right: 0,
+          bottom: Platform.OS === "web" ? -100 : 0,
+          backgroundColor: bg,
+          zIndex: 9999,
+          elevation: 9999,
+        },
       ]}
     >
       <Pressable
         onPress={handleDismiss}
-        style={[styles.touchArea, { paddingTop: topPad, paddingBottom: bottomPad }]}
+        style={[styles.touchArea, { paddingTop: topPad + (Platform.OS === "web" ? 67 : 0), paddingBottom: bottomPad + (Platform.OS === "web" ? 100 : 0) }]}
         testID="sabbath-overlay"
       >
         <Animated.View style={[styles.content, contentStyle]}>
