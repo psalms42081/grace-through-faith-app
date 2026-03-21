@@ -1,0 +1,125 @@
+I need to implement Organization/Church Accounts for Grace by Faith. This is a significant feature so please implement it carefully and completely, following each requirement exactly as written.
+Database Schema — add these tables via Drizzle migration:
+
+organizations table:
+
+
+id — uuid, primary key
+name — text, not null
+type — varchar, enum: 'church' or 'conference'
+parentId — uuid, nullable, foreign key to organizations.id (for conference → church hierarchy)
+joinCode — varchar(8), unique, not null (auto-generated, uppercase alphanumeric)
+ownerId — uuid, foreign key to users.id
+memberCount — integer, default 0
+tier — varchar, enum: 'free' or 'paid', default 'free'
+maxMembers — integer, default 50
+createdAt — timestamp, default now
+updatedAt — timestamp, default now
+
+
+organization_members table:
+
+
+id — uuid, primary key
+organizationId — uuid, foreign key to organizations.id
+userId — uuid, foreign key to users.id
+role — varchar, enum: 'pastor', 'elder', 'member'
+joinedAt — timestamp, default now
+Unique constraint on (organizationId, userId)
+
+
+Add to existing users table:
+
+
+organizationId — uuid, nullable, foreign key to organizations.id
+organizationType — varchar, nullable, enum: 'church' or 'conference'
+
+Backend API endpoints — add these to the Express backend:
+All endpoints require authentication via existing auth middleware.
+
+POST /api/organizations — Create a new organization
+
+
+Body: { name, type } where type is 'church' or 'conference'
+Auto-generate a unique 8-character uppercase alphanumeric joinCode
+Set the creating user as owner with role 'pastor'
+Add the owner to organization_members automatically
+Return the created organization including joinCode
+
+
+POST /api/organizations/join — Join an organization via join code
+
+
+Body: { joinCode }
+Validate the join code exists
+Check if organization is at member limit (maxMembers)
+If free tier and memberCount >= 50, return error: "This organization has reached its free tier limit of 50 members"
+Add user to organization_members with role 'member'
+Increment memberCount on the organization
+Update user's organizationId
+Return success with organization details
+
+
+GET /api/organizations/:id — Get organization details
+
+
+Return organization info including member count, tier, joinCode (only if requester is pastor or elder)
+Include list of members with their roles
+
+
+PUT /api/organizations/:id/members/:userId/role — Update a member's role
+
+
+Only pastors can change roles
+Can promote members to elder, or demote elders to member
+Cannot change the pastor's own role
+
+
+DELETE /api/organizations/:id/members/:userId — Remove a member
+
+
+Only pastors and elders can remove members
+Cannot remove the pastor (owner)
+
+
+GET /api/organizations/:id/members — List all members
+
+
+Only accessible to members of the organization
+Return userId, name, role, joinedAt for each member
+
+
+POST /api/organizations/:id/churches — Add a church under a conference
+
+
+Only valid if the parent organization type is 'conference'
+Creates a new church organization with parentId set to the conference id
+
+
+GET /api/organizations/:id/churches — List churches under a conference
+
+
+Only valid for conference type organizations
+
+Signup flow — update the existing signup/onboarding:
+When a new user signs up, after account creation show an onboarding step that asks:
+
+"Are you joining as an individual or as part of a church?"
+Option 1: Individual — proceed as normal, no org required
+Option 2: Join a church — show a join code input field
+Option 3: Register my church — show a church name field and create a new organization with them as pastor
+Option 4: Register a conference — show a conference name field and create a conference organization
+
+This step should be skippable. Store the selection in the user's profile.
+Join Code display — add to existing Profile/Settings screen:
+If the user is a pastor or elder, show their organization's join code prominently in their profile settings under a new "My Church" section. Include a copy button so they can share it easily.
+Security requirements:
+
+Join codes must be unique across all organizations
+Users can only belong to one organization at a time
+All org endpoints must verify the requesting user is a member of that organization before returning data
+Pastors cannot be removed from their own organization
+Only pastors can promote/demote roles
+
+Do not build a billing/payment UI yet — just ensure the tier and maxMembers fields exist in the schema and the member limit check works in the join endpoint. Billing UI will be added separately.
+Please implement all of this completely. Run the Drizzle migration, implement all 8 API endpoints, update the signup flow, and add the join code to the profile settings. Run the existing test suite after implementation and confirm all tests pass.
