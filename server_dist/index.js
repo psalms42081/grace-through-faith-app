@@ -158,8 +158,8 @@ var init_schema = __esm({
     });
     organizationMembers = pgTable("organization_members", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      organizationId: varchar("organization_id").notNull(),
-      userId: varchar("user_id").notNull(),
+      organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+      userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
       role: varchar("role", { length: 12 }).notNull().default("member"),
       joinedAt: timestamp("joined_at").defaultNow().notNull()
     }, (table) => ({
@@ -203,8 +203,8 @@ var init_schema = __esm({
       "prayer_group_member",
       {
         id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-        groupId: varchar("group_id").notNull(),
-        userId: varchar("user_id").notNull(),
+        groupId: varchar("group_id").notNull().references(() => prayerGroups.id, { onDelete: "cascade" }),
+        userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
         displayName: text("display_name"),
         role: varchar("role", { length: 20 }).default("member").notNull(),
         joinedAt: timestamp("joined_at").defaultNow().notNull()
@@ -480,8 +480,8 @@ var init_schema = __esm({
       "user_plan_enrollment",
       {
         id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-        userId: varchar("user_id").notNull().references(() => users.id),
-        planId: varchar("plan_id").notNull().references(() => devotionalPlans.id),
+        userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        planId: varchar("plan_id").notNull().references(() => devotionalPlans.id, { onDelete: "cascade" }),
         enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
         startedAt: timestamp("started_at"),
         isActive: boolean("is_active").default(true)
@@ -538,7 +538,8 @@ var init_schema = __esm({
           table.userId,
           table.verseId,
           table.color
-        )
+        ),
+        userIdx: index("user_highlight_user_idx").on(table.userId)
       })
     );
     userBookmarks = pgTable(
@@ -554,7 +555,8 @@ var init_schema = __esm({
         userVerseUnique: uniqueIndex("user_bookmark_unique").on(
           table.userId,
           table.verseId
-        )
+        ),
+        userIdx: index("user_bookmark_user_idx").on(table.userId)
       })
     );
     kidsCollections = pgTable("kids_collection", {
@@ -807,7 +809,8 @@ var init_schema = __esm({
       },
       (table) => ({
         userIdx: index("reading_history_user_idx").on(table.userId),
-        readAtIdx: index("reading_history_read_at_idx").on(table.readAt)
+        readAtIdx: index("reading_history_read_at_idx").on(table.readAt),
+        userReadAtIdx: index("reading_history_user_read_at_idx").on(table.userId, table.readAt)
       })
     );
     readingStreaks = pgTable("reading_streak", {
@@ -1191,10 +1194,13 @@ var init_schema = __esm({
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       queryText: text("query_text").notNull(),
       queryHash: varchar("query_hash", { length: 64 }).notNull().unique(),
+      userId: varchar("user_id"),
       results: jsonb("results").notNull(),
       createdAt: timestamp("created_at").defaultNow().notNull(),
       expiresAt: timestamp("expires_at").notNull()
-    });
+    }, (table) => ({
+      userIdx: index("search_cache_user_idx").on(table.userId)
+    }));
     gcExplorationCache = pgTable("gc_exploration_cache", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       nodeId: varchar("node_id", { length: 64 }).notNull().unique(),
@@ -4211,15 +4217,22 @@ __export(seed_books_exports, {
   seedBibleBooks: () => seedBibleBooks
 });
 async function seedBibleBooks(database) {
+  const translations = [
+    { id: "KJV", name: "King James Version", abbreviation: "KJV", language: "en" },
+    { id: "ASV", name: "American Standard Version", abbreviation: "ASV", language: "en" },
+    { id: "WEB", name: "World English Bible", abbreviation: "WEB", language: "en" },
+    { id: "BBE", name: "Bible in Basic English", abbreviation: "BBE", language: "en" },
+    { id: "YLT", name: "Young's Literal Translation", abbreviation: "YLT", language: "en" },
+    { id: "RV1909", name: "Reina Valera 1909", abbreviation: "RV1909", language: "es" },
+    { id: "LSG", name: "Louis Segond 1910", abbreviation: "LSG", language: "fr" },
+    { id: "ARC", name: "Almeida Revista e Corrigida", abbreviation: "ARC", language: "pt" },
+    { id: "TAGV", name: "Ang Biblia (Tagalog)", abbreviation: "TAGV", language: "tl" }
+  ];
+  for (const t of translations) {
+    await database.insert(bibleTranslations).values(t).onConflictDoNothing();
+  }
   const existing = await database.select().from(bibleBooks).limit(1);
   if (existing.length > 0) return;
-  console.log("Seeding KJV translation...");
-  await database.insert(bibleTranslations).values({
-    id: "KJV",
-    name: "King James Version",
-    abbreviation: "KJV",
-    language: "en"
-  }).onConflictDoNothing();
   console.log("Seeding 66 Bible books...");
   for (const book of BOOKS) {
     await database.insert(bibleBooks).values(book).onConflictDoNothing();
@@ -32489,6 +32502,7 @@ function logSecurityPosture() {
 
 // server/index.ts
 import express from "express";
+import helmet from "helmet";
 
 // server/routes.ts
 init_db();
@@ -35238,6 +35252,7 @@ router11.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
       await db.insert(searchCache).values({
         queryText: trimmedQuery,
         queryHash,
+        userId: userId !== "guest" ? userId : null,
         results: verses,
         expiresAt
       }).onConflictDoNothing();
@@ -35314,10 +35329,14 @@ router11.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
 });
 router11.get("/api/search/recent", async (req, res) => {
   try {
+    const userId = extractUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
     const recent = await db.select({
       queryText: searchCache.queryText,
       createdAt: searchCache.createdAt
-    }).from(searchCache).orderBy(desc4(searchCache.createdAt)).limit(10);
+    }).from(searchCache).where(eq12(searchCache.userId, userId)).orderBy(desc4(searchCache.createdAt)).limit(10);
     return res.json(recent);
   } catch (err) {
     console.error("Recent searches error:", err);
@@ -36952,7 +36971,8 @@ router15.post("/api/groups/create", requireAuth, async (req, res) => {
       joinCode,
       createdBy: userId,
       groupType: groupType || "prayer",
-      isPublic: isPublic === true
+      isPublic: isPublic === true,
+      memberCount: 1
     }).returning();
     await db.insert(prayerGroupMembers).values({
       groupId: group.id,
@@ -36960,7 +36980,7 @@ router15.post("/api/groups/create", requireAuth, async (req, res) => {
       displayName: user?.displayName || user?.username || "Member",
       role: "leader"
     });
-    return res.json({ group });
+    return res.json({ group: { ...group, memberCount: 1 } });
   } catch (err) {
     console.error("Group create error:", err);
     return res.status(500).json({ error: "Failed to create group" });
@@ -37031,7 +37051,24 @@ router15.get("/api/groups/:id", async (req, res) => {
     const { id: id2 } = req.params;
     const [group] = await db.select().from(prayerGroups).where(eq15(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
-    const members = await db.select().from(prayerGroupMembers).where(eq15(prayerGroupMembers.groupId, id2));
+    let members = await db.select().from(prayerGroupMembers).where(eq15(prayerGroupMembers.groupId, id2));
+    if (group.createdBy && !members.some((m) => m.userId === group.createdBy)) {
+      try {
+        const [creator] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq15(users.id, group.createdBy));
+        await db.insert(prayerGroupMembers).values({
+          groupId: group.id,
+          userId: group.createdBy,
+          displayName: creator?.displayName || creator?.username || "Leader",
+          role: "leader"
+        });
+        members = await db.select().from(prayerGroupMembers).where(eq15(prayerGroupMembers.groupId, id2));
+        await db.update(prayerGroups).set({ memberCount: members.length }).where(eq15(prayerGroups.id, id2));
+      } catch (repairErr) {
+        if (!repairErr?.message?.includes("duplicate")) {
+          console.error("Group membership repair error:", repairErr);
+        }
+      }
+    }
     let trackProgress = null;
     if (group.assignedTrackId) {
       const [track] = await db.select().from(formationTracks).where(eq15(formationTracks.id, group.assignedTrackId));
@@ -37051,7 +37088,7 @@ router15.get("/api/groups/:id", async (req, res) => {
         };
       }
     }
-    return res.json({ group, members, trackProgress });
+    return res.json({ group: { ...group, memberCount: members.length }, members, trackProgress });
   } catch (err) {
     console.error("Group detail error:", err);
     return res.status(500).json({ error: "Failed to get group details" });
@@ -37069,6 +37106,29 @@ router15.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Group leave error:", err);
     return res.status(500).json({ error: "Failed to leave group" });
+  }
+});
+router15.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const { id: id2 } = req.params;
+    const { targetUserId } = req.body;
+    if (!targetUserId) return res.status(400).json({ error: "Target user ID is required" });
+    if (targetUserId === userId) return res.status(400).json({ error: "Cannot remove yourself. Use leave instead." });
+    const [requester] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
+    if (!requester || requester.role !== "leader") {
+      return res.status(403).json({ error: "Only leaders can remove members" });
+    }
+    const deleted = await db.delete(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, targetUserId))).returning({ id: prayerGroupMembers.id });
+    if (deleted.length > 0) {
+      await db.update(prayerGroups).set({
+        memberCount: sql11`GREATEST(${prayerGroups.memberCount} - 1, 0)`
+      }).where(eq15(prayerGroups.id, id2));
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Remove member error:", err);
+    return res.status(500).json({ error: "Failed to remove member" });
   }
 });
 router15.get("/api/groups/:id/prayers", async (req, res) => {
@@ -37485,7 +37545,7 @@ router15.get("/api/streams/:id/token", async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
-    const userId = getAuthUserId(req);
+    const userId = extractUserId(req);
     const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
@@ -37505,19 +37565,24 @@ router15.get("/api/streams/:id/room", async (req, res) => {
   try {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
-    const userId = getAuthUserId(req);
+    const userId = extractUserId(req);
     const [session] = await db.select().from(liveSessions).where(eq15(liveSessions.id, id2));
     if (!session) return res.status(404).send("Session not found");
     if (session.status === "ended") return res.status(410).send("Session has ended");
     const isHost = !!userId && userId === session.hostUserId;
+    let canShare = isHost;
+    if (!canShare && userId && session.groupId) {
+      const [mem] = await db.select({ role: prayerGroupMembers.role }).from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, session.groupId), eq15(prayerGroupMembers.userId, userId)));
+      if (mem && (mem.role === "leader" || mem.role === "moderator")) canShare = true;
+    }
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
-    const htmlPath = path.join(__dirname, "..", "templates", "livekit-room.html");
     const fs2 = await import("fs");
+    const htmlPath = path.join(process.cwd(), "server", "templates", "livekit-room.html");
     let html = fs2.readFileSync(htmlPath, "utf-8");
     html = html.replace(
       "<!--SERVER_INJECTED_CONFIG-->",
-      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName })};</script>`
+      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName, isHost, canShare })};</script>`
     );
     res.setHeader("Content-Type", "text/html");
     return res.send(html);
@@ -37526,8 +37591,15 @@ router15.get("/api/streams/:id/room", async (req, res) => {
     return res.status(500).send("Error loading room");
   }
 });
-router15.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
+router15.get("/api/streams/active", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1e3);
+    await db.update(liveSessions).set({
+      status: "ended",
+      endedAt: /* @__PURE__ */ new Date()
+    }).where(and11(eq15(liveSessions.status, "live"), sql11`${liveSessions.startedAt} < ${sixHoursAgo}`));
     const sessions = await db.select().from(liveSessions).where(eq15(liveSessions.status, "live")).orderBy(desc7(liveSessions.startedAt));
     const enriched = [];
     for (const session of sessions) {
@@ -40297,8 +40369,8 @@ router23.post("/api/organizations", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { name, type } = req.body;
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Organization name is required" });
+    if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
+      return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
     }
     if (type !== "church" && type !== "conference") {
       return res.status(400).json({ error: "Type must be 'church' or 'conference'" });
@@ -40320,7 +40392,12 @@ router23.post("/api/organizations", requireAuth, async (req, res) => {
       userId,
       role: "pastor"
     });
-    await db.update(users).set({ organizationId: org.id, organizationType: type }).where(eq26(users.id, userId));
+    const updateFields = { organizationId: org.id, organizationType: type };
+    const [currentUser] = await db.select({ role: users.role }).from(users).where(eq26(users.id, userId)).limit(1);
+    if (currentUser?.role === "church_leader_pending") {
+      updateFields.role = "church_leader";
+    }
+    await db.update(users).set(updateFields).where(eq26(users.id, userId));
     return res.json(org);
   } catch (err) {
     console.error("Create org error:", err);
@@ -40366,6 +40443,8 @@ router23.post("/api/organizations/join", requireAuth, async (req, res) => {
   }
 });
 router23.get("/api/organizations/my-org", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId;
     const [membership] = await db.select({
@@ -40501,8 +40580,8 @@ router23.post("/api/organizations/:id/churches", requireAuth, async (req, res) =
     const userId = req.authUserId;
     const conferenceId = req.params.id;
     const { name } = req.body;
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Church name is required" });
+    if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
+      return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
     }
     const [conference] = await db.select().from(organizations).where(eq26(organizations.id, conferenceId)).limit(1);
     if (!conference) {
@@ -40531,6 +40610,8 @@ router23.post("/api/organizations/:id/churches", requireAuth, async (req, res) =
   }
 });
 router23.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId;
     const conferenceId = req.params.id;
@@ -40961,6 +41042,7 @@ function setupErrorHandler(app2) {
 }
 (async () => {
   logSecurityPosture();
+  app.use(helmet());
   setupCacheControl(app);
   setupCors(app);
   setupBodyParsing(app);
