@@ -98,7 +98,20 @@ export default function useBibleAudio(
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      sessionRef.current += 1;
+      if (playbackTimeoutRef.current) {
+        clearTimeout(playbackTimeoutRef.current);
+        playbackTimeoutRef.current = null;
+      }
+      if (playerRef.current) {
+        try { playerRef.current.stopAsync(); } catch {}
+        try { playerRef.current.unloadAsync(); } catch {}
+        playerRef.current = null;
+      }
+      Speech.stop();
+    };
   }, []);
 
   useEffect(() => {
@@ -288,8 +301,6 @@ export default function useBibleAudio(
       const apiUrl = getApiUrl();
       const prepareUrl = new URL("/api/tts/prepare", apiUrl);
 
-      console.log("[TTS speakVerseAI] Calling prepare:", prepareUrl.href, "voice:", selectedVoiceRef.current, "text length:", textToSpeak.length);
-
       let prepareRes: Response | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         if (session !== sessionRef.current) return;
@@ -300,39 +311,32 @@ export default function useBibleAudio(
             body: JSON.stringify({ text: textToSpeak, voice: selectedVoiceRef.current }),
           });
           if (prepareRes.ok) break;
-          console.log(`[TTS speakVerseAI] Prepare attempt ${attempt + 1} failed: ${prepareRes.status}`);
           prepareRes = null;
           if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
         } catch (fetchErr: any) {
-          console.log(`[TTS speakVerseAI] Prepare attempt ${attempt + 1} error:`, fetchErr.message);
           if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
         }
       }
 
       if (!prepareRes || !prepareRes.ok) {
         const errBody = prepareRes ? await prepareRes.text().catch(() => "") : "no response";
-        console.log("[TTS speakVerseAI] Prepare failed after retries:", prepareRes?.status, errBody);
         throw new Error(`TTS prepare failed: ${prepareRes?.status || "network"}`);
       }
 
       const { audioId } = await prepareRes.json();
-      console.log("[TTS speakVerseAI] Prepare succeeded, audioId:", audioId);
 
       if (session !== sessionRef.current) {
-        console.log("[TTS speakVerseAI] Session invalidated after prepare, aborting. session:", session, "current:", sessionRef.current);
         return;
       }
 
       await cleanupPlayer();
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
-      console.log("[TTS speakVerseAI] Loading audio from:", audioUri);
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioUri },
         { shouldPlay: false, rate: speechRateRef.current, shouldCorrectPitch: true, progressUpdateIntervalMillis: 300 },
       );
-      console.log("[TTS speakVerseAI] Sound loaded successfully");
 
       playerRef.current = sound;
       batchInfoRef.current = { startIndex: index, endIndex: batchEnd, charOffsets };
@@ -379,17 +383,13 @@ export default function useBibleAudio(
 
         const timeout = setTimeout(() => {
           if (!resolved) {
-            console.log("[TTS speakVerseAI] Audio playback timed out after 60s");
             resolved = true;
             resolve(false);
           }
         }, 60000);
         playbackTimeoutRef.current = timeout;
 
-        sound.playAsync().then(() => {
-          console.log("[TTS speakVerseAI] playAsync() started");
-        }).catch((e: any) => {
-          console.log("[TTS speakVerseAI] playAsync() error:", e.message);
+        sound.playAsync().then(() => {}).catch((e: any) => {
           if (!resolved) { resolved = true; resolve(false); }
         });
       });
@@ -407,7 +407,6 @@ export default function useBibleAudio(
       }
     } catch (err: any) {
       const reason = err?.message || String(err);
-      console.log("[TTS speakVerseAI] Error, falling back:", reason);
       if (session !== sessionRef.current) return;
       setUsingFallback(true);
       setFallbackReason(reason);
@@ -418,9 +417,7 @@ export default function useBibleAudio(
 
   const handlePlay = useCallback(() => {
     const vrs = versesRef.current;
-    console.log("[TTS handlePlay] verses count:", vrs.length, "isPaused:", isPaused, "currentIndex:", currentIndexRef.current);
     if (!vrs.length) {
-      console.log("[TTS handlePlay] No verses, returning early");
       return;
     }
 
@@ -432,7 +429,6 @@ export default function useBibleAudio(
     });
 
     if (isPaused && currentIndexRef.current >= 0) {
-      console.log("[TTS handlePlay] Resuming from pause at index:", currentIndexRef.current);
       setIsPaused(false);
       setIsSpeaking(true);
       if (usingFallback) {
@@ -440,7 +436,6 @@ export default function useBibleAudio(
       } else if (playerRef.current) {
         try {
           playerRef.current.playAsync();
-          console.log("[TTS handlePlay] Resumed existing player");
         } catch {
           speakVerseAI(currentIndexRef.current, sessionRef.current);
         }
@@ -453,7 +448,6 @@ export default function useBibleAudio(
     Speech.stop();
     cleanupPlayer();
     const session = ++sessionRef.current;
-    console.log("[TTS handlePlay] Starting new session:", session);
     setIsSpeaking(true);
     setIsPaused(false);
     setUsingFallback(false);

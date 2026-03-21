@@ -101,7 +101,6 @@ export function useShareInsight() {
             dialogTitle: "Share Insight",
           });
         } catch (e) {
-          console.log("Share cancelled or error:", e);
         } finally {
           setShareData(null);
           setIsSharing(false);

@@ -1980,8 +1980,6 @@ export default function SceneStoryScreen() {
     try {
       const apiBase = getApiUrl();
       const prepareUrl = new URL("/api/tts/prepare", apiBase).toString();
-      console.log("[Kids TTS] Calling prepare:", prepareUrl, "voice:", narratorVoice, "text length:", scene.narration.length);
-
       let prepareRes: Response | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         if (abortCtrl.signal.aborted) return;
@@ -1993,12 +1991,10 @@ export default function SceneStoryScreen() {
             signal: abortCtrl.signal,
           });
           if (prepareRes.ok) break;
-          console.log(`[Kids TTS] Prepare attempt ${attempt + 1} failed: ${prepareRes.status}`);
           prepareRes = null;
           if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
         } catch (fetchErr: any) {
           if (abortCtrl.signal.aborted) return;
-          console.log(`[Kids TTS] Prepare attempt ${attempt + 1} fetch error:`, fetchErr.message);
           if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
         }
       }
@@ -2009,20 +2005,15 @@ export default function SceneStoryScreen() {
       }
 
       const { audioId } = await prepareRes.json();
-      console.log("[Kids TTS] Prepare succeeded, audioId:", audioId);
       if (abortCtrl.signal.aborted) return;
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiBase).href;
-      console.log("[Kids TTS] Playing from:", audioUri);
 
-      console.log("[Kids TTS] Setting audio mode...");
-      await setIsAudioActiveAsync(true).catch((e: any) => console.log("[Kids TTS] setIsAudioActiveAsync error:", e.message));
-      await setAudioModeAsync({ playsInSilentMode: true }).catch((e: any) => console.log("[Kids TTS] setAudioModeAsync error:", e.message));
+      await setIsAudioActiveAsync(true).catch(() => {});
+      await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
 
-      console.log("[Kids TTS] Creating audio player...");
       const player = createAudioPlayer(audioUri);
       narrationPlayerRef.current = player;
-      console.log("[Kids TTS] Player created, setting up listener...");
 
       let wordTimerStarted = false;
       const startWordTimer = (durationMs?: number) => {
@@ -2054,7 +2045,6 @@ export default function SceneStoryScreen() {
           startWordTimer(status.duration * 1000);
         }
         if (status.didJustFinish) {
-          console.log("[Kids TTS] Audio finished playing");
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
           statusSub?.remove();
           if (narrationPlayerRef.current === player) {
@@ -2073,12 +2063,9 @@ export default function SceneStoryScreen() {
         }
       }, 600);
 
-      console.log("[Kids TTS] Calling player.play()...");
       player.play();
-      console.log("[Kids TTS] player.play() called successfully");
     } catch (err: any) {
       if (abortCtrl.signal.aborted) return;
-      console.log("[Kids TTS] ElevenLabs failed, falling back to device voice:", err.message);
       const fallbackTotalMs = (isLittleLambs ? 480 : 400) * words.length;
       const fbMinChars = 2;
       const fbWeights = words.map(w => Math.max(w.replace(/[^a-zA-Z']/g, "").length, fbMinChars));

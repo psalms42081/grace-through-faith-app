@@ -61,8 +61,12 @@ export const organizationMembers = pgTable("organization_members", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
-  userId: varchar("user_id").notNull(),
+  organizationId: varchar("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 12 }).notNull().default("member"),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 }, (table) => ({
@@ -129,8 +133,12 @@ export const prayerGroupMembers = pgTable(
     id: varchar("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    groupId: varchar("group_id").notNull(),
-    userId: varchar("user_id").notNull(),
+    groupId: varchar("group_id")
+      .notNull()
+      .references(() => prayerGroups.id, { onDelete: "cascade" }),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     displayName: text("display_name"),
     role: varchar("role", { length: 20 }).default("member").notNull(),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
@@ -534,10 +542,10 @@ export const userPlanEnrollments = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     planId: varchar("plan_id")
       .notNull()
-      .references(() => devotionalPlans.id),
+      .references(() => devotionalPlans.id, { onDelete: "cascade" }),
     enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
     startedAt: timestamp("started_at"),
     isActive: boolean("is_active").default(true),
@@ -618,6 +626,7 @@ export const userHighlights = pgTable(
       table.verseId,
       table.color
     ),
+    userIdx: index("user_highlight_user_idx").on(table.userId),
   })
 );
 
@@ -641,6 +650,7 @@ export const userBookmarks = pgTable(
       table.userId,
       table.verseId
     ),
+    userIdx: index("user_bookmark_user_idx").on(table.userId),
   })
 );
 
@@ -1003,6 +1013,7 @@ export const readingHistory = pgTable(
   (table) => ({
     userIdx: index("reading_history_user_idx").on(table.userId),
     readAtIdx: index("reading_history_read_at_idx").on(table.readAt),
+    userReadAtIdx: index("reading_history_user_read_at_idx").on(table.userId, table.readAt),
   })
 );
 
@@ -1545,10 +1556,13 @@ export const searchCache = pgTable("search_cache", {
     .default(sql`gen_random_uuid()`),
   queryText: text("query_text").notNull(),
   queryHash: varchar("query_hash", { length: 64 }).notNull().unique(),
+  userId: varchar("user_id"),
   results: jsonb("results").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
-});
+}, (table) => ({
+  userIdx: index("search_cache_user_idx").on(table.userId),
+}));
 
 export type SearchCache = typeof searchCache.$inferSelect;
 

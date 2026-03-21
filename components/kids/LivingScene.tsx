@@ -619,7 +619,6 @@ function CalibrationDot({
         const finalY = Math.max(0, Math.min(1, dragStartRef.current.y + gs.dy / imageFrame.height));
         posRef.current = { x: finalX, y: finalY };
         setPos({ x: finalX, y: finalY });
-        console.log(`[CALIBRATE] ${id} "${label}": { x: ${finalX.toFixed(3)}, y: ${finalY.toFixed(3)} }`);
       },
     })
   ).current;

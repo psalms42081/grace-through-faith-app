@@ -1,5 +1,6 @@
 import { logSecurityPosture } from "./env";
 import express from "express";
+import helmet from "helmet";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
@@ -310,6 +311,7 @@ function setupErrorHandler(app: express.Application) {
 
 (async () => {
   logSecurityPosture();
+  app.use(helmet());
   setupCacheControl(app);
   setupCors(app);
   setupBodyParsing(app);

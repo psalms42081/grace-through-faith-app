@@ -1,0 +1,57 @@
+Send this to Replit now:
+
+---
+
+> Using the code review report as your guide, fix the following issues in this exact order. Do not fix anything outside this list. Do not refactor or restructure anything not mentioned.
+>
+> **Fix 1 — Search Privacy Leak (Critical)**
+> File: `server/routes/search.ts`, line 151+
+> The `/api/search/recent` endpoint returns search terms from all users globally. Fix it to return only the requesting user's own recent searches. If the user is not authenticated return an empty array. This is a privacy violation and must be the first fix.
+>
+> **Fix 2 — Helmet Security Middleware (Critical)**
+> File: `server/index.ts`
+> Install and add `helmet` middleware to the Express server. Add it as the first middleware before all routes. Use the default helmet configuration.
+> Run: `npm install helmet @types/helmet`
+>
+> **Fix 3 — Audio Cleanup on Unmount (Critical)**
+> File: `hooks/useBibleAudio.ts`
+> The hook does not stop audio playback when the component unmounts, causing ghost audio and memory leaks. Add a cleanup function that stops playback and releases audio resources when the hook unmounts. Use a useEffect cleanup return function.
+>
+> **Fix 4 — Console.log Cleanup (Quick Win)**
+> File: `app/kids/story/[id].tsx`
+> Remove all 14 console.log debug statements from this file. Also remove the ~2 console.log statements from frontend components. Do not remove server-side logging — only remove console.log from frontend files in the `app/` and `components/` directories.
+>
+> **Fix 5 — Database Performance Indexes**
+> File: `shared/schema.ts`
+> Add the following performance indexes:
+> - `reading_history` table: index on `userId` + `readAt`
+> - `user_note` table: index on `userId`
+> - `user_highlight` table: index on `userId`
+> - `user_bookmark` table: index on `userId`
+> - `prayer_requests` or `prayers` table: index on `userId`
+> After adding indexes run `db:push` to apply them.
+>
+> **Fix 6 — Foreign Key Constraints**
+> File: `shared/schema.ts`
+> Add ON DELETE CASCADE foreign key constraints to the following junction tables at minimum:
+> - `organization_members.organizationId` → `organizations.id`
+> - `organization_members.userId` → `users.id`
+> - `prayer_group_member.prayerGroupId` → `prayer_groups.id`
+> - `prayer_group_member.userId` → `users.id`
+> - `user_plan_enrollment.devotionalPlanId` → `devotional_plan.id`
+> - `user_plan_enrollment.userId` → `users.id`
+> After adding constraints run `db:push` to apply. If any constraint causes a conflict due to existing orphaned data, report it rather than silently dropping the orphaned records.
+>
+> **Fix 7 — Organization Name Validation**
+> File: `server/routes/organizations.ts`
+> Add maximum length validation on the `name` field for both church and conference creation. Maximum length should be 100 characters. Return a 400 error with message "Organization name must be between 1 and 100 characters" if exceeded.
+>
+> **After all fixes:**
+> 1. Run the full security regression test suite and confirm all tests pass
+> 2. Produce a summary of every change made, including file name and line numbers changed
+> 3. Confirm each of the 7 fixes was completed successfully
+> 4. Flag anything that could not be completed and explain why
+
+---
+
+Paste the summary back here when it's done and I'll verify everything landed correctly before we move to Prompt 3. 🙏

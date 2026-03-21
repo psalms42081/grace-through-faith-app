@@ -32,8 +32,8 @@ router.post("/api/organizations", requireAuth, async (req, res) => {
     const userId = req.authUserId!;
     const { name, type } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Organization name is required" });
+    if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
+      return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
     }
     if (type !== "church" && type !== "conference") {
       return res.status(400).json({ error: "Type must be 'church' or 'conference'" });
@@ -348,8 +348,8 @@ router.post("/api/organizations/:id/churches", requireAuth, async (req, res) => 
     const conferenceId = req.params.id;
     const { name } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Church name is required" });
+    if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
+      return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
     }
 
     const [conference] = await db.select()

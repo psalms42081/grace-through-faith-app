@@ -45,6 +45,7 @@ router.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
         .values({
           queryText: trimmedQuery,
           queryHash,
+          userId: userId !== "guest" ? userId : null,
           results: verses,
           expiresAt,
         })
@@ -150,12 +151,18 @@ router.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
 
 router.get("/api/search/recent", async (req, res) => {
   try {
+    const userId = extractUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
+
     const recent = await db
       .select({
         queryText: searchCache.queryText,
         createdAt: searchCache.createdAt,
       })
       .from(searchCache)
+      .where(eq(searchCache.userId, userId))
       .orderBy(desc(searchCache.createdAt))
       .limit(10);
 
