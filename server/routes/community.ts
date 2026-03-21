@@ -1000,7 +1000,9 @@ router.post("/api/streams/:id/end", requireAuth, async (req, res) => {
     const { id } = req.params;
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Stream not found" });
-    if (session.hostUserId !== userId) {
+    const [caller] = await db.select().from(users).where(eq(users.id, userId));
+    const isAdmin = caller?.role === "admin";
+    if (session.hostUserId !== userId && !isAdmin) {
       return res.status(403).json({ error: "Only the host can end this session" });
     }
     if (session.status === "ended") {
