@@ -199,8 +199,13 @@ try {
   dbg('LiveKit library loaded successfully');
   statusText.textContent = 'Step 2: Library loaded. Creating room...';
 } catch (err) {
-  dbg('FATAL: Failed to load LiveKit library: ' + err.message);
-  statusText.textContent = 'ERROR loading LiveKit library: ' + err.message;
+  document.body.innerHTML = '<div style="color:white;padding:20px;font-family:monospace;font-size:12px;">' +
+    '<h2 style="color:red;">ERROR AT STEP 1</h2>' +
+    '<pre>' + (err.name || 'Unknown') + ': ' + (err.message || String(err)) + '</pre>' +
+    '<pre>Stack: ' + (err.stack || 'none') + '</pre>' +
+    '<pre>URL attempted: /api/streams/livekit-client.esm.mjs</pre>' +
+    '<pre>User Agent: ' + navigator.userAgent + '</pre>' +
+    '</div>';
   throw err;
 }
 
