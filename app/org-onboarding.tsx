@@ -13,11 +13,13 @@ import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Step = "choice" | "join" | "register-church" | "register-conference";
 
 export default function OrgOnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { refreshUser } = useAuth();
   const [step, setStep] = useState<Step>("choice");
   const [joinCode, setJoinCode] = useState("");
   const [orgName, setOrgName] = useState("");
@@ -38,6 +40,7 @@ export default function OrgOnboardingScreen() {
       const res = await apiRequest("POST", "/api/organizations/join", { joinCode: joinCode.trim() });
       const data = await res.json();
       await queryClient.removeQueries({ queryKey: ["/api/organizations/my-org"] });
+      await refreshUser();
       setSuccess(`Joined ${data.organization?.name || "your church"}!`);
       setTimeout(() => router.replace("/(tabs)/profile"), 1500);
     } catch (err: any) {
@@ -71,6 +74,7 @@ export default function OrgOnboardingScreen() {
       });
       const data = await res.json();
       await queryClient.removeQueries({ queryKey: ["/api/organizations/my-org"] });
+      await refreshUser();
       setSuccess(`${type === "church" ? "Church" : "Conference"} created! Your join code: ${data.joinCode}`);
       setTimeout(() => router.replace("/(tabs)/profile"), 2500);
     } catch (err: any) {

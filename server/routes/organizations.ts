@@ -64,8 +64,13 @@ router.post("/api/organizations", requireAuth, async (req, res) => {
       role: "pastor",
     });
 
+    const updateFields: Record<string, any> = { organizationId: org.id, organizationType: type };
+    const [currentUser] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    if (currentUser?.role === "church_leader_pending") {
+      updateFields.role = "church_leader";
+    }
     await db.update(users)
-      .set({ organizationId: org.id, organizationType: type })
+      .set(updateFields)
       .where(eq(users.id, userId));
 
     return res.json(org);
