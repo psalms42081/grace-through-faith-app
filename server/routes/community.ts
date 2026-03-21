@@ -831,6 +831,7 @@ router.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) =>
 
 import { createLiveKitRoom, generateToken, deleteLiveKitRoom, getLiveKitUrl } from "../services/livekit";
 import path from "path";
+import { fileURLToPath } from "url";
 
 function generateRoomName(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -919,6 +920,8 @@ router.get("/api/streams/:id/room", async (req, res) => {
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
 
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const htmlPath = path.join(__dirname, "..", "templates", "livekit-room.html");
     const fs = await import("fs");
     let html = fs.readFileSync(htmlPath, "utf-8");
