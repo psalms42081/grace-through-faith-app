@@ -916,6 +916,12 @@ router.get("/api/streams/:id/room", async (req, res) => {
     if (session.status === "ended") return res.status(410).send("Session has ended");
 
     const isHost = !!userId && userId === session.hostUserId;
+    let canShare = isHost;
+    if (!canShare && userId && session.groupId) {
+      const [mem] = await db.select({ role: prayerGroupMembers.role }).from(prayerGroupMembers)
+        .where(and(eq(prayerGroupMembers.groupId, session.groupId), eq(prayerGroupMembers.userId, userId)));
+      if (mem && (mem.role === "leader" || mem.role === "moderator")) canShare = true;
+    }
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
 
@@ -925,7 +931,7 @@ router.get("/api/streams/:id/room", async (req, res) => {
 
     html = html.replace(
       "<!--SERVER_INJECTED_CONFIG-->",
-      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName })};</script>`
+      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName, isHost, canShare })};</script>`
     );
 
     res.setHeader("Content-Type", "text/html");

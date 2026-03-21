@@ -98,6 +98,17 @@
   .ctrl-btn.end-call { background: #e53935; }
   .ctrl-btn.end-call:hover { background: #c62828; }
   .ctrl-btn.off { background: #555; }
+  .ctrl-btn.screen-share { background: #2a2a30; }
+  .ctrl-btn.screen-share.active { background: #4CAF50; }
+  .ctrl-btn.hidden { display: none; }
+
+  .screen-share-tile {
+    grid-column: 1 / -1;
+    min-height: 300px;
+  }
+  .screen-share-tile video {
+    object-fit: contain !important;
+  }
 
   #status-overlay {
     position: absolute;
@@ -145,6 +156,13 @@
         <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
       </svg>
     </button>
+    <button class="ctrl-btn screen-share hidden" id="btn-screen" title="Share Screen">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    </button>
     <button class="ctrl-btn end-call" id="btn-leave" title="Leave">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
@@ -173,11 +191,18 @@ const overlay = document.getElementById('status-overlay');
 const statusText = document.getElementById('status-text');
 const btnMic = document.getElementById('btn-mic');
 const btnCamera = document.getElementById('btn-camera');
+const btnScreen = document.getElementById('btn-screen');
 const btnLeave = document.getElementById('btn-leave');
+
+const canShare = config.canShare === true;
+if (canShare && typeof navigator.mediaDevices?.getDisplayMedia === 'function') {
+  btnScreen.classList.remove('hidden');
+}
 
 let room;
 let micEnabled = true;
 let camEnabled = false;
+let screenShareTrack = null;
 
 function postToApp(msg) {
   if (window.ReactNativeWebView) {
@@ -225,7 +250,41 @@ function removeTile(identity) {
   if (tile) { tile.remove(); updateGridLayout(); }
 }
 
+function getOrCreateScreenTile(identity, name) {
+  const tileId = 'screen-tile-' + identity;
+  let tile = document.getElementById(tileId);
+  if (!tile) {
+    tile = document.createElement('div');
+    tile.id = tileId;
+    tile.className = 'participant-tile screen-share-tile';
+    const label = document.createElement('div');
+    label.className = 'participant-name';
+    label.textContent = (name || identity) + "'s screen";
+    tile.appendChild(label);
+    grid.insertBefore(tile, grid.firstChild);
+    updateGridLayout();
+  }
+  return tile;
+}
+
+function removeScreenTile(identity) {
+  const tile = document.getElementById('screen-tile-' + identity);
+  if (tile) { tile.remove(); updateGridLayout(); }
+}
+
 function attachTrack(track, identity, name) {
+  if (track.source === 'screen_share') {
+    const tile = getOrCreateScreenTile(identity, name);
+    const existing = tile.querySelector('video');
+    if (existing) { existing.srcObject = null; existing.remove(); }
+    const el = track.attach();
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.style.objectFit = 'contain';
+    tile.insertBefore(el, tile.firstChild);
+    return;
+  }
+
   const tile = getOrCreateTile(identity, name);
   const avatar = document.getElementById('avatar-' + identity);
   const isLocal = room && room.localParticipant && identity === room.localParticipant.identity;
@@ -253,6 +312,11 @@ function attachTrack(track, identity, name) {
 }
 
 function detachTrack(track, identity) {
+  if (track.source === 'screen_share') {
+    track.detach().forEach(el => el.remove());
+    removeScreenTile(identity);
+    return;
+  }
   track.detach().forEach(el => el.remove());
   const tile = document.getElementById('tile-' + identity);
   const avatar = document.getElementById('avatar-' + identity);
@@ -408,7 +472,63 @@ btnCamera.addEventListener('click', async () => {
   }
 });
 
+btnScreen.addEventListener('click', async () => {
+  if (!room) return;
+  try {
+    if (screenShareTrack) {
+      await room.localParticipant.unpublishTrack(screenShareTrack);
+      screenShareTrack.stop();
+      removeScreenTile(room.localParticipant.identity);
+      screenShareTrack = null;
+      btnScreen.classList.remove('active');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 15, max: 30 } },
+      audio: true,
+    });
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    videoTrack.addEventListener('ended', async () => {
+      if (screenShareTrack) {
+        try {
+          await room.localParticipant.unpublishTrack(screenShareTrack);
+        } catch {}
+        removeScreenTile(room.localParticipant.identity);
+        screenShareTrack = null;
+        btnScreen.classList.remove('active');
+      }
+    });
+
+    const { LocalVideoTrack } = await import('https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.esm.mjs');
+    const lkTrack = new LocalVideoTrack(videoTrack, undefined, false);
+    await room.localParticipant.publishTrack(lkTrack, { source: 'screen_share', simulcast: false });
+    screenShareTrack = lkTrack;
+    btnScreen.classList.add('active');
+
+    const tile = getOrCreateScreenTile(room.localParticipant.identity, room.localParticipant.name);
+    const el = lkTrack.attach();
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.style.objectFit = 'contain';
+    el.muted = true;
+    tile.insertBefore(el, tile.firstChild);
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') {
+      console.error('Screen share failed:', err);
+      statusText.textContent = 'Screen share failed';
+      overlay.classList.remove('hidden');
+      setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+    }
+  }
+});
+
 btnLeave.addEventListener('click', async () => {
+  if (screenShareTrack) {
+    screenShareTrack.stop();
+    screenShareTrack = null;
+  }
   if (room) {
     await room.disconnect();
   }
