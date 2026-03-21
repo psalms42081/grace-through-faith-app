@@ -18,6 +18,7 @@ import { queryClient, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbath, getSabbathPhase, SabbathPhase } from "@/lib/sabbath";
 import { useTheme } from "@/hooks/useTheme";
+import { useToast } from "@/contexts/ToastContext";
 import StudyDepthSelector, { DepthBadge } from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 
@@ -298,6 +299,7 @@ function PhaseContentCard({ item, phaseColor }: { item: PhaseContentItem; phaseC
 
 export default function SabbathExperienceScreen() {
   const { theme, isDark } = useTheme();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { closingReflectionActive, sabbathStart, sabbathEnd, isSabbath } = useSabbath();
@@ -377,11 +379,7 @@ export default function SabbathExperienceScreen() {
     try {
       await Promise.all(promises);
     } catch {
-      if (Platform.OS === "web") {
-        window.alert("Could not save reflections. Please try again.");
-      } else {
-        Alert.alert("Error", "Could not save reflections. Please try again.");
-      }
+      showToast("Could not save reflections. Please try again.", "error");
     }
     setSaving(false);
   };
@@ -395,11 +393,7 @@ export default function SabbathExperienceScreen() {
         response: closingResponse.trim(),
       });
     } catch {
-      if (Platform.OS === "web") {
-        window.alert("Could not save reflection. Please try again.");
-      } else {
-        Alert.alert("Error", "Could not save reflection. Please try again.");
-      }
+      showToast("Could not save reflection. Please try again.", "error");
     }
     setSavingClosing(false);
   };

@@ -14,20 +14,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
+import { useToast } from "@/contexts/ToastContext";
 
 type Flow = "idle" | "set" | "change" | "remove";
-
-function showAlert(title: string, msg: string) {
-  if (Platform.OS === "web") {
-    window.alert(`${title}\n${msg}`);
-  } else {
-    Alert.alert(title, msg);
-  }
-}
 
 export default function ParentControlsScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -50,31 +44,31 @@ export default function ParentControlsScreen() {
   const handleSetPin = async () => {
     if (step === 0) {
       if (newInput.length !== 4) {
-        showAlert("Invalid PIN", "Please enter a 4-digit PIN.");
+        showToast("Please enter a 4-digit PIN.", "error");
         return;
       }
       setStep(1);
       return;
     }
     if (confirmInput !== newInput) {
-      showAlert("Mismatch", "PINs do not match. Try again.");
+      showToast("PINs do not match. Try again.", "error");
       setConfirmInput("");
       return;
     }
     await setPin(newInput);
-    showAlert("Success", "PIN has been set.");
+    showToast("PIN has been set.", "success");
     resetFlow();
   };
 
   const handleChangePin = async () => {
     if (!pin) {
-      showAlert("Error", "No PIN is currently set.");
+      showToast("No PIN is currently set.", "error");
       resetFlow();
       return;
     }
     if (step === 0) {
       if (!verifyPin(currentInput)) {
-        showAlert("Incorrect", "Current PIN is incorrect.");
+        showToast("Current PIN is incorrect.", "error");
         setCurrentInput("");
         return;
       }
@@ -83,35 +77,35 @@ export default function ParentControlsScreen() {
     }
     if (step === 1) {
       if (newInput.length !== 4) {
-        showAlert("Invalid PIN", "Please enter a 4-digit PIN.");
+        showToast("Please enter a 4-digit PIN.", "error");
         return;
       }
       setStep(2);
       return;
     }
     if (confirmInput !== newInput) {
-      showAlert("Mismatch", "PINs do not match. Try again.");
+      showToast("PINs do not match. Try again.", "error");
       setConfirmInput("");
       return;
     }
     await setPin(newInput);
-    showAlert("Success", "PIN has been changed.");
+    showToast("PIN has been changed.", "success");
     resetFlow();
   };
 
   const handleRemovePin = async () => {
     if (!pin) {
-      showAlert("Error", "No PIN is currently set.");
+      showToast("No PIN is currently set.", "error");
       resetFlow();
       return;
     }
     if (!verifyPin(currentInput)) {
-      showAlert("Incorrect", "Current PIN is incorrect.");
+      showToast("Current PIN is incorrect.", "error");
       setCurrentInput("");
       return;
     }
     await removePin();
-    showAlert("Removed", "PIN has been removed.");
+    showToast("PIN has been removed.", "success");
     resetFlow();
   };
 

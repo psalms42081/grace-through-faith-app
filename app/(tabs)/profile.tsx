@@ -536,12 +536,7 @@ function ProfileScreenInner() {
             title={link.title}
             onPress={() => {
               if (link.route === "pending-leader") {
-                const msg = "Your church leader access is being reviewed. You'll be notified when approved.";
-                if (Platform.OS === "web") {
-                  window.alert(msg);
-                } else {
-                  Alert.alert("Pending Review", msg);
-                }
+                Alert.alert("Pending Review", "Your church leader access is being reviewed. You'll be notified when approved.");
                 return;
               }
               router.push(link.route as any);

@@ -18,6 +18,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
 import { track } from "@/lib/analytics";
@@ -55,6 +56,7 @@ function formatDate(dateStr: string) {
 export default function PrayerJournalScreen() {
   const { theme, isDark } = useTheme();
   const { userId } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -87,8 +89,7 @@ export default function PrayerJournalScreen() {
       setNewCategory("personal");
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Could not save your prayer. Please try again."); }
-      else { Alert.alert("Something went wrong", "Could not save your prayer. Please try again."); }
+      showToast("Could not save your prayer. Please try again.", "error");
     },
   });
 
@@ -103,8 +104,7 @@ export default function PrayerJournalScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Could not update prayer. Please try again."); }
-      else { Alert.alert("Something went wrong", "Could not update prayer. Please try again."); }
+      showToast("Could not update prayer. Please try again.", "error");
     },
   });
 
@@ -116,8 +116,7 @@ export default function PrayerJournalScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/prayers?userId=${userId}`] });
     },
     onError: () => {
-      if (Platform.OS === "web") { window.alert("Could not remove prayer. Please try again."); }
-      else { Alert.alert("Something went wrong", "Could not remove prayer. Please try again."); }
+      showToast("Could not remove prayer. Please try again.", "error");
     },
   });
 
@@ -203,9 +202,7 @@ export default function PrayerJournalScreen() {
             <EmptyState
               icon={filter === "active" ? "journal-outline" : "checkmark-done-outline"}
               title={filter === "active" ? "No Active Prayers" : "No Answered Prayers"}
-              description={filter === "active" ? "Add your first prayer request to get started." : "Mark prayers as answered to build your testimony of God's faithfulness."}
-              actionLabel={filter === "active" ? "Add Prayer" : undefined}
-              onAction={filter === "active" ? () => setShowAdd(true) : undefined}
+              description={filter === "active" ? "Your prayer journal is empty. Tap + to add your first prayer request." : "Mark prayers as answered to build your testimony of God's faithfulness."}
             />
           )}
 

@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/hooks/useTheme";
 import { apiRequest } from "@/lib/query-client";
+import { useToast } from "@/contexts/ToastContext";
 import type { AgeGroup } from "@/context/KidsModeContext";
 
 const AGE_TIERS: { value: AgeGroup; label: string; ages: string }[] = [
@@ -47,6 +48,7 @@ export default function ChildPickerModal({
   lastActiveChildId,
 }: ChildPickerModalProps) {
   const { theme, isDark } = useTheme();
+  const { showToast } = useToast();
   const qc = useQueryClient();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -76,8 +78,7 @@ export default function ChildPickerModal({
     },
     onError: (err: Error) => {
       const msg = err.message || "Could not add child. Please try again.";
-      if (Platform.OS === "web") window.alert(msg);
-      else Alert.alert("Error", msg);
+      showToast(msg, "error");
     },
   });
 
@@ -230,8 +231,7 @@ export default function ChildPickerModal({
               <Pressable
                 onPress={() => {
                   if (!newChildName.trim()) {
-                    if (Platform.OS === "web") window.alert("Please enter a name");
-                    else Alert.alert("Name required", "Please enter a name for the child.");
+                    showToast("Please enter a name.", "error");
                     return;
                   }
                   addChildMutation.mutate();

@@ -32,6 +32,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useSabbath } from "@/lib/sabbath";
 import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
@@ -171,6 +172,7 @@ function BouncyActionCard({
 function KidsHomeScreen() {
   const { theme, isDark } = useTheme(true);
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const { ageGroup, exitKidsMode, pin, activeChildName, activeChildProfileId, lastActiveChildId, switchChild, verifyPin } = useKidsMode();
   const { userId } = useAuth();
   const baseUrl = useImageBaseUrl();
@@ -333,11 +335,7 @@ function KidsHomeScreen() {
                     setShowExitModal(false);
                     setExitPin("");
                   } else {
-                    if (Platform.OS === "web") {
-                      window.alert("Incorrect PIN");
-                    } else {
-                      Alert.alert("Incorrect PIN", "Please try again.");
-                    }
+                      showToast("Incorrect PIN. Please try again.", "error");
                   }
                 }}
                 style={[kidsStyles.modalConfirmBtn, { backgroundColor: theme.accent }]}
@@ -392,8 +390,7 @@ function KidsHomeScreen() {
                     setSwitchPin("");
                     setShowSwitchPicker(true);
                   } else {
-                    if (Platform.OS === "web") window.alert("Incorrect PIN");
-                    else Alert.alert("Incorrect PIN", "Please try again.");
+                    showToast("Incorrect PIN. Please try again.", "error");
                   }
                 }}
                 style={[kidsStyles.modalConfirmBtn, { backgroundColor: theme.accent }]}

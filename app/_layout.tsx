@@ -17,6 +17,7 @@ import { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
 import {
@@ -177,8 +178,10 @@ export default function RootLayout() {
                       <AudioProvider>
                         <GestureHandlerRootView style={{ flex: 1 }}>
                           <KeyboardProvider>
-                            <RootLayoutNav />
-                            <MiniPlayer />
+                            <ToastProvider>
+                              <RootLayoutNav />
+                              <MiniPlayer />
+                            </ToastProvider>
                           </KeyboardProvider>
                         </GestureHandlerRootView>
                       </AudioProvider>
