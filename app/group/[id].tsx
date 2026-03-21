@@ -716,13 +716,14 @@ export default function GroupDetailScreen() {
                 {isLeader && (
                   <Pressable
                     onPress={() => {
-                      apiRequest("POST", "/api/streams/start", {
+                      apiRequest("POST", "/api/streams/create", {
                         title: `${data?.group?.name || "Group"} Live Session`,
                         groupId: id,
-                      }).then((res) => res.json()).then((stream) => {
+                      }).then((stream: any) => {
                         queryClient.invalidateQueries({ queryKey: ["/api/streams/active"] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
                         router.push(`/stream/${stream.id}` as any);
-                      });
+                      }).catch(() => {});
                     }}
                     style={({ pressed }) => [{ backgroundColor: theme.accent, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, opacity: pressed ? 0.85 : 1 }]}
                   >
