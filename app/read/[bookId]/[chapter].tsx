@@ -327,36 +327,41 @@ export default function VerseReaderScreen() {
               showsVerticalScrollIndicator={false}
             >
               {showTranslationPicker && (
-                <View style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard, zIndex: 100 }]}>
-                  {translationList.map((t) => {
-                    const isActiveT = translation === t;
-                    return (
-                      <Pressable
-                        key={t}
-                        onPress={() => {
-                          if (!isActiveT) setTranslation(t);
-                          setShowTranslationPicker(false);
-                        }}
-                        style={[
-                          styles.translationOption,
-                          isActiveT && { backgroundColor: theme.accent + "15" },
-                        ]}
-                      >
-                        <Text style={[
-                          styles.translationOptionText,
-                          {
-                            color: isActiveT ? theme.accent : theme.text,
-                            fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                          },
-                        ]}>
-                          {t}
-                        </Text>
-                        <Text style={[styles.translationOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                          {TRANSLATION_LABELS[t] || t}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <View
+                  style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard, zIndex: 100 }]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} nestedScrollEnabled>
+                    {translationList.map((t) => {
+                      const isActiveT = translation === t;
+                      return (
+                        <Pressable
+                          key={t}
+                          onPress={() => {
+                            if (!isActiveT) setTranslation(t);
+                            setShowTranslationPicker(false);
+                          }}
+                          style={[
+                            styles.translationOption,
+                            isActiveT && { backgroundColor: theme.accent + "15" },
+                          ]}
+                        >
+                          <Text style={[
+                            styles.translationOptionText,
+                            {
+                              color: isActiveT ? theme.accent : theme.text,
+                              fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
+                            },
+                          ]}>
+                            {t}
+                          </Text>
+                          <Text style={[styles.translationOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                            {TRANSLATION_LABELS[t] || t}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               )}
 

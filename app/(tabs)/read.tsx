@@ -86,34 +86,38 @@ export default function ReadScreen() {
 
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowPicker(false)}>
-          <View style={[styles.pickerModal, { backgroundColor: isDark ? theme.backgroundElevated : "#fff" }]}>
+          <View
+            style={[styles.pickerModal, { backgroundColor: isDark ? theme.backgroundElevated : "#fff" }]}
+            onStartShouldSetResponder={() => true}
+          >
             <Text style={[styles.pickerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               Select Translation
             </Text>
-            {TRANSLATIONS.map((t) => {
-              const isActive = translation === t.id;
-              return (
-                <Pressable
-                  key={t.id}
-                  onPress={() => { setTranslation(t.id); setShowPicker(false); }}
-                  style={[styles.pickerOption, isActive && { backgroundColor: theme.accent + "15" }]}
-                  testID={`translation-${t.id}`}
-                >
-                  <View style={styles.pickerOptionLeft}>
-                    <Text style={[styles.pickerOptionAbbr, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_700Bold" }]}>
-                      {t.id}
-                    </Text>
-                    <View>
-                      <Text style={[styles.pickerOptionName, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>
-                        {t.name}
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+              {TRANSLATIONS.map((t) => {
+                const isActive = translation === t.id;
+                return (
+                  <Pressable
+                    key={t.id}
+                    onPress={() => { setTranslation(t.id); setShowPicker(false); }}
+                    style={[styles.pickerOption, isActive && { backgroundColor: theme.accent + "15" }]}
+                    testID={`translation-${t.id}`}
+                  >
+                    <View style={styles.pickerOptionLeft}>
+                      <Text style={[styles.pickerOptionAbbr, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_700Bold" }]}>
+                        {t.id}
                       </Text>
-                      
+                      <View>
+                        <Text style={[styles.pickerOptionName, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>
+                          {t.name}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}
-                </Pressable>
-              );
-            })}
+                    {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
