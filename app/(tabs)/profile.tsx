@@ -21,6 +21,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -83,6 +84,7 @@ function ProfileScreenInner() {
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated, logout } = useAuth();
+  const { showToast } = useToast();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -536,7 +538,7 @@ function ProfileScreenInner() {
             title={link.title}
             onPress={() => {
               if (link.route === "pending-leader") {
-                Alert.alert("Pending Review", "Your church leader access is being reviewed. You'll be notified when approved.");
+                showToast("Your church leader access is being reviewed. You'll be notified when approved.", "info");
                 return;
               }
               router.push(link.route as any);
