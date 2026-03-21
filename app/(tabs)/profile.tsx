@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
@@ -123,12 +124,42 @@ function ProfileScreenInner() {
     refetchOnWindowFocus: true,
   });
 
+  const isConference = myOrgData?.organization?.type === "conference";
+  const isPastorOrElder = myOrgData?.role === "pastor" || myOrgData?.role === "elder";
+
+  const { data: confChurches, refetch: refetchChurches } = useQuery<{
+    id: string; name: string; joinCode: string; memberCount: number;
+  }[]>({
+    queryKey: [`/api/organizations/${myOrgData?.organization?.id}/churches`],
+    enabled: isAuthenticated && isConference && !!myOrgData?.organization?.id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
   const [codeCopied, setCodeCopied] = useState(false);
+  const [addChurchName, setAddChurchName] = useState("");
+  const [addingChurch, setAddingChurch] = useState(false);
+  const [showAddChurch, setShowAddChurch] = useState(false);
+
   const handleCopyCode = useCallback(async (code: string) => {
     await Clipboard.setStringAsync(code);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   }, []);
+
+  const handleAddChurch = useCallback(async () => {
+    if (!addChurchName.trim() || !myOrgData?.organization?.id) return;
+    setAddingChurch(true);
+    try {
+      await apiRequest("POST", `/api/organizations/${myOrgData.organization.id}/churches`, {
+        name: addChurchName.trim(),
+      });
+      setAddChurchName("");
+      setShowAddChurch(false);
+      refetchChurches();
+    } catch {}
+    setAddingChurch(false);
+  }, [addChurchName, myOrgData?.organization?.id, refetchChurches]);
 
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
   const streak = weeklyData?.currentStreak ?? 0;
@@ -325,49 +356,118 @@ function ProfileScreenInner() {
       {isAuthenticated && (
         <View style={st.sectionPad}>
           <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            My Church
+            {isConference ? "My Conference" : "My Church"}
           </Text>
           {orgLoading ? (
             <ActivityIndicator color="#C9933A" style={{ marginVertical: 16 }} />
           ) : myOrgData?.organization ? (
-            <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
-              <View style={st.orgHeader}>
-                <Ionicons
-                  name={myOrgData.organization.type === "conference" ? "globe-outline" : "home-outline"}
-                  size={24}
-                  color="#C9933A"
-                />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[st.orgName, { color: theme.text }]}>{myOrgData.organization.name}</Text>
-                  <Text style={[st.orgMeta, { color: theme.textMuted }]}>
-                    {myOrgData.role.charAt(0).toUpperCase() + myOrgData.role.slice(1)} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
-                  </Text>
-                </View>
-              </View>
-              {(myOrgData.role === "pastor" || myOrgData.role === "elder") && (
-                <Pressable
-                  style={st.joinCodeRow}
-                  onPress={() => handleCopyCode(myOrgData.organization.joinCode)}
-                >
-                  <View>
-                    <Text style={[st.joinCodeLabel, { color: theme.textMuted }]}>Join Code</Text>
-                    <Text style={[st.joinCodeValue, { color: theme.text }]}>{myOrgData.organization.joinCode}</Text>
-                  </View>
+            <>
+              <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+                <View style={st.orgHeader}>
                   <Ionicons
-                    name={codeCopied ? "checkmark-circle" : "copy-outline"}
-                    size={20}
-                    color={codeCopied ? "#4CAF50" : "#C9933A"}
+                    name={isConference ? "globe-outline" : "home-outline"}
+                    size={24}
+                    color="#C9933A"
                   />
-                </Pressable>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[st.orgName, { color: theme.text }]}>{myOrgData.organization.name}</Text>
+                    <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                      {myOrgData.role!.charAt(0).toUpperCase() + myOrgData.role!.slice(1)} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                </View>
+                {isPastorOrElder && myOrgData.organization.joinCode && (
+                  <Pressable
+                    style={st.joinCodeRow}
+                    onPress={() => handleCopyCode(myOrgData.organization!.joinCode)}
+                  >
+                    <View>
+                      <Text style={[st.joinCodeLabel, { color: theme.textMuted }]}>
+                        {isConference ? "Conference Join Code" : "Join Code"}
+                      </Text>
+                      <Text style={[st.joinCodeValue, { color: theme.text }]}>{myOrgData.organization.joinCode}</Text>
+                    </View>
+                    <Ionicons
+                      name={codeCopied ? "checkmark-circle" : "copy-outline"}
+                      size={20}
+                      color={codeCopied ? "#4CAF50" : "#C9933A"}
+                    />
+                  </Pressable>
+                )}
+                <ListItem
+                  icon="people"
+                  iconColor="#C9933A"
+                  title={isConference ? "View Conference Members" : "View Members"}
+                  onPress={() => router.push(`/org-members?orgId=${myOrgData.organization!.id}` as any)}
+                  style={{ marginTop: 8 }}
+                />
+              </View>
+
+              {isConference && (
+                <View style={{ marginTop: 20 }}>
+                  <View style={st.confChurchesHeader}>
+                    <Text style={[st.confChurchesTitle, { color: theme.text }]}>My Churches</Text>
+                    {isPastorOrElder && (
+                      <Pressable onPress={() => setShowAddChurch(!showAddChurch)}>
+                        <Ionicons name={showAddChurch ? "close-circle-outline" : "add-circle-outline"} size={24} color="#C9933A" />
+                      </Pressable>
+                    )}
+                  </View>
+
+                  {showAddChurch && (
+                    <View style={[st.addChurchRow, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+                      <TextInput
+                        style={[st.addChurchInput, { color: theme.text, borderColor: isDark ? "#2A2A35" : "#DDD" }]}
+                        placeholder="New church name"
+                        placeholderTextColor={theme.textMuted}
+                        value={addChurchName}
+                        onChangeText={setAddChurchName}
+                      />
+                      <Pressable
+                        style={[st.addChurchBtn, (!addChurchName.trim() || addingChurch) && st.btnDisabled]}
+                        onPress={handleAddChurch}
+                        disabled={!addChurchName.trim() || addingChurch}
+                      >
+                        {addingChurch ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={st.addChurchBtnText}>Add</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {confChurches && confChurches.length > 0 ? (
+                    confChurches.map((church) => (
+                      <View key={church.id} style={[st.confChurchCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+                        <View style={st.confChurchRow}>
+                          <Ionicons name="home-outline" size={20} color="#C9933A" />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <Text style={[st.confChurchName, { color: theme.text }]}>{church.name}</Text>
+                            <Text style={[st.confChurchMeta, { color: theme.textMuted }]}>
+                              {church.memberCount} member{church.memberCount !== 1 ? "s" : ""}
+                            </Text>
+                          </View>
+                          {isPastorOrElder && church.joinCode && (
+                            <Pressable
+                              style={st.confChurchCodeBtn}
+                              onPress={() => handleCopyCode(church.joinCode)}
+                            >
+                              <Text style={st.confChurchCodeText}>{church.joinCode}</Text>
+                              <Ionicons name="copy-outline" size={14} color="#C9933A" />
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={[st.confChurchesEmpty, { color: theme.textMuted }]}>
+                      No churches added yet. Tap + to add one.
+                    </Text>
+                  )}
+                </View>
               )}
-              <ListItem
-                icon="people"
-                iconColor="#C9933A"
-                title="View Members"
-                onPress={() => router.push(`/org-members?orgId=${myOrgData.organization.id}` as any)}
-                style={{ marginTop: 8 }}
-              />
-            </View>
+            </>
           ) : (
             <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
               <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
@@ -647,5 +747,90 @@ const st = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: "#C9933A",
+  },
+  btnDisabled: { opacity: 0.5 },
+  confChurchesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  confChurchesTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+  },
+  addChurchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.2)",
+  },
+  addChurchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: "transparent",
+  },
+  addChurchBtn: {
+    backgroundColor: "#C9933A",
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addChurchBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+  confChurchCard: {
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.12)",
+  },
+  confChurchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  confChurchName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  confChurchMeta: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  confChurchCodeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(201,147,58,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  confChurchCodeText: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: "#C9933A",
+    letterSpacing: 1,
+  },
+  confChurchesEmpty: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    paddingVertical: 20,
   },
 });

@@ -392,6 +392,8 @@ router.post("/api/organizations/:id/churches", requireAuth, async (req, res) => 
 });
 
 router.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId!;
     const conferenceId = req.params.id;
