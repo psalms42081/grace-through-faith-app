@@ -39,7 +39,7 @@ The application features a mobile-first architecture with a frontend built using
 - **Spiritual Growth Map:** Visual spiritual journey tracking 5 dimensions with 4 levels each.
 - **Christian Radio:** Live streaming player with 15 SDA/gospel stations.
 - **Dynamic Topic Content:** AI-generated daily reflections and shuffled verses/media for 14 topics.
-- **Insight & Voices:** Commentary screen with Adventist-first content ordering, including AI-generated Ellen G. White perspectives.
+- **Insight & Voices:** Commentary screen with grouped sections — "Adventist Pioneers" (Ellen G. White, Uriah Smith, J.N. Andrews, John Loughborough, Joseph Bates, James White) and "Classic Commentators" (Matthew Henry, etc.). All Adventist pioneers use AI-generated thematic summaries based on each pioneer's known theological emphases. Backfill logic ensures pioneers are generated even for chapters with existing commentary.
 - **Sabbath School Mode:** Weekly-synced Sabbath School lesson engine powered by Adventech's open-source quarterly content, including companion lessons.
 - **28 Fundamental Beliefs UX:** Interactive belief cards with scripture navigation.
 - **Great Controversy Timeline Engine:** Immersive vertical timeline.

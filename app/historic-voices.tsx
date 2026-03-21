@@ -33,8 +33,22 @@ interface CommentaryEntry {
 
 const ADVENTIST_VOICE = "Ellen G. White";
 
+const ADVENTIST_PIONEER_NAMES = new Set([
+  ADVENTIST_VOICE,
+  "Uriah Smith",
+  "J.N. Andrews",
+  "John Loughborough",
+  "Joseph Bates",
+  "James White",
+]);
+
 const VOICE_ORDER: string[] = [
   ADVENTIST_VOICE,
+  "Uriah Smith",
+  "J.N. Andrews",
+  "John Loughborough",
+  "Joseph Bates",
+  "James White",
   "Matthew Henry",
   "Jamieson, Fausset & Brown",
   "Adam Clarke",
@@ -112,6 +126,9 @@ export default function HistoricVoicesScreen() {
 
   const hasEgw = commentatorNames.includes(ADVENTIST_VOICE);
 
+  const adventistEntries = filteredCommentary?.filter((c) => ADVENTIST_PIONEER_NAMES.has(c.commentator.name)) || [];
+  const classicEntries = filteredCommentary?.filter((c) => !ADVENTIST_PIONEER_NAMES.has(c.commentator.name)) || [];
+
   return (
     <>
       <Stack.Screen
@@ -166,7 +183,7 @@ export default function HistoricVoicesScreen() {
               </Pressable>
               {commentatorNames.map((name) => {
                 const isActive = activeCommentator === name;
-                const isAdventist = name === ADVENTIST_VOICE;
+                const isPioneer = ADVENTIST_PIONEER_NAMES.has(name);
                 return (
                   <Pressable
                     key={name}
@@ -175,7 +192,7 @@ export default function HistoricVoicesScreen() {
                       styles.filterChip,
                       {
                         backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                        borderColor: isActive ? theme.accent : isAdventist ? theme.accent + "50" : theme.border,
+                        borderColor: isActive ? theme.accent : isPioneer ? theme.accent + "50" : theme.border,
                       },
                     ]}
                     testID={`filter-${name.replace(/\s/g, "-").toLowerCase()}`}
@@ -187,8 +204,8 @@ export default function HistoricVoicesScreen() {
                       style={[
                         styles.filterChipText,
                         {
-                          color: isActive ? "#fff" : isAdventist ? theme.accent : theme.textSecondary,
-                          fontFamily: isActive || isAdventist ? "Inter_600SemiBold" : "Inter_500Medium",
+                          color: isActive ? "#fff" : isPioneer ? theme.accent : theme.textSecondary,
+                          fontFamily: isActive || isPioneer ? "Inter_600SemiBold" : "Inter_500Medium",
                         },
                       ]}
                     >
@@ -250,92 +267,111 @@ export default function HistoricVoicesScreen() {
           </View>
         )}
 
-        {filteredCommentary?.map((item) => {
-          const isAdventist = item.commentator.name === ADVENTIST_VOICE;
-          return (
-            <View
-              key={item.entry.id}
-              style={[
-                styles.commentCard,
-                {
-                  backgroundColor: theme.backgroundCard,
-                  borderColor: isAdventist ? theme.accent + "40" : theme.border,
-                  borderLeftWidth: isAdventist ? 3 : 1,
-                  borderLeftColor: isAdventist ? theme.accent : theme.border,
-                },
-              ]}
-            >
-              <View style={styles.commentHeader}>
-                <View style={styles.commentHeaderLeft}>
-                  {isAdventist && (
-                    <View style={[styles.adventistBadge, { backgroundColor: theme.accent + "18" }]}>
-                      <Ionicons name="star" size={10} color={theme.accent} />
-                    </View>
-                  )}
-                  <Text style={[styles.commentatorName, { color: isAdventist ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    {item.commentator.name}
-                  </Text>
-                  {item.commentator.tradition && (
-                    <>
-                      <Text style={[styles.traditionSep, { color: theme.textMuted }]}>{" \u2014 "}</Text>
-                      <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {item.commentator.tradition}
-                      </Text>
-                    </>
-                  )}
-                </View>
-              </View>
-              {item.entry.verseStart && (
-                <Text style={[styles.verseRange, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                  {item.entry.verseStart === item.entry.verseEnd || !item.entry.verseEnd
-                    ? `Verse ${item.entry.verseStart}`
-                    : `Verses ${item.entry.verseStart}–${item.entry.verseEnd}`}
-                </Text>
-              )}
-              <Text style={[styles.commentContent, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                {item.entry.content}
+        {adventistEntries.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star" size={14} color={theme.accent} />
+              <Text style={[styles.sectionTitle, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                Adventist Pioneers
               </Text>
-              {isAdventist && (
-                <View style={styles.egwFooter}>
-                  <Text style={[styles.egwDisclaimer, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Summary inspired by themes in Ellen G. White's writings.
-                  </Text>
-                  <Pressable
-                    onPress={() => Linking.openURL("https://egwwritings.org")}
-                    style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <Ionicons name="open-outline" size={13} color={theme.accent} />
-                    <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                      Read more on egwwritings.org
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
             </View>
-          );
-        })}
+            {adventistEntries.map((item) => {
+              const isEgw = item.commentator.name === ADVENTIST_VOICE;
+              return (
+                <View
+                  key={item.entry.id}
+                  style={[
+                    styles.commentCard,
+                    {
+                      backgroundColor: theme.backgroundCard,
+                      borderColor: theme.accent + "40",
+                      borderLeftWidth: 3,
+                      borderLeftColor: theme.accent,
+                    },
+                  ]}
+                >
+                  <View style={styles.commentHeader}>
+                    <View style={styles.commentHeaderLeft}>
+                      <View style={[styles.adventistBadge, { backgroundColor: theme.accent + "18" }]}>
+                        <Ionicons name="star" size={10} color={theme.accent} />
+                      </View>
+                      <Text style={[styles.commentatorName, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {item.commentator.name}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.commentContent, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                    {item.entry.content}
+                  </Text>
+                  <View style={styles.egwFooter}>
+                    <Text style={[styles.egwDisclaimer, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      Thematic summary based on {item.commentator.name}'s known theological emphases.
+                    </Text>
+                    {isEgw && (
+                      <Pressable
+                        onPress={() => Linking.openURL("https://egwwritings.org")}
+                        style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
+                      >
+                        <Ionicons name="open-outline" size={13} color={theme.accent} />
+                        <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                          Read more on egwwritings.org
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
 
-        {!hasEgw && hasCommentary && !isLoading && (
-          <Pressable
-            onPress={() => Linking.openURL("https://egwwritings.org")}
-            style={({ pressed }) => [
-              styles.egwPromo,
-              { backgroundColor: theme.accent + "10", borderColor: theme.accent + "30", opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <View style={styles.egwPromoInner}>
-              <Ionicons name="book-outline" size={20} color={theme.accent} />
-              <View style={styles.egwPromoText}>
-                <Text style={[styles.egwPromoTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  Ellen G. White Writings
-                </Text>
-                <Text style={[styles.egwPromoSub, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                  Explore Adventist commentary on egwwritings.org
+        {classicEntries.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="book" size={14} color={theme.textSecondary} />
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                Classic Commentators
+              </Text>
+            </View>
+            {classicEntries.map((item) => (
+              <View
+                key={item.entry.id}
+                style={[
+                  styles.commentCard,
+                  {
+                    backgroundColor: theme.backgroundCard,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <View style={styles.commentHeader}>
+                  <View style={styles.commentHeaderLeft}>
+                    <Text style={[styles.commentatorName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                      {item.commentator.name}
+                    </Text>
+                    {item.commentator.tradition && (
+                      <>
+                        <Text style={[styles.traditionSep, { color: theme.textMuted }]}>{" \u2014 "}</Text>
+                        <Text style={[styles.tradition, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                          {item.commentator.tradition}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                </View>
+                {item.entry.verseStart && (
+                  <Text style={[styles.verseRange, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                    {item.entry.verseStart === item.entry.verseEnd || !item.entry.verseEnd
+                      ? `Verse ${item.entry.verseStart}`
+                      : `Verses ${item.entry.verseStart}–${item.entry.verseEnd}`}
+                  </Text>
+                )}
+                <Text style={[styles.commentContent, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                  {item.entry.content}
                 </Text>
               </View>
-              <Ionicons name="open-outline" size={16} color={theme.accent} />
-            </View>
-          </Pressable>
+            ))}
+          </>
         )}
       </ScrollView>
     </>
@@ -359,6 +395,14 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 13 },
   resultCount: { fontSize: 12, marginBottom: 16 },
+  sectionHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  sectionTitle: { fontSize: 15, letterSpacing: 0.3 },
   loadingBox: { alignItems: "center" as const, paddingVertical: 60, gap: 16 },
   loadingText: { fontSize: 14 },
   emptyBox: { alignItems: "center" as const, paddingVertical: 60, gap: 12 },
@@ -409,19 +453,4 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   egwLinkText: { fontSize: 12 },
-  egwPromo: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  egwPromoInner: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-  },
-  egwPromoText: { flex: 1 },
-  egwPromoTitle: { fontSize: 14, marginBottom: 2 },
-  egwPromoSub: { fontSize: 12 },
 });
