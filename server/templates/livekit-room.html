@@ -415,15 +415,36 @@ async function connect() {
 
   statusText.textContent = 'Connecting...';
 
+  const connectTimeout = setTimeout(() => {
+    statusText.textContent = 'Connection timed out — retrying...';
+    postToApp({ type: 'error', message: 'Connection timed out' });
+    if (room) {
+      room.disconnect().catch(() => {});
+    }
+    setTimeout(() => connect(), 2000);
+  }, 15000);
+
+  room.on(RoomEvent.SignalConnected, () => {
+    statusText.textContent = 'Signal connected, joining room...';
+  });
+
   try {
     await room.connect(wsUrl, token);
+    clearTimeout(connectTimeout);
 
     getOrCreateTile(room.localParticipant.identity, room.localParticipant.name);
 
-    await room.localParticipant.setMicrophoneEnabled(true);
-    micEnabled = true;
-    btnMic.classList.add('active');
-    btnMic.classList.remove('off');
+    try {
+      await room.localParticipant.setMicrophoneEnabled(true);
+      micEnabled = true;
+      btnMic.classList.add('active');
+      btnMic.classList.remove('off');
+    } catch (micErr) {
+      console.warn('Microphone access denied:', micErr);
+      micEnabled = false;
+      btnMic.classList.remove('active');
+      btnMic.classList.add('off');
+    }
 
     room.remoteParticipants.forEach((p) => {
       getOrCreateTile(p.identity, p.name);
@@ -434,9 +455,10 @@ async function connect() {
       });
     });
   } catch (err) {
+    clearTimeout(connectTimeout);
     console.error('Connection error:', err);
-    statusText.textContent = 'Connection failed: ' + err.message;
-    postToApp({ type: 'error', message: err.message });
+    statusText.textContent = 'Connection failed: ' + (err.message || String(err));
+    postToApp({ type: 'error', message: err.message || String(err) });
   }
 }
 
