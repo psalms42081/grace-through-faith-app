@@ -311,6 +311,11 @@ function setupErrorHandler(app: express.Application) {
 
 (async () => {
   logSecurityPosture();
+
+  app.get("/__health", (_req, res) => {
+    res.status(200).send("ok");
+  });
+
   app.use(helmet());
   setupCacheControl(app);
   setupCors(app);
@@ -330,7 +335,8 @@ function setupErrorHandler(app: express.Application) {
       host: "0.0.0.0",
     },
     async () => {
-      log(`express server serving on port ${port}`);
+      console.log(`express server serving on port ${port}`);
+      console.log(`[deploy-debug] Server bound to 0.0.0.0:${port} at ${new Date().toISOString()}`);
       try {
         const { initSabbathSchoolSync } = await import("./services/sabbath-school-sync");
         initSabbathSchoolSync();
@@ -348,4 +354,11 @@ function setupErrorHandler(app: express.Application) {
       }, 30000);
     },
   );
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    console.error(`[deploy-debug] Server listen error:`, err.message);
+    if (err.code === "EADDRINUSE") {
+      console.error(`[deploy-debug] Port ${port} is already in use!`);
+    }
+  });
 })();
