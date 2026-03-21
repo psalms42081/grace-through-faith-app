@@ -292,52 +292,54 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
   const accentColor = isClosing ? "#C8875A" : "#D4A245";
 
   return (
-    <Animated.View
-      style={[
-        overlayStyle,
-        {
-          position: "absolute",
-          top: Platform.OS === "web" ? -67 : 0,
-          left: 0,
-          right: 0,
-          bottom: Platform.OS === "web" ? -100 : 0,
-          backgroundColor: bg,
-          zIndex: 9999,
-          elevation: 9999,
-        },
-      ]}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={handleDismiss}
     >
-      <Pressable
-        onPress={handleDismiss}
-        style={[styles.touchArea, { paddingTop: topPad + (Platform.OS === "web" ? 67 : 0), paddingBottom: bottomPad + (Platform.OS === "web" ? 100 : 0) }]}
-        testID="sabbath-overlay"
+      <Animated.View
+        style={[
+          overlayStyle,
+          {
+            flex: 1,
+            backgroundColor: bg,
+          },
+        ]}
       >
-        <Animated.View style={[styles.content, contentStyle]}>
-          <CandleFlame size={isClosing ? 50 : 60} />
+        <Pressable
+          onPress={handleDismiss}
+          style={[styles.touchArea, { paddingTop: topPad, paddingBottom: bottomPad }]}
+          testID="sabbath-overlay"
+        >
+          <Animated.View style={[styles.content, contentStyle]}>
+            <CandleFlame size={isClosing ? 50 : 60} />
 
-          <View style={styles.textWrap}>
-            <Text style={[styles.label, { color: accentColor }]}>
-              {isClosing ? "SABBATH CLOSING" : "SHABBAT SHALOM"}
+            <View style={styles.textWrap}>
+              <Text style={[styles.label, { color: accentColor }]}>
+                {isClosing ? "SABBATH CLOSING" : "SHABBAT SHALOM"}
+              </Text>
+
+              <Text style={styles.blessing}>{blessing}</Text>
+              <Text style={[styles.ref, { color: accentColor }]}>{ref}</Text>
+            </View>
+
+            <Text style={[styles.closingMessage, { color: isClosing ? "#A08060" : "#887755" }]}>
+              {isClosing
+                ? "Carry the Sabbath peace into your week."
+                : "The Sabbath has begun. Rest in His presence."}
             </Text>
 
-            <Text style={styles.blessing}>{blessing}</Text>
-            <Text style={[styles.ref, { color: accentColor }]}>{ref}</Text>
-          </View>
-
-          <Text style={[styles.closingMessage, { color: isClosing ? "#A08060" : "#887755" }]}>
-            {isClosing
-              ? "Carry the Sabbath peace into your week."
-              : "The Sabbath has begun. Rest in His presence."}
-          </Text>
-
-          <View style={[styles.dismissHint, { borderColor: accentColor + "40" }]}>
-            <Text style={[styles.dismissText, { color: accentColor + "90" }]}>
-              Tap anywhere to enter
-            </Text>
-          </View>
-        </Animated.View>
-      </Pressable>
-    </Animated.View>
+            <View style={[styles.dismissHint, { borderColor: accentColor + "40" }]}>
+              <Text style={[styles.dismissText, { color: accentColor + "90" }]}>
+                Tap anywhere to enter
+              </Text>
+            </View>
+          </Animated.View>
+        </Pressable>
+      </Animated.View>
+    </Modal>
   );
 }
 
