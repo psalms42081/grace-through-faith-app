@@ -136,6 +136,8 @@ router.post("/api/organizations/join", requireAuth, async (req, res) => {
 });
 
 router.get("/api/organizations/my-org", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId!;
 
