@@ -138,7 +138,8 @@
 <div id="room-container">
   <div id="status-overlay">
     <div class="spinner"></div>
-    <div id="status-text">Connecting...</div>
+    <div id="status-text">Step 1: Loading LiveKit library...</div>
+    <div id="debug-log" style="margin-top:16px;font-size:11px;color:#666;max-width:90%;text-align:left;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;"></div>
   </div>
   <div id="video-grid"></div>
   <div id="controls">
@@ -173,13 +174,35 @@
 </div>
 
 <script type="module">
-import {
-  Room,
-  RoomEvent,
-  Track,
-  VideoPresets,
-  createLocalTracks,
-} from 'https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.esm.mjs';
+const debugLog = document.getElementById('debug-log');
+const statusText = document.getElementById('status-text');
+function dbg(msg) {
+  const ts = new Date().toISOString().substr(11, 12);
+  debugLog.textContent += ts + ' ' + msg + '\n';
+  debugLog.scrollTop = debugLog.scrollHeight;
+  console.log('[livekit-debug]', msg);
+}
+
+dbg('Module script started');
+dbg('Config: ' + JSON.stringify(window.__LIVEKIT_CONFIG__ ? {wsUrl: window.__LIVEKIT_CONFIG__.wsUrl, hasToken: !!window.__LIVEKIT_CONFIG__.token, displayName: window.__LIVEKIT_CONFIG__.displayName} : 'MISSING'));
+
+let Room, RoomEvent, Track, VideoPresets, createLocalTracks;
+try {
+  statusText.textContent = 'Step 1: Loading LiveKit library...';
+  dbg('Fetching livekit-client from cdn.jsdelivr.net...');
+  const lk = await import('https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.esm.mjs');
+  Room = lk.Room;
+  RoomEvent = lk.RoomEvent;
+  Track = lk.Track;
+  VideoPresets = lk.VideoPresets;
+  createLocalTracks = lk.createLocalTracks;
+  dbg('LiveKit library loaded successfully');
+  statusText.textContent = 'Step 2: Library loaded. Creating room...';
+} catch (err) {
+  dbg('FATAL: Failed to load LiveKit library: ' + err.message);
+  statusText.textContent = 'ERROR loading LiveKit library: ' + err.message;
+  throw err;
+}
 
 const config = window.__LIVEKIT_CONFIG__ || {};
 const wsUrl = config.wsUrl;
@@ -188,7 +211,6 @@ const displayName = config.displayName || 'Guest';
 
 const grid = document.getElementById('video-grid');
 const overlay = document.getElementById('status-overlay');
-const statusText = document.getElementById('status-text');
 const btnMic = document.getElementById('btn-mic');
 const btnCamera = document.getElementById('btn-camera');
 const btnScreen = document.getElementById('btn-screen');
@@ -327,34 +349,46 @@ function detachTrack(track, identity) {
 
 async function connect() {
   if (!wsUrl || !token) {
-    statusText.textContent = 'Missing connection parameters';
+    dbg('FATAL: Missing wsUrl=' + !!wsUrl + ' token=' + !!token);
+    statusText.textContent = 'ERROR: Missing connection parameters (wsUrl=' + !!wsUrl + ', token=' + !!token + ')';
     return;
   }
 
-  room = new Room({
-    adaptiveStream: true,
-    dynacast: true,
-    videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
-    audioCaptureDefaults: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-      channelCount: 1,
-    },
-    publishDefaults: {
-      dtx: true,
-      red: true,
-    },
-  });
+  dbg('Creating Room object...');
+  try {
+    room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+      publishDefaults: {
+        dtx: true,
+        red: true,
+      },
+    });
+    dbg('Room object created successfully');
+    statusText.textContent = 'Step 3: Room created. Connecting to server...';
+  } catch (err) {
+    dbg('FATAL: Room creation failed: ' + err.message);
+    statusText.textContent = 'ERROR creating room: ' + err.message;
+    return;
+  }
 
   room.on(RoomEvent.Connected, () => {
+    dbg('EVENT: RoomEvent.Connected fired');
     overlay.classList.add('hidden');
     postToApp({ type: 'connected' });
   });
 
   room.on(RoomEvent.Disconnected, (reason) => {
+    dbg('EVENT: RoomEvent.Disconnected reason=' + reason);
     overlay.classList.remove('hidden');
-    statusText.textContent = 'Disconnected';
+    statusText.textContent = 'Disconnected: ' + (reason || 'unknown');
     postToApp({ type: 'call_ended', reason: reason });
   });
 
@@ -413,10 +447,12 @@ async function connect() {
     }
   });
 
-  statusText.textContent = 'Connecting...';
+  dbg('Starting connection to ' + wsUrl);
+  statusText.textContent = 'Step 3: Connecting to ' + wsUrl + '...';
 
   const connectTimeout = setTimeout(() => {
-    statusText.textContent = 'Connection timed out — retrying...';
+    dbg('TIMEOUT: 15s elapsed, connection did not complete');
+    statusText.textContent = 'Connection timed out after 15s — retrying...';
     postToApp({ type: 'error', message: 'Connection timed out' });
     if (room) {
       room.disconnect().catch(() => {});
@@ -425,28 +461,35 @@ async function connect() {
   }, 15000);
 
   room.on(RoomEvent.SignalConnected, () => {
-    statusText.textContent = 'Signal connected, joining room...';
+    dbg('EVENT: SignalConnected');
+    statusText.textContent = 'Step 4: Signal connected, joining room as ' + displayName + '...';
   });
 
   try {
+    dbg('Calling room.connect()...');
     await room.connect(wsUrl, token);
     clearTimeout(connectTimeout);
+    dbg('room.connect() resolved successfully');
+    dbg('Local participant: ' + room.localParticipant.identity + ' / ' + room.localParticipant.name);
 
     getOrCreateTile(room.localParticipant.identity, room.localParticipant.name);
 
     try {
+      dbg('Enabling microphone...');
       await room.localParticipant.setMicrophoneEnabled(true);
       micEnabled = true;
       btnMic.classList.add('active');
       btnMic.classList.remove('off');
+      dbg('Microphone enabled');
     } catch (micErr) {
-      console.warn('Microphone access denied:', micErr);
+      dbg('Microphone denied: ' + micErr.message);
       micEnabled = false;
       btnMic.classList.remove('active');
       btnMic.classList.add('off');
     }
 
     room.remoteParticipants.forEach((p) => {
+      dbg('Remote participant: ' + p.identity);
       getOrCreateTile(p.identity, p.name);
       p.trackPublications.forEach((pub) => {
         if (pub.track && pub.isSubscribed) {
@@ -456,7 +499,8 @@ async function connect() {
     });
   } catch (err) {
     clearTimeout(connectTimeout);
-    console.error('Connection error:', err);
+    dbg('CONNECT ERROR: ' + (err.message || String(err)));
+    dbg('Error stack: ' + (err.stack || 'none'));
     statusText.textContent = 'Connection failed: ' + (err.message || String(err));
     postToApp({ type: 'error', message: err.message || String(err) });
   }
