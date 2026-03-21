@@ -11,6 +11,7 @@ import {
   Alert,
   TextInput,
   Share,
+  Modal,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { safeGoBack } from "@/lib/safe-back";
@@ -143,6 +144,7 @@ export default function GroupDetailScreen() {
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [newPostText, setNewPostText] = useState("");
   const [expandedDiscussion, setExpandedDiscussion] = useState<string | null>(null);
+  const [manageMember, setManageMember] = useState<GroupMember | null>(null);
 
   const { data, isLoading } = useQuery<GroupDetail>({
     queryKey: [`/api/groups/${id}`],
@@ -235,6 +237,16 @@ export default function GroupDetailScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async ({ targetUserId }: { targetUserId: string }) => {
+      return await apiRequest("POST", `/api/groups/${id}/remove-member`, { targetUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
+      setManageMember(null);
     },
   });
 
@@ -624,13 +636,10 @@ export default function GroupDetailScreen() {
                 </View>
                 {isLeader && member.userId !== userId ? (
                   <Pressable
-                    onPress={() => {
-                      const nextRole = member.role === "member" ? "moderator" : "member";
-                      promoteMutation.mutate({ targetUserId: member.userId, newRole: nextRole });
-                    }}
+                    onPress={() => setManageMember(member)}
                     style={s.promoteBtn}
                   >
-                    <Ionicons name={member.role === "member" ? "arrow-up" : "arrow-down"} size={14} color={theme.textMuted} />
+                    <Ionicons name="ellipsis-vertical" size={16} color={theme.textMuted} />
                   </Pressable>
                 ) : null}
               </View>
@@ -905,6 +914,87 @@ function DiscussionCard({
           </View>
         </View>
       ) : null}
+
+      {manageMember && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setManageMember(null)}>
+          <Pressable style={s.modalOverlay} onPress={() => setManageMember(null)}>
+            <View style={[s.memberSheet, { backgroundColor: isDark ? "#1A1A24" : "#fff" }]}>
+              <Text style={[s.memberSheetTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {manageMember.displayName || "Member"}
+              </Text>
+              <Text style={[s.memberSheetRole, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Current role: {manageMember.role}
+              </Text>
+
+              {manageMember.role !== "leader" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "leader" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="shield" size={20} color={theme.accent} />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    Promote to Leader
+                  </Text>
+                </Pressable>
+              )}
+
+              {manageMember.role !== "moderator" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "moderator" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="star" size={20} color="#7C3AED" />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    {manageMember.role === "leader" ? "Demote to Moderator" : "Promote to Moderator"}
+                  </Text>
+                </Pressable>
+              )}
+
+              {manageMember.role !== "member" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "member" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="arrow-down" size={20} color={theme.textMuted} />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    Demote to Member
+                  </Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                style={[s.memberSheetAction, { borderColor: "#FF3B3020" }]}
+                onPress={() => {
+                  removeMemberMutation.mutate({ targetUserId: manageMember.userId });
+                }}
+              >
+                <Ionicons name="person-remove" size={20} color="#FF3B30" />
+                <Text style={[s.memberSheetActionText, { color: "#FF3B30", fontFamily: "Inter_500Medium" }]}>
+                  Remove from Group
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[s.memberSheetCancel, { backgroundColor: isDark ? "#2A2A36" : "#F3F3F3" }]}
+                onPress={() => setManageMember(null)}
+              >
+                <Text style={[s.memberSheetCancelText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -1165,4 +1255,32 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   goLiveStartText: { color: "#fff", fontSize: 14 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  memberSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  memberSheetTitle: { fontSize: 18, textAlign: "center", marginBottom: 2 },
+  memberSheetRole: { fontSize: 13, textAlign: "center", marginBottom: 16 },
+  memberSheetAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  memberSheetActionText: { fontSize: 15 },
+  memberSheetCancel: {
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  memberSheetCancelText: { fontSize: 14 },
 });

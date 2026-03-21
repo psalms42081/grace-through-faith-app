@@ -154,6 +154,7 @@ router.get("/api/family/members", async (req, res) => {
       createdBy: userId,
       groupType: groupType || "prayer",
       isPublic: isPublic === true,
+      memberCount: 1,
     }).returning();
 
     await db.insert(prayerGroupMembers).values({
@@ -163,7 +164,7 @@ router.get("/api/family/members", async (req, res) => {
       role: "leader",
     });
 
-    return res.json({ group });
+    return res.json({ group: { ...group, memberCount: 1 } });
   } catch (err) {
     console.error("Group create error:", err);
     return res.status(500).json({ error: "Failed to create group" });
@@ -250,7 +251,26 @@ router.get("/api/groups/:id", async (req, res) => {
     const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
     if (!group) return res.status(404).json({ error: "Group not found" });
 
-    const members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+    let members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+
+    if (group.createdBy && !members.some(m => m.userId === group.createdBy)) {
+      try {
+        const [creator] = await db.select({ displayName: users.displayName, username: users.username })
+          .from(users).where(eq(users.id, group.createdBy));
+        await db.insert(prayerGroupMembers).values({
+          groupId: group.id,
+          userId: group.createdBy,
+          displayName: creator?.displayName || creator?.username || "Leader",
+          role: "leader",
+        });
+        members = await db.select().from(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+        await db.update(prayerGroups).set({ memberCount: members.length }).where(eq(prayerGroups.id, id));
+      } catch (repairErr: any) {
+        if (!repairErr?.message?.includes("duplicate")) {
+          console.error("Group membership repair error:", repairErr);
+        }
+      }
+    }
 
     let trackProgress: any = null;
     if (group.assignedTrackId) {
@@ -275,7 +295,7 @@ router.get("/api/groups/:id", async (req, res) => {
       }
     }
 
-    return res.json({ group, members, trackProgress });
+    return res.json({ group: { ...group, memberCount: members.length }, members, trackProgress });
   } catch (err) {
     console.error("Group detail error:", err);
     return res.status(500).json({ error: "Failed to get group details" });
@@ -298,6 +318,37 @@ router.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Group leave error:", err);
     return res.status(500).json({ error: "Failed to leave group" });
+  }
+});
+
+router.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const { id } = req.params;
+    const { targetUserId } = req.body;
+    if (!targetUserId) return res.status(400).json({ error: "Target user ID is required" });
+    if (targetUserId === userId) return res.status(400).json({ error: "Cannot remove yourself. Use leave instead." });
+
+    const [requester] = await db.select().from(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+    if (!requester || requester.role !== "leader") {
+      return res.status(403).json({ error: "Only leaders can remove members" });
+    }
+
+    const deleted = await db.delete(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, targetUserId)))
+      .returning({ id: prayerGroupMembers.id });
+
+    if (deleted.length > 0) {
+      await db.update(prayerGroups).set({
+        memberCount: sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`,
+      }).where(eq(prayerGroups.id, id));
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Remove member error:", err);
+    return res.status(500).json({ error: "Failed to remove member" });
   }
 });
 
