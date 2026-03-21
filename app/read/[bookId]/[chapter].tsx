@@ -312,6 +312,12 @@ export default function VerseReaderScreen() {
           </View>
         ) : (
           <>
+            {showTranslationPicker && (
+              <Pressable
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}
+                onPress={() => setShowTranslationPicker(false)}
+              />
+            )}
             <ScrollView
               ref={scrollViewRef}
               contentContainerStyle={[
@@ -321,13 +327,16 @@ export default function VerseReaderScreen() {
               showsVerticalScrollIndicator={false}
             >
               {showTranslationPicker && (
-                <View style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard }]}>
+                <View style={[styles.translationDropdown, { backgroundColor: isDark ? theme.backgroundElevated : theme.backgroundCard, zIndex: 100 }]}>
                   {translationList.map((t) => {
                     const isActiveT = translation === t;
                     return (
                       <Pressable
                         key={t}
-                        onPress={() => { setTranslation(t); setShowTranslationPicker(false); }}
+                        onPress={() => {
+                          if (!isActiveT) setTranslation(t);
+                          setShowTranslationPicker(false);
+                        }}
                         style={[
                           styles.translationOption,
                           isActiveT && { backgroundColor: theme.accent + "15" },

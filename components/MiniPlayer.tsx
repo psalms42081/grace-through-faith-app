@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAudioContext } from "@/contexts/AudioContext";
 import { useTheme } from "@/hooks/useTheme";
@@ -10,8 +10,11 @@ export default function MiniPlayer() {
   const { isActive, isSpeaking, isPaused, sessionInfo, play, pause, stop } = useAudioContext();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
-  if (!isActive || !sessionInfo) return null;
+  const isOnChapterReader = pathname.startsWith("/read/") && pathname.split("/").length >= 4;
+
+  if (!isActive || !sessionInfo || isOnChapterReader) return null;
 
   const handleTap = () => {
     router.push(
