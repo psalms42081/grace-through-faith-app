@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Modal,
 } from "react-native";
 import Animated, {
   useSharedValue,
