@@ -114,11 +114,13 @@ function ProfileScreenInner() {
   });
 
   const { data: myOrgData, isLoading: orgLoading } = useQuery<{
-    organization: { id: string; name: string; type: string; joinCode: string; memberCount: number };
-    role: string;
+    organization: { id: string; name: string; type: string; joinCode: string; memberCount: number } | null;
+    role: string | null;
   }>({
     queryKey: ["/api/organizations/my-org"],
     enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const [codeCopied, setCodeCopied] = useState(false);

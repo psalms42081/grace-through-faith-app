@@ -12,7 +12,7 @@ import {
 import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
 
 type Step = "choice" | "join" | "register-church" | "register-conference";
 
@@ -37,15 +37,22 @@ export default function OrgOnboardingScreen() {
     try {
       const res = await apiRequest("POST", "/api/organizations/join", { joinCode: joinCode.trim() });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to join");
-        setLoading(false);
-        return;
-      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/organizations/my-org"] });
       setSuccess(`Joined ${data.organization?.name || "your church"}!`);
       setTimeout(() => router.dismissAll(), 1500);
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      const parsed = msg.match(/^\d+:\s*(.+)/);
+      if (parsed) {
+        try {
+          const body = JSON.parse(parsed[1]);
+          setError(body.error || "Failed to join");
+        } catch {
+          setError(parsed[1]);
+        }
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     }
     setLoading(false);
   };
@@ -63,15 +70,22 @@ export default function OrgOnboardingScreen() {
         type,
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to register");
-        setLoading(false);
-        return;
-      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/organizations/my-org"] });
       setSuccess(`${type === "church" ? "Church" : "Conference"} created! Your join code: ${data.joinCode}`);
       setTimeout(() => router.dismissAll(), 2500);
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      const parsed = msg.match(/^\d+:\s*(.+)/);
+      if (parsed) {
+        try {
+          const body = JSON.parse(parsed[1]);
+          setError(body.error || "Failed to register");
+        } catch {
+          setError(parsed[1]);
+        }
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     }
     setLoading(false);
   };
