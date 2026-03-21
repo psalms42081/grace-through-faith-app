@@ -833,7 +833,7 @@ router.get("/api/streams/:id/token", async (req, res) => {
   try {
     const { id } = req.params;
     const displayName = (req.query.displayName as string) || "Guest";
-    const userId = getAuthUserId(req);
+    const userId = extractUserId(req);
 
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Session not found" });
@@ -858,7 +858,7 @@ router.get("/api/streams/:id/room", async (req, res) => {
     const { id } = req.params;
     const displayName = (req.query.displayName as string) || "Guest";
 
-    const userId = getAuthUserId(req);
+    const userId = extractUserId(req);
 
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).send("Session not found");
