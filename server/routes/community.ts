@@ -904,6 +904,20 @@ router.get("/api/streams/:id/token", async (req, res) => {
   }
 });
 
+router.get("/api/streams/livekit-client.esm.mjs", async (_req, res) => {
+  try {
+    const fs = await import("fs");
+    const filePath = path.join(process.cwd(), "server", "templates", "livekit-client.esm.mjs");
+    const content = fs.readFileSync(filePath, "utf-8");
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    return res.send(content);
+  } catch (err) {
+    console.error("LiveKit client serve error:", err);
+    return res.status(500).send("Error serving LiveKit client");
+  }
+});
+
 router.get("/api/streams/:id/room", async (req, res) => {
   try {
     const { id } = req.params;
