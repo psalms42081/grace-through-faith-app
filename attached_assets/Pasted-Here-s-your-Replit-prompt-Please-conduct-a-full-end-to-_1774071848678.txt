@@ -1,0 +1,93 @@
+Here's your Replit prompt:
+
+---
+
+> Please conduct a full end-to-end code review of the entire Grace by Faith codebase and produce a comprehensive written report. Do not make any code changes during this review — analysis and reporting only.
+>
+> The report should cover every layer of the stack and be structured in the following sections:
+>
+> **1. Architecture Overview**
+> - Summarize the overall structure of the frontend, backend, and database
+> - Identify any architectural concerns or technical debt
+> - Note any areas where the structure could cause scaling problems
+>
+> **2. Security Audit**
+> - Authentication and authorization — are all routes properly protected?
+> - Data validation and sanitization on all inputs
+> - API security — rate limiting, CORS, headers
+> - Any exposed sensitive data, credentials, or keys in the codebase
+> - SQL injection, XSS, or other vulnerability risks
+> - User data privacy concerns
+>
+> **3. Database & Data Layer**
+> - Schema design quality — are tables normalized correctly?
+> - Missing indexes that could cause performance issues at scale
+> - Any dangerous queries or N+1 problems
+> - Migration integrity — are all migrations clean and reversible?
+> - Data integrity — are foreign keys and constraints properly defined?
+>
+> **4. Backend API Quality**
+> - Are all endpoints consistent in their response format?
+> - Error handling — are errors caught and returned gracefully?
+> - Any missing validation on request bodies
+> - Redundant or unused endpoints
+> - Performance concerns — slow queries, missing caching where needed
+>
+> **5. Frontend Code Quality**
+> - Component structure and reusability
+> - State management — is TanStack Query being used correctly?
+> - Any memory leaks, missing cleanup, or useEffect issues
+> - Navigation and routing integrity
+> - Accessibility concerns
+> - Any hardcoded values that should be constants or config
+>
+> **6. Feature Completeness Audit**
+> - Go through every major feature and note its completion status:
+>   - Bible Reader
+>   - Sabbath Experience
+>   - Kids Club
+>   - Family Altar
+>   - Prayer
+>   - Study tools (Word Study, Historical Voices, Context, Verse Map, Insight)
+>   - Devotional Plans
+>   - Connect tab
+>   - LiveKit small group / go live feature
+>   - Organization/Church accounts
+>   - Multilingual support
+>   - TTS audio
+>   - Notifications
+>   - User profile and settings
+> - For each feature note: Complete / Partially complete / Incomplete / Broken
+>
+> **7. Performance & Scalability**
+> - Bundle size concerns
+> - Image optimization
+> - API response times
+> - Any operations that will not scale beyond a few hundred users
+> - Caching strategy assessment
+>
+> **8. Code Consistency & Standards**
+> - TypeScript usage — are types properly defined or are there too many `any` types?
+> - Naming conventions — are they consistent across the codebase?
+> - Dead code — unused files, functions, imports, or components
+> - Console.log statements left in production code
+> - Commented out code that should be removed
+>
+> **9. Third Party Integrations**
+> - ElevenLabs TTS — integration quality and error handling
+> - OpenAI — prompt quality, error handling, cost control
+> - LiveKit — integration completeness and reliability
+> - Bible translation APIs — stability and fallback handling
+> - Any other external services — assess reliability and fallback
+>
+> **10. Critical Issues & Priority Recommendations**
+> - List all critical issues that must be fixed before beta
+> - List high priority improvements
+> - List nice-to-have improvements
+> - Provide a recommended order of work
+>
+> Please be thorough, honest, and specific. Include file names and line numbers where relevant. This report will be reviewed externally so it needs to be complete and accurate. Output the full report as text.
+
+---
+
+Once Replit produces the report, paste it here and I'll go through it thoroughly and give you my own independent assessment of what's critical, what's overstated, and what the real priority order should be. 🙏

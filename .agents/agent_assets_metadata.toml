@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "w4RrmDXJcFJcRZ5YfV8QT"
+uri = "file://CODE_REVIEW_REPORT.md"
+type = "text"
+title = "Grace by Faith — Full Code Review Report"
