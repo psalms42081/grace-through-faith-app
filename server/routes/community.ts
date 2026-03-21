@@ -831,7 +831,6 @@ router.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) =>
 
 import { createLiveKitRoom, generateToken, deleteLiveKitRoom, getLiveKitUrl } from "../services/livekit";
 import path from "path";
-import { fileURLToPath } from "url";
 
 function generateRoomName(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -920,10 +919,8 @@ router.get("/api/streams/:id/room", async (req, res) => {
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
 
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const htmlPath = path.join(__dirname, "..", "templates", "livekit-room.html");
     const fs = await import("fs");
+    const htmlPath = path.join(process.cwd(), "server", "templates", "livekit-room.html");
     let html = fs.readFileSync(htmlPath, "utf-8");
 
     html = html.replace(
@@ -939,8 +936,16 @@ router.get("/api/streams/:id/room", async (req, res) => {
   }
 });
 
-router.get("/api/streams/active", cachedResponse(30), async (_req, res) => {
+router.get("/api/streams/active", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    await db.update(liveSessions).set({
+      status: "ended",
+      endedAt: new Date(),
+    }).where(and(eq(liveSessions.status, "live"), sql`${liveSessions.startedAt} < ${sixHoursAgo}`));
+
     const sessions = await db.select().from(liveSessions)
       .where(eq(liveSessions.status, "live"))
       .orderBy(desc(liveSessions.startedAt));
