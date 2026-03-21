@@ -61,6 +61,7 @@
     "http-proxy-middleware": "^3.0.5",
     "i18next": "^25.8.13",
     "jsonwebtoken": "^9.0.3",
+    "livekit-client": "^2.17.3",
     "livekit-server-sdk": "^2.15.0",
     "openai": "^6.25.0",
     "p-limit": "^7.3.0",
