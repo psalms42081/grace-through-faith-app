@@ -5,7 +5,7 @@ modules = ["nodejs-22", "javascript", "postgresql-16"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "autoscale"
 build = ["bash", "scripts/deploy-build.sh"]
 run = ["bash", "-c", "PORT=8081 npm run server:prod"]
 
