@@ -116,7 +116,7 @@ export default function OrgOnboardingScreen() {
               <Ionicons name="enter-outline" size={28} color="#C9933A" />
               <View style={s.optionTextWrap}>
                 <Text style={s.optionTitle}>Join a Church</Text>
-                <Text style={s.optionDesc}>I have a join code from my pastor</Text>
+                <Text style={s.optionDesc}>I have a join code from my church administrator</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </Pressable>
@@ -125,7 +125,7 @@ export default function OrgOnboardingScreen() {
               <Ionicons name="home-outline" size={28} color="#C9933A" />
               <View style={s.optionTextWrap}>
                 <Text style={s.optionTitle}>Register My Church</Text>
-                <Text style={s.optionDesc}>I'm a pastor or leader starting my church</Text>
+                <Text style={s.optionDesc}>I'm a leader setting up my church</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </Pressable>
@@ -152,7 +152,7 @@ export default function OrgOnboardingScreen() {
               <Text style={s.backText}>Back</Text>
             </Pressable>
             <Text style={s.title}>Join a Church</Text>
-            <Text style={s.subtitle}>Enter the join code shared by your pastor or church leader.</Text>
+            <Text style={s.subtitle}>Enter the join code shared by your church administrator.</Text>
 
             <TextInput
               style={s.input}
@@ -193,7 +193,7 @@ export default function OrgOnboardingScreen() {
             </Text>
             <Text style={s.subtitle}>
               {step === "register-church"
-                ? "You'll be set as the pastor and receive a join code to share with your congregation."
+                ? "You'll be set as the church administrator and receive a join code to share with your congregation."
                 : "Create a conference to manage multiple churches. You'll be the conference administrator."}
             </Text>
 

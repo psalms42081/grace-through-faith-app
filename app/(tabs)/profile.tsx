@@ -372,7 +372,7 @@ function ProfileScreenInner() {
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[st.orgName, { color: theme.text }]}>{myOrgData.organization.name}</Text>
                     <Text style={[st.orgMeta, { color: theme.textMuted }]}>
-                      {myOrgData.role!.charAt(0).toUpperCase() + myOrgData.role!.slice(1)} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
+                      {myOrgData.role === "pastor" ? "Administrator" : myOrgData.role === "elder" ? "Elder" : "Member"} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
                     </Text>
                   </View>
                 </View>

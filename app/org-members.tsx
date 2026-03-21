@@ -19,10 +19,10 @@ type Member = {
   joinedAt: string;
 };
 
-const roleIcon: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  pastor: { icon: "shield", color: "#C9933A" },
-  elder: { icon: "star", color: "#8B5CF6" },
-  member: { icon: "person", color: "#666" },
+const roleInfo: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
+  pastor: { icon: "shield", color: "#C9933A", label: "Administrator" },
+  elder: { icon: "star", color: "#8B5CF6", label: "Elder" },
+  member: { icon: "person", color: "#666", label: "Member" },
 };
 
 export default function OrgMembersScreen() {
@@ -54,7 +54,7 @@ export default function OrgMembersScreen() {
             keyExtractor={(item) => item.userId}
             contentContainerStyle={{ paddingBottom: insets.bottom + 20, paddingTop: 8 }}
             renderItem={({ item }) => {
-              const ri = roleIcon[item.role] || roleIcon.member;
+              const ri = roleInfo[item.role] || roleInfo.member;
               return (
                 <View style={s.memberRow}>
                   <View style={[s.avatar, { backgroundColor: ri.color + "22" }]}>
@@ -62,9 +62,7 @@ export default function OrgMembersScreen() {
                   </View>
                   <View style={s.memberInfo}>
                     <Text style={s.memberName}>{item.displayName || "Member"}</Text>
-                    <Text style={s.memberRole}>
-                      {item.role.charAt(0).toUpperCase() + item.role.slice(1)}
-                    </Text>
+                    <Text style={s.memberRole}>{ri.label}</Text>
                   </View>
                 </View>
               );
