@@ -37,9 +37,9 @@ export default function OrgOnboardingScreen() {
     try {
       const res = await apiRequest("POST", "/api/organizations/join", { joinCode: joinCode.trim() });
       const data = await res.json();
-      await queryClient.invalidateQueries({ queryKey: ["/api/organizations/my-org"] });
+      await queryClient.removeQueries({ queryKey: ["/api/organizations/my-org"] });
       setSuccess(`Joined ${data.organization?.name || "your church"}!`);
-      setTimeout(() => router.dismissAll(), 1500);
+      setTimeout(() => router.replace("/(tabs)/profile"), 1500);
     } catch (err: any) {
       const msg = err?.message || "";
       const parsed = msg.match(/^\d+:\s*(.+)/);
@@ -70,9 +70,9 @@ export default function OrgOnboardingScreen() {
         type,
       });
       const data = await res.json();
-      await queryClient.invalidateQueries({ queryKey: ["/api/organizations/my-org"] });
+      await queryClient.removeQueries({ queryKey: ["/api/organizations/my-org"] });
       setSuccess(`${type === "church" ? "Church" : "Conference"} created! Your join code: ${data.joinCode}`);
-      setTimeout(() => router.dismissAll(), 2500);
+      setTimeout(() => router.replace("/(tabs)/profile"), 2500);
     } catch (err: any) {
       const msg = err?.message || "";
       const parsed = msg.match(/^\d+:\s*(.+)/);
