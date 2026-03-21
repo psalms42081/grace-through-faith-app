@@ -316,7 +316,22 @@ function setupErrorHandler(app: express.Application) {
     res.status(200).send("ok");
   });
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud"],
+        mediaSrc: ["'self'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        fontSrc: ["'self'", "https:", "data:"],
+        styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+        frameSrc: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+  }));
   setupCacheControl(app);
   setupCors(app);
   setupBodyParsing(app);
