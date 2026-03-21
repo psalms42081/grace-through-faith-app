@@ -341,14 +341,8 @@ export default function KidsLearnScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const { data: collections } = useQuery<{ id: string; title: string }[]>({
-    queryKey: [`/api/kids/collections?ageGroup=${ageGroup}`],
-  });
-
-  const firstCollectionId = collections?.[0]?.id;
   const { data: stories } = useQuery<Story[]>({
-    queryKey: [`/api/kids/collections/${firstCollectionId}/stories`],
-    enabled: !!firstCollectionId,
+    queryKey: [`/api/kids/collections/all/stories?ageGroup=${ageGroup}`],
   });
 
   const { data: quizQuestions } = useQuery<QuizQuestion[]>({

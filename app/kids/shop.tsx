@@ -88,7 +88,7 @@ export default function KidsShopScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { userId } = useAuth();
-  const { activeChild } = useKidsMode();
+  const { activeChildProfileId } = useKidsMode();
 
   const [selectedCategory, setSelectedCategory] = useState<ShopItem["category"]>("avatar_frame");
 
@@ -97,7 +97,7 @@ export default function KidsShopScreen() {
   });
 
   const { data: purchasesData, refetch: refetchPurchases } = useQuery<any[]>({
-    queryKey: [`/api/kids/shop/purchases?childId=${activeChild?.id || ""}`],
+    queryKey: [`/api/kids/shop/purchases?childId=${activeChildProfileId || ""}`],
   });
 
   const totalStars = useMemo(() => {
@@ -134,7 +134,7 @@ export default function KidsShopScreen() {
     mutationFn: async (item: ShopItem) => {
       return apiRequest("POST", "/api/kids/shop/purchase", {
         itemId: item.id,
-        childId: activeChild?.id,
+        childId: activeChildProfileId,
       });
     },
     onSuccess: () => {
@@ -151,7 +151,7 @@ export default function KidsShopScreen() {
     mutationFn: async ({ itemId, category }: { itemId: string; category: string }) => {
       return apiRequest("POST", "/api/kids/shop/equip", {
         itemId: equippedItemIds.has(itemId) ? null : itemId,
-        childId: activeChild?.id,
+        childId: activeChildProfileId,
         category,
       });
     },
