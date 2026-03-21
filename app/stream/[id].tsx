@@ -43,9 +43,36 @@ interface ParticipantInfo {
   hasVideo: boolean;
 }
 
+function attachTrackToTile(track: any, tileId: string, isLocal: boolean) {
+  const tile = document.getElementById(tileId);
+  if (!tile) return;
+  const existingTrackEl = tile.querySelector(`[data-track-kind="${track.kind}"]`);
+  if (existingTrackEl) existingTrackEl.remove();
+
+  const el = track.attach();
+  el.setAttribute("data-track-kind", track.kind);
+  if (track.kind === "video") {
+    el.style.width = "100%";
+    el.style.height = "100%";
+    el.style.objectFit = "cover";
+    el.style.position = "absolute";
+    el.style.top = "0";
+    el.style.left = "0";
+    el.style.zIndex = "1";
+    if (isLocal) el.style.transform = "scaleX(-1)";
+  } else {
+    el.style.display = "none";
+  }
+  tile.appendChild(el);
+}
+
+function detachTrackFromTile(track: any) {
+  track.detach().forEach((el: HTMLElement) => el.remove());
+}
+
 function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSession; displayName: string; isHost: boolean }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const roomRef = useRef<any>(null);
+  const lkRef = useRef<any>(null);
   const [status, setStatus] = useState("Connecting...");
   const [error, setError] = useState<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
@@ -69,6 +96,7 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
 
         setStatus("Loading LiveKit...");
         const lk = await import("livekit-client");
+        lkRef.current = lk;
         if (!mounted) return;
 
         setStatus("Connecting to room...");
@@ -122,32 +150,31 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
         room.on(lk.RoomEvent.ParticipantDisconnected, () => updateParticipants());
         room.on(lk.RoomEvent.TrackMuted, () => updateParticipants());
         room.on(lk.RoomEvent.TrackUnmuted, () => updateParticipants());
-        room.on(lk.RoomEvent.LocalTrackPublished, () => updateParticipants());
-        room.on(lk.RoomEvent.LocalTrackUnpublished, () => updateParticipants());
 
-        room.on(lk.RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
-          if (!mounted || !containerRef.current) return;
-          const el = track.attach();
-          el.id = `track-${participant.identity}-${track.kind}`;
-          el.style.width = "100%";
-          el.style.height = "100%";
-          el.style.objectFit = "cover";
-          if (track.kind === "audio") {
-            el.style.display = "none";
+        room.on(lk.RoomEvent.LocalTrackPublished, (pub: any) => {
+          updateParticipants();
+          const track = pub.track;
+          if (track) {
+            const tileId = `tile-${room.localParticipant.identity}`;
+            setTimeout(() => attachTrackToTile(track, tileId, true), 50);
           }
-          const tileId = `tile-${participant.identity}`;
-          let tile = document.getElementById(tileId);
-          if (!tile) {
-            tile = document.createElement("div");
-            tile.id = tileId;
-            tile.style.cssText = "position:relative;background:#1a1a1f;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:200px;";
-            containerRef.current?.appendChild(tile);
-          }
-          tile.appendChild(el);
         });
 
-        room.on(lk.RoomEvent.TrackUnsubscribed, (track: any, _pub: any, participant: any) => {
-          track.detach().forEach((el: HTMLElement) => el.remove());
+        room.on(lk.RoomEvent.LocalTrackUnpublished, (pub: any) => {
+          updateParticipants();
+          if (pub.track) detachTrackFromTile(pub.track);
+        });
+
+        room.on(lk.RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
+          if (!mounted) return;
+          const tileId = `tile-${participant.identity}`;
+          setTimeout(() => attachTrackToTile(track, tileId, false), 50);
+          updateParticipants();
+        });
+
+        room.on(lk.RoomEvent.TrackUnsubscribed, (track: any) => {
+          detachTrackFromTile(track);
+          updateParticipants();
         });
 
         await room.connect(wsUrl, token);
@@ -238,7 +265,6 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
   return (
     <View style={{ flex: 1, backgroundColor: "#050507" }}>
       <div
-        ref={containerRef}
         style={{
           flex: 1,
           display: "grid",
@@ -277,6 +303,7 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
                 fontSize: "28px",
                 fontWeight: "700" as const,
                 color: "#fff",
+                zIndex: 0,
               }}>
                 {(p.name || "?")[0].toUpperCase()}
               </div>
@@ -290,6 +317,7 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
               borderRadius: "6px",
               fontSize: "12px",
               color: "#fff",
+              zIndex: 5,
             }}>
               {p.name}{p.isMuted ? " 🔇" : ""}
             </div>
