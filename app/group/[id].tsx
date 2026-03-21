@@ -719,7 +719,7 @@ export default function GroupDetailScreen() {
                       apiRequest("POST", "/api/streams/create", {
                         title: `${data?.group?.name || "Group"} Live Session`,
                         groupId: id,
-                      }).then((stream: any) => {
+                      }).then(res => res.json()).then((stream: any) => {
                         queryClient.invalidateQueries({ queryKey: ["/api/streams/active"] });
                         queryClient.invalidateQueries({ queryKey: [`/api/groups/${id}`] });
                         router.push(`/stream/${stream.id}` as any);
