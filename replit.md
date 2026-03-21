@@ -54,6 +54,7 @@ The application features a mobile-first architecture with a frontend built using
 - **Daily Reading Reminders:** Local push notifications via `expo-notifications` with configurable times.
 - **Web Desktop Layout:** Production web build constrained to 480px max-width, centered on a dark background.
 - **Sabbath School Archive:** Browsable past quarters for Sabbath School lessons.
+- **Organization/Church Accounts:** Churches and conferences can register as organizations with join codes. Tables: `organizations` and `organization_members` in `shared/schema.ts`. Backend routes in `server/routes/organizations.ts` (9 endpoints: create, join, my-org, get, members, update role, remove member, add/list churches). Roles: `pastor` (owner, sees join code), `elder` (can remove members), `member`. Post-registration org onboarding (`app/org-onboarding.tsx`). "My Church" section in profile with join code copy for pastors/elders. Members list screen (`app/org-members.tsx`). Security: 45/45 regression checks pass.
 
 ## External Dependencies
 

@@ -9,6 +9,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -33,8 +34,40 @@ export const users = pgTable("users", {
   preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
   preferredBibleTranslation: varchar("preferred_bible_translation", { length: 10 }),
   preferredNarrator: varchar("preferred_narrator", { length: 10 }).default("george"),
+  organizationId: varchar("organization_id"),
+  organizationType: varchar("organization_type", { length: 12 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ─── ORGANIZATIONS ──────────────────────────────────────────────────────────
+
+export const organizations = pgTable("organizations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: varchar("type", { length: 12 }).notNull(),
+  parentId: varchar("parent_id"),
+  joinCode: varchar("join_code", { length: 8 }).unique().notNull(),
+  ownerId: varchar("owner_id").notNull(),
+  memberCount: integer("member_count").default(0).notNull(),
+  tier: varchar("tier", { length: 6 }).default("free").notNull(),
+  maxMembers: integer("max_members").default(50).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const organizationMembers = pgTable("organization_members", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: varchar("role", { length: 12 }).notNull().default("member"),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+}, (table) => ({
+  orgUserUnique: uniqueIndex("org_member_org_user").on(table.organizationId, table.userId),
+}));
 
 export const userActivityCounters = pgTable("user_activity_counter", {
   id: varchar("id")

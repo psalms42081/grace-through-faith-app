@@ -115,6 +115,12 @@ echo "--- 10. Community writes require auth ---"
 check "POST /api/family/create" "401" "$(status -X POST "$BASE/api/family/create" -H 'Content-Type: application/json' -d '{"name":"test"}')"
 check "POST /api/groups/create" "401" "$(status -X POST "$BASE/api/groups/create" -H 'Content-Type: application/json' -d '{"name":"test"}')"
 
+echo "--- 11. Organization endpoints require auth ---"
+check "POST /api/organizations (no auth)" "401" "$(status -X POST "$BASE/api/organizations" -H 'Content-Type: application/json' -d '{"name":"test","type":"church"}')"
+check "POST /api/organizations/join (no auth)" "401" "$(status -X POST "$BASE/api/organizations/join" -H 'Content-Type: application/json' -d '{"joinCode":"TESTCODE"}')"
+check "GET /api/organizations/fake-id (no auth)" "401" "$(status "$BASE/api/organizations/fake-id")"
+check "GET /api/organizations/fake-id/members (no auth)" "401" "$(status "$BASE/api/organizations/fake-id/members")"
+
 echo ""
 echo "========================================="
 printf "  TOTAL: %d  |  PASS: %d  |  FAIL: %d\n" "$TOTAL" "$PASS" "$FAIL"

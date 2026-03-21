@@ -80,7 +80,7 @@ export default function RegisterScreen() {
     const result = await register(email.trim(), password, displayName.trim(), profileType);
     setLoading(false);
     if (result.success) {
-      router.dismissAll();
+      router.replace("/org-onboarding");
     } else {
       setError(result.error || "Registration failed");
     }

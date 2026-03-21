@@ -7,7 +7,9 @@ import {
   Pressable,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -110,6 +112,21 @@ function ProfileScreenInner() {
   const { data: growthData } = useQuery<GrowthData>({
     queryKey: [`/api/analytics/growth?userId=${uid}`],
   });
+
+  const { data: myOrgData, isLoading: orgLoading } = useQuery<{
+    organization: { id: string; name: string; type: string; joinCode: string; memberCount: number };
+    role: string;
+  }>({
+    queryKey: ["/api/organizations/my-org"],
+    enabled: isAuthenticated,
+  });
+
+  const [codeCopied, setCodeCopied] = useState(false);
+  const handleCopyCode = useCallback(async (code: string) => {
+    await Clipboard.setStringAsync(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  }, []);
 
   const daysRead = weeklyData?.daysRead ?? [false, false, false, false, false, false, false];
   const streak = weeklyData?.currentStreak ?? 0;
@@ -300,6 +317,71 @@ function ProfileScreenInner() {
           style={{ marginBottom: 6 }}
         />
       </View>
+
+      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+
+      {isAuthenticated && (
+        <View style={st.sectionPad}>
+          <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            My Church
+          </Text>
+          {orgLoading ? (
+            <ActivityIndicator color="#C9933A" style={{ marginVertical: 16 }} />
+          ) : myOrgData?.organization ? (
+            <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+              <View style={st.orgHeader}>
+                <Ionicons
+                  name={myOrgData.organization.type === "conference" ? "globe-outline" : "home-outline"}
+                  size={24}
+                  color="#C9933A"
+                />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[st.orgName, { color: theme.text }]}>{myOrgData.organization.name}</Text>
+                  <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                    {myOrgData.role.charAt(0).toUpperCase() + myOrgData.role.slice(1)} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
+                  </Text>
+                </View>
+              </View>
+              {(myOrgData.role === "pastor" || myOrgData.role === "elder") && (
+                <Pressable
+                  style={st.joinCodeRow}
+                  onPress={() => handleCopyCode(myOrgData.organization.joinCode)}
+                >
+                  <View>
+                    <Text style={[st.joinCodeLabel, { color: theme.textMuted }]}>Join Code</Text>
+                    <Text style={[st.joinCodeValue, { color: theme.text }]}>{myOrgData.organization.joinCode}</Text>
+                  </View>
+                  <Ionicons
+                    name={codeCopied ? "checkmark-circle" : "copy-outline"}
+                    size={20}
+                    color={codeCopied ? "#4CAF50" : "#C9933A"}
+                  />
+                </Pressable>
+              )}
+              <ListItem
+                icon="people"
+                iconColor="#C9933A"
+                title="View Members"
+                onPress={() => router.push(`/org-members?orgId=${myOrgData.organization.id}` as any)}
+                style={{ marginTop: 8 }}
+              />
+            </View>
+          ) : (
+            <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+              <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
+                You're not part of a church yet.
+              </Text>
+              <Pressable
+                style={st.orgJoinBtn}
+                onPress={() => router.push("/org-onboarding" as any)}
+              >
+                <Ionicons name="add-circle-outline" size={18} color="#C9933A" />
+                <Text style={st.orgJoinBtnText}>Join or Register a Church</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
@@ -502,5 +584,66 @@ const st = StyleSheet.create({
   authBtnText: {
     fontSize: 14,
     color: "#fff",
+  },
+  orgCard: {
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.15)",
+  },
+  orgHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  orgName: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+  },
+  orgMeta: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  joinCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(128,128,128,0.2)",
+  },
+  joinCodeLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  joinCodeValue: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
+  },
+  orgEmptyText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  orgJoinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#C9933A",
+  },
+  orgJoinBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#C9933A",
   },
 });
