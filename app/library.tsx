@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -401,7 +402,7 @@ export default function LibraryScreen() {
 
         {isLoading ? (
           <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Loading...</Text>
+            <ActivityIndicator size="large" color={theme.accent} />
           </View>
         ) : activeTab === "notes" ? (
           <FlatList

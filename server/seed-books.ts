@@ -71,16 +71,23 @@ const BOOKS = [
 ];
 
 export async function seedBibleBooks(database: NodePgDatabase<any>) {
+  const translations = [
+    { id: "KJV", name: "King James Version", abbreviation: "KJV", language: "en" },
+    { id: "ASV", name: "American Standard Version", abbreviation: "ASV", language: "en" },
+    { id: "WEB", name: "World English Bible", abbreviation: "WEB", language: "en" },
+    { id: "BBE", name: "Bible in Basic English", abbreviation: "BBE", language: "en" },
+    { id: "YLT", name: "Young's Literal Translation", abbreviation: "YLT", language: "en" },
+    { id: "RV1909", name: "Reina Valera 1909", abbreviation: "RV1909", language: "es" },
+    { id: "LSG", name: "Louis Segond 1910", abbreviation: "LSG", language: "fr" },
+    { id: "ARC", name: "Almeida Revista e Corrigida", abbreviation: "ARC", language: "pt" },
+    { id: "TAGV", name: "Ang Biblia (Tagalog)", abbreviation: "TAGV", language: "tl" },
+  ];
+  for (const t of translations) {
+    await database.insert(bibleTranslations).values(t).onConflictDoNothing();
+  }
+
   const existing = await database.select().from(bibleBooks).limit(1);
   if (existing.length > 0) return;
-
-  console.log("Seeding KJV translation...");
-  await database.insert(bibleTranslations).values({
-    id: "KJV",
-    name: "King James Version",
-    abbreviation: "KJV",
-    language: "en",
-  }).onConflictDoNothing();
 
   console.log("Seeding 66 Bible books...");
   for (const book of BOOKS) {

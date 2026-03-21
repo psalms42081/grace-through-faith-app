@@ -357,6 +357,15 @@ export default function DevotionalsScreen() {
           </View>
         )}
 
+        {!isLoading && plans && plans.length === 0 && (
+          <View style={{ alignItems: "center", paddingTop: 32, paddingHorizontal: 24 }}>
+            <Ionicons name="book-outline" size={40} color={theme.textMuted} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 15, marginTop: 12, textAlign: "center" }}>
+              No devotional plans available yet
+            </Text>
+          </View>
+        )}
+
         {plans && plans.map((plan) => (
           <Pressable
             key={plan.id}

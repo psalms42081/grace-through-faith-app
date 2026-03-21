@@ -122,6 +122,7 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={() => setShowPassword(!showPassword)}
                   style={s.eyeBtn}
+                  hitSlop={12}
                 >
                   <Ionicons
                     name={showPassword ? "eye-off" : "eye"}

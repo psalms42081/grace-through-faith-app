@@ -101,6 +101,10 @@ export default function VerseActionsSheet() {
       <ScrollView
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 20 }]}
+        bounces={false}
+        overScrollMode="never"
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
           <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>

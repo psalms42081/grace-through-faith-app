@@ -448,16 +448,17 @@ function ProfileScreenInner() {
                               {church.memberCount} member{church.memberCount !== 1 ? "s" : ""}
                             </Text>
                           </View>
-                          {isPastorOrElder && church.joinCode && (
-                            <Pressable
-                              style={st.confChurchCodeBtn}
-                              onPress={() => handleCopyCode(church.joinCode)}
-                            >
-                              <Text style={st.confChurchCodeText}>{church.joinCode}</Text>
-                              <Ionicons name="copy-outline" size={14} color="#C9933A" />
-                            </Pressable>
-                          )}
                         </View>
+                        {isPastorOrElder && church.joinCode && (
+                          <Pressable
+                            style={st.confChurchCodeBtn}
+                            onPress={() => handleCopyCode(church.joinCode)}
+                          >
+                            <Ionicons name="key-outline" size={14} color="#C9933A" />
+                            <Text style={st.confChurchCodeText}>{church.joinCode}</Text>
+                            <Ionicons name="copy-outline" size={14} color="#C9933A" />
+                          </Pressable>
+                        )}
                       </View>
                     ))
                   ) : (
@@ -815,11 +816,14 @@ const st = StyleSheet.create({
   confChurchCodeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     backgroundColor: "rgba(201,147,58,0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
+    marginTop: 8,
+    marginLeft: 30,
+    alignSelf: "flex-start",
   },
   confChurchCodeText: {
     fontSize: 12,

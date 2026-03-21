@@ -48,7 +48,7 @@ export default function ListItem({
       <View style={s.textWrap}>
         <Text
           style={[s.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {title}
         </Text>

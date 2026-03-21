@@ -151,6 +151,7 @@ export default function RegisterScreen() {
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
               style={s.eyeBtn}
+              hitSlop={12}
             >
               <Ionicons
                 name={showPassword ? "eye-off" : "eye"}

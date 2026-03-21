@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -375,7 +376,13 @@ export default function SabbathExperienceScreen() {
     );
     try {
       await Promise.all(promises);
-    } catch {}
+    } catch {
+      if (Platform.OS === "web") {
+        window.alert("Could not save reflections. Please try again.");
+      } else {
+        Alert.alert("Error", "Could not save reflections. Please try again.");
+      }
+    }
     setSaving(false);
   };
 
@@ -387,7 +394,13 @@ export default function SabbathExperienceScreen() {
         prompt: "closing",
         response: closingResponse.trim(),
       });
-    } catch {}
+    } catch {
+      if (Platform.OS === "web") {
+        window.alert("Could not save reflection. Please try again.");
+      } else {
+        Alert.alert("Error", "Could not save reflection. Please try again.");
+      }
+    }
     setSavingClosing(false);
   };
 

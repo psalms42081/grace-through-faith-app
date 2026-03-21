@@ -142,6 +142,14 @@ export default function MusicScreen() {
         </ScrollView>
 
         <View style={styles.stationList}>
+          {filtered.length === 0 && (
+            <View style={{ alignItems: "center", paddingTop: 32, paddingHorizontal: 24 }}>
+              <Ionicons name="radio-outline" size={40} color={theme.textMuted} />
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 15, marginTop: 12, textAlign: "center" }}>
+                No stations in this category
+              </Text>
+            </View>
+          )}
           {filtered.map(station => {
             const isCurrent = activeStation?.id === station.id;
             const isThisPlaying = isCurrent && isPlaying;
