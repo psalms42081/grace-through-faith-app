@@ -37561,6 +37561,19 @@ router15.get("/api/streams/:id/token", async (req, res) => {
     return res.status(500).json({ error: "Failed to generate token" });
   }
 });
+router15.get("/api/streams/livekit-client.esm.mjs", async (_req, res) => {
+  try {
+    const fs2 = await import("fs");
+    const filePath = path.join(process.cwd(), "server", "templates", "livekit-client.esm.mjs");
+    const content = fs2.readFileSync(filePath, "utf-8");
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    return res.send(content);
+  } catch (err) {
+    console.error("LiveKit client serve error:", err);
+    return res.status(500).send("Error serving LiveKit client");
+  }
+});
 router15.get("/api/streams/:id/room", async (req, res) => {
   try {
     const { id: id2 } = req.params;

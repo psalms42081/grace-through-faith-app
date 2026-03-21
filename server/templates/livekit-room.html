@@ -189,8 +189,8 @@ dbg('Config: ' + JSON.stringify(window.__LIVEKIT_CONFIG__ ? {wsUrl: window.__LIV
 let Room, RoomEvent, Track, VideoPresets, createLocalTracks;
 try {
   statusText.textContent = 'Step 1: Loading LiveKit library...';
-  dbg('Fetching livekit-client from cdn.jsdelivr.net...');
-  const lk = await import('https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.esm.mjs');
+  dbg('Fetching livekit-client from local server...');
+  const lk = await import('/api/streams/livekit-client.esm.mjs');
   Room = lk.Room;
   RoomEvent = lk.RoomEvent;
   Track = lk.Track;
@@ -567,7 +567,7 @@ btnScreen.addEventListener('click', async () => {
       }
     });
 
-    const { LocalVideoTrack } = await import('https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.esm.mjs');
+    const { LocalVideoTrack } = await import('/api/streams/livekit-client.esm.mjs');
     const lkTrack = new LocalVideoTrack(videoTrack, undefined, false);
     await room.localParticipant.publishTrack(lkTrack, { source: 'screen_share', simulcast: false });
     screenShareTrack = lkTrack;
