@@ -526,9 +526,7 @@ function ProfileScreenInner() {
           ...(isAuthenticated && (user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader") ? [
             { title: "Admin Dashboard", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
-          ...(isAuthenticated && user?.role === "church_leader_pending" ? [
-            { title: "Leader Access", icon: "hourglass" as const, color: "#F59E0B", route: "pending-leader" },
-          ] : []),
+          /* Leader Access — hidden until approval pipeline is complete */
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
         ].map((link) => (
           <ListItem

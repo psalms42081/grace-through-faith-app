@@ -1836,6 +1836,9 @@ export default function SceneStoryScreen() {
   const { cleanup: cleanupAudio } = useAtmosphereAudio(currentMood, quietMode);
 
   const flatListRef = useRef<FlatList>(null);
+  const narrationScrollRef = useRef<ScrollView>(null);
+  const narrationUserScrolledRef = useRef(false);
+  const narrationUserScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1849,6 +1852,26 @@ export default function SceneStoryScreen() {
       }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isSpeaking || currentWordIndex < 0) return;
+    if (narrationUserScrolledRef.current) return;
+    const scene = scenes[currentScene];
+    if (!scene) return;
+    const words = scene.narration.split(/\s+/);
+    if (words.length === 0) return;
+    const progress = currentWordIndex / words.length;
+    const fontSize = isLittleLambs ? 22 : 20;
+    const lineHeight = fontSize * 2.1;
+    const charsPerLine = 30;
+    const totalChars = scene.narration.length;
+    const totalLines = Math.ceil(totalChars / charsPerLine);
+    const totalContentHeight = totalLines * lineHeight;
+    const visibleHeight = 180;
+    const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
+    const targetY = Math.max(0, progress * maxScroll);
+    narrationScrollRef.current?.scrollTo({ y: targetY, animated: true });
+  }, [currentWordIndex, isSpeaking, scenes, currentScene, isLittleLambs]);
 
   const stopNarrationAudio = useCallback(() => {
     if (narrationAbortRef.current) {
@@ -2044,6 +2067,9 @@ export default function SceneStoryScreen() {
         if (status.playing && !wordTimerStarted && status.duration && status.duration > 0) {
           startWordTimer(status.duration * 1000);
         }
+        if (status.playing && !wordTimerStarted && (!status.duration || status.duration <= 0)) {
+          startWordTimer();
+        }
         if (status.didJustFinish) {
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
           statusSub?.remove();
@@ -2056,12 +2082,6 @@ export default function SceneStoryScreen() {
         }
       });
       narrationListenerRef.current = statusSub;
-
-      setTimeout(() => {
-        if (!wordTimerStarted && !abortCtrl.signal.aborted) {
-          startWordTimer();
-        }
-      }, 600);
 
       player.play();
     } catch (err: any) {
@@ -2461,9 +2481,18 @@ export default function SceneStoryScreen() {
 
             <View style={styles.narrationArea}>
               <ScrollView
+                ref={index === currentScene ? narrationScrollRef : undefined}
                 nestedScrollEnabled
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.narrationScroll}
+                onScrollBeginDrag={() => {
+                  narrationUserScrolledRef.current = true;
+                  if (narrationUserScrollTimerRef.current) clearTimeout(narrationUserScrollTimerRef.current);
+                  narrationUserScrollTimerRef.current = setTimeout(() => {
+                    narrationUserScrolledRef.current = false;
+                  }, 3000);
+                }}
+                scrollEventThrottle={16}
               >
                 {index === currentScene ? (
                   <WordHighlightText
@@ -2603,7 +2632,10 @@ export default function SceneStoryScreen() {
         renderItem={renderScene}
         keyExtractor={(item) => item.id}
         horizontal
-        pagingEnabled
+        snapToInterval={SCREEN_WIDTH}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
         showsHorizontalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}

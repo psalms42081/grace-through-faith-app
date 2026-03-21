@@ -58,6 +58,7 @@ export interface UseBibleAudioReturn {
   handleSpeedChange: (rate: number) => void;
   handleVoiceChange: (voiceId: string, deviceVoiceIdentifier?: string) => void;
   resetPlayback: () => void;
+  onUserScroll: () => void;
 }
 
 export default function useBibleAudio(
@@ -95,6 +96,8 @@ export default function useBibleAudio(
   const mountedRef = useRef(true);
   const playbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const batchInfoRef = useRef<{ startIndex: number; endIndex: number; charOffsets: number[] } | null>(null);
+  const userScrolledRef = useRef(false);
+  const userScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -191,8 +194,17 @@ export default function useBibleAudio(
     resetPlayback();
   }, [bookId, chapter, translation, resetPlayback]);
 
+  const onUserScroll = useCallback(() => {
+    userScrolledRef.current = true;
+    if (userScrollTimerRef.current) clearTimeout(userScrollTimerRef.current);
+    userScrollTimerRef.current = setTimeout(() => {
+      userScrolledRef.current = false;
+    }, 3000);
+  }, []);
+
   const scrollToVerseEstimate = useCallback((index: number) => {
     if (index < 0 || !scrollViewRef.current) return;
+    if (userScrolledRef.current) return;
     const vrs = versesRef.current;
     if (!vrs.length) return;
     const headerHeight = 120;
@@ -209,10 +221,10 @@ export default function useBibleAudio(
   }, [scrollViewRef]);
 
   useEffect(() => {
-    if (speakingVerseIndex >= 0 && (isSpeaking || isPaused)) {
+    if (speakingVerseIndex >= 0 && isSpeaking) {
       scrollToVerseEstimate(speakingVerseIndex);
     }
-  }, [speakingVerseIndex, isSpeaking, isPaused, scrollToVerseEstimate]);
+  }, [speakingVerseIndex, isSpeaking, scrollToVerseEstimate]);
 
   const speakVerseFallback = useCallback((index: number, session: number) => {
     if (session !== sessionRef.current) return;
@@ -335,7 +347,7 @@ export default function useBibleAudio(
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioUri },
-        { shouldPlay: false, rate: speechRateRef.current, shouldCorrectPitch: true, progressUpdateIntervalMillis: 300 },
+        { shouldPlay: false, rate: speechRateRef.current, shouldCorrectPitch: true, progressUpdateIntervalMillis: 150 },
       );
 
       playerRef.current = sound;
@@ -544,5 +556,6 @@ export default function useBibleAudio(
     handleSpeedChange,
     handleVoiceChange,
     resetPlayback,
+    onUserScroll,
   };
 }

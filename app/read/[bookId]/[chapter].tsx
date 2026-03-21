@@ -320,6 +320,8 @@ export default function VerseReaderScreen() {
             )}
             <ScrollView
               ref={scrollViewRef}
+              onScrollBeginDrag={audio.onUserScroll}
+              scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
                 { paddingBottom: 160 + bottomPad },
