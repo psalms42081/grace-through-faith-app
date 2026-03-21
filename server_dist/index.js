@@ -70,6 +70,8 @@ __export(schema_exports, {
   liveSessions: () => liveSessions,
   locationVerseMaps: () => locationVerseMaps,
   locations: () => locations,
+  organizationMembers: () => organizationMembers,
+  organizations: () => organizations,
   prayerGroupMembers: () => prayerGroupMembers,
   prayerGroups: () => prayerGroups,
   prayerRequests: () => prayerRequests,
@@ -117,7 +119,7 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-var users, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, bibleTranslations, bibleBooks, bibleVerses, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback;
+var users, organizations, organizationMembers, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, bibleTranslations, bibleBooks, bibleVerses, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -134,8 +136,35 @@ var init_schema = __esm({
       isPatron: boolean("is_patron").default(false),
       donationAmount: integer("donation_amount").default(0),
       lastMissionInvite: timestamp("last_mission_invite"),
+      preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
+      preferredBibleTranslation: varchar("preferred_bible_translation", { length: 10 }),
+      preferredNarrator: varchar("preferred_narrator", { length: 10 }).default("george"),
+      organizationId: varchar("organization_id"),
+      organizationType: varchar("organization_type", { length: 12 }),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
+    organizations = pgTable("organizations", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      name: text("name").notNull(),
+      type: varchar("type", { length: 12 }).notNull(),
+      parentId: varchar("parent_id"),
+      joinCode: varchar("join_code", { length: 8 }).unique().notNull(),
+      ownerId: varchar("owner_id").notNull(),
+      memberCount: integer("member_count").default(0).notNull(),
+      tier: varchar("tier", { length: 6 }).default("free").notNull(),
+      maxMembers: integer("max_members").default(50).notNull(),
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
+    });
+    organizationMembers = pgTable("organization_members", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      organizationId: varchar("organization_id").notNull(),
+      userId: varchar("user_id").notNull(),
+      role: varchar("role", { length: 12 }).notNull().default("member"),
+      joinedAt: timestamp("joined_at").defaultNow().notNull()
+    }, (table) => ({
+      orgUserUnique: uniqueIndex("org_member_org_user").on(table.organizationId, table.userId)
+    }));
     userActivityCounters = pgTable("user_activity_counter", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       userId: varchar("user_id").notNull(),
@@ -1439,6 +1468,88 @@ var init_ai_semaphore = __esm({
   }
 });
 
+// lib/bibleTranslationMap.ts
+var TRANSLATION_MAP;
+var init_bibleTranslationMap = __esm({
+  "lib/bibleTranslationMap.ts"() {
+    "use strict";
+    TRANSLATION_MAP = {
+      en: "KJV",
+      es: "RV1909",
+      fr: "LSG",
+      pt: "ARC",
+      fil: "TAGV"
+    };
+  }
+});
+
+// server/services/languageAwareContent.ts
+var languageAwareContent_exports = {};
+__export(languageAwareContent_exports, {
+  buildDevotionalPrompt: () => buildDevotionalPrompt,
+  buildPrayerPrompt: () => buildPrayerPrompt,
+  buildSabbathPrompt: () => buildSabbathPrompt,
+  getLanguageName: () => getLanguageName,
+  getTranslationId: () => getTranslationId,
+  normalizeLanguageCode: () => normalizeLanguageCode
+});
+function normalizeLanguageCode(raw) {
+  if (!raw) return "en";
+  const base = String(raw).split("-")[0].toLowerCase().substring(0, 10);
+  return SUPPORTED_LANGUAGES.has(base) ? base : "en";
+}
+function getTranslationId(languageCode) {
+  const base = languageCode.split("-")[0];
+  return TRANSLATION_MAP[base] ?? TRANSLATION_MAP.en;
+}
+function getLanguageName(code) {
+  const base = code.split("-")[0];
+  return LANGUAGE_NAMES[base] ?? "English";
+}
+function buildDevotionalPrompt(topic, languageCode) {
+  const language = getLanguageName(languageCode);
+  return [
+    `You are a Seventh-day Adventist devotional writer.`,
+    `Always respond in ${language}.`,
+    `Maintain a warm, peaceful, theologically grounded tone.`,
+    `Write a short devotional about: ${topic}`
+  ].join("\n");
+}
+function buildSabbathPrompt(context, languageCode) {
+  const language = getLanguageName(languageCode);
+  return [
+    `You are a Seventh-day Adventist worship guide.`,
+    `Always respond in ${language}.`,
+    `Provide a warm, reverent Sabbath reflection.`,
+    `Context: ${context}`
+  ].join("\n");
+}
+function buildPrayerPrompt(prayerRequest, languageCode) {
+  const language = getLanguageName(languageCode);
+  return [
+    `You are a compassionate Christian prayer companion.`,
+    `Always respond in ${language}.`,
+    `Offer a gentle, scripturally grounded response to this prayer request.`,
+    `Prayer request: ${prayerRequest}`
+  ].join("\n");
+}
+var SUPPORTED_LANGUAGES, LANGUAGE_NAMES;
+var init_languageAwareContent = __esm({
+  "server/services/languageAwareContent.ts"() {
+    "use strict";
+    init_bibleTranslationMap();
+    SUPPORTED_LANGUAGES = /* @__PURE__ */ new Set(["en", "es", "fr", "pt", "fil", "zh"]);
+    LANGUAGE_NAMES = {
+      en: "English",
+      es: "Spanish",
+      fr: "French",
+      pt: "Portuguese",
+      fil: "Filipino",
+      zh: "Chinese"
+    };
+  }
+});
+
 // server/services/api-client.ts
 var api_client_exports = {};
 __export(api_client_exports, {
@@ -2359,14 +2470,33 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
     return null;
   }
 }
-async function generateScripturalEncouragement(prayerTitle, prayerContent) {
+async function generateScripturalEncouragement(prayerTitle, prayerContent, languageCode = "en") {
+  const LANGUAGE_NAMES2 = {
+    en: "English",
+    es: "Spanish",
+    fr: "French",
+    pt: "Portuguese",
+    fil: "Filipino",
+    zh: "Chinese"
+  };
+  const TRANSLATION_DEFAULTS = {
+    en: "KJV",
+    es: "RV1909",
+    fr: "LSG",
+    pt: "ARC",
+    fil: "TAGV"
+  };
+  const baseLang = languageCode.split("-")[0];
+  const langName = LANGUAGE_NAMES2[baseLang] || "English";
+  const translationName = TRANSLATION_DEFAULTS[baseLang] || "KJV";
+  const languageInstruction = baseLang !== "en" ? `Always respond entirely in ${langName}. Use the ${translationName} Bible translation for verse text.` : `Use the KJV Bible translation for verse text.`;
   const client = createOpenAIClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `You are a compassionate biblical counselor. Given a prayer request, respond with a single relevant Bible verse (KJV preferred) and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`
+        content: `You are a compassionate biblical counselor. ${languageInstruction} Given a prayer request, respond with a single relevant Bible verse and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`
       },
       {
         role: "user",
@@ -7987,9 +8117,9 @@ var seed_beliefs_wave1_exports = {};
 __export(seed_beliefs_wave1_exports, {
   seedBeliefsWave1: () => seedBeliefsWave1
 });
-import { eq as eq27 } from "drizzle-orm";
+import { eq as eq28 } from "drizzle-orm";
 async function seedBeliefsWave1(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq27(formationLessons.id, "w1l-1-2")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq28(formationLessons.id, "w1l-1-2")).limit(1);
   if (check) {
     return;
   }
@@ -8004,7 +8134,7 @@ async function seedBeliefsWave1(db2) {
     "bmod-007"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq27(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq28(formationModules.id, mid));
   }
   const allLessons = [
     ...belief1Lessons,
@@ -10213,16 +10343,16 @@ var seed_beliefs_wave2_exports = {};
 __export(seed_beliefs_wave2_exports, {
   seedBeliefsWave2: () => seedBeliefsWave2
 });
-import { eq as eq28 } from "drizzle-orm";
+import { eq as eq29 } from "drizzle-orm";
 async function seedBeliefsWave2(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq28(formationLessons.id, "w2l-8-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq29(formationLessons.id, "w2l-8-1")).limit(1);
   if (check) {
     return;
   }
   console.log("Seeding Wave 2 beliefs content (Beliefs 8-11)...");
   const moduleIds = ["bmod-008", "bmod-009", "bmod-010", "bmod-011"];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq28(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq29(formationModules.id, mid));
   }
   const allLessons = [
     ...belief8Lessons,
@@ -14110,9 +14240,9 @@ var seed_beliefs_wave3_exports = {};
 __export(seed_beliefs_wave3_exports, {
   seedBeliefsWave3: () => seedBeliefsWave3
 });
-import { eq as eq29 } from "drizzle-orm";
+import { eq as eq30 } from "drizzle-orm";
 async function seedBeliefsWave3(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq29(formationLessons.id, "w3l-12-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq30(formationLessons.id, "w3l-12-1")).limit(1);
   if (check) {
     return;
   }
@@ -14127,7 +14257,7 @@ async function seedBeliefsWave3(db2) {
     "bmod-018"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq29(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq30(formationModules.id, mid));
   }
   const allLessons = [
     ...belief12Lessons,
@@ -20092,9 +20222,9 @@ var seed_beliefs_wave4_exports = {};
 __export(seed_beliefs_wave4_exports, {
   seedBeliefsWave4: () => seedBeliefsWave4
 });
-import { eq as eq30 } from "drizzle-orm";
+import { eq as eq31 } from "drizzle-orm";
 async function seedBeliefsWave4(db2) {
-  const [check] = await db2.select().from(formationLessons).where(eq30(formationLessons.id, "w4l-19-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where(eq31(formationLessons.id, "w4l-19-1")).limit(1);
   if (check) {
     return;
   }
@@ -20112,7 +20242,7 @@ async function seedBeliefsWave4(db2) {
     "bmod-028"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq30(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where(eq31(formationModules.id, mid));
   }
   const allLessons = [
     ...belief19Lessons,
@@ -20198,7 +20328,7 @@ var seed_global_churches_exports = {};
 __export(seed_global_churches_exports, {
   seedGlobalChurches: () => seedGlobalChurches
 });
-import { eq as eq31 } from "drizzle-orm";
+import { eq as eq32 } from "drizzle-orm";
 async function seedGlobalChurches() {
   try {
     const auChurches = GLOBAL_CHURCHES.filter(
@@ -20206,7 +20336,7 @@ async function seedGlobalChurches() {
     );
     if (auChurches.length > 0) {
       await db.transaction(async (tx) => {
-        await tx.delete(sdaChurches).where(eq31(sdaChurches.country, "Australia"));
+        await tx.delete(sdaChurches).where(eq32(sdaChurches.country, "Australia"));
         for (let i = 0; i < auChurches.length; i += 100) {
           const batch = auChurches.slice(i, i + 100).map((c) => ({
             name: c.name,
@@ -32131,9 +32261,9 @@ var cache_warmup_exports = {};
 __export(cache_warmup_exports, {
   runCacheWarmup: () => runCacheWarmup
 });
-import { eq as eq33, and as and20 } from "drizzle-orm";
+import { eq as eq34, and as and21 } from "drizzle-orm";
 async function warmContextCards(bookId, chapter, bookName) {
-  const existing = await db.select({ id: contextCards.id }).from(contextCards).where(and20(eq33(contextCards.bookId, bookId), eq33(contextCards.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: contextCards.id }).from(contextCards).where(and21(eq34(contextCards.bookId, bookId), eq34(contextCards.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateContextCards({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(contextCards).values({
@@ -32151,7 +32281,7 @@ async function warmContextCards(bookId, chapter, bookName) {
   return true;
 }
 async function warmApplicationTemplates(bookId, chapter, bookName) {
-  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where(and20(eq33(applicationTemplates.bookId, bookId), eq33(applicationTemplates.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where(and21(eq34(applicationTemplates.bookId, bookId), eq34(applicationTemplates.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateApplicationStudy({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(applicationTemplates).values({
@@ -32166,7 +32296,7 @@ async function warmApplicationTemplates(bookId, chapter, bookName) {
   return true;
 }
 async function warmChapterContext(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where(and20(eq33(chapterContextCache.bookId, bookId), eq33(chapterContextCache.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where(and21(eq34(chapterContextCache.bookId, bookId), eq34(chapterContextCache.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateChapterContext({ bookId, chapter, bookName });
   await db.insert(chapterContextCache).values({
@@ -32181,9 +32311,9 @@ async function warmChapterContext(bookId, chapter, bookName) {
   return true;
 }
 async function warmPassageSections(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where(and20(eq33(chapterPassageSections.bookId, bookId), eq33(chapterPassageSections.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where(and21(eq34(chapterPassageSections.bookId, bookId), eq34(chapterPassageSections.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
-  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where(and20(eq33(bibleVerses.bookId, bookId), eq33(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where(and21(eq34(bibleVerses.bookId, bookId), eq34(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
   if (verses.length === 0) return false;
   const totalVerses = verses.length;
   const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
@@ -32364,7 +32494,7 @@ import express from "express";
 init_db();
 init_schema();
 import { createServer } from "node:http";
-import { eq as eq32 } from "drizzle-orm";
+import { eq as eq33 } from "drizzle-orm";
 
 // server/middleware/auth.ts
 init_db();
@@ -32472,7 +32602,7 @@ function generateCode() {
 }
 
 // server/routes.ts
-import { sql as sql19 } from "drizzle-orm";
+import { sql as sql20 } from "drizzle-orm";
 init_ai_semaphore();
 
 // server/middleware/response-cache.ts
@@ -32958,6 +33088,51 @@ router2.post("/api/user/dismiss-mission-invite", requireAuth, async (req, res) =
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+router2.get("/api/user/preferences", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json({ preferredLanguage: "en", preferredBibleTranslation: null, preferredNarrator: "george" });
+    }
+    const [user] = await db.select({
+      preferredLanguage: users.preferredLanguage,
+      preferredBibleTranslation: users.preferredBibleTranslation,
+      preferredNarrator: users.preferredNarrator
+    }).from(users).where(eq3(users.id, userId));
+    return res.json({
+      preferredLanguage: user?.preferredLanguage ?? "en",
+      preferredBibleTranslation: user?.preferredBibleTranslation ?? null,
+      preferredNarrator: user?.preferredNarrator ?? "george"
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+router2.put("/api/user/preferences", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const updates = {};
+    if (req.body.preferredLanguage !== void 0) {
+      updates.preferredLanguage = String(req.body.preferredLanguage).substring(0, 10);
+    }
+    if (req.body.preferredBibleTranslation !== void 0) {
+      const val = req.body.preferredBibleTranslation;
+      updates.preferredBibleTranslation = val ? String(val).substring(0, 10) : null;
+    }
+    if (req.body.preferredNarrator !== void 0) {
+      const val = String(req.body.preferredNarrator);
+      const valid = ["george", "sarah"];
+      updates.preferredNarrator = valid.includes(val) ? val : "george";
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid preferences provided" });
+    }
+    await db.update(users).set(updates).where(eq3(users.id, userId));
+    return res.json({ success: true, ...updates });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 router2.get("/api/notes/:userId", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
@@ -33324,6 +33499,7 @@ init_db();
 init_schema();
 import { Router as Router3 } from "express";
 import { eq as eq4, and as and2, ilike, sql as sql4 } from "drizzle-orm";
+init_languageAwareContent();
 var router3 = Router3();
 router3.get("/api/passage", async (req, res) => {
   try {
@@ -33331,8 +33507,8 @@ router3.get("/api/passage", async (req, res) => {
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
     }
-    const chapterNum2 = Number(chapter);
-    if (isNaN(chapterNum2) || chapterNum2 < 1) {
+    const chapterNum = Number(chapter);
+    if (isNaN(chapterNum) || chapterNum < 1) {
       return res.status(400).json({ error: "chapter must be a positive number" });
     }
     let bookRecord;
@@ -33353,11 +33529,11 @@ router3.get("/api/passage", async (req, res) => {
     const verses = await db.select().from(bibleVerses).where(
       and2(
         eq4(bibleVerses.bookId, bookId),
-        eq4(bibleVerses.chapter, chapterNum2),
+        eq4(bibleVerses.chapter, chapterNum),
         eq4(bibleVerses.translationId, translationRecord[0].id)
       )
     ).orderBy(bibleVerses.verse);
-    return res.json({ book: bookRecord[0], chapter: chapterNum2, verses });
+    return res.json({ book: bookRecord[0], chapter: chapterNum, verses });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -33372,11 +33548,39 @@ router3.get("/api/books", cachedResponse(300), async (_req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+router3.get("/api/translations", cachedResponse(600), async (_req, res) => {
+  try {
+    const translations = await db.select().from(bibleTranslations);
+    return res.json(translations);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+router3.get("/api/translation-for-language", async (req, res) => {
+  try {
+    const { lang = "en" } = req.query;
+    const translationAbbr = getTranslationId(String(lang));
+    const record = await db.select().from(bibleTranslations).where(eq4(bibleTranslations.abbreviation, translationAbbr)).limit(1);
+    if (!record.length) {
+      const fallback = await db.select().from(bibleTranslations).where(eq4(bibleTranslations.abbreviation, "KJV")).limit(1);
+      return res.json(fallback[0] || { abbreviation: "KJV" });
+    }
+    return res.json(record[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 router3.get("/api/verse", async (req, res) => {
   try {
     const { book, chapter, verse, translation = "KJV" } = req.query;
     if (!book || !chapter || !verse) {
       return res.status(400).json({ error: "book, chapter, and verse are required" });
+    }
+    const chapterNum = Number(chapter);
+    if (isNaN(chapterNum) || chapterNum < 1) {
+      return res.status(400).json({ error: "chapter must be a positive number" });
     }
     const translationRecord = await db.select().from(bibleTranslations).where(eq4(bibleTranslations.abbreviation, String(translation))).limit(1);
     if (!translationRecord.length) {
@@ -33676,6 +33880,43 @@ var EGW_COMMENTATOR = {
   dates: "1827\u20131915",
   tradition: "Adventist"
 };
+var ADVENTIST_PIONEERS = [
+  {
+    dbId: "uriah-smith",
+    name: "Uriah Smith",
+    dates: "1832\u20131903",
+    tradition: "Adventist",
+    focus: "prophetic interpretation, Daniel and Revelation, sanctuary doctrine, second advent"
+  },
+  {
+    dbId: "jn-andrews",
+    name: "J.N. Andrews",
+    dates: "1829\u20131883",
+    tradition: "Adventist",
+    focus: "Sabbath theology, church history, law and grace, prophetic fulfillment"
+  },
+  {
+    dbId: "john-loughborough",
+    name: "John Loughborough",
+    dates: "1832\u20131924",
+    tradition: "Adventist",
+    focus: "early church history, spiritual gifts, Adventist distinctives"
+  },
+  {
+    dbId: "joseph-bates",
+    name: "Joseph Bates",
+    dates: "1792\u20131872",
+    tradition: "Adventist",
+    focus: "Sabbath restoration, sanctification, the third angel's message"
+  },
+  {
+    dbId: "james-white",
+    name: "James White",
+    dates: "1821\u20131881",
+    tradition: "Adventist",
+    focus: "grace and the law, church organization, prophetic study"
+  }
+];
 async function generateEgwInsight(bookName, chapter) {
   try {
     const OpenAI3 = (await import("openai")).default;
@@ -33704,6 +33945,37 @@ async function generateEgwInsight(bookName, chapter) {
     return resp.choices[0]?.message?.content?.trim() || null;
   } catch (err) {
     console.error("[EGW Insight] Generation failed:", err);
+    return null;
+  }
+}
+async function generatePioneerInsight(pioneer, bookName, chapter) {
+  try {
+    const OpenAI3 = (await import("openai")).default;
+    const { getTimeout: getTimeout2 } = await Promise.resolve().then(() => (init_api_client(), api_client_exports));
+    const { withAIConcurrency: withAIConcurrency2 } = await Promise.resolve().then(() => (init_ai_semaphore(), ai_semaphore_exports));
+    const client = new OpenAI3({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      timeout: getTimeout2("openai")
+    });
+    const resp = await withAIConcurrency2(() => client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.5,
+      max_tokens: 600,
+      messages: [
+        {
+          role: "system",
+          content: `You are an Adventist Bible study assistant. Provide a brief thematic summary of how ${pioneer.name} (${pioneer.dates}), an early Adventist pioneer, would have approached the given Bible chapter based on their known theological emphases: ${pioneer.focus}. Do NOT fabricate specific quotes \u2014 instead summarize thematic insights ${pioneer.name.split(" ").pop()} was known to emphasize. Write in third person ("${pioneer.name.split(" ").pop()} emphasized..." or "${pioneer.name.split(" ").pop()} argued..."). Keep the tone reverent and educational. Limit to 2-3 paragraphs.`
+        },
+        {
+          role: "user",
+          content: `Provide a thematic summary of how ${pioneer.name} would have approached ${bookName} chapter ${chapter}, based on their theological emphases: ${pioneer.focus}.`
+        }
+      ]
+    }));
+    return resp.choices[0]?.message?.content?.trim() || null;
+  } catch (err) {
+    console.error(`[Pioneer Insight] ${pioneer.name} generation failed:`, err);
     return null;
   }
 }
@@ -33766,7 +34038,14 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         eq6(commentaryEntries.chapter, Number(chapter))
       )
     );
-    if (existing.length > 0) {
+    const existingIds = new Set(existing.map((e) => e.entry?.commentatorId || e.commentatorId));
+    const allExpectedIds = [
+      EGW_COMMENTATOR.dbId,
+      ...ADVENTIST_PIONEERS.map((p) => p.dbId),
+      ...COMMENTARY_SOURCES.map((s) => s.dbId)
+    ];
+    const hasMissing = allExpectedIds.some((id2) => !existingIds.has(id2));
+    if (existing.length > 0 && !hasMissing) {
       return res.json(existing);
     }
     const bookCode = BOOK_ID_TO_API[Number(bookId)];
@@ -33845,6 +34124,39 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         }).returning();
         const egwRow = await db.select().from(commentators).where(eq6(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
         results.unshift({ entry: egwInserted, commentator: egwRow[0] || null });
+      }
+    }
+    for (const pioneer of ADVENTIST_PIONEERS) {
+      if (!commentatorMap[pioneer.dbId]) {
+        await db.insert(commentators).values({
+          id: pioneer.dbId,
+          name: pioneer.name,
+          dates: pioneer.dates,
+          tradition: pioneer.tradition
+        }).onConflictDoNothing();
+        commentatorMap[pioneer.dbId] = pioneer.dbId;
+      }
+      const existingPioneer = await db.select().from(commentaryEntries).where(and4(
+        eq6(commentaryEntries.commentatorId, pioneer.dbId),
+        eq6(commentaryEntries.bookId, Number(bookId)),
+        eq6(commentaryEntries.chapter, Number(chapter))
+      )).limit(1);
+      if (existingPioneer.length > 0) {
+        const pRow = await db.select().from(commentators).where(eq6(commentators.id, pioneer.dbId)).limit(1);
+        results.push({ entry: existingPioneer[0], commentator: pRow[0] || null });
+      } else {
+        const content = await generatePioneerInsight(pioneer, bookName, Number(chapter));
+        if (content) {
+          const [inserted] = await db.insert(commentaryEntries).values({
+            commentatorId: pioneer.dbId,
+            bookId: Number(bookId),
+            chapter: Number(chapter),
+            content,
+            title: `${bookName} ${chapter} \u2014 ${pioneer.name}`
+          }).returning();
+          const pRow = await db.select().from(commentators).where(eq6(commentators.id, pioneer.dbId)).limit(1);
+          results.push({ entry: inserted, commentator: pRow[0] || null });
+        }
       }
     }
     return res.json(results);
@@ -35223,12 +35535,7 @@ import crypto2 from "crypto";
 init_api_client();
 var ELEVENLABS_VOICES = {
   george: "JBFqnCBsd6RMkjVDRZzb",
-  callum: "N2lVS1w4EtoT3dr4eOWO",
-  daniel: "onwK4e9ZLuTAKqWW03F9",
-  brian: "nPczCjzI2devNBz1zQrb",
-  sarah: "EXAVITQu4vr4xnSDxMaL",
-  lily: "pFZP5JQG7iQjIQuC4Bku",
-  alice: "Xb7hH8MSUJpSbSDYk0k2"
+  sarah: "EXAVITQu4vr4xnSDxMaL"
 };
 function isValidVoice(voice) {
   return Object.keys(ELEVENLABS_VOICES).includes(voice);
@@ -36783,7 +37090,9 @@ router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
     let scripturalVerse = null;
     let scripturalNote = null;
     try {
-      const encouragement = await generateScripturalEncouragement(title, content || "");
+      const { normalizeLanguageCode: normalizeLanguageCode2 } = await Promise.resolve().then(() => (init_languageAwareContent(), languageAwareContent_exports));
+      const contentLang = normalizeLanguageCode2(req.headers["x-content-language"]);
+      const encouragement = await generateScripturalEncouragement(title, content || "", contentLang);
       scripturalVerse = encouragement.verse;
       scripturalNote = encouragement.note;
     } catch {
@@ -37343,6 +37652,9 @@ async function ensureDeviceUserExists(deviceId) {
 router16.get("/api/family/children", optionalAuth, async (req, res) => {
   try {
     const parentId = getEffectiveUserId(req);
+    if (parentId === "guest") {
+      return res.status(401).json({ error: "A device ID or login is required" });
+    }
     const children = await db.select().from(childProfiles).where(eq16(childProfiles.parentId, parentId)).orderBy(asc5(childProfiles.createdAt));
     return res.json(children);
   } catch (err) {
@@ -37599,7 +37911,9 @@ router16.post("/api/family/prayers", requireAuth, checkProStatus, async (req, re
     let scripturalVerse = null;
     let scripturalNote = null;
     try {
-      const encouragement = await generateScripturalEncouragement(title, content || "");
+      const { normalizeLanguageCode: normalizeLanguageCode2 } = await Promise.resolve().then(() => (init_languageAwareContent(), languageAwareContent_exports));
+      const contentLang = normalizeLanguageCode2(req.headers["x-content-language"]);
+      const encouragement = await generateScripturalEncouragement(title, content || "", contentLang);
       scripturalVerse = encouragement.verse;
       scripturalNote = encouragement.note;
     } catch (aiErr) {
@@ -39957,6 +40271,286 @@ router22.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (r
 });
 var admin_pipeline_default = router22;
 
+// server/routes/organizations.ts
+init_db();
+init_schema();
+import { Router as Router23 } from "express";
+import { eq as eq26, and as and20, sql as sql19 } from "drizzle-orm";
+var router23 = Router23();
+function generateJoinCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+async function uniqueJoinCode() {
+  for (let i = 0; i < 10; i++) {
+    const code = generateJoinCode();
+    const existing = await db.select({ id: organizations.id }).from(organizations).where(eq26(organizations.joinCode, code)).limit(1);
+    if (existing.length === 0) return code;
+  }
+  throw new Error("Failed to generate unique join code");
+}
+router23.post("/api/organizations", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const { name, type } = req.body;
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return res.status(400).json({ error: "Organization name is required" });
+    }
+    if (type !== "church" && type !== "conference") {
+      return res.status(400).json({ error: "Type must be 'church' or 'conference'" });
+    }
+    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where(eq26(organizationMembers.userId, userId)).limit(1);
+    if (existingMember) {
+      return res.status(400).json({ error: "You already belong to an organization. Leave your current one first." });
+    }
+    const joinCode = await uniqueJoinCode();
+    const [org] = await db.insert(organizations).values({
+      name: name.trim(),
+      type,
+      joinCode,
+      ownerId: userId,
+      memberCount: 1
+    }).returning();
+    await db.insert(organizationMembers).values({
+      organizationId: org.id,
+      userId,
+      role: "pastor"
+    });
+    await db.update(users).set({ organizationId: org.id, organizationType: type }).where(eq26(users.id, userId));
+    return res.json(org);
+  } catch (err) {
+    console.error("Create org error:", err);
+    return res.status(500).json({ error: "Failed to create organization" });
+  }
+});
+router23.post("/api/organizations/join", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const { joinCode } = req.body;
+    if (!joinCode || typeof joinCode !== "string") {
+      return res.status(400).json({ error: "Join code is required" });
+    }
+    const code = joinCode.trim().toUpperCase().replace(/-/g, "");
+    const [org] = await db.select().from(organizations).where(eq26(organizations.joinCode, code)).limit(1);
+    if (!org) {
+      return res.status(404).json({ error: "Invalid join code. Please check and try again." });
+    }
+    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where(eq26(organizationMembers.userId, userId)).limit(1);
+    if (existingMember) {
+      return res.status(400).json({ error: "You already belong to an organization. Leave your current one first." });
+    }
+    if (org.tier === "free" && org.memberCount >= org.maxMembers) {
+      return res.status(400).json({ error: `This organization has reached its free tier limit of ${org.maxMembers} members` });
+    }
+    await db.insert(organizationMembers).values({
+      organizationId: org.id,
+      userId,
+      role: "member"
+    });
+    await db.update(organizations).set({
+      memberCount: sql19`${organizations.memberCount} + 1`,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq26(organizations.id, org.id));
+    await db.update(users).set({ organizationId: org.id, organizationType: org.type }).where(eq26(users.id, userId));
+    return res.json({ message: "Successfully joined", organization: { id: org.id, name: org.name, type: org.type } });
+  } catch (err) {
+    if (err?.code === "23505") {
+      return res.status(400).json({ error: "You are already a member of this organization" });
+    }
+    console.error("Join org error:", err);
+    return res.status(500).json({ error: "Failed to join organization" });
+  }
+});
+router23.get("/api/organizations/my-org", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const [membership] = await db.select({
+      role: organizationMembers.role,
+      orgId: organizationMembers.organizationId
+    }).from(organizationMembers).where(eq26(organizationMembers.userId, userId)).limit(1);
+    if (!membership) {
+      return res.json({ organization: null, role: null });
+    }
+    const [org] = await db.select().from(organizations).where(eq26(organizations.id, membership.orgId)).limit(1);
+    if (!org) {
+      return res.json({ organization: null, role: null });
+    }
+    const safeOrg = {
+      ...org,
+      joinCode: membership.role === "pastor" || membership.role === "elder" ? org.joinCode : void 0
+    };
+    return res.json({ organization: safeOrg, role: membership.role });
+  } catch (err) {
+    console.error("Get my org error:", err);
+    return res.status(500).json({ error: "Failed to get organization" });
+  }
+});
+router23.get("/api/organizations/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const orgId = req.params.id;
+    const [membership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, userId))).limit(1);
+    if (!membership) {
+      return res.status(403).json({ error: "You are not a member of this organization" });
+    }
+    const [org] = await db.select().from(organizations).where(eq26(organizations.id, orgId)).limit(1);
+    if (!org) {
+      return res.status(404).json({ error: "Organization not found" });
+    }
+    const members = await db.select({
+      userId: organizationMembers.userId,
+      role: organizationMembers.role,
+      joinedAt: organizationMembers.joinedAt,
+      displayName: users.displayName
+    }).from(organizationMembers).leftJoin(users, eq26(organizationMembers.userId, users.id)).where(eq26(organizationMembers.organizationId, orgId));
+    const showJoinCode = membership.role === "pastor" || membership.role === "elder";
+    return res.json({
+      ...org,
+      joinCode: showJoinCode ? org.joinCode : void 0,
+      members,
+      myRole: membership.role
+    });
+  } catch (err) {
+    console.error("Get org error:", err);
+    return res.status(500).json({ error: "Failed to get organization" });
+  }
+});
+router23.get("/api/organizations/:id/members", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const orgId = req.params.id;
+    const [membership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, userId))).limit(1);
+    if (!membership) {
+      return res.status(403).json({ error: "You are not a member of this organization" });
+    }
+    const members = await db.select({
+      userId: organizationMembers.userId,
+      role: organizationMembers.role,
+      joinedAt: organizationMembers.joinedAt,
+      displayName: users.displayName
+    }).from(organizationMembers).leftJoin(users, eq26(organizationMembers.userId, users.id)).where(eq26(organizationMembers.organizationId, orgId));
+    return res.json(members);
+  } catch (err) {
+    console.error("List members error:", err);
+    return res.status(500).json({ error: "Failed to list members" });
+  }
+});
+router23.put("/api/organizations/:id/members/:userId/role", requireAuth, async (req, res) => {
+  try {
+    const requesterId = req.authUserId;
+    const orgId = req.params.id;
+    const targetUserId = req.params.userId;
+    const { role } = req.body;
+    if (role !== "elder" && role !== "member") {
+      return res.status(400).json({ error: "Role must be 'elder' or 'member'" });
+    }
+    const [requesterMembership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, requesterId))).limit(1);
+    if (!requesterMembership || requesterMembership.role !== "pastor") {
+      return res.status(403).json({ error: "Only pastors can change member roles" });
+    }
+    const [org] = await db.select().from(organizations).where(eq26(organizations.id, orgId)).limit(1);
+    if (org && org.ownerId === targetUserId) {
+      return res.status(400).json({ error: "Cannot change the pastor's role" });
+    }
+    const [targetMembership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, targetUserId))).limit(1);
+    if (!targetMembership) {
+      return res.status(404).json({ error: "Member not found in this organization" });
+    }
+    await db.update(organizationMembers).set({ role }).where(eq26(organizationMembers.id, targetMembership.id));
+    return res.json({ message: "Role updated", userId: targetUserId, newRole: role });
+  } catch (err) {
+    console.error("Update role error:", err);
+    return res.status(500).json({ error: "Failed to update role" });
+  }
+});
+router23.delete("/api/organizations/:id/members/:userId", requireAuth, async (req, res) => {
+  try {
+    const requesterId = req.authUserId;
+    const orgId = req.params.id;
+    const targetUserId = req.params.userId;
+    const [requesterMembership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, requesterId))).limit(1);
+    if (!requesterMembership || requesterMembership.role !== "pastor" && requesterMembership.role !== "elder") {
+      return res.status(403).json({ error: "Only pastors and elders can remove members" });
+    }
+    const [org] = await db.select().from(organizations).where(eq26(organizations.id, orgId)).limit(1);
+    if (org && org.ownerId === targetUserId) {
+      return res.status(400).json({ error: "Cannot remove the pastor (owner) from the organization" });
+    }
+    const [targetMembership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, orgId), eq26(organizationMembers.userId, targetUserId))).limit(1);
+    if (!targetMembership) {
+      return res.status(404).json({ error: "Member not found in this organization" });
+    }
+    await db.delete(organizationMembers).where(eq26(organizationMembers.id, targetMembership.id));
+    await db.update(organizations).set({
+      memberCount: sql19`GREATEST(${organizations.memberCount} - 1, 0)`,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq26(organizations.id, orgId));
+    await db.update(users).set({ organizationId: null, organizationType: null }).where(eq26(users.id, targetUserId));
+    return res.json({ message: "Member removed", userId: targetUserId });
+  } catch (err) {
+    console.error("Remove member error:", err);
+    return res.status(500).json({ error: "Failed to remove member" });
+  }
+});
+router23.post("/api/organizations/:id/churches", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const conferenceId = req.params.id;
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return res.status(400).json({ error: "Church name is required" });
+    }
+    const [conference] = await db.select().from(organizations).where(eq26(organizations.id, conferenceId)).limit(1);
+    if (!conference) {
+      return res.status(404).json({ error: "Conference not found" });
+    }
+    if (conference.type !== "conference") {
+      return res.status(400).json({ error: "Can only add churches under a conference" });
+    }
+    const [membership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, conferenceId), eq26(organizationMembers.userId, userId))).limit(1);
+    if (!membership || membership.role !== "pastor") {
+      return res.status(403).json({ error: "Only the conference pastor can add churches" });
+    }
+    const joinCode = await uniqueJoinCode();
+    const [church] = await db.insert(organizations).values({
+      name: name.trim(),
+      type: "church",
+      parentId: conferenceId,
+      joinCode,
+      ownerId: userId,
+      memberCount: 0
+    }).returning();
+    return res.json(church);
+  } catch (err) {
+    console.error("Add church error:", err);
+    return res.status(500).json({ error: "Failed to add church" });
+  }
+});
+router23.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const conferenceId = req.params.id;
+    const [conference] = await db.select().from(organizations).where(eq26(organizations.id, conferenceId)).limit(1);
+    if (!conference || conference.type !== "conference") {
+      return res.status(400).json({ error: "Not a conference organization" });
+    }
+    const [membership] = await db.select().from(organizationMembers).where(and20(eq26(organizationMembers.organizationId, conferenceId), eq26(organizationMembers.userId, userId))).limit(1);
+    if (!membership) {
+      return res.status(403).json({ error: "You are not a member of this conference" });
+    }
+    const churches = await db.select().from(organizations).where(eq26(organizations.parentId, conferenceId));
+    return res.json(churches);
+  } catch (err) {
+    console.error("List churches error:", err);
+    return res.status(500).json({ error: "Failed to list churches" });
+  }
+});
+var organizations_default = router23;
+
 // server/routes.ts
 async function registerRoutes(app2) {
   if (env.RUN_STARTUP_SEEDS === "true") {
@@ -40018,6 +40612,7 @@ async function registerRoutes(app2) {
   app2.use("/api/analytics", analytics_default);
   app2.use(resources_default);
   app2.use(admin_pipeline_default);
+  app2.use(organizations_default);
   const startTime = Date.now();
   app2.get("/api/health", async (_req, res) => {
     const uptimeMs = Date.now() - startTime;
@@ -40025,13 +40620,13 @@ async function registerRoutes(app2) {
     let dbStatus = "ok";
     let resourceStats = { published: 0, draft: 0 };
     try {
-      await db.execute(sql19`SELECT 1`);
+      await db.execute(sql20`SELECT 1`);
     } catch {
       dbStatus = "unreachable";
     }
     if (dbStatus === "ok") {
       try {
-        const counts = await db.execute(sql19`
+        const counts = await db.execute(sql20`
           SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
         `);
         for (const row of counts.rows) {
@@ -40085,12 +40680,12 @@ async function registerRoutes(app2) {
   app2.get("/api/growth-map", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const prayerRows = await db.select().from(prayerRequests).where(eq32(prayerRequests.userId, userId));
-      const readingRows = await db.select().from(readingHistory).where(eq32(readingHistory.userId, userId));
-      const groupMemberRows = await db.select().from(prayerGroupMembers).where(eq32(prayerGroupMembers.userId, userId));
-      const discussionRows = await db.select().from(groupDiscussions).where(eq32(groupDiscussions.userId, userId));
-      const layerRows = await db.select().from(layerCompletions).where(eq32(layerCompletions.userId, userId));
-      const progressTrackRows = await db.select().from(progressTracks).where(eq32(progressTracks.userId, userId));
+      const prayerRows = await db.select().from(prayerRequests).where(eq33(prayerRequests.userId, userId));
+      const readingRows = await db.select().from(readingHistory).where(eq33(readingHistory.userId, userId));
+      const groupMemberRows = await db.select().from(prayerGroupMembers).where(eq33(prayerGroupMembers.userId, userId));
+      const discussionRows = await db.select().from(groupDiscussions).where(eq33(groupDiscussions.userId, userId));
+      const layerRows = await db.select().from(layerCompletions).where(eq33(layerCompletions.userId, userId));
+      const progressTrackRows = await db.select().from(progressTracks).where(eq33(progressTracks.userId, userId));
       const uniqueChapters = new Set(
         readingRows.map((r) => `${r.bookId}-${r.chapter}`)
       );
@@ -40169,7 +40764,7 @@ function setupCors(app2) {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS"
       );
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id, X-Content-Language");
       res.header("Access-Control-Allow-Credentials", "true");
     }
     if (req.method === "OPTIONS") {
