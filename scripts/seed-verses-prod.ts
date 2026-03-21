@@ -34,6 +34,12 @@ const TRANSLATIONS = [
   { id: "KJV", name: "King James Version", abbreviation: "KJV", language: "en", file: "kjv.json" },
   { id: "ASV", name: "American Standard Version", abbreviation: "ASV", language: "en", file: "asv.json" },
   { id: "WEB", name: "World English Bible", abbreviation: "WEB", language: "en", file: "web.json" },
+  { id: "BBE", name: "Bible in Basic English", abbreviation: "BBE", language: "en", file: "bbe.json" },
+  { id: "YLT", name: "Young's Literal Translation", abbreviation: "YLT", language: "en", file: "ylt.json" },
+  { id: "RV1909", name: "Reina Valera 1909", abbreviation: "RV1909", language: "es", file: "rv1909.json" },
+  { id: "LSG", name: "Louis Segond 1910", abbreviation: "LSG", language: "fr", file: "lsg.json" },
+  { id: "ARC", name: "Almeida Revista e Corrigida", abbreviation: "ARC", language: "pt", file: "arc.json" },
+  { id: "TAGV", name: "Ang Biblia (Tagalog)", abbreviation: "TAGV", language: "fil", file: "tagv.json" },
 ];
 
 async function seedTranslation(translationId: string, dataFile: string, bookMap: Map<string, number>) {
