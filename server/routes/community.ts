@@ -904,12 +904,12 @@ router.get("/api/streams/:id/token", async (req, res) => {
   }
 });
 
-router.get("/api/streams/livekit-client.esm.mjs", async (_req, res) => {
+router.get("/api/streams/livekit-client.umd.js", async (_req, res) => {
   try {
     const fs = await import("fs");
-    const filePath = path.join(process.cwd(), "server", "templates", "livekit-client.esm.mjs");
+    const filePath = path.join(process.cwd(), "server", "templates", "livekit-client.umd.js");
     const content = fs.readFileSync(filePath, "utf-8");
-    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=86400, immutable");
     return res.send(content);
   } catch (err) {
