@@ -41158,14 +41158,15 @@ function setupErrorHandler(app2) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
-        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud"],
-        mediaSrc: ["'self'", "blob:"],
+        scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://www.youtube.com", "https://s.ytimg.com"],
+        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud", "https://*.youtube.com", "https://*.google.com", "https://*.googlevideo.com"],
+        mediaSrc: ["'self'", "blob:", "https://*.googlevideo.com", "https://*.youtube.com"],
         workerSrc: ["'self'", "blob:"],
-        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.ytimg.com", "https://*.ggpht.com"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
+        childSrc: ["'self'", "https://www.youtube.com", "blob:"],
         frameAncestors: ["'self'"]
       }
     }
