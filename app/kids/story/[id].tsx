@@ -2919,7 +2919,7 @@ const styles = StyleSheet.create({
   narrationScroll: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingBottom: 80,
+    paddingBottom: 120,
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",
