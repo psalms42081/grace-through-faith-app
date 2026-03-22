@@ -1820,6 +1820,9 @@ export const leaderRequests = pgTable(
     contactEmail: text("contact_email").notNull(),
     description: text("description"),
     status: varchar("status", { length: 12 }).default("pending").notNull(),
+    reviewedBy: varchar("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewNotes: text("review_notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

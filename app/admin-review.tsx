@@ -1471,7 +1471,7 @@ export default function AdminReviewScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test" | "leaders">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test" | "users" | "leaders">("overview");
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [filterHasNotes, setFilterHasNotes] = useState(false);
@@ -1649,7 +1649,8 @@ export default function AdminReviewScreen() {
           },
         ]}
       >
-        {(["overview", "pending", "quarter", ...(isAdmin ? ["leaders" as const, "sabbath-test" as const] : [])] as const).map((tab) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 0 }}>
+        {(["overview", "pending", "quarter", ...(isAdmin ? ["users" as const, "leaders" as const, "sabbath-test" as const] : [])] as const).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
@@ -1662,12 +1663,15 @@ export default function AdminReviewScreen() {
                 ? `Review (${pendingCount})`
                 : tab === "sabbath-test"
                 ? "Sabbath"
+                : tab === "users"
+                ? "Users"
                 : tab === "leaders"
                 ? "Leaders"
                 : "Quarter"}
             </Text>
           </Pressable>
         ))}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -1733,6 +1737,10 @@ export default function AdminReviewScreen() {
             reviewLoading={reviewMutation.isPending}
             theme={theme}
           />
+        )}
+
+        {activeTab === "users" && isAdmin && (
+          <UsersTab theme={theme} />
         )}
 
         {activeTab === "leaders" && isAdmin && (
@@ -1851,6 +1859,502 @@ export default function AdminReviewScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+interface AdminUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  email: string | null;
+  role: string;
+  createdAt: string;
+  isPro: boolean;
+  isPatron: boolean | null;
+  organizationId: string | null;
+  lastActive: string | null;
+}
+
+interface AdminUserDetail {
+  user: AdminUser;
+  groups: Array<{
+    groupId: string;
+    role: string;
+    joinedAt: string;
+    groupName: string | null;
+    groupType: string | null;
+  }>;
+  organization: { id: string; name: string; type: string } | null;
+  recentActivity: Array<{
+    id: string;
+    bookName: string;
+    chapter: number;
+    readAt: string;
+  }>;
+  recentPosts: Array<{
+    id: string;
+    groupId: string;
+    content: string;
+    createdAt: string;
+  }>;
+}
+
+function UserDetailModal({
+  visible,
+  userId,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  userId: string | null;
+  onClose: () => void;
+  theme: any;
+}) {
+  const queryClient = useQueryClient();
+  const detailPath = userId ? `/api/admin/users/${userId}` : "";
+  const { data, isLoading } = useQuery<AdminUserDetail>({
+    queryKey: [detailPath],
+    enabled: !!userId,
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      return apiRequest("PATCH", `/api/admin/users/${id}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [detailPath] });
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/admin/users") });
+      Alert.alert("Success", "User role updated successfully.");
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Failed to update user role.");
+    },
+  });
+
+  const handleRoleChange = (newRole: string) => {
+    if (!userId) return;
+    if (Platform.OS === "web") {
+      if (confirm(`Change this user's role to "${newRole}"?`)) {
+        roleMutation.mutate({ id: userId, role: newRole });
+      }
+    } else {
+      Alert.alert("Change Role", `Change this user's role to "${newRole}"?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Confirm", onPress: () => roleMutation.mutate({ id: userId, role: newRole }) },
+      ]);
+    }
+  };
+
+  const roleOptions = ROLE_OPTIONS;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: "85%" }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>User Details</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Ionicons name="close" size={24} color={theme.textMuted} />
+            </Pressable>
+          </View>
+
+          {isLoading ? (
+            <ActivityIndicator size="large" color={theme.accent} style={{ marginVertical: 40 }} />
+          ) : data ? (
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              <View style={{ padding: 16, gap: 16 }}>
+                <View style={[styles.userDetailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <View style={[styles.userDetailAvatar, { backgroundColor: theme.accent }]}>
+                    <Ionicons name="person" size={28} color="#fff" />
+                  </View>
+                  <Text style={[styles.userDetailName, { color: theme.text }]}>
+                    {data.user.displayName || data.user.username}
+                  </Text>
+                  <Text style={[styles.userDetailEmail, { color: theme.textMuted }]}>
+                    {data.user.email || "No email"}
+                  </Text>
+                  <Text style={[styles.userDetailMeta, { color: theme.textSecondary }]}>
+                    Joined {new Date(data.user.createdAt).toLocaleDateString()}
+                    {` · Active: ${formatLastActive(data.user.lastActive)}`}
+                  </Text>
+                </View>
+
+                <View style={[styles.userDetailSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                  <Text style={[styles.userDetailSectionTitle, { color: theme.text }]}>Role</Text>
+                  <View style={styles.roleRow}>
+                    {roleOptions.map((r) => (
+                      <Pressable
+                        key={r}
+                        style={[
+                          styles.roleChip,
+                          {
+                            backgroundColor: data.user.role === r ? theme.accent + "30" : theme.background,
+                            borderColor: data.user.role === r ? theme.accent : theme.border,
+                          },
+                        ]}
+                        onPress={() => data.user.role !== r && handleRoleChange(r)}
+                        disabled={roleMutation.isPending}
+                      >
+                        <Text
+                          style={[
+                            styles.roleChipText,
+                            { color: data.user.role === r ? theme.accent : theme.textSecondary },
+                          ]}
+                        >
+                          {ROLE_LABELS[r] || r}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {roleMutation.isPending && <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 8 }} />}
+                </View>
+
+                {data.organization && (
+                  <View style={[styles.userDetailSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                    <Text style={[styles.userDetailSectionTitle, { color: theme.text }]}>Organization</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                      <Ionicons name="business-outline" size={16} color={theme.accent} />
+                      <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                        {data.organization.name} ({data.organization.type})
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {data.groups.length > 0 && (
+                  <View style={[styles.userDetailSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                    <Text style={[styles.userDetailSectionTitle, { color: theme.text }]}>
+                      Groups ({data.groups.length})
+                    </Text>
+                    {data.groups.map((g) => (
+                      <View key={g.groupId} style={styles.userDetailGroupRow}>
+                        <Ionicons name="people-outline" size={14} color={theme.textMuted} />
+                        <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
+                          {g.groupName || "Unknown Group"}
+                        </Text>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                          {g.role}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {data.recentActivity.length > 0 && (
+                  <View style={[styles.userDetailSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                    <Text style={[styles.userDetailSectionTitle, { color: theme.text }]}>
+                      Recent Reading
+                    </Text>
+                    {data.recentActivity.map((a) => (
+                      <View key={a.id} style={styles.userDetailActivityRow}>
+                        <Ionicons name="book-outline" size={14} color={theme.textMuted} />
+                        <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
+                          {a.bookName} {a.chapter}
+                        </Text>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                          {new Date(a.readAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {data.recentPosts.length > 0 && (
+                  <View style={[styles.userDetailSection, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+                    <Text style={[styles.userDetailSectionTitle, { color: theme.text }]}>
+                      Recent Posts
+                    </Text>
+                    {data.recentPosts.map((p) => (
+                      <View key={p.id} style={styles.userDetailPostRow}>
+                        <Text
+                          style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: 13 }}
+                          numberOfLines={2}
+                        >
+                          {p.content}
+                        </Text>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
+                          {new Date(p.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          ) : (
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>User not found</Text>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function formatLastActive(dateStr: string | null): string {
+  if (!dateStr) return "Never";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString();
+}
+
+const ROLE_OPTIONS = ["member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
+
+const ROLE_LABELS: Record<string, string> = {
+  member: "Member",
+  student: "Student",
+  church_leader_pending: "Leader (Pending)",
+  church_leader: "Church Leader",
+  editor: "Editor",
+  admin: "Admin",
+};
+
+function roleColor(role: string): string {
+  switch (role) {
+    case "admin": return "#EF4444";
+    case "editor": return "#F59E0B";
+    case "church_leader": return "#8B5CF6";
+    case "church_leader_pending": return "#A78BFA";
+    case "student": return "#06B6D4";
+    default: return "#6B7280";
+  }
+}
+
+function UserRowRolePicker({ user, theme }: { user: AdminUser; theme: any }) {
+  const queryClient = useQueryClient();
+  const [showPicker, setShowPicker] = useState(false);
+
+  const roleMutation = useMutation({
+    mutationFn: async (newRole: string) => {
+      return apiRequest("PATCH", `/api/admin/users/${user.id}/role`, { role: newRole });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes("/api/admin/users") });
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Failed to update role.");
+    },
+  });
+
+  const handleRoleChange = (newRole: string) => {
+    if (newRole === user.role) {
+      setShowPicker(false);
+      return;
+    }
+    const label = ROLE_LABELS[newRole] || newRole;
+    const userName = user.displayName || user.username;
+    if (Platform.OS === "web") {
+      if (confirm(`Change ${userName}'s role to ${label}?`)) {
+        roleMutation.mutate(newRole);
+      }
+    } else {
+      Alert.alert(
+        "Change Role",
+        `Change ${userName}'s role to ${label}?`,
+        [
+          { text: "Cancel", style: "cancel" as const },
+          { text: "Confirm", onPress: () => roleMutation.mutate(newRole) },
+        ]
+      );
+    }
+    setShowPicker(false);
+  };
+
+  const color = roleColor(user.role);
+
+  return (
+    <View>
+      <Pressable
+        onPress={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+        style={[styles.userRoleBadge, { backgroundColor: color + "20", flexDirection: "row", alignItems: "center", gap: 4 }]}
+        disabled={roleMutation.isPending}
+      >
+        {roleMutation.isPending ? (
+          <ActivityIndicator size="small" color={color} />
+        ) : (
+          <>
+            <Text style={[styles.userRoleBadgeText, { color }]}>
+              {ROLE_LABELS[user.role] || user.role}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={color} />
+          </>
+        )}
+      </Pressable>
+      {showPicker && (
+        <View style={[styles.roleDropdown, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          {ROLE_OPTIONS.map((r) => (
+            <Pressable
+              key={r}
+              style={[styles.roleDropdownItem, user.role === r && { backgroundColor: theme.accent + "15" }]}
+              onPress={(e) => { e.stopPropagation(); handleRoleChange(r); }}
+            >
+              <Text style={{ color: user.role === r ? theme.accent : theme.text, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                {ROLE_LABELS[r] || r}
+              </Text>
+              {user.role === r && <Ionicons name="checkmark" size={14} color={theme.accent} />}
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function UsersTab({ theme }: { theme: any }) {
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const params = new URLSearchParams({ page: String(page), limit: "20" });
+  if (debouncedSearch) params.set("search", debouncedSearch);
+  if (roleFilter) params.set("role", roleFilter);
+  const usersPath = `/api/admin/users?${params.toString()}`;
+
+  const { data, isLoading } = useQuery<{
+    users: AdminUser[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>({
+    queryKey: [usersPath],
+  });
+
+  const filterRoleOptions = ["", "member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
+
+  return (
+    <View style={{ padding: 16 }}>
+      <View style={styles.userSearchBar}>
+        <Ionicons name="search-outline" size={18} color={theme.textMuted} />
+        <TextInput
+          style={[styles.userSearchInput, { color: theme.text }]}
+          placeholder="Search by name or email..."
+          placeholderTextColor={theme.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+          </Pressable>
+        )}
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+        {filterRoleOptions.map((r) => (
+          <Pressable
+            key={r || "all"}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor: roleFilter === r ? theme.accent + "30" : theme.backgroundCard,
+                borderColor: roleFilter === r ? theme.accent : theme.border,
+                marginRight: 8,
+              },
+            ]}
+            onPress={() => { setRoleFilter(r); setPage(1); }}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: roleFilter === r ? theme.accent : theme.textSecondary },
+              ]}
+            >
+              {r ? (ROLE_LABELS[r] || r) : "All Roles"}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {data?.pagination && (
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 8 }}>
+          {data.pagination.total} user{data.pagination.total !== 1 ? "s" : ""} found
+        </Text>
+      )}
+
+      {isLoading ? (
+        <ActivityIndicator size="large" color={theme.accent} style={{ marginVertical: 40 }} />
+      ) : (
+        <>
+          {(data?.users || []).map((u) => (
+            <Pressable
+              key={u.id}
+              style={[styles.userRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              onPress={() => setSelectedUserId(u.id)}
+            >
+              <View style={[styles.userRowAvatar, { backgroundColor: theme.accent + "30" }]}>
+                <Ionicons name="person-outline" size={18} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.userRowName, { color: theme.text }]}>
+                  {u.displayName || u.username}
+                </Text>
+                <Text style={[styles.userRowEmail, { color: theme.textMuted }]}>
+                  {u.email || "No email"}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 }}>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                    Joined {new Date(u.createdAt).toLocaleDateString()}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 10 }}>|</Text>
+                  <Text style={{ color: u.lastActive ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                    Active: {formatLastActive(u.lastActive)}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ alignItems: "flex-end", zIndex: 10 }}>
+                <UserRowRolePicker user={u} theme={theme} />
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginLeft: 4 }} />
+            </Pressable>
+          ))}
+
+          {data?.pagination && data.pagination.totalPages > 1 && (
+            <View style={styles.paginationRow}>
+              <Pressable
+                style={[styles.pageBtn, { opacity: page <= 1 ? 0.4 : 1, backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                onPress={() => setPage(Math.max(1, page - 1))}
+                disabled={page <= 1}
+              >
+                <Ionicons name="chevron-back" size={16} color={theme.textSecondary} />
+              </Pressable>
+              <Text style={{ color: theme.textSecondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                Page {data.pagination.page} of {data.pagination.totalPages}
+              </Text>
+              <Pressable
+                style={[styles.pageBtn, { opacity: page >= data.pagination.totalPages ? 0.4 : 1, backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+                onPress={() => setPage(Math.min(data.pagination.totalPages, page + 1))}
+                disabled={page >= data.pagination.totalPages}
+              >
+                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+        </>
+      )}
+
+      <UserDetailModal
+        visible={!!selectedUserId}
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+        theme={theme}
+      />
     </View>
   );
 }
@@ -2415,13 +2919,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tab: {
-    flex: 1,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
-  tabText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  tabText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   scrollContent: { flex: 1 },
   section: { padding: 16 },
   sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 12 },
@@ -2789,5 +3293,202 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 6,
     fontFamily: "Inter_400Regular",
+  },
+  userSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  userSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    padding: 0,
+  },
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+    gap: 10,
+  },
+  userRowAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userRowName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  userRowEmail: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  userRoleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  userRoleBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  roleDropdown: {
+    position: "absolute" as const,
+    top: 30,
+    right: 0,
+    minWidth: 140,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: 4,
+    zIndex: 100,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  roleDropdownItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  paginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  pageBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userDetailCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  userDetailAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  userDetailName: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  userDetailEmail: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  userDetailMeta: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+  },
+  userDetailSection: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  userDetailSectionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 8,
+  },
+  roleRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  roleChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  roleChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  userDetailGroupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  userDetailActivityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 5,
+  },
+  userDetailPostRow: {
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  leaderRequestCard: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  leaderRequestHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  leaderRequestReason: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic",
+    marginTop: 10,
+    paddingLeft: 4,
+  },
+  leaderRequestActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  leaderActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  leaderActionBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
   },
 });
