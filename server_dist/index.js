@@ -37138,7 +37138,8 @@ router15.delete("/api/groups/:id", requireAuth, async (req, res) => {
     const [member] = await db.select().from(prayerGroupMembers).where(and11(eq15(prayerGroupMembers.groupId, id2), eq15(prayerGroupMembers.userId, userId)));
     const [userRow] = await db.select().from(users).where(eq15(users.id, userId));
     const isAdmin = userRow?.role === "admin";
-    if (!member || member.role !== "leader" && !isAdmin) {
+    const isLeader = member?.role === "leader";
+    if (!isAdmin && !isLeader) {
       return res.status(403).json({ error: "Only group leaders or admins can delete groups" });
     }
     await db.delete(groupDiscussionReplies).where(
