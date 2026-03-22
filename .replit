@@ -108,3 +108,7 @@ RUN_STARTUP_SEEDS = "true"
 
 [userenv.production]
 PORT = "8081"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000
