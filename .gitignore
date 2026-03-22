@@ -39,3 +39,6 @@ yarn-error.*
 .vercel
 
 .env
+
+# Attached assets (screenshots shared during development)
+attached_assets/
