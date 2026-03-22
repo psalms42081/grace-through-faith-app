@@ -352,6 +352,33 @@ router.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
   }
 });
 
+router.delete("/api/groups/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const { id } = req.params;
+    const [member] = await db.select().from(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+    const [userRow] = await db.select().from(users).where(eq(users.id, userId));
+    const isAdmin = userRow?.role === "admin";
+    if (!member || (member.role !== "leader" && !isAdmin)) {
+      return res.status(403).json({ error: "Only group leaders or admins can delete groups" });
+    }
+    await db.delete(groupDiscussionReplies).where(
+      sql`${groupDiscussionReplies.discussionId} IN (SELECT id FROM group_discussion WHERE group_id = ${id})`
+    );
+    await db.delete(groupDiscussions).where(eq(groupDiscussions.groupId, id));
+    await db.delete(groupAnnouncements).where(eq(groupAnnouncements.groupId, id));
+    await db.delete(prayerRequests).where(eq(prayerRequests.groupId, id));
+    await db.delete(liveSessions).where(eq(liveSessions.groupId, id));
+    await db.delete(prayerGroupMembers).where(eq(prayerGroupMembers.groupId, id));
+    await db.delete(prayerGroups).where(eq(prayerGroups.id, id));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Delete group error:", err);
+    return res.status(500).json({ error: "Failed to delete group" });
+  }
+});
+
 router.get("/api/groups/:id/prayers", async (req, res) => {
   try {
     const { id } = req.params;
