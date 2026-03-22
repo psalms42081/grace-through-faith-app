@@ -66,6 +66,8 @@ export default function GroupsScreen() {
   const { data: myData, isLoading: myLoading } = useQuery<{ groups: SmallGroup[] }>({
     queryKey: ["/api/groups"],
     enabled: !isGuest,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: activeStreams } = useQuery<any[]>({
@@ -77,6 +79,9 @@ export default function GroupsScreen() {
   const { data: publicGroups, isLoading: publicLoading } = useQuery<SmallGroup[]>({
     queryKey: [`/api/groups/public?type=${filterType}&search=${searchText}`],
     enabled: tab === "browse",
+    staleTime: 30_000,
+    gcTime: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const createMutation = useMutation({
