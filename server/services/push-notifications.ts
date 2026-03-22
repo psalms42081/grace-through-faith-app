@@ -94,6 +94,26 @@ export async function notifyGroupMembers(
   }
 }
 
+export async function notifyUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<void> {
+  try {
+    const tokens = await db
+      .select({ pushToken: deviceTokens.pushToken })
+      .from(deviceTokens)
+      .where(eq(deviceTokens.userId, userId));
+    const tokenList = tokens.map((t) => t.pushToken);
+    if (tokenList.length > 0) {
+      await sendPushNotifications(tokenList, title, body, data);
+    }
+  } catch (err) {
+    console.error("[push] notifyUser error:", err);
+  }
+}
+
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {

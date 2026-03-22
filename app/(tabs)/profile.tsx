@@ -9,12 +9,13 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Modal,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
@@ -90,9 +91,34 @@ function ProfileScreenInner() {
 
   const uid = user?.id || "guest";
 
+  const qc = useQueryClient();
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [notifSettingsOpen, setNotifSettingsOpen] = useState(false);
+  const [leaderFormOpen, setLeaderFormOpen] = useState(false);
+  const [leaderForm, setLeaderForm] = useState({ fullName: "", churchName: "", role: "Pastor", contactEmail: "", description: "" });
   const currentLang = i18n.language?.split("-")[0] || "en";
+
+  const isLeader = user?.role === "church_leader";
+
+  const { data: leaderStatus } = useQuery<{ request: { id: string; status: string } | null }>({
+    queryKey: ["/api/leader-requests/my-status"],
+    enabled: isAuthenticated && !isLeader && user?.role !== "admin",
+  });
+
+  const leaderRequestMutation = useMutation({
+    mutationFn: async (data: typeof leaderForm) => {
+      return apiRequest("POST", "/api/leader-requests", data);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/leader-requests/my-status"] });
+      setLeaderFormOpen(false);
+      setLeaderForm({ fullName: "", churchName: "", role: "Pastor", contactEmail: "", description: "" });
+      showToast("Leader access request submitted! You'll be notified when reviewed.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.message || "Failed to submit request", "error");
+    },
+  });
 
   const handleLanguageChange = useCallback(async (code: string) => {
     await setLanguage(code);
@@ -526,7 +552,11 @@ function ProfileScreenInner() {
           ...(isAuthenticated && (user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader") ? [
             { title: "Admin Dashboard", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
           ] : []),
-          /* Leader Access — hidden until approval pipeline is complete */
+          ...(isAuthenticated && !isLeader && user?.role !== "admin" && user?.role !== "editor" ? [
+            leaderStatus?.request?.status === "pending"
+              ? { title: "Leader Access (Pending)", icon: "time-outline" as const, color: "#F59E0B", route: "pending-leader" }
+              : { title: "Request Leader Access", icon: "shield-checkmark-outline" as const, color: "#8B5CF6", route: "request-leader" },
+          ] : []),
           { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
         ].map((link) => (
           <ListItem
@@ -539,13 +569,119 @@ function ProfileScreenInner() {
                 showToast("Your church leader access is being reviewed. You'll be notified when approved.", "info");
                 return;
               }
+              if (link.route === "request-leader") {
+                setLeaderFormOpen(true);
+                return;
+              }
               router.push(link.route as any);
             }}
             style={{ marginBottom: 6 }}
           />
         ))}
+
+        {isAuthenticated && isLeader && (
+          <>
+            <View style={[st.sectionDivider, { backgroundColor: theme.border }]} />
+            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold", paddingHorizontal: 20, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+              Leader Tools
+            </Text>
+            <ListItem
+              icon="megaphone-outline"
+              iconColor="#8B5CF6"
+              title="Broadcast Announcements"
+              onPress={() => router.push("/leader-broadcast" as any)}
+              style={{ marginBottom: 6 }}
+            />
+            <ListItem
+              icon="people-outline"
+              iconColor="#3B82F6"
+              title="Church Member Analytics"
+              onPress={() => router.push("/leader-analytics" as any)}
+              style={{ marginBottom: 6 }}
+            />
+          </>
+        )}
       </View>
     </ScrollView>
+
+    <Modal visible={leaderFormOpen} animationType="slide" transparent>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+        <View style={{ backgroundColor: theme.backgroundCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 20, maxHeight: "90%" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <Text style={{ color: theme.text, fontSize: 20, fontFamily: "Inter_700Bold" }}>Request Leader Access</Text>
+            <Pressable onPress={() => setLeaderFormOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={theme.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Full Name</Text>
+            <TextInput
+              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              value={leaderForm.fullName}
+              onChangeText={(v) => setLeaderForm(f => ({ ...f, fullName: v }))}
+              placeholder="Your full name"
+              placeholderTextColor={theme.textMuted}
+            />
+            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Church Name</Text>
+            <TextInput
+              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              value={leaderForm.churchName}
+              onChangeText={(v) => setLeaderForm(f => ({ ...f, churchName: v }))}
+              placeholder="Your church name"
+              placeholderTextColor={theme.textMuted}
+            />
+            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Role</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              {["Pastor", "Elder", "Deacon", "Ministry Leader"].map((r) => (
+                <Pressable
+                  key={r}
+                  onPress={() => setLeaderForm(f => ({ ...f, role: r }))}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: leaderForm.role === r ? "#8B5CF6" : theme.border, backgroundColor: leaderForm.role === r ? "#8B5CF620" : theme.background }}
+                >
+                  <Text style={{ color: leaderForm.role === r ? "#8B5CF6" : theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium" }}>{r}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Contact Email</Text>
+            <TextInput
+              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              value={leaderForm.contactEmail}
+              onChangeText={(v) => setLeaderForm(f => ({ ...f, contactEmail: v }))}
+              placeholder="your@email.com"
+              placeholderTextColor={theme.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Description (optional)</Text>
+            <TextInput
+              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 16, borderWidth: 1, borderColor: theme.border, minHeight: 80, textAlignVertical: "top" }}
+              value={leaderForm.description}
+              onChangeText={(v) => setLeaderForm(f => ({ ...f, description: v }))}
+              placeholder="Tell us about your ministry..."
+              placeholderTextColor={theme.textMuted}
+              multiline
+            />
+            <Pressable
+              onPress={() => {
+                if (!leaderForm.fullName || !leaderForm.churchName || !leaderForm.contactEmail) {
+                  showToast("Please fill in all required fields", "error");
+                  return;
+                }
+                leaderRequestMutation.mutate(leaderForm);
+              }}
+              disabled={leaderRequestMutation.isPending}
+              style={{ backgroundColor: "#8B5CF6", borderRadius: 12, padding: 14, alignItems: "center", opacity: leaderRequestMutation.isPending ? 0.6 : 1 }}
+            >
+              {leaderRequestMutation.isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Submit Request</Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
     </>
   );
 }

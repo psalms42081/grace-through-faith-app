@@ -20,10 +20,11 @@ import { Router } from "express";
     userPlanEnrollments,
     userPlanProgress,
     deviceTokens,
+    leaderRequests,
   } from "../../shared/schema";
   import { eq, and, ilike, sql, desc } from "drizzle-orm";
-  import { notifyGroupMembers } from "../services/push-notifications";
-  import { generateCode, requireAuth, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
+  import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
+  import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
 
   const router = Router();
@@ -1209,6 +1210,137 @@ router.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Sabbath reflections POST error:", err);
     return res.status(500).json({ error: "Failed to save reflection" });
+  }
+});
+
+router.post("/api/leader-requests", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const { fullName, churchName, role, contactEmail, description } = req.body;
+    if (!fullName || !churchName || !role || !contactEmail) {
+      return res.status(400).json({ error: "Full name, church name, role, and contact email are required" });
+    }
+    const validRoles = ["Pastor", "Elder", "Deacon", "Ministry Leader"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const existing = await db.select().from(leaderRequests)
+      .where(and(eq(leaderRequests.userId, userId), eq(leaderRequests.status, "pending")));
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "You already have a pending leader access request" });
+    }
+
+    const [userRow] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+    if (userRow?.role === "church_leader" || userRow?.role === "admin") {
+      return res.status(400).json({ error: "You already have leader access" });
+    }
+
+    const [request] = await db.insert(leaderRequests).values({
+      userId,
+      fullName,
+      churchName,
+      role,
+      contactEmail,
+      description: description || null,
+    }).returning();
+
+    return res.json({ request });
+  } catch (err) {
+    console.error("Leader request create error:", err);
+    return res.status(500).json({ error: "Failed to submit leader request" });
+  }
+});
+
+router.get("/api/leader-requests/my-status", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const requests = await db.select().from(leaderRequests)
+      .where(eq(leaderRequests.userId, userId))
+      .orderBy(desc(leaderRequests.createdAt));
+    const latest = requests[0] || null;
+    return res.json({ request: latest });
+  } catch (err) {
+    console.error("Leader request status error:", err);
+    return res.status(500).json({ error: "Failed to get request status" });
+  }
+});
+
+router.get("/api/leader-requests", requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.query as { status?: string };
+    let query = db.select({
+      id: leaderRequests.id,
+      userId: leaderRequests.userId,
+      fullName: leaderRequests.fullName,
+      churchName: leaderRequests.churchName,
+      role: leaderRequests.role,
+      contactEmail: leaderRequests.contactEmail,
+      description: leaderRequests.description,
+      status: leaderRequests.status,
+      createdAt: leaderRequests.createdAt,
+      username: users.username,
+      displayName: users.displayName,
+    }).from(leaderRequests)
+      .leftJoin(users, eq(leaderRequests.userId, users.id))
+      .orderBy(desc(leaderRequests.createdAt));
+
+    let results = await query;
+    if (status && status !== "all") {
+      results = results.filter(r => r.status === status);
+    }
+
+    return res.json({ requests: results });
+  } catch (err) {
+    console.error("Leader requests list error:", err);
+    return res.status(500).json({ error: "Failed to list leader requests" });
+  }
+});
+
+router.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [request] = await db.select().from(leaderRequests).where(eq(leaderRequests.id, id));
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
+
+    await db.update(leaderRequests).set({ status: "approved" }).where(eq(leaderRequests.id, id));
+    await db.update(users).set({ role: "church_leader" }).where(eq(users.id, request.userId));
+
+    notifyUser(
+      request.userId,
+      "Leader Access Approved!",
+      "Your church leader access request has been approved. You now have access to Leader Tools.",
+      { type: "leader_approved" }
+    ).catch(() => {});
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Leader request approve error:", err);
+    return res.status(500).json({ error: "Failed to approve request" });
+  }
+});
+
+router.post("/api/leader-requests/:id/reject", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [request] = await db.select().from(leaderRequests).where(eq(leaderRequests.id, id));
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
+
+    await db.update(leaderRequests).set({ status: "rejected" }).where(eq(leaderRequests.id, id));
+
+    notifyUser(
+      request.userId,
+      "Leader Access Update",
+      "Your church leader access request was not approved at this time.",
+      { type: "leader_rejected" }
+    ).catch(() => {});
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Leader request reject error:", err);
+    return res.status(500).json({ error: "Failed to reject request" });
   }
 });
 

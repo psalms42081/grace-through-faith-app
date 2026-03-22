@@ -1311,13 +1311,167 @@ function MetaRow({ label, value, theme }: { label: string; value: string; theme:
   );
 }
 
+interface LeaderRequestItem {
+  id: string;
+  userId: string;
+  fullName: string;
+  churchName: string;
+  role: string;
+  contactEmail: string;
+  description: string | null;
+  status: string;
+  createdAt: string;
+  username: string | null;
+  displayName: string | null;
+}
+
+function LeaderRequestsTab({ theme }: { theme: any }) {
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const path = `/api/leader-requests?status=${statusFilter}`;
+  const { data, isLoading, refetch } = useQuery<{ requests: LeaderRequestItem[] }>({
+    queryKey: [path],
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/leader-requests/${id}/approve`);
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/leader-requests") });
+      Alert.alert("Approved", "Leader access has been granted.");
+    },
+    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to approve"),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/leader-requests/${id}/reject`);
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/leader-requests") });
+      Alert.alert("Rejected", "Request has been rejected.");
+    },
+    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to reject"),
+  });
+
+  const requests = data?.requests || [];
+
+  return (
+    <View style={{ padding: 16 }}>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>Leader Requests</Text>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+        {["pending", "approved", "rejected", "all"].map((s) => (
+          <Pressable
+            key={s}
+            onPress={() => setStatusFilter(s)}
+            style={[styles.filterChip, {
+              backgroundColor: statusFilter === s ? theme.accent + "30" : theme.backgroundCard,
+              borderColor: statusFilter === s ? theme.accent : theme.border,
+            }]}
+          >
+            <Text style={[styles.filterChipText, { color: statusFilter === s ? theme.accent : theme.textSecondary }]}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {isLoading && <ActivityIndicator size="small" color={theme.accent} style={{ marginTop: 20 }} />}
+
+      {!isLoading && requests.length === 0 && (
+        <View style={styles.centered}>
+          <Ionicons name="checkmark-circle-outline" size={40} color={theme.textMuted} />
+          <Text style={[styles.emptyText, { color: theme.textSecondary, marginTop: 8 }]}>
+            No {statusFilter === "all" ? "" : statusFilter} leader requests
+          </Text>
+        </View>
+      )}
+
+      {requests.map((req) => (
+        <View
+          key={req.id}
+          style={[styles.metaBlock, { backgroundColor: theme.backgroundCard, borderColor: theme.border, marginBottom: 12 }]}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>{req.fullName}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                @{req.username || "unknown"} · {req.displayName || ""}
+              </Text>
+            </View>
+            <View style={[styles.badge, {
+              backgroundColor: req.status === "approved" ? "#10B98120" : req.status === "rejected" ? "#EF444420" : "#F59E0B20",
+              borderColor: req.status === "approved" ? "#10B981" : req.status === "rejected" ? "#EF4444" : "#F59E0B",
+            }]}>
+              <Text style={[styles.badgeText, {
+                color: req.status === "approved" ? "#10B981" : req.status === "rejected" ? "#EF4444" : "#F59E0B",
+              }]}>{req.status}</Text>
+            </View>
+          </View>
+          <View style={{ gap: 4, marginBottom: 8 }}>
+            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={{ fontFamily: "Inter_500Medium" }}>Church:</Text> {req.churchName}
+            </Text>
+            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={{ fontFamily: "Inter_500Medium" }}>Role:</Text> {req.role}
+            </Text>
+            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              <Text style={{ fontFamily: "Inter_500Medium" }}>Email:</Text> {req.contactEmail}
+            </Text>
+            {req.description && (
+              <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+                {req.description}
+              </Text>
+            )}
+            <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+              {new Date(req.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+
+          {req.status === "pending" && (
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+              <Pressable
+                onPress={() => {
+                  Alert.alert("Approve Leader", `Grant leader access to ${req.fullName}?`, [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Approve", onPress: () => approveMutation.mutate(req.id) },
+                  ]);
+                }}
+                disabled={approveMutation.isPending}
+                style={{ flex: 1, backgroundColor: "#10B981", borderRadius: 8, padding: 10, alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Approve</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Alert.alert("Reject Request", `Reject leader request from ${req.fullName}?`, [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Reject", style: "destructive", onPress: () => rejectMutation.mutate(req.id) },
+                  ]);
+                }}
+                disabled={rejectMutation.isPending}
+                style={{ flex: 1, backgroundColor: "#EF4444", borderRadius: 8, padding: 10, alignItems: "center" }}
+              >
+                <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Reject</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function AdminReviewScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test" | "leaders">("overview");
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [filterHasNotes, setFilterHasNotes] = useState(false);
@@ -1495,7 +1649,7 @@ export default function AdminReviewScreen() {
           },
         ]}
       >
-        {(["overview", "pending", "quarter", ...(isAdmin ? ["sabbath-test" as const] : [])] as const).map((tab) => (
+        {(["overview", "pending", "quarter", ...(isAdmin ? ["leaders" as const, "sabbath-test" as const] : [])] as const).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
@@ -1508,6 +1662,8 @@ export default function AdminReviewScreen() {
                 ? `Review (${pendingCount})`
                 : tab === "sabbath-test"
                 ? "Sabbath"
+                : tab === "leaders"
+                ? "Leaders"
                 : "Quarter"}
             </Text>
           </Pressable>
@@ -1577,6 +1733,10 @@ export default function AdminReviewScreen() {
             reviewLoading={reviewMutation.isPending}
             theme={theme}
           />
+        )}
+
+        {activeTab === "leaders" && isAdmin && (
+          <LeaderRequestsTab theme={theme} />
         )}
 
         {activeTab === "sabbath-test" && isAdmin && (

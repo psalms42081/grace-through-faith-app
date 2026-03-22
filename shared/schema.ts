@@ -1802,3 +1802,30 @@ export const deviceTokens = pgTable(
 );
 
 export type DeviceToken = typeof deviceTokens.$inferSelect;
+
+// ─── LEADER REQUESTS ─────────────────────────────────────────────────────────
+
+export const leaderRequests = pgTable(
+  "leader_requests",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    churchName: text("church_name").notNull(),
+    role: varchar("role", { length: 30 }).notNull(),
+    contactEmail: text("contact_email").notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 12 }).default("pending").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("leader_requests_user_idx").on(table.userId),
+    statusIdx: index("leader_requests_status_idx").on(table.status),
+  })
+);
+
+export type LeaderRequest = typeof leaderRequests.$inferSelect;
