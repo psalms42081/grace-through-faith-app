@@ -1064,6 +1064,7 @@ const s = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     marginHorizontal: 16,
+    marginTop: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
     marginBottom: 4,
