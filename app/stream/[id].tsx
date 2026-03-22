@@ -70,7 +70,7 @@ function detachTrackFromTile(track: any) {
   track.detach().forEach((el: HTMLElement) => el.remove());
 }
 
-function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSession; displayName: string; isHost: boolean }) {
+function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { session: StreamSession; displayName: string; isHost: boolean; onEndSession: () => void }) {
   const roomRef = useRef<any>(null);
   const lkRef = useRef<any>(null);
   const [status, setStatus] = useState("Connecting...");
@@ -233,8 +233,12 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
     if (room) {
       room.disconnect().catch(() => {});
     }
-    safeGoBack(router);
-  }, []);
+    if (isHost) {
+      onEndSession();
+    } else {
+      safeGoBack(router);
+    }
+  }, [isHost, onEndSession]);
 
   if (error) {
     return (
@@ -325,7 +329,7 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
         ))}
       </div>
 
-      <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, padding: 12, backgroundColor: "#111114" }}>
+      <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 16, padding: 12, paddingBottom: 24, backgroundColor: "#111114" }}>
         <Pressable
           onPress={toggleMic}
           style={{
@@ -356,6 +360,25 @@ function WebLiveKitRoom({ session, displayName, isHost }: { session: StreamSessi
         >
           <Ionicons name="call" size={22} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
         </Pressable>
+        {isHost && (
+          <Pressable
+            onPress={() => {
+              if (confirm("End this live session for everyone?")) {
+                const room = roomRef.current;
+                if (room) room.disconnect().catch(() => {});
+                onEndSession();
+              }
+            }}
+            style={{
+              paddingHorizontal: 16, height: 48, borderRadius: 24,
+              backgroundColor: "#FF3B30",
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <Ionicons name="stop-circle" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" }}>End Session</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -567,7 +590,7 @@ export default function StreamScreen() {
       </View>
 
       {Platform.OS === "web" ? (
-        <WebLiveKitRoom session={session} displayName={displayName} isHost={isHost} />
+        <WebLiveKitRoom session={session} displayName={displayName} isHost={isHost} onEndSession={() => endMutation.mutate()} />
       ) : (
         <>
           {webViewLoading && (
