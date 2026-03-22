@@ -70,7 +70,8 @@ export default function GroupsScreen() {
 
   const { data: activeStreams } = useQuery<any[]>({
     queryKey: ["/api/streams/active"],
-    refetchInterval: 30000,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: publicGroups, isLoading: publicLoading } = useQuery<SmallGroup[]>({
