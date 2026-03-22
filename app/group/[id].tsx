@@ -697,7 +697,7 @@ export default function GroupDetailScreen() {
                 onLayout={(e) => handleTabLayout(t.key, e)}
                 style={[s.tabItem, activeTab === t.key && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
               >
-                <Ionicons name={t.icon} size={18} color={activeTab === t.key ? theme.accent : theme.textMuted} />
+                <Ionicons name={t.icon} size={14} color={activeTab === t.key ? theme.accent : theme.textMuted} />
                 <Text style={[s.tabLabel, { color: activeTab === t.key ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                   {t.label}
                 </Text>
@@ -1129,8 +1129,8 @@ const s = StyleSheet.create({
     bottom: 0,
     width: 40,
   },
-  tabItem: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 12, paddingHorizontal: 8 },
-  tabLabel: { fontSize: 12 },
+  tabItem: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, paddingVertical: 12, paddingHorizontal: 4 },
+  tabLabel: { fontSize: 11 },
   tabContent: { marginHorizontal: 16, marginTop: 8 },
   tabEmpty: { alignItems: "center", gap: 10, paddingVertical: 48 },
   tabEmptyText: { fontSize: 14, textAlign: "center" },
