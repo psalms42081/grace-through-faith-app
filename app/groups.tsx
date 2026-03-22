@@ -115,11 +115,31 @@ export default function GroupsScreen() {
 
   const joinPublicMutation = useMutation({
     mutationFn: async (code: string) => {
-      return await apiRequest("POST", "/api/groups/join", { joinCode: code });
+      const res = await apiRequest("POST", "/api/groups/join", { joinCode: code });
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
       queryClient.invalidateQueries({ queryKey: [`/api/groups/public?type=${filterType}&search=${searchText}`] });
+      if (data?.group?.id) {
+        router.push(`/group/${data.group.id}` as any);
+      }
+    },
+    onError: (err: any) => {
+      let msg = "Could not join the group.";
+      try {
+        const errText = err?.message || "";
+        const jsonMatch = errText.match(/\{.*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          msg = parsed.error || msg;
+        }
+      } catch {}
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Join Failed", msg);
+      }
     },
   });
 
@@ -200,9 +220,14 @@ export default function GroupsScreen() {
         ) : showJoinBtn ? (
           <Pressable
             onPress={() => joinPublicMutation.mutate(item.joinCode)}
-            style={[s.joinBadge, { backgroundColor: theme.accent }]}
+            disabled={joinPublicMutation.isPending}
+            style={[s.joinBadge, { backgroundColor: theme.accent, opacity: joinPublicMutation.isPending ? 0.6 : 1 }]}
           >
-            <Text style={[s.joinBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Join</Text>
+            {joinPublicMutation.isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[s.joinBadgeText, { fontFamily: "Inter_600SemiBold" }]}>Join</Text>
+            )}
           </Pressable>
         ) : null}
       </View>
