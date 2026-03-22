@@ -1053,7 +1053,7 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
 }
 
 const ILLUSTRATION_WIDTH = SCREEN_WIDTH - 48;
-const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.85;
+const ILLUSTRATION_HEIGHT = ILLUSTRATION_WIDTH * 0.65;
 
 const KEN_BURNS_PATTERNS = [
   { fromScale: 1.0, toScale: 1.18, fromX: 0, toX: -15, fromY: 0, toY: -10 },
