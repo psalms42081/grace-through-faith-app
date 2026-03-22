@@ -41155,7 +41155,20 @@ function setupErrorHandler(app2) {
     res.status(200).send("ok");
   });
   app.use(helmet({
-    contentSecurityPolicy: false
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud", "https://www.youtube.com"],
+        mediaSrc: ["'self'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com"],
+        fontSrc: ["'self'", "https:", "data:"],
+        styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
+        frameAncestors: ["'self'"]
+      }
+    }
   }));
   setupCacheControl(app);
   setupCors(app);
