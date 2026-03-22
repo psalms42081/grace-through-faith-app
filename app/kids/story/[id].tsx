@@ -1870,7 +1870,7 @@ export default function SceneStoryScreen() {
     const totalContentHeight = totalLines * lineHeight;
     const visibleHeight = narrationMeasuredHeight.current > 0 ? narrationMeasuredHeight.current : 120;
     const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
-    const targetY = Math.min(maxScroll, Math.max(0, progress * maxScroll * 1.3));
+    const targetY = Math.min(maxScroll, Math.max(0, progress * maxScroll * 1.6));
     narrationScrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [currentWordIndex, isSpeaking, scenes, currentScene, isLittleLambs]);
 
@@ -2919,7 +2919,7 @@ const styles = StyleSheet.create({
   narrationScroll: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",
