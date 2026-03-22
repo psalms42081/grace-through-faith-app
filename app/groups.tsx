@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -66,7 +67,7 @@ export default function GroupsScreen() {
   const { data: myData, isLoading: myLoading } = useQuery<{ groups: SmallGroup[] }>({
     queryKey: ["/api/groups"],
     enabled: !isGuest,
-    staleTime: 30_000,
+    staleTime: 10_000,
     refetchOnWindowFocus: true,
   });
 
@@ -79,8 +80,8 @@ export default function GroupsScreen() {
   const { data: publicGroups, isLoading: publicLoading } = useQuery<SmallGroup[]>({
     queryKey: [`/api/groups/public?type=${filterType}&search=${searchText}`],
     enabled: tab === "browse",
-    staleTime: 30_000,
-    gcTime: 60_000,
+    staleTime: 10_000,
+    gcTime: 30_000,
     refetchOnWindowFocus: true,
   });
 
@@ -220,7 +221,11 @@ export default function GroupsScreen() {
             </View>
           </View>
         </View>
-        {myGroupIds.has(item.id) ? (
+        {myGroupIds.has(item.id) && showJoinBtn ? (
+          <View style={[s.joinBadge, { backgroundColor: theme.accent + "20" }]}>
+            <Text style={[s.joinBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Joined</Text>
+          </View>
+        ) : myGroupIds.has(item.id) ? (
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         ) : showJoinBtn ? (
           <Pressable
