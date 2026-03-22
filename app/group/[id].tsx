@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   TextInput,
   Share,
   Modal,
+  LayoutChangeEvent,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Clipboard from "expo-clipboard";
 import { safeGoBack } from "@/lib/safe-back";
 import { router, useLocalSearchParams } from "expo-router";
@@ -145,6 +147,37 @@ export default function GroupDetailScreen() {
   const [newPostText, setNewPostText] = useState("");
   const [expandedDiscussion, setExpandedDiscussion] = useState<string | null>(null);
   const [manageMember, setManageMember] = useState<GroupMember | null>(null);
+  const tabScrollRef = useRef<ScrollView>(null);
+  const tabLayouts = useRef<Record<string, { x: number; width: number }>>({});
+  const [showTabFade, setShowTabFade] = useState(true);
+
+  const TABS = [
+    { key: "discussion" as const, icon: "chatbubbles" as const, label: "Discussion" },
+    { key: "prayer" as const, icon: "heart" as const, label: "Prayer" },
+    { key: "devotional" as const, icon: "flame" as const, label: "Devotional" },
+    { key: "study" as const, icon: "book" as const, label: "Study" },
+    { key: "live" as const, icon: "videocam" as const, label: "Live" },
+  ];
+
+  useEffect(() => {
+    const layout = tabLayouts.current[activeTab];
+    if (layout && tabScrollRef.current) {
+      const scrollTo = Math.max(0, layout.x - 16);
+      tabScrollRef.current.scrollTo({ x: scrollTo, animated: true });
+    }
+  }, [activeTab]);
+
+  const handleTabLayout = useCallback((key: string, e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    tabLayouts.current[key] = { x, width };
+  }, []);
+
+  const handleTabScroll = useCallback((e: any) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const contentWidth = e.nativeEvent.contentSize.width;
+    const layoutWidth = e.nativeEvent.layoutMeasurement.width;
+    setShowTabFade(offsetX + layoutWidth < contentWidth - 8);
+  }, []);
 
   const { data, isLoading } = useQuery<GroupDetail>({
     queryKey: [`/api/groups/${id}`],
@@ -647,26 +680,40 @@ export default function GroupDetailScreen() {
           </View>
         ) : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBarScroll} contentContainerStyle={s.tabBarContent}>
-          {([
-            { key: "discussion" as const, icon: "chatbubbles" as const, label: "Discussion" },
-            { key: "prayer" as const, icon: "heart" as const, label: "Prayer" },
-            { key: "devotional" as const, icon: "flame" as const, label: "Devotional" },
-            { key: "study" as const, icon: "book" as const, label: "Study" },
-            { key: "live" as const, icon: "videocam" as const, label: "Live" },
-          ]).map((t) => (
-            <Pressable
-              key={t.key}
-              onPress={() => setActiveTab(t.key)}
-              style={[s.tabItem, activeTab === t.key && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
-            >
-              <Ionicons name={t.icon} size={18} color={activeTab === t.key ? theme.accent : theme.textMuted} />
-              <Text style={[s.tabLabel, { color: activeTab === t.key ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                {t.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={s.tabBarWrapper}>
+          <ScrollView
+            ref={tabScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.tabBarScroll}
+            contentContainerStyle={s.tabBarContent}
+            onScroll={handleTabScroll}
+            scrollEventThrottle={16}
+          >
+            {TABS.map((t) => (
+              <Pressable
+                key={t.key}
+                onPress={() => setActiveTab(t.key)}
+                onLayout={(e) => handleTabLayout(t.key, e)}
+                style={[s.tabItem, activeTab === t.key && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
+              >
+                <Ionicons name={t.icon} size={18} color={activeTab === t.key ? theme.accent : theme.textMuted} />
+                <Text style={[s.tabLabel, { color: activeTab === t.key ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          {showTabFade && (
+            <LinearGradient
+              colors={["transparent", theme.background]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.tabFade}
+              pointerEvents="none"
+            />
+          )}
+        </View>
 
         {activeTab === "discussion" && renderDiscussionTab()}
         {activeTab === "prayer" && (
@@ -1061,16 +1108,26 @@ const s = StyleSheet.create({
   roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   roleText: { fontSize: 10, textTransform: "capitalize" as const },
   promoteBtn: { padding: 6 },
-  tabBarScroll: {
+  tabBarWrapper: {
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 4,
+    position: "relative" as const,
+  },
+  tabBarScroll: {
     flexGrow: 0,
   },
   tabBarContent: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  tabFade: {
+    position: "absolute" as const,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 32,
   },
   tabItem: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 12, paddingHorizontal: 12 },
   tabLabel: { fontSize: 12 },
