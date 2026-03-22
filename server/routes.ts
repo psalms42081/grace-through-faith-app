@@ -185,40 +185,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const feedbackEmailUser = process.env.FEEDBACK_EMAIL_USER;
       const feedbackEmailPass = process.env.FEEDBACK_EMAIL_PASS;
       if (feedbackEmailUser && feedbackEmailPass) {
-        try {
-          const transporter = nodemailer.createTransport({
-            host: "smtp.office365.com",
-            port: 587,
-            secure: false,
-            auth: { user: feedbackEmailUser, pass: feedbackEmailPass },
-            tls: { ciphers: "SSLv3", rejectUnauthorized: false },
-          });
+        const topicLabel = safeTopic.charAt(0).toUpperCase() + safeTopic.slice(1);
+        const emailHtml = `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+            <h2 style="color:#C9933A;margin-bottom:16px;">New Feedback Received</h2>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+              <tr><td style="padding:8px;font-weight:bold;color:#666;width:120px;">From:</td><td style="padding:8px;">${displayName}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;color:#666;">Email:</td><td style="padding:8px;">${safeEmail || "Not provided"}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;color:#666;">Type:</td><td style="padding:8px;">${topicLabel}</td></tr>
+              ${platform ? `<tr><td style="padding:8px;font-weight:bold;color:#666;">Platform:</td><td style="padding:8px;">${platform}</td></tr>` : ""}
+            </table>
+            <div style="background:#f5f5f5;padding:16px;border-radius:8px;border-left:4px solid #C9933A;">
+              <p style="margin:0;white-space:pre-wrap;">${safeMessage}</p>
+            </div>
+            ${safeContext ? `<div style="margin-top:12px;padding:12px;background:#fafafa;border-radius:8px;font-size:13px;color:#888;"><strong>Context:</strong> ${safeContext}</div>` : ""}
+            <p style="margin-top:20px;font-size:12px;color:#999;">Grace Through Faith App — Automated Feedback Notification</p>
+          </div>
+        `;
 
-          const topicLabel = safeTopic.charAt(0).toUpperCase() + safeTopic.slice(1);
-          await transporter.sendMail({
-            from: `"Grace Through Faith" <${feedbackEmailUser}>`,
-            to: "joseph@gracethroughfaith.app",
-            subject: `[Feedback] ${topicLabel} — from ${displayName}`,
-            html: `
-              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-                <h2 style="color:#C9933A;margin-bottom:16px;">New Feedback Received</h2>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-                  <tr><td style="padding:8px;font-weight:bold;color:#666;width:120px;">From:</td><td style="padding:8px;">${displayName}</td></tr>
-                  <tr><td style="padding:8px;font-weight:bold;color:#666;">Email:</td><td style="padding:8px;">${safeEmail || "Not provided"}</td></tr>
-                  <tr><td style="padding:8px;font-weight:bold;color:#666;">Type:</td><td style="padding:8px;">${topicLabel}</td></tr>
-                  ${platform ? `<tr><td style="padding:8px;font-weight:bold;color:#666;">Platform:</td><td style="padding:8px;">${platform}</td></tr>` : ""}
-                </table>
-                <div style="background:#f5f5f5;padding:16px;border-radius:8px;border-left:4px solid #C9933A;">
-                  <p style="margin:0;white-space:pre-wrap;">${safeMessage}</p>
-                </div>
-                ${safeContext ? `<div style="margin-top:12px;padding:12px;background:#fafafa;border-radius:8px;font-size:13px;color:#888;"><strong>Context:</strong> ${safeContext}</div>` : ""}
-                <p style="margin-top:20px;font-size:12px;color:#999;">Grace Through Faith App — Automated Feedback Notification</p>
-              </div>
-            `,
-          });
-          console.log("[feedback] Email notification sent for:", safeTopic);
-        } catch (emailErr) {
-          console.error("[feedback] Email notification failed:", emailErr);
+        const smtpConfigs = [
+          { host: "smtpout.secureserver.net", port: 465, secure: true, name: "GoDaddy" },
+          { host: "smtpout.secureserver.net", port: 587, secure: false, name: "GoDaddy-587" },
+          { host: "smtp.office365.com", port: 587, secure: false, name: "Office365" },
+        ];
+
+        let emailSent = false;
+        for (const cfg of smtpConfigs) {
+          if (emailSent) break;
+          try {
+            const transporter = nodemailer.createTransport({
+              host: cfg.host,
+              port: cfg.port,
+              secure: cfg.secure,
+              auth: { user: feedbackEmailUser, pass: feedbackEmailPass },
+              tls: { rejectUnauthorized: false },
+              connectionTimeout: 8000,
+              greetingTimeout: 8000,
+              socketTimeout: 12000,
+            });
+            await transporter.sendMail({
+              from: `"Grace Through Faith" <${feedbackEmailUser}>`,
+              to: "joseph@gracethroughfaith.app",
+              subject: `[Feedback] ${topicLabel} — from ${displayName}`,
+              html: emailHtml,
+            });
+            console.log(`[feedback] Email sent via ${cfg.name} for: ${safeTopic}`);
+            emailSent = true;
+          } catch (smtpErr: any) {
+            console.error(`[feedback] ${cfg.name} failed:`, smtpErr.message || smtpErr);
+          }
+        }
+        if (!emailSent) {
+          console.error("[feedback] All SMTP configs failed — email not sent");
         }
       }
 
