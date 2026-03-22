@@ -1075,6 +1075,49 @@ export async function generateSceneImage(
   sceneId: string
 ): Promise<string | null> {
   try {
+    const { db } = await import("../db");
+    const { kidsStoryScenes } = await import("../../shared/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const [scene] = await db
+      .select({ imageUrl: kidsStoryScenes.imageUrl })
+      .from(kidsStoryScenes)
+      .where(eq(kidsStoryScenes.id, sceneId))
+      .limit(1);
+
+    if (scene?.imageUrl) {
+      return scene.imageUrl;
+    }
+
+    const client = createOpenAIClient();
+    const response = await client.images.generate({
+      model: "dall-e-3",
+      prompt: illustrationPrompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    const generatedUrl = response.data?.[0]?.url ?? null;
+
+    if (generatedUrl) {
+      await db
+        .update(kidsStoryScenes)
+        .set({ imageUrl: generatedUrl })
+        .where(eq(kidsStoryScenes.id, sceneId));
+
+      return generatedUrl;
+    }
+
+    return fallbackLocalImage(sceneId);
+  } catch (err) {
+    console.error("Scene image generation error:", err);
+    return fallbackLocalImage(sceneId);
+  }
+}
+
+async function fallbackLocalImage(sceneId: string): Promise<string | null> {
+  try {
     const fs = await import("fs");
     const path = await import("path");
     const filePath = path.resolve(process.cwd(), "assets", "kids-scenes", `${sceneId}.png`);
@@ -1082,8 +1125,7 @@ export async function generateSceneImage(
       return `/assets/kids-scenes/${sceneId}.png`;
     }
     return null;
-  } catch (err) {
-    console.error("Scene image lookup error:", err);
+  } catch {
     return null;
   }
 }

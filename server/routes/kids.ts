@@ -741,11 +741,6 @@ router.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimi
       return res.status(500).json({ error: "Image generation failed" });
     }
 
-    await db
-      .update(kidsStoryScenes)
-      .set({ imageUrl })
-      .where(eq(kidsStoryScenes.id, id));
-
     return res.json({ imageUrl });
   } catch (err) {
     console.error("Scene image generation error:", err);
