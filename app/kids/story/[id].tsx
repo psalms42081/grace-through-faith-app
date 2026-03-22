@@ -1862,6 +1862,10 @@ export default function SceneStoryScreen() {
     const words = scene.narration.split(/\s+/);
     if (words.length === 0) return;
     const progress = currentWordIndex / words.length;
+    if (progress > 0.75) {
+      narrationScrollRef.current?.scrollToEnd({ animated: true });
+      return;
+    }
     const fontSize = isLittleLambs ? 22 : 20;
     const lineHeight = fontSize * 2.1;
     const charsPerLine = 30;
