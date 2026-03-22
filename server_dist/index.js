@@ -41168,7 +41168,8 @@ function setupErrorHandler(app2) {
         frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
         frameAncestors: ["'self'"]
       }
-    }
+    },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" }
   }));
   setupCacheControl(app);
   setupCors(app);

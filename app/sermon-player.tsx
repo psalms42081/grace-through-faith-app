@@ -26,7 +26,8 @@ export default function SermonPlayerScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [loading, setLoading] = useState(true);
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+  const appOrigin = Platform.OS === "web" ? (typeof window !== "undefined" ? window.location.origin : "") : "";
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&origin=${encodeURIComponent(appOrigin)}`;
 
   const handleOpenInYouTube = useCallback(() => {
     Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
@@ -65,6 +66,7 @@ export default function SermonPlayerScreen() {
             } as any}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            referrerPolicy="origin"
           />
         </View>
       );

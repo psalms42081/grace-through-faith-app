@@ -331,6 +331,7 @@ function setupErrorHandler(app: express.Application) {
         frameAncestors: ["'self'"],
       },
     },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   }));
   setupCacheControl(app);
   setupCors(app);
