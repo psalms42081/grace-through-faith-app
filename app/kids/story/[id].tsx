@@ -1867,7 +1867,7 @@ export default function SceneStoryScreen() {
     const totalChars = scene.narration.length;
     const totalLines = Math.ceil(totalChars / charsPerLine);
     const totalContentHeight = totalLines * lineHeight;
-    const visibleHeight = 180;
+    const visibleHeight = 120;
     const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
     const targetY = Math.max(0, progress * maxScroll);
     narrationScrollRef.current?.scrollTo({ y: targetY, animated: true });
@@ -2042,6 +2042,7 @@ export default function SceneStoryScreen() {
       const startWordTimer = (durationMs?: number) => {
         if (wordTimerStarted) return;
         wordTimerStarted = true;
+        const HIGHLIGHT_DELAY = 100;
         const totalMs = durationMs && durationMs > 0
           ? durationMs
           : (isLittleLambs ? 480 : 400) * words.length;
@@ -2060,7 +2061,7 @@ export default function SceneStoryScreen() {
             scheduleNext();
           }, delay) as any;
         };
-        scheduleNext();
+        wordTimerRef.current = setTimeout(() => scheduleNext(), HIGHLIGHT_DELAY) as any;
       };
 
       const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
@@ -2313,6 +2314,21 @@ export default function SceneStoryScreen() {
       }
     }
   }).current;
+
+  const scrollStartXRef = useRef(0);
+  const SWIPE_THRESHOLD = 50;
+
+  const onScrollBeginDrag = useCallback((e: any) => {
+    scrollStartXRef.current = e.nativeEvent.contentOffset.x;
+  }, []);
+
+  const onScrollEndDrag = useCallback((e: any) => {
+    const endX = e.nativeEvent.contentOffset.x;
+    const dragDistance = Math.abs(endX - scrollStartXRef.current);
+    if (dragDistance < SWIPE_THRESHOLD) {
+      flatListRef.current?.scrollToIndex({ index: currentScene, animated: true });
+    }
+  }, [currentScene]);
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
@@ -2645,6 +2661,9 @@ export default function SceneStoryScreen() {
           index,
         })}
         scrollEnabled={showWonder === null}
+        onScrollBeginDrag={onScrollBeginDrag}
+        onScrollEndDrag={onScrollEndDrag}
+        scrollEventThrottle={16}
       />
 
       <ConfettiBurst visible={showConfetti} />
@@ -2894,6 +2913,7 @@ const styles = StyleSheet.create({
   narrationScroll: {
     flexGrow: 1,
     justifyContent: "center",
+    paddingBottom: 40,
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",
