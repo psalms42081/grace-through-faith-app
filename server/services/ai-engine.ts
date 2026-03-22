@@ -1086,7 +1086,9 @@ export async function generateSceneImage(
       .limit(1);
 
     if (scene?.imageUrl) {
-      return scene.imageUrl;
+      if (scene.imageUrl.startsWith("data:image")) {
+        return scene.imageUrl;
+      }
     }
 
     const client = createOpenAIClient();
@@ -1101,12 +1103,28 @@ export async function generateSceneImage(
     const generatedUrl = response.data?.[0]?.url ?? null;
 
     if (generatedUrl) {
-      await db
-        .update(kidsStoryScenes)
-        .set({ imageUrl: generatedUrl })
-        .where(eq(kidsStoryScenes.id, sceneId));
+      try {
+        const imgResponse = await fetch(generatedUrl);
+        const arrayBuffer = await imgResponse.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString("base64");
+        const contentType = imgResponse.headers.get("content-type") || "image/png";
+        const dataUrl = `data:${contentType};base64,${base64}`;
 
-      return generatedUrl;
+        await db
+          .update(kidsStoryScenes)
+          .set({ imageUrl: dataUrl })
+          .where(eq(kidsStoryScenes.id, sceneId));
+
+        return dataUrl;
+      } catch (fetchErr) {
+        console.error("Failed to fetch/convert DALL-E image to base64:", fetchErr);
+        await db
+          .update(kidsStoryScenes)
+          .set({ imageUrl: generatedUrl })
+          .where(eq(kidsStoryScenes.id, sceneId));
+        return generatedUrl;
+      }
     }
 
     return fallbackLocalImage(sceneId);
