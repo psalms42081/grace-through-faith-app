@@ -1778,3 +1778,27 @@ export const userFeedback = pgTable("user_feedback", {
   platform: varchar("platform", { length: 16 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ─── DEVICE TOKENS (Push Notifications) ──────────────────────────────────────
+
+export const deviceTokens = pgTable(
+  "device_tokens",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pushToken: text("push_token").notNull(),
+    platform: varchar("platform", { length: 16 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("device_tokens_user_idx").on(table.userId),
+    tokenUnique: uniqueIndex("device_tokens_token_unique").on(table.pushToken),
+  })
+);
+
+export type DeviceToken = typeof deviceTokens.$inferSelect;

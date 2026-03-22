@@ -19,12 +19,52 @@ import { Router } from "express";
     devotionalDays,
     userPlanEnrollments,
     userPlanProgress,
+    deviceTokens,
   } from "../../shared/schema";
   import { eq, and, ilike, sql, desc } from "drizzle-orm";
+  import { notifyGroupMembers } from "../services/push-notifications";
   import { generateCode, requireAuth, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
 
   const router = Router();
+
+  router.post("/api/notifications/register-token", requireAuth, async (req, res) => {
+    try {
+      const userId = req.authUserId!;
+      const { pushToken, platform } = req.body;
+      if (!pushToken) return res.status(400).json({ error: "Push token is required" });
+
+      const existing = await db.select().from(deviceTokens)
+        .where(eq(deviceTokens.pushToken, pushToken));
+
+      if (existing.length > 0) {
+        if (existing[0].userId === userId) {
+          await db.update(deviceTokens)
+            .set({ platform: platform || null, updatedAt: new Date() })
+            .where(eq(deviceTokens.pushToken, pushToken));
+        } else {
+          await db.delete(deviceTokens)
+            .where(eq(deviceTokens.pushToken, pushToken));
+          await db.insert(deviceTokens).values({
+            userId,
+            pushToken,
+            platform: platform || null,
+          });
+        }
+      } else {
+        await db.insert(deviceTokens).values({
+          userId,
+          pushToken,
+          platform: platform || null,
+        });
+      }
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Register push token error:", err);
+      return res.status(500).json({ error: "Failed to register push token" });
+    }
+  });
 
   router.post("/api/family/create", requireAuth, async (req, res) => {
   try {
@@ -401,6 +441,10 @@ router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
     const { title, content, authorName } = req.body;
     if (!title) return res.status(400).json({ error: "Prayer title is required" });
 
+    const [membership] = await db.select().from(prayerGroupMembers)
+      .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
+    if (!membership) return res.status(403).json({ error: "You must be a member to submit prayer requests" });
+
     let scripturalVerse = null;
     let scripturalNote = null;
     try {
@@ -411,16 +455,28 @@ router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
       scripturalNote = encouragement.note;
     } catch {}
 
+    const displayAuthor = authorName || "Group Member";
+
     const [prayer] = await db.insert(prayerRequests).values({
       userId,
       groupId: id,
       title,
       content: content || null,
-      authorName: authorName || "Group Member",
+      authorName: displayAuthor,
       category: "group",
       scripturalVerse,
       scripturalNote,
     }).returning();
+
+    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq(prayerGroups.id, id));
+    const groupName = group?.name || "your group";
+    notifyGroupMembers(
+      id,
+      userId,
+      `Prayer request in ${groupName}`,
+      `${displayAuthor}: ${title}`,
+      { type: "prayer", groupId: id, prayerId: prayer.id }
+    ).catch(() => {});
 
     return res.json(prayer);
   } catch (err) {
@@ -554,12 +610,25 @@ router.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
 
     const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
 
+    const authorName = user?.displayName || user?.username || "Member";
+
     const [discussion] = await db.insert(groupDiscussions).values({
       groupId: id,
       userId,
-      authorName: user?.displayName || user?.username || "Member",
+      authorName,
       content: content.trim(),
     }).returning();
+
+    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq(prayerGroups.id, id));
+    const groupName = group?.name || "your group";
+    const preview = content.trim().length > 100 ? content.trim().slice(0, 97) + "..." : content.trim();
+    notifyGroupMembers(
+      id,
+      userId,
+      `New post in ${groupName}`,
+      `${authorName}: ${preview}`,
+      { type: "discussion", groupId: id, discussionId: discussion.id }
+    ).catch(() => {});
 
     return res.json(discussion);
   } catch (err) {
@@ -891,15 +960,29 @@ router.post("/api/streams/create", requireAuth, async (req, res) => {
     const roomName = generateRoomName();
     await createLiveKitRoom(roomName);
 
+    const hostName = user?.displayName || user?.username || "Host";
+
     const [session] = await db.insert(liveSessions).values({
       title,
       groupId: groupId || null,
       churchId: churchId || null,
       hostUserId: userId,
-      hostDisplayName: user?.displayName || user?.username || "Host",
+      hostDisplayName: hostName,
       roomUrl: roomName,
       status: "live",
     }).returning();
+
+    if (groupId) {
+      const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where(eq(prayerGroups.id, groupId));
+      const groupName = group?.name || "your group";
+      notifyGroupMembers(
+        groupId,
+        "",
+        `Live session in ${groupName}`,
+        `${hostName} started "${title}"`,
+        { type: "live_session", groupId, sessionId: session.id }
+      ).catch(() => {});
+    }
 
     return res.json(session);
   } catch (err) {
