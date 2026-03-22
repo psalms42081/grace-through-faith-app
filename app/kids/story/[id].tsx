@@ -1838,7 +1838,6 @@ export default function SceneStoryScreen() {
   const flatListRef = useRef<FlatList>(null);
   const narrationScrollRef = useRef<ScrollView>(null);
   const narrationUserScrolledRef = useRef(false);
-  const [debugScroll, setDebugScroll] = useState({ totalContentHeight: 0, measuredHeight: 0, maxScroll: 0, targetY: 0, progress: 0 });
   const narrationMeasuredHeight = useRef(0);
   const narrationUserScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1871,8 +1870,7 @@ export default function SceneStoryScreen() {
     const totalContentHeight = totalLines * lineHeight;
     const visibleHeight = narrationMeasuredHeight.current > 0 ? narrationMeasuredHeight.current : 120;
     const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
-    const targetY = Math.max(0, progress * maxScroll);
-    setDebugScroll({ totalContentHeight: Math.round(totalContentHeight), measuredHeight: Math.round(visibleHeight), maxScroll: Math.round(maxScroll), targetY: Math.round(targetY), progress: Math.round(progress * 100) });
+    const targetY = Math.min(maxScroll, Math.max(0, progress * maxScroll * 1.3));
     narrationScrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [currentWordIndex, isSpeaking, scenes, currentScene, isLittleLambs]);
 
@@ -2673,14 +2671,6 @@ export default function SceneStoryScreen() {
         onScrollEndDrag={onScrollEndDrag}
         scrollEventThrottle={16}
       />
-
-      {isSpeaking && (
-        <View style={{ position: "absolute", top: 40, left: 8, backgroundColor: "rgba(0,0,0,0.75)", padding: 6, borderRadius: 6, zIndex: 999 }} pointerEvents="none">
-          <Text style={{ color: "#0f0", fontSize: 10, fontFamily: "Inter_400Regular" }}>
-            {`content: ${debugScroll.totalContentHeight}px\nmeasured: ${debugScroll.measuredHeight}px\nmaxScroll: ${debugScroll.maxScroll}px\ntargetY: ${debugScroll.targetY}px\nprogress: ${debugScroll.progress}%`}
-          </Text>
-        </View>
-      )}
 
       <ConfettiBurst visible={showConfetti} />
 
