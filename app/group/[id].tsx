@@ -647,7 +647,7 @@ export default function GroupDetailScreen() {
           </View>
         ) : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBarScroll} contentContainerStyle={s.tabBar}>
+        <View style={s.tabBar}>
           {([
             { key: "discussion" as const, icon: "chatbubbles" as const, label: "Discussion" },
             { key: "prayer" as const, icon: "heart" as const, label: "Prayer" },
@@ -661,12 +661,12 @@ export default function GroupDetailScreen() {
               style={[s.tabItem, activeTab === t.key && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
             >
               <Ionicons name={t.icon} size={18} color={activeTab === t.key ? theme.accent : theme.textMuted} />
-              <Text style={[s.tabLabel, { color: activeTab === t.key ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+              <Text style={[s.tabLabel, { color: activeTab === t.key ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                 {t.label}
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
 
         {activeTab === "discussion" && renderDiscussionTab()}
         {activeTab === "prayer" && (
@@ -1061,20 +1061,15 @@ const s = StyleSheet.create({
   roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   roleText: { fontSize: 10, textTransform: "capitalize" as const },
   promoteBtn: { padding: 6 },
-  tabBarScroll: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 4,
-    flexGrow: 0,
-  },
   tabBar: {
     flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
-    gap: 4,
-    paddingRight: 8,
+    marginBottom: 4,
   },
-  tabItem: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 12, paddingHorizontal: 10 },
+  tabItem: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 12 },
   tabLabel: { fontSize: 12 },
   tabContent: { marginHorizontal: 16, marginTop: 8 },
   tabEmpty: { alignItems: "center", gap: 10, paddingVertical: 48 },
