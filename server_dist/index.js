@@ -41162,10 +41162,10 @@ function setupErrorHandler(app2) {
         connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud"],
         mediaSrc: ["'self'", "blob:"],
         workerSrc: ["'self'", "blob:"],
-        imgSrc: ["'self'", "data:", "blob:"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        frameSrc: ["'self'"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com"],
         frameAncestors: ["'self'"]
       }
     }
