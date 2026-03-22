@@ -5,6 +5,7 @@ import { resolveContentLang } from "@/lib/content-language";
 import i18n from "@/lib/i18n";
 import { queryClient } from "@/lib/query-client";
 import { fetch } from "expo/fetch";
+import { registerPushToken } from "@/lib/notifications";
 
 const AUTH_TOKEN_KEY = "@grace_auth_token";
 const DEVICE_UUID_KEY = "@grace-through-faith/deviceUUID";
@@ -257,6 +258,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user && !!token;
   const isGuest = !isAuthenticated;
   const userId = user?.id || deviceId;
+
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      registerPushToken(token, getApiUrl()).catch(() => {});
+    }
+  }, [isAuthenticated, token]);
 
   return (
     <AuthContext.Provider

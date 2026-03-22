@@ -1,6 +1,8 @@
 import { Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
+const PUSH_TOKEN_REGISTERED_KEY = "@grace-through-faith/push-token-registered";
 const REMINDER_ENABLED_KEY = "@grace-through-faith/reminder-enabled";
 const REMINDER_HOUR_KEY = "@grace-through-faith/reminder-hour";
 const REMINDER_MINUTE_KEY = "@grace-through-faith/reminder-minute";
@@ -182,4 +184,52 @@ export async function scheduleIfEnabled(): Promise<void> {
       await scheduleDailyReminder(hour, minute);
     }
   }
+}
+
+export async function registerPushToken(authToken: string, apiBaseUrl: string): Promise<void> {
+  if (Platform.OS === "web") return;
+
+  try {
+    const mod = await loadModule();
+    if (!mod) return;
+
+    const { status: existingStatus } = await mod.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } = await mod.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") return;
+
+    await ensureAndroidChannel();
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const tokenData = await mod.getExpoPushTokenAsync({
+      ...(projectId ? { projectId } : {}),
+    });
+    const pushToken = tokenData.data;
+    if (!pushToken) return;
+
+    const lastRegistered = await AsyncStorage.getItem(PUSH_TOKEN_REGISTERED_KEY);
+    if (lastRegistered === pushToken) return;
+
+    const url = new URL("/api/notifications/register-token", apiBaseUrl);
+    const res = await globalThis.fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        token: pushToken,
+        platform: Platform.OS,
+      }),
+    });
+
+    if (res.ok) {
+      await AsyncStorage.setItem(PUSH_TOKEN_REGISTERED_KEY, pushToken);
+    }
+  } catch {}
 }
