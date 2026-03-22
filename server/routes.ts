@@ -162,13 +162,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeTopic = allowedTopics.includes(topic) ? topic : "other";
       const safeMessage = message.trim().substring(0, 5000);
       const safeContext = context?.trim()?.substring(0, 2000) || null;
-      const safeEmail = email?.trim()?.substring(0, 255) || null;
+      let safeEmail = email?.trim()?.substring(0, 255) || null;
       let displayName = "Anonymous";
       if (userId) {
-        const [userRow] = await db.select({ displayName: users.displayName, email: users.email })
+        const [userRow] = await db.select({ displayName: users.displayName, username: users.username, email: users.email })
           .from(users).where(eq(users.id, userId));
         if (userRow) {
-          displayName = userRow.displayName || "No display name";
+          displayName = userRow.displayName || userRow.username || (userRow.email ? userRow.email.split("@")[0] : null) || "Anonymous";
+          if (!safeEmail && userRow.email) {
+            safeEmail = userRow.email;
+          }
         }
       }
 
