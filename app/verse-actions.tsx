@@ -33,7 +33,8 @@ const HIGHLIGHT_COLORS = {
 
 type HighlightColorKey = keyof typeof HIGHLIGHT_COLORS;
 
-const COMPARE_TRANSLATIONS = ["KJV", "NLT", "NIV", "AMP", "NASB", "ASV", "WEB", "BBE", "YLT"];
+// Only free/open translations available in the database
+const COMPARE_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
 
 interface PassageVerse {
   id: string;
@@ -162,10 +163,22 @@ export default function VerseActionsSheet() {
     [txLabel]
   );
 
+  // AI cross-references disabled — use verse map endpoint instead
   const { data: crossRefData, isLoading: crossRefLoading, isError: crossRefError } = useQuery<{ crossReferences: { ref: string; text: string; connection: string }[] }>({
-    queryKey: [`/api/ai/cross-references?bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&translation=${txLabel}`],
-    enabled: !!bookName && !!chapter && !!verse && activeSection === "compare",
+    queryKey: [`/api/verse-map/${verseId}`],
+    enabled: !!verseId && activeSection === "compare",
     retry: false,
+    select: (raw: any) => {
+      // verse-map returns related verses — adapt to our display shape
+      const refs = raw?.relatedVerses ?? raw?.crossReferences ?? [];
+      return {
+        crossReferences: refs.map((r: any) => ({
+          ref: r.reference ?? r.ref ?? "",
+          text: r.text ?? "",
+          connection: r.theme ?? r.connection ?? "",
+        })),
+      };
+    },
   });
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -212,10 +225,10 @@ export default function VerseActionsSheet() {
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 20 }]}
-          bounces={false}
+          contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
         >
           <View style={[styles.verseCard, { backgroundColor: cardBg, borderColor }]}>
             <Text style={[styles.verseRef, { color: GOLD, fontFamily: "Inter_500Medium" }]}>
@@ -432,6 +445,13 @@ function TranslationCompareCard({
   const borderColor = isDark ? "#222" : "#EEE";
   const mutedColor = isDark ? "#666" : "#AAA";
 
+  const handleShare = async () => {
+    if (!matchedVerse) return;
+    try {
+      await Share.share({ message: `${reference} (${tx})\n${matchedVerse.text}` });
+    } catch {}
+  };
+
   return (
     <View style={[styles.compareCard, { backgroundColor: cardBg, borderColor }]}>
       <View style={styles.compareHeader}>
@@ -439,13 +459,18 @@ function TranslationCompareCard({
           <Text style={[styles.txBadgeText, { color: TEAL, fontFamily: "Inter_600SemiBold" }]}>{tx}</Text>
         </View>
         {matchedVerse && (
-          <Pressable onPress={() => onCopy(matchedVerse.text, tx)} hitSlop={8}>
-            <Ionicons
-              name={copiedTx === tx ? "checkmark-circle" : "copy-outline"}
-              size={16}
-              color={copiedTx === tx ? "#10B981" : mutedColor}
-            />
-          </Pressable>
+          <View style={styles.compareActions}>
+            <Pressable onPress={() => onCopy(matchedVerse.text, tx)} hitSlop={10}>
+              <Ionicons
+                name={copiedTx === tx ? "checkmark-circle" : "copy-outline"}
+                size={16}
+                color={copiedTx === tx ? "#10B981" : mutedColor}
+              />
+            </Pressable>
+            <Pressable onPress={handleShare} hitSlop={10}>
+              <Ionicons name="share-outline" size={16} color={mutedColor} />
+            </Pressable>
+          </View>
         )}
       </View>
       {isLoading ? (
@@ -657,6 +682,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  compareActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
   compareText: {
     fontSize: 15,

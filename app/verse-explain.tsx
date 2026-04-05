@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,12 @@ import {
   Pressable,
   Linking,
   Platform,
-  ActivityIndicator,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -286,11 +283,10 @@ export default function VerseExplainScreen() {
     : "Selected Verse";
   const txLabel = translation || "KJV";
 
-  const { data: aiExplanation, isLoading: isExplaining, isError: explainError, refetch: retryExplain } = useQuery<{ explanation: string }>({
-    queryKey: [`/api/ai/explain?bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&translation=${txLabel}`],
-    enabled: !!bookName && !!chapter && !!verse,
-    retry: false,
-  });
+  // AI explanations disabled — BibleProject videos are the primary resource
+  const aiExplanation = null;
+  const isExplaining = false;
+  const explainError = false;
 
   const bookVideos = useMemo(() => {
     if (!bookName) return [];
@@ -372,57 +368,15 @@ export default function VerseExplainScreen() {
             </View>
           </View>
 
-          {isExplaining && (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={GOLD} />
-              <Text style={[styles.loadingText, { color: isDark ? "#888" : "#999" }]}>
-                Generating explanation...
-              </Text>
+          <View style={[styles.explanationCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={styles.explanationHeader}>
+              <Ionicons name="bulb" size={16} color={GOLD} />
+              <Text style={[styles.sectionTitle, { color: GOLD }]}>About This Passage</Text>
             </View>
-          )}
-
-          {aiExplanation?.explanation && (
-            <View style={[styles.explanationCard, { backgroundColor: cardBg, borderColor }]}>
-              <View style={styles.explanationHeader}>
-                <Ionicons name="bulb" size={16} color={GOLD} />
-                <Text style={[styles.sectionTitle, { color: GOLD }]}>Verse Explanation</Text>
-              </View>
-              <Text style={[styles.explanationText, { color: textColor }]}>
-                {aiExplanation.explanation}
-              </Text>
-            </View>
-          )}
-
-          {!isExplaining && explainError && (
-            <View style={[styles.explanationCard, { backgroundColor: cardBg, borderColor }]}>
-              <View style={styles.explanationHeader}>
-                <Ionicons name="alert-circle" size={16} color="#F44" />
-                <Text style={[styles.sectionTitle, { color: "#F44" }]}>Explanation Unavailable</Text>
-              </View>
-              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
-                Could not generate an explanation right now. Check your connection and try again.
-              </Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { borderColor: GOLD }]}
-                onPress={() => retryExplain()}
-              >
-                <Ionicons name="refresh" size={16} color={GOLD} />
-                <Text style={[styles.retryText, { color: GOLD }]}>Try Again</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!isExplaining && !aiExplanation?.explanation && !explainError && (
-            <View style={[styles.explanationCard, { backgroundColor: cardBg, borderColor }]}>
-              <View style={styles.explanationHeader}>
-                <Ionicons name="bulb" size={16} color={GOLD} />
-                <Text style={[styles.sectionTitle, { color: GOLD }]}>About This Passage</Text>
-              </View>
-              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
-                Explore the videos below to understand the context and meaning of {bookName}. The BibleProject creates short animated videos that walk through every book of the Bible, highlighting how each passage points to Jesus Christ.
-              </Text>
-            </View>
-          )}
+            <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
+              Explore the videos below to understand the context and meaning of {bookName}. BibleProject creates short animated videos walking through every book of the Bible and its key themes.
+            </Text>
+          </View>
 
           {allVideos.length > 0 && (
             <>
@@ -480,43 +434,6 @@ export default function VerseExplainScreen() {
             </Text>
           </Pressable>
 
-          <View style={styles.quickActions}>
-            <Text style={[styles.sectionLabel, { color: isDark ? "#888" : "#999" }]}>
-              VERSE ACTIONS
-            </Text>
-            <View style={styles.quickRow}>
-              <Pressable
-                onPress={() => {
-                  router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse, verseId, text, translation } });
-                }}
-                style={[styles.quickBtn, { backgroundColor: cardBg, borderColor }]}
-              >
-                <Ionicons name="color-fill-outline" size={18} color={GOLD} />
-                <Text style={[styles.quickLabel, { color: textColor }]}>Highlight</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse, verseId, text, translation } });
-                }}
-                style={[styles.quickBtn, { backgroundColor: cardBg, borderColor }]}
-              >
-                <Ionicons name="bookmark-outline" size={18} color={GOLD} />
-                <Text style={[styles.quickLabel, { color: textColor }]}>Save</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  router.push({
-                    pathname: "/(tabs)/study" as any,
-                    params: { bookId, chapter, verse, bookName }
-                  });
-                }}
-                style={[styles.quickBtn, { backgroundColor: cardBg, borderColor }]}
-              >
-                <Ionicons name="layers-outline" size={18} color={GOLD} />
-                <Text style={[styles.quickLabel, { color: textColor }]}>Deep Dive</Text>
-              </Pressable>
-            </View>
-          </View>
         </ScrollView>
       </View>
     </>
@@ -647,21 +564,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   moreBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  quickActions: { marginTop: 4 },
-  quickRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  quickBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 16,
-  },
-  quickLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
   retryButton: {
     flexDirection: "row",
     alignItems: "center",

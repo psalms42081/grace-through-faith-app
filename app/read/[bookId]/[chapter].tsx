@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
@@ -89,6 +90,7 @@ function BottomSheetToolbar({
   userId,
   onDismiss,
   isDark,
+  bottomPad,
 }: {
   verse: Verse;
   bookName: string;
@@ -98,6 +100,7 @@ function BottomSheetToolbar({
   userId: string | null;
   onDismiss: () => void;
   isDark: boolean;
+  bottomPad: number;
 }) {
   const slideAnim = useRef(new Animated.Value(400)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -244,6 +247,7 @@ function BottomSheetToolbar({
           sheetStyles.sheet,
           {
             backgroundColor: sheetBg,
+            paddingBottom: Math.max(bottomPad, Platform.OS === "android" ? 24 : 16) + 8,
             transform: [
               { translateY: Animated.add(slideAnim, dragY) },
             ],
@@ -435,7 +439,6 @@ const sheetStyles = StyleSheet.create({
     right: 0,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingBottom: Platform.OS === "web" ? 34 : 0,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.25, shadowRadius: 16 },
       android: { elevation: 16 },
@@ -713,6 +716,18 @@ export default function VerseReaderScreen() {
     }, [userId])
   );
 
+  // Hide Android nav bar while reading (immersive mode); restore on leave
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android") return;
+      NavigationBar.setVisibilityAsync("hidden");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
+      return () => {
+        NavigationBar.setVisibilityAsync("visible");
+      };
+    }, [])
+  );
+
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
@@ -918,6 +933,7 @@ export default function VerseReaderScreen() {
           </View>
         ) : (
           <>
+            {/* Close overlays — sit below the dropdowns */}
             {showTranslationPicker && (
               <Pressable
                 style={[StyleSheet.absoluteFill, { zIndex: 50 }]}
@@ -931,12 +947,56 @@ export default function VerseReaderScreen() {
               />
             )}
 
+            {/* Translation picker — absolutely positioned ABOVE the close overlay */}
+            {showTranslationPicker && (
+              <View
+                style={[
+                  styles.translationDropdownAbsolute,
+                  { backgroundColor: isDark ? "#141416" : LIGHT_SURFACE, borderColor: isDark ? "#2A2A2A" : "#E0E0E0" },
+                ]}
+                onStartShouldSetResponder={() => true}
+              >
+                <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} nestedScrollEnabled>
+                  {translationList.map((t) => {
+                    const isActiveT = translation === t;
+                    return (
+                      <Pressable
+                        key={t}
+                        onPress={() => {
+                          if (!isActiveT) setTranslation(t);
+                          setShowTranslationPicker(false);
+                        }}
+                        style={[
+                          styles.translationOption,
+                          isActiveT && { backgroundColor: GOLD + "12" },
+                        ]}
+                      >
+                        <Text style={[
+                          styles.translationOptionText,
+                          {
+                            color: isActiveT ? GOLD : textColor,
+                            fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
+                          },
+                        ]}>
+                          {t}
+                        </Text>
+                        <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
+                          {TRANSLATION_LABELS[t] || t}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
             <View style={splitMode && isSideBySide ? styles.splitRow : splitMode ? styles.splitColumn : { flex: 1 }}>
             <ScrollView
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
                 audio.onUserScroll();
                 if (toolbarVerse) dismissToolbar();
+                setShowTranslationPicker(false);
               }}
               onScroll={splitMode ? handlePrimaryScroll : undefined}
               scrollEventThrottle={16}
@@ -947,44 +1007,6 @@ export default function VerseReaderScreen() {
               ]}
               showsVerticalScrollIndicator={false}
             >
-              {showTranslationPicker && (
-                <View
-                  style={[styles.translationDropdown, { backgroundColor: isDark ? "#141416" : LIGHT_SURFACE, borderColor: isDark ? "#2A2A2A" : "#E0E0E0" }]}
-                  onStartShouldSetResponder={() => true}
-                >
-                  <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} nestedScrollEnabled>
-                    {translationList.map((t) => {
-                      const isActiveT = translation === t;
-                      return (
-                        <Pressable
-                          key={t}
-                          onPress={() => {
-                            if (!isActiveT) setTranslation(t);
-                            setShowTranslationPicker(false);
-                          }}
-                          style={[
-                            styles.translationOption,
-                            isActiveT && { backgroundColor: GOLD + "12" },
-                          ]}
-                        >
-                          <Text style={[
-                            styles.translationOptionText,
-                            {
-                              color: isActiveT ? GOLD : textColor,
-                              fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                            },
-                          ]}>
-                            {t}
-                          </Text>
-                          <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                            {TRANSLATION_LABELS[t] || t}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
 
               <View style={styles.chapterHeader}>
                 <Text style={[styles.bookNameLabel, { color: isDark ? "#555" : "#AAA" }]}>
@@ -1015,9 +1037,10 @@ export default function VerseReaderScreen() {
                   const highlightBg = getHighlightBg(v.id, v.verse, i);
                   const isBookmarked = bookmarkedVerseIds.has(v.id);
                   const hasHighlightBg = highlightBg !== "transparent";
+                  const isSpeaking = i === audio.speakingVerseIndex && audio.isSpeaking && !audio.isPaused;
 
                   const verseBg = isActive
-                    ? `rgba(201, 147, 58, 0.12)`
+                    ? `rgba(201, 147, 58, 0.10)`
                     : hasHighlightBg
                       ? highlightBg
                       : "transparent";
@@ -1029,23 +1052,23 @@ export default function VerseReaderScreen() {
                       onLongPress={() => handleVerseLongPress(v)}
                       delayLongPress={400}
                       style={[
-                        styles.verseRow,
+                        styles.verseBlock,
                         {
                           backgroundColor: verseBg,
-                          borderRadius: (isActive || hasHighlightBg) ? 6 : 0,
+                          borderRadius: (isActive || hasHighlightBg) ? 8 : 4,
+                          borderLeftWidth: isSpeaking ? 2 : 0,
+                          borderLeftColor: isSpeaking ? GOLD : "transparent",
                         },
                       ]}
                     >
-                      <View style={styles.verseNumContainer}>
-                        <Text style={[styles.verseNum, { color: verseNumColor }]}>
-                          {v.verse}
-                        </Text>
-                        {isBookmarked && (
-                          <Ionicons name="bookmark" size={7} color={GOLD} style={{ marginTop: -1 }} />
-                        )}
-                      </View>
                       <Text style={[styles.verseText, { color: textColor }]}>
+                        <Text style={[styles.verseNumInline, { color: verseNumColor }]}>
+                          {v.verse}{" "}
+                        </Text>
                         {v.text}
+                        {isBookmarked && (
+                          <Text style={{ color: GOLD, fontSize: 10 }}> ◆</Text>
+                        )}
                       </Text>
                     </Pressable>
                   );
@@ -1142,13 +1165,11 @@ export default function VerseReaderScreen() {
                 >
                   <View style={styles.proseContainer}>
                     {splitVerses.map((v) => (
-                      <View key={v.id} style={styles.verseRow}>
-                        <View style={styles.verseNumContainer}>
-                          <Text style={[styles.verseNum, { color: verseNumColor }]}>
-                            {v.verse}
-                          </Text>
-                        </View>
+                      <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                         <Text style={[styles.verseText, { color: textColor }]}>
+                          <Text style={[styles.verseNumInline, { color: verseNumColor }]}>
+                            {v.verse}{" "}
+                          </Text>
                           {v.text}
                         </Text>
                       </View>
@@ -1193,6 +1214,7 @@ export default function VerseReaderScreen() {
                 userId={userId}
                 onDismiss={dismissToolbar}
                 isDark={isDark}
+                bottomPad={bottomPad}
               />
             )}
 
@@ -1254,6 +1276,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
   },
+  translationDropdownAbsolute: {
+    position: "absolute",
+    top: 0,
+    right: 16,
+    width: 260,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+    zIndex: 200,
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
   translationOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1298,29 +1335,22 @@ const styles = StyleSheet.create({
   proseContainer: {
     paddingBottom: 24,
   },
-  verseRow: {
-    flexDirection: "row",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    marginVertical: 0,
+  verseBlock: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginBottom: 2,
+    paddingLeft: 12,
   },
-  verseNumContainer: {
-    width: 24,
-    alignItems: "center",
-    paddingTop: 6,
-    gap: 1,
-  },
-  verseNum: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    lineHeight: 12,
+  verseNumInline: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 36,
   },
   verseText: {
-    flex: 1,
     fontSize: 18,
-    lineHeight: 33.3,
+    lineHeight: 36,
     fontFamily: "Lora_400Regular",
-    letterSpacing: 0.18,
+    letterSpacing: 0.2,
   },
   chapterCompleteRow: {
     flexDirection: "row",

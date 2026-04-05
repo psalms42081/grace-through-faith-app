@@ -2,6 +2,7 @@ import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import type { Persister } from "@tanstack/react-query-persist-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 let _authTokenGetter: (() => string | null) | null = null;
 let _deviceIdGetter: (() => string | null) | null = null;
@@ -37,6 +38,21 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function getApiUrl(): string {
+  // In development, auto-detect the server host from Expo's manifest.
+  // Expo knows the PC's current IP (it uses it to serve the JS bundle),
+  // so we extract that IP and point the API at port 5000 on the same machine.
+  // This means the app works on any network without updating .env.
+  if (__DEV__) {
+    const expoHost: string | undefined =
+      (Constants as any).expoConfig?.hostUri ||
+      (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
+      (Constants as any).manifest?.debuggerHost;
+    if (expoHost) {
+      const ip = expoHost.split(":")[0];
+      return `http://${ip}:5000/`;
+    }
+  }
+
   const host = process.env.EXPO_PUBLIC_DOMAIN;
 
   if (host) {
