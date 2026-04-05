@@ -177,6 +177,45 @@ export function getSabbathPhase(start: Date, end: Date): SabbathPhase {
   return "closing";
 }
 
+const TIMEZONE_FALLBACKS: Record<string, { lat: number; lng: number }> = {
+  "Australia/Sydney": { lat: -33.87, lng: 151.21 },
+  "Australia/Melbourne": { lat: -37.81, lng: 144.96 },
+  "Australia/Brisbane": { lat: -27.47, lng: 153.03 },
+  "Australia/Perth": { lat: -31.95, lng: 115.86 },
+  "Australia/Adelaide": { lat: -34.93, lng: 138.60 },
+  "Australia/Hobart": { lat: -42.88, lng: 147.33 },
+  "Australia/Darwin": { lat: -12.46, lng: 130.84 },
+  "Pacific/Auckland": { lat: -36.85, lng: 174.76 },
+  "America/New_York": { lat: 40.71, lng: -74.01 },
+  "America/Chicago": { lat: 41.88, lng: -87.63 },
+  "America/Denver": { lat: 39.74, lng: -104.99 },
+  "America/Los_Angeles": { lat: 34.05, lng: -118.24 },
+  "America/Toronto": { lat: 43.65, lng: -79.38 },
+  "Europe/London": { lat: 51.51, lng: -0.13 },
+  "Europe/Berlin": { lat: 52.52, lng: 13.41 },
+  "Europe/Paris": { lat: 48.86, lng: 2.35 },
+  "Asia/Tokyo": { lat: 35.68, lng: 139.69 },
+  "Asia/Singapore": { lat: 1.35, lng: 103.82 },
+  "Asia/Manila": { lat: 14.60, lng: 120.98 },
+  "Africa/Johannesburg": { lat: -26.20, lng: 28.04 },
+  "America/Sao_Paulo": { lat: -23.55, lng: -46.63 },
+};
+
+function getFallbackLocation(): { lat: number; lng: number } {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TIMEZONE_FALLBACKS[tz]) {
+      return TIMEZONE_FALLBACKS[tz];
+    }
+    const offset = new Date().getTimezoneOffset();
+    if (offset >= -660 && offset <= -480) return { lat: -33.87, lng: 151.21 };
+    if (offset >= -120 && offset <= 0) return { lat: 51.51, lng: -0.13 };
+    if (offset >= 240 && offset <= 300) return { lat: 40.71, lng: -74.01 };
+    if (offset >= 360 && offset <= 480) return { lat: 34.05, lng: -118.24 };
+  } catch {}
+  return { lat: 40.71, lng: -74.01 };
+}
+
 interface SabbathState {
   isSabbath: boolean;
   closingReflectionActive: boolean;
@@ -216,6 +255,7 @@ export function useSabbath(enabled: boolean = true): SabbathState {
               accuracy: Location.Accuracy.Low,
             });
             if (mounted) {
+              console.log(`[Sabbath] GPS location: ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
               setLocation({
                 lat: pos.coords.latitude,
                 lng: pos.coords.longitude,
@@ -232,6 +272,7 @@ export function useSabbath(enabled: boolean = true): SabbathState {
             }
           );
           if (mounted) {
+            console.log(`[Sabbath] Web geolocation: ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`);
             setLocation({
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
@@ -239,10 +280,13 @@ export function useSabbath(enabled: boolean = true): SabbathState {
             return;
           }
         }
-      } catch {
+      } catch (err) {
+        console.log("[Sabbath] Geolocation failed:", err);
       }
       if (mounted) {
-        setLocation({ lat: 40.7, lng: -74.0 });
+        const fallback = getFallbackLocation();
+        console.log(`[Sabbath] Using fallback location: ${fallback.lat}, ${fallback.lng} (from timezone)`);
+        setLocation(fallback);
       }
     }
 
@@ -257,6 +301,7 @@ export function useSabbath(enabled: boolean = true): SabbathState {
 
     function update() {
       const window = getSabbathWindow(location!.lat, location!.lng);
+      console.log(`[Sabbath] Window: start=${window.start.toISOString()}, end=${window.end.toISOString()}, active=${window.isActive}, closing=${window.closingReflectionActive}`);
       setSabbathInfo({
         isSabbath: window.isActive,
         closingReflectionActive: window.closingReflectionActive,

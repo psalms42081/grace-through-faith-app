@@ -13,6 +13,7 @@ import {
 import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import FormattedNote from "@/components/FormattedNote";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -119,9 +120,12 @@ function NoteItem({ item, theme, isDark }: { item: EnrichedNote; theme: any; isD
         </View>
         <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
       </View>
-      <Text style={[styles.noteContent, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={3}>
-        {item.content}
-      </Text>
+      <FormattedNote
+        content={item.content}
+        textColor={theme.textSecondary}
+        fontSize={13}
+        numberOfLines={3}
+      />
       {item.verseText && (
         <Text style={[styles.versePreview, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
           {item.verseText}

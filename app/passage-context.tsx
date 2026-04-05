@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Pressable,
   ActivityIndicator,
   Platform,
 } from "react-native";
@@ -107,11 +108,20 @@ export default function PassageContextScreen() {
           <View style={[styles.emptyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <Ionicons name="library-outline" size={36} color={theme.textMuted} />
             <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
-              Study materials coming soon
+              Unable to load study materials
             </Text>
             <Text style={[styles.emptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Context cards and commentary for this passage will be added in future updates.
+              We couldn't generate context for this passage right now. Tap below to try again.
             </Text>
+            <Pressable
+              onPress={() => { setCtxGenDone(false); }}
+              style={[styles.retryBtn, { backgroundColor: theme.accent + "18" }]}
+            >
+              <Ionicons name="refresh" size={16} color={theme.accent} />
+              <Text style={[styles.retryBtnText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Try Again
+              </Text>
+            </Pressable>
           </View>
         ) : (
           <>
@@ -248,6 +258,16 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16 },
   emptySub: { fontSize: 13, textAlign: "center" as const, lineHeight: 20 },
+  retryBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  retryBtnText: { fontSize: 14 },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",

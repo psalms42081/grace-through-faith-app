@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import InlineCoachTip from "@/components/InlineCoachTip";
 
 interface DiscussionData {
   keyQuestions: string[];
@@ -40,7 +41,6 @@ export default function SabbathSchoolDiscussionScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [data, setData] = useState<DiscussionData | null>(null);
-  const [largeFontMode, setLargeFontMode] = useState(false);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -55,8 +55,8 @@ export default function SabbathSchoolDiscussionScreen() {
     },
   });
 
-  const baseFontSize = largeFontMode ? 18 : 15;
-  const questionFontSize = largeFontMode ? 17 : 14;
+  const baseFontSize = 15;
+  const questionFontSize = 14;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -69,17 +69,7 @@ export default function SabbathSchoolDiscussionScreen() {
             Lesson Discussion Guide
           </Text>
         </View>
-        <Pressable
-          onPress={() => setLargeFontMode(!largeFontMode)}
-          hitSlop={8}
-          style={[styles.fontBtn, { backgroundColor: largeFontMode ? "rgba(201,147,58,0.2)" : "transparent" }]}
-        >
-          <Ionicons
-            name="text"
-            size={largeFontMode ? 22 : 18}
-            color={largeFontMode ? theme.accent : theme.textMuted}
-          />
-        </Pressable>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -87,7 +77,7 @@ export default function SabbathSchoolDiscussionScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.lessonTitle, { color: theme.text, fontSize: largeFontMode ? 24 : 20 }]}>
+        <Text style={[styles.lessonTitle, { color: theme.text, fontSize: 20 }]}>
           {lessonTitle}
         </Text>
 
@@ -108,6 +98,10 @@ export default function SabbathSchoolDiscussionScreen() {
                 Prepare Discussion Guide
               </Text>
             </Pressable>
+            <InlineCoachTip
+              id="ss_discussion_generate"
+              text="Tap to generate questions for your Sabbath class."
+            />
 
             <View style={[styles.previewFeatures, { borderColor: theme.border }]}>
               <Text style={[styles.previewFeaturesTitle, { color: theme.text }]}>
@@ -275,13 +269,6 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: { fontFamily: "Lora_700Bold", fontSize: 18 },
-  fontBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 20 },
   guideIntro: {

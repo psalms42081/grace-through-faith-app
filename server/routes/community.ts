@@ -60,6 +60,14 @@ import { Router } from "express";
         });
       }
 
+      await db.delete(deviceTokens)
+        .where(
+          and(
+            eq(deviceTokens.userId, userId),
+            sql`${deviceTokens.pushToken} != ${pushToken}`
+          )
+        );
+
       return res.json({ success: true });
     } catch (err) {
       console.error("Register push token error:", err);
@@ -768,18 +776,19 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
       const withDist = allChurches
         .map(c => ({ ...c, distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)) }));
 
-      if (hasTextSearch) {
-        return res.json(withDist.sort((a, b) => a.distance - b.distance));
-      }
-
+      const maxRadius = hasTextSearch ? Math.max(radiusKm, 2000) : radiusKm;
       return res.json(
         withDist
-          .filter(c => c.distance <= radiusKm)
+          .filter(c => c.distance <= maxRadius)
           .sort((a, b) => a.distance - b.distance)
       );
     }
 
-    return res.json(allChurches);
+    if (hasTextSearch) {
+      return res.json(allChurches);
+    }
+
+    return res.json([]);
   } catch (err) {
     console.error("Churches list error:", err);
     return res.status(500).json({ error: "Failed to list churches" });

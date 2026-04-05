@@ -50,15 +50,23 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const KIDS_VOICE_KEY = "@grace-kids/narrator-voice";
 
-type NarratorVoice = "george" | "sarah";
-const NARRATOR_VOICES: { id: NarratorVoice; label: string; desc: string; gender: "male" | "female" }[] = [
+type NarratorVoice = "george" | "sarah" | "jessica" | "laura" | "bella" | "lily";
+const NARRATOR_VOICES: { id: NarratorVoice; label: string; desc: string; gender: "male" | "female"; teenOnly?: boolean }[] = [
   { id: "george", label: "George", desc: "Warm storyteller", gender: "male" },
   { id: "sarah", label: "Sarah", desc: "Reassuring & confident", gender: "female" },
+  { id: "jessica", label: "Jessica", desc: "Playful & relatable", gender: "female", teenOnly: true },
+  { id: "laura", label: "Laura", desc: "Enthusiastic & quirky", gender: "female", teenOnly: true },
+  { id: "bella", label: "Bella", desc: "Professional & warm", gender: "female", teenOnly: true },
+  { id: "lily", label: "Lily", desc: "Velvety actress", gender: "female", teenOnly: true },
 ];
 
 const VOICE_PITCH_MAP: Record<NarratorVoice, { pitch: number; rate: number; gender: "male" | "female" }> = {
   george: { pitch: 0.9, rate: 0, gender: "male" },
   sarah: { pitch: 1.1, rate: 0, gender: "female" },
+  jessica: { pitch: 1.0, rate: 0, gender: "female" },
+  laura: { pitch: 1.0, rate: 0, gender: "female" },
+  bella: { pitch: 1.0, rate: 0, gender: "female" },
+  lily: { pitch: 1.0, rate: 0, gender: "female" },
 };
 
 let cachedDeviceVoices: { male: Speech.Voice | null; female: Speech.Voice | null } | null = null;
@@ -400,7 +408,7 @@ function WordHighlightText({
 }) {
   const words = useMemo(() => text.split(/\s+/), [text]);
   const sentences = useMemo(() => splitIntoSentences(text), [text]);
-  const fontSize = isLittleLambs ? 22 : 20;
+  const fontSize = isLittleLambs ? 18 : 16;
 
   const currentSentenceIdx = useMemo(() => {
     if (!isSpeaking) return -1;
@@ -410,7 +418,7 @@ function WordHighlightText({
   }, [sentences, currentWordIndex, isSpeaking]);
 
   return (
-    <Text style={{ textAlign: "center", lineHeight: fontSize * 2.1 }}>
+    <Text style={{ textAlign: "center", lineHeight: fontSize * 1.5 }}>
       {words.map((word, i) => {
         const isActive = isSpeaking && i === currentWordIndex;
         const isPast = isSpeaking && i < currentWordIndex;
@@ -425,7 +433,7 @@ function WordHighlightText({
             key={i}
             style={{
               fontFamily: "Lora_400Regular",
-              fontSize: isActive ? fontSize + 2 : fontSize,
+              fontSize,
               color: isActive
                 ? "#F5C451"
                 : isInCurrentSentence
@@ -1792,6 +1800,7 @@ export default function SceneStoryScreen() {
   const { ageGroup, activeChildProfileId } = useKidsMode();
   const queryClient = useQueryClient();
   const isLittleLambs = ageGroup === "little_lambs";
+  const isTeen = ageGroup === "young_disciples_plus";
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const baseUrl = useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
@@ -1802,6 +1811,7 @@ export default function SceneStoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentScene, setCurrentScene] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showNextButton, setShowNextButton] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [answeredWonders, setAnsweredWonders] = useState<Set<number>>(new Set());
   const [showWonder, setShowWonder] = useState<number | null>(null);
@@ -1819,8 +1829,7 @@ export default function SceneStoryScreen() {
   const [quietMode, setQuietMode] = useState(false);
   const [quietModeLoaded, setQuietModeLoaded] = useState(false);
   const [autoPlayMode, setAutoPlayMode] = useState(false);
-  const [narratorVoice, setNarratorVoice] = useState<NarratorVoice>("george");
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [narratorVoice, setNarratorVoice] = useState<NarratorVoice>(isTeen ? "bella" : "george");
   const autoPlayRef = useRef(false);
   const narrationActiveRef = useRef(false);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1837,8 +1846,14 @@ export default function SceneStoryScreen() {
 
   const flatListRef = useRef<FlatList>(null);
   const narrationScrollRef = useRef<ScrollView>(null);
+  const narrationFadeAnim = useSharedValue(1);
+  const narrationFadeStyle = useAnimatedStyle(() => ({
+    opacity: narrationFadeAnim.value,
+  }));
   const narrationUserScrolledRef = useRef(false);
   const narrationMeasuredHeight = useRef(0);
+  const sceneLayoutHeights = useRef<Record<number, number>>({});
+  const sceneContentHeights = useRef<Record<number, number>>({});
   const narrationUserScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1854,28 +1869,31 @@ export default function SceneStoryScreen() {
     }).catch(() => {});
   }, []);
 
+  const narrationContentHeight = useRef(0);
+
   useEffect(() => {
-    if (!isSpeaking || currentWordIndex < 0) return;
+    if (!isSpeaking || currentWordIndex <= 0) return;
     if (narrationUserScrolledRef.current) return;
     const scene = scenes[currentScene];
     if (!scene) return;
     const words = scene.narration.split(/\s+/);
     if (words.length === 0) return;
+    const visibleHeight = narrationMeasuredHeight.current;
+    const contentHeight = narrationContentHeight.current;
+    const scrollPadding = 160;
+    const realTextHeight = contentHeight - scrollPadding;
+    if (!visibleHeight || !contentHeight || realTextHeight <= visibleHeight) return;
     const progress = currentWordIndex / words.length;
-    if (progress > 0.75) {
+    const maxScroll = contentHeight - visibleHeight;
+    if (progress > 0.95) {
       narrationScrollRef.current?.scrollToEnd({ animated: true });
-      return;
+    } else {
+      const estimatedWordY = progress * realTextHeight;
+      const keepInUpperHalf = visibleHeight * 0.4;
+      const targetY = Math.max(0, (estimatedWordY - keepInUpperHalf) * 0.5);
+      const clampedY = Math.min(targetY, maxScroll);
+      narrationScrollRef.current?.scrollTo({ y: clampedY, animated: true });
     }
-    const fontSize = isLittleLambs ? 22 : 20;
-    const lineHeight = fontSize * 2.1;
-    const charsPerLine = 30;
-    const totalChars = scene.narration.length;
-    const totalLines = Math.ceil(totalChars / charsPerLine);
-    const totalContentHeight = totalLines * lineHeight;
-    const visibleHeight = narrationMeasuredHeight.current > 0 ? narrationMeasuredHeight.current : 120;
-    const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
-    const targetY = Math.min(maxScroll, Math.max(0, progress * maxScroll * 1.6));
-    narrationScrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [currentWordIndex, isSpeaking, scenes, currentScene, isLittleLambs]);
 
   const stopNarrationAudio = useCallback(() => {
@@ -1950,6 +1968,7 @@ export default function SceneStoryScreen() {
   };
 
   const startNarrationRef = useRef<(sceneIdx: number) => void>(() => {});
+  const handleCompleteRef = useRef<() => void>(() => {});
 
   const autoAdvanceToNext = useCallback((fromScene: number) => {
     if (!autoPlayRef.current) return;
@@ -1984,15 +2003,26 @@ export default function SceneStoryScreen() {
     const words = scene.narration.split(/\s+/);
     setIsSpeaking(true);
     setCurrentWordIndex(0);
+    setShowNextButton(false);
 
     const onNarrationEnd = () => {
       if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
       setIsSpeaking(false);
-      setCurrentWordIndex(0);
+      narrationFadeAnim.value = withTiming(0, { duration: 400 });
+      setTimeout(() => {
+        setCurrentWordIndex(0);
+        narrationFadeAnim.value = withTiming(1, { duration: 300 });
+      }, 450);
       if (scene.pauseAndWonder && !answeredWonders.has(scene.sceneIndex)) {
         setShowWonder(scene.sceneIndex);
-      } else {
+      } else if (sceneIdx >= scenes.length - 1 && autoPlayRef.current) {
+        autoPlayRef.current = false;
+        setAutoPlayMode(false);
+        setTimeout(() => handleCompleteRef.current(), 500);
+      } else if (autoPlayRef.current) {
         autoAdvanceToNext(sceneIdx);
+      } else {
+        setShowNextButton(true);
       }
     };
 
@@ -2032,7 +2062,7 @@ export default function SceneStoryScreen() {
         throw new Error(`TTS prepare failed after retries: ${prepareRes?.status || "network"} ${errBody}`);
       }
 
-      const { audioId } = await prepareRes.json();
+      const { audioId, durationMs } = await prepareRes.json();
       if (abortCtrl.signal.aborted) return;
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiBase).href;
@@ -2043,47 +2073,35 @@ export default function SceneStoryScreen() {
       const player = createAudioPlayer(audioUri);
       narrationPlayerRef.current = player;
 
-      let wordTimerStarted = false;
-      const startWordTimer = (durationMs?: number) => {
-        if (wordTimerStarted) return;
-        wordTimerStarted = true;
-        const HIGHLIGHT_DELAY = 100;
-        const totalMs = durationMs && durationMs > 0
-          ? durationMs
-          : (isLittleLambs ? 480 : 400) * words.length;
-        const minChars = 2;
-        const charWeights = words.map(w => Math.max(w.replace(/[^a-zA-Z']/g, "").length, minChars));
-        const totalWeight = charWeights.reduce((a, b) => a + b, 0);
-        const wordDurations = charWeights.map(w => Math.max(180, (w / totalWeight) * totalMs));
+      const minChars = 2;
+      const charWeights = words.map(w => Math.max(w.replace(/[^a-zA-Z']/g, "").length, minChars));
+      const totalWeight = charWeights.reduce((a, b) => a + b, 0);
 
-        let wordIdx = 0;
-        const scheduleNext = () => {
-          if (wordIdx >= words.length - 1) return;
-          const delay = wordDurations[wordIdx];
-          wordTimerRef.current = setTimeout(() => {
-            wordIdx++;
-            setCurrentWordIndex(wordIdx);
-            scheduleNext();
-          }, delay) as any;
-        };
-        wordTimerRef.current = setTimeout(() => scheduleNext(), HIGHLIGHT_DELAY) as any;
+      const estTotalMs = (durationMs && durationMs > 0) ? durationMs : (isLittleLambs ? 480 : 400) * words.length;
+      const wordDurations = charWeights.map(w => (w / totalWeight) * estTotalMs);
+      let wordIdx = 0;
+      const scheduleNextWord = () => {
+        if (wordIdx >= words.length - 1 || abortCtrl.signal.aborted) return;
+        const delay = wordDurations[wordIdx];
+        wordTimerRef.current = setTimeout(() => {
+          if (abortCtrl.signal.aborted) return;
+          wordIdx++;
+          setCurrentWordIndex(wordIdx);
+          scheduleNextWord();
+        }, delay) as any;
       };
+      scheduleNextWord();
 
       const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
-        if (status.playing && !wordTimerStarted && status.duration && status.duration > 0) {
-          startWordTimer(status.duration * 1000);
-        }
-        if (status.playing && !wordTimerStarted && (!status.duration || status.duration <= 0)) {
-          startWordTimer();
-        }
         if (status.didJustFinish) {
+          setCurrentWordIndex(words.length - 1);
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;
           statusSub?.remove();
           if (narrationPlayerRef.current === player) {
             narrationPlayerRef.current = null;
           }
           if (!abortCtrl.signal.aborted) {
-            onNarrationEnd();
+            setTimeout(() => onNarrationEnd(), 800);
           }
         }
       });
@@ -2096,14 +2114,16 @@ export default function SceneStoryScreen() {
       const fbMinChars = 2;
       const fbWeights = words.map(w => Math.max(w.replace(/[^a-zA-Z']/g, "").length, fbMinChars));
       const fbTotalWeight = fbWeights.reduce((a, b) => a + b, 0);
-      const fbDurations = fbWeights.map(w => Math.max(180, (w / fbTotalWeight) * fallbackTotalMs));
+      const fbDurations = fbWeights.map(w => (w / fbTotalWeight) * fallbackTotalMs);
       let wordIdx = 0;
       const fbScheduleNext = () => {
-        if (wordIdx >= words.length - 1) return;
-        const delay = fbDurations[wordIdx];
+        if (wordIdx >= words.length) return;
+        const delay = fbDurations[wordIdx] || 100;
         wordTimerRef.current = setTimeout(() => {
           wordIdx++;
-          setCurrentWordIndex(wordIdx);
+          if (wordIdx < words.length) {
+            setCurrentWordIndex(wordIdx);
+          }
           fbScheduleNext();
         }, delay) as any;
       };
@@ -2218,9 +2238,16 @@ export default function SceneStoryScreen() {
       setIsSpeaking(false);
       setCurrentWordIndex(0);
       if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
+      narrationContentHeight.current = sceneContentHeights.current[idx] || 0;
+      narrationMeasuredHeight.current = sceneLayoutHeights.current[idx] || 0;
+      narrationUserScrolledRef.current = false;
+      setShowNextButton(false);
       prevSceneRef.current = idx;
       setCurrentScene(idx);
       flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+      setTimeout(() => {
+        narrationScrollRef.current?.scrollTo({ y: 0, animated: false });
+      }, 100);
       if (narrationActiveRef.current) {
         setTimeout(() => {
           startNarrationRef.current(idx);
@@ -2303,6 +2330,8 @@ export default function SceneStoryScreen() {
     }
   }, [hasCompletionFlow]);
 
+  handleCompleteRef.current = handleComplete;
+
   const prevSceneRef = useRef(0);
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -2357,7 +2386,7 @@ export default function SceneStoryScreen() {
             />
           )}
 
-          {!item.interactionType && !isLivingScene && (
+          {!item.interactionType && !isLivingScene && !isTeen && (
             <MoodParticleOverlay
               mood={item.mood || "PEACE"}
               isActive={index === currentScene && !quietMode}
@@ -2413,21 +2442,6 @@ export default function SceneStoryScreen() {
                 isSpeaking={isSpeaking}
                 theme={theme}
               />
-            )}
-
-            {isLastScene && !storyComplete && index === currentScene && (
-              <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.livingSceneCompleteWrap}>
-                <Pressable
-                  onPress={handleComplete}
-                  style={[styles.completeBtn, { backgroundColor: theme.starGold || "#F5A623" }]}
-                  testID="complete-story"
-                >
-                  <Ionicons name="star" size={20} color="#fff" />
-                  <Text style={[styles.completeBtnText, { fontFamily: "Inter_700Bold" }]}>
-                    I Finished This Story!
-                  </Text>
-                </Pressable>
-              </Animated.View>
             )}
 
             {storyComplete && isLastScene && (
@@ -2507,8 +2521,15 @@ export default function SceneStoryScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.narrationScroll}
                 onLayout={(e) => {
+                  sceneLayoutHeights.current[index] = e.nativeEvent.layout.height;
                   if (index === currentScene) {
                     narrationMeasuredHeight.current = e.nativeEvent.layout.height;
+                  }
+                }}
+                onContentSizeChange={(_w, h) => {
+                  sceneContentHeights.current[index] = h;
+                  if (index === currentScene) {
+                    narrationContentHeight.current = h;
                   }
                 }}
                 onScrollBeginDrag={() => {
@@ -2521,13 +2542,15 @@ export default function SceneStoryScreen() {
                 scrollEventThrottle={16}
               >
                 {index === currentScene ? (
-                  <WordHighlightText
-                    text={item.narration}
-                    currentWordIndex={currentWordIndex}
-                    isSpeaking={isSpeaking}
-                    theme={theme}
-                    isLittleLambs={isLittleLambs}
-                  />
+                  <Animated.View style={narrationFadeStyle}>
+                    <WordHighlightText
+                      text={item.narration}
+                      currentWordIndex={currentWordIndex}
+                      isSpeaking={isSpeaking}
+                      theme={theme}
+                      isLittleLambs={isLittleLambs}
+                    />
+                  </Animated.View>
                 ) : (
                   <Text
                     style={[
@@ -2560,21 +2583,6 @@ export default function SceneStoryScreen() {
                   Wonder answered!
                 </Text>
               </View>
-            )}
-
-            {isLastScene && !storyComplete && index === currentScene && (
-              <Animated.View entering={FadeInUp.delay(300).springify()}>
-                <Pressable
-                  onPress={handleComplete}
-                  style={[styles.completeBtn, { backgroundColor: theme.starGold || "#F5A623" }]}
-                  testID="complete-story"
-                >
-                  <Ionicons name="star" size={20} color="#fff" />
-                  <Text style={[styles.completeBtnText, { fontFamily: "Inter_700Bold" }]}>
-                    I Finished This Story!
-                  </Text>
-                </Pressable>
-              </Animated.View>
             )}
 
             {storyComplete && isLastScene && (
@@ -2670,9 +2678,7 @@ export default function SceneStoryScreen() {
           offset: SCREEN_WIDTH * index,
           index,
         })}
-        scrollEnabled={showWonder === null}
-        onScrollBeginDrag={onScrollBeginDrag}
-        onScrollEndDrag={onScrollEndDrag}
+        scrollEnabled={false}
         scrollEventThrottle={16}
       />
 
@@ -2727,6 +2733,27 @@ export default function SceneStoryScreen() {
 
       {currentScene === scenes.length - 1 ? (
         <View style={[styles.cinematicBottomBar, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12 }]}>
+          <SceneProgressDots total={scenes.length} current={currentScene} theme={theme} />
+          <View style={styles.cleanControlRow}>
+            <PulsingPlayButton isSpeaking={isSpeaking} onPress={handleReadToMe} />
+          </View>
+          {showNextButton && !isSpeaking && !storyComplete && (
+            <Animated.View entering={FadeInUp.springify()}>
+              <Pressable
+                onPress={() => {
+                  setShowNextButton(false);
+                  handleComplete();
+                }}
+                style={styles.nextSceneBtn}
+                testID="finish-story"
+              >
+                <Ionicons name="star" size={20} color="#1a1a1a" />
+                <Text style={[styles.nextSceneBtnText, { fontFamily: "Inter_700Bold" }]}>
+                  Finish Story
+                </Text>
+              </Pressable>
+            </Animated.View>
+          )}
           {storyComplete ? (
             <Animated.View entering={FadeInUp.delay(600).springify()}>
               <Pressable
@@ -2748,28 +2775,26 @@ export default function SceneStoryScreen() {
           <View style={styles.cleanControlRow}>
             <PulsingPlayButton isSpeaking={isSpeaking} onPress={handleReadToMe} />
           </View>
+          {showNextButton && !isSpeaking && (
+            <Animated.View entering={FadeInUp.springify()}>
+              <Pressable
+                onPress={() => {
+                  setShowNextButton(false);
+                  goToScene(currentScene + 1);
+                }}
+                style={styles.nextSceneBtn}
+                testID="next-scene"
+              >
+                <Text style={[styles.nextSceneBtnText, { fontFamily: "Inter_700Bold" }]}>
+                  Next
+                </Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </Pressable>
+            </Animated.View>
+          )}
         </View>
       )}
 
-      {currentScene > 0 && (
-        <Pressable
-          onPress={() => goToScene(currentScene - 1)}
-          style={[styles.navArrow, styles.navLeft]}
-          testID="scene-prev"
-        >
-          <Ionicons name="chevron-back" size={28} color="rgba(255,255,255,0.6)" />
-        </Pressable>
-      )}
-
-      {currentScene < scenes.length - 1 && (
-        <Pressable
-          onPress={() => goToScene(currentScene + 1)}
-          style={[styles.navArrow, styles.navRight]}
-          testID="scene-next"
-        >
-          <Ionicons name="chevron-forward" size={28} color="rgba(255,255,255,0.6)" />
-        </Pressable>
-      )}
 
       <LevelUpModal
         visible={showLevelUp}
@@ -2785,72 +2810,6 @@ export default function SceneStoryScreen() {
         onClose={() => setShowStreak(false)}
       />
 
-      <Modal
-        visible={showVoicePicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowVoicePicker(false)}
-      >
-        <Pressable style={styles.voiceOverlay} onPress={() => setShowVoicePicker(false)}>
-          <View style={styles.voiceSheet}>
-            <Text style={styles.voiceSheetTitle}>Choose Narrator</Text>
-            <Text style={styles.voiceSheetSubtitle}>MALE VOICES</Text>
-            {NARRATOR_VOICES.filter(v => v.gender === "male").map(v => (
-              <Pressable
-                key={v.id}
-                style={[
-                  styles.voiceOption,
-                  narratorVoice === v.id && styles.voiceOptionSelected,
-                ]}
-                onPress={() => {
-                  setNarratorVoice(v.id);
-                  AsyncStorage.setItem(KIDS_VOICE_KEY, v.id);
-                  setShowVoicePicker(false);
-                }}
-              >
-                <View style={styles.voiceOptionRow}>
-                  <Ionicons
-                    name={narratorVoice === v.id ? "radio-button-on" : "radio-button-off"}
-                    size={20}
-                    color={narratorVoice === v.id ? "#A78BFA" : "#888"}
-                  />
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={[styles.voiceOptionName, narratorVoice === v.id && { color: "#A78BFA" }]}>{v.label}</Text>
-                    <Text style={styles.voiceOptionDesc}>{v.desc}</Text>
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-            <Text style={[styles.voiceSheetSubtitle, { marginTop: 16 }]}>FEMALE VOICES</Text>
-            {NARRATOR_VOICES.filter(v => v.gender === "female").map(v => (
-              <Pressable
-                key={v.id}
-                style={[
-                  styles.voiceOption,
-                  narratorVoice === v.id && styles.voiceOptionSelected,
-                ]}
-                onPress={() => {
-                  setNarratorVoice(v.id);
-                  AsyncStorage.setItem(KIDS_VOICE_KEY, v.id);
-                  setShowVoicePicker(false);
-                }}
-              >
-                <View style={styles.voiceOptionRow}>
-                  <Ionicons
-                    name={narratorVoice === v.id ? "radio-button-on" : "radio-button-off"}
-                    size={20}
-                    color={narratorVoice === v.id ? "#A78BFA" : "#888"}
-                  />
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={[styles.voiceOptionName, narratorVoice === v.id && { color: "#A78BFA" }]}>{v.label}</Text>
-                    <Text style={styles.voiceOptionDesc}>{v.desc}</Text>
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -2887,7 +2846,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingBottom: 180,
   },
   illustrationArea: {
     height: ILLUSTRATION_HEIGHT + 8,
@@ -2917,13 +2876,13 @@ const styles = StyleSheet.create({
   },
   narrationArea: {
     flex: 1,
-    paddingHorizontal: 8,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
   },
   narrationScroll: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingBottom: 120,
+    paddingBottom: 160,
   },
   narrationText: {
     color: "rgba(255,255,255,0.9)",
@@ -3030,6 +2989,22 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  nextSceneBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 36,
+    borderRadius: 30,
+    backgroundColor: "#D4A853",
+    marginTop: 10,
+    minWidth: 160,
+  },
+  nextSceneBtnText: {
+    color: "#1a1a1a",
+    fontSize: 18,
   },
   backToStoriesBtn: {
     flexDirection: "row" as const,

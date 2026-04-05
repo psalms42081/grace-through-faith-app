@@ -6,24 +6,41 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "graceThroughFaith",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/adventist-symbol-gold.png",
       "resizeMode": "contain",
       "backgroundColor": "#1A1F3C"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.graceThroughFaith"
+      "bundleIdentifier": "com.graceThroughFaith",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      },
+      "entitlements": {
+        "aps-environment": "development"
+      }
     },
     "android": {
       "package": "com.graceThroughFaith",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#1A1F3C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
       }
     },
     "web": {
@@ -38,7 +55,30 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#1A1F3C",
+          "defaultChannel": "daily-reminders",
+          "sounds": [],
+          "mode": "default"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Grace through Faith to use your location to find nearby churches.",
+          "locationWhenInUsePermission": "Allow Grace through Faith to use your location to find nearby churches."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Grace through Faith to use your camera for live fellowship video.",
+          "microphonePermission": "Allow Grace through Faith to use your microphone for live fellowship audio."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

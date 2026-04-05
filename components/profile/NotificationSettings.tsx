@@ -8,6 +8,7 @@ import {
   setReminderTime,
   getNotificationPermissionStatus,
   openAppSettings,
+  isAndroidExpoGo,
 } from "@/lib/notifications";
 
 interface NotificationSettingsProps {
@@ -52,11 +53,14 @@ export default function NotificationSettings({
   }, []);
 
   const handleToggle = async (value: boolean) => {
+    if (isAndroidExpoGo()) return;
     setLoading(true);
     const result = await setReminderEnabled(value);
     if (result.success) {
       setEnabled(value);
       setPermDenied(false);
+    } else if (result.unavailable) {
+      setEnabled(false);
     } else if (result.permissionDenied) {
       setEnabled(false);
       if (!result.canAskAgain) {
@@ -81,6 +85,7 @@ export default function NotificationSettings({
   };
 
   const isWeb = Platform.OS === "web";
+  const androidExpoGo = isAndroidExpoGo();
 
   return (
     <View style={[styles.wrap, { borderColor: theme.border }]}>
@@ -104,10 +109,15 @@ export default function NotificationSettings({
 
       {expanded && (
         <View style={styles.body}>
-          {isWeb ? (
-            <Text style={[styles.webNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Notifications are available on mobile devices only.
-            </Text>
+          {isWeb || androidExpoGo ? (
+            <View style={styles.unavailableBox}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.textMuted} style={{ marginRight: 8 }} />
+              <Text style={[styles.webNote, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }]}>
+                {androidExpoGo
+                  ? "Push notifications are not supported in Expo Go on Android (SDK 53+). Install the app via a development build to enable reminders."
+                  : "Notifications are available on mobile devices only."}
+              </Text>
+            </View>
           ) : (
             <>
               <View style={styles.toggleRow}>
@@ -209,6 +219,11 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 4,
     paddingBottom: 12,
+  },
+  unavailableBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 8,
   },
   webNote: {
     fontSize: 13,

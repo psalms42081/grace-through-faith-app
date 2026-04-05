@@ -1,14 +1,26 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 
 export default function GoldDivider({ theme }: { theme: typeof Colors.dark }) {
   return (
     <View style={styles.dividerRow}>
-      <View style={[styles.dividerLine, { backgroundColor: theme.accent + "30" }]} />
-      <Ionicons name="diamond-outline" size={10} color={theme.accent + "60"} />
-      <View style={[styles.dividerLine, { backgroundColor: theme.accent + "30" }]} />
+      <LinearGradient
+        colors={["transparent", theme.accent + "40", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientLine}
+      />
+      <View style={[styles.centerDot, { backgroundColor: theme.accent + "50" }]} />
+      <View style={[styles.centerDotInner, { backgroundColor: theme.accent + "80" }]} />
+      <View style={[styles.centerDot, { backgroundColor: theme.accent + "50" }]} />
+      <LinearGradient
+        colors={["transparent", theme.accent + "40", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientLine}
+      />
     </View>
   );
 }
@@ -17,12 +29,22 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginVertical: 8,
+    gap: 6,
+    marginVertical: 12,
     paddingHorizontal: 20,
   },
-  dividerLine: {
+  gradientLine: {
     flex: 1,
     height: 1,
+  },
+  centerDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  centerDotInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 });

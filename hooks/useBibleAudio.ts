@@ -12,8 +12,11 @@ const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
 const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
 const AI_VOICE_OPTIONS = [
-  { id: "george", label: "George", description: "Warm, captivating British storyteller", gender: "male" },
-  { id: "sarah", label: "Sarah", description: "Mature, reassuring, confident", gender: "female" },
+  { id: "ellen_white", label: "Ellen G. White", description: "Prophetic, gentle, Spirit-led", gender: "female" },
+  { id: "james_white", label: "James White", description: "Commanding organizer, pastoral", gender: "male" },
+  { id: "joseph_bates", label: "Joseph Bates", description: "Seasoned mariner, bold conviction", gender: "male" },
+  { id: "uriah_smith", label: "Uriah Smith", description: "Scholarly, meticulous, prophetic", gender: "male" },
+  { id: "jn_andrews", label: "J.N. Andrews", description: "Intellectual, missionary zeal", gender: "male" },
 ] as const;
 
 export type AIVoiceId = (typeof AI_VOICE_OPTIONS)[number]["id"];
@@ -79,7 +82,7 @@ export default function useBibleAudio(
   const [speechRate, setSpeechRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState("george");
+  const [selectedVoice, setSelectedVoice] = useState("ellen_white");
   const [selectedDeviceVoiceId, setSelectedDeviceVoiceId] = useState<string | null>(null);
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoice[]>([]);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -91,7 +94,7 @@ export default function useBibleAudio(
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
   const playerRef = useRef<Audio.Sound | null>(null);
-  const selectedVoiceRef = useRef("george");
+  const selectedVoiceRef = useRef("ellen_white");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const playbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

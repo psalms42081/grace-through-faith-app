@@ -627,6 +627,7 @@ function TimelineContent({ theme }: { theme: typeof Colors.light }) {
 
   const { data: events, isLoading } = useQuery<TimelineEvent[]>({
     queryKey: ["/api/timeline"],
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: linkedVerses } = useQuery<LinkedVerse[]>({
@@ -636,9 +637,16 @@ function TimelineContent({ theme }: { theme: typeof Colors.light }) {
 
   const grouped = React.useMemo(() => {
     if (!events) return [];
+    const seen = new Set<string>();
+    const unique = events.filter((ev) => {
+      const key = `${ev.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     const g: Record<string, TimelineEvent[]> = {};
     const order: string[] = [];
-    for (const ev of events) {
+    for (const ev of unique) {
       const p = ev.period || "Unknown";
       if (!g[p]) {
         g[p] = [];

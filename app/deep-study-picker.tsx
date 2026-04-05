@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { safeGoBack } from "@/lib/safe-back";
 
 interface BibleBook {
   id: number;
@@ -109,7 +110,7 @@ export default function DeepStudyPickerScreen() {
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <View style={[styles.stickyHeader, { paddingTop: topPad + 12, backgroundColor: theme.background }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
+        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} hitSlop={12} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
         <View style={{ flex: 1 }}>

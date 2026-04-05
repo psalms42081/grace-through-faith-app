@@ -103,11 +103,18 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
         const room = new lk.Room({
           adaptiveStream: true,
           dynacast: true,
-          videoCaptureDefaults: { resolution: lk.VideoPresets.h540.resolution },
+          videoCaptureDefaults: { resolution: lk.VideoPresets.h360.resolution },
           audioCaptureDefaults: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            channelCount: 1,
+            sampleRate: 24000,
+          },
+          publishDefaults: {
+            dtx: true,
+            videoEncoding: { maxBitrate: 500000, maxFramerate: 20 },
+            stopMicTrackOnMute: true,
           },
         });
         currentRoom = room;
@@ -184,7 +191,13 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
         }
 
         try {
-          await room.localParticipant.setMicrophoneEnabled(true);
+          await room.localParticipant.setMicrophoneEnabled(true, {
+            echoCancellation: { ideal: true },
+            noiseSuppression: { ideal: true },
+            autoGainControl: { ideal: true },
+            channelCount: 1,
+            sampleRate: { ideal: 24000 },
+          } as any);
           if (mounted) setMicEnabled(true);
         } catch {
           if (mounted) setMicEnabled(false);
@@ -213,7 +226,17 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
     if (!room) return;
     try {
       const next = !micEnabled;
-      await room.localParticipant.setMicrophoneEnabled(next);
+      if (next) {
+        await room.localParticipant.setMicrophoneEnabled(true, {
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          channelCount: 1,
+          sampleRate: { ideal: 24000 },
+        } as any);
+      } else {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      }
       setMicEnabled(next);
     } catch {}
   }, [micEnabled]);
@@ -615,6 +638,9 @@ export default function StreamScreen() {
             onMessage={handleWebViewMessage}
             originWhitelist={["https://*", "http://*"]}
             allowsBackForwardNavigationGestures={false}
+            onAndroidPermissionRequest={(resources: string[], grant: (r: string[]) => void) => {
+              grant(resources);
+            }}
           />
         </>
       )}

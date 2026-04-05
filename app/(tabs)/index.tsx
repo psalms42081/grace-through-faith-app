@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  StatusBar,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -38,7 +39,7 @@ import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
-import VerseOfTheDay from "@/components/home/VerseOfTheDay";
+import RotatingPanel from "@/components/home/RotatingPanel";
 import { getBookImage } from "@/constants/bible-books";
 import ContinueCard from "@/components/home/ContinueCard";
 import { useResumeJourney } from "@/hooks/useResumeJourney";
@@ -50,10 +51,140 @@ import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
 import TodaysPath from "@/components/home/TodaysPath";
-import FeedbackWidget from "@/components/home/FeedbackWidget";
 import { DAILY_QUEST_STAR_REWARD, DAILY_CHAMPION_BONUS } from "@/constants/kids-shop";
+import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
+import { usePioneer } from "@/contexts/PioneerContext";
+import * as Haptics from "expo-haptics";
+import { Animated as RNAnimated } from "react-native";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const COACH_TIP_BG = "#1E88E5";
+const COACH_ARROW_W = 4;
+const COACH_ARROW_H = 6;
+
+function InlineCoachTip({
+  id,
+  text,
+  visible,
+  onDismiss,
+}: {
+  id: TutorialId;
+  text: string;
+  visible: boolean;
+  onDismiss: () => void;
+}) {
+  const { hasSeenTutorial, markTutorialSeen, isLoaded } = useTutorial();
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
+  const floatAnim = useRef(new RNAnimated.Value(0)).current;
+  const dismissed = useRef(false);
+
+  const shouldShow = isLoaded && visible && !hasSeenTutorial(id);
+
+  useEffect(() => {
+    if (shouldShow) {
+      dismissed.current = false;
+      fadeAnim.setValue(0);
+      RNAnimated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+
+      const loop = RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(floatAnim, {
+            toValue: -6,
+            duration: 750,
+            useNativeDriver: true,
+            easing: (t: number) => t * t * (3 - 2 * t),
+          }),
+          RNAnimated.timing(floatAnim, {
+            toValue: 0,
+            duration: 750,
+            useNativeDriver: true,
+            easing: (t: number) => t * t * (3 - 2 * t),
+          }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    } else {
+      floatAnim.setValue(0);
+    }
+  }, [shouldShow]);
+
+  const handleDismiss = () => {
+    if (dismissed.current) return;
+    dismissed.current = true;
+    Haptics.selectionAsync();
+    RNAnimated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      markTutorialSeen(id);
+      onDismiss();
+    });
+  };
+
+  if (!shouldShow) return null;
+
+  return (
+    <Pressable onPress={handleDismiss} accessibilityRole="button" accessibilityLabel={`Dismiss tip: ${text}`}>
+      <RNAnimated.View
+        style={[
+          inlineCoachStyles.container,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: floatAnim }],
+          },
+        ]}
+      >
+        <View style={inlineCoachStyles.arrow} />
+        <Text style={inlineCoachStyles.text} numberOfLines={1}>{text}</Text>
+      </RNAnimated.View>
+    </Pressable>
+  );
+}
+
+const inlineCoachStyles = StyleSheet.create({
+  container: {
+    backgroundColor: COACH_TIP_BG,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginHorizontal: 22,
+    marginTop: 6,
+    marginBottom: 4,
+    maxWidth: 260,
+    alignSelf: "flex-start",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8 },
+      android: { elevation: 8 },
+      web: { boxShadow: "0 3px 12px rgba(0,0,0,0.2)" },
+    }),
+  },
+  arrow: {
+    position: "absolute",
+    top: -COACH_ARROW_H,
+    left: 24,
+    width: 0,
+    height: 0,
+    borderLeftWidth: COACH_ARROW_W,
+    borderRightWidth: COACH_ARROW_W,
+    borderBottomWidth: COACH_ARROW_H,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: COACH_TIP_BG,
+  },
+  text: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "Inter_500Medium",
+  },
+});
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -1010,6 +1141,270 @@ const kidsStyles = StyleSheet.create({
   },
 });
 
+
+
+interface HomeSeries {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  tag: string | null;
+  speaker: string | null;
+  gradientColors: string[] | null;
+  episodeCount: number;
+  isFeatured: boolean;
+  status: string;
+}
+
+function ReadingPlansCard({ theme, isDark }: { theme: any; isDark: boolean }) {
+  return (
+    <Pressable
+      onPress={() => router.push("/(tabs)/plans" as any)}
+      style={({ pressed }) => [
+        readingPlanStyles.card,
+        { transform: [{ scale: pressed ? 0.98 : 1 }] },
+      ]}
+      testID="home-reading-plans-card"
+    >
+      <Image
+        source={require("@/assets/home-cards/read.png")}
+        style={readingPlanStyles.bgImage}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={["rgba(5,5,7,0.10)", "rgba(5,5,7,0.44)", "rgba(5,5,7,0.74)"]}
+        locations={[0, 0.5, 1]}
+        style={readingPlanStyles.overlay}
+      >
+        <View style={readingPlanStyles.contentBottom}>
+          <View style={readingPlanStyles.labelRow}>
+            <Ionicons name="calendar" size={14} color="#C9933A" />
+            <Text style={[readingPlanStyles.labelText, { fontFamily: "Inter_500Medium" }]}>
+              Reading Plans
+            </Text>
+          </View>
+          <Text style={[readingPlanStyles.title, { fontFamily: "Lora_700Bold" }]}>
+            Guided Daily Scripture
+          </Text>
+          <Text style={[readingPlanStyles.subtitle, { fontFamily: "Inter_400Regular" }]}>
+            Follow a structured path through the Bible
+          </Text>
+          <View style={readingPlanStyles.ctaRow}>
+            <LinearGradient
+              colors={["#C9933A", "#A87828"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={readingPlanStyles.ctaButton}
+            >
+              <Text style={[readingPlanStyles.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Browse Plans</Text>
+              <Ionicons name="arrow-forward" size={14} color="#fff" />
+            </LinearGradient>
+          </View>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+const readingPlanStyles = StyleSheet.create({
+  card: {
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 20,
+    height: 160,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    padding: 22,
+    borderRadius: 20,
+  },
+  contentBottom: {
+    gap: 4,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
+  labelText: {
+    fontSize: 11,
+    color: "#C9933A",
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+  },
+  title: {
+    color: "#F5F0E8",
+    fontSize: 20,
+  },
+  subtitle: {
+    color: "rgba(245,240,232,0.5)",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  ctaText: {
+    color: "#fff",
+    fontSize: 13,
+  },
+});
+
+function FeaturedSeriesSection({ theme, isDark }: { theme: any; isDark: boolean }) {
+  const { data: seriesList } = useQuery<HomeSeries[]>({
+    queryKey: ["/api/series"],
+    staleTime: 60_000,
+  });
+
+  const featured = seriesList?.find((s) => s.isFeatured);
+  if (!featured) return null;
+
+  const gradient = featured.gradientColors && featured.gradientColors.length >= 2
+    ? featured.gradientColors as [string, string, ...string[]]
+    : ["#1a0a2e", "#2d1b69", "#4c1d95"] as [string, string, ...string[]];
+
+  return (
+    <View style={seriesStyles.section}>
+      <View style={seriesStyles.sectionHeader}>
+        <Text style={[seriesStyles.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Series
+        </Text>
+        <Pressable onPress={() => router.push("/series" as any)} hitSlop={8}>
+          <Text style={[seriesStyles.seeAll, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            See All
+          </Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={() => router.push("/series" as any)}
+        style={({ pressed }) => [
+          seriesStyles.featuredCard,
+          { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+        ]}
+        testID="home-featured-series"
+      >
+        <LinearGradient
+          colors={gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={seriesStyles.featuredGradient}
+        >
+          {featured.tag ? (
+            <View style={seriesStyles.tagBadge}>
+              <Text style={seriesStyles.tagText}>✦ {featured.tag}</Text>
+            </View>
+          ) : null}
+
+          <Text style={seriesStyles.featuredTitle}>{featured.title}</Text>
+          {featured.subtitle ? (
+            <Text style={seriesStyles.featuredSubtitle}>{featured.subtitle}</Text>
+          ) : null}
+
+          <View style={seriesStyles.metaRow}>
+            <View style={seriesStyles.metaItem}>
+              <Ionicons name="videocam-outline" size={13} color="rgba(255,255,255,0.5)" />
+              <Text style={seriesStyles.metaText}>{featured.episodeCount} Episodes</Text>
+            </View>
+            {featured.speaker ? (
+              <>
+                <Text style={seriesStyles.metaDot}>•</Text>
+                <View style={seriesStyles.metaItem}>
+                  <Ionicons name="person-outline" size={13} color="rgba(255,255,255,0.5)" />
+                  <Text style={seriesStyles.metaText}>{featured.speaker} Speaker</Text>
+                </View>
+              </>
+            ) : null}
+          </View>
+
+          <View style={seriesStyles.watchBtn}>
+            <Ionicons name="play" size={14} color="#C9933A" />
+            <Text style={seriesStyles.watchBtnText}>Watch Series</Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
+    </View>
+  );
+}
+
+const seriesStyles = StyleSheet.create({
+  section: { marginBottom: 16 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 20, letterSpacing: -0.3 },
+  seeAll: { fontSize: 13 },
+  featuredCard: { borderRadius: 18, overflow: "hidden" },
+  featuredGradient: { padding: 20, borderRadius: 18 },
+  tagBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(201,147,58,0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  tagText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+    textTransform: "uppercase" as const,
+  },
+  featuredTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontFamily: "Lora_700Bold",
+    marginBottom: 4,
+  },
+  featuredSubtitle: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 14,
+  },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaText: { color: "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: "Inter_400Regular" },
+  metaDot: { color: "rgba(255,255,255,0.2)", fontSize: 11, marginHorizontal: 4 },
+  watchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(201,147,58,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.3)",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  watchBtnText: {
+    color: "#C9933A",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
+
 export default function HomeScreen() {
   const { isKidsMode } = useKidsMode();
 
@@ -1028,6 +1423,33 @@ const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&q=80",
   "https://images.unsplash.com/photo-1518173946687-a3e33105820b?w=800&q=80",
   "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
+];
+
+const TOUCHPOINT_TOPICS = [
+  { title: "The Sanctuary", excerpt: "Christ's ministry in the heavenly sanctuary reveals God's plan to restore us fully to His image and eradicate sin forever.", route: "/touchpoint-topic?topicId=sanctuary" },
+  { title: "The Sabbath Rest", excerpt: "The seventh-day Sabbath is a gift of time \u2014 a weekly invitation to cease striving and rest in the finished work of our Creator.", route: "/touchpoint-topic?topicId=sabbath" },
+  { title: "The Second Coming", excerpt: "The blessed hope of Christ's literal, visible return is the culmination of the gospel and the answer to every longing heart.", route: "/touchpoint-topic?topicId=second-coming" },
+  { title: "Righteousness by Faith", excerpt: "We are justified by grace alone through faith in Christ, not by any merit of our own, yet genuine faith always bears fruit.", route: "/touchpoint-topic?topicId=trust" },
+  { title: "The State of the Dead", excerpt: "Death is a sleep, not a doorway. The Bible's clear teaching frees us from fear and points us to the resurrection morning.", route: "/touchpoint-topic?topicId=state-of-dead" },
+  { title: "The Three Angels' Messages", excerpt: "Heaven's final appeal calls every nation to worship the Creator, come out of confusion, and stand faithful in the last days.", route: "/touchpoint-topic?topicId=three-angels" },
+  { title: "Health & Wholeness", excerpt: "God cares for the whole person \u2014 body, mind, and spirit. Biblical health principles are an expression of His love for us.", route: "/touchpoint-topic?topicId=health-message" },
+  { title: "The Gift of Prophecy", excerpt: "The prophetic gift, manifested in the life and writings of Ellen G. White, continues to guide and encourage God's remnant people.", route: "/touchpoint-topic?topicId=prophecy" },
+  { title: "Christian Stewardship", excerpt: "Everything we have belongs to God. Faithful stewardship of time, talents, and treasure is an act of worship and trust.", route: "/touchpoint-topic?topicId=generosity" },
+  { title: "The Law of God", excerpt: "The Ten Commandments reveal God's character of love. Through Christ, obedience becomes not a burden but a joyful response to grace.", route: "/touchpoint-topic?topicId=integrity" },
+  { title: "Baptism & New Life", excerpt: "Baptism by immersion symbolises death to the old life and resurrection to walk in newness of life with Jesus.", route: "/touchpoint-topic?topicId=purpose" },
+  { title: "The Great Controversy", excerpt: "The cosmic conflict between Christ and Satan explains the origin of suffering and assures us of God's ultimate victory.", route: "/touchpoint-topic?topicId=great-controversy" },
+  { title: "Unity in the Body", excerpt: "Christ calls His church to unity in diversity, reflecting the love of the Godhead and witnessing to the world.", route: "/touchpoint-topic?topicId=forgiveness" },
+  { title: "The Remnant Church", excerpt: "In the last days God has a faithful people who keep His commandments and hold to the testimony of Jesus.", route: "/touchpoint-topic?topicId=remnant" },
+];
+
+const DAILY_REFLECTIONS = [
+  { thought: "Grace is not a doctrine to be memorised but a Person to be embraced. Today, let Christ's unmerited favour reshape every anxious thought.", source: "Reflection on Ephesians 2:8-9" },
+  { thought: "The cross does not merely pardon the past; it empowers the present. Walk today in the strength of the One who conquered death.", source: "Reflection on Galatians 2:20" },
+  { thought: "Sabbath rest is heaven's rhythm set in time \u2014 a weekly reminder that our worth is not in what we produce but in Whose we are.", source: "Reflection on Exodus 20:8-11" },
+  { thought: "Prayer is not convincing God to act; it is aligning our hearts with the One who is already working all things for good.", source: "Reflection on Romans 8:28" },
+  { thought: "When we behold Christ, we become like Him \u2014 not by straining to imitate, but by gazing until His character becomes our own.", source: "Reflection on 2 Corinthians 3:18" },
+  { thought: "Hope is not wishful thinking. It is the anchor of the soul, fastened to the promise of a God who cannot lie.", source: "Reflection on Hebrews 6:19" },
+  { thought: "Love your neighbour not because they deserve it, but because you have been loved beyond all deserving. Grace received becomes grace given.", source: "Reflection on 1 John 4:19" },
 ];
 
 const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
@@ -1123,38 +1545,85 @@ function AdultHomeScreen() {
 
   const isSabbathMode = sabbath.isSabbath;
 
+  const { hasSeenTutorial, markTutorialSeen, isLoaded: tutorialLoaded } = useTutorial();
+  const { onboardingComplete: hologramDone, isVisible: hologramActive } = usePioneer();
+
+  const HOME_COACH_SEQUENCE: TutorialId[] = [
+    "home_daily_rhythm",
+    "home_formation_rings",
+    "home_kids_button",
+  ];
+
+  const HOME_COACH_TEXTS: Record<string, string> = {
+    home_daily_rhythm: "Tap Read or Reflect to start your day.",
+    home_formation_rings: "Tap a ring to see your daily progress.",
+    home_kids_button: "Switch to Kids Club content.",
+  };
+
+  const [activeCoachMark, setActiveCoachMark] = useState<TutorialId | null>(null);
+
+  useEffect(() => {
+    if (!tutorialLoaded) return;
+    if (hologramActive || !hologramDone) {
+      setActiveCoachMark(null);
+      return;
+    }
+    HOME_COACH_SEQUENCE.forEach(id => {
+      if (!hasSeenTutorial(id)) markTutorialSeen(id);
+    });
+    setActiveCoachMark(null);
+  }, [tutorialLoaded, hasSeenTutorial, hologramDone, hologramActive]);
+
+  const handleCoachDismiss = useCallback(() => {
+    setActiveCoachMark(prev => {
+      const idx = HOME_COACH_SEQUENCE.indexOf(prev as TutorialId);
+      if (idx >= 0 && idx < HOME_COACH_SEQUENCE.length - 1) {
+        return HOME_COACH_SEQUENCE[idx + 1];
+      }
+      return null;
+    });
+  }, []);
+
   const streakSection = weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) ? (
     <View style={[
       s.streakCard,
-      { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" },
       isSabbathMode && { opacity: 0.7 },
     ]}>
-      <View style={s.streakHeader}>
-        <View style={s.streakLeft}>
-          <Ionicons name="flame" size={isSabbathMode ? 22 : 28} color={isSabbathMode ? theme.textMuted : "#FF6B35"} />
-          <View>
-            <Text style={[
-              s.streakNum,
-              { color: isSabbathMode ? theme.textSecondary : theme.text, fontFamily: "Inter_700Bold" },
-              isSabbathMode && { fontSize: 18 },
-            ]}>
-              {streak}
-            </Text>
-            <Text style={[s.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Day Streak
-            </Text>
+      <LinearGradient
+        colors={isDark ? ["#1A1510", "#0F0D0A", "#0A0908"] : ["#FFFDF6", "#FFF8ED", "#FFF5E6"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.streakGradient}
+      >
+        <View style={s.streakHeader}>
+          <View style={s.streakLeft}>
+            <View style={s.streakFireWrap}>
+              <Ionicons name="flame" size={isSabbathMode ? 20 : 24} color={isSabbathMode ? theme.textMuted : "#FF6B35"} />
+            </View>
+            <View>
+              <Text style={[
+                s.streakNum,
+                { color: isSabbathMode ? theme.textSecondary : theme.text, fontFamily: "Inter_700Bold" },
+                isSabbathMode && { fontSize: 18 },
+              ]}>
+                {streak}
+              </Text>
+              <Text style={[s.streakLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Day Streak
+              </Text>
+            </View>
           </View>
+          {perfectWeeks > 0 && (
+            <View style={[s.perfectBadge, { backgroundColor: theme.accent + "15" }]}>
+              <Ionicons name="trophy" size={14} color={theme.accent} />
+              <Text style={[s.perfectText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                {perfectWeeks} Perfect {perfectWeeks === 1 ? "Week" : "Weeks"}
+              </Text>
+            </View>
+          )}
         </View>
-        {perfectWeeks > 0 && (
-          <View style={[s.perfectBadge, { backgroundColor: theme.accent + "15" }]}>
-            <Ionicons name="trophy" size={14} color={theme.accent} />
-            <Text style={[s.perfectText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-              {perfectWeeks} Perfect {perfectWeeks === 1 ? "Week" : "Weeks"}
-            </Text>
-          </View>
-        )}
-      </View>
-      <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
+        <WeeklyCalendar data={weeklyData} theme={theme} isDark={isDark} />
+      </LinearGradient>
     </View>
   ) : null;
 
@@ -1184,7 +1653,7 @@ function AdultHomeScreen() {
             Read · Reflect · Pray · Practice · Grow
           </Text>
         </View>
-        <View>
+        <View style={{ flexShrink: 0 }}>
           {showTooltip && (
             <View style={[s.tooltip, { backgroundColor: theme.accent }]}>
               <View style={[s.tooltipArrow, { borderBottomColor: theme.accent }]} />
@@ -1210,6 +1679,13 @@ function AdultHomeScreen() {
         </View>
       </View>
 
+      <InlineCoachTip
+        id="home_kids_button"
+        text={HOME_COACH_TEXTS.home_kids_button}
+        visible={activeCoachMark === "home_kids_button"}
+        onDismiss={handleCoachDismiss}
+      />
+
       <ChildPickerModal
         visible={showChildPicker}
         onClose={() => setShowChildPicker(false)}
@@ -1228,21 +1704,31 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
               dailyVerseRef={verse.reference}
             />
+            <InlineCoachTip
+              id="home_daily_rhythm"
+              text={HOME_COACH_TEXTS.home_daily_rhythm}
+              visible={activeCoachMark === "home_daily_rhythm"}
+              onDismiss={handleCoachDismiss}
+            />
           </AnimatedSection>
-          <AnimatedSection index={2}><VerseOfTheDay verse={verse} bgImage={bgImage} bookImage={verseBookImage} /></AnimatedSection>
-          <AnimatedSection index={3}>
+          <AnimatedSection index={2}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={4}><RotatingPanel verse={verse} bgImage={bgImage} bookImage={verseBookImage} touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={5}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
+          <AnimatedSection index={6}>
+            <ReadingPlansCard theme={theme} isDark={isDark} />
+          </AnimatedSection>
+          <AnimatedSection index={7}><GoldDivider theme={theme} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={4}>
+            <AnimatedSection index={7}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1253,38 +1739,47 @@ function AdultHomeScreen() {
             </AnimatedSection>
           )}
           {ssData?.companion && (
-            <AnimatedSection index={5}>
+            <AnimatedSection index={7}>
               <Pressable
                 onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
                 style={({ pressed }) => [
                   homeStyles.companionHomeCard,
-                  {
-                    backgroundColor: isDark ? "rgba(139, 92, 246, 0.08)" : "rgba(139, 92, 246, 0.05)",
-                    borderColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.12)",
-                    opacity: pressed ? 0.8 : 1,
-                  },
+                  { opacity: pressed ? 0.85 : 1 },
                 ]}
               >
-                <View style={homeStyles.companionHomeRow}>
-                  <View style={homeStyles.companionHomeIcon}>
-                    <Ionicons name="book" size={16} color="#8B5CF6" />
+                <LinearGradient
+                  colors={isDark ? ["rgba(109,62,206,0.18)", "rgba(139,92,246,0.08)"] : ["rgba(139,92,246,0.1)", "rgba(109,62,206,0.05)"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={homeStyles.companionGradient}
+                >
+                  <View style={homeStyles.companionHomeRow}>
+                    <View style={homeStyles.companionHomeIcon}>
+                      <Ionicons name="book" size={16} color="#A78BFA" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[homeStyles.companionHomeLabel, { color: "#A78BFA" }]}>
+                        Lesson Companion
+                      </Text>
+                      <Text style={[homeStyles.companionHomeTitle, { color: isDark ? "#E8E0F0" : theme.text }]} numberOfLines={1}>
+                        {ssData.companion.title.replace(/^Companion:\s*/i, "")}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? "rgba(167,139,250,0.5)" : theme.textMuted} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
-                      Lesson Companion
-                    </Text>
-                    <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
-                      {ssData.companion.title.replace(/^Companion:\s*/i, "")}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-                </View>
+                </LinearGradient>
               </Pressable>
             </AnimatedSection>
           )}
-          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={7}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={8}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={8}>
+            <SpiritualRings theme={theme} isDark={isDark} />
+            <InlineCoachTip
+              id="home_formation_rings"
+              text={HOME_COACH_TEXTS.home_formation_rings}
+              visible={activeCoachMark === "home_formation_rings"}
+              onDismiss={handleCoachDismiss}
+            />
+          </AnimatedSection>
         </>
       ) : (
         <>
@@ -1292,21 +1787,31 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              prayerDone={(ringsData?.prayer.current ?? 0) > 0}
               hasRecentRead={!!lastRead}
               dailyVerseRef={verse.reference}
             />
+            <InlineCoachTip
+              id="home_daily_rhythm"
+              text={HOME_COACH_TEXTS.home_daily_rhythm}
+              visible={activeCoachMark === "home_daily_rhythm"}
+              onDismiss={handleCoachDismiss}
+            />
           </AnimatedSection>
-          <AnimatedSection index={1}><VerseOfTheDay verse={verse} bgImage={bgImage} bookImage={verseBookImage} /></AnimatedSection>
-          <AnimatedSection index={2}>
+          <AnimatedSection index={1}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={3}><RotatingPanel verse={verse} bgImage={bgImage} bookImage={verseBookImage} touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={4}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
+          <AnimatedSection index={5}>
+            <ReadingPlansCard theme={theme} isDark={isDark} />
+          </AnimatedSection>
+          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={3}>
+            <AnimatedSection index={6}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1317,42 +1822,52 @@ function AdultHomeScreen() {
             </AnimatedSection>
           )}
           {ssData?.companion && (
-            <AnimatedSection index={4}>
+            <AnimatedSection index={7}>
               <Pressable
                 onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
                 style={({ pressed }) => [
                   homeStyles.companionHomeCard,
-                  {
-                    backgroundColor: isDark ? "rgba(139, 92, 246, 0.08)" : "rgba(139, 92, 246, 0.05)",
-                    borderColor: isDark ? "rgba(139, 92, 246, 0.2)" : "rgba(139, 92, 246, 0.12)",
-                    opacity: pressed ? 0.8 : 1,
-                  },
+                  { opacity: pressed ? 0.85 : 1 },
                 ]}
               >
-                <View style={homeStyles.companionHomeRow}>
-                  <View style={homeStyles.companionHomeIcon}>
-                    <Ionicons name="book" size={16} color="#8B5CF6" />
+                <LinearGradient
+                  colors={isDark ? ["rgba(109,62,206,0.18)", "rgba(139,92,246,0.08)"] : ["rgba(139,92,246,0.1)", "rgba(109,62,206,0.05)"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={homeStyles.companionGradient}
+                >
+                  <View style={homeStyles.companionHomeRow}>
+                    <View style={homeStyles.companionHomeIcon}>
+                      <Ionicons name="book" size={16} color="#A78BFA" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[homeStyles.companionHomeLabel, { color: "#A78BFA" }]}>
+                        Lesson Companion
+                      </Text>
+                      <Text style={[homeStyles.companionHomeTitle, { color: isDark ? "#E8E0F0" : theme.text }]} numberOfLines={1}>
+                        {ssData.companion.title.replace(/^Companion:\s*/i, "")}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? "rgba(167,139,250,0.5)" : theme.textMuted} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[homeStyles.companionHomeLabel, { color: "#8B5CF6" }]}>
-                      Lesson Companion
-                    </Text>
-                    <Text style={[homeStyles.companionHomeTitle, { color: theme.text }]} numberOfLines={1}>
-                      {ssData.companion.title.replace(/^Companion:\s*/i, "")}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-                </View>
+                </LinearGradient>
               </Pressable>
             </AnimatedSection>
           )}
-          <AnimatedSection index={5}><GoldDivider theme={theme} /></AnimatedSection>
-          <AnimatedSection index={6}><SpiritualRings theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={7}><FeedbackWidget theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={8}>
+            <SpiritualRings theme={theme} isDark={isDark} />
+            <InlineCoachTip
+              id="home_formation_rings"
+              text={HOME_COACH_TEXTS.home_formation_rings}
+              visible={activeCoachMark === "home_formation_rings"}
+              onDismiss={handleCoachDismiss}
+            />
+          </AnimatedSection>
         </>
       )}
 
     </ScrollView>
+
     </>
   );
 }
@@ -1422,8 +1937,12 @@ const s = StyleSheet.create({
   },
   streakCard: {
     borderRadius: 20,
-    padding: 20,
+    overflow: "hidden",
     marginBottom: 16,
+  },
+  streakGradient: {
+    borderRadius: 20,
+    padding: 20,
   },
   streakHeader: {
     flexDirection: "row",
@@ -1435,6 +1954,16 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  streakFireWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,107,53,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,107,53,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   streakNum: { fontSize: 28, lineHeight: 30 },
   streakLabel: { fontSize: 12 },
@@ -1451,10 +1980,15 @@ const s = StyleSheet.create({
 
 const homeStyles = StyleSheet.create({
   companionHomeCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
+    borderRadius: 16,
+    overflow: "hidden",
     marginBottom: 12,
+  },
+  companionGradient: {
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.15)",
   },
   companionHomeRow: {
     flexDirection: "row",

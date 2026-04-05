@@ -29,27 +29,34 @@ export const authLoginSchema = z.object({
 });
 
 export const noteSchema = z.object({
-  userId: z.string().min(1),
-  verseId: z.string().min(1),
+  verseId: z.string().min(1, "verseId is required"),
   content: z.string().min(1, "Note content is required").max(5000),
 });
 
 export const highlightSchema = z.object({
-  userId: z.string().min(1),
-  verseId: z.string().min(1),
-  color: z.string().min(1),
+  verseId: z.string().min(1, "verseId is required"),
+  color: z.string().optional(),
 });
 
 export const bookmarkSchema = z.object({
-  userId: z.string().min(1),
-  bookId: z.number().int().positive(),
-  chapter: z.number().int().positive(),
-  verse: z.number().int().positive().optional(),
-  label: z.string().optional(),
+  verseId: z.string().min(1, "verseId is required"),
+  label: z.string().max(200).optional(),
 });
 
 export const prayerSchema = z.object({
   title: z.string().min(1, "Prayer title is required").max(200),
   content: z.string().max(2000).optional(),
   category: z.string().optional(),
+});
+
+export const readingHistorySchema = z.object({
+  bookId: z.union([z.number().int().positive(), z.string().min(1)]),
+  bookName: z.string().min(1, "bookName is required"),
+  chapter: z.union([z.number().int().positive(), z.string().min(1)]),
+  translation: z.string().optional(),
+});
+
+export const trackActivitySchema = z.object({
+  type: z.string().min(1, "Activity type is required"),
+  metadata: z.record(z.unknown()).optional(),
 });

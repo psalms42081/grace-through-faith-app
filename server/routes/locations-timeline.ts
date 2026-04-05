@@ -49,7 +49,15 @@ router.get("/api/timeline", async (req, res) => {
       .from(timelineEvents)
       .orderBy(timelineEvents.yearApprox);
 
-    return res.json(events);
+    const seen = new Set<string>();
+    const deduped = events.filter((e) => {
+      if (seen.has(e.title)) return false;
+      seen.add(e.title);
+      return true;
+    });
+
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return res.json(deduped);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });

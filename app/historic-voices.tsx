@@ -65,6 +65,10 @@ function sortCommentatorNames(names: string[]): string[] {
   });
 }
 
+const DEFAULT_BOOK_ID = 1;
+const DEFAULT_CHAPTER = 1;
+const DEFAULT_BOOK_NAME = "Genesis";
+
 export default function HistoricVoicesScreen() {
   const { bookId, chapter, bookName } = useLocalSearchParams<{
     bookId: string;
@@ -76,14 +80,14 @@ export default function HistoricVoicesScreen() {
   const queryClient = useQueryClient();
   const [activeCommentator, setActiveCommentator] = useState<string | null>(null);
 
-  const chapterNum = chapter ? parseInt(chapter) : null;
-  const bookIdNum = bookId ? parseInt(bookId) : null;
+  const chapterNum = chapter ? parseInt(chapter) : DEFAULT_CHAPTER;
+  const bookIdNum = bookId ? parseInt(bookId) : DEFAULT_BOOK_ID;
+  const displayBookName = bookName || DEFAULT_BOOK_NAME;
 
   const commentaryQueryKey = `/api/commentary?book=${bookIdNum}&chapter=${chapterNum}`;
 
   const { data: commentaryData, isLoading } = useQuery<CommentaryEntry[]>({
     queryKey: [commentaryQueryKey],
-    enabled: !!bookIdNum && !!chapterNum,
   });
 
   const generateMutation = useMutation({
@@ -133,7 +137,7 @@ export default function HistoricVoicesScreen() {
     <>
       <Stack.Screen
         options={{
-          title: `${bookName || ""} ${chapter || ""} — Insight`,
+          title: `${displayBookName} ${chapterNum} — Insight`,
           headerBackTitle: "Back",
         }}
       />
@@ -145,7 +149,7 @@ export default function HistoricVoicesScreen() {
           Insight & Voices
         </Text>
         <Text style={[styles.subheading, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-          Insights and perspectives on {bookName} {chapter}
+          Insights and perspectives on {displayBookName} {chapterNum}
         </Text>
 
         {commentatorNames.length > 0 && (

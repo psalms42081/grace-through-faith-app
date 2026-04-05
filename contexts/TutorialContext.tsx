@@ -12,7 +12,29 @@ export type TutorialId =
   | "profile"
   | "prayer-journal"
   | "family-dashboard"
-  | "spiritual-rings";
+  | "spiritual-rings"
+  | "home_daily_rhythm"
+  | "home_for_you"
+  | "home_formation_rings"
+  | "home_kids_button"
+  | "read_verse_tap"
+  | "read_translation_picker"
+  | "connect_tab"
+  | "connect_find_church"
+  | "study_tab"
+  | "study_four_layers_intro"
+  | "study_layer_observe"
+  | "study_layer_context"
+  | "study_layer_insight"
+  | "study_layer_respond"
+  | "study_quick_read"
+  | "study_guided_study"
+  | "study_deep_dive"
+  | "inductive_progress_bar"
+  | "ss_depth_quick"
+  | "ss_depth_standard"
+  | "ss_depth_deep"
+  | "ss_discussion_generate";
 
 interface TutorialContextType {
   hasSeenTutorial: (id: TutorialId) => boolean;

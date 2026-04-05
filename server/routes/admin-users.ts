@@ -9,6 +9,26 @@ import {
   readingHistory,
   groupDiscussions,
   userActivityCounters,
+  readingStreaks,
+  layerCompletions,
+  studyJournalEntries,
+  studyGuideSessions,
+  userNotes,
+  userHighlights,
+  userBookmarks,
+  prayerRequests,
+  sabbathSchoolUserProgress,
+  sabbathReflections,
+  progressTracks,
+  progressLessons,
+  userPlanEnrollments,
+  deviceTokens,
+  childProfiles,
+  kidsPurchases,
+  kidsProgress,
+  kidsStreaks,
+  kidsDailyQuests,
+  kidsUserBadges,
 } from "../../shared/schema";
 import { eq, and, sql, desc, asc, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth";
@@ -212,6 +232,64 @@ router.patch("/api/admin/users/:id/role", requireAdmin, async (req: Request, res
   } catch (err) {
     console.error("Admin update role error:", err);
     return res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
+router.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.authUserId) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const [existing] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, id));
+    if (!existing) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const relatedTables = [
+      { table: kidsPurchases, col: kidsPurchases.userId },
+      { table: kidsProgress, col: kidsProgress.userId },
+      { table: kidsStreaks, col: kidsStreaks.userId },
+      { table: kidsDailyQuests, col: kidsDailyQuests.userId },
+      { table: kidsUserBadges, col: kidsUserBadges.userId },
+      { table: userActivityCounters, col: userActivityCounters.userId },
+      { table: readingHistory, col: readingHistory.userId },
+      { table: readingStreaks, col: readingStreaks.userId },
+      { table: layerCompletions, col: layerCompletions.userId },
+      { table: studyJournalEntries, col: studyJournalEntries.userId },
+      { table: studyGuideSessions, col: studyGuideSessions.userId },
+      { table: userNotes, col: userNotes.userId },
+      { table: userHighlights, col: userHighlights.userId },
+      { table: userBookmarks, col: userBookmarks.userId },
+      { table: prayerRequests, col: prayerRequests.userId },
+      { table: prayerGroupMembers, col: prayerGroupMembers.userId },
+      { table: sabbathSchoolUserProgress, col: sabbathSchoolUserProgress.userId },
+      { table: sabbathReflections, col: sabbathReflections.userId },
+      { table: progressTracks, col: progressTracks.userId },
+      { table: progressLessons, col: progressLessons.userId },
+      { table: userPlanEnrollments, col: userPlanEnrollments.userId },
+      { table: deviceTokens, col: deviceTokens.userId },
+      { table: organizationMembers, col: organizationMembers.userId },
+    ];
+
+    try {
+      await db.delete(childProfiles).where(eq(childProfiles.parentId, id));
+    } catch {}
+
+    for (const { table, col } of relatedTables) {
+      try {
+        await db.delete(table).where(eq(col, id));
+      } catch {}
+    }
+
+    await db.delete(users).where(eq(users.id, id));
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Admin delete user error:", err);
+    return res.status(500).json({ error: "Failed to delete user" });
   }
 });
 

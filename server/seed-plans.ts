@@ -8,6 +8,7 @@ const PLANS = [
     description: "Explore the bedrock truths of Christian faith through key passages that define what it means to believe.",
     totalDays: 7,
     theme: "faith",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -25,6 +26,7 @@ const PLANS = [
     description: "Learn to deepen your prayer life through Scripture's greatest examples and teachings on communion with God.",
     totalDays: 7,
     theme: "prayer",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 12,
     days: [
@@ -42,6 +44,7 @@ const PLANS = [
     description: "Discover the practical wisdom of Scripture for navigating relationships, decisions, and daily challenges.",
     totalDays: 7,
     theme: "wisdom",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -59,6 +62,7 @@ const PLANS = [
     description: "Experience the depth, width, and height of God's love through the most powerful passages in Scripture.",
     totalDays: 7,
     theme: "love",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -76,6 +80,7 @@ const PLANS = [
     description: "Find renewed hope in God's promises — even in the darkest seasons, His light breaks through.",
     totalDays: 5,
     theme: "hope",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -91,6 +96,7 @@ const PLANS = [
     description: "Discover how God's power is made perfect in weakness — finding supernatural strength for every challenge.",
     totalDays: 5,
     theme: "faith,strength",
+    category: "foundations" as const,
     difficultyLevel: "intermediate",
     estimatedMinutesPerDay: 12,
     days: [
@@ -106,6 +112,7 @@ const PLANS = [
     description: "In a world of anxiety and noise, discover the peace that surpasses all understanding.",
     totalDays: 5,
     theme: "peace,comfort",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -121,6 +128,7 @@ const PLANS = [
     description: "Explore the richness of God's grace — unmerited, transforming, and overflowing for every sinner saved.",
     totalDays: 5,
     theme: "grace,faith",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 10,
     days: [
@@ -136,6 +144,7 @@ const PLANS = [
     description: "When life is hard, the Psalms meet you where you are — honest cries, deep comfort, and unshakeable trust.",
     totalDays: 7,
     theme: "comfort,peace,hope",
+    category: "foundations" as const,
     difficultyLevel: "beginner",
     estimatedMinutesPerDay: 8,
     days: [
@@ -153,6 +162,7 @@ const PLANS = [
     description: "Jesus' most famous teaching — a radical vision for kingdom living that still challenges and inspires today.",
     totalDays: 7,
     theme: "wisdom,faith",
+    category: "foundations" as const,
     difficultyLevel: "intermediate",
     estimatedMinutesPerDay: 15,
     days: [
@@ -188,6 +198,7 @@ async function seedPlans() {
         description: plan.description,
         totalDays: plan.totalDays,
         theme: plan.theme,
+        category: plan.category || "thematic",
         difficultyLevel: plan.difficultyLevel,
         estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
         isPublished: true,

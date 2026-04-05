@@ -398,6 +398,7 @@ const cStyles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginTop: 8,
+    paddingBottom: 120,
   },
   wordChip: {
     borderWidth: 1.5,

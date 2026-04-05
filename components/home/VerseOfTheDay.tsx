@@ -19,7 +19,7 @@ export default function VerseOfTheDay({ verse, bgImage, bookImage }: VerseOfTheD
         resizeMode="cover"
       >
         <LinearGradient
-          colors={["rgba(0,0,0,0.2)", "rgba(0,0,0,0.6)", "rgba(0,0,0,0.85)"]}
+          colors={["rgba(0,0,0,0.06)", "rgba(0,0,0,0.40)", "rgba(0,0,0,0.68)"]}
           style={styles.verseOverlay}
         >
           <View style={styles.verseBadge}>

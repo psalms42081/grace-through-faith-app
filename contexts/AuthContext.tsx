@@ -158,6 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err: any) {
       const msg = err.message || "Login failed";
+      if (msg.includes("<!DOCTYPE") || msg.includes("<html") || msg.includes("temporarily unavailable")) {
+        return { success: false, error: "Unable to reach the server. Please check your connection and try again." };
+      }
       const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
       try {
         const parsed = JSON.parse(errorText);
@@ -185,6 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err: any) {
       const msg = err.message || "Registration failed";
+      if (msg.includes("<!DOCTYPE") || msg.includes("<html") || msg.includes("temporarily unavailable")) {
+        return { success: false, error: "Unable to reach the server. Please check your connection and try again." };
+      }
       const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
       try {
         const parsed = JSON.parse(errorText);
@@ -237,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setAuthTokenGetter(() => null);
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    await AsyncStorage.removeItem("@grace-through-faith/onboarded");
     queryClient.clear();
   }, []);
 

@@ -14,6 +14,7 @@ import { Router } from "express";
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { requireAuth, optionalAuth, getEffectiveUserId } from "../middleware/auth";
+  import { validate, noteSchema, highlightSchema, bookmarkSchema, prayerSchema, readingHistorySchema } from "../middleware/validate";
 
   const router = Router();
 
@@ -261,13 +262,10 @@ router.put("/api/user/preferences", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/notes", requireAuth, async (req, res) => {
+router.post("/api/notes", requireAuth, validate(noteSchema), async (req, res) => {
   try {
     const userId = req.authUserId!;
     const { verseId, content } = req.body;
-    if (!verseId || !content) {
-      return res.status(400).json({ error: "verseId and content are required" });
-    }
     const note = await db
       .insert(userNotes)
       .values({ userId, verseId, content })
@@ -310,13 +308,10 @@ router.get("/api/highlights/:userId", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/highlights", requireAuth, async (req, res) => {
+router.post("/api/highlights", requireAuth, validate(highlightSchema), async (req, res) => {
   try {
     const userId = req.authUserId!;
     const { verseId, color = "yellow" } = req.body;
-    if (!verseId) {
-      return res.status(400).json({ error: "verseId is required" });
-    }
     const highlight = await db
       .insert(userHighlights)
       .values({ userId, verseId, color })
@@ -360,13 +355,10 @@ router.get("/api/bookmarks/:userId", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/bookmarks", requireAuth, async (req, res) => {
+router.post("/api/bookmarks", requireAuth, validate(bookmarkSchema), async (req, res) => {
   try {
     const userId = req.authUserId!;
     const { verseId, label } = req.body;
-    if (!verseId) {
-      return res.status(400).json({ error: "verseId is required" });
-    }
     const bookmark = await db
       .insert(userBookmarks)
       .values({ userId, verseId, label })
@@ -417,14 +409,16 @@ router.delete("/api/bookmarks/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/api/prayers", optionalAuth, async (req, res) => {
+router.post("/api/prayers", optionalAuth, (req, res, next) => {
+  const userId = getEffectiveUserId(req);
+  if (userId === "guest") {
+    return res.status(401).json({ error: "A device ID or login is required to save prayers" });
+  }
+  next();
+}, validate(prayerSchema), async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    if (userId === "guest") {
-      return res.status(401).json({ error: "A device ID or login is required to save prayers" });
-    }
     const { title, content, category = "personal" } = req.body;
-    if (!title) return res.status(400).json({ error: "Title is required" });
     const [prayer] = await db
       .insert(prayerRequests)
       .values({ userId, title, content, category })
@@ -487,13 +481,10 @@ router.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/reading-history", optionalAuth, async (req, res) => {
+router.post("/api/reading-history", optionalAuth, validate(readingHistorySchema), async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { bookId, bookName, chapter, translation = "KJV" } = req.body;
-    if (!bookId || !chapter || !bookName) {
-      return res.status(400).json({ error: "bookId, bookName, and chapter are required" });
-    }
 
     const [entry] = await db
       .insert(readingHistory)

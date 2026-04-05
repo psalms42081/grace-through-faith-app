@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { organizations, organizationMembers, users } from "../../shared/schema";
+import { organizations, organizationMembers, users, groupAnnouncements } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
 
@@ -429,6 +429,37 @@ router.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("List churches error:", err);
     return res.status(500).json({ error: "Failed to list churches" });
+  }
+});
+
+router.post("/api/organizations/:id/announcement", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const orgId = req.params.id;
+    const { title, content } = req.body;
+    if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
+
+    const [membership] = await db.select()
+      .from(organizationMembers)
+      .where(and(eq(organizationMembers.organizationId, orgId), eq(organizationMembers.userId, userId)));
+    if (!membership || (membership.role !== "pastor" && membership.role !== "elder")) {
+      return res.status(403).json({ error: "Only pastors and elders can broadcast to the organization" });
+    }
+
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId));
+
+    const [announcement] = await db.insert(groupAnnouncements).values({
+      groupId: `org:${orgId}`,
+      userId,
+      authorName: user?.displayName || user?.username || "Leader",
+      title: title.trim(),
+      content: content.trim(),
+    }).returning();
+
+    return res.json(announcement);
+  } catch (err) {
+    console.error("Create org announcement error:", err);
+    return res.status(500).json({ error: "Failed to create announcement" });
   }
 });
 

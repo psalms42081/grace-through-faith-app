@@ -131,6 +131,31 @@ async function ensureTables() {
     await db.execute(sql`ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS platform VARCHAR(16)`);
   }
 
+  if (!(await check("characters"))) {
+    missing.push("characters");
+    await db.execute(sql`
+      CREATE TABLE characters (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        slug VARCHAR(100) NOT NULL,
+        character_type VARCHAR(30) NOT NULL,
+        gender VARCHAR(10),
+        description TEXT,
+        cloudinary_url TEXT,
+        thumbnail_url TEXT,
+        voice_id VARCHAR(50),
+        aliases JSONB DEFAULT '[]',
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS characters_slug_idx ON characters(slug)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS characters_active_partial_idx ON characters(is_active) WHERE is_active = true`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS characters_type_idx ON characters(character_type)`);
+    console.log("Created table: characters");
+  }
+
   if (missing.length === 0) {
     console.log("All critical tables verified present");
   } else {

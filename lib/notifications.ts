@@ -11,9 +11,42 @@ const NOTIFICATION_ID_KEY = "@grace-through-faith/reminder-notification-id";
 const DEFAULT_HOUR = 8;
 const DEFAULT_MINUTE = 0;
 
+/**
+ * Returns true when running inside Expo Go.
+ * SDK 53+ removed Android push notifications from Expo Go entirely.
+ * A proper development build (EAS) is required for Android push notifications.
+ */
+function isExpoGo(): boolean {
+  try {
+    const env = (Constants as any).executionEnvironment;
+    if (env) return env === "storeClient";
+    return (Constants as any).appOwnership === "expo";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Android + Expo Go = no notification support at all since SDK 53.
+ * iOS Expo Go still supports local notifications (not remote push).
+ */
+export function isAndroidExpoGo(): boolean {
+  return Platform.OS === "android" && isExpoGo();
+}
+
+/**
+ * Remote push tokens are unavailable in ALL Expo Go environments since SDK 53.
+ */
+function canUsePushTokens(): boolean {
+  return !isExpoGo();
+}
+
 let Notifications: typeof import("expo-notifications") | null = null;
 
 async function loadModule() {
+  if (Platform.OS === "web") return null;
+  // Do not even try to load expo-notifications on Android Expo Go (SDK 53+)
+  if (isAndroidExpoGo()) return null;
   if (!Notifications) {
     try {
       Notifications = await import("expo-notifications");
@@ -28,24 +61,30 @@ async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
   const mod = await loadModule();
   if (!mod) return;
-  await mod.setNotificationChannelAsync("daily-reminders", {
-    name: "Daily Reading Reminders",
-    importance: mod.AndroidImportance.HIGH,
-    sound: "default",
-  });
+  try {
+    await mod.setNotificationChannelAsync("daily-reminders", {
+      name: "Daily Reading Reminders",
+      importance: mod.AndroidImportance.HIGH,
+      sound: "default",
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#C9933A",
+    });
+  } catch {}
 }
 
 export type PermissionResult = {
   granted: boolean;
   canAskAgain: boolean;
+  /** True when the feature is unavailable (e.g. Android Expo Go) */
+  unavailable?: boolean;
 };
 
 export async function getNotificationPermissionStatus(): Promise<PermissionResult> {
   if (Platform.OS === "web") return { granted: false, canAskAgain: false };
+  if (isAndroidExpoGo()) return { granted: false, canAskAgain: false, unavailable: true };
   try {
     const mod = await loadModule();
     if (!mod) return { granted: false, canAskAgain: false };
-
     const perm = await mod.getPermissionsAsync();
     return {
       granted: perm.status === "granted",
@@ -58,13 +97,12 @@ export async function getNotificationPermissionStatus(): Promise<PermissionResul
 
 export async function requestNotificationPermission(): Promise<PermissionResult> {
   if (Platform.OS === "web") return { granted: false, canAskAgain: false };
+  if (isAndroidExpoGo()) return { granted: false, canAskAgain: false, unavailable: true };
   try {
     const mod = await loadModule();
     if (!mod) return { granted: false, canAskAgain: false };
-
     const existing = await mod.getPermissionsAsync();
     if (existing.status === "granted") return { granted: true, canAskAgain: true };
-
     const result = await mod.requestPermissionsAsync();
     return {
       granted: result.status === "granted",
@@ -107,10 +145,19 @@ export async function getReminderSettings(): Promise<{
   }
 }
 
-export async function setReminderEnabled(enabled: boolean): Promise<{ success: boolean; permissionDenied?: boolean; canAskAgain?: boolean }> {
+export async function setReminderEnabled(
+  enabled: boolean
+): Promise<{ success: boolean; permissionDenied?: boolean; canAskAgain?: boolean; unavailable?: boolean }> {
+  if (isAndroidExpoGo()) {
+    return { success: false, unavailable: true };
+  }
   await AsyncStorage.setItem(REMINDER_ENABLED_KEY, String(enabled));
   if (enabled) {
     const result = await requestNotificationPermission();
+    if (result.unavailable) {
+      await AsyncStorage.setItem(REMINDER_ENABLED_KEY, "false");
+      return { success: false, unavailable: true };
+    }
     if (!result.granted) {
       await AsyncStorage.setItem(REMINDER_ENABLED_KEY, "false");
       return { success: false, permissionDenied: true, canAskAgain: result.canAskAgain };
@@ -134,39 +181,41 @@ export async function setReminderTime(hour: number, minute: number): Promise<voi
   }
 }
 
-export async function scheduleDailyReminder(
-  hour: number,
-  minute: number
-): Promise<void> {
-  if (Platform.OS === "web") return;
+export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
+  if (Platform.OS === "web" || isAndroidExpoGo()) return;
   const mod = await loadModule();
   if (!mod) return;
 
   await cancelReminder();
   await ensureAndroidChannel();
 
-  const id = await mod.scheduleNotificationAsync({
-    content: {
-      title: "Your reading plan is waiting",
-      body: "Take a few minutes with today's passage.",
-      sound: true,
-      ...(Platform.OS === "android" ? { channelId: "daily-reminders" } : {}),
-    },
-    trigger: {
-      type: mod.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    } as any,
-  });
-
-  await AsyncStorage.setItem(NOTIFICATION_ID_KEY, id);
+  try {
+    const id = await mod.scheduleNotificationAsync({
+      content: {
+        title: "Your reading plan is waiting ✝",
+        body: "Take a few minutes with today's passage.",
+        sound: "default",
+        ...(Platform.OS === "android" ? { channelId: "daily-reminders" } : {}),
+      },
+      trigger: {
+        type: mod.SchedulableTriggerInputTypes?.DAILY
+          ? mod.SchedulableTriggerInputTypes.DAILY
+          : ("daily" as any),
+        hour,
+        minute,
+        repeats: true,
+      } as any,
+    });
+    await AsyncStorage.setItem(NOTIFICATION_ID_KEY, id);
+  } catch (err) {
+    console.warn("[notifications] scheduleDailyReminder failed:", err);
+  }
 }
 
 export async function cancelReminder(): Promise<void> {
-  if (Platform.OS === "web") return;
+  if (Platform.OS === "web" || isAndroidExpoGo()) return;
   const mod = await loadModule();
   if (!mod) return;
-
   try {
     const existingId = await AsyncStorage.getItem(NOTIFICATION_ID_KEY);
     if (existingId) {
@@ -186,8 +235,21 @@ export async function scheduleIfEnabled(): Promise<void> {
   }
 }
 
+/**
+ * Register for Expo remote push notifications.
+ * Requires a proper development build — not supported in Expo Go (SDK 53+).
+ */
 export async function registerPushToken(authToken: string, apiBaseUrl: string): Promise<void> {
   if (Platform.OS === "web") return;
+
+  if (isExpoGo()) {
+    console.log(
+      "[push] Push token registration skipped — Expo Go does not support remote push " +
+      "notifications since SDK 53. Use a development build (npx expo run:android / run:ios) " +
+      "or EAS Build to enable push notifications."
+    );
+    return;
+  }
 
   try {
     const mod = await loadModule();
@@ -205,10 +267,20 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
 
     await ensureAndroidChannel();
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const tokenData = await mod.getExpoPushTokenAsync({
-      ...(projectId ? { projectId } : {}),
-    });
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ||
+      (Constants as any).easConfig?.projectId ||
+      undefined;
+
+    if (!projectId) {
+      console.warn(
+        "[push] No EAS projectId found in app.json extra.eas.projectId. " +
+        "Run `eas init` to link your project and add the ID to app.json."
+      );
+      return;
+    }
+
+    const tokenData = await mod.getExpoPushTokenAsync({ projectId });
     const pushToken = tokenData.data;
     if (!pushToken) return;
 
@@ -222,14 +294,14 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
         "Content-Type": "application/json",
         Authorization: `Bearer ${authToken}`,
       },
-      body: JSON.stringify({
-        token: pushToken,
-        platform: Platform.OS,
-      }),
+      body: JSON.stringify({ token: pushToken, platform: Platform.OS }),
     });
 
     if (res.ok) {
       await AsyncStorage.setItem(PUSH_TOKEN_REGISTERED_KEY, pushToken);
+      console.log("[push] Push token registered successfully");
     }
-  } catch {}
+  } catch (err) {
+    console.warn("[push] registerPushToken failed (non-fatal):", err instanceof Error ? err.message : err);
+  }
 }

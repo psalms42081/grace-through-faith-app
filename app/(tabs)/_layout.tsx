@@ -1,81 +1,13 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { KidsColors } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
-
-function NativeTabLayout() {
-  const { isKidsMode } = useKidsMode();
-
-  if (isKidsMode) {
-    return (
-      <NativeTabs>
-        <NativeTabs.Trigger name="index">
-          <Icon sf={{ default: "house", selected: "house.fill" }} />
-          <Label>Home</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="kids-stories">
-          <Icon sf={{ default: "book", selected: "book.fill" }} />
-          <Label>Stories</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="kids-learn">
-          <Icon sf={{ default: "graduationcap", selected: "graduationcap.fill" }} />
-          <Label>Learn</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="kids-stars">
-          <Icon sf={{ default: "star", selected: "star.fill" }} />
-          <Label>My Stars</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="read" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="plans" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="search" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="study" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="explore" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="connect" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="profile" options={{ href: null } as any} />
-        <NativeTabs.Trigger name="family" options={{ href: null } as any} />
-      </NativeTabs>
-    );
-  }
-
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="read">
-        <Icon sf={{ default: "book", selected: "book.fill" }} />
-        <Label>Read</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="connect">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Connect</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="explore">
-        <Icon sf={{ default: "text.book.closed", selected: "text.book.closed.fill" }} />
-        <Label>Study</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>You</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plans" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="search" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="study" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="family" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="kids-stories" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="kids-learn" options={{ href: null } as any} />
-      <NativeTabs.Trigger name="kids-stars" options={{ href: null } as any} />
-    </NativeTabs>
-  );
-}
+import { useEllenWhite } from "@/contexts/PioneerContext";
 
 function ClassicTabLayout() {
   const { isKidsMode } = useKidsMode();
@@ -263,8 +195,24 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  const { isReady, onboardingComplete, showOnboarding, syncOnboardingFromServer } = useEllenWhite();
+  const [serverChecked, setServerChecked] = useState(false);
+
+  useEffect(() => {
+    // Only run once per session: skip if not ready, already complete, or already checked
+    if (!isReady || onboardingComplete || serverChecked) return;
+    let cancelled = false;
+
+    syncOnboardingFromServer().then((seen) => {
+      if (cancelled) return;
+      setServerChecked(true);
+      if (!seen) {
+        setTimeout(() => showOnboarding(), 600);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [isReady, onboardingComplete, serverChecked]);
+
   return <ClassicTabLayout />;
 }

@@ -10,6 +10,10 @@ import {
   index,
   uniqueIndex,
   uuid,
+  doublePrecision,
+  real,
+  smallint,
+  serial,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -36,6 +40,9 @@ export const users = pgTable("users", {
   preferredNarrator: varchar("preferred_narrator", { length: 10 }).default("george"),
   organizationId: varchar("organization_id"),
   organizationType: varchar("organization_type", { length: 12 }),
+  hierarchyNodeId: varchar("hierarchy_node_id"),
+  ageGroup: varchar("age_group", { length: 16 }),
+  hologramOnboardingSeen: boolean("hologram_onboarding_seen").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -216,6 +223,59 @@ export const groupAnnouncements = pgTable(
 
 export type GroupAnnouncement = typeof groupAnnouncements.$inferSelect;
 
+// ─── HEYGEN VIDEOS ──────────────────────────────────────────────────────────
+
+export const heygenVideos = pgTable(
+  "heygen_video",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    videoId: varchar("video_id").notNull().unique(),
+    title: text("title"),
+    avatarId: varchar("avatar_id"),
+    script: text("script"),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    videoUrl: text("video_url"),
+    userId: varchar("user_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    videoIdIdx: index("heygen_video_id_idx").on(table.videoId),
+    userIdx: index("heygen_video_user_idx").on(table.userId),
+  })
+);
+
+export type HeygenVideo = typeof heygenVideos.$inferSelect;
+
+// ─── PIONEER VIDEOS ──────────────────────────────────────────────────────────
+
+export const pioneerVideos = pgTable(
+  "pioneer_video",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    pioneerId: varchar("pioneer_id", { length: 50 }).notNull(),
+    clipId: varchar("clip_id", { length: 100 }).notNull(),
+    script: text("script").notNull(),
+    voiceId: varchar("voice_id", { length: 50 }),
+    audioUrl: text("audio_url"),
+    videoUrl: text("video_url"),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    heygenVideoId: varchar("heygen_video_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    pioneerClipIdx: uniqueIndex("pioneer_clip_idx").on(table.pioneerId, table.clipId),
+    statusIdx: index("pioneer_video_status_idx").on(table.status),
+  })
+);
+
+export type PioneerVideo = typeof pioneerVideos.$inferSelect;
+
 // ─── BIBLE ────────────────────────────────────────────────────────────────────
 
 export const bibleTranslations = pgTable("bible_translation", {
@@ -269,6 +329,46 @@ export const bibleVerses = pgTable(
 );
 
 export type BibleVerse = typeof bibleVerses.$inferSelect;
+
+export const bibleCache = pgTable(
+  "bible_cache",
+  {
+    id: serial("id").primaryKey(),
+    translation: varchar("translation", { length: 10 }).notNull(),
+    bookId: integer("book_id")
+      .notNull()
+      .references(() => bibleBooks.id),
+    bookName: varchar("book_name", { length: 50 }).notNull(),
+    chapter: integer("chapter").notNull(),
+    versesJson: jsonb("verses_json").notNull(),
+    verseCount: integer("verse_count").notNull().default(0),
+    fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+    sourceApi: varchar("source_api", { length: 20 }).notNull(),
+  },
+  (table) => ({
+    cacheUnique: uniqueIndex("bible_cache_unique").on(
+      table.translation,
+      table.bookId,
+      table.chapter
+    ),
+    translationIdx: index("bible_cache_translation_idx").on(table.translation),
+  })
+);
+
+export const bibleCacheStats = pgTable(
+  "bible_cache_stats",
+  {
+    id: serial("id").primaryKey(),
+    translation: varchar("translation", { length: 10 }).notNull(),
+    cacheHits: integer("cache_hits").notNull().default(0),
+    cacheMisses: integer("cache_misses").notNull().default(0),
+    lastHitAt: timestamp("last_hit_at"),
+    lastMissAt: timestamp("last_miss_at"),
+  },
+  (table) => ({
+    translationUnique: uniqueIndex("bible_cache_stats_translation_unique").on(table.translation),
+  })
+);
 
 // ─── WORD STUDY (STRONG'S) ────────────────────────────────────────────────────
 
@@ -1371,7 +1471,11 @@ export type ProgressLesson = typeof progressLessons.$inferSelect;
 
 // ─── CONTENT i18n OVERLAY TABLES ─────────────────────────────────────────────
 
-export const CONTENT_LANGUAGES = ["en", "es", "fr", "pt", "fil", "zh"] as const;
+export const CONTENT_LANGUAGES = [
+  "en", "es", "fr", "pt", "fil", "zh",
+  "de", "sw", "id", "ko", "ja", "hi", "ar",
+  "ru", "hr", "it", "nl", "tr", "pl", "ro", "uk", "am",
+] as const;
 export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
 
 export const formationModuleI18n = pgTable(
@@ -1832,3 +1936,590 @@ export const leaderRequests = pgTable(
 );
 
 export type LeaderRequest = typeof leaderRequests.$inferSelect;
+
+// ─── VIDEO PIPELINE JOBS ─────────────────────────────────────────────────────
+
+export const videoPipelineJobs = pgTable(
+  "video_pipeline_jobs",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    topic: text("topic").notNull(),
+    script: text("script").notNull(),
+    status: text("status").default("pending").notNull(),
+    avatarVideoUrl: text("avatar_video_url"),
+    brollImageUrls: jsonb("broll_image_urls").$type<string[]>(),
+    brollVideoUrls: jsonb("broll_video_urls").$type<string[]>(),
+    assembledVideoUrl: text("assembled_video_url"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  }
+);
+
+export type VideoPipelineJob = typeof videoPipelineJobs.$inferSelect;
+
+// ─── VIDEO TOPICS ───────────────────────────────────────────────────────────
+
+export const videoAvatars = pgTable("video_avatars", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  heygenAvatarId: text("heygen_avatar_id").notNull(),
+  heygenVoiceId: text("heygen_voice_id").notNull(),
+  gender: text("gender"),
+  ethnicity: text("ethnicity"),
+  ageGroup: text("age_group").default("teens"),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  elevenlabsVoiceId: text("elevenlabs_voice_id"),
+  characterDescription: text("character_description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type VideoAvatar = typeof videoAvatars.$inferSelect;
+
+export const videoTopics = pgTable(
+  "video_topics",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    description: text("description"),
+    targetAgeGroup: text("target_age_group").default("teens"),
+    scriptureAnchor: text("scripture_anchor"),
+    category: text("category"),
+    status: text("status").default("pending"),
+    priority: integer("priority").default(0),
+    generatedScript: text("generated_script"),
+    avatarVideoUrl: text("avatar_video_url"),
+    finalVideoUrl: text("final_video_url"),
+    language: text("language").default("en"),
+    avatarId: varchar("avatar_id"),
+    musicTrack: text("music_track"),
+    pipelineMode: text("pipeline_mode").default("cinematic"),
+    assemblyStatus: text("assembly_status"),
+    assembledVideoUrl: text("assembled_video_url"),
+    cinematicScenes: jsonb("cinematic_scenes"),
+    voiceoverUrl: text("voiceover_url"),
+    characterAnchorUrl: text("character_anchor_url"),
+    thumbnailUrl: text("thumbnail_url"),
+    reviewStatus: text("review_status"),
+    reviewNotes: text("review_notes"),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("video_topics_status_idx").on(table.status),
+    categoryIdx: index("video_topics_category_idx").on(table.category),
+    titleLangUniq: uniqueIndex("video_topics_title_language_idx").on(table.title, table.language),
+  })
+);
+
+export type VideoTopic = typeof videoTopics.$inferSelect;
+
+// ─── TOPIC VIDEOS (Multiple videos per topic, each with unique scripture) ─────
+
+export const topicVideos = pgTable(
+  "topic_videos",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    topicId: varchar("topic_id").notNull(),
+    scriptureAnchor: text("scripture_anchor").notNull(),
+    generatedScript: text("generated_script"),
+    voiceoverUrl: text("voiceover_url"),
+    characterAnchorUrl: text("character_anchor_url"),
+    cinematicScenes: jsonb("cinematic_scenes"),
+    assembledVideoUrl: text("assembled_video_url"),
+    finalVideoUrl: text("final_video_url"),
+    thumbnailUrl: text("thumbnail_url"),
+    musicTrack: text("music_track"),
+    assemblyStatus: text("assembly_status"),
+    reviewStatus: text("review_status"),
+    reviewNotes: text("review_notes"),
+    crossRefOf: text("cross_ref_of"),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    topicIdx: index("topic_videos_topic_id_idx").on(table.topicId),
+    statusIdx: index("topic_videos_assembly_status_idx").on(table.assemblyStatus),
+    topicScriptureUniq: uniqueIndex("topic_videos_topic_scripture_idx").on(table.topicId, table.scriptureAnchor),
+  })
+);
+
+export type TopicVideo = typeof topicVideos.$inferSelect;
+
+// ─── BIBLICAL SERIES ──────────────────────────────────────────────────────────
+
+export const biblicalSeries = pgTable("biblical_series", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  description: text("description"),
+  tag: varchar("tag", { length: 50 }),
+  speaker: varchar("speaker", { length: 100 }),
+  gradientColors: jsonb("gradient_colors").$type<string[]>(),
+  episodeCount: integer("episode_count").default(0).notNull(),
+  status: varchar("status", { length: 20 }).default("published").notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type BiblicalSeries = typeof biblicalSeries.$inferSelect;
+
+export const biblicalEpisodes = pgTable(
+  "biblical_episode",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    seriesId: varchar("series_id")
+      .notNull()
+      .references(() => biblicalSeries.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    scriptureAnchor: text("scripture_anchor"),
+    videoUrl: text("video_url"),
+    duration: integer("duration"),
+    orderIndex: integer("order_index").notNull(),
+    status: varchar("status", { length: 20 }).default("ready").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    seriesIdx: index("biblical_episode_series_idx").on(table.seriesId),
+    orderIdx: index("biblical_episode_order_idx").on(table.seriesId, table.orderIndex),
+  })
+);
+
+export type BiblicalEpisode = typeof biblicalEpisodes.$inferSelect;
+
+// ─── READING PLANS ──────────────────────────────────────────────────────────
+
+export const readingPlans = pgTable("reading_plan", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 40 }),
+  coverImageUrl: text("cover_image_url"),
+  durationDays: integer("duration_days").notNull(),
+  type: varchar("type", { length: 12 }).default("ready-made").notNull(),
+  status: varchar("status", { length: 20 }).default("active").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ReadingPlan = typeof readingPlans.$inferSelect;
+
+export const planDays = pgTable(
+  "plan_day",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    planId: varchar("plan_id")
+      .notNull()
+      .references(() => readingPlans.id, { onDelete: "cascade" }),
+    dayNumber: integer("day_number").notNull(),
+    bookId: integer("book_id"),
+    chapter: integer("chapter"),
+    verseStart: integer("verse_start"),
+    verseEnd: integer("verse_end"),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => ({
+    planIdx: index("plan_day_plan_idx").on(table.planId),
+    dayOrderIdx: index("plan_day_order_idx").on(table.planId, table.dayNumber),
+  })
+);
+
+export type PlanDay = typeof planDays.$inferSelect;
+
+export const userPlans = pgTable(
+  "user_plan",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    planId: varchar("plan_id")
+      .notNull()
+      .references(() => readingPlans.id, { onDelete: "cascade" }),
+    startDate: timestamp("start_date").defaultNow().notNull(),
+    currentDay: integer("current_day").default(1).notNull(),
+    completedAt: timestamp("completed_at"),
+    notificationTime: varchar("notification_time", { length: 10 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("user_plan_user_idx").on(table.userId),
+    userPlanIdx: index("user_plan_user_plan_idx").on(table.userId, table.planId),
+  })
+);
+
+export type UserPlan = typeof userPlans.$inferSelect;
+
+export const sabbathTypes = pgTable(
+  "sabbath_types",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: text("name").notNull(),
+    hebrewName: text("hebrew_name").notNull(),
+    type: text("type").notNull(),
+    anchorScripture: text("anchor_scripture").notNull(),
+    description: text("description").notNull(),
+    historicalContext: text("historical_context").notNull(),
+    propheticSignificance: text("prophetic_significance").notNull(),
+    frequencyDescription: text("frequency_description").notNull(),
+    orderIndex: integer("order_index").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    typeIdx: index("sabbath_types_type_idx").on(table.type),
+    orderIdx: index("sabbath_types_order_idx").on(table.orderIndex),
+    nameUniq: uniqueIndex("sabbath_types_name_idx").on(table.name),
+  })
+);
+
+export type SabbathType = typeof sabbathTypes.$inferSelect;
+
+export const sabbathScriptures = pgTable(
+  "sabbath_scriptures",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    sabbathTypeId: varchar("sabbath_type_id")
+      .notNull()
+      .references(() => sabbathTypes.id, { onDelete: "cascade" }),
+    bookId: integer("book_id").notNull(),
+    chapter: integer("chapter").notNull(),
+    verseStart: integer("verse_start").notNull(),
+    verseEnd: integer("verse_end"),
+    label: text("label").notNull(),
+    orderIndex: integer("order_index").notNull(),
+  },
+  (table) => ({
+    sabbathIdx: index("sabbath_scriptures_sabbath_idx").on(table.sabbathTypeId),
+    sabbathOrderUniq: uniqueIndex("sabbath_scriptures_type_order_idx").on(table.sabbathTypeId, table.orderIndex),
+  })
+);
+
+export type SabbathScripture = typeof sabbathScriptures.$inferSelect;
+
+// ─── CHARACTERS (Video Pipeline) ─────────────────────────────────────────────
+
+export const characters = pgTable(
+  "characters",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: text("name").notNull(),
+    slug: varchar("slug", { length: 100 }).notNull(),
+    characterType: varchar("character_type", { length: 30 }).notNull(),
+    gender: varchar("gender", { length: 10 }),
+    description: text("description"),
+    cloudinaryUrl: text("cloudinary_url"),
+    thumbnailUrl: text("thumbnail_url"),
+    voiceId: varchar("voice_id", { length: 50 }),
+    aliases: jsonb("aliases").$type<string[]>().default([]),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    slugUniq: uniqueIndex("characters_slug_idx").on(table.slug),
+    activePartialIdx: index("characters_active_partial_idx").on(table.isActive).where(sql`is_active = true`),
+    typeIdx: index("characters_type_idx").on(table.characterType),
+  })
+);
+
+export type Character = typeof characters.$inferSelect;
+export type InsertCharacter = typeof characters.$inferInsert;
+
+// ─── STAGE 3 ANALYTICS: CHURCH HIERARCHY ─────────────────────────────────────
+
+export const churchHierarchy = pgTable("church_hierarchy", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  tier: smallint("tier").notNull(),
+  parentId: varchar("parent_id"),
+  path: text("path").notNull(),
+  timezone: varchar("timezone", { length: 64 }).default("UTC"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  parentIdx: index("ch_parent_idx").on(table.parentId),
+  tierIdx: index("ch_tier_idx").on(table.tier),
+  pathIdx: index("ch_path_idx").on(table.path),
+}));
+
+export type ChurchHierarchy = typeof churchHierarchy.$inferSelect;
+export type InsertChurchHierarchy = typeof churchHierarchy.$inferInsert;
+
+export const hierarchyMembership = pgTable("hierarchy_membership", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  role: varchar("role", { length: 32 }).notNull().default("member"),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("hm_user_idx").on(table.userId),
+  nodeIdx: index("hm_node_idx").on(table.hierarchyNodeId),
+  userNodeUniq: uniqueIndex("hm_user_node_uniq").on(table.userId, table.hierarchyNodeId),
+}));
+
+export type HierarchyMembership = typeof hierarchyMembership.$inferSelect;
+export type InsertHierarchyMembership = typeof hierarchyMembership.$inferInsert;
+
+// ─── STAGE 3 ANALYTICS: TOPIC ENGAGEMENT ─────────────────────────────────────
+
+export const topicEngagement = pgTable("topic_engagement", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  topic: varchar("topic", { length: 128 }).notNull(),
+  topicType: varchar("topic_type", { length: 32 }).notNull(),
+  contentId: varchar("content_id", { length: 128 }),
+  durationSec: integer("duration_sec").default(0).notNull(),
+  isSensitive: boolean("is_sensitive").default(false).notNull(),
+  hierarchyNodeId: varchar("hierarchy_node_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("te_user_idx").on(table.userId),
+  topicIdx: index("te_topic_idx").on(table.topic),
+  nodeIdx: index("te_node_idx").on(table.hierarchyNodeId),
+  createdIdx: index("te_created_idx").on(table.createdAt),
+  sensitivePartialIdx: index("te_sensitive_partial_idx").on(table.isSensitive).where(sql`is_sensitive = true`),
+}));
+
+export type TopicEngagement = typeof topicEngagement.$inferSelect;
+export type InsertTopicEngagement = typeof topicEngagement.$inferInsert;
+
+export const topicEngagementDaily = pgTable("topic_engagement_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  topic: varchar("topic", { length: 128 }).notNull(),
+  topicType: varchar("topic_type", { length: 32 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(),
+  totalViews: integer("total_views").default(0).notNull(),
+  totalDurationSec: integer("total_duration_sec").default(0).notNull(),
+  uniqueUsers: integer("unique_users").default(0).notNull(),
+  ageGroupBreakdown: jsonb("age_group_breakdown").$type<Record<string, number>>(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeDateTopicTypeUniq: uniqueIndex("ted_node_date_topic_type_uniq").on(table.hierarchyNodeId, table.date, table.topic, table.topicType),
+  dateIdx: index("ted_date_idx").on(table.date),
+}));
+
+export type TopicEngagementDaily = typeof topicEngagementDaily.$inferSelect;
+export type InsertTopicEngagementDaily = typeof topicEngagementDaily.$inferInsert;
+
+export const topicTrend = pgTable("topic_trend", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  topic: varchar("topic", { length: 128 }).notNull(),
+  topicType: varchar("topic_type", { length: 32 }).notNull(),
+  currentWeekViews: integer("current_week_views").default(0).notNull(),
+  previousWeekViews: integer("previous_week_views").default(0).notNull(),
+  trendPercent: real("trend_percent").default(0).notNull(),
+  trendDirection: varchar("trend_direction", { length: 8 }).notNull().default("stable"),
+  avgCompletionRate: real("avg_completion_rate").default(0),
+  topAgeGroup: varchar("top_age_group", { length: 16 }),
+  topAgeGroupCount: integer("top_age_group_count").default(0),
+  weekStartDate: varchar("week_start_date", { length: 10 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeWeekUniq: uniqueIndex("tt_node_week_topic_uniq").on(table.hierarchyNodeId, table.weekStartDate, table.topic),
+  trendIdx: index("tt_trend_idx").on(table.trendPercent),
+}));
+
+export type TopicTrend = typeof topicTrend.$inferSelect;
+export type InsertTopicTrend = typeof topicTrend.$inferInsert;
+
+// ─── STAGE 3 ANALYTICS: PASTORAL CARE ────────────────────────────────────────
+
+export const pastoralCareAlert = pgTable("pastoral_care_alert", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  alertType: varchar("alert_type", { length: 24 }).notNull(),
+  severity: varchar("severity", { length: 16 }).notNull().default("MODERATE"),
+  topic: varchar("topic", { length: 128 }).notNull(),
+  memberCount: integer("member_count").default(0).notNull(),
+  optedInMembers: jsonb("opted_in_members").$type<{ userId: string; displayName: string }[]>().default([]),
+  isReviewed: boolean("is_reviewed").default(false).notNull(),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  assignedTo: varchar("assigned_to"),
+  notes: text("notes"),
+  weekStartDate: varchar("week_start_date", { length: 10 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeIdx: index("pca_node_idx").on(table.hierarchyNodeId),
+  unreviewedIdx: index("pca_unreviewed_idx").on(table.isReviewed).where(sql`is_reviewed = false`),
+  severityIdx: index("pca_severity_idx").on(table.severity),
+  weekIdx: index("pca_week_idx").on(table.weekStartDate),
+  dedupUniq: uniqueIndex("pca_dedup_uniq").on(table.hierarchyNodeId, table.alertType, table.topic, table.weekStartDate),
+}));
+
+export type PastoralCareAlert = typeof pastoralCareAlert.$inferSelect;
+export type InsertPastoralCareAlert = typeof pastoralCareAlert.$inferInsert;
+
+export const memberPastoralOptin = pgTable("member_pastoral_optin", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  isOptedIn: boolean("is_opted_in").default(false).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userNodeUniq: uniqueIndex("mpo_user_node_uniq").on(table.userId, table.hierarchyNodeId),
+}));
+
+export type MemberPastoralOptin = typeof memberPastoralOptin.$inferSelect;
+export type InsertMemberPastoralOptin = typeof memberPastoralOptin.$inferInsert;
+
+// ─── STAGE 3 ANALYTICS: CACHING & GEO ────────────────────────────────────────
+
+export const analyticsCache = pgTable("analytics_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  cacheType: varchar("cache_type", { length: 32 }).notNull(),
+  timeRange: varchar("time_range", { length: 16 }).notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeTypeRangeUniq: uniqueIndex("ac_node_type_range_uniq").on(table.hierarchyNodeId, table.cacheType, table.timeRange),
+  expiresIdx: index("ac_expires_idx").on(table.expiresAt),
+}));
+
+export type AnalyticsCache = typeof analyticsCache.$inferSelect;
+export type InsertAnalyticsCache = typeof analyticsCache.$inferInsert;
+
+export const userLocation = pgTable("user_location", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  hierarchyNodeId: varchar("hierarchy_node_id"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userUniq: uniqueIndex("ul_user_uniq").on(table.userId),
+  nodeIdx: index("ul_node_idx").on(table.hierarchyNodeId),
+}));
+
+export type UserLocation = typeof userLocation.$inferSelect;
+export type InsertUserLocation = typeof userLocation.$inferInsert;
+
+export const heatmapTile = pgTable("heatmap_tile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  engagementCount: integer("engagement_count").default(0).notNull(),
+  engagementScore: integer("engagement_score").default(0).notNull(),
+  regionKey: varchar("region_key", { length: 128 }).notNull(),
+  regionLevel: varchar("region_level", { length: 24 }).notNull().default("country"),
+  timeRange: varchar("time_range", { length: 16 }).notNull().default("month"),
+  userCount: integer("user_count").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeRegionUniq: uniqueIndex("ht_node_region_range_uniq").on(table.hierarchyNodeId, table.regionKey, table.timeRange),
+  nodeIdx: index("ht_node_idx").on(table.hierarchyNodeId),
+  regionLevelIdx: index("ht_region_level_idx").on(table.regionLevel),
+}));
+
+export type HeatmapTile = typeof heatmapTile.$inferSelect;
+export type InsertHeatmapTile = typeof heatmapTile.$inferInsert;
+
+export const activityPatternTile = pgTable("activity_pattern_tile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hierarchyNodeId: varchar("hierarchy_node_id").notNull(),
+  dayOfWeek: smallint("day_of_week").notNull(),
+  timeBlock: smallint("time_block").notNull(),
+  engagementCount: integer("engagement_count").default(0).notNull(),
+  engagementScore: integer("engagement_score").default(0).notNull(),
+  timeRange: varchar("time_range", { length: 16 }).notNull().default("month"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nodeDayBlockUniq: uniqueIndex("apt_node_day_block_range_uniq").on(table.hierarchyNodeId, table.dayOfWeek, table.timeBlock, table.timeRange),
+  nodeIdx: index("apt_node_idx").on(table.hierarchyNodeId),
+}));
+
+export type ActivityPatternTile = typeof activityPatternTile.$inferSelect;
+export type InsertActivityPatternTile = typeof activityPatternTile.$inferInsert;
+
+// ─── STAGE 3 ANALYTICS: BROADCASTS ───────────────────────────────────────────
+
+export const hierarchyBroadcast = pgTable("hierarchy_broadcast", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderNodeId: varchar("sender_node_id").notNull(),
+  senderUserId: varchar("sender_user_id").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  targetTier: smallint("target_tier"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  senderIdx: index("hb_sender_idx").on(table.senderNodeId),
+  createdIdx: index("hb_created_idx").on(table.createdAt),
+}));
+
+export type HierarchyBroadcast = typeof hierarchyBroadcast.$inferSelect;
+export type InsertHierarchyBroadcast = typeof hierarchyBroadcast.$inferInsert;
+
+export const hierarchyBroadcastReceipt = pgTable("hierarchy_broadcast_receipt", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  broadcastId: varchar("broadcast_id").notNull(),
+  recipientNodeId: varchar("recipient_node_id").notNull(),
+  recipientUserId: varchar("recipient_user_id").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  readAt: timestamp("read_at"),
+}, (table) => ({
+  broadcastIdx: index("hbr_broadcast_idx").on(table.broadcastId),
+  recipientIdx: index("hbr_recipient_idx").on(table.recipientUserId),
+  unreadPartialIdx: index("hbr_unread_idx").on(table.isRead).where(sql`is_read = false`),
+}));
+
+export type HierarchyBroadcastReceipt = typeof hierarchyBroadcastReceipt.$inferSelect;
+export type InsertHierarchyBroadcastReceipt = typeof hierarchyBroadcastReceipt.$inferInsert;
+
+// ─── CONTENT TRANSLATIONS CACHE ──────────────────────────────────────────────
+// Stores AI-generated translations permanently so each string is only translated once.
+
+export const contentTranslations = pgTable(
+  "content_translations",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    contentKey: varchar("content_key", { length: 64 }).notNull(),
+    langCode: varchar("lang_code", { length: 10 }).notNull(),
+    originalText: text("original_text").notNull(),
+    translatedText: text("translated_text").notNull(),
+    translatedAt: timestamp("translated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    keyLangUniq: uniqueIndex("ct_key_lang_uniq").on(table.contentKey, table.langCode),
+    langIdx: index("ct_lang_idx").on(table.langCode),
+  })
+);
+
+export type ContentTranslation = typeof contentTranslations.$inferSelect;
+export type InsertContentTranslation = typeof contentTranslations.$inferInsert;

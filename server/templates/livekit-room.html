@@ -330,6 +330,8 @@ function attachTrack(track, identity, name) {
     existing.forEach(a => { a.srcObject = null; a.remove(); });
     const el = track.attach();
     el.style.display = 'none';
+    el.volume = 0.8;
+    el.setAttribute('playsinline', '');
     tile.appendChild(el);
   }
 }
@@ -360,16 +362,19 @@ async function connect() {
     room = new Room({
       adaptiveStream: true,
       dynacast: true,
-      videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
+      videoCaptureDefaults: { resolution: VideoPresets.h360.resolution },
       audioCaptureDefaults: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
         channelCount: 1,
+        sampleRate: 24000,
       },
       publishDefaults: {
         dtx: true,
         red: true,
+        videoEncoding: { maxBitrate: 500000, maxFramerate: 20 },
+        stopMicTrackOnMute: true,
       },
     });
     dbg('Room object created successfully');
@@ -476,12 +481,18 @@ async function connect() {
     getOrCreateTile(room.localParticipant.identity, room.localParticipant.name);
 
     try {
-      dbg('Enabling microphone...');
-      await room.localParticipant.setMicrophoneEnabled(true);
+      dbg('Enabling microphone with explicit constraints...');
+      await room.localParticipant.setMicrophoneEnabled(true, {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: 1,
+        sampleRate: { ideal: 24000 },
+      });
       micEnabled = true;
       btnMic.classList.add('active');
       btnMic.classList.remove('off');
-      dbg('Microphone enabled');
+      dbg('Microphone enabled with echo cancellation');
     } catch (micErr) {
       dbg('Microphone denied: ' + micErr.message);
       micEnabled = false;
@@ -508,34 +519,48 @@ async function connect() {
 }
 
 btnMic.addEventListener('click', async () => {
-  if (!room) return;
+  if (!room) { dbg('Mic toggle: no room yet'); return; }
   try {
     micEnabled = !micEnabled;
-    await room.localParticipant.setMicrophoneEnabled(micEnabled);
+    dbg('Toggling mic to ' + micEnabled);
+    if (micEnabled) {
+      await room.localParticipant.setMicrophoneEnabled(true, {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: 1,
+        sampleRate: { ideal: 24000 },
+      });
+    } else {
+      await room.localParticipant.setMicrophoneEnabled(false);
+    }
     btnMic.classList.toggle('active', micEnabled);
     btnMic.classList.toggle('off', !micEnabled);
+    dbg('Mic toggled successfully to ' + micEnabled);
   } catch (err) {
     micEnabled = !micEnabled;
-    console.error('Mic toggle failed:', err);
-    statusText.textContent = 'Microphone access denied';
+    dbg('Mic toggle FAILED: ' + (err.message || err));
+    statusText.textContent = 'Microphone: ' + (err.message || 'access denied') + ' — check app permissions';
     overlay.classList.remove('hidden');
-    setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+    setTimeout(() => { overlay.classList.add('hidden'); }, 3000);
   }
 });
 
 btnCamera.addEventListener('click', async () => {
-  if (!room) return;
+  if (!room) { dbg('Camera toggle: no room yet'); return; }
   try {
     camEnabled = !camEnabled;
+    dbg('Toggling camera to ' + camEnabled);
     await room.localParticipant.setCameraEnabled(camEnabled);
     btnCamera.classList.toggle('active', camEnabled);
     btnCamera.classList.toggle('off', !camEnabled);
+    dbg('Camera toggled successfully to ' + camEnabled);
   } catch (err) {
     camEnabled = !camEnabled;
-    console.error('Camera toggle failed:', err);
-    statusText.textContent = 'Camera access denied';
+    dbg('Camera toggle FAILED: ' + (err.message || err));
+    statusText.textContent = 'Camera: ' + (err.message || 'access denied') + ' — check app permissions';
     overlay.classList.remove('hidden');
-    setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+    setTimeout(() => { overlay.classList.add('hidden'); }, 3000);
   }
 });
 

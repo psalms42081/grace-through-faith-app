@@ -15,7 +15,7 @@ export default function LeaderBroadcastScreen() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
 
   const isLeaderOrAdmin = user?.role === "church_leader" || user?.role === "admin";
 
@@ -24,12 +24,26 @@ export default function LeaderBroadcastScreen() {
     enabled: isLeaderOrAdmin,
   });
 
+  const { data: orgData } = useQuery<{ organization: { id: string; name: string; memberCount: number } }>({
+    queryKey: ["/api/organizations/my-org"],
+    enabled: isLeaderOrAdmin && !!user?.organizationId,
+  });
+
   const groups = groupsData?.groups || [];
+  const org = orgData?.organization;
 
   const broadcastMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedGroupId) throw new Error("Please select a group");
-      return apiRequest("POST", `/api/groups/${selectedGroupId}/announcements`, {
+      if (!selectedTarget) throw new Error("Please select a target");
+      if (selectedTarget.startsWith("org:")) {
+        const orgId = selectedTarget.replace("org:", "");
+        return apiRequest("POST", `/api/organizations/${orgId}/announcement`, {
+          title,
+          content,
+          authorName: user?.displayName || user?.username || "Leader",
+        });
+      }
+      return apiRequest("POST", `/api/groups/${selectedTarget}/announcements`, {
         title,
         content,
         authorName: user?.displayName || user?.username || "Leader",
@@ -38,7 +52,8 @@ export default function LeaderBroadcastScreen() {
     onSuccess: () => {
       setTitle("");
       setContent("");
-      Alert.alert("Sent", "Your announcement has been broadcast to the group.");
+      const targetLabel = selectedTarget?.startsWith("org:") ? "your organization" : "the group";
+      Alert.alert("Sent", `Your announcement has been broadcast to ${targetLabel}.`);
     },
     onError: (err: any) => {
       Alert.alert("Error", err?.message || "Failed to send announcement");
@@ -56,6 +71,7 @@ export default function LeaderBroadcastScreen() {
   }
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const hasTargets = groups.length > 0 || !!org;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -77,28 +93,49 @@ export default function LeaderBroadcastScreen() {
             New Announcement
           </Text>
 
-          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Select Group</Text>
-          {groups.length === 0 ? (
+          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Send To</Text>
+          {!hasTargets ? (
             <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 12 }}>
-              You are not a member of any groups yet.
+              You are not a member of any groups or organizations yet.
             </Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                {groups.map((g) => (
+                {org && (
                   <Pressable
-                    key={g.id}
-                    onPress={() => setSelectedGroupId(g.id)}
+                    onPress={() => setSelectedTarget(`org:${org.id}`)}
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 8,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: selectedGroupId === g.id ? "#8B5CF6" : theme.border,
-                      backgroundColor: selectedGroupId === g.id ? "#8B5CF620" : theme.background,
+                      borderColor: selectedTarget === `org:${org.id}` ? "#C9933A" : "#D4A853",
+                      backgroundColor: selectedTarget === `org:${org.id}` ? "#C9933A20" : theme.background,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 5,
                     }}
                   >
-                    <Text style={{ color: selectedGroupId === g.id ? "#8B5CF6" : theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium" }}>
+                    <Ionicons name="business" size={14} color={selectedTarget === `org:${org.id}` ? "#C9933A" : theme.textMuted} />
+                    <Text style={{ color: selectedTarget === `org:${org.id}` ? "#C9933A" : theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                      {org.name} ({org.memberCount})
+                    </Text>
+                  </Pressable>
+                )}
+                {groups.map((g) => (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => setSelectedTarget(g.id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: selectedTarget === g.id ? "#8B5CF6" : theme.border,
+                      backgroundColor: selectedTarget === g.id ? "#8B5CF620" : theme.background,
+                    }}
+                  >
+                    <Text style={{ color: selectedTarget === g.id ? "#8B5CF6" : theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium" }}>
                       {g.name} ({g.memberCount})
                     </Text>
                   </Pressable>
@@ -128,6 +165,10 @@ export default function LeaderBroadcastScreen() {
 
           <Pressable
             onPress={() => {
+              if (!selectedTarget) {
+                Alert.alert("Error", "Please select who to send this to");
+                return;
+              }
               if (!title.trim()) {
                 Alert.alert("Error", "Please enter an announcement title");
                 return;

@@ -1,9 +1,62 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>APP_NAME_PLACEHOLDER</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grace Through Faith — SDA Spiritual Formation and Evangelism App</title>
+    <meta name="description" content="Grow deeper in Scripture prayer and Sabbath life. AI-powered Bible study devotional plans and teen evangelism videos grounded in Seventh-day Adventist faith." />
+    <link rel="canonical" href="https://grace-through-faith.replit.app/" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✝️</text></svg>" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Grace Through Faith — SDA Spiritual Formation and Evangelism App" />
+    <meta property="og:description" content="Grow deeper in Scripture prayer and Sabbath life. AI-powered Bible study devotional plans and teen evangelism videos grounded in Seventh-day Adventist faith." />
+    <meta property="og:url" content="https://grace-through-faith.replit.app/" />
+    <meta property="og:image" content="https://grace-through-faith.replit.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Grace Through Faith — SDA Spiritual Formation and Evangelism App" />
+    <meta name="twitter:description" content="Grow deeper in Scripture prayer and Sabbath life. AI-powered Bible study devotional plans and teen evangelism videos grounded in Seventh-day Adventist faith." />
+    <meta name="twitter:image" content="https://grace-through-faith.replit.app/og-image.png" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Grace Through Faith",
+      "description": "Grow deeper in Scripture, prayer, and Sabbath life. AI-powered Bible study, devotional plans, and teen evangelism videos grounded in Seventh-day Adventist faith.",
+      "url": "https://grace-through-faith.replit.app/",
+      "applicationCategory": "ReligiousApp",
+      "operatingSystem": "iOS, Android, Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Grace Through Faith"
+      },
+      "featureList": [
+        "AI-powered Bible study and Deep Dive analysis",
+        "Devotional plans with daily readings",
+        "Sabbath School quarterly lessons",
+        "Teen evangelism cinematic videos",
+        "Spiritual growth tracking and formation map",
+        "Kids Club with interactive Bible stories",
+        "Church analytics dashboard for leaders",
+        "Multi-language Bible translations",
+        "Prophecy Explorer with interactive timelines",
+        "Christian radio streaming"
+      ],
+      "screenshot": "https://grace-through-faith.replit.app/og-image.png",
+      "softwareVersion": "1.0.0",
+      "inLanguage": "en"
+    }
+    </script>
+
     <style>
       * {
         box-sizing: border-box;
@@ -17,6 +70,11 @@
         color: #222;
         line-height: 1.5;
         min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        flex: 1;
       }
       .wrapper {
         max-width: 480px;
@@ -201,11 +259,25 @@
         opacity: 0.9;
       }
 
+      footer {
+        margin-top: 40px;
+        padding: 20px 0;
+        font-size: 13px;
+        color: #999;
+      }
+      footer a {
+        color: #666;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      footer a:hover {
+        color: #333;
+      }
+
       /* Desktop styles */
       @media (min-width: 768px) {
         body {
           padding: 48px 32px;
-          display: flex;
           align-items: center;
           justify-content: center;
         }
@@ -325,73 +397,92 @@
         .open-button:hover {
           background: #e0e0e0;
         }
+        footer {
+          color: #666;
+        }
+        footer a {
+          color: #888;
+        }
+        footer a:hover {
+          color: #ccc;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="wrapper">
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Opening in Expo Go...</div>
-      </div>
+    <main>
+      <div class="wrapper">
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <div class="loading-text">Opening in Expo Go...</div>
+        </div>
 
-      <div class="content" id="content">
-        <h1>APP_NAME_PLACEHOLDER</h1>
-        <p class="subtitle">Preview this app on your phone</p>
+        <div class="content" id="content">
+          <h1>Grace Through Faith</h1>
+          <p class="subtitle">AI-powered Bible study, devotional plans, and teen evangelism videos grounded in Seventh-day Adventist faith</p>
 
-        <div class="steps-container">
-          <div class="step">
-            <div class="step-header">
-              <div class="step-number">1</div>
-              <h2 class="step-title">Download Expo Go</h2>
+          <div class="steps-container">
+            <div class="step">
+              <div class="step-header">
+                <div class="step-number">1</div>
+                <h2 class="step-title">Download Expo Go</h2>
+              </div>
+              <p class="step-description">
+                Expo Go is a free app to test mobile apps
+              </p>
+              <div class="store-buttons" id="store-buttons">
+                <a
+                  id="app-store-btn"
+                  href="https://apps.apple.com/app/id982107779"
+                  class="store-button"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                      d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+                    />
+                  </svg>
+                  App Store
+                </a>
+                <a
+                  id="play-store-btn"
+                  href="https://play.google.com/store/apps/details?id=host.exp.exponent"
+                  class="store-button"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path
+                      d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"
+                    />
+                  </svg>
+                  Google Play
+                </a>
+              </div>
             </div>
-            <p class="step-description">
-              Expo Go is a free app to test mobile apps
-            </p>
-            <div class="store-buttons" id="store-buttons">
-              <a
-                id="app-store-btn"
-                href="https://apps.apple.com/app/id982107779"
-                class="store-button"
-                target="_blank"
+
+            <div class="step qr-section">
+              <div class="step-header">
+                <div class="step-number">2</div>
+                <h2 class="step-title">Scan QR Code</h2>
+              </div>
+              <p class="step-description">Use your phone's camera or Expo Go</p>
+              <div class="qr-code" id="qr-code"></div>
+              <a href="exps://EXPS_URL_PLACEHOLDER" class="open-button"
+                >Open in Expo Go</a
               >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-                  />
-                </svg>
-                App Store
-              </a>
-              <a
-                id="play-store-btn"
-                href="https://play.google.com/store/apps/details?id=host.exp.exponent"
-                class="store-button"
-                target="_blank"
-              >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"
-                  />
-                </svg>
-                Google Play
-              </a>
             </div>
-          </div>
-
-          <div class="step qr-section">
-            <div class="step-header">
-              <div class="step-number">2</div>
-              <h2 class="step-title">Scan QR Code</h2>
-            </div>
-            <p class="step-description">Use your phone's camera or Expo Go</p>
-            <div class="qr-code" id="qr-code"></div>
-            <a href="exps://EXPS_URL_PLACEHOLDER" class="open-button"
-              >Open in Expo Go</a
-            >
           </div>
         </div>
       </div>
-    </div>
+    </main>
+
+    <footer>
+      <div class="wrapper">
+        &copy; 2026 Grace Through Faith &middot; <a href="/privacy">Privacy Policy</a>
+      </div>
+    </footer>
 
     <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
     <script>

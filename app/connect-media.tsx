@@ -43,7 +43,7 @@ function MediaCard({
     >
       <Image source={CARD_IMAGES[imageKey]} style={st.cardImage} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.88)"]}
+        colors={["transparent", "rgba(0,0,0,0.30)", "rgba(0,0,0,0.70)"]}
         locations={[0, 0.35, 1]}
         style={st.cardGradient}
       />
@@ -87,6 +87,30 @@ export default function ConnectMediaScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={st.cards}>
+          <Pressable
+            onPress={() => router.push("/series" as any)}
+            style={({ pressed }) => [
+              st.card,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Biblical Series"
+          >
+            <LinearGradient
+              colors={["#1a0a2e", "#2d1b69"]}
+              style={[StyleSheet.absoluteFill, { borderRadius: 18 }]}
+            />
+            <View style={st.cardContent}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="film" size={18} color="#C9933A" />
+                  <Text style={[st.cardTitle, { fontFamily: "Inter_600SemiBold" }]}>Biblical Series</Text>
+                </View>
+                <Text style={[st.cardSub, { fontFamily: "Inter_400Regular" }]}>Curated video story series</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.7)" />
+            </View>
+          </Pressable>
           <MediaCard
             imageKey="speakers"
             title="SDA Speakers"

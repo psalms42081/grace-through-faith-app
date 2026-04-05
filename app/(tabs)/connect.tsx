@@ -44,7 +44,7 @@ function VisualCard({ imageKey, title, subtitle, onPress, theme, compact }: Visu
     >
       <Image source={CARD_IMAGES[imageKey]} style={st.cardImage} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.75)", "rgba(0,0,0,0.92)"]}
+        colors={["transparent", "rgba(0,0,0,0.42)", "rgba(0,0,0,0.72)"]}
         locations={[0.1, 0.6, 1]}
         style={st.cardGradient}
       />
@@ -68,7 +68,6 @@ export default function ConnectScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -131,6 +130,7 @@ export default function ConnectScreen() {
           </Text>
         </View>
       </ScrollView>
+
     </View>
   );
 }

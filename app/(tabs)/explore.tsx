@@ -26,6 +26,9 @@ const CATEGORY_IMAGES: Record<string, any> = {
   "spiritual-themes": require("@/assets/topic-cards/grace.png"),
 };
 
+const SIGNPOST_IMAGE = require("@/assets/topic-cards/wisdom.png");
+const SABBATH_IMAGE = require("@/assets/topic-cards/prayer.png");
+
 const CATEGORIES = [
   {
     id: "study-scripture",
@@ -91,7 +94,7 @@ function CategoryCard({
     >
       <Image source={CATEGORY_IMAGES[id]} style={st.categoryBg} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.88)"]}
+        colors={["transparent", "rgba(0,0,0,0.30)", "rgba(0,0,0,0.70)"]}
         locations={[0, 0.35, 1]}
         style={st.categoryOverlay}
       >
@@ -169,7 +172,7 @@ function EnrolledTracksPreview({ theme }: { theme: typeof Colors.dark }) {
 }
 
 export default function StudyScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -202,6 +205,72 @@ export default function StudyScreen() {
               onPress={() => router.push({ pathname: "/study-category", params: { category: cat.id } } as any)}
             />
           ))}
+        </View>
+
+        <View style={st.dividerRow}>
+          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
+          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
+          <View style={[st.dividerDotCenter, { backgroundColor: "rgba(201,147,58,0.75)" }]} />
+          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
+          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
+        </View>
+
+        <View style={st.infoGroup}>
+          <Pressable
+            onPress={() => router.push("/touchpoints" as any)}
+            testID="touchpoints-card"
+            style={({ pressed }) => [
+              st.infoCard,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <Image source={SIGNPOST_IMAGE} style={st.infoBg} resizeMode="cover" />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.30)", "rgba(0,0,0,0.70)"]}
+              locations={[0, 0.35, 1]}
+              style={st.infoOverlay}
+            >
+              <View style={st.infoContent}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.infoTitle, { fontFamily: "Inter_600SemiBold" }]}>
+                    Signposts
+                  </Text>
+                  <Text style={[st.infoSub, { fontFamily: "Inter_400Regular" }]}>
+                    What does the Bible say about life's toughest questions?
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+              </View>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/biblical-sabbaths" as any)}
+            testID="biblical-sabbaths-card"
+            style={({ pressed }) => [
+              st.infoCard,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <Image source={SABBATH_IMAGE} style={st.infoBg} resizeMode="cover" />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.30)", "rgba(0,0,0,0.70)"]}
+              locations={[0, 0.35, 1]}
+              style={st.infoOverlay}
+            >
+              <View style={st.infoContent}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[st.infoTitle, { fontFamily: "Inter_600SemiBold" }]}>
+                    The Biblical Sabbaths
+                  </Text>
+                  <Text style={[st.infoSub, { fontFamily: "Inter_400Regular" }]}>
+                    Weekly, Annual, Sabbatical & Jubilee — God's rhythm of rest
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+              </View>
+            </LinearGradient>
+          </Pressable>
         </View>
 
         <EnrolledTracksPreview theme={theme} />
@@ -304,4 +373,58 @@ const st = StyleSheet.create({
     borderRadius: 2,
   },
   enrolledPercent: { fontSize: 11 },
+
+  dividerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center",
+    gap: 6,
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  dividerDotCenter: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  infoGroup: {
+    gap: 12,
+  },
+  infoCard: {
+    borderRadius: 18,
+    overflow: "hidden" as const,
+    height: 130,
+  },
+  infoBg: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%" as any,
+    height: "100%" as any,
+  },
+  infoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end" as const,
+  },
+  infoContent: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    paddingTop: 10,
+  },
+  infoTitle: {
+    color: "#fff",
+    fontSize: 17,
+    marginBottom: 2,
+  },
+  infoSub: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 12,
+  },
 });

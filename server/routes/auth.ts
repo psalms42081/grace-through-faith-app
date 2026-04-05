@@ -25,8 +25,8 @@ import {
   kidsDailyQuests,
   kidsUserBadges,
 } from "../../shared/schema";
-import { eq, sql } from "drizzle-orm";
-import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId } from "../middleware/auth";
+import { eq, and, sql } from "drizzle-orm";
+import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId, touchUserActivity } from "../middleware/auth";
 import { validate, authRegisterSchema, authLoginSchema } from "../middleware/validate";
 import { authLimiter } from "../middleware/rate-limit";
 
@@ -113,6 +113,15 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
 
+    touchUserActivity(user.id);
+
+    db.execute(sql`
+      INSERT INTO user_activity_counter (id, user_id, feature_type, use_count, last_used_at)
+      VALUES (gen_random_uuid(), ${user.id}, 'login', 1, now())
+      ON CONFLICT (user_id, feature_type)
+      DO UPDATE SET use_count = user_activity_counter.use_count + 1, last_used_at = now()
+    `).catch((err) => console.error("Login activity tracking error:", err));
+
     return res.json({
       user: {
         id: user.id,
@@ -122,6 +131,7 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
         isPro: user.isPro,
         isPatron: user.isPatron,
         role: user.role,
+        organizationId: user.organizationId,
       },
       token,
     });
@@ -252,6 +262,8 @@ router.get("/api/auth/me", async (req, res) => {
       return res.json({ user: null, isGuest: true });
     }
 
+    touchUserActivity(userId);
+
     return res.json({
       user: {
         id: user.id,
@@ -261,6 +273,8 @@ router.get("/api/auth/me", async (req, res) => {
         isPro: user.isPro,
         isPatron: user.isPatron,
         role: user.role,
+        organizationId: user.organizationId,
+        hologramOnboardingSeen: user.hologramOnboardingSeen ?? false,
       },
       isGuest: false,
     });

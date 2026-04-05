@@ -35,6 +35,21 @@ import resourcesRoutes from "./routes/resources";
 import adminPipelineRoutes from "./routes/admin-pipeline";
 import adminUsersRoutes from "./routes/admin-users";
 import organizationRoutes from "./routes/organizations";
+import heygenRoutes from "./routes/heygen";
+import videoPipelineRoutes from "./routes/videoPipeline";
+import videoTopicsRoutes from "./routes/videoTopics";
+import { recoverStuckHeyGenJobs } from "./routes/videoTopics";
+import seriesRoutes from "./routes/series";
+import plansRoutes from "./routes/plans";
+import touchpointsRoutes from "./routes/touchpoints";
+import sabbathTypesRoutes from "./routes/sabbath-types";
+import characterRoutes from "./routes/characters";
+import ellenWhiteRoutes from "./routes/ellenWhite";
+import adminWorkersRoutes from "./routes/admin-workers";
+import newsRoutes from "./routes/news";
+import egwRoutes from "./routes/egw";
+import pioneerRoutes from "./routes/pioneers";
+import demoRoutes from "./routes/demo";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -81,8 +96,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     seedResources(db).catch((err) => {
       console.error("Resources seed error:", err);
     });
+
+    const { seedSabbathTypes } = await import("./seeds/seed-sabbath-types");
+    seedSabbathTypes(db).catch((err) => {
+      console.error("Sabbath types seed error:", err);
+    });
   } else {
     console.log("[startup] RUN_STARTUP_SEEDS is not enabled — skipping seed scripts");
+  }
+
+  const { seedSabbathTypes: ensureSabbathTypes } = await import("./seeds/seed-sabbath-types");
+  ensureSabbathTypes(db).catch((err) => {
+    console.error("Sabbath types ensure error:", err);
+  });
+
+  try {
+    const { seedBiblicalSeries } = await import("./seed-series");
+    console.log("[startup] Running biblical series seed...");
+    await seedBiblicalSeries(db);
+    console.log("[startup] Biblical series seed complete.");
+  } catch (err) {
+    console.error("[startup] Biblical series seed FAILED:", err);
+  }
+
+  try {
+    const { seedReadingPlans } = await import("./seed-reading-plans");
+    console.log("[startup] Running reading plans seed...");
+    await seedReadingPlans(db);
+    console.log("[startup] Reading plans seed complete.");
+  } catch (err) {
+    console.error("[startup] Reading plans seed FAILED:", err);
+  }
+
+  try {
+    const { fixDevotionalCategories } = await import("./fix-devotional-categories");
+    console.log("[startup] Running devotional category fix...");
+    await fixDevotionalCategories(db);
+    console.log("[startup] Devotional category fix complete.");
+  } catch (err) {
+    console.error("[startup] Devotional category fix FAILED:", err);
   }
 
   app.use(authRoutes);
@@ -109,6 +161,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(adminPipelineRoutes);
   app.use(adminUsersRoutes);
   app.use(organizationRoutes);
+  app.use(heygenRoutes);
+  app.use(videoPipelineRoutes);
+  app.use(videoTopicsRoutes);
+  app.use(seriesRoutes);
+  app.use(plansRoutes);
+  app.use(touchpointsRoutes);
+  app.use(sabbathTypesRoutes);
+  app.use(characterRoutes);
+  app.use("/api/ellen-white", ellenWhiteRoutes);
+  app.use("/api/admin/workers", adminWorkersRoutes);
+  app.use(newsRoutes);
+  app.use("/api/egw", egwRoutes);
+  app.use(pioneerRoutes);
+  app.use("/api/demo", demoRoutes);
+
+  recoverStuckHeyGenJobs().catch((err) => {
+    console.error("[startup] HeyGen recovery job failed:", err);
+  });
+
+  (async () => {
+    try {
+      const { videoTopics } = await import("../shared/schema");
+      const { eq, ne, sql, and, isNotNull, notInArray } = await import("drizzle-orm");
+      const result = await db
+        .update(videoTopics)
+        .set({ pipelineMode: "cinematic", updatedAt: new Date() })
+        .where(ne(videoTopics.pipelineMode, "cinematic"));
+
+      const busyStatuses = ["queued", "scene-directing", "generating-anchor", "generating-scene-videos", "generating-voiceover", "computing-timing", "assembling-video", "generating-edl", "extracting-timestamps", "generating-broll-images", "generating-broll-videos"];
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const staleReset = await db
+        .update(videoTopics)
+        .set({ assemblyStatus: null, updatedAt: new Date() })
+        .where(sql`${videoTopics.assemblyStatus} IS NOT NULL AND ${videoTopics.assemblyStatus} != 'complete' AND (${videoTopics.assemblyStatus} LIKE '%failed%' OR ${videoTopics.updatedAt} < ${tenMinAgo})`);
+      console.log("[startup] All video topics migrated to cinematic pipeline mode; stale/failed statuses reset");
+    } catch (err) {
+      console.error("[startup] Pipeline mode migration error:", err);
+    }
+  })();
+
+  app.get("/api/map-embed", (req, res) => {
+    const { markers, centerLat, centerLng, zoom, userLat, userLng } = req.query;
+    const markersData = markers ? JSON.parse(decodeURIComponent(markers as string)) : [];
+    const cLat = parseFloat(centerLat as string) || 39.8283;
+    const cLng = parseFloat(centerLng as string) || -98.5795;
+    const z = parseInt(zoom as string) || 4;
+    const uLat = userLat ? parseFloat(userLat as string) : null;
+    const uLng = userLng ? parseFloat(userLng as string) : null;
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body,#map{width:100%;height:100%}
+.sel-m{background:#C9933A;border:2px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 0 6px rgba(201,147,58,0.6)}
+.def-m{background:#E8456B;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 4px rgba(0,0,0,0.3)}
+.usr-m{background:#4A90D9;border:3px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px rgba(74,144,217,0.5)}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${cLat},${cLng}],${z});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+L.control.zoom({position:'topright'}).addTo(map);
+${uLat !== null && uLng !== null ? `L.marker([${uLat},${uLng}],{icon:L.divIcon({className:'',html:'<div class="usr-m"></div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);` : ''}
+var ms=${JSON.stringify(markersData)};
+var bounds=[];
+ms.forEach(function(m){
+  var cls=m.selected?'sel-m':'def-m';
+  var sz=m.selected?16:14;
+  var mk=L.marker([m.lat,m.lng],{icon:L.divIcon({className:'',html:'<div class="'+cls+'"></div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(map);
+  mk.bindPopup('<div style="font-family:sans-serif;text-align:center;min-width:140px;"><b style="font-size:13px;">'+m.name+'</b><br><a href="https://www.google.com/maps/dir/?api=1&destination='+m.lat+','+m.lng+'" target="_blank" style="display:inline-block;margin-top:6px;padding:5px 12px;background:#C9933A;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">Get Directions</a></div>',{offset:[0,-4]});
+  mk.on('click',function(){map.flyTo([m.lat,m.lng],16,{duration:0.5});window.parent.postMessage(JSON.stringify({type:'markerPress',id:m.id}),'*');});
+  bounds.push([m.lat,m.lng]);
+});
+${uLat !== null && uLng !== null ? `bounds.push([${uLat},${uLng}]);` : ''}
+if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
+<\/script>
+</body>
+</html>`;
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  });
 
   const startTime = Date.now();
 

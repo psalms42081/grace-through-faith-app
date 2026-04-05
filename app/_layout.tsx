@@ -18,8 +18,38 @@ import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { PioneerProvider } from "@/contexts/PioneerContext";
+import EllenWhiteHologram from "@/components/EllenWhiteHologram";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
+// Android Expo Go (SDK 53+) removed push notification support entirely.
+// Calling setNotificationHandler there throws — guard against it.
+function _isAndroidExpoGo() {
+  if (Platform.OS !== "android") return false;
+  try {
+    const env = (Constants as any).executionEnvironment;
+    if (env) return env === "storeClient";
+    return (Constants as any).appOwnership === "expo";
+  } catch {
+    return false;
+  }
+}
+
+if (!_isAndroidExpoGo()) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 import {
   useFonts,
   Lora_400Regular,
@@ -44,10 +74,34 @@ if (typeof globalThis !== "undefined" && !globalThis.__rejectionHandlerSet) {
   const handler = (event: any) => {
     const reason = event?.reason || event;
     const msg = reason instanceof Error ? reason.message : String(reason);
+    const EXTENSION_PATTERNS = [
+      "MetaMask",
+      "ethereum",
+      "chrome-extension://",
+      "moz-extension://",
+    ];
+    if (EXTENSION_PATTERNS.some((p) => msg.includes(p))) {
+      event?.preventDefault?.();
+      return;
+    }
     reportError(`Unhandled rejection: ${msg}`);
   };
   if (typeof globalThis.addEventListener === "function") {
     globalThis.addEventListener("unhandledrejection", handler);
+  }
+
+  const errorHandler = (event: any) => {
+    const msg = event?.message || "";
+    const stack = event?.error?.stack || "";
+    const combined = msg + stack;
+    const EXT_PATTERNS = ["MetaMask", "ethereum", "chrome-extension://", "moz-extension://"];
+    if (EXT_PATTERNS.some((p) => combined.includes(p))) {
+      event?.preventDefault?.();
+      return;
+    }
+  };
+  if (typeof globalThis.addEventListener === "function") {
+    globalThis.addEventListener("error", errorHandler);
   }
 }
 
@@ -78,9 +132,9 @@ function RootLayoutNav() {
           headerShown: true,
         }}
       />
-      <Stack.Screen name="passage-context" options={{ headerShown: true }} />
+      <Stack.Screen name="passage-context" options={{ headerShown: true, title: "Passage Context" }} />
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
-      <Stack.Screen name="historic-voices" options={{ headerShown: true }} />
+      <Stack.Screen name="historic-voices" options={{ headerShown: true, title: "Historic Voices" }} />
       <Stack.Screen name="verse-map" options={{ headerShown: false }} />
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
@@ -113,8 +167,16 @@ function RootLayoutNav() {
       <Stack.Screen name="resource-detail" options={{ headerShown: false }} />
       <Stack.Screen name="feedback" options={{ headerShown: false }} />
       <Stack.Screen name="sermon-player" options={{ headerShown: false }} />
+      <Stack.Screen name="evangelism-videos" options={{ headerShown: false }} />
       <Stack.Screen name="study-category" options={{ headerShown: false }} />
       <Stack.Screen name="kids" options={{ headerShown: false }} />
+      <Stack.Screen name="touchpoints" options={{ headerShown: false }} />
+      <Stack.Screen name="touchpoint-topic" options={{ headerShown: false }} />
+      <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
+      <Stack.Screen name="connect-media" options={{ headerShown: false }} />
+      <Stack.Screen name="biblical-sabbaths" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="conference-portal" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -154,9 +216,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded && onboardingChecked && i18nReady) {
       SplashScreen.hideAsync().catch(() => {});
-      if (needsOnboarding) {
-        setTimeout(() => router.replace("/onboarding"), 50);
-      }
+      // Always show the splash/intro on every launch
+      setTimeout(() => router.replace("/onboarding"), 50);
     }
   }, [fontsLoaded, onboardingChecked, needsOnboarding, i18nReady]);
 
@@ -179,8 +240,11 @@ export default function RootLayout() {
                         <GestureHandlerRootView style={{ flex: 1 }}>
                           <KeyboardProvider>
                             <ToastProvider>
-                              <RootLayoutNav />
-                              <MiniPlayer />
+                              <PioneerProvider>
+                                <RootLayoutNav />
+                                <MiniPlayer />
+                                <EllenWhiteHologram />
+                              </PioneerProvider>
                             </ToastProvider>
                           </KeyboardProvider>
                         </GestureHandlerRootView>

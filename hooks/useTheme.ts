@@ -11,10 +11,11 @@ export function useTheme(isKidsMode?: false): { theme: RegularTheme; isDark: boo
 export function useTheme(isKidsMode?: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme };
 export function useTheme(isKidsMode?: boolean) {
   const colorScheme: ColorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  // App is always dark-themed regardless of device setting
+  const isDark = true;
   const theme = isKidsMode
-    ? (isDark ? KidsColors.dark : KidsColors.light)
-    : (isDark ? Colors.dark : Colors.light);
+    ? KidsColors.dark
+    : Colors.dark;
 
   return { theme, isDark, colorScheme } as const;
 }

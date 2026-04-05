@@ -551,4 +551,141 @@ router.get("/api/analytics/growth", async (req, res) => {
   }
 });
 
+router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { bookName, chapter, verse, translation } = req.query as Record<string, string>;
+    if (!bookName || !chapter || !verse) {
+      return res.status(400).json({ error: "bookName, chapter, and verse are required" });
+    }
+
+    const cacheKey = `explain-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
+    const [cached] = await db.select().from(searchCache)
+      .where(eq(searchCache.queryHash, cacheKey))
+      .limit(1);
+
+    if (cached && cached.expiresAt > new Date()) {
+      return res.json(cached.results);
+    }
+
+    const client = new (await import("openai")).default({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
+1. Clarifies its meaning in historical and literary context
+2. Shows how it connects to God's larger plan of salvation
+3. Points to Jesus Christ and the gospel
+4. Offers a practical application for daily life
+5. Cites 1-2 cross-references that illuminate the passage
+Keep the explanation warm, clear, and between 150-250 words. Write in second person ("you") to make it personal.`,
+        },
+        {
+          role: "user",
+          content: `Explain ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`,
+        },
+      ],
+      temperature: 0.7,
+    });
+
+    const explanation = response.choices[0]?.message?.content || "";
+    const result = { explanation };
+
+    await db.insert(searchCache).values({
+      queryText: `${bookName} ${chapter}:${verse} (${translation || "KJV"})`,
+      queryHash: cacheKey,
+      results: result,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    }).onConflictDoUpdate({
+      target: searchCache.queryHash,
+      set: { results: result, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error("AI explain error:", err);
+    const status = getErrorStatusCode(err);
+    return res.status(status || 500).json({ error: "Could not generate explanation" });
+  }
+});
+
+router.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => {
+  try {
+    const { bookName, chapter, verse, translation } = req.query as Record<string, string>;
+    if (!bookName || !chapter || !verse) {
+      return res.status(400).json({ error: "bookName, chapter, and verse are required" });
+    }
+
+    const cacheKey = `crossref-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
+    const [cached] = await db.select().from(searchCache)
+      .where(eq(searchCache.queryHash, cacheKey))
+      .limit(1);
+
+    if (cached && cached.expiresAt > new Date()) {
+      return res.json(cached.results);
+    }
+
+    const client = new (await import("openai")).default({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a Bible scholar. Given a verse reference, provide 4-6 of the most relevant cross-references.
+For each cross-reference, provide:
+1. The exact reference (e.g., "John 3:16")
+2. The verse text (from the specified translation or KJV)
+3. A brief explanation of how it connects to the original verse
+
+Return JSON format:
+{
+  "crossReferences": [
+    { "ref": "John 3:16", "text": "For God so loved the world...", "connection": "Both passages emphasize God's redemptive plan..." }
+  ]
+}
+
+Focus on cross-references that:
+- Share thematic connections
+- Use similar language or imagery
+- Illuminate the same doctrine or truth
+- Point to Christ and the gospel`,
+        },
+        {
+          role: "user",
+          content: `Find cross-references for ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`,
+        },
+      ],
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0]?.message?.content || '{"crossReferences":[]}');
+
+    await db.insert(searchCache).values({
+      queryText: `Cross-ref: ${bookName} ${chapter}:${verse}`,
+      queryHash: cacheKey,
+      results: result,
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    }).onConflictDoUpdate({
+      target: searchCache.queryHash,
+      set: { results: result, expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error("AI cross-references error:", err);
+    const status = getErrorStatusCode(err);
+    return res.status(status || 500).json({ error: "Could not generate cross-references" });
+  }
+});
+
 export default router;

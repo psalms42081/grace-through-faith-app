@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
@@ -25,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import { useTutorial } from "@/contexts/TutorialContext";
 
 type Tab = "word" | "context" | "voices" | "application";
 
@@ -94,6 +96,12 @@ function computeNextStep(
   return null;
 }
 
+function isLayerAccessible(layer: Tab, completedLayers: Set<string>): boolean {
+  const idx = LAYER_ORDER.indexOf(layer);
+  if (idx === 0) return true;
+  return completedLayers.has(LAYER_ORDER[idx - 1]);
+}
+
 function LayerProgressBar({
   activeTab,
   completedLayers,
@@ -136,28 +144,37 @@ function LayerProgressBar({
         {LAYER_ORDER.map((layer, i) => {
           const isActive = activeTab === layer;
           const isCompleted = completedLayers.has(layer);
+          const accessible = isLayerAccessible(layer, completedLayers);
+          const isLocked = !accessible && !isCompleted;
           return (
             <Pressable
               key={layer}
-              onPress={() => onTabPress(layer)}
+              onPress={() => {
+                if (isLocked) return;
+                onTabPress(layer);
+              }}
               style={[
                 lpStyles.segment,
                 i === 0 && lpStyles.segmentFirst,
                 i === LAYER_ORDER.length - 1 && lpStyles.segmentLast,
                 isActive && { backgroundColor: theme.accent },
                 !isActive && { backgroundColor: theme.backgroundSecondary },
+                isLocked && { opacity: 0.4 },
               ]}
             >
-              {isCompleted && !isActive && (
+              {isLocked && (
+                <Ionicons name="lock-closed" size={10} color={theme.textMuted} style={lpStyles.check} />
+              )}
+              {!isLocked && isCompleted && !isActive && (
                 <Ionicons name="checkmark-circle" size={12} color={theme.accent} style={lpStyles.check} />
               )}
-              {isCompleted && isActive && (
+              {!isLocked && isCompleted && isActive && (
                 <Ionicons name="checkmark-circle" size={12} color="#fff" style={lpStyles.check} />
               )}
               <Text
                 style={[
                   lpStyles.label,
-                  { color: isActive ? "#fff" : theme.textSecondary },
+                  { color: isActive ? "#fff" : isLocked ? theme.textMuted : theme.textSecondary },
                   isActive && { fontFamily: "Inter_600SemiBold" },
                   !isActive && { fontFamily: "Inter_400Regular" },
                 ]}
@@ -258,6 +275,79 @@ function NextLayerCTA({
         <Text style={ctaStyles.btnText}>{actionLabel}</Text>
         <Ionicons name={allDone || isLastLayer ? "checkmark-done" : "arrow-forward"} size={18} color="#fff" />
       </Pressable>
+    </View>
+  );
+}
+
+const LAYER_COACH_TIPS: Record<Tab, { id: string; icon: keyof typeof Ionicons.glyphMap; title: string; description: string }> = {
+  word: {
+    id: "study_layer_observe",
+    icon: "eye-outline",
+    title: "Step 1: Observe",
+    description: "Read the passage slowly and carefully. Notice repeated words, key phrases, and what stands out. Mark the text complete when you've studied it thoroughly.",
+  },
+  context: {
+    id: "study_layer_context",
+    icon: "time-outline",
+    title: "Step 2: Context",
+    description: "Explore the historical and literary context. Who wrote this? When and why? Understanding the setting reveals deeper meaning in God's Word.",
+  },
+  voices: {
+    id: "study_layer_insight",
+    icon: "people-outline",
+    title: "Step 3: Insight",
+    description: "Learn from trusted commentators and Bible scholars. See how the passage connects to the full story of Scripture and points to Christ.",
+  },
+  application: {
+    id: "study_layer_respond",
+    icon: "heart-outline",
+    title: "Step 4: Respond",
+    description: "Let Scripture transform your life. Write a personal response, form a prayer, and identify one thing you'll do differently because of what God has shown you.",
+  },
+};
+
+function LayerCoachBanner({ activeTab, theme }: { activeTab: Tab; theme: typeof Colors.light }) {
+  const { hasSeenTutorial, markTutorialSeen } = useTutorial();
+  const tip = LAYER_COACH_TIPS[activeTab];
+  const tutId = tip.id as any;
+
+  if (hasSeenTutorial(tutId)) return null;
+
+  return (
+    <View style={{
+      backgroundColor: theme.accent + "10",
+      borderWidth: 1,
+      borderColor: theme.accent + "25",
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 16,
+      gap: 8,
+    }}>
+      <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10 }}>
+        <View style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: theme.accent + "20",
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+        }}>
+          <Ionicons name={tip.icon} size={16} color={theme.accent} />
+        </View>
+        <Text style={{ flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.accent }}>
+          {tip.title}
+        </Text>
+        <Pressable
+          onPress={() => markTutorialSeen(tutId)}
+          hitSlop={12}
+          style={{ padding: 4 }}
+        >
+          <Ionicons name="close" size={18} color={theme.textMuted} />
+        </Pressable>
+      </View>
+      <Text style={{ fontSize: 13, lineHeight: 20, fontFamily: "Inter_400Regular", color: theme.textSecondary }}>
+        {tip.description}
+      </Text>
     </View>
   );
 }
@@ -1870,11 +1960,16 @@ interface Commentator {
 }
 
 const COMMENTATORS: Commentator[] = [
+  { name: "Ellen G. White", dates: "1827\u20131915", tradition: "Adventist", isPublicDomain: false, externalUrl: "https://egwwritings.org" },
+  { name: "Uriah Smith", dates: "1832\u20131903", tradition: "Adventist Pioneer", isPublicDomain: true },
+  { name: "J.N. Andrews", dates: "1829\u20131883", tradition: "Adventist Pioneer", isPublicDomain: true },
+  { name: "John Loughborough", dates: "1832\u20131924", tradition: "Adventist Pioneer", isPublicDomain: true },
+  { name: "Joseph Bates", dates: "1792\u20131872", tradition: "Adventist Pioneer", isPublicDomain: true },
+  { name: "James White", dates: "1821\u20131881", tradition: "Adventist Pioneer", isPublicDomain: true },
   { name: "Matthew Henry", dates: "1662\u20131714", tradition: "Reformed", isPublicDomain: true },
   { name: "Jamieson, Fausset & Brown", dates: "1871", tradition: "Presbyterian", isPublicDomain: true },
   { name: "Adam Clarke", dates: "1762\u20131832", tradition: "Wesleyan", isPublicDomain: true },
   { name: "John Gill", dates: "1697\u20131771", tradition: "Baptist", isPublicDomain: true },
-  { name: "Ellen G. White", dates: "1827\u20131915", tradition: "Adventist", isPublicDomain: false, externalUrl: "https://egwwritings.org" },
 ];
 
 interface StrongEntry {
@@ -1946,16 +2041,8 @@ export default function StudyScreen() {
     showIntro?: string;
   }>();
   const validTabs: Tab[] = ["word", "context", "voices", "application"];
-  const [activeTab, setActiveTab] = useState<Tab>(
-    params.tab && validTabs.includes(params.tab as Tab) ? (params.tab as Tab) : "word"
-  );
+  const [activeTab, setActiveTabRaw] = useState<Tab>("word");
   const [showDepthPicker, setShowDepthPicker] = useState(false);
-
-  useEffect(() => {
-    if (params.tab && ["word", "context", "voices", "application"].includes(params.tab)) {
-      setActiveTab(params.tab as Tab);
-    }
-  }, [params.tab]);
 
   const paramBookId = params.bookId ? parseInt(params.bookId) : null;
   const paramChapter = params.chapter ? parseInt(params.chapter) : null;
@@ -1988,6 +2075,7 @@ export default function StudyScreen() {
   const handleSharedChapterChange = useCallback((ch: number | null) => {
     setSharedChapter(ch);
     setAutoCompletionShown(false);
+    setActiveTabRaw("word");
     if (ch !== null) {
       setShowDeepIntro(true);
     }
@@ -2029,6 +2117,28 @@ export default function StudyScreen() {
     () => new Set<string>((completions ?? []).map((c) => c.layer)),
     [completions]
   );
+
+  const setActiveTab = useCallback((tab: Tab) => {
+    if (isLayerAccessible(tab, completedLayers)) {
+      setActiveTabRaw(tab);
+    }
+  }, [completedLayers]);
+
+  useEffect(() => {
+    if (!isLayerAccessible(activeTab, completedLayers)) {
+      const firstAccessible = LAYER_ORDER.find(l => isLayerAccessible(l, completedLayers)) ?? "word";
+      setActiveTabRaw(firstAccessible);
+    }
+  }, [completedLayers, activeTab, bookId, chapter]);
+
+  useEffect(() => {
+    if (params.tab && validTabs.includes(params.tab as Tab)) {
+      const requested = params.tab as Tab;
+      if (isLayerAccessible(requested, completedLayers)) {
+        setActiveTabRaw(requested);
+      }
+    }
+  }, [params.tab, completedLayers]);
 
   const markCompleteMutation = useMutation({
     mutationFn: async (layer: string) => {
@@ -2449,11 +2559,13 @@ export default function StudyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: canTrack ? "transparent" : theme.border }]}>
+      <View
+        style={[styles.header, { paddingTop: topPad + 16, backgroundColor: theme.background, borderBottomColor: canTrack ? "transparent" : theme.border }]}
+      >
         {canTrack ? (
           <View style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const }}>
             <Pressable
-              onPress={() => router.push("/(tabs)/explore")}
+              onPress={() => safeGoBack(router, "/(tabs)/explore")}
               hitSlop={12}
               style={{ marginRight: 10, padding: 4 }}
               accessibilityLabel="Back to Study"
@@ -2481,7 +2593,7 @@ export default function StudyScreen() {
         ) : (
           <>
             <Pressable
-              onPress={() => router.push("/(tabs)/explore")}
+              onPress={() => safeGoBack(router, "/(tabs)/explore")}
               style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, marginBottom: 6 }}
               hitSlop={8}
             >
@@ -2556,14 +2668,19 @@ export default function StudyScreen() {
             {LAYER_ORDER.map((layer, i) => {
               const isActive = activeTab === layer;
               const isCompleted = completedLayers.has(layer);
+              const accessible = isLayerAccessible(layer, completedLayers);
+              const isLocked = !accessible && !isCompleted;
               return (
                 <React.Fragment key={layer}>
                   {i > 0 && (
                     <View style={{ flex: 1, height: 2, backgroundColor: completedLayers.has(LAYER_ORDER[i - 1]) ? theme.accent + "50" : theme.border, marginHorizontal: -1 }} />
                   )}
                   <Pressable
-                    onPress={() => setActiveTab(layer)}
-                    style={{ alignItems: "center" as const, width: 68 }}
+                    onPress={() => {
+                      if (isLocked) return;
+                      setActiveTab(layer);
+                    }}
+                    style={{ alignItems: "center" as const, width: 68, opacity: isLocked ? 0.35 : 1 }}
                     testID={`step-${layer}`}
                   >
                     <View style={{
@@ -2577,7 +2694,9 @@ export default function StudyScreen() {
                       justifyContent: "center" as const,
                       marginBottom: 5,
                     }}>
-                      {isCompleted && !isActive ? (
+                      {isLocked ? (
+                        <Ionicons name="lock-closed" size={12} color={theme.textMuted} />
+                      ) : isCompleted && !isActive ? (
                         <Ionicons name="checkmark" size={14} color={theme.accent} />
                       ) : (
                         <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isActive ? "#fff" : theme.textMuted }}>
@@ -2588,7 +2707,7 @@ export default function StudyScreen() {
                     <Text
                       style={{
                         fontSize: 11,
-                        color: isActive ? theme.accent : theme.textSecondary,
+                        color: isActive ? theme.accent : isLocked ? theme.textMuted : theme.textSecondary,
                         fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                       }}
                       numberOfLines={1}
@@ -2623,6 +2742,7 @@ export default function StudyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {canTrack && <LayerCoachBanner activeTab={activeTab} theme={theme} />}
         {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} isDeepSession={deepSession.active} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
         {activeTab === "context" && <ContextTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
         {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
@@ -2652,6 +2772,7 @@ export default function StudyScreen() {
           />
         )}
       </ScrollView>
+
     </View>
   );
 }

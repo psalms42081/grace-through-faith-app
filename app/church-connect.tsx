@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -97,16 +98,32 @@ export default function ChurchConnectScreen() {
     if (Platform.OS === "web") {
       setLocationStatus("loading");
       try {
+        if (!navigator.geolocation) {
+          Alert.alert("Location Unavailable", "Your browser does not support location services. Try searching by city name instead.");
+          setLocationStatus("denied");
+          return;
+        }
+        const timeoutId = setTimeout(() => {
+          setLocationStatus("denied");
+          Alert.alert("Location Timed Out", "Could not get your location. Make sure location is enabled in your browser settings, then try again. You can also search by city name.");
+        }, 8000);
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            clearTimeout(timeoutId);
             setUserLat(pos.coords.latitude);
             setUserLng(pos.coords.longitude);
             setLocationStatus("granted");
           },
-          () => {
+          (err) => {
+            clearTimeout(timeoutId);
             setLocationStatus("denied");
+            if (err.code === 1) {
+              Alert.alert("Location Denied", "You've blocked location access for this site. To enable it:\n\n• iPhone Safari: Settings → Safari → Location → Allow\n• Chrome: Tap the lock icon next to the URL → Location → Allow\n\nOr search by city name instead.");
+            } else {
+              Alert.alert("Location Error", "Could not determine your location. Try searching by city name instead.");
+            }
           },
-          { timeout: 10000 }
+          { timeout: 7000, enableHighAccuracy: false, maximumAge: 300000 }
         );
       } catch {
         setLocationStatus("denied");
@@ -315,6 +332,16 @@ export default function ChurchConnectScreen() {
                         {formatDistance(sel.distance)} away
                       </Text>
                     ) : null}
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${sel.lat},${sel.lng}`);
+                      }}
+                      style={[s.directionsBtn, { backgroundColor: theme.accent }]}
+                    >
+                      <Ionicons name="navigate-outline" size={15} color="#fff" />
+                      <Text style={[s.directionsBtnText, { fontFamily: "Inter_600SemiBold" }]}>Get Directions</Text>
+                    </Pressable>
                   </Pressable>
                 );
               })()}
@@ -437,4 +464,14 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
   },
   directoryFooterText: { fontSize: 13 },
+  directionsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  directionsBtnText: { color: "#fff", fontSize: 13 },
 });

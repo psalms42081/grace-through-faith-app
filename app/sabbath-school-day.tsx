@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -286,7 +287,7 @@ export default function SabbathSchoolDayScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
+        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} hitSlop={12} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </Pressable>
         <View style={styles.headerCenter}>
@@ -468,7 +469,7 @@ export default function SabbathSchoolDayScreen() {
                 </Pressable>
               ) : (
                 <Pressable
-                  onPress={() => router.back()}
+                  onPress={() => safeGoBack(router, "/(tabs)/explore")}
                   style={({ pressed }) => [
                     styles.completionPrimaryBtn,
                     { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
@@ -499,7 +500,7 @@ export default function SabbathSchoolDayScreen() {
 
               {hasNextDay && (
                 <Pressable
-                  onPress={() => router.back()}
+                  onPress={() => safeGoBack(router, "/(tabs)/explore")}
                   style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: "center" as const, paddingVertical: 6 })}
                 >
                   <Text style={[styles.completionLinkText, { color: theme.textMuted }]}>

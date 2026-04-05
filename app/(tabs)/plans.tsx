@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,133 +6,365 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  FlatList,
+  Modal,
+  Animated as RNAnimated,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
+import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import EmptyState from "@/components/ui/EmptyState";
-interface Plan {
+import { apiRequest } from "@/lib/query-client";
+import { navigateToScriptureByParts } from "@/lib/scripture-nav";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+const CARD_W = 170;
+const CARD_H = 220;
+const GOLD = "#C9933A";
+
+interface ReadingPlan {
   id: string;
   title: string;
-  description: string;
-  totalDays: number;
-  theme: string | null;
-  difficultyLevel: string | null;
-  estimatedMinutesPerDay: number | null;
+  description: string | null;
+  category: string | null;
+  coverImageUrl: string | null;
+  durationDays: number;
+  type: string;
+  status: string;
 }
 
-interface TodayResponse {
-  today: { dayNumber: number; title: string; passageLabel: string | null } | null;
-  enrollment?: { planId: string };
-  completedCount?: number;
-  totalDays?: number;
-  planComplete?: boolean;
-}
-
-interface PlanProgress {
+interface PlanDay {
+  id: string;
   planId: string;
-  isActive: boolean;
-  completedCount: number;
-  totalDays: number;
+  dayNumber: number;
+  bookId: number | null;
+  chapter: number | null;
+  verseStart: number | null;
+  verseEnd: number | null;
+  completedAt: string | null;
 }
 
-const TABS = ["Find Plans", "My Plans"] as const;
+interface PlanDetail extends ReadingPlan {
+  days: PlanDay[];
+}
 
-const PLAN_SECTIONS = [
-  {
-    id: "scripture",
-    label: "Scripture Journeys",
-    icon: "book" as const,
-    titles: ["Foundations of Faith", "The Life of Christ", "Women of the Bible", "Parables of Jesus", "Walking Through the Wilderness"],
-  },
-  {
-    id: "living",
-    label: "Christian Living",
-    icon: "leaf" as const,
-    titles: ["Wisdom for Life", "A Life of Prayer", "Grace Upon Grace", "Finding Peace", "Strength in Weakness", "Living in Hope"],
-  },
-  {
-    id: "encouragement",
-    label: "Encouragement",
-    icon: "heart" as const,
-    titles: ["Psalms of Comfort", "God's Unfailing Love"],
-  },
-  {
-    id: "adventist",
-    label: "Adventist Foundations",
-    icon: "shield" as const,
-    titles: ["The Sabbath Rest", "Daniel's Prophecies", "The Heavenly Sanctuary", "Death, Sleep, and Resurrection", "God's Health Blueprint"],
-  },
-];
+interface UserPlan {
+  id: string;
+  userId: string;
+  planId: string;
+  startDate: string;
+  currentDay: number;
+  completedAt: string | null;
+  notificationTime: string | null;
+  createdAt: string;
+  planTitle: string;
+  planDescription: string | null;
+  planCategory: string | null;
+  planCoverImageUrl: string | null;
+  planDurationDays: number;
+  planType: string;
+  planStatus: string;
+}
 
-const PLAN_GRADIENTS: [string, string][] = [
-  ["#C9933A", "#A87828"],
-  ["#2E7D32", "#1B5E20"],
-  ["#3B6CB5", "#2A4F8F"],
-  ["#8B5CF6", "#6D3BD4"],
-  ["#E8456B", "#C2185B"],
-  ["#FF6B35", "#E65100"],
-  ["#00796B", "#4DB6AC"],
-  ["#1565C0", "#42A5F5"],
-];
+interface BibleBook {
+  id: number;
+  name: string;
+  abbreviation: string;
+  testament: string;
+  chapterCount: number;
+  orderIndex: number;
+}
 
-const PLAN_ICONS: ("book" | "heart" | "leaf" | "star" | "sunny" | "flame" | "sparkles" | "diamond")[] =
-  ["book", "heart", "leaf", "star", "sunny", "flame", "sparkles", "diamond"];
+const TABS = ["Discover", "My Plans", "Today"] as const;
+type Tab = (typeof TABS)[number];
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  "Spiritual Growth": "trending-up",
+  "Mental Health": "heart",
+  "Identity": "person",
+  "Relationships": "people",
+  "Young Disciples": "flash",
+  "Seasonal": "calendar",
+  "Custom": "create",
+};
+
+const CATEGORY_GRADIENTS: Record<string, [string, string]> = {
+  "Spiritual Growth": ["#3B6CB5", "#1A3A6E"],
+  "Mental Health": ["#4ECCA3", "#2E8B6E"],
+  "Identity": ["#8B5CF6", "#5B2EA6"],
+  "Relationships": ["#E8456B", "#A02040"],
+  "Young Disciples": ["#FF6B35", "#C04A20"],
+  "Seasonal": ["#C9933A", "#8A6420"],
+  "Custom": ["#5B8DEF", "#3060B0"],
+};
+
+function getBookName(books: BibleBook[] | undefined, bookId: number | null): string {
+  if (!bookId || !books) return "";
+  const book = books.find((b) => b.id === bookId);
+  return book?.name ?? `Book ${bookId}`;
+}
+
+function formatScriptureRef(
+  books: BibleBook[] | undefined,
+  day: PlanDay
+): string {
+  const name = getBookName(books, day.bookId);
+  if (!name || !day.chapter) return `Day ${day.dayNumber}`;
+  let ref = `${name} ${day.chapter}`;
+  if (day.verseStart && day.verseEnd) {
+    ref += `:${day.verseStart}-${day.verseEnd}`;
+  } else if (day.verseStart) {
+    ref += `:${day.verseStart}`;
+  }
+  return ref;
+}
+
+function ProgressRing({
+  progress,
+  size = 56,
+  strokeWidth = 5,
+  color = GOLD,
+}: {
+  progress: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+}) {
+  const center = size / 2;
+  const radius = center - strokeWidth;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - Math.min(progress, 1));
+  const pct = Math.round(Math.min(progress, 1) * 100);
+
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={`${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          rotation={-90}
+          origin={`${center}, ${center}`}
+        />
+      </Svg>
+      <Text
+        style={{
+          position: "absolute",
+          fontSize: 13,
+          fontFamily: "Inter_600SemiBold",
+          color: "#fff",
+        }}
+      >
+        {pct}%
+      </Text>
+    </View>
+  );
+}
 
 export default function PlansScreen() {
   const { theme, isDark } = useTheme();
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Find Plans");
+  const qc = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const { data: plans } = useQuery<Plan[]>({
-    queryKey: ["/api/devotionals/plans?traditionKey=all"],
+  const [activeTab, setActiveTab] = useState<Tab>("Discover");
+  const [detailPlanId, setDetailPlanId] = useState<string | null>(null);
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showCustomSheet, setShowCustomSheet] = useState(false);
+  const [customBookId, setCustomBookId] = useState<number | null>(null);
+  const [customDuration, setCustomDuration] = useState(7);
+
+  const detailSlide = useRef(new RNAnimated.Value(0)).current;
+  const addSlide = useRef(new RNAnimated.Value(0)).current;
+  const customSlide = useRef(new RNAnimated.Value(0)).current;
+
+  const { data: plans } = useQuery<ReadingPlan[]>({
+    queryKey: ["/api/plans"],
   });
 
-  const { data: todayData } = useQuery<TodayResponse>({
-    queryKey: [`/api/devotionals/today?userId=${userId}`],
+  const { data: planDetail } = useQuery<PlanDetail>({
+    queryKey: ["/api/plans", detailPlanId],
+    enabled: !!detailPlanId,
   });
 
-  const { data: userProgress } = useQuery<PlanProgress[]>({
-    queryKey: [`/api/devotionals/user-progress?userId=${userId}`],
+  const { data: userPlans, refetch: refetchUserPlans } = useQuery<UserPlan[]>({
+    queryKey: ["/api/user-plans"],
     enabled: !!userId,
   });
 
-  const progressMap = new Map<string, PlanProgress>();
-  (userProgress || []).forEach((p) => progressMap.set(p.planId, p));
-
-  const hasActivePlan = todayData?.today != null;
-  const dayNumber = todayData?.today?.dayNumber ?? 0;
-  const progress = todayData?.completedCount ?? dayNumber;
-  const total = todayData?.totalDays ?? 1;
-  const progressPct = total > 0 ? Math.min((progress / total) * 100, 100) : 0;
-
-  const sectionTitleSet = new Set(PLAN_SECTIONS.flatMap((s) => s.titles.map((t) => t.toLowerCase())));
-
-  const groupedSections = PLAN_SECTIONS.map((section) => {
-    const sectionPlans = (plans || []).filter((p) =>
-      section.titles.some((t) => p.title.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(p.title.toLowerCase()))
-    );
-    return { ...section, plans: sectionPlans };
+  const { data: books } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
   });
 
-  const uncategorizedPlans = (plans || []).filter(
-    (p) => !sectionTitleSet.has(p.title.toLowerCase()) && !PLAN_SECTIONS.some((s) => s.titles.some((t) => p.title.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(p.title.toLowerCase())))
+  const invalidateAll = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["/api/user-plans"] });
+    qc.invalidateQueries({ queryKey: ["/api/plans"] });
+    qc.invalidateQueries({ queryKey: ["/api/spiritual-rings"] });
+  }, [qc]);
+
+  const enrollMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const res = await apiRequest("POST", "/api/user-plans", { planId });
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateAll();
+      closeDetail();
+      setActiveTab("My Plans");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err: Error) => {
+      Alert.alert("Error", err.message.includes("409") ? "You're already enrolled in this plan." : "Failed to start plan.");
+    },
+  });
+
+  const dayCompleteMutation = useMutation({
+    mutationFn: async ({ enrollmentId, day }: { enrollmentId: string; day: number }) => {
+      const res = await apiRequest("PATCH", `/api/user-plans/${enrollmentId}/day/${day}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateAll();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+  });
+
+  const customPlanMutation = useMutation({
+    mutationFn: async ({ bookId, durationDays }: { bookId: number; durationDays: number }) => {
+      const res = await apiRequest("POST", "/api/plans/custom", { bookId, durationDays });
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateAll();
+      closeCustom();
+      setActiveTab("My Plans");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: () => {
+      Alert.alert("Error", "Failed to create custom plan.");
+    },
+  });
+
+  const openDetail = useCallback((id: string) => {
+    setDetailPlanId(id);
+    RNAnimated.spring(detailSlide, {
+      toValue: 1,
+      damping: 20,
+      stiffness: 120,
+      useNativeDriver: true,
+    }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [detailSlide]);
+
+  const closeDetail = useCallback(() => {
+    RNAnimated.timing(detailSlide, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setDetailPlanId(null));
+  }, [detailSlide]);
+
+  const openAdd = useCallback(() => {
+    setShowAddSheet(true);
+    RNAnimated.spring(addSlide, {
+      toValue: 1,
+      damping: 20,
+      stiffness: 120,
+      useNativeDriver: true,
+    }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [addSlide]);
+
+  const closeAdd = useCallback(() => {
+    RNAnimated.timing(addSlide, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setShowAddSheet(false));
+  }, [addSlide]);
+
+  const openCustom = useCallback(() => {
+    closeAdd();
+    setTimeout(() => {
+      setShowCustomSheet(true);
+      RNAnimated.spring(customSlide, {
+        toValue: 1,
+        damping: 20,
+        stiffness: 120,
+        useNativeDriver: true,
+      }).start();
+    }, 250);
+  }, [customSlide, closeAdd]);
+
+  const closeCustom = useCallback(() => {
+    RNAnimated.timing(customSlide, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowCustomSheet(false);
+      setCustomBookId(null);
+      setCustomDuration(7);
+    });
+  }, [customSlide]);
+
+  const grouped = useMemo(() => {
+    if (!plans) return [];
+    const map = new Map<string, ReadingPlan[]>();
+    plans.forEach((p) => {
+      const cat = p.category || "Other";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(p);
+    });
+    return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+  }, [plans]);
+
+  const activePlans = useMemo(
+    () => (userPlans || []).filter((p) => !p.completedAt),
+    [userPlans]
   );
 
+  const todayItems = useMemo(() => {
+    if (!activePlans.length) return [];
+    return activePlans.map((up) => ({
+      enrollment: up,
+      dayNumber: up.currentDay,
+    }));
+  }, [activePlans]);
+
+  const bg = theme.background;
+  const cardBg = isDark ? theme.backgroundCard || "#1A1A1A" : "#FFFDF6";
+
   return (
-    <View style={[st.container, { backgroundColor: theme.background }]}>
+    <View style={[st.container, { backgroundColor: bg }]}>
       <View style={[st.header, { paddingTop: topPad + 12 }]}>
         <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Plans
+          Reading Plans
         </Text>
-
         <View style={st.tabRow}>
           {TABS.map((tab) => (
             <Pressable
@@ -140,8 +372,8 @@ export default function PlansScreen() {
               onPress={() => setActiveTab(tab)}
               style={[
                 st.tab,
-                activeTab === tab && { backgroundColor: theme.accent },
-                activeTab !== tab && { backgroundColor: isDark ? theme.backgroundCard : "#F0EBE0" },
+                activeTab === tab && { backgroundColor: GOLD },
+                activeTab !== tab && { backgroundColor: isDark ? "#1A1A1A" : "#F0EBE0" },
               ]}
             >
               <Text
@@ -160,350 +392,917 @@ export default function PlansScreen() {
         </View>
       </View>
 
-      {activeTab === "My Plans" ? (
-        <ScrollView
-          contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {hasActivePlan ? (
-            <Pressable
-              onPress={() => router.push(`/devotional-day?planId=${todayData?.enrollment?.planId || ""}`)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+      {activeTab === "Discover" && (
+        <DiscoverTab
+          grouped={grouped}
+          books={books}
+          theme={theme}
+          isDark={isDark}
+          bottomPad={bottomPad}
+          onPlanPress={openDetail}
+        />
+      )}
+
+      {activeTab === "My Plans" && (
+        <MyPlansTab
+          activePlans={activePlans}
+          books={books}
+          theme={theme}
+          isDark={isDark}
+          cardBg={cardBg}
+          bottomPad={bottomPad}
+          onSwitchTab={() => setActiveTab("Discover")}
+        />
+      )}
+
+      {activeTab === "Today" && (
+        <TodayTab
+          todayItems={todayItems}
+          books={books}
+          theme={theme}
+          isDark={isDark}
+          cardBg={cardBg}
+          bottomPad={bottomPad}
+          dayCompleteMutation={dayCompleteMutation}
+          onSwitchTab={() => setActiveTab("Discover")}
+        />
+      )}
+
+      <Pressable
+        onPress={openAdd}
+        style={({ pressed }) => [
+          st.fab,
+          { bottom: bottomPad + 100, opacity: pressed ? 0.85 : 1 },
+        ]}
+        testID="plans-fab"
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </Pressable>
+
+      {detailPlanId && (
+        <PlanDetailSheet
+          plan={planDetail}
+          books={books}
+          slide={detailSlide}
+          enrolling={enrollMutation.isPending}
+          onClose={closeDetail}
+          onStart={() => enrollMutation.mutate(detailPlanId)}
+          theme={theme}
+          isDark={isDark}
+        />
+      )}
+
+      {showAddSheet && (
+        <AddPlanSheet
+          slide={addSlide}
+          onClose={closeAdd}
+          onReadyMade={() => {
+            closeAdd();
+            setActiveTab("Discover");
+          }}
+          onCustom={openCustom}
+          theme={theme}
+          isDark={isDark}
+        />
+      )}
+
+      {showCustomSheet && (
+        <CustomPlanSheet
+          slide={customSlide}
+          books={books}
+          selectedBookId={customBookId}
+          duration={customDuration}
+          creating={customPlanMutation.isPending}
+          onSelectBook={setCustomBookId}
+          onSelectDuration={setCustomDuration}
+          onClose={closeCustom}
+          onCreate={() => {
+            if (customBookId) {
+              customPlanMutation.mutate({ bookId: customBookId, durationDays: customDuration });
+            }
+          }}
+          theme={theme}
+          isDark={isDark}
+        />
+      )}
+    </View>
+  );
+}
+
+function DiscoverTab({
+  grouped,
+  books,
+  theme,
+  isDark,
+  bottomPad,
+  onPlanPress,
+}: {
+  grouped: { category: string; items: ReadingPlan[] }[];
+  books: BibleBook[] | undefined;
+  theme: any;
+  isDark: boolean;
+  bottomPad: number;
+  onPlanPress: (id: string) => void;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: bottomPad + 140 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {grouped.map(({ category, items }) => (
+        <View key={category} style={st.section}>
+          <View style={st.sectionHeader}>
+            <Ionicons
+              name={CATEGORY_ICONS[category] || "library"}
+              size={18}
+              color={GOLD}
+            />
+            <Text
+              style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}
             >
-              <LinearGradient
-                colors={["#C9933A", "#A87828"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={st.activePlanCard}
-              >
-                <View style={st.activePlanBadge}>
-                  <Ionicons name="checkmark-circle" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={[st.activePlanBadgeText, { fontFamily: "Inter_500Medium" }]}>IN PROGRESS</Text>
-                </View>
-                <Text style={[st.activePlanTitle, { fontFamily: "Lora_700Bold" }]}>
-                  {todayData?.today?.title || "Current Plan"}
-                </Text>
-                <Text style={[st.activePlanDay, { fontFamily: "Inter_400Regular" }]}>
-                  Day {progress} of {total} completed
-                </Text>
-                <View style={st.activePlanProgressTrack}>
-                  <View style={[st.activePlanProgressFill, { width: `${progressPct}%` as any }]} />
-                </View>
-                <View style={st.activePlanFooter}>
-                  <Text style={[st.activePlanCta, { fontFamily: "Inter_600SemiBold" }]}>
-                    Continue Reading
-                  </Text>
-                  <Ionicons name="arrow-forward" size={16} color="#fff" />
-                </View>
-              </LinearGradient>
-            </Pressable>
-          ) : (
-            <View style={[st.emptyState, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-              <EmptyState
-                icon="book-outline"
-                title="No Active Plans"
-                description="Start a devotional plan to build a daily reading habit"
-                actionLabel="Browse Plans"
-                onAction={() => setActiveTab("Find Plans")}
-              />
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[st.content, { paddingBottom: bottomPad + 120 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {plans && plans.length === 0 && (
-            <View style={st.noResults}>
-              <Ionicons name="library-outline" size={32} color={theme.textMuted} />
-              <Text style={[st.noResultsText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No devotional plans available yet
-              </Text>
-            </View>
-          )}
-          {groupedSections.map((section, si) => {
-            if (section.plans.length === 0) return null;
-            return (
-              <View key={section.id} style={st.sectionBlock}>
-                <View style={st.sectionHeaderRow}>
-                  <Ionicons name={section.icon} size={18} color={theme.accent} />
-                  <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                    {section.label}
-                  </Text>
-                </View>
-                <View style={st.planGrid}>
-                  {section.plans.map((plan, i) => {
-                    const gi = si * 4 + i;
-                    const pp = progressMap.get(plan.id);
-                    const isCompleted = pp && pp.completedCount >= pp.totalDays && pp.totalDays > 0;
-                    const isInProgress = pp && !isCompleted && pp.completedCount > 0;
-                    return (
-                      <Pressable
-                        key={plan.id}
-                        onPress={() => router.push("/devotionals")}
-                        style={({ pressed }) => [st.planCardWrap, { opacity: pressed ? 0.85 : 1 }]}
-                      >
-                        <LinearGradient
-                          colors={PLAN_GRADIENTS[gi % PLAN_GRADIENTS.length]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={st.planCard}
-                        >
-                          <Ionicons
-                            name={PLAN_ICONS[gi % PLAN_ICONS.length]}
-                            size={36}
-                            color="rgba(255,255,255,0.15)"
-                            style={st.planCardBgIcon}
-                          />
-                          <View style={st.planCardContent}>
-                            <Text style={[st.planCardTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                              {plan.title}
-                            </Text>
-                            {isCompleted ? (
-                              <View style={st.progressRow}>
-                                <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-                                <Text style={[st.progressText, { fontFamily: "Inter_600SemiBold", color: "#2E7D32" }]}>Completed</Text>
-                              </View>
-                            ) : isInProgress ? (
-                              <View style={st.progressRow}>
-                                <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
-                                  Day {pp.completedCount + 1} of {pp.totalDays}
-                                </Text>
-                                <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
-                              </View>
-                            ) : (
-                              <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
-                                {plan.totalDays} days
-                                {plan.estimatedMinutesPerDay ? ` \u00b7 ~${plan.estimatedMinutesPerDay} min` : ""}
-                              </Text>
-                            )}
-                          </View>
-                        </LinearGradient>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })}
-
-          {uncategorizedPlans.length > 0 && (
-            <View style={st.sectionBlock}>
-              <View style={st.sectionHeaderRow}>
-                <Ionicons name="sparkles" size={18} color={theme.accent} />
-                <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-                  More Plans
-                </Text>
-              </View>
-              <View style={st.planGrid}>
-                {uncategorizedPlans.map((plan, i) => {
-                  const pp = progressMap.get(plan.id);
-                  const isCompleted = pp && pp.completedCount >= pp.totalDays && pp.totalDays > 0;
-                  const isInProgress = pp && !isCompleted && pp.completedCount > 0;
-                  return (
-                    <Pressable
-                      key={plan.id}
-                      onPress={() => router.push("/devotionals")}
-                      style={({ pressed }) => [st.planCardWrap, { opacity: pressed ? 0.85 : 1 }]}
-                    >
-                      <LinearGradient
-                        colors={PLAN_GRADIENTS[(i + 3) % PLAN_GRADIENTS.length]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={st.planCard}
-                      >
-                        <Ionicons
-                          name={PLAN_ICONS[(i + 3) % PLAN_ICONS.length]}
-                          size={36}
-                          color="rgba(255,255,255,0.15)"
-                          style={st.planCardBgIcon}
-                        />
-                        <View style={st.planCardContent}>
-                          <Text style={[st.planCardTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                            {plan.title}
-                          </Text>
-                          {isCompleted ? (
-                            <View style={st.progressRow}>
-                              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-                              <Text style={[st.progressText, { fontFamily: "Inter_600SemiBold", color: "#2E7D32" }]}>Completed</Text>
-                            </View>
-                          ) : isInProgress ? (
-                            <View style={st.progressRow}>
-                              <Text style={[st.progressText, { fontFamily: "Inter_500Medium" }]}>
-                                Day {pp.completedCount + 1} of {pp.totalDays}
-                              </Text>
-                              <Text style={[st.continueLabel, { fontFamily: "Inter_600SemiBold" }]}>Continue</Text>
-                            </View>
-                          ) : (
-                            <Text style={[st.planCardMeta, { fontFamily: "Inter_400Regular" }]}>
-                              {plan.totalDays} days
-                              {plan.estimatedMinutesPerDay ? ` \u00b7 ~${plan.estimatedMinutesPerDay} min` : ""}
-                            </Text>
-                          )}
-                        </View>
-                      </LinearGradient>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          <View style={st.featuredSection}>
-            <Text style={[st.featuredTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-              Why Read a Plan?
+              {category}
             </Text>
-            <View style={[st.featuredCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-              {[
-                { icon: "calendar" as const, title: "Build consistency", desc: "Daily readings create a habit" },
-                { icon: "layers" as const, title: "Go deeper", desc: "Structured study on key topics" },
-                { icon: "people" as const, title: "Stay accountable", desc: "Track your progress over time" },
-              ].map((item, i) => (
-                <View key={i} style={[st.benefitRow, i < 2 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border }]}>
-                  <View style={[st.benefitIcon, { backgroundColor: theme.accent + "15" }]}>
-                    <Ionicons name={item.icon} size={18} color={theme.accent} />
-                  </View>
-                  <View style={st.benefitInfo}>
-                    <Text style={[st.benefitTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[st.benefitDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {item.desc}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+          </View>
+          <FlatList
+            horizontal
+            data={items}
+            keyExtractor={(p) => p.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}
+            renderItem={({ item }) => {
+              const grad = CATEGORY_GRADIENTS[item.category || ""] || ["#3B6CB5", "#1A3A6E"];
+              return (
+                <Pressable
+                  onPress={() => onPlanPress(item.id)}
+                  style={({ pressed }) => [
+                    st.cardShadow,
+                    { opacity: pressed ? 0.85 : 1, width: CARD_W, transform: [{ scale: pressed ? 0.97 : 1 }] },
+                  ]}
+                  testID={`plan-card-${item.id}`}
+                >
+                  <LinearGradient
+                    colors={grad}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={st.discoverCard}
+                  >
+                    <View style={st.cardInnerBorder}>
+                      <View style={st.durationBadge}>
+                        <Text style={st.durationText}>{item.durationDays} days</Text>
+                      </View>
+                      <Ionicons
+                        name={CATEGORY_ICONS[item.category || ""] || "book"}
+                        size={64}
+                        color="rgba(255,255,255,0.07)"
+                        style={st.cardBgIcon}
+                      />
+                      <LinearGradient
+                        colors={["transparent", "rgba(0,0,0,0.48)"]}
+                        style={st.cardGradientOverlay}
+                      >
+                        <Text
+                          style={[st.cardTitle, { fontFamily: "Lora_700Bold" }]}
+                          numberOfLines={3}
+                        >
+                          {item.title}
+                        </Text>
+                        {item.description ? (
+                          <Text style={st.cardDesc} numberOfLines={2}>
+                            {item.description}
+                          </Text>
+                        ) : null}
+                      </LinearGradient>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+function MyPlansTab({
+  activePlans,
+  books,
+  theme,
+  isDark,
+  cardBg,
+  bottomPad,
+  onSwitchTab,
+}: {
+  activePlans: UserPlan[];
+  books: BibleBook[] | undefined;
+  theme: any;
+  isDark: boolean;
+  cardBg: string;
+  bottomPad: number;
+  onSwitchTab: () => void;
+}) {
+  const qc2 = useQueryClient();
+  const planDetails = useMemo(() => {
+    const map: Record<string, PlanDetail | undefined> = {};
+    activePlans.forEach((up) => {
+      const cached = qc2.getQueryData<PlanDetail>(["/api/plans", up.planId]);
+      if (cached) map[up.planId] = cached;
+    });
+    return map;
+  }, [activePlans, qc2]);
+
+  if (activePlans.length === 0) {
+    return (
+      <View style={st.emptyContainer}>
+        <View style={[st.emptyIcon, { backgroundColor: GOLD + "15" }]}>
+          <Ionicons name="book-outline" size={32} color={GOLD} />
+        </View>
+        <Text style={[st.emptyTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          No Active Plans
+        </Text>
+        <Text style={[st.emptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Start a reading plan to build a daily Scripture habit
+        </Text>
+        <Pressable
+          onPress={onSwitchTab}
+          style={[st.emptyBtn, { backgroundColor: GOLD }]}
+        >
+          <Text style={[st.emptyBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+            Browse Plans
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ padding: 20, paddingBottom: bottomPad + 140, gap: 16 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {activePlans.map((up) => {
+        const progress = up.currentDay / up.planDurationDays;
+        const detail = planDetails?.[up.planId];
+        const currentDayData = detail?.days?.find((d) => d.dayNumber === up.currentDay);
+        const todayRef = currentDayData
+          ? formatScriptureRef(books, currentDayData)
+          : `Day ${up.currentDay}`;
+
+        return (
+          <View key={up.id} style={[st.myPlanCard, { backgroundColor: cardBg }]}>
+            <View style={st.myPlanTop}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[st.myPlanTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}
+                  numberOfLines={2}
+                >
+                  {up.planTitle}
+                </Text>
+                <Text style={[st.myPlanMeta, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Day {up.currentDay} of {up.planDurationDays}
+                </Text>
+              </View>
+              <ProgressRing progress={progress} />
+            </View>
+            <View style={[st.myPlanDivider, { backgroundColor: theme.border }]} />
+            <View style={st.myPlanBottom}>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.todayLabel, { color: GOLD, fontFamily: "Inter_500Medium" }]}>
+                  Today's Reading
+                </Text>
+                <Text
+                  style={[st.todayRef, { color: theme.text, fontFamily: "Inter_400Regular" }]}
+                  numberOfLines={1}
+                >
+                  {todayRef}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  if (currentDayData?.bookId && currentDayData?.chapter) {
+                    navigateToScriptureByParts(
+                      currentDayData.bookId,
+                      currentDayData.chapter,
+                      currentDayData.verseStart || undefined
+                    );
+                  }
+                }}
+                style={[st.resumeBtn, { backgroundColor: GOLD }]}
+              >
+                <Text style={[st.resumeBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Resume
+                </Text>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+              </Pressable>
             </View>
           </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+function TodayTab({
+  todayItems,
+  books,
+  theme,
+  isDark,
+  cardBg,
+  bottomPad,
+  dayCompleteMutation,
+  onSwitchTab,
+}: {
+  todayItems: { enrollment: UserPlan; dayNumber: number }[];
+  books: BibleBook[] | undefined;
+  theme: any;
+  isDark: boolean;
+  cardBg: string;
+  bottomPad: number;
+  dayCompleteMutation: any;
+  onSwitchTab: () => void;
+}) {
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const rollbackCompletion = useCallback((id: string) => {
+    setCompletedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const qc3 = useQueryClient();
+  const allDetails = useMemo(() => {
+    const map: Record<string, PlanDetail | undefined> = {};
+    todayItems.forEach((item) => {
+      const cached = qc3.getQueryData<PlanDetail>(["/api/plans", item.enrollment.planId]);
+      if (cached) map[item.enrollment.planId] = cached;
+    });
+    return map;
+  }, [todayItems, qc3]);
+
+  if (todayItems.length === 0) {
+    return (
+      <View style={st.emptyContainer}>
+        <View style={[st.emptyIcon, { backgroundColor: GOLD + "15" }]}>
+          <Ionicons name="today-outline" size={32} color={GOLD} />
+        </View>
+        <Text style={[st.emptyTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Nothing for Today
+        </Text>
+        <Text style={[st.emptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Enroll in a reading plan to see daily readings here
+        </Text>
+        <Pressable
+          onPress={onSwitchTab}
+          style={[st.emptyBtn, { backgroundColor: GOLD }]}
+        >
+          <Text style={[st.emptyBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+            Discover Plans
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ padding: 20, paddingBottom: bottomPad + 140, gap: 12 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {todayItems.map((item) => {
+        const detail = allDetails?.[item.enrollment.planId];
+        const dayData = detail?.days?.find((d) => d.dayNumber === item.dayNumber);
+        const ref = dayData ? formatScriptureRef(books, dayData) : `Day ${item.dayNumber}`;
+        const isDone = completedIds.has(item.enrollment.id);
+
+        return (
+          <View key={item.enrollment.id} style={[st.todayCard, { backgroundColor: cardBg }]}>
+            <Pressable
+              onPress={() => {
+                if (isDone) return;
+                const eid = item.enrollment.id;
+                setCompletedIds((prev) => new Set(prev).add(eid));
+                dayCompleteMutation.mutate(
+                  { enrollmentId: eid, day: item.dayNumber },
+                  { onError: () => rollbackCompletion(eid) }
+                );
+              }}
+              style={[
+                st.checkCircle,
+                isDone && { backgroundColor: GOLD, borderColor: GOLD },
+                !isDone && { borderColor: theme.textMuted },
+              ]}
+              testID={`today-check-${item.enrollment.id}`}
+            >
+              {isDone && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (dayData?.bookId && dayData?.chapter) {
+                  navigateToScriptureByParts(
+                    dayData.bookId,
+                    dayData.chapter,
+                    dayData.verseStart || undefined
+                  );
+                }
+              }}
+              style={{ flex: 1 }}
+            >
+              <Text
+                style={[
+                  st.todayPlanName,
+                  { color: theme.textMuted, fontFamily: "Inter_500Medium" },
+                ]}
+                numberOfLines={1}
+              >
+                {item.enrollment.planTitle}
+              </Text>
+              <Text
+                style={[
+                  st.todayScripture,
+                  { color: theme.text, fontFamily: "Inter_600SemiBold" },
+                  isDone && { textDecorationLine: "line-through", opacity: 0.5 },
+                ]}
+                numberOfLines={1}
+              >
+                {ref}
+              </Text>
+              <Text
+                style={[st.todayDayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+              >
+                Day {item.dayNumber} of {item.enrollment.planDurationDays}
+              </Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+function PlanDetailSheet({
+  plan,
+  books,
+  slide,
+  enrolling,
+  onClose,
+  onStart,
+  theme,
+  isDark,
+}: {
+  plan: PlanDetail | undefined;
+  books: BibleBook[] | undefined;
+  slide: RNAnimated.Value;
+  enrolling: boolean;
+  onClose: () => void;
+  onStart: () => void;
+  theme: any;
+  isDark: boolean;
+}) {
+  const translateY = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [600, 0],
+  });
+  const backdropOpacity = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.6],
+  });
+  const cardBg = isDark ? "#1A1A1A" : "#FFFDF6";
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <RNAnimated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: backdropOpacity }]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </RNAnimated.View>
+      <RNAnimated.View
+        style={[
+          st.detailSheet,
+          { backgroundColor: cardBg, transform: [{ translateY }] },
+        ]}
+      >
+        <View style={st.sheetHandle} />
+        {!plan ? (
+          <ActivityIndicator color={GOLD} style={{ marginTop: 40 }} />
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
+            <Text
+              style={[st.detailTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}
+            >
+              {plan.title}
+            </Text>
+            <View style={st.detailMeta}>
+              <View style={[st.detailBadge, { backgroundColor: GOLD + "20" }]}>
+                <Ionicons name="calendar" size={14} color={GOLD} />
+                <Text style={[st.detailBadgeText, { color: GOLD, fontFamily: "Inter_500Medium" }]}>
+                  {plan.durationDays} days
+                </Text>
+              </View>
+              {plan.category && (
+                <View style={[st.detailBadge, { backgroundColor: GOLD + "20" }]}>
+                  <Ionicons
+                    name={CATEGORY_ICONS[plan.category] || "library"}
+                    size={14}
+                    color={GOLD}
+                  />
+                  <Text style={[st.detailBadgeText, { color: GOLD, fontFamily: "Inter_500Medium" }]}>
+                    {plan.category}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {plan.description && (
+              <Text style={[st.detailDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                {plan.description}
+              </Text>
+            )}
+            <Text style={[st.dayListTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Daily Readings
+            </Text>
+            {plan.days.map((day) => (
+              <View key={day.id} style={[st.dayRow, { borderBottomColor: theme.border }]}>
+                <View style={[st.dayNum, { backgroundColor: GOLD + "15" }]}>
+                  <Text style={[st.dayNumText, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+                    {day.dayNumber}
+                  </Text>
+                </View>
+                <Text style={[st.dayRef, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                  {formatScriptureRef(books, day)}
+                </Text>
+              </View>
+            ))}
+            <Pressable
+              onPress={onStart}
+              disabled={enrolling}
+              style={[st.startBtn, { backgroundColor: GOLD, opacity: enrolling ? 0.7 : 1 }]}
+              testID="plan-start-btn"
+            >
+              {enrolling ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[st.startBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Start Plan
+                </Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        )}
+      </RNAnimated.View>
+    </View>
+  );
+}
+
+function AddPlanSheet({
+  slide,
+  onClose,
+  onReadyMade,
+  onCustom,
+  theme,
+  isDark,
+}: {
+  slide: RNAnimated.Value;
+  onClose: () => void;
+  onReadyMade: () => void;
+  onCustom: () => void;
+  theme: any;
+  isDark: boolean;
+}) {
+  const translateY = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [400, 0],
+  });
+  const backdropOpacity = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.6],
+  });
+  const cardBg = isDark ? "#1A1A1A" : "#FFFDF6";
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <RNAnimated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: backdropOpacity }]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </RNAnimated.View>
+      <RNAnimated.View
+        style={[st.addSheet, { backgroundColor: cardBg, transform: [{ translateY }] }]}
+      >
+        <View style={st.sheetHandle} />
+        <Text style={[st.addSheetTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Add a Plan
+        </Text>
+        <Pressable
+          onPress={onReadyMade}
+          style={[st.addOption, { backgroundColor: isDark ? "#222" : "#F5F0E8" }]}
+        >
+          <View style={[st.addOptionIcon, { backgroundColor: GOLD + "20" }]}>
+            <Ionicons name="library" size={22} color={GOLD} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.addOptionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Ready-Made Plans
+            </Text>
+            <Text style={[st.addOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Browse curated plans on key topics
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+        <Pressable
+          onPress={onCustom}
+          style={[st.addOption, { backgroundColor: isDark ? "#222" : "#F5F0E8" }]}
+        >
+          <View style={[st.addOptionIcon, { backgroundColor: GOLD + "20" }]}>
+            <Ionicons name="create" size={22} color={GOLD} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.addOptionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Custom Plan
+            </Text>
+            <Text style={[st.addOptionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Pick a Bible book and set your own pace
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+      </RNAnimated.View>
+    </View>
+  );
+}
+
+function CustomPlanSheet({
+  slide,
+  books,
+  selectedBookId,
+  duration,
+  creating,
+  onSelectBook,
+  onSelectDuration,
+  onClose,
+  onCreate,
+  theme,
+  isDark,
+}: {
+  slide: RNAnimated.Value;
+  books: BibleBook[] | undefined;
+  selectedBookId: number | null;
+  duration: number;
+  creating: boolean;
+  onSelectBook: (id: number) => void;
+  onSelectDuration: (d: number) => void;
+  onClose: () => void;
+  onCreate: () => void;
+  theme: any;
+  isDark: boolean;
+}) {
+  const translateY = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [700, 0],
+  });
+  const backdropOpacity = slide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.6],
+  });
+  const cardBg = isDark ? "#1A1A1A" : "#FFFDF6";
+  const DURATIONS = [7, 14, 21, 30];
+  const sortedBooks = useMemo(
+    () => [...(books || [])].sort((a, b) => a.orderIndex - b.orderIndex),
+    [books]
+  );
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <RNAnimated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: backdropOpacity }]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </RNAnimated.View>
+      <RNAnimated.View
+        style={[
+          st.customSheet,
+          { backgroundColor: cardBg, transform: [{ translateY }] },
+        ]}
+      >
+        <View style={st.sheetHandle} />
+        <Text style={[st.addSheetTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          Create Custom Plan
+        </Text>
+
+        <Text style={[st.customLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+          Choose a Book
+        </Text>
+        <ScrollView
+          style={{ maxHeight: 260 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ gap: 4 }}
+        >
+          {sortedBooks.map((book) => (
+            <Pressable
+              key={book.id}
+              onPress={() => {
+                onSelectBook(book.id);
+                Haptics.selectionAsync();
+              }}
+              style={[
+                st.bookRow,
+                selectedBookId === book.id && { backgroundColor: GOLD + "20" },
+                selectedBookId !== book.id && {
+                  backgroundColor: isDark ? "#222" : "#F5F0E8",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  st.bookName,
+                  {
+                    color: selectedBookId === book.id ? GOLD : theme.text,
+                    fontFamily: selectedBookId === book.id ? "Inter_600SemiBold" : "Inter_400Regular",
+                  },
+                ]}
+              >
+                {book.name}
+              </Text>
+              <Text style={[st.bookChapters, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {book.chapterCount} ch
+              </Text>
+              {selectedBookId === book.id && (
+                <Ionicons name="checkmark-circle" size={18} color={GOLD} />
+              )}
+            </Pressable>
+          ))}
         </ScrollView>
-      )}
+
+        <Text style={[st.customLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginTop: 16 }]}>
+          Duration
+        </Text>
+        <View style={st.durationRow}>
+          {DURATIONS.map((d) => (
+            <Pressable
+              key={d}
+              onPress={() => {
+                onSelectDuration(d);
+                Haptics.selectionAsync();
+              }}
+              style={[
+                st.durationPill,
+                duration === d
+                  ? { backgroundColor: GOLD }
+                  : { backgroundColor: isDark ? "#222" : "#F5F0E8" },
+              ]}
+            >
+              <Text
+                style={[
+                  st.durationPillText,
+                  {
+                    color: duration === d ? "#fff" : theme.text,
+                    fontFamily: duration === d ? "Inter_600SemiBold" : "Inter_400Regular",
+                  },
+                ]}
+              >
+                {d} days
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          onPress={onCreate}
+          disabled={!selectedBookId || creating}
+          style={[
+            st.startBtn,
+            {
+              backgroundColor: GOLD,
+              opacity: !selectedBookId || creating ? 0.5 : 1,
+              marginTop: 20,
+            },
+          ]}
+          testID="custom-plan-create-btn"
+        >
+          {creating ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={[st.startBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+              Generate Plan
+            </Text>
+          )}
+        </Pressable>
+      </RNAnimated.View>
     </View>
   );
 }
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 8 },
   title: { fontSize: 28, marginBottom: 16 },
-  tabRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 8,
-  },
-  tab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
-  },
+  tabRow: { flexDirection: "row", gap: 10, marginBottom: 8 },
+  tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 },
   tabText: { fontSize: 14 },
-  content: { paddingHorizontal: 20, paddingTop: 12 },
-  sectionBlock: {
-    marginBottom: 24,
-  },
-  sectionHeaderRow: {
+
+  section: { marginTop: 20 },
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingHorizontal: 20,
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
+  sectionTitle: { fontSize: 18 },
+
+  cardShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  planGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  planCardWrap: {
-    width: "47%" as any,
-    flexGrow: 1,
-  },
-  planCard: {
+  discoverCard: {
+    width: CARD_W,
+    height: CARD_H,
     borderRadius: 18,
-    padding: 18,
-    minHeight: 180,
+    overflow: "hidden",
     justifyContent: "flex-end",
+  },
+  cardInnerBorder: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
     overflow: "hidden",
   },
-  planCardBgIcon: {
+  cardBgIcon: { position: "absolute", top: 16, right: -8 },
+  cardGradientOverlay: {
     position: "absolute",
-    top: 18,
-    right: 18,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: CARD_H * 0.55,
+    justifyContent: "flex-end",
+    padding: 14,
   },
-  planCardContent: { gap: 4 },
-  progressRow: {
+  cardTitle: { color: "#fff", fontSize: 15, lineHeight: 20 },
+  cardDesc: { color: "rgba(255,255,255,0.7)", fontSize: 11, lineHeight: 15, marginTop: 4, fontFamily: "Inter_400Regular" },
+  durationBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 2,
+  },
+  durationText: { color: "#fff", fontSize: 11, fontFamily: "Inter_500Medium" },
+
+  myPlanCard: {
+    borderRadius: 20,
+    padding: 20,
+  },
+  myPlanTop: { flexDirection: "row", alignItems: "center", gap: 16 },
+  myPlanTitle: { fontSize: 18, marginBottom: 4 },
+  myPlanMeta: { fontSize: 13 },
+  myPlanDivider: { height: StyleSheet.hairlineWidth, marginVertical: 14 },
+  myPlanBottom: { flexDirection: "row", alignItems: "center", gap: 12 },
+  todayLabel: { fontSize: 11, letterSpacing: 0.5, marginBottom: 2 },
+  todayRef: { fontSize: 15 },
+  resumeBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  progressText: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.85)",
-  },
-  continueLabel: {
-    fontSize: 13,
-    color: "#fff",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  planCardTitle: { color: "#fff", fontSize: 16, lineHeight: 22 },
-  planCardMeta: { color: "rgba(255,255,255,0.6)", fontSize: 12 },
-  activePlanCard: {
-    borderRadius: 22,
-    padding: 24,
-    gap: 12,
-  },
-  activePlanBadge: {
+  resumeBtnText: { color: "#fff", fontSize: 14 },
+
+  todayCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 14,
+    borderRadius: 16,
+    padding: 16,
   },
-  activePlanBadgeText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  activePlanTitle: {
-    color: "#fff",
-    fontSize: 22,
-  },
-  activePlanDay: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-  },
-  activePlanProgressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    overflow: "hidden",
-  },
-  activePlanProgressFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#fff",
-  },
-  activePlanFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  activePlanCta: {
-    color: "#fff",
-    fontSize: 15,
-  },
-  emptyState: {
+  checkCircle: {
+    width: 44,
+    height: 44,
     borderRadius: 22,
-    padding: 32,
+    borderWidth: 2,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  todayPlanName: { fontSize: 12, marginBottom: 2 },
+  todayScripture: { fontSize: 16, marginBottom: 2 },
+  todayDayLabel: { fontSize: 12 },
+
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
     gap: 12,
   },
   emptyIcon: {
@@ -514,42 +1313,144 @@ const st = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 20 },
-  emptySub: { fontSize: 14, textAlign: "center", lineHeight: 20, maxWidth: 260 },
-  emptyBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 8,
-  },
+  emptyTitle: { fontSize: 20, textAlign: "center" },
+  emptySub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  emptyBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24, marginTop: 8 },
   emptyBtnText: { color: "#fff", fontSize: 15 },
-  noResults: {
-    padding: 40,
+
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: GOLD,
     alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
-  noResultsText: { fontSize: 14 },
-  featuredSection: {
-    marginTop: 32,
+
+  detailSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: "85%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 100,
   },
-  featuredTitle: { fontSize: 22, marginBottom: 14 },
-  featuredCard: {
-    borderRadius: 20,
-    overflow: "hidden",
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(128,128,128,0.3)",
+    alignSelf: "center",
+    marginBottom: 16,
   },
-  benefitRow: {
+  detailTitle: { fontSize: 24, marginBottom: 12 },
+  detailMeta: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  detailBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 18,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
   },
-  benefitIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  detailBadgeText: { fontSize: 13 },
+  detailDesc: { fontSize: 15, lineHeight: 22, marginBottom: 20 },
+  dayListTitle: { fontSize: 16, marginBottom: 12 },
+  dayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dayNum: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-  benefitInfo: { flex: 1 },
-  benefitTitle: { fontSize: 15, marginBottom: 2 },
-  benefitDesc: { fontSize: 13 },
+  dayNumText: { fontSize: 13 },
+  dayRef: { fontSize: 15, flex: 1 },
+  startBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 24,
+    marginTop: 24,
+  },
+  startBtnText: { color: "#fff", fontSize: 16 },
+
+  addSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 100,
+  },
+  addSheetTitle: { fontSize: 22, marginBottom: 20 },
+  addOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  addOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addOptionTitle: { fontSize: 16, marginBottom: 2 },
+  addOptionDesc: { fontSize: 13 },
+
+  customSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: "90%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 100,
+  },
+  customLabel: { fontSize: 13, letterSpacing: 0.5, marginBottom: 8, textTransform: "uppercase" },
+  bookRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 10,
+  },
+  bookName: { flex: 1, fontSize: 15 },
+  bookChapters: { fontSize: 13 },
+  durationRow: { flexDirection: "row", gap: 10 },
+  durationPill: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  durationPillText: { fontSize: 14 },
 });

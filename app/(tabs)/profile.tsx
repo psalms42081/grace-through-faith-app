@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  Share,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
@@ -23,14 +24,7 @@ import { useProStatus } from "@/contexts/ProContext";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { setLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { apiRequest, queryClient } from "@/lib/query-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import BibleHeatmap from "@/components/profile/BibleHeatmap";
-import GrowthAnalytics from "@/components/profile/GrowthAnalytics";
-import LanguageSettings from "@/components/profile/LanguageSettings";
-import NotificationSettings from "@/components/profile/NotificationSettings";
-import type { BookMapEntry } from "@/components/profile/BibleHeatmap";
 
 class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -71,12 +65,22 @@ interface GrowthData {
   deepStudyMinutes: number;
   totalSessions: number;
   wordsLearned: number;
-  bibleMap: BookMapEntry[];
   booksExplored: number;
   totalBooks: number;
 }
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+const BADGES = [
+  { id: "first-read", icon: "book", label: "First Steps", check: (s: number) => s >= 1 },
+  { id: "week-warrior", icon: "flame", label: "Week Warrior", check: (s: number) => s >= 7 },
+  { id: "perfect-week", icon: "star", label: "Perfect Week", check: (_s: number, pw: number) => pw >= 1 },
+  { id: "month-strong", icon: "shield-checkmark", label: "Month Strong", check: (s: number) => s >= 30 },
+  { id: "deep-diver", icon: "telescope", label: "Deep Diver", check: (_s: number, _pw: number, ts: number) => ts >= 1 },
+  { id: "explorer", icon: "map", label: "Explorer", check: (_s: number, _pw: number, _ts: number, be: number) => be >= 10 },
+  { id: "scholar", icon: "school", label: "Scholar", check: (_s: number, _pw: number, _ts: number, be: number) => be >= 33 },
+  { id: "centurion", icon: "trophy", label: "Centurion", check: (s: number) => s >= 100 },
+] as const;
 
 function ProfileScreenInner() {
   const { theme, isDark } = useTheme();
@@ -92,13 +96,10 @@ function ProfileScreenInner() {
   const uid = user?.id || "guest";
 
   const qc = useQueryClient();
-  const [langPickerOpen, setLangPickerOpen] = useState(false);
-  const [notifSettingsOpen, setNotifSettingsOpen] = useState(false);
+  const [streakSheetOpen, setStreakSheetOpen] = useState(false);
   const [leaderFormOpen, setLeaderFormOpen] = useState(false);
   const [leaderForm, setLeaderForm] = useState({ fullName: "", churchName: "", role: "Pastor", contactEmail: "", description: "" });
-  const currentLang = i18n.language?.split("-")[0] || "en";
-
-  const isLeader = user?.role === "church_leader";
+  const isLeader = user?.role === "church_leader" || user?.role === "admin";
 
   const { data: leaderStatus } = useQuery<{ request: { id: string; status: string } | null }>({
     queryKey: ["/api/leader-requests/my-status"],
@@ -119,20 +120,6 @@ function ProfileScreenInner() {
       showToast(err?.message || "Failed to submit request", "error");
     },
   });
-
-  const handleLanguageChange = useCallback(async (code: string) => {
-    await setLanguage(code);
-    await AsyncStorage.removeItem("@grace-through-faith/translation-manual");
-    await AsyncStorage.removeItem("@grace-through-faith/translation");
-    setLangPickerOpen(false);
-  }, []);
-
-  const handleUseDeviceLang = useCallback(async () => {
-    await useDeviceLanguage();
-    await AsyncStorage.removeItem("@grace-through-faith/translation-manual");
-    await AsyncStorage.removeItem("@grace-through-faith/translation");
-    setLangPickerOpen(false);
-  }, []);
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
     queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
@@ -195,11 +182,26 @@ function ProfileScreenInner() {
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
   const todayIdx = new Date().getDay();
 
-  const studyMinutes = growthData?.deepStudyMinutes ?? 0;
-  const wordsLearned = growthData?.wordsLearned ?? 0;
   const booksExplored = growthData?.booksExplored ?? 0;
-  const totalBooks = growthData?.totalBooks ?? 66;
   const totalSessions = growthData?.totalSessions ?? 0;
+
+  const initials = (() => {
+    const name = user?.displayName || "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase() || "G";
+  })();
+
+  const handleShareProfile = useCallback(async () => {
+    const profileName = user?.displayName || "Guest";
+    const message = `Check out my faith journey on Grace Through Faith! I'm ${profileName} with a ${streak}-day reading streak.`;
+    if (Platform.OS === "web") {
+      await Clipboard.setStringAsync(message);
+      showToast("Profile copied to clipboard!", "success");
+    } else {
+      try { await Share.share({ message }); } catch {}
+    }
+  }, [user?.displayName, streak, showToast]);
 
   return (
     <>
@@ -209,8 +211,16 @@ function ProfileScreenInner() {
       showsVerticalScrollIndicator={false}
     >
       <View style={st.headerSection}>
+        <Pressable
+          onPress={() => router.push("/settings" as any)}
+          hitSlop={12}
+          style={{ position: "absolute", top: 0, right: 20, zIndex: 10 }}
+          testID="profile-settings-gear"
+        >
+          <Ionicons name="settings-outline" size={24} color="#C9933A" />
+        </Pressable>
         <View style={[st.avatarCircle, { backgroundColor: theme.accent }]}>
-          <Ionicons name="person" size={36} color="#fff" />
+          <Text style={st.avatarInitials}>{initials}</Text>
         </View>
         <Text style={[st.userName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           {isAuthenticated ? (user?.displayName || "User") : "Guest"}
@@ -235,148 +245,103 @@ function ProfileScreenInner() {
           </Pressable>
         ) : (
           <Pressable
-            onPress={logout}
-            style={[st.authBtn, { backgroundColor: isDark ? "#2A2A3E" : "#E8E4DD" }]}
-            testID="profile-sign-out"
+            onPress={handleShareProfile}
+            style={st.sharePill}
+            testID="profile-share"
           >
-            <Ionicons name="log-out-outline" size={16} color={theme.textSecondary} />
-            <Text style={[st.authBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>{t("profile.signOut")}</Text>
+            <Ionicons name="share-outline" size={15} color="#C9933A" />
+            <Text style={[st.sharePillText, { fontFamily: "Inter_600SemiBold" }]}>Share Profile</Text>
           </Pressable>
         )}
       </View>
 
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Your Growth
-        </Text>
+      <View style={st.tilesRow}>
+        <Pressable
+          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push("/library" as any)}
+        >
+          <View style={[st.tileIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
+            <Ionicons name="bookmark" size={22} color="#C9933A" />
+          </View>
+          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Saved</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push("/prayer-journal" as any)}
+        >
+          <View style={[st.tileIcon, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
+            <Ionicons name="journal" size={22} color="#8B5CF6" />
+          </View>
+          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Prayer</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => showToast("Giving features coming soon", "info")}
+        >
+          <View style={[st.tileIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}>
+            <Ionicons name="heart" size={22} color="#EF4444" />
+          </View>
+          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
+        </Pressable>
       </View>
 
-      <View style={st.statsRow}>
-        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
-          <Ionicons name="flame" size={22} color="#FF6B35" />
-          <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.currentStreak")}</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
-          <Ionicons name={streak >= longestStreak && longestStreak > 0 ? "trophy" : "trending-up"} size={22} color={theme.accent} />
-          <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-            {streak >= longestStreak && longestStreak > 0 ? longestStreak : longestStreak > 0 ? `${longestStreak - streak} to go` : "--"}
-          </Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {streak >= longestStreak && longestStreak > 0 ? t("profile.longestStreak") : longestStreak > 0 ? "Beat your best" : t("profile.longestStreak")}
-          </Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [st.statCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 }]}>
-          <Ionicons name="trophy" size={22} color="#E8456B" />
-          <Text style={[st.statNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
-          <Text style={[st.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("profile.perfectWeeks")}</Text>
-        </Pressable>
-      </View>
-
-      <View style={{ height: 8 }} />
-
-      {weeklyData && (
-        <View style={[st.weeklyCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-          <Text style={[st.weeklyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {t("profile.thisWeek")}
-          </Text>
-          <View style={st.weekRow}>
+      <Pressable
+        style={({ pressed }) => [st.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.97 : 1 }]}
+        onPress={() => setStreakSheetOpen(true)}
+      >
+        <View style={st.streakTop}>
+          <View style={st.streakLeft}>
+            <Ionicons name="flame" size={28} color="#FF6B35" />
+            <View>
+              <Text style={[st.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+              <Text style={[st.streakSubLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>day streak</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </View>
+        {weeklyData && (
+          <View style={st.streakWeekRow}>
             {DAY_LABELS.map((label, i) => {
               const isToday = i === todayIdx;
               const didRead = daysRead[i];
               return (
-                <View key={i} style={st.weekDayCol}>
-                  <Text style={[st.weekLabel, { color: isToday ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                <View key={i} style={st.streakDayCol}>
+                  <Text style={[st.streakDayLabel, { color: isToday ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                     {label}
                   </Text>
                   <View
                     style={[
-                      st.weekDot,
+                      st.streakDot,
                       didRead && { backgroundColor: theme.accent },
                       isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 },
                     ]}
                   >
-                    {didRead && <Ionicons name="checkmark" size={14} color="#fff" />}
+                    {didRead && <Ionicons name="checkmark" size={12} color="#fff" />}
                   </View>
                 </View>
               );
             })}
           </View>
-          <Text style={[st.weekSummary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {daysRead.filter(Boolean).length} of 7 days completed
-          </Text>
-        </View>
-      )}
-
-      <View style={{ height: 16 }} />
-
-      {(studyMinutes > 0 || wordsLearned > 0 || totalSessions > 0) ? (
-        <GrowthAnalytics
-          studyMinutes={studyMinutes}
-          wordsLearned={wordsLearned}
-          totalSessions={totalSessions}
-          theme={theme}
-          isDark={isDark}
-          headerText={t("profile.growthAnalytics")}
-          deepStudyLabel={t("profile.deepStudyMinutes")}
-          greekHebrewLabel={t("profile.greekHebrewWords")}
-          socraticLabel={t("profile.socraticSessions")}
-        />
-      ) : (
-        <View style={[st.analyticsInvite, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-          <Ionicons name="analytics-outline" size={32} color={theme.textMuted} />
-          <Text style={[st.analyticsInviteText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Complete your first Deep Dive to unlock your growth stats
-          </Text>
-        </View>
-      )}
-
-      <View style={{ height: 16 }} />
-
-      <View style={[st.heatmapSection, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
-        <View style={st.heatmapHeaderRow}>
-          <Text style={[st.heatmapTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            {t("profile.bibleKnowledgeMap")}
-          </Text>
-          <Text style={[st.heatmapSubtitle, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {booksExplored}/{totalBooks}
-          </Text>
-        </View>
-        <Text style={[st.heatmapDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {t("profile.tapBlockToSee")}
-        </Text>
-        {growthData?.bibleMap && growthData.bibleMap.length > 0 ? (
-          <BibleHeatmap bibleMap={growthData.bibleMap} theme={theme} isDark={isDark} userId={uid} />
-        ) : (
-          <View style={st.heatmapEmpty}>
-            <Ionicons name="map-outline" size={32} color={theme.textMuted} />
-            <Text style={[st.heatmapEmptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {t("profile.startReadingMap")}
-            </Text>
-          </View>
         )}
-      </View>
+      </Pressable>
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
-
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Library
-        </Text>
-        <ListItem
-          icon="journal"
-          iconColor="#8B5CF6"
-          title={t("profile.prayerJournal")}
-          onPress={() => router.push("/prayer-journal" as any)}
-          style={{ marginBottom: 6 }}
-        />
-        <ListItem
-          icon="bookmark"
-          iconColor="#C9933A"
-          title="Saved"
-          onPress={() => router.push("/library" as any)}
-          style={{ marginBottom: 6 }}
-        />
+      <View style={st.badgesSection}>
+        <Text style={[st.badgesTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>Badges</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.badgesScroll}>
+          {BADGES.map((badge) => {
+            const earned = badge.check(streak, perfectWeeks, totalSessions, booksExplored);
+            return (
+              <View key={badge.id} style={st.badgeItem}>
+                <View style={[st.badgeCircle, earned ? { backgroundColor: "rgba(201,147,58,0.15)", borderColor: "#C9933A" } : { backgroundColor: "rgba(128,128,128,0.08)", borderColor: "rgba(128,128,128,0.2)" }]}>
+                  <Ionicons name={badge.icon as any} size={24} color={earned ? "#C9933A" : theme.textMuted} />
+                </View>
+                <Text style={[st.badgeLabel, { color: earned ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                  {badge.label}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
@@ -514,75 +479,98 @@ function ProfileScreenInner() {
         </View>
       )}
 
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+      {isAuthenticated && user?.role === "church_leader_pending" && (
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#8B5CF615", borderWidth: 1, borderColor: "#8B5CF640", borderRadius: 16, padding: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#8B5CF620", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="shield-checkmark" size={20} color="#8B5CF6" />
+            </View>
+            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Complete Your Leader Setup</Text>
+          </View>
+          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
+            You registered as a church leader. Submit a request for admin verification, or create your church organization now.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              onPress={() => setLeaderFormOpen(true)}
+              style={{ flex: 1, backgroundColor: "#8B5CF6", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+            >
+              <Ionicons name="document-text-outline" size={16} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Submit Request</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/org-onboarding" as any)}
+              style={{ flex: 1, backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+            >
+              <Ionicons name="add-circle-outline" size={16} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Set Up Church</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
-      <View style={st.sectionPad}>
-        <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Settings
-        </Text>
-        <ListItem
-          icon="shield-checkmark"
-          iconColor="#E65100"
-          title={t("profile.parentControls")}
-          onPress={() => router.push("/parent-controls" as any)}
-          style={{ marginBottom: 6 }}
-        />
+      {isAuthenticated && user?.role === "church_leader" && !user?.organizationId && (
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#C9933A15", borderWidth: 1, borderColor: "#C9933A40", borderRadius: 16, padding: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#C9933A20", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="home" size={20} color="#C9933A" />
+            </View>
+            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Set Up Your Church</Text>
+          </View>
+          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
+            Your leader access is approved! Create your church organization to manage members and share a join code with your congregation.
+          </Text>
+          <Pressable
+            onPress={() => router.push("/org-onboarding" as any)}
+            style={{ backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+          >
+            <Ionicons name="add-circle-outline" size={16} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Create Your Church</Text>
+          </Pressable>
+        </View>
+      )}
 
-        <NotificationSettings
-          theme={theme}
-          expanded={notifSettingsOpen}
-          onToggle={() => setNotifSettingsOpen(!notifSettingsOpen)}
-        />
+      {isAuthenticated && (user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader") && (
+        <>
+          <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+          <View style={st.sectionPad}>
+            <ListItem
+              icon="construct"
+              iconColor="#EF4444"
+              title="Admin Dashboard"
+              onPress={() => router.push("/admin-review" as any)}
+              style={{ marginBottom: 6 }}
+            />
+          </View>
+        </>
+      )}
 
-        <LanguageSettings
-          theme={theme}
-          isDark={isDark}
-          currentLang={currentLang}
-          langPickerOpen={langPickerOpen}
-          onToggleLangPicker={() => setLangPickerOpen(!langPickerOpen)}
-          onLanguageChange={handleLanguageChange}
-          onUseDeviceLang={handleUseDeviceLang}
-          languageLabel={t("profile.language")}
-          useDeviceLanguageLabel={t("profile.useDeviceLanguage")}
-        />
-
-        <View style={{ height: 12 }} />
-
-        {[
-          ...(isAuthenticated && (user?.role === "admin" || user?.role === "editor" || user?.role === "church_leader") ? [
-            { title: "Admin Dashboard", icon: "construct" as const, color: "#EF4444", route: "/admin-review" },
-          ] : []),
-          ...(isAuthenticated && !isLeader && user?.role !== "admin" && user?.role !== "editor" ? [
-            leaderStatus?.request?.status === "pending"
-              ? { title: "Leader Access (Pending)", icon: "time-outline" as const, color: "#F59E0B", route: "pending-leader" }
-              : { title: "Request Leader Access", icon: "shield-checkmark-outline" as const, color: "#8B5CF6", route: "request-leader" },
-          ] : []),
-          { title: "AI Use & Ethics", icon: "sparkles" as const, color: "#C9933A", route: "/ai-guidelines" },
-        ].map((link) => (
-          <ListItem
-            key={link.route}
-            icon={link.icon}
-            iconColor={link.color}
-            title={link.title}
-            onPress={() => {
-              if (link.route === "pending-leader") {
-                showToast("Your church leader access is being reviewed. You'll be notified when approved.", "info");
-                return;
-              }
-              if (link.route === "request-leader") {
+      {isAuthenticated && !isLeader && user?.role !== "admin" && user?.role !== "editor" && (
+        <>
+          <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+          <View style={st.sectionPad}>
+            <ListItem
+              icon={leaderStatus?.request?.status === "pending" ? "time-outline" : "shield-checkmark-outline"}
+              iconColor={leaderStatus?.request?.status === "pending" ? "#F59E0B" : "#8B5CF6"}
+              title={leaderStatus?.request?.status === "pending" ? "Leader Access (Pending)" : "Request Leader Access"}
+              onPress={() => {
+                if (leaderStatus?.request?.status === "pending") {
+                  showToast("Your church leader access is being reviewed. You'll be notified when approved.", "info");
+                  return;
+                }
                 setLeaderFormOpen(true);
-                return;
-              }
-              router.push(link.route as any);
-            }}
-            style={{ marginBottom: 6 }}
-          />
-        ))}
+              }}
+              style={{ marginBottom: 6 }}
+            />
+          </View>
+        </>
+      )}
 
-        {isAuthenticated && isLeader && (
-          <>
-            <View style={[st.sectionDivider, { backgroundColor: theme.border }]} />
-            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold", paddingHorizontal: 20, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+      {isAuthenticated && isLeader && (
+        <>
+          <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
+          <View style={st.sectionPad}>
+            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
               Leader Tools
             </Text>
             <ListItem
@@ -599,10 +587,65 @@ function ProfileScreenInner() {
               onPress={() => router.push("/leader-analytics" as any)}
               style={{ marginBottom: 6 }}
             />
-          </>
-        )}
-      </View>
+          </View>
+        </>
+      )}
+
     </ScrollView>
+
+    <Modal visible={streakSheetOpen} animationType="slide" transparent>
+      <Pressable style={st.sheetOverlay} onPress={() => setStreakSheetOpen(false)}>
+        <View style={{ flex: 1 }} />
+        <Pressable style={[st.sheetContent, { backgroundColor: theme.backgroundCard, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 24 }]}>
+          <View style={st.sheetHandle} />
+          <View style={st.sheetHeaderRow}>
+            <Text style={[st.sheetTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>Your Streak</Text>
+            <Pressable onPress={() => setStreakSheetOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={theme.textMuted} />
+            </Pressable>
+          </View>
+          <View style={st.sheetStatsRow}>
+            <View style={st.sheetStatItem}>
+              <Ionicons name="flame" size={28} color="#FF6B35" />
+              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Current</Text>
+            </View>
+            <View style={st.sheetStatItem}>
+              <Ionicons name="trophy" size={28} color={theme.accent} />
+              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
+              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Longest</Text>
+            </View>
+            <View style={st.sheetStatItem}>
+              <Ionicons name="star" size={28} color="#E8456B" />
+              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
+              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Perfect Weeks</Text>
+            </View>
+          </View>
+          {weeklyData && (
+            <>
+              <Text style={[st.sheetWeekTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>This Week</Text>
+              <View style={st.sheetWeekRow}>
+                {DAY_LABELS.map((label, i) => {
+                  const isToday = i === todayIdx;
+                  const didRead = daysRead[i];
+                  return (
+                    <View key={i} style={{ alignItems: "center", gap: 8 }}>
+                      <Text style={{ color: isToday ? theme.accent : theme.textMuted, fontSize: 13, fontFamily: "Inter_500Medium" }}>{label}</Text>
+                      <View style={[st.streakDot, didRead && { backgroundColor: theme.accent }, isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 }]}>
+                        {didRead && <Ionicons name="checkmark" size={12} color="#fff" />}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              <Text style={[st.sheetWeekSummary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {daysRead.filter(Boolean).length} of 7 days completed
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
 
     <Modal visible={leaderFormOpen} animationType="slide" transparent>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
@@ -705,7 +748,7 @@ const st = StyleSheet.create({
   headerSection: {
     alignItems: "center",
     paddingHorizontal: 24,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   avatarCircle: {
     width: 80,
@@ -714,6 +757,12 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
+  },
+  avatarInitials: {
+    fontSize: 28,
+    fontFamily: "Lora_700Bold",
+    color: "#fff",
+    letterSpacing: 1,
   },
   userName: { fontSize: 26, marginBottom: 4, letterSpacing: -0.2 },
   userSub: { fontSize: 14, lineHeight: 22, opacity: 0.8 },
@@ -734,83 +783,22 @@ const st = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#C9933A",
   },
-  statsRow: {
+  sharePill: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
+    alignItems: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 20,
-    padding: 18,
-    alignItems: "center",
-    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(201,147,58,0.3)",
+    backgroundColor: "rgba(201,147,58,0.08)",
   },
-  statNum: { fontSize: 24, letterSpacing: -0.5 },
-  statLabel: { fontSize: 11, textAlign: "center", lineHeight: 15 },
-  weeklyCard: {
-    marginHorizontal: 20,
-    borderRadius: 22,
-    padding: 22,
-    marginBottom: 8,
+  sharePillText: {
+    fontSize: 13,
+    color: "#C9933A",
   },
-  weeklyTitle: { fontSize: 16, marginBottom: 18 },
-  weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  weekDayCol: {
-    alignItems: "center",
-    gap: 10,
-  },
-  weekLabel: { fontSize: 12 },
-  weekDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(128,128,128,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  weekSummary: { fontSize: 13, textAlign: "center", lineHeight: 20 },
-  heatmapSection: {
-    marginHorizontal: 20,
-    borderRadius: 22,
-    padding: 22,
-    marginBottom: 8,
-  },
-  heatmapHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 6,
-  },
-  heatmapTitle: { fontSize: 18 },
-  heatmapSubtitle: { fontSize: 15 },
-  heatmapDesc: { fontSize: 12, marginBottom: 18, lineHeight: 18, opacity: 0.8 },
-  heatmapEmpty: {
-    alignItems: "center",
-    paddingVertical: 34,
-    gap: 12,
-  },
-  heatmapEmptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
-  analyticsInvite: {
-    marginHorizontal: 20,
-    borderRadius: 22,
-    padding: 28,
-    alignItems: "center",
-    gap: 12,
-  },
-  analyticsInviteText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
-  sectionPad: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionTitle: { fontSize: 21, marginBottom: 16, letterSpacing: -0.1 },
-  sectionSubLabel: { fontSize: 11.5, letterSpacing: 0.8, textTransform: "uppercase" as const },
   authBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -824,6 +812,165 @@ const st = StyleSheet.create({
     fontSize: 14,
     color: "#fff",
   },
+  tilesRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  tile: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 10,
+  },
+  tileIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tileLabel: {
+    fontSize: 13,
+  },
+  streakCard: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  streakTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  streakLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  streakNum: {
+    fontSize: 26,
+    letterSpacing: -0.5,
+  },
+  streakSubLabel: {
+    fontSize: 12,
+    marginTop: -2,
+  },
+  streakWeekRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(128,128,128,0.15)",
+  },
+  streakDayCol: {
+    alignItems: "center",
+    gap: 8,
+  },
+  streakDayLabel: { fontSize: 11 },
+  streakDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(128,128,128,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgesSection: {
+    marginBottom: 20,
+  },
+  badgesTitle: {
+    fontSize: 18,
+    paddingHorizontal: 24,
+    marginBottom: 14,
+  },
+  badgesScroll: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  badgeItem: {
+    alignItems: "center",
+    width: 72,
+    gap: 8,
+  },
+  badgeCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  badgeLabel: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  sheetContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(128,128,128,0.3)",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  sheetHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  sheetTitle: {
+    fontSize: 20,
+  },
+  sheetStatsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 28,
+  },
+  sheetStatItem: {
+    alignItems: "center",
+    gap: 6,
+  },
+  sheetStatNum: {
+    fontSize: 28,
+  },
+  sheetStatLabel: {
+    fontSize: 12,
+  },
+  sheetWeekTitle: {
+    fontSize: 16,
+    marginBottom: 14,
+  },
+  sheetWeekRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 12,
+  },
+  sheetWeekSummary: {
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  sectionPad: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  sectionTitle: { fontSize: 21, marginBottom: 16, letterSpacing: -0.1 },
   orgCard: {
     borderRadius: 16,
     padding: 18,

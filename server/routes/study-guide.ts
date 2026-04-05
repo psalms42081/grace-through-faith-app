@@ -64,7 +64,7 @@ router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
 
-    const validPersonas = ["scholarly", "pastoral", "ancient"];
+    const validPersonas = ["scholarly", "pastoral", "ellen-white"];
     const resolvedPersona = validPersonas.includes(persona) ? persona : "scholarly";
 
     if (!forceNew) {

@@ -1435,10 +1435,16 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
             <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <Pressable
                 onPress={() => {
-                  Alert.alert("Approve Leader", `Grant leader access to ${req.fullName}?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Approve", onPress: () => approveMutation.mutate(req.id) },
-                  ]);
+                  if (Platform.OS === "web") {
+                    if (window.confirm(`Grant leader access to ${req.fullName}?`)) {
+                      approveMutation.mutate(req.id);
+                    }
+                  } else {
+                    Alert.alert("Approve Leader", `Grant leader access to ${req.fullName}?`, [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Approve", onPress: () => approveMutation.mutate(req.id) },
+                    ]);
+                  }
                 }}
                 disabled={approveMutation.isPending}
                 style={{ flex: 1, backgroundColor: "#10B981", borderRadius: 8, padding: 10, alignItems: "center" }}
@@ -1447,10 +1453,16 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  Alert.alert("Reject Request", `Reject leader request from ${req.fullName}?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Reject", style: "destructive", onPress: () => rejectMutation.mutate(req.id) },
-                  ]);
+                  if (Platform.OS === "web") {
+                    if (window.confirm(`Reject leader request from ${req.fullName}?`)) {
+                      rejectMutation.mutate(req.id);
+                    }
+                  } else {
+                    Alert.alert("Reject Request", `Reject leader request from ${req.fullName}?`, [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Reject", style: "destructive", onPress: () => rejectMutation.mutate(req.id) },
+                    ]);
+                  }
                 }}
                 disabled={rejectMutation.isPending}
                 style={{ flex: 1, backgroundColor: "#EF4444", borderRadius: 8, padding: 10, alignItems: "center" }}
@@ -1465,13 +1477,1159 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
   );
 }
 
+interface VideoTopic {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  scriptureAnchor: string | null;
+  targetAgeGroup: string | null;
+  status: string | null;
+  priority: number | null;
+  generatedScript: string | null;
+  avatarVideoUrl: string | null;
+  finalVideoUrl: string | null;
+  language: string | null;
+  musicTrack: string | null;
+  pipelineMode: string | null;
+  assemblyStatus: string | null;
+  assembledVideoUrl: string | null;
+  cinematicScenes: any[] | null;
+  voiceoverUrl: string | null;
+  characterAnchorUrl: string | null;
+  thumbnailUrl: string | null;
+  reviewStatus: string | null;
+  reviewNotes: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TopicVideoItem {
+  id: string;
+  topicId: string;
+  scriptureAnchor: string;
+  generatedScript: string | null;
+  finalVideoUrl: string | null;
+  thumbnailUrl: string | null;
+  assemblyStatus: string | null;
+  reviewStatus: string | null;
+  createdAt: string;
+}
+
+function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: any }) {
+  const queryClient = useQueryClient();
+  const [newScripture, setNewScripture] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [generatingVideoIds, setGeneratingVideoIds] = useState<Set<string>>(new Set());
+
+  const expandMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/video-topics/${topicId}/expand-cross-references`, { maxReferences: 7 });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
+      const msg = `Found ${data.crossReferences?.length || 0} cross-references.\n+${data.inserted} new, ${data.skipped} already existed.`;
+      if (Platform.OS === "web") {
+        window.alert(msg);
+      } else {
+        Alert.alert("Cross-References Expanded", msg);
+      }
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Could not expand cross-references");
+    },
+  });
+
+  const { data: scriptureVideos, isLoading } = useQuery<TopicVideoItem[]>({
+    queryKey: ["/api/video-topics", topicId, "scriptures"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/video-topics/${topicId}/scriptures`);
+      return res.json();
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data as TopicVideoItem[] | undefined;
+      if (data?.some((v) => v.assemblyStatus && v.assemblyStatus !== "complete" && !v.assemblyStatus.startsWith("failed"))) return 10000;
+      return false;
+    },
+  });
+
+  const addScriptureMutation = useMutation({
+    mutationFn: async (scripture: string) => {
+      return apiRequest("POST", `/api/video-topics/${topicId}/scriptures`, { scriptureAnchor: scripture });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
+      setNewScripture("");
+      setIsAdding(false);
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Could not add scripture");
+    },
+  });
+
+  const deleteScriptureMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      return apiRequest("DELETE", `/api/topic-videos/${videoId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Could not delete scripture");
+    },
+  });
+
+  const generateVideoMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      setGeneratingVideoIds((prev) => new Set(prev).add(videoId));
+      return apiRequest("POST", `/api/topic-videos/${videoId}/generate`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
+      Alert.alert("Pipeline Started", "Video generation has begun for this scripture.");
+    },
+    onSettled: (_data, _err, videoId) => {
+      setGeneratingVideoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(videoId);
+        return next;
+      });
+    },
+    onError: (err: any) => {
+      Alert.alert("Pipeline Failed", err?.message || "Could not start pipeline.");
+    },
+  });
+
+  const handleDelete = (videoId: string, scripture: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Remove "${scripture}" from this topic?`)) {
+        deleteScriptureMutation.mutate(videoId);
+      }
+    } else {
+      Alert.alert("Remove Scripture", `Remove "${scripture}" from this topic?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => deleteScriptureMutation.mutate(videoId) },
+      ]);
+    }
+  };
+
+  const handleGenerate = (videoId: string, scripture: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Generate cinematic video for "${scripture}"? This will generate a full script, scenes, voiceover, and assemble into a cinematic video.`)) {
+        generateVideoMutation.mutate(videoId);
+      }
+    } else {
+      Alert.alert("Generate Video", `Generate cinematic video for "${scripture}"?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Generate", onPress: () => generateVideoMutation.mutate(videoId) },
+      ]);
+    }
+  };
+
+  const pipelineLabel = (status: string | null): string => {
+    const labels: Record<string, string> = {
+      "queued": "Queued",
+      "scene-directing": "Scene Director",
+      "generating-anchor": "Anchor Image",
+      "generating-scene-videos": "Animating Scenes",
+      "generating-voiceover": "Voiceover",
+      "computing-timing": "Timing",
+      "assembling-video": "Assembly",
+      "generating-thumbnail": "Thumbnail",
+      "complete": "Complete",
+    };
+    if (!status) return "";
+    return labels[status] || status;
+  };
+
+  return (
+    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Ionicons name="book-outline" size={16} color={theme.accent} />
+          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.text }}>
+            Scripture Videos ({scriptureVideos?.length || 0})
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <Pressable
+            onPress={() => expandMutation.mutate()}
+            disabled={expandMutation.isPending}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: "#6C5CE7" + "20" }}
+          >
+            {expandMutation.isPending ? (
+              <ActivityIndicator size={12} color="#6C5CE7" />
+            ) : (
+              <Ionicons name="git-branch-outline" size={14} color="#6C5CE7" />
+            )}
+            <Text style={{ fontSize: 11, color: "#6C5CE7", fontFamily: "Inter_500Medium" }}>
+              {expandMutation.isPending ? "Expanding..." : "Cross-Refs"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setIsAdding(!isAdding)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: theme.accent + "15" }}
+          >
+            <Ionicons name={isAdding ? "close" : "add"} size={14} color={theme.accent} />
+            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_500Medium" }}>
+              {isAdding ? "Cancel" : "+ Add"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {isAdding && (
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+          <TextInput
+            style={{ flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, color: theme.text, backgroundColor: theme.background, fontSize: 13 }}
+            placeholder="e.g. Isaiah 41:10"
+            placeholderTextColor={theme.textMuted}
+            value={newScripture}
+            onChangeText={setNewScripture}
+            onSubmitEditing={() => newScripture.trim() && addScriptureMutation.mutate(newScripture.trim())}
+          />
+          <Pressable
+            style={{ backgroundColor: theme.accent, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, justifyContent: "center" }}
+            onPress={() => newScripture.trim() && addScriptureMutation.mutate(newScripture.trim())}
+            disabled={addScriptureMutation.isPending || !newScripture.trim()}
+          >
+            {addScriptureMutation.isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>Add</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+
+      {isLoading && <ActivityIndicator size="small" color={theme.accent} />}
+
+      {scriptureVideos && scriptureVideos.length > 0 && (
+        <View style={{ gap: 6 }}>
+          {scriptureVideos.map((sv) => {
+            const isComplete = sv.assemblyStatus === "complete";
+            const isFailed = sv.assemblyStatus?.startsWith("failed");
+            const isRunning = sv.assemblyStatus && !isComplete && !isFailed && sv.assemblyStatus !== "null";
+            const statusIcon = isComplete ? "checkmark-circle" : isFailed ? "alert-circle" : isRunning ? "hourglass-outline" : "ellipse-outline";
+            const statusColor = isComplete ? "#10B981" : isFailed ? "#EF4444" : isRunning ? "#F59E0B" : "#6B7280";
+
+            return (
+              <View key={sv.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 8, backgroundColor: theme.background }}>
+                <Ionicons name={statusIcon as any} size={16} color={statusColor} />
+                <Text style={{ flex: 1, fontSize: 13, color: theme.text, fontFamily: "Inter_500Medium" }}>
+                  {sv.scriptureAnchor}
+                </Text>
+
+                {isRunning && (
+                  <Text style={{ fontSize: 10, color: "#F59E0B", fontFamily: "Inter_500Medium" }}>
+                    {pipelineLabel(sv.assemblyStatus)}
+                  </Text>
+                )}
+
+                {isComplete && sv.finalVideoUrl && Platform.OS === "web" && (
+                  <Pressable
+                    onPress={() => window.open(sv.finalVideoUrl!, "_blank")}
+                    style={{ paddingHorizontal: 6, paddingVertical: 2 }}
+                  >
+                    <Ionicons name="play-circle-outline" size={18} color="#10B981" />
+                  </Pressable>
+                )}
+
+                {!isComplete && !isRunning && !generatingVideoIds.has(sv.id) && (
+                  <Pressable
+                    onPress={() => handleGenerate(sv.id, sv.scriptureAnchor)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E67E22", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  >
+                    <Ionicons name="film-outline" size={12} color="#fff" />
+                    <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_500Medium" }}>Generate</Text>
+                  </Pressable>
+                )}
+
+                {generatingVideoIds.has(sv.id) && (
+                  <ActivityIndicator size="small" color="#E67E22" />
+                )}
+
+                {!isRunning && (
+                  <Pressable onPress={() => handleDelete(sv.id, sv.scriptureAnchor)} style={{ padding: 4 }}>
+                    <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {scriptureVideos && scriptureVideos.length === 0 && !isLoading && (
+        <Text style={{ fontSize: 12, color: theme.textMuted, fontStyle: "italic" as const }}>
+          No additional scriptures added yet
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function ExpandAllButton({ theme }: { theme: any }) {
+  const [isExpanding, setIsExpanding] = useState(false);
+
+  const handleExpandAll = async () => {
+    const msg = "Expand cross-references for ALL 53 topics? GPT will find 7 related scriptures per topic. This runs in the background.";
+    let confirmed = false;
+    if (Platform.OS === "web") {
+      confirmed = window.confirm(msg);
+    } else {
+      confirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert("Expand All Cross-References", msg, [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          { text: "Expand All", onPress: () => resolve(true) },
+        ]);
+      });
+    }
+    if (!confirmed) return;
+
+    setIsExpanding(true);
+    try {
+      await apiRequest("POST", "/api/video-topics/expand-all-cross-references", { maxReferences: 7 });
+      if (Platform.OS === "web") {
+        window.alert("Cross-reference expansion started for all topics. This runs in the background — scriptures will appear as they're found.");
+      } else {
+        Alert.alert("Started", "Cross-reference expansion is running in the background.");
+      }
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Failed to start expansion");
+    } finally {
+      setIsExpanding(false);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={handleExpandAll}
+      disabled={isExpanding}
+      style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: "#6C5CE7" + "18" }}
+    >
+      {isExpanding ? (
+        <ActivityIndicator size={14} color="#6C5CE7" />
+      ) : (
+        <Ionicons name="git-branch-outline" size={16} color="#6C5CE7" />
+      )}
+      <Text style={{ fontSize: 12, color: "#6C5CE7", fontFamily: "Inter_600SemiBold" }}>
+        {isExpanding ? "Expanding..." : "Expand All Cross-Refs"}
+      </Text>
+    </Pressable>
+  );
+}
+
+function VideoTopicsTab({ theme }: { theme: any }) {
+  const queryClient = useQueryClient();
+  const [expandedScripts, setExpandedScripts] = useState<Set<string>>(new Set());
+  const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [cinematicIds, setCinematicIds] = useState<Set<string>>(new Set());
+  const [reviewNotesMap, setReviewNotesMap] = useState<Record<string, string>>({});
+
+  const { data: topics, isLoading } = useQuery<VideoTopic[]>({
+    queryKey: ["/api/video-topics"],
+    refetchInterval: (query) => {
+      const data = query.state.data as VideoTopic[] | undefined;
+      if (data?.some((t) => t.status === "generating" || (t.assemblyStatus && t.assemblyStatus !== "complete" && !t.assemblyStatus.startsWith("failed") && t.assemblyStatus !== "null"))) return 10000;
+      return false;
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setGeneratingIds((prev) => new Set(prev).add(id));
+      return apiRequest("POST", `/api/video-topics/${id}/generate-script`);
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
+      setExpandedScripts((prev) => new Set(prev).add(id));
+    },
+    onSettled: (_data, _err, id) => {
+      setGeneratingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    onError: (err: any) => {
+      Alert.alert("Generation Failed", err?.message || "Could not generate script.");
+    },
+  });
+
+  const cleanupAvatarsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/video-avatars/cleanup-unused");
+    },
+    onSuccess: () => {
+      Alert.alert("Cleanup Complete", "Unused avatars have been removed.");
+    },
+    onError: (err: any) => {
+      Alert.alert("Cleanup Failed", err?.message || "Could not clean up avatars.");
+    },
+  });
+
+  const saveScriptMutation = useMutation({
+    mutationFn: async ({ id, script }: { id: string; script: string }) => {
+      return apiRequest("PATCH", `/api/video-topics/${id}`, { generatedScript: script });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
+      setEditingId(null);
+      setEditText("");
+      Alert.alert("Saved", "Script has been updated.");
+    },
+    onError: (err: any) => {
+      Alert.alert("Save Failed", err?.message || "Could not save script.");
+    },
+  });
+
+  const cinematicMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setCinematicIds((prev) => new Set(prev).add(id));
+      return apiRequest("POST", `/api/video-topics/${id}/generate-cinematic`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
+      Alert.alert("Pipeline Started", "The cinematic video pipeline has been started in the background.");
+    },
+    onSettled: (_data, _err, id) => {
+      setCinematicIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    onError: (err: any) => {
+      Alert.alert("Pipeline Failed", err?.message || "Could not start cinematic pipeline.");
+    },
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: async ({ id, action, notes }: { id: string; action: string; notes?: string }) => {
+      return apiRequest("PATCH", `/api/video-topics/${id}/review`, { action, notes });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/evangelism-videos"] });
+      Alert.alert(
+        variables.action === "approve" ? "Approved" : "Rejected",
+        variables.action === "approve"
+          ? "Video has been approved and published."
+          : "Video has been rejected."
+      );
+    },
+    onError: (err: any) => {
+      Alert.alert("Review Failed", err?.message || "Could not process review.");
+    },
+  });
+
+  const handleGenerateCinematic = (id: string, title: string, pipelineMode: string | null) => {
+    const isCinematic = pipelineMode === "cinematic";
+    const desc = isCinematic
+      ? `Start cinematic narrative pipeline for "${title}"? This will generate scenes with AI, voiceover, and assemble into a cinematic video.`
+      : `Start cinematic pipeline for "${title}"? This will generate B-roll, extract timestamps, and assemble the final video.`;
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(desc);
+      if (confirmed) cinematicMutation.mutate(id);
+    } else {
+      Alert.alert(
+        "Generate Cinematic Video",
+        desc,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Start", onPress: () => cinematicMutation.mutate(id) },
+        ]
+      );
+    }
+  };
+
+  const handleApprove = (id: string) => {
+    reviewMutation.mutate({ id, action: "approve", notes: reviewNotesMap[id] });
+  };
+
+  const handleReject = (id: string) => {
+    const notes = reviewNotesMap[id];
+    if (!notes?.trim()) {
+      Alert.alert("Notes Required", "Please add review notes before rejecting.");
+      return;
+    }
+    reviewMutation.mutate({ id, action: "reject", notes });
+  };
+
+  const toggleScriptPreview = (id: string) => {
+    setExpandedScripts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const statusColor = (status: string | null) => {
+    switch (status) {
+      case "pending": return "#6B7280";
+      case "generating": return "#3B82F6";
+      case "script-ready": return "#F59E0B";
+      case "completed": return "#10B981";
+      case "failed": return "#EF4444";
+      default: return "#6B7280";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={theme.accent} />
+        <Text style={[styles.emptyText, { color: theme.textSecondary, marginTop: 12 }]}>
+          Loading video topics...
+        </Text>
+      </View>
+    );
+  }
+
+  if (!topics || topics.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="videocam-outline" size={48} color={theme.textMuted} />
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No video topics found</Text>
+      </View>
+    );
+  }
+
+  const uniqueTopics = React.useMemo(() => {
+    if (!topics) return [];
+    const seen = new Set<string>();
+    return topics.filter((t) => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  }, [topics]);
+
+  return (
+    <View style={vtStyles.container}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <Text style={[vtStyles.heading, { color: theme.text, marginBottom: 0 }]}>
+          Video Topics ({uniqueTopics.length})
+        </Text>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <Pressable
+            style={[vtStyles.actionBtn, { backgroundColor: "#EF4444" }]}
+            onPress={() => {
+              if (Platform.OS === "web") {
+                if (window.confirm("Remove all unused avatar records from the database? This only removes avatars not linked to any topic.")) {
+                  cleanupAvatarsMutation.mutate();
+                }
+              } else {
+                Alert.alert("Clean Up Avatars", "Remove all unused avatar records?", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Remove", style: "destructive", onPress: () => cleanupAvatarsMutation.mutate() },
+                ]);
+              }
+            }}
+            disabled={cleanupAvatarsMutation.isPending}
+          >
+            <Ionicons name="trash-outline" size={14} color="#fff" />
+            <Text style={vtStyles.actionBtnText}>
+              {cleanupAvatarsMutation.isPending ? "Cleaning..." : "Clean Up Avatars"}
+            </Text>
+          </Pressable>
+          <ExpandAllButton theme={theme} />
+        </View>
+      </View>
+      <View style={vtStyles.grid}>
+        {uniqueTopics.map((topic) => {
+          const sColor = statusColor(topic.status);
+          const isGenerating = generatingIds.has(topic.id);
+          const hasScript = !!topic.generatedScript;
+          const isExpanded = expandedScripts.has(topic.id);
+          const isLocked = topic.status === "generating";
+
+          return (
+            <View
+              key={topic.id}
+              style={[vtStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+            >
+              <View style={vtStyles.cardHeader}>
+                <Text style={[vtStyles.cardTitle, { color: theme.text }]} numberOfLines={1}>
+                  {topic.title}
+                </Text>
+                <View style={[vtStyles.statusBadge, { backgroundColor: sColor + "20", borderColor: sColor }]}>
+                  <Text style={[vtStyles.statusText, { color: sColor }]}>
+                    {topic.status || "pending"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[vtStyles.scripture, { color: theme.accent }]} numberOfLines={1}>
+                {topic.scriptureAnchor || "No scripture"}
+              </Text>
+
+              {topic.category && (
+                <View style={[vtStyles.categoryBadge, { backgroundColor: theme.accent + "15" }]}>
+                  <Text style={[vtStyles.categoryText, { color: theme.accent }]}>
+                    {topic.category}
+                  </Text>
+                </View>
+              )}
+
+              {topic.description && (
+                <Text style={[vtStyles.description, { color: theme.textSecondary }]} numberOfLines={2}>
+                  {topic.description}
+                </Text>
+              )}
+
+              <View style={vtStyles.cardActions}>
+                {!hasScript && !isGenerating && !isLocked && (
+                  <Pressable
+                    style={[vtStyles.actionBtn, { backgroundColor: theme.accent }]}
+                    onPress={() => generateMutation.mutate(topic.id)}
+                    disabled={isGenerating || isLocked}
+                  >
+                    <Ionicons name="sparkles-outline" size={14} color="#fff" />
+                    <Text style={vtStyles.actionBtnText}>Generate Script</Text>
+                  </Pressable>
+                )}
+
+                {isGenerating && (
+                  <View style={[vtStyles.actionBtn, { backgroundColor: "#3B82F6" }]}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={vtStyles.actionBtnText}>Generating...</Text>
+                  </View>
+                )}
+
+                {hasScript && !isGenerating && (
+                  <>
+                    <Pressable
+                      style={[vtStyles.actionBtn, { backgroundColor: "#10B981" }]}
+                      onPress={() => toggleScriptPreview(topic.id)}
+                    >
+                      <Ionicons name={isExpanded ? "chevron-up" : "document-text-outline"} size={14} color="#fff" />
+                      <Text style={vtStyles.actionBtnText}>
+                        {isExpanded ? "Hide Script" : "Preview Script"}
+                      </Text>
+                    </Pressable>
+                    {!isLocked && (
+                      <Pressable
+                        style={[vtStyles.actionBtn, { backgroundColor: theme.accent }]}
+                        onPress={() => generateMutation.mutate(topic.id)}
+                      >
+                        <Ionicons name="refresh-outline" size={14} color="#fff" />
+                        <Text style={vtStyles.actionBtnText}>Regenerate</Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+
+                {hasScript && topic.musicTrack && !cinematicIds.has(topic.id) && topic.assemblyStatus !== "complete" && (
+                  <Pressable
+                    style={[vtStyles.actionBtn, { backgroundColor: "#E67E22" }]}
+                    onPress={() => handleGenerateCinematic(topic.id, topic.title, topic.pipelineMode)}
+                  >
+                    <Ionicons name="film-outline" size={14} color="#fff" />
+                    <Text style={vtStyles.actionBtnText}>Generate Cinematic</Text>
+                  </Pressable>
+                )}
+
+                {cinematicIds.has(topic.id) && (
+                  <View style={[vtStyles.actionBtn, { backgroundColor: "#E67E22" }]}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={vtStyles.actionBtnText}>Starting Pipeline...</Text>
+                  </View>
+                )}
+              </View>
+
+              {topic.assemblyStatus && (
+                <View style={[vtStyles.assemblyStatusRow, { borderColor: theme.border }]}>
+                  <Ionicons
+                    name={topic.assemblyStatus === "complete" ? "checkmark-circle" : topic.assemblyStatus?.startsWith("failed") ? "close-circle" : "hourglass-outline"}
+                    size={14}
+                    color={topic.assemblyStatus === "complete" ? "#10B981" : topic.assemblyStatus?.startsWith("failed") ? "#EF4444" : "#F59E0B"}
+                  />
+                  <Text style={[vtStyles.assemblyStatusText, { color: theme.textSecondary }]}>
+                    Pipeline: {
+                      ({
+                        "queued": "Queued",
+                        "scene-directing": "Scene Director (AI)",
+                        "generating-anchor": "Character Anchor Image",
+                        "generating-scene-videos": "Animating Scenes",
+                        "generating-voiceover": "Generating Voiceover",
+                        "computing-timing": "Computing Timing",
+                        "assembling-video": "FFmpeg Assembly",
+                        "generating-thumbnail": "Generating Thumbnail",
+                        "complete": "Complete",
+                        "generating-edl": "Edit Decision List",
+                        "extracting-timestamps": "Whisper Timestamps",
+                        "generating-broll-images": "B-Roll Images",
+                        "generating-broll-videos": "B-Roll Videos",
+                      } as Record<string, string>)[topic.assemblyStatus] || topic.assemblyStatus
+                    }
+                  </Text>
+                </View>
+              )}
+
+              {topic.assembledVideoUrl && (
+                <View style={[vtStyles.reviewSection, { borderColor: theme.border }]}>
+                  <Text style={[vtStyles.reviewSectionTitle, { color: theme.text }]}>Cinematic Video Preview</Text>
+                  {Platform.OS === "web" ? (
+                    <div
+                      style={{ width: "100%", aspectRatio: "9/16", maxHeight: 400, borderRadius: 8, overflow: "hidden", background: "#000" }}
+                      dangerouslySetInnerHTML={{
+                        __html: `<video src="${topic.assembledVideoUrl}" controls playsinline style="width:100%;height:100%;object-fit:contain;background:#000;" />`,
+                      }}
+                    />
+                  ) : (
+                    <View style={{ width: "100%", aspectRatio: 9/16, maxHeight: 400, borderRadius: 8, overflow: "hidden", backgroundColor: "#000" }}>
+                      <Text style={{ color: "#fff", textAlign: "center", paddingTop: 20, fontSize: 12 }}>Open in browser to preview</Text>
+                    </View>
+                  )}
+
+                  {topic.reviewStatus && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_500Medium" }}>Review:</Text>
+                      <View style={[vtStyles.statusBadge, {
+                        backgroundColor: (topic.reviewStatus === "approved" ? "#10B981" : topic.reviewStatus === "rejected" ? "#EF4444" : "#F59E0B") + "20",
+                        borderColor: topic.reviewStatus === "approved" ? "#10B981" : topic.reviewStatus === "rejected" ? "#EF4444" : "#F59E0B",
+                      }]}>
+                        <Text style={[vtStyles.statusText, {
+                          color: topic.reviewStatus === "approved" ? "#10B981" : topic.reviewStatus === "rejected" ? "#EF4444" : "#F59E0B",
+                        }]}>
+                          {topic.reviewStatus}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {topic.reviewStatus !== "approved" && (
+                    <>
+                      <TextInput
+                        style={[vtStyles.reviewNotesInput, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+                        placeholder="Review notes..."
+                        placeholderTextColor={theme.textMuted}
+                        value={reviewNotesMap[topic.id] || ""}
+                        onChangeText={(text) => setReviewNotesMap((prev) => ({ ...prev, [topic.id]: text }))}
+                        multiline
+                        numberOfLines={2}
+                        textAlignVertical="top"
+                      />
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#10B981", flex: 1, justifyContent: "center" }]}
+                          onPress={() => handleApprove(topic.id)}
+                          disabled={reviewMutation.isPending}
+                        >
+                          <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                          <Text style={vtStyles.actionBtnText}>Approve</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#EF4444", flex: 1, justifyContent: "center" }]}
+                          onPress={() => handleReject(topic.id)}
+                          disabled={reviewMutation.isPending}
+                        >
+                          <Ionicons name="close-circle" size={14} color="#fff" />
+                          <Text style={vtStyles.actionBtnText}>Reject</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+
+              <ScriptureVideosSection topicId={topic.id} theme={theme} />
+
+              {hasScript && isExpanded && (
+                <View style={[vtStyles.scriptPreview, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  {editingId === topic.id ? (
+                    <>
+                      <TextInput
+                        style={[vtStyles.scriptText, { color: theme.text, borderColor: theme.border, borderWidth: 1, borderRadius: 8, padding: 10, minHeight: 160, textAlignVertical: "top" }]}
+                        multiline
+                        value={editText}
+                        onChangeText={setEditText}
+                        autoFocus
+                      />
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#10B981" }]}
+                          onPress={() => saveScriptMutation.mutate({ id: topic.id, script: editText })}
+                          disabled={saveScriptMutation.isPending}
+                        >
+                          {saveScriptMutation.isPending ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          )}
+                          <Text style={vtStyles.actionBtnText}>Save</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#6B7280" }]}
+                          onPress={() => { setEditingId(null); setEditText(""); }}
+                        >
+                          <Ionicons name="close" size={14} color="#fff" />
+                          <Text style={vtStyles.actionBtnText}>Cancel</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 6, gap: 8 }}>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#8B5CF6" }]}
+                          onPress={() => {
+                            if (Platform.OS === "web") {
+                              if (window.confirm("Regenerate script? This will replace the current script with a new AI-generated one.")) {
+                                generateMutation.mutate(topic.id);
+                              }
+                            } else {
+                              Alert.alert(
+                                "Regenerate Script",
+                                "This will replace the current script with a new AI-generated one.",
+                                [
+                                  { text: "Cancel", style: "cancel" },
+                                  { text: "Regenerate", onPress: () => generateMutation.mutate(topic.id) },
+                                ]
+                              );
+                            }
+                          }}
+                          disabled={isGenerating}
+                        >
+                          {isGenerating ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Ionicons name="refresh" size={14} color="#fff" />
+                          )}
+                          <Text style={vtStyles.actionBtnText}>Regenerate</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[vtStyles.actionBtn, { backgroundColor: "#F59E0B" }]}
+                          onPress={() => { setEditingId(topic.id); setEditText(topic.generatedScript || ""); }}
+                        >
+                          <Ionicons name="create-outline" size={14} color="#fff" />
+                          <Text style={vtStyles.actionBtnText}>Edit</Text>
+                        </Pressable>
+                      </View>
+                      <Text style={[vtStyles.scriptText, { color: theme.text }]}>
+                        {topic.generatedScript}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const vtStyles = StyleSheet.create({
+  container: {
+    padding: 16,
+  },
+  heading: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 16,
+  },
+  grid: {
+    gap: 12,
+  },
+  card: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "capitalize" as const,
+  },
+  scripture: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    marginBottom: 8,
+  },
+  categoryBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+  },
+  description: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  cardActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  actionBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  scriptPreview: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  scriptText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+  },
+  assemblyStatusRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  assemblyStatusText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+  },
+  reviewSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  reviewSectionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 10,
+  },
+  reviewNotesInput: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    minHeight: 60,
+  },
+});
+
+function DemoDataTab({ theme }: { theme: any }) {
+  const queryClient = useQueryClient();
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
+  const [lastResult, setLastResult] = useState<string | null>(null);
+
+  const { data: demoStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery<{ demo_data_loaded: boolean }>({
+    queryKey: ["/api/demo/status"],
+  });
+
+  const isLoaded = demoStatus?.demo_data_loaded ?? false;
+
+  const handleSeed = async () => {
+    setSeedLoading(true);
+    setLastResult(null);
+    try {
+      const res = await apiRequest("GET", "/api/demo/seed");
+      const data = await res.json();
+      setLastResult(data.message || "Seed complete");
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/dashboard"] });
+    } catch (err: any) {
+      setLastResult(`Error: ${err.message}`);
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setClearLoading(true);
+    setLastResult(null);
+    try {
+      const res = await apiRequest("GET", "/api/demo/clear");
+      const data = await res.json();
+      setLastResult(data.message || "Clear complete");
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/dashboard"] });
+    } catch (err: any) {
+      setLastResult(`Error: ${err.message}`);
+    } finally {
+      setClearLoading(false);
+    }
+  };
+
+  return (
+    <View style={{ padding: 16, gap: 16 }}>
+      <View style={{
+        backgroundColor: "rgba(201, 147, 58, 0.08)",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "rgba(201, 147, 58, 0.2)",
+        padding: 16,
+        gap: 12,
+      }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Ionicons name="flask" size={22} color="#C9933A" />
+          <Text style={{ color: theme.text, fontSize: 18, fontFamily: "Lora_700Bold" }}>
+            Demo Data Management
+          </Text>
+        </View>
+        <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 }}>
+          Seed the analytics dashboard with realistic conference demo data. Creates 51 hierarchy nodes, 200 demo users, 90 days of engagement data, and 8 pastoral care alerts. All demo data uses @demo.gracethroughfaith.app emails and can be fully cleared.
+        </Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+          <View style={{
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: statusLoading ? "#6B7280" : isLoaded ? "#22C55E" : "#6B7280",
+          }} />
+          <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_500Medium" }}>
+            {statusLoading ? "Checking..." : isLoaded ? "Demo data loaded" : "No demo data"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <Pressable
+          onPress={handleSeed}
+          disabled={seedLoading || clearLoading || isLoaded}
+          style={{
+            flex: 1,
+            backgroundColor: isLoaded ? "rgba(201, 147, 58, 0.15)" : "#C9933A",
+            borderRadius: 10,
+            paddingVertical: 14,
+            alignItems: "center",
+            opacity: (seedLoading || clearLoading || isLoaded) ? 0.5 : 1,
+          }}
+        >
+          {seedLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={{ color: isLoaded ? theme.textSecondary : "#050507", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+              Seed Demo Data
+            </Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={handleClear}
+          disabled={seedLoading || clearLoading || !isLoaded}
+          style={{
+            flex: 1,
+            backgroundColor: !isLoaded ? "rgba(239, 140, 44, 0.15)" : "rgba(239, 140, 44, 0.25)",
+            borderRadius: 10,
+            paddingVertical: 14,
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: !isLoaded ? "rgba(239, 140, 44, 0.2)" : "rgba(239, 140, 44, 0.5)",
+            opacity: (seedLoading || clearLoading || !isLoaded) ? 0.5 : 1,
+          }}
+        >
+          {clearLoading ? (
+            <ActivityIndicator size="small" color="#EF8C2C" />
+          ) : (
+            <Text style={{ color: "#EF8C2C", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+              Clear Demo Data
+            </Text>
+          )}
+        </Pressable>
+      </View>
+
+      {lastResult && (
+        <View style={{
+          backgroundColor: "rgba(201, 147, 58, 0.06)",
+          borderRadius: 8,
+          padding: 12,
+          borderWidth: 1,
+          borderColor: "rgba(201, 147, 58, 0.15)",
+        }}>
+          <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 }}>
+            {lastResult}
+          </Text>
+        </View>
+      )}
+
+      <View style={{
+        backgroundColor: "rgba(201, 147, 58, 0.04)",
+        borderRadius: 10,
+        padding: 14,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: "rgba(201, 147, 58, 0.1)",
+      }}>
+        <Text style={{ color: theme.text, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>What gets seeded:</Text>
+        {[
+          "1 General Conference, 3 Divisions, 5 Unions, 12 Conferences, 30 Churches",
+          "200 demo user accounts (@demo.gracethroughfaith.app)",
+          "Reading streaks (3-45 days) across all users",
+          "Topic engagement across all 42 Signpost topics",
+          "Activity pattern heatmap data (90 days)",
+          "Geographic heatmap tiles for all churches",
+          "8 pastoral care alerts (amber + gold severity)",
+          "Pre-computed analytics cache for dashboard",
+        ].map((item, i) => (
+          <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+            <Ionicons name="checkmark-circle" size={14} color="#C9933A" style={{ marginTop: 2 }} />
+            <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 17 }}>
+              {item}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function AdminReviewScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test" | "users" | "leaders">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "quarter" | "pending" | "sabbath-test" | "users" | "leaders" | "video-topics" | "demo">("overview");
   const [filterReviewStatus, setFilterReviewStatus] = useState("pending");
   const [filterPromptVersion, setFilterPromptVersion] = useState("");
   const [filterHasNotes, setFilterHasNotes] = useState(false);
@@ -1650,7 +2808,7 @@ export default function AdminReviewScreen() {
         ]}
       >
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 0 }}>
-        {(["overview", "pending", "quarter", ...(isAdmin ? ["users" as const, "leaders" as const, "sabbath-test" as const] : [])] as const).map((tab) => (
+        {(["overview", "pending", "quarter", "video-topics" as const, ...(isAdmin ? ["users" as const, "leaders" as const, "sabbath-test" as const, "demo" as const] : [])] as const).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
@@ -1667,6 +2825,10 @@ export default function AdminReviewScreen() {
                 ? "Users"
                 : tab === "leaders"
                 ? "Leaders"
+                : tab === "video-topics"
+                ? "Video Topics"
+                : tab === "demo"
+                ? "Demo"
                 : "Quarter"}
             </Text>
           </Pressable>
@@ -1749,6 +2911,14 @@ export default function AdminReviewScreen() {
 
         {activeTab === "sabbath-test" && isAdmin && (
           <SabbathTestTab theme={theme} />
+        )}
+
+        {activeTab === "video-topics" && isEditor && (
+          <VideoTopicsTab theme={theme} />
+        )}
+
+        {activeTab === "demo" && isAdmin && (
+          <DemoDataTab theme={theme} />
         )}
       </ScrollView>
 
@@ -1932,6 +3102,35 @@ function UserDetailModal({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/admin/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/admin/users") });
+      Alert.alert("Deleted", "User account has been removed.");
+      onClose();
+    },
+    onError: (err: any) => {
+      Alert.alert("Error", err?.message || "Failed to delete user.");
+    },
+  });
+
+  const handleDelete = () => {
+    if (!userId || !data) return;
+    const name = data.user.displayName || data.user.email || userId;
+    if (Platform.OS === "web") {
+      if (confirm(`Permanently delete "${name}"? This cannot be undone.`)) {
+        deleteMutation.mutate(userId);
+      }
+    } else {
+      Alert.alert("Delete User", `Permanently delete "${name}"? This cannot be undone.`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(userId) },
+      ]);
+    }
+  };
+
   const handleRoleChange = (newRole: string) => {
     if (!userId) return;
     if (Platform.OS === "web") {
@@ -1951,7 +3150,7 @@ function UserDetailModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: "85%" }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: "85%", minHeight: 300 }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>User Details</Text>
             <Pressable onPress={onClose} hitSlop={12}>
@@ -1962,7 +3161,7 @@ function UserDetailModal({
           {isLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginVertical: 40 }} />
           ) : data ? (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 1, flexShrink: 1 }}>
               <View style={{ padding: 16, gap: 16 }}>
                 <View style={[styles.userDetailCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
                   <View style={[styles.userDetailAvatar, { backgroundColor: theme.accent }]}>
@@ -2080,6 +3279,28 @@ function UserDetailModal({
                     ))}
                   </View>
                 )}
+
+                {data.user.role !== "admin" && (
+                  <Pressable
+                    onPress={handleDelete}
+                    style={({ pressed }) => ({
+                      backgroundColor: pressed ? "#DC262620" : "transparent",
+                      borderWidth: 1,
+                      borderColor: "#EF4444",
+                      borderRadius: 10,
+                      paddingVertical: 12,
+                      alignItems: "center" as const,
+                      flexDirection: "row" as const,
+                      justifyContent: "center" as const,
+                      gap: 8,
+                    })}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Text style={{ color: "#EF4444", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                      Delete User
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </ScrollView>
           ) : (
@@ -2128,9 +3349,9 @@ function roleColor(role: string): string {
   }
 }
 
-function UserRowRolePicker({ user, theme }: { user: AdminUser; theme: any }) {
+function UserRowRolePicker({ user, theme, isOpen, onToggle }: { user: AdminUser; theme: any; isOpen: boolean; onToggle: () => void }) {
   const queryClient = useQueryClient();
-  const [showPicker, setShowPicker] = useState(false);
+  const showPicker = isOpen;
 
   const roleMutation = useMutation({
     mutationFn: async (newRole: string) => {
@@ -2146,7 +3367,7 @@ function UserRowRolePicker({ user, theme }: { user: AdminUser; theme: any }) {
 
   const handleRoleChange = (newRole: string) => {
     if (newRole === user.role) {
-      setShowPicker(false);
+      onToggle();
       return;
     }
     const label = ROLE_LABELS[newRole] || newRole;
@@ -2165,15 +3386,15 @@ function UserRowRolePicker({ user, theme }: { user: AdminUser; theme: any }) {
         ]
       );
     }
-    setShowPicker(false);
+    onToggle();
   };
 
   const color = roleColor(user.role);
 
   return (
-    <View>
+    <View style={{ overflow: "visible" as const, zIndex: showPicker ? 9999 : 1 }}>
       <Pressable
-        onPress={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+        onPress={(e) => { e.stopPropagation(); onToggle(); }}
         style={[styles.userRoleBadge, { backgroundColor: color + "20", flexDirection: "row", alignItems: "center", gap: 4 }]}
         disabled={roleMutation.isPending}
       >
@@ -2213,6 +3434,7 @@ function UsersTab({ theme }: { theme: any }) {
   const [roleFilter, setRoleFilter] = useState("");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [openPickerUserId, setOpenPickerUserId] = useState<string | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
@@ -2295,7 +3517,7 @@ function UsersTab({ theme }: { theme: any }) {
           {(data?.users || []).map((u) => (
             <Pressable
               key={u.id}
-              style={[styles.userRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
+              style={[styles.userRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border, zIndex: openPickerUserId === u.id ? 9999 : 1 }]}
               onPress={() => setSelectedUserId(u.id)}
             >
               <View style={[styles.userRowAvatar, { backgroundColor: theme.accent + "30" }]}>
@@ -2318,8 +3540,13 @@ function UsersTab({ theme }: { theme: any }) {
                   </Text>
                 </View>
               </View>
-              <View style={{ alignItems: "flex-end", zIndex: 10 }}>
-                <UserRowRolePicker user={u} theme={theme} />
+              <View style={{ alignItems: "flex-end", zIndex: 10, overflow: "visible" as const }}>
+                <UserRowRolePicker
+                  user={u}
+                  theme={theme}
+                  isOpen={openPickerUserId === u.id}
+                  onToggle={() => setOpenPickerUserId(openPickerUserId === u.id ? null : u.id)}
+                />
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginLeft: 4 }} />
             </Pressable>
@@ -3319,6 +4546,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 8,
     gap: 10,
+    overflow: "visible" as const,
   },
   userRowAvatar: {
     width: 36,

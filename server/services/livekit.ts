@@ -1,20 +1,41 @@
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY!;
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET!;
-const LIVEKIT_URL = process.env.LIVEKIT_URL!;
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+const LIVEKIT_URL = process.env.LIVEKIT_URL;
 
-const httpUrl = LIVEKIT_URL.replace("wss://", "https://");
+function isConfigured(): boolean {
+  return !!(LIVEKIT_API_KEY && LIVEKIT_API_SECRET && LIVEKIT_URL);
+}
 
-const roomService = new RoomServiceClient(httpUrl, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+let _roomService: RoomServiceClient | null = null;
+
+function getRoomService(): RoomServiceClient {
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+    throw new Error(
+      "LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL in your environment."
+    );
+  }
+  if (!_roomService) {
+    _roomService = new RoomServiceClient(
+      LIVEKIT_URL.replace("wss://", "https://"),
+      LIVEKIT_API_KEY,
+      LIVEKIT_API_SECRET
+    );
+  }
+  return _roomService;
+}
 
 export function getLiveKitUrl(): string {
+  if (!LIVEKIT_URL) {
+    throw new Error("LIVEKIT_URL is not configured.");
+  }
   return LIVEKIT_URL;
 }
 
 export async function createLiveKitRoom(roomName: string): Promise<void> {
   try {
-    await roomService.createRoom({
+    await getRoomService().createRoom({
       name: roomName,
       emptyTimeout: 60 * 30,
       maxParticipants: 50,
@@ -27,7 +48,7 @@ export async function createLiveKitRoom(roomName: string): Promise<void> {
 
 export async function deleteLiveKitRoom(roomName: string): Promise<void> {
   try {
-    await roomService.deleteRoom(roomName);
+    await getRoomService().deleteRoom(roomName);
   } catch (err) {
     console.error("Failed to delete LiveKit room:", err);
   }
@@ -40,6 +61,9 @@ export async function generateToken(
 ): Promise<string> {
   const identity = `${participantName.replace(/[^a-zA-Z0-9_-]/g, "_")}_${Date.now().toString(36)}`;
 
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+    throw new Error("LiveKit credentials are not configured.");
+  }
   const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
     identity,
     name: participantName,
@@ -60,7 +84,7 @@ export async function generateToken(
 
 export async function getParticipantCount(roomName: string): Promise<number> {
   try {
-    const participants = await roomService.listParticipants(roomName);
+    const participants = await getRoomService().listParticipants(roomName);
     return participants.length;
   } catch {
     return 0;

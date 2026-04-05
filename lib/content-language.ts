@@ -1,18 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SUPPORTED_LANGUAGES, type SupportedLangCode } from "@/lib/i18n";
 
 const CONTENT_LANG_KEY = "@grace-through-faith/contentLanguage";
 const SAME_AS_APP = "same";
 
-export type ContentLanguageOption = "same" | "en" | "es" | "fr" | "pt" | "fil" | "zh";
+export type ContentLanguageOption = "same" | SupportedLangCode;
 
+// Build options list dynamically from all 22 registered languages
 export const CONTENT_LANGUAGE_OPTIONS: { code: ContentLanguageOption; label: string }[] = [
   { code: "same", label: "Same as App Language" },
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "fr", label: "Français" },
-  { code: "pt", label: "Português" },
-  { code: "fil", label: "Filipino" },
-  { code: "zh", label: "中文" },
+  ...SUPPORTED_LANGUAGES.map((l) => ({ code: l.code as ContentLanguageOption, label: l.label })),
 ];
 
 let _cachedContentLang: ContentLanguageOption = "same";
@@ -35,6 +32,11 @@ export async function setContentLanguage(code: ContentLanguageOption): Promise<v
   await AsyncStorage.setItem(CONTENT_LANG_KEY, code);
 }
 
+/**
+ * Resolve the actual language code to send to the server.
+ * - "same" → use the current app UI language
+ * - anything else → use that code directly
+ */
 export function resolveContentLang(appLang: string): string {
   if (_cachedContentLang === SAME_AS_APP) {
     const base = appLang.split("-")[0];

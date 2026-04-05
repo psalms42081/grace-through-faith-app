@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,24 +6,22 @@ import {
   Pressable,
   Dimensions,
   Platform,
-  FlatList,
-  ViewToken,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Audio } from "expo-av";
 import { track } from "@/lib/analytics";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSpring,
-  interpolate,
-  FadeIn,
+  withDelay,
+  Easing,
 } from "react-native-reanimated";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const ONBOARDING_KEY = "@grace-through-faith/onboarded";
 
@@ -32,360 +30,226 @@ const NAVY = "#1A1F3C";
 const DEEP_NAVY = "#0D1025";
 const PARCHMENT = "#F5EFE0";
 
-interface PageData {
-  key: string;
-}
+const QUOTE =
+  "The Word of God is living and powerful.\nYou have come to the right place —\nopen your heart, and let it speak.";
 
-const PAGES: PageData[] = [
-  { key: "welcome" },
-  { key: "get-started" },
-];
+const ease = Easing.out(Easing.ease);
 
-function WelcomePage() {
+export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const hasStartedRef = useRef(false);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const cancelledRef = useRef(false);
+
+  const flameOpacity = useSharedValue(0);
+  const flameScale = useSharedValue(0.85);
+  const glowOpacity = useSharedValue(0);
+  const quoteOpacity = useSharedValue(0);
+  const attributionOpacity = useSharedValue(0);
+  const buttonOpacity = useSharedValue(0);
+
+  const handleEnter = useCallback(async () => {
+    track("onboarding_completed", { method: "enter" });
+    cancelledRef.current = true;
+    if (soundRef.current) {
+      try { await soundRef.current.stopAsync(); } catch {}
+    }
+    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    router.replace("/(tabs)");
+  }, []);
+
+  useEffect(() => {
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+
+    flameOpacity.value = withDelay(
+      1000,
+      withTiming(1, { duration: 2000, easing: ease })
+    );
+    flameScale.value = withDelay(
+      1000,
+      withTiming(1, { duration: 2500, easing: Easing.out(Easing.cubic) })
+    );
+
+    glowOpacity.value = withDelay(
+      1500,
+      withTiming(0.12, { duration: 2500, easing: ease })
+    );
+
+    quoteOpacity.value = withDelay(
+      3000,
+      withTiming(1, { duration: 1800, easing: ease })
+    );
+
+    attributionOpacity.value = withDelay(
+      4200,
+      withTiming(0.5, { duration: 1200, easing: ease })
+    );
+
+    buttonOpacity.value = withDelay(
+      6500,
+      withTiming(1, { duration: 1000, easing: ease })
+    );
+
+    // Configure audio session then play voiceover
+    setTimeout(async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+        });
+        const { sound } = await Audio.Sound.createAsync(
+          require("@/assets/audio/invitation-quote.mp3"),
+          { shouldPlay: true, volume: 0.7 },
+          (status) => {
+            // Auto-advance as soon as the voiceover finishes
+            if (status.isLoaded && status.didJustFinish) {
+              setTimeout(() => handleEnter(), 1500);
+            }
+          }
+        );
+        if (!cancelledRef.current) {
+          soundRef.current = sound;
+        } else {
+          sound.unloadAsync().catch(() => {});
+        }
+      } catch {
+        // If audio fails, auto-advance after a generous delay
+        setTimeout(() => handleEnter(), 10000);
+      }
+    }, 3200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+      if (soundRef.current) {
+        soundRef.current
+          .stopAsync()
+          .catch(() => {})
+          .finally(() => soundRef.current?.unloadAsync().catch(() => {}));
+      }
+    };
+  }, []);
+
+  const flameStyle = useAnimatedStyle(() => ({
+    opacity: flameOpacity.value,
+    transform: [{ scale: flameScale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
+  const quoteStyle = useAnimatedStyle(() => ({
+    opacity: quoteOpacity.value,
+  }));
+
+  const attributionStyle = useAnimatedStyle(() => ({
+    opacity: attributionOpacity.value,
+  }));
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    opacity: buttonOpacity.value,
+  }));
+
   return (
-    <View style={pageStyles.container}>
-      <View style={pageStyles.topSection}>
-        <Animated.View entering={FadeIn.delay(200).duration(800)} style={pageStyles.crossContainer}>
-          <View style={[pageStyles.crossVertical, { backgroundColor: GOLD }]} />
-          <View style={[pageStyles.crossHorizontal, { backgroundColor: GOLD }]} />
-        </Animated.View>
-        <Animated.View entering={FadeIn.delay(400).duration(800)} style={pageStyles.doveRow}>
-          <Ionicons name="leaf-outline" size={18} color={GOLD} style={{ transform: [{ rotate: "-45deg" }] }} />
-          <Ionicons name="leaf-outline" size={18} color={GOLD} style={{ transform: [{ rotate: "45deg" }, { scaleX: -1 }] }} />
-        </Animated.View>
-      </View>
-      <Animated.View entering={FadeIn.delay(600).duration(800)} style={pageStyles.centerContent}>
-        <Text style={[pageStyles.appTitle, { fontFamily: "Lora_700Bold" }]}>
-          Grace{"\n"}through{"\n"}Faith
-        </Text>
-        <View style={pageStyles.dividerLine} />
-        <Text style={[pageStyles.tagline, { fontFamily: "Lora_400Regular_Italic" }]}>
-          Grow deeper in Scripture, prayer,{"\n"}and Sabbath life — with your church.
-        </Text>
-      </Animated.View>
-      <View style={pageStyles.bottomSpacer} />
-    </View>
-  );
-}
+    <View style={[s.root, { paddingBottom: bottomPad }]}>
+      <View style={s.center}>
+        <Animated.View style={[s.glowRing, glowStyle]} />
 
-function GetStartedPage({ onGetStarted }: { onGetStarted: () => void }) {
-  return (
-    <View style={pageStyles.container}>
-      <Animated.View entering={FadeIn.delay(200).duration(800)} style={pageStyles.startCenter}>
-        <View style={pageStyles.startCrossContainer}>
-          <View style={[pageStyles.startCrossV, { backgroundColor: GOLD }]} />
-          <View style={[pageStyles.startCrossH, { backgroundColor: GOLD }]} />
+        <Animated.View style={flameStyle}>
+          <Image
+            source={require("@/assets/images/adventist-symbol-gold.png")}
+            style={s.flame}
+            resizeMode="contain"
+          />
+        </Animated.View>
+
+        <View style={s.quoteBlock}>
+          <Animated.View style={quoteStyle}>
+            <Text style={s.quoteText}>{QUOTE}</Text>
+          </Animated.View>
+          <Animated.View style={attributionStyle}>
+            <Text style={s.attribution}>— Ellen G. White</Text>
+          </Animated.View>
         </View>
-        <Text style={[pageStyles.startTitle, { fontFamily: "Lora_700Bold" }]}>
-          Begin Your{"\n"}Journey
-        </Text>
-        <Text style={[pageStyles.startDesc, { fontFamily: "Inter_400Regular" }]}>
-          Study Scripture, grow in prayer, and stay connected to your church family.
-        </Text>
+      </View>
+
+      <Animated.View style={[s.bottomArea, buttonStyle]}>
         <Pressable
-          style={({ pressed }) => [pageStyles.startBtn, pressed && { opacity: 0.85 }]}
-          onPress={onGetStarted}
+          style={({ pressed }) => [s.enterBtn, pressed && { opacity: 0.8 }]}
+          onPress={handleEnter}
         >
-          <Text style={[pageStyles.startBtnText, { fontFamily: "Inter_700Bold" }]}>
-            Begin Your Journey
-          </Text>
-          <Ionicons name="arrow-forward" size={20} color={NAVY} />
+          <Text style={s.enterBtnText}>Enter</Text>
         </Pressable>
       </Animated.View>
     </View>
   );
 }
 
-function DotIndicator({ current, total }: { current: number; total: number }) {
-  return (
-    <View style={dotStyles.row}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={[
-            dotStyles.dot,
-            i === current ? dotStyles.dotActive : dotStyles.dotInactive,
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-export default function OnboardingScreen() {
-  const insets = useSafeAreaInsets();
-  const [currentPage, setCurrentPage] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
-      if (value) {
-        router.replace("/(tabs)");
-      }
-    });
-  }, []);
-
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentPage(viewableItems[0].index);
-      }
-    },
-    []
-  );
-
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
-
-  const handleGetStarted = useCallback(async () => {
-    track("onboarding_completed", { method: "button" });
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-    router.replace("/(tabs)");
-  }, []);
-
-  const handleSkip = useCallback(async () => {
-    track("onboarding_completed", { method: "skip" });
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
-    router.replace("/(tabs)");
-  }, []);
-
-  const handleNext = useCallback(() => {
-    if (currentPage < PAGES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentPage + 1, animated: true });
-    }
-  }, [currentPage]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: PageData }) => {
-      const pageContent = () => {
-        switch (item.key) {
-          case "welcome":
-            return <WelcomePage />;
-          case "get-started":
-            return <GetStartedPage onGetStarted={handleGetStarted} />;
-          default:
-            return null;
-        }
-      };
-      return <View style={{ width: SCREEN_WIDTH }}>{pageContent()}</View>;
-    },
-    [handleGetStarted]
-  );
-
-  return (
-    <View style={[styles.root, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-      <FlatList
-        ref={flatListRef}
-        data={PAGES}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.key}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        scrollEnabled
-        bounces={false}
-        getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
-          index,
-        })}
-      />
-      <View style={[styles.bottomBar, { paddingBottom: 16 }]}>
-        {currentPage < PAGES.length - 1 ? (
-          <>
-            <Pressable onPress={handleSkip} hitSlop={12} accessibilityLabel="Skip onboarding" accessibilityRole="button">
-              <Text style={[styles.skipText, { fontFamily: "Inter_500Medium" }]}>Skip</Text>
-            </Pressable>
-            <DotIndicator current={currentPage} total={PAGES.length} />
-            <Pressable onPress={handleNext} hitSlop={12} style={styles.nextBtn} accessibilityLabel="Next step" accessibilityRole="button">
-              <Ionicons name="arrow-forward" size={22} color={NAVY} />
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <View />
-            <DotIndicator current={currentPage} total={PAGES.length} />
-            <View />
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: DEEP_NAVY,
   },
-  bottomBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 28,
-    paddingTop: 12,
-  },
-  skipText: {
-    color: "rgba(237, 229, 213, 0.5)",
-    fontSize: 15,
-  },
-  nextBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: GOLD,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
-
-const dotStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  dot: {
-    borderRadius: 4,
-  },
-  dotActive: {
-    width: 24,
-    height: 8,
-    backgroundColor: GOLD,
-    borderRadius: 4,
-  },
-  dotInactive: {
-    width: 8,
-    height: 8,
-    backgroundColor: "rgba(201, 147, 58, 0.3)",
-    borderRadius: 4,
-  },
-});
-
-const pageStyles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    width: SCREEN_WIDTH,
-    paddingHorizontal: 32,
-    justifyContent: "center",
-  },
-  topSection: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  crossContainer: {
-    width: 60,
-    height: 60,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
   },
-  crossVertical: {
+  glowRing: {
     position: "absolute",
-    width: 4,
-    height: 50,
-    borderRadius: 2,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: GOLD,
   },
-  crossHorizontal: {
-    position: "absolute",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    top: 14,
+  flame: {
+    width: 90,
+    height: 90,
   },
-  doveRow: {
-    flexDirection: "row",
-    gap: 6,
+  quoteBlock: {
+    marginTop: 48,
+    paddingHorizontal: 40,
     alignItems: "center",
   },
-  centerContent: {
-    alignItems: "center",
-  },
-  appTitle: {
-    fontSize: 44,
+  quoteText: {
+    fontFamily: "Lora_400Regular_Italic",
+    fontSize: 18,
     color: PARCHMENT,
     textAlign: "center",
-    lineHeight: 52,
-    marginBottom: 20,
+    lineHeight: 30,
+    letterSpacing: 0.3,
   },
-  dividerLine: {
-    width: 48,
-    height: 2,
-    backgroundColor: GOLD,
-    marginBottom: 20,
-    borderRadius: 1,
-  },
-  tagline: {
-    fontSize: 17,
-    color: "rgba(237, 229, 213, 0.7)",
-    textAlign: "center",
-    lineHeight: 26,
-    marginBottom: 8,
-  },
-  taglineRef: {
+  attribution: {
+    fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: GOLD,
-    letterSpacing: 1.2,
+    textAlign: "center",
+    marginTop: 16,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
-  bottomSpacer: { height: 80 },
-  startCenter: {
+  bottomArea: {
     alignItems: "center",
+    paddingBottom: Platform.OS === "web" ? 48 : 32,
   },
-  startCrossContainer: {
-    width: 50,
-    height: 50,
+  enterBtn: {
+    width: 160,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: GOLD,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 28,
   },
-  startCrossV: {
-    position: "absolute",
-    width: 3,
-    height: 40,
-    borderRadius: 1.5,
-  },
-  startCrossH: {
-    position: "absolute",
-    width: 28,
-    height: 3,
-    borderRadius: 1.5,
-    top: 10,
-  },
-  startTitle: {
-    fontSize: 38,
-    color: PARCHMENT,
-    textAlign: "center",
-    lineHeight: 46,
-    marginBottom: 16,
-  },
-  startDesc: {
-    fontSize: 15,
-    color: "rgba(237, 229, 213, 0.6)",
-    textAlign: "center",
-    lineHeight: 23,
-    marginBottom: 36,
-    maxWidth: 300,
-  },
-  startBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: GOLD,
-    paddingVertical: 16,
-    paddingHorizontal: 36,
-    borderRadius: 16,
-    gap: 10,
-    marginBottom: 20,
-  },
-  startBtnText: {
-    color: NAVY,
+  enterBtnText: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 17,
-  },
-  startNote: {
-    fontSize: 12,
-    color: "rgba(237, 229, 213, 0.35)",
+    color: NAVY,
+    letterSpacing: 1,
   },
 });

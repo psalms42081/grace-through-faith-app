@@ -7,7 +7,6 @@ import { LinearGradient } from "expo-linear-gradient";
 const HOME_IMAGES = {
   read: require("@/assets/home-cards/read.png"),
   study: require("@/assets/home-cards/study.png"),
-  pray: require("@/assets/home-cards/pray.png"),
 };
 
 const BOOK_IDS: Record<string, number> = {
@@ -48,7 +47,6 @@ interface PathItem {
 interface TodaysPathProps {
   theme: any;
   isDark: boolean;
-  prayerDone: boolean;
   hasRecentRead: boolean;
   dailyVerseRef?: string;
 }
@@ -56,7 +54,6 @@ interface TodaysPathProps {
 export default function TodaysPath({
   theme,
   isDark,
-  prayerDone,
   hasRecentRead,
   dailyVerseRef,
 }: TodaysPathProps) {
@@ -81,20 +78,7 @@ export default function TodaysPath({
       label: "Study",
       subtitle: "Reflect on today's passage",
       completed: false,
-      onPress: () => {
-        if (parsed) {
-          router.push({ pathname: "/(tabs)/study", params: { bookId: String(parsed.bookId), chapter: String(parsed.chapter), bookName: dailyVerseRef?.replace(/\s+\d+.*$/, "") || "" } } as any);
-        } else {
-          router.push("/(tabs)/explore" as any);
-        }
-      },
-    },
-    {
-      image: HOME_IMAGES.pray,
-      label: "Pray",
-      subtitle: "Respond in prayer",
-      completed: prayerDone,
-      onPress: () => router.push("/prayer-journal"),
+      onPress: () => router.push("/(tabs)/explore"),
     },
   ];
 
@@ -119,7 +103,7 @@ export default function TodaysPath({
         >
           <Image source={item.image} style={s.cardImage} resizeMode="cover" />
           <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.85)"]}
+            colors={["transparent", "rgba(0,0,0,0.38)", "rgba(0,0,0,0.68)"]}
             locations={[0, 0.5, 1]}
             style={s.cardOverlay}
           >

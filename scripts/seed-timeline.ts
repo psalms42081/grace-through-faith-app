@@ -532,21 +532,33 @@ async function seed() {
       console.warn(`Location not found: "${event.locationName}" — skipping link for event "${event.title}"`);
     }
 
-    const inserted = await db
-      .insert(timelineEvents)
-      .values({
-        title: event.title,
-        description: event.description,
-        yearApprox: event.yearApprox,
-        yearLabel: event.yearLabel,
-        period: event.period,
-        category: event.category,
-        locationId,
-      })
-      .returning();
+    const existing = await db
+      .select()
+      .from(timelineEvents)
+      .where(eq(timelineEvents.title, event.title))
+      .limit(1);
 
-    const eventId = inserted[0].id;
-    eventsSeeded++;
+    let eventId: string;
+    if (existing.length > 0) {
+      eventId = existing[0].id;
+      console.log(`Timeline event already exists: "${event.title}" — skipping`);
+    } else {
+      const inserted = await db
+        .insert(timelineEvents)
+        .values({
+          title: event.title,
+          description: event.description,
+          yearApprox: event.yearApprox,
+          yearLabel: event.yearLabel,
+          period: event.period,
+          category: event.category,
+          locationId,
+        })
+        .returning();
+
+      eventId = inserted[0].id;
+      eventsSeeded++;
+    }
 
     for (const ref of event.verses) {
       const verse = await db

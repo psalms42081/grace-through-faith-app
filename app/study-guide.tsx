@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Stack, useLocalSearchParams, router } from "expo-router";
+import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -21,6 +22,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
+import { useEllenWhite } from "@/contexts/PioneerContext";
+import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
+import InlineCoachTip from "@/components/InlineCoachTip";
 
 interface Message {
   role: "user" | "assistant";
@@ -42,12 +46,12 @@ interface Progression {
   apply: StageProgress;
 }
 
-type Persona = "scholarly" | "pastoral" | "ancient";
+type Persona = "scholarly" | "pastoral" | "ellen-white";
 
 const PERSONAS: { id: Persona; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
   { id: "scholarly", label: "Scholarly", icon: "school-outline", desc: "Academic depth with Greek & Hebrew focus" },
   { id: "pastoral", label: "Pastoral", icon: "heart-circle-outline", desc: "Warm, life-focused spiritual guidance" },
-  { id: "ancient", label: "Ancient", icon: "library-outline", desc: "Patristic wisdom from the early church" },
+  { id: "ellen-white", label: "Ellen White", icon: "book-outline", desc: "Spirit of Prophecy insights from her writings" },
 ];
 
 const PHASES = [
@@ -119,6 +123,17 @@ export default function StudyGuideScreen() {
     chapter: string;
     verse: string;
   }>();
+
+  const { tryAutoGuide } = useEllenWhite();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (FEATURE_GUIDES["study-guide"]) {
+        tryAutoGuide("study-guide", FEATURE_GUIDES["study-guide"]);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -318,7 +333,7 @@ export default function StudyGuideScreen() {
         <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
           <Pressable onPress={() => {
             if (pickerStep === "chapter") { setPickerStep("book"); setPickerBook(null); }
-            else router.back();
+            else safeGoBack(router, "/(tabs)/explore");
           }} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={theme.text} />
           </Pressable>
@@ -578,7 +593,7 @@ export default function StudyGuideScreen() {
       />
 
       <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} testID="study-guide-back">
+        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} style={styles.backBtn} testID="study-guide-back">
           <Ionicons name="chevron-back" size={22} color={theme.text} />
         </Pressable>
         <View style={styles.headerCenter}>
@@ -625,6 +640,11 @@ export default function StudyGuideScreen() {
           );
         })}
       </View>
+
+      <InlineCoachTip
+        id="inductive_progress_bar"
+        text="Move through Observe Interpret and Apply as you study."
+      />
 
       <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard }]}>
         <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={3}>
@@ -807,7 +827,7 @@ export default function StudyGuideScreen() {
                     theme={theme}
                   />
                   <Pressable
-                    onPress={() => router.back()}
+                    onPress={() => safeGoBack(router, "/(tabs)/explore")}
                     style={[styles.doneBtn, { backgroundColor: theme.accent }]}
                     testID="study-done-btn"
                   >

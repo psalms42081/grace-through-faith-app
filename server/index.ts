@@ -1,6 +1,7 @@
 import { logSecurityPosture } from "./env";
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
@@ -70,13 +71,14 @@ function setupCors(app: express.Application) {
 function setupBodyParsing(app: express.Application) {
   app.use(
     express.json({
+      limit: "1mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       },
     }),
   );
 
-  app.use(express.urlencoded({ extended: false }));
+  app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 }
 
 const AI_PATH_PATTERNS = ["/generate", "/study-guide", "/context", "/semantic", "/tts", "/scene/"];
@@ -191,8 +193,7 @@ function configureExpoAndLanding(app: express.Application) {
   log("Serving static Expo files with dynamic manifest routing");
 
   app.use("/assets/kids-scenes", express.static(path.resolve(process.cwd(), "assets", "kids-scenes"), {
-    maxAge: "7d",
-    immutable: true,
+    maxAge: "1h",
     etag: true,
   }));
 
@@ -201,23 +202,29 @@ function configureExpoAndLanding(app: express.Application) {
     etag: true,
   }));
 
+  const privacyPath = path.resolve(process.cwd(), "server", "templates", "privacy.html");
+  const privacyHtml = fs.readFileSync(privacyPath, "utf-8");
+  app.get("/privacy", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.status(200).send(privacyHtml);
+  });
+
+  const robotsTxt = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "robots.txt"), "utf-8");
+  app.get("/robots.txt", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.status(200).send(robotsTxt);
+  });
+
+  const sitemapXml = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "sitemap.xml"), "utf-8");
+  app.get("/sitemap.xml", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.status(200).send(sitemapXml);
+  });
+
   if (isDev) {
-    const { createProxyMiddleware } = require("http-proxy-middleware");
-    const metroProxy = createProxyMiddleware({
-      target: "http://localhost:8081",
-      changeOrigin: true,
-      ws: true,
-      logger: undefined,
-    });
-
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api")) {
-        return next();
-      }
-      return metroProxy(req, res, next);
-    });
-
-    log("Dev mode: Proxying all non-API requests to Metro on port 8081");
+    log("Dev mode: Metro proxy already configured before middleware");
     return;
   }
 
@@ -250,6 +257,9 @@ function configureExpoAndLanding(app: express.Application) {
         return next();
       }
       if (req.accepts("html")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         return res.sendFile(webIndexPath);
       }
       next();
@@ -316,19 +326,50 @@ function setupErrorHandler(app: express.Application) {
     res.status(200).send("ok");
   });
 
+  app.use(compression({
+    level: 6,
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) return false;
+      return compression.filter(req, res);
+    },
+  }));
+
+  if (process.env.NODE_ENV === "development") {
+    const { createProxyMiddleware } = require("http-proxy-middleware");
+    const metroProxy = createProxyMiddleware({
+      target: "http://localhost:8081",
+      changeOrigin: true,
+      ws: true,
+      logger: undefined,
+      timeout: 300000,
+      proxyTimeout: 300000,
+      selfHandleResponse: false,
+    });
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith("/api") || req.path === "/__health" || req.path === "/robots.txt" || req.path === "/sitemap.xml") {
+        return next();
+      }
+      return metroProxy(req, res, next);
+    });
+
+    log("Dev mode: Metro proxy installed BEFORE middleware (no Helmet/CSP on bundle)");
+  }
+
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
-        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud", "https://www.youtube.com"],
-        mediaSrc: ["'self'", "blob:"],
+        scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud", "https://www.youtube.com", "https://*.tile.openstreetmap.org"],
+        mediaSrc: ["'self'", "blob:", "https://res.cloudinary.com"],
         workerSrc: ["'self'", "blob:"],
-        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.tile.openstreetmap.org", "https://res.cloudinary.com"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
-        frameAncestors: ["'self'"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
+        frameAncestors: ["'self'", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
       },
     },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
@@ -360,6 +401,30 @@ function setupErrorHandler(app: express.Application) {
         console.error("Sabbath School sync init failed:", err);
       }
 
+      try {
+        const { db: startupDb } = await import("./db");
+        const { kidsStoryScenes } = await import("../shared/schema");
+        const { eq } = await import("drizzle-orm");
+        const scene = await startupDb.select({ imageUrl: kidsStoryScenes.imageUrl }).from(kidsStoryScenes).where(eq(kidsStoryScenes.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
+        if (scene.length && scene[0].imageUrl === "/assets/kids-scenes/creation-animals-scene-2.png") {
+          await startupDb.update(kidsStoryScenes).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq(kidsStoryScenes.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
+          console.log("[startup] Updated creation-animals-scene-2 image URL with cache buster");
+        }
+        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes.imageUrl }).from(kidsStoryScenes).where(eq(kidsStoryScenes.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
+        if (relScene3.length && relScene3[0].imageUrl === "/assets/kids-scenes/teen-relationships-scene-3.png") {
+          await startupDb.update(kidsStoryScenes).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq(kidsStoryScenes.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
+          console.log("[startup] Updated teen-relationships-scene-3 image URL with cache buster");
+        }
+        const { like } = await import("drizzle-orm");
+        const whoseScenes = await startupDb.select({ id: kidsStoryScenes.id, narration: kidsStoryScenes.narration }).from(kidsStoryScenes).where(like(kidsStoryScenes.narration, "%knowing exactly whose you are%"));
+        for (const s of whoseScenes) {
+          await startupDb.update(kidsStoryScenes).set({ narration: s.narration!.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq(kidsStoryScenes.id, s.id));
+          console.log("[startup] Fixed 'whose' -> 'who' in scene", s.id);
+        }
+      } catch (err) {
+        console.error("[startup] Scene image URL fix failed:", err);
+      }
+
       setTimeout(async () => {
         try {
           const { runCacheWarmup } = await import("./services/cache-warmup");
@@ -368,6 +433,36 @@ function setupErrorHandler(app: express.Application) {
           console.error("Cache warmup failed:", err);
         }
       }, 30000);
+
+      const FOUR_HOURS = 4 * 60 * 60 * 1000;
+      setTimeout(async () => {
+        try {
+          const { runAnalyticsRollup } = await import("./workers/analyticsRollupWorker");
+          await runAnalyticsRollup();
+          setInterval(async () => {
+            try { await runAnalyticsRollup(); } catch (err) { console.error("[Worker] Analytics rollup failed:", err); }
+          }, FOUR_HOURS);
+          console.log("[Workers] Analytics rollup worker scheduled (every 4h)");
+        } catch (err) {
+          console.error("[Workers] Analytics rollup initial run failed:", err);
+        }
+      }, 60000);
+
+      setTimeout(async () => {
+        try {
+          const { runHeatmapTiles } = await import("./workers/heatmapTileWorker");
+          const { runActivityPattern } = await import("./workers/activityPatternWorker");
+          await runHeatmapTiles();
+          await runActivityPattern();
+          setInterval(async () => {
+            try { await runHeatmapTiles(); } catch (err) { console.error("[Worker] Heatmap tiles failed:", err); }
+            try { await runActivityPattern(); } catch (err) { console.error("[Worker] Activity pattern failed:", err); }
+          }, FOUR_HOURS);
+          console.log("[Workers] Heatmap tile + activity pattern workers scheduled (every 4h, +2h offset)");
+        } catch (err) {
+          console.error("[Workers] Heatmap/activity pattern initial run failed:", err);
+        }
+      }, 60000 + 2 * 60 * 60 * 1000);
     },
   );
 
@@ -377,4 +472,19 @@ function setupErrorHandler(app: express.Application) {
       console.error(`[deploy-debug] Port ${port} is already in use!`);
     }
   });
+
+  function gracefulShutdown(signal: string) {
+    console.log(`[shutdown] Received ${signal}, closing server...`);
+    server.close(() => {
+      console.log(`[shutdown] Server closed cleanly`);
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.log(`[shutdown] Forcing exit after timeout`);
+      process.exit(1);
+    }, 3000);
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

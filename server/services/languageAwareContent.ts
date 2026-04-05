@@ -1,6 +1,5 @@
 import { TRANSLATION_MAP } from "../../lib/bibleTranslationMap";
-
-const SUPPORTED_LANGUAGES = new Set(["en", "es", "fr", "pt", "fil", "zh"]);
+import { CONTENT_LANGUAGES } from "../../shared/schema";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
@@ -9,12 +8,30 @@ const LANGUAGE_NAMES: Record<string, string> = {
   pt: "Portuguese",
   fil: "Filipino",
   zh: "Chinese",
+  de: "German",
+  sw: "Swahili",
+  id: "Indonesian",
+  ko: "Korean",
+  ja: "Japanese",
+  hi: "Hindi",
+  ar: "Arabic",
+  ru: "Russian",
+  hr: "Croatian",
+  it: "Italian",
+  nl: "Dutch",
+  tr: "Turkish",
+  pl: "Polish",
+  ro: "Romanian",
+  uk: "Ukrainian",
+  am: "Amharic",
 };
 
 export function normalizeLanguageCode(raw: string | undefined | null): string {
   if (!raw) return "en";
   const base = String(raw).split("-")[0].toLowerCase().substring(0, 10);
-  return SUPPORTED_LANGUAGES.has(base) ? base : "en";
+  // Croatian covers Bosnian/Serbian
+  if (base === "bs" || base === "sr") return "hr";
+  return (CONTENT_LANGUAGES as readonly string[]).includes(base) ? base : "en";
 }
 
 export function getTranslationId(languageCode: string): string {

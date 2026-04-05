@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import InlineCoachTip from "@/components/InlineCoachTip";
+import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
 
 const TOPIC_IMAGES: Record<string, any> = {
   "quick-read": require("@/assets/topic-cards/quick-read.png"),
@@ -28,6 +30,7 @@ const TOPIC_IMAGES: Record<string, any> = {
   "bible-maps": require("@/assets/topic-cards/bible-maps.png"),
   timeline: require("@/assets/topic-cards/timeline.png"),
   "three-angels": require("@/assets/topic-cards/three-angels.png"),
+  "state-of-the-dead": require("@/assets/topic-cards/timeline.png"),
   health: require("@/assets/topic-cards/health-message.png"),
   prayer: require("@/assets/topic-cards/prayer.png"),
   love: require("@/assets/topic-cards/love.png"),
@@ -38,6 +41,9 @@ const TOPIC_IMAGES: Record<string, any> = {
   wisdom: require("@/assets/topic-cards/wisdom.png"),
   grace: require("@/assets/topic-cards/grace.png"),
   joy: require("@/assets/topic-cards/joy.png"),
+  "second-coming": require("@/assets/topic-cards/three-angels.png"),
+  "sabbath-study": require("@/assets/topic-cards/quick-read.png"),
+  "sanctuary-study": require("@/assets/topic-cards/fundamental-beliefs.png"),
 };
 
 function TopicImageCard({
@@ -65,7 +71,7 @@ function TopicImageCard({
     >
       <Image source={TOPIC_IMAGES[id]} style={st.topicImageBg} resizeMode="cover" />
       <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.82)"]}
+        colors={["transparent", "rgba(0,0,0,0.28)", "rgba(0,0,0,0.65)"]}
         locations={[0, 0.4, 1]}
         style={st.topicImageOverlay}
       >
@@ -121,6 +127,22 @@ export default function StudyCategoryScreen() {
 
   const meta = CATEGORY_META[category || ""] || { title: "Study", subtitle: "" };
 
+  const { hasSeenTutorial, isLoaded: tutorialLoaded } = useTutorial();
+  const STUDY_COACH_SEQ: TutorialId[] = ["study_quick_read", "study_guided_study", "study_deep_dive"];
+  const [activeCoach, setActiveCoach] = useState<TutorialId | null>(null);
+  useEffect(() => {
+    if (!tutorialLoaded || category !== "study-scripture") return;
+    const first = STUDY_COACH_SEQ.find(id => !hasSeenTutorial(id));
+    setActiveCoach(first ?? null);
+  }, [tutorialLoaded, hasSeenTutorial, category]);
+  const advanceCoach = useCallback(() => {
+    setActiveCoach(prev => {
+      const idx = STUDY_COACH_SEQ.indexOf(prev as TutorialId);
+      if (idx >= 0 && idx < STUDY_COACH_SEQ.length - 1) return STUDY_COACH_SEQ[idx + 1];
+      return null;
+    });
+  }, []);
+
   const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
     queryKey: [`/api/reading-history/recent?userId=${userId}`],
     enabled: category === "study-scripture",
@@ -160,11 +182,23 @@ export default function StudyCategoryScreen() {
               subtitle="Read a passage without extra study layers"
               onPress={() => router.push("/book-picker" as any)}
             />
+            <InlineCoachTip
+              id="study_quick_read"
+              text="Tap to read Scripture with no distractions."
+              visible={activeCoach === "study_quick_read"}
+              onDismiss={advanceCoach}
+            />
             <TopicImageCard
               id="guided-study"
               title="Guided Study"
               subtitle="Choose a passage and explore it with guided questions"
               onPress={() => router.push("/study-guide" as any)}
+            />
+            <InlineCoachTip
+              id="study_guided_study"
+              text="Choose a passage and explore it with questions."
+              visible={activeCoach === "study_guided_study"}
+              onDismiss={advanceCoach}
             />
             <TopicImageCard
               id="deep-study"
@@ -172,6 +206,12 @@ export default function StudyCategoryScreen() {
               subtitle={deepStudyState.sub}
               badge="Guided"
               onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
+            />
+            <InlineCoachTip
+              id="study_deep_dive"
+              text="Study any passage across four detailed layers."
+              visible={activeCoach === "study_deep_dive"}
+              onDismiss={advanceCoach}
             />
           </>
         );
@@ -219,7 +259,7 @@ export default function StudyCategoryScreen() {
               id="historic-voices"
               title="Historic Voices"
               subtitle="Matthew Henry, Adam Clarke, John Gill & more"
-              onPress={() => router.push("/(tabs)/study?tab=voices" as any)}
+              onPress={() => router.push("/historic-voices" as any)}
             />
             <TopicImageCard
               id="bible-maps"
@@ -240,10 +280,40 @@ export default function StudyCategoryScreen() {
         return (
           <>
             <TopicImageCard
+              id="fundamental-beliefs"
+              title="28 Fundamental Beliefs"
+              subtitle="The core doctrines of the Seventh-day Adventist Church"
+              onPress={() => router.push("/sda-studies" as any)}
+            />
+            <TopicImageCard
+              id="second-coming"
+              title="The Second Coming"
+              subtitle="The blessed hope at the heart of Adventist faith"
+              onPress={() => router.push("/topic/second-coming")}
+            />
+            <TopicImageCard
+              id="sabbath-study"
+              title="The Sabbath"
+              subtitle="God's gift of rest from Creation to eternity"
+              onPress={() => router.push("/topic/sabbath-study")}
+            />
+            <TopicImageCard
+              id="sanctuary-study"
+              title="The Sanctuary"
+              subtitle="Understanding Christ's ministry in heaven"
+              onPress={() => router.push("/topic/sanctuary-study")}
+            />
+            <TopicImageCard
               id="three-angels"
               title="Three Angels' Messages"
               subtitle="Study the messages of Revelation 14"
               onPress={() => router.push("/topic/three-angels")}
+            />
+            <TopicImageCard
+              id="state-of-the-dead"
+              title="The State of the Dead"
+              subtitle="What the Bible teaches about death and resurrection"
+              onPress={() => router.push("/topic/state-of-the-dead")}
             />
             <TopicImageCard
               id="health"

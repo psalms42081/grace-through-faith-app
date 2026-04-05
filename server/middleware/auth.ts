@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { db } from "../db";
-import { users } from "../../shared/schema";
-import { eq } from "drizzle-orm";
+import { users, userActivityCounters } from "../../shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { env } from "../env";
 
 declare global {
@@ -14,6 +14,34 @@ declare global {
 }
 
 export const JWT_SECRET = env.JWT_SECRET;
+
+const ACTIVITY_THROTTLE_MS = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 10000;
+const lastActivityUpdate = new Map<string, number>();
+
+export function touchUserActivity(userId: string) {
+  const now = Date.now();
+  const lastUpdate = lastActivityUpdate.get(userId) || 0;
+  if (now - lastUpdate < ACTIVITY_THROTTLE_MS) return;
+  lastActivityUpdate.set(userId, now);
+
+  if (lastActivityUpdate.size > MAX_CACHE_SIZE) {
+    const cutoff = now - ACTIVITY_THROTTLE_MS;
+    for (const [key, ts] of lastActivityUpdate) {
+      if (ts < cutoff) lastActivityUpdate.delete(key);
+    }
+  }
+
+  db.execute(sql`
+    INSERT INTO user_activity_counter (id, user_id, feature_type, use_count, last_used_at)
+    VALUES (gen_random_uuid(), ${userId}, 'app_active', 1, now())
+    ON CONFLICT (user_id, feature_type)
+    DO UPDATE SET use_count = user_activity_counter.use_count + 1, last_used_at = now()
+  `).catch((err) => {
+    console.error("Activity tracking error:", err);
+    lastActivityUpdate.delete(userId);
+  });
+}
 
 export function getAuthUserId(req: Request): string | null {
   try {
@@ -49,6 +77,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Authentication required" });
   }
   req.authUserId = userId;
+  touchUserActivity(userId);
   next();
 }
 
@@ -56,6 +85,7 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   const userId = getAuthUserId(req);
   if (userId) {
     req.authUserId = userId;
+    touchUserActivity(userId);
   }
   next();
 }
@@ -76,6 +106,7 @@ export function requireRole(...allowedRoles: string[]) {
       return res.status(401).json({ error: "Authentication required" });
     }
     req.authUserId = userId;
+    touchUserActivity(userId);
     try {
       const [user] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
       if (!user || !allowedRoles.includes(user.role)) {
@@ -109,6 +140,7 @@ export async function checkProStatus(
       return res.status(403).json({ error: "This feature requires an active account. All features are free during beta." });
     }
     req.authUserId = userId;
+    touchUserActivity(userId);
     next();
   } catch (err) {
     console.error("Pro check error:", err);

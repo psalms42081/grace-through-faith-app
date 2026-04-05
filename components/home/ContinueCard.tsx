@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, ImageBackground } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,42 +29,56 @@ export default function ContinueCard({ item, theme, isDark }: ContinueCardProps)
       onPress={handlePress}
       style={({ pressed }) => [
         s.card,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+        { transform: [{ scale: pressed ? 0.98 : 1 }] },
       ]}
       testID="home-continue-card"
       accessibilityRole="button"
       accessibilityLabel={"Continue " + item.title}
     >
-      <View style={s.top}>
+      <ImageBackground
+        source={require("@/assets/home-cards/study.png")}
+        style={s.bgImage}
+        imageStyle={s.bgImageInner}
+        resizeMode="cover"
+      >
         <LinearGradient
-          colors={item.gradientColors}
-          style={s.iconWrap}
+          colors={["rgba(5,5,7,0.18)", "rgba(5,5,7,0.48)", "rgba(5,5,7,0.72)"]}
+          locations={[0, 0.4, 1]}
+          style={s.overlay}
         >
-          <Ionicons name={item.icon as any} size={20} color="#fff" />
-        </LinearGradient>
-        <View style={s.info}>
-          <Text style={[s.label, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Continue Your Journey
-          </Text>
-          <Text style={[s.title, { color: theme.text, fontFamily: "Lora_600SemiBold" }]} numberOfLines={1}>
+          <View style={s.labelRow}>
+            <View style={s.labelDot} />
+            <Text style={[s.label, { fontFamily: "Inter_500Medium" }]}>
+              Continue Your Journey
+            </Text>
+          </View>
+
+          <Text style={[s.title, { fontFamily: "Lora_700Bold" }]} numberOfLines={1}>
             {item.title}
           </Text>
-        </View>
-      </View>
-      <View style={s.metaRow}>
-        <View style={[s.typeBadge, { backgroundColor: item.gradientColors[0] + "18" }]}>
-          <Text style={[s.typeBadgeText, { color: item.gradientColors[0] }]}>{item.typeBadge}</Text>
-        </View>
-        <Text style={[s.progressText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {item.subtitle}
-        </Text>
-      </View>
-      <View style={s.bottom}>
-        <View style={[s.ctaButton, { backgroundColor: theme.accent + "18" }]}>
-          <Text style={[s.ctaText, { color: theme.accent }]}>Resume</Text>
-          <Ionicons name="arrow-forward" size={14} color={theme.accent} />
-        </View>
-      </View>
+
+          <View style={s.metaRow}>
+            <View style={[s.typeBadge, { backgroundColor: item.gradientColors[0] + "30" }]}>
+              <Text style={[s.typeBadgeText, { color: item.gradientColors[0] }]}>{item.typeBadge}</Text>
+            </View>
+            <Text style={[s.progressText, { fontFamily: "Inter_400Regular" }]}>
+              {item.subtitle}
+            </Text>
+          </View>
+
+          <View style={s.bottom}>
+            <LinearGradient
+              colors={["#C9933A", "#A87828"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.ctaButton}
+            >
+              <Ionicons name="play" size={14} color="#fff" />
+              <Text style={[s.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Resume</Text>
+            </LinearGradient>
+          </View>
+        </LinearGradient>
+      </ImageBackground>
     </Pressable>
   );
 }
@@ -72,65 +86,82 @@ export default function ContinueCard({ item, theme, isDark }: ContinueCardProps)
 const s = StyleSheet.create({
   card: {
     borderRadius: 20,
-    padding: 20,
+    overflow: "hidden",
     marginBottom: 20,
   },
-  top: {
+  bgImage: {
+    width: "100%",
+    minHeight: 180,
+  },
+  bgImageInner: {
+    borderRadius: 20,
+  },
+  overlay: {
+    padding: 22,
+    paddingTop: 20,
+    borderRadius: 20,
+    minHeight: 180,
+    justifyContent: "flex-end",
+  },
+  labelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 8,
+    marginBottom: 8,
+  },
+  labelDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#C9933A",
+  },
+  label: {
+    fontSize: 12,
+    color: "#C9933A",
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+  },
+  title: {
+    fontSize: 24,
+    color: "#F5F0E8",
     marginBottom: 10,
   },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  info: { flex: 1 },
-  label: { fontSize: 12, marginBottom: 3 },
-  title: { fontSize: 19 },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 14,
-    paddingLeft: 58,
+    marginBottom: 16,
   },
   typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   typeBadgeText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 10,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
     textTransform: "uppercase" as const,
   },
   progressText: {
     fontSize: 13,
+    color: "rgba(245,240,232,0.5)",
     flex: 1,
   },
   bottom: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(201,147,58,0.15)",
   },
   ctaButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
   },
   ctaText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+    color: "#fff",
+    fontSize: 14,
   },
 });

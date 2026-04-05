@@ -14,20 +14,30 @@ import { Router } from "express";
   import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
   import type { StudyDepth } from "../services/ai-engine";
+  import { translateObject, translateBatch } from "../services/translationService";
+  import { normalizeLanguageCode } from "../services/languageAwareContent";
 
   const router = Router();
 
   router.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => {
   try {
     const traditionKey = String(req.query.traditionKey || "all");
+    const lang = normalizeLanguageCode(String(req.query.lang || "en"));
     const conditions = [eq(devotionalPlans.isPublished, true)];
     if (traditionKey !== "all") {
       conditions.push(eq(devotionalPlans.traditionKey, traditionKey));
     }
-    const plans = await db
+    let plans = await db
       .select()
       .from(devotionalPlans)
       .where(and(...conditions));
+
+    if (lang !== "en") {
+      plans = await Promise.all(
+        plans.map((p) => translateObject(p, lang, ["title", "description"] as any))
+      );
+    }
+
     return res.json(plans);
   } catch (err) {
     console.error(err);
@@ -130,6 +140,7 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { planId, depth } = req.query;
+    const lang = normalizeLanguageCode(String(req.query.lang || "en"));
 
     const conditions = [
       eq(userPlanEnrollments.userId, userId),
@@ -179,11 +190,29 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
       .where(eq(devotionalPlans.id, activeEnrollment[0].planId))
       .limit(1);
 
+    let translatedDay: typeof todayDay = todayDay;
+    let translatedPlanTitle = plan?.title ?? null;
+
+    if (lang !== "en") {
+      translatedDay = await translateObject(todayDay, lang, [
+        "title", "passageLabel", "contextNote", "historicVoiceExcerpt", "prayerPrompt",
+      ] as any);
+      // Translate reflection questions array
+      if (Array.isArray(todayDay.reflectionQuestions) && todayDay.reflectionQuestions.length) {
+        const translated = await translateBatch(todayDay.reflectionQuestions as string[], lang);
+        (translatedDay as any).reflectionQuestions = translated;
+      }
+      if (plan?.title) {
+        const [tt] = await translateBatch([plan.title], lang);
+        translatedPlanTitle = tt;
+      }
+    }
+
     return res.json({
-      today: todayDay,
+      today: translatedDay,
       enrollment: {
         ...activeEnrollment[0],
-        plan: plan ? { title: plan.title } : null,
+        plan: plan ? { title: translatedPlanTitle } : null,
       },
       completedCount: completedDays.length,
       totalDays: allDays.length,
@@ -227,7 +256,11 @@ router.post("/api/devotionals/reflect", optionalAuth, async (req, res) => {
 });
 
 
-router.post("/api/reading-plans/generate", optionalAuth, async (req, res) => {
+router.post("/api/reading-plans/generate", (_req, res) => {
+  return res.status(503).json({ error: "AI plan generation is currently disabled." });
+});
+
+router.post("/api/reading-plans/generate-disabled", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { topic, durationDays, difficulty, depth } = req.body;

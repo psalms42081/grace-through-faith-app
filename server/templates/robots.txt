@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /manifest
+
+Sitemap: https://grace-through-faith.replit.app/sitemap.xml

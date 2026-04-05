@@ -37,10 +37,18 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
 
   if (host) {
-    return new URL(`https://${host}`).href;
+    // Use http:// for local IPs (development), https:// for real domains (production)
+    const isLocal =
+      host.startsWith("localhost") ||
+      host.startsWith("127.") ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+    const scheme = isLocal ? "http" : "https";
+    return `${scheme}://${host}/`;
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
@@ -52,8 +60,23 @@ export function getApiUrl(): string {
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let text = "";
+    try {
+      text = await res.text();
+    } catch {
+      text = res.statusText;
+    }
+    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+      throw new Error(`${res.status}: Server is temporarily unavailable. Please try again.`);
+    }
+    try {
+      const json = JSON.parse(text);
+      throw new Error(`${res.status}: ${JSON.stringify(json)}`);
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith(`${res.status}:`)) throw e;
+    }
+    const cleaned = text.length > 200 ? text.slice(0, 200) : text;
+    throw new Error(`${res.status}: ${cleaned || res.statusText}`);
   }
 }
 
@@ -120,8 +143,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-const CACHE_KEY = "grace-through-faith-cache-v2";
-const OLD_CACHE_KEYS = ["grace-through-faith-cache"];
+const CACHE_KEY = "grace-through-faith-cache-v7";
+const OLD_CACHE_KEYS = ["grace-through-faith-cache", "grace-through-faith-cache-v2", "grace-through-faith-cache-v3", "grace-through-faith-cache-v4", "grace-through-faith-cache-v5", "grace-through-faith-cache-v6"];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
 AsyncStorage.multiRemove(OLD_CACHE_KEYS).catch(() => {});
