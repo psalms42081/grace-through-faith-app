@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import {
 import { useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -46,29 +45,9 @@ export default function PassageContextScreen() {
     queryKey: [`/api/context?book=${bookId}&chapter=${chapter}`],
   });
 
-  const generateCtxMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/context/generate", { bookId: Number(bookId), chapter: Number(chapter) });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/context?book=${bookId}&chapter=${chapter}`] });
-    },
-  });
-
   const hasContext = (contextCards?.length ?? 0) > 0;
-  const isGenerating = generateCtxMutation.isPending;
-  const isLoading = ctxLoading || isGenerating;
+  const isLoading = ctxLoading;
   const hasContent = hasContext;
-
-  const [ctxGenDone, setCtxGenDone] = React.useState(false);
-
-  useEffect(() => {
-    if (!ctxLoading && !hasContext && !generateCtxMutation.isPending && !ctxGenDone) {
-      setCtxGenDone(true);
-      generateCtxMutation.mutate();
-    }
-  }, [ctxLoading, hasContext]);
 
   return (
     <>
@@ -108,20 +87,11 @@ export default function PassageContextScreen() {
           <View style={[styles.emptyCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <Ionicons name="library-outline" size={36} color={theme.textMuted} />
             <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Lora_500Medium" }]}>
-              Unable to load study materials
+              Coming Soon
             </Text>
             <Text style={[styles.emptySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              We couldn't generate context for this passage right now. Tap below to try again.
+              Historical background and cultural context for this passage will be available soon.
             </Text>
-            <Pressable
-              onPress={() => { setCtxGenDone(false); }}
-              style={[styles.retryBtn, { backgroundColor: theme.accent + "18" }]}
-            >
-              <Ionicons name="refresh" size={16} color={theme.accent} />
-              <Text style={[styles.retryBtnText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                Try Again
-              </Text>
-            </Pressable>
           </View>
         ) : (
           <>

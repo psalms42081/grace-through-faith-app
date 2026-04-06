@@ -2134,11 +2134,12 @@ export default function StudyScreen() {
   useEffect(() => {
     if (params.tab && validTabs.includes(params.tab as Tab)) {
       const requested = params.tab as Tab;
-      if (isLayerAccessible(requested, completedLayers)) {
-        setActiveTabRaw(requested);
-      }
+      // When navigating directly from the Bible reader, skip the deep dive
+      // intro and go straight to the requested tab regardless of layer order.
+      setShowDeepIntro(false);
+      setActiveTabRaw(requested);
     }
-  }, [params.tab, completedLayers]);
+  }, [params.tab]);
 
   const markCompleteMutation = useMutation({
     mutationFn: async (layer: string) => {

@@ -38,10 +38,24 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function getApiUrl(): string {
-  // In development, auto-detect the server host from Expo's manifest.
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
+
+  // If EXPO_PUBLIC_DOMAIN is set to a real (non-local) domain, always use it.
+  // This allows Railway / cloud deployments to work even in __DEV__ mode.
+  const isLocal = !host ||
+    host.startsWith("localhost") ||
+    host.startsWith("127.") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("10.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+
+  if (host && !isLocal) {
+    return `https://${host}/`;
+  }
+
+  // No cloud domain set — auto-detect local dev server IP from Expo's manifest.
   // Expo knows the PC's current IP (it uses it to serve the JS bundle),
   // so we extract that IP and point the API at port 5000 on the same machine.
-  // This means the app works on any network without updating .env.
   if (__DEV__) {
     const expoHost: string | undefined =
       (Constants as any).expoConfig?.hostUri ||
@@ -53,18 +67,8 @@ export function getApiUrl(): string {
     }
   }
 
-  const host = process.env.EXPO_PUBLIC_DOMAIN;
-
   if (host) {
-    // Use http:// for local IPs (development), https:// for real domains (production)
-    const isLocal =
-      host.startsWith("localhost") ||
-      host.startsWith("127.") ||
-      host.startsWith("192.168.") ||
-      host.startsWith("10.") ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
-    const scheme = isLocal ? "http" : "https";
-    return `${scheme}://${host}/`;
+    return `http://${host}/`;
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
