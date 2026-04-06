@@ -58,7 +58,7 @@ export default function SettingsScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, userId, isAuthenticated, logout } = useAuth();
   const { isPatron } = useProStatus();
   const { showToast } = useToast();
   const { selectedPioneer, selectPioneer } = useEllenWhite();
@@ -369,6 +369,40 @@ export default function SettingsScreen() {
           showChevron: false,
           isLast: true,
         })}
+
+        {isAuthenticated && (
+          <Pressable
+            onPress={() => {
+              Alert.alert(
+                "Reset Reading History",
+                "This will clear all your Bible reading history so chapters no longer appear as read. This cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Reset",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await apiRequest("DELETE", "/api/reading-history/reset");
+                        queryClient.invalidateQueries({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
+                        Alert.alert("Done", "Your reading history has been cleared.");
+                      } catch {
+                        Alert.alert("Error", "Could not reset reading history. Try again.");
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+            style={({ pressed }) => [s.signOutBtn, { opacity: pressed ? 0.85 : 1 }]}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#F59E0B" />
+            <Text style={[s.signOutText, { color: "#F59E0B", fontFamily: "Inter_600SemiBold" }]}>
+              Reset Reading History
+            </Text>
+          </Pressable>
+        )}
 
         {isAuthenticated && (
           <Pressable
