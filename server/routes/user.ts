@@ -550,6 +550,17 @@ router.get("/api/reading-history/recent", optionalAuth, async (req, res) => {
   }
 });
 
+router.delete("/api/reading-history/reset", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).authUserId as string;
+    await db.delete(readingHistory).where(eq(readingHistory.userId, userId));
+    return res.json({ success: true, message: "Reading history cleared" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/reading-history/book/:bookId", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
