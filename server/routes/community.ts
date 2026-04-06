@@ -22,12 +22,37 @@ import { Router } from "express";
     deviceTokens,
     leaderRequests,
   } from "../../shared/schema";
-  import { eq, and, ilike, sql, desc } from "drizzle-orm";
+  import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
   import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
   import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
 
   const router = Router();
+
+  function escapeIlikePattern(raw: string): string {
+    return raw.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
+  /** Each word must match at least one of the columns (same idea as the old `words.every` on joined fields). */
+  function buildChurchTextSearchWhere(searchRaw: string) {
+    const words = searchRaw.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return undefined;
+
+    const columnDisjunctions = words.map((word) => {
+      const pattern = `%${escapeIlikePattern(word)}%`;
+      return or(
+        ilike(sdaChurches.city, pattern),
+        ilike(sdaChurches.state, pattern),
+        ilike(sdaChurches.country, pattern),
+        ilike(sdaChurches.name, pattern),
+        ilike(sdaChurches.address, pattern),
+      );
+    });
+
+    return columnDisjunctions.length === 1
+      ? columnDisjunctions[0]
+      : and(...columnDisjunctions);
+  }
 
   router.post("/api/notifications/register-token", requireAuth, async (req, res) => {
     try {
@@ -735,25 +760,26 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
 
   router.get("/api/churches", cachedResponse(300), async (req, res) => {
   try {
-    const { lat, lng, radius, city } = req.query as { lat?: string; lng?: string; radius?: string; city?: string };
+    const { lat, lng, radius, city } = req.query as {
+      lat?: string;
+      lng?: string;
+      radius?: string;
+      city?: string;
+    };
 
-    let allChurches = await db.select().from(sdaChurches);
-
-    const hasTextSearch = !!city;
+    const searchTerm = typeof city === "string" ? city.trim() : "";
+    const hasTextSearch = searchTerm.length > 0;
 
     if (hasTextSearch) {
-      const words = city!.toLowerCase().split(/\s+/).filter(Boolean);
-      allChurches = allChurches.filter(c => {
-        const fields = [
-          c.city.toLowerCase(),
-          (c.state || "").toLowerCase(),
-          c.country.toLowerCase(),
-          c.name.toLowerCase(),
-          c.address.toLowerCase(),
-        ].join(" ");
-        return words.every(w => fields.includes(w));
-      });
+      const whereClause = buildChurchTextSearchWhere(searchTerm);
+      if (!whereClause) {
+        return res.json([]);
+      }
+      const rows = await db.select().from(sdaChurches).where(whereClause);
+      return res.json(rows);
     }
+
+    let allChurches = await db.select().from(sdaChurches);
 
     if (lat && lng) {
       const userLat = parseFloat(lat);
@@ -769,23 +795,20 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
         const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       };
 
-      const withDist = allChurches
-        .map(c => ({ ...c, distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)) }));
+      const withDist = allChurches.map((c) => ({
+        ...c,
+        distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)),
+      }));
 
-      const maxRadius = hasTextSearch ? Math.max(radiusKm, 2000) : radiusKm;
       return res.json(
-        withDist
-          .filter(c => c.distance <= maxRadius)
-          .sort((a, b) => a.distance - b.distance)
+        withDist.filter((c) => c.distance <= radiusKm).sort((a, b) => a.distance - b.distance),
       );
-    }
-
-    if (hasTextSearch) {
-      return res.json(allChurches);
     }
 
     return res.json([]);
