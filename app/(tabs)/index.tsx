@@ -1506,7 +1506,7 @@ function AdultHomeScreen() {
     queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
-  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
+  const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string; readAt: string }[]>({
     queryKey: [`/api/reading-history/recent?userId=${userId}`],
   });
 
@@ -1534,6 +1534,10 @@ function AdultHomeScreen() {
   });
 
   const lastRead = recentReads?.[0];
+  const todayStr = new Date().toDateString();
+  const readToday = lastRead?.readAt
+    ? new Date(lastRead.readAt).toDateString() === todayStr
+    : false;
   const streak = weeklyData?.currentStreak ?? 0;
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
 
@@ -1704,7 +1708,7 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              hasRecentRead={!!lastRead}
+              hasRecentRead={readToday}
               dailyVerseRef={verse.reference}
             />
             <InlineCoachTip
@@ -1787,7 +1791,7 @@ function AdultHomeScreen() {
             <TodaysPath
               theme={theme}
               isDark={isDark}
-              hasRecentRead={!!lastRead}
+              hasRecentRead={readToday}
               dailyVerseRef={verse.reference}
             />
             <InlineCoachTip

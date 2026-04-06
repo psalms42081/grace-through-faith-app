@@ -550,6 +550,28 @@ router.get("/api/reading-history/recent", optionalAuth, async (req, res) => {
   }
 });
 
+router.get("/api/reading-history/book/:bookId", optionalAuth, async (req, res) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
+    const bookId = Number(req.params.bookId);
+    if (isNaN(bookId)) {
+      return res.status(400).json({ error: "Invalid bookId" });
+    }
+    const rows = await db
+      .select({ chapter: readingHistory.chapter })
+      .from(readingHistory)
+      .where(and(eq(readingHistory.userId, userId), eq(readingHistory.bookId, bookId)));
+    const chapters = [...new Set(rows.map((r) => r.chapter))];
+    return res.json(chapters);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/reading-streaks", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);

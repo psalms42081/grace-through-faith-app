@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BibleBook {
   id: number;
@@ -25,14 +26,26 @@ export default function ChapterPickerScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
 
   const { data: books, isLoading, error } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
   });
 
+  const { data: readChapters } = useQuery<number[]>({
+    queryKey: [`/api/reading-history/book/${bookId}?userId=${userId}`],
+    enabled: !!bookId && !!userId,
+    staleTime: 30_000,
+  });
+
+  const readSet = new Set(readChapters ?? []);
+
   const book = books?.find((b) => b.id === Number(bookId));
   const chapterCount = book?.chapterCount ?? 0;
   const chapters = Array.from({ length: chapterCount }, (_, i) => i + 1);
+  const chaptersReadCount = readChapters?.length
+    ? [...new Set(readChapters)].length
+    : 0;
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -67,6 +80,13 @@ export default function ChapterPickerScreen() {
                     {book.testament === "OT" ? "Old Testament" : "New Testament"}
                   </Text>
                 </View>
+                {chaptersReadCount > 0 && (
+                  <View style={[styles.testamentBadge, { backgroundColor: "rgba(78,204,163,0.18)", marginLeft: 8 }]}>
+                    <Text style={[styles.testamentText, { color: "#4ECCA3", fontFamily: "Inter_600SemiBold" }]}>
+                      {chaptersReadCount}/{chapterCount} read
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={[styles.bookTitle, { fontFamily: "Lora_700Bold" }]}>
                 {book.name}
@@ -82,23 +102,32 @@ export default function ChapterPickerScreen() {
               numColumns={5}
               contentContainerStyle={[styles.gridContent, { paddingBottom: bottomPad + 20 }]}
               columnWrapperStyle={styles.gridRow}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => router.push(`/read/${bookId}/${item}`)}
-                  style={({ pressed }) => [
-                    styles.chapterCell,
-                    {
-                      backgroundColor: theme.backgroundCard,
-                      borderColor: theme.border,
-                      opacity: pressed ? 0.6 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.chapterNum, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-                    {item}
-                  </Text>
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                const isRead = readSet.has(item);
+                return (
+                  <Pressable
+                    onPress={() => router.push(`/read/${bookId}/${item}`)}
+                    style={({ pressed }) => [
+                      styles.chapterCell,
+                      {
+                        backgroundColor: isRead ? "rgba(201,147,58,0.18)" : theme.backgroundCard,
+                        borderColor: isRead ? "rgba(201,147,58,0.55)" : theme.border,
+                        opacity: pressed ? 0.6 : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chapterNum,
+                      { color: isRead ? "#C9933A" : theme.text, fontFamily: isRead ? "Lora_700Bold" : "Lora_600SemiBold" }
+                    ]}>
+                      {item}
+                    </Text>
+                    {isRead && (
+                      <View style={styles.readDot} />
+                    )}
+                  </Pressable>
+                );
+              }}
               ListHeaderComponent={
                 <Text style={[styles.selectLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
                   Select a chapter
@@ -146,4 +175,12 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
   },
   chapterNum: { fontSize: 16 },
+  readDot: {
+    position: "absolute",
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#C9933A",
+  },
 });
