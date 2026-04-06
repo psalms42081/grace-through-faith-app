@@ -384,8 +384,14 @@ export default function SettingsScreen() {
                     onPress: async () => {
                       try {
                         await apiRequest("DELETE", "/api/reading-history/reset");
-                        queryClient.invalidateQueries({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
+                        // Clear ALL reading-history caches (recent + per-book)
+                        queryClient.removeQueries({
+                          predicate: (query) =>
+                            typeof query.queryKey[0] === "string" &&
+                            (query.queryKey[0] as string).includes("/api/reading-history"),
+                        });
                         queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
+                        queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
                         Alert.alert("Done", "Your reading history has been cleared.");
                       } catch {
                         Alert.alert("Error", "Could not reset reading history. Try again.");
