@@ -45,9 +45,15 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
     const validProfileTypes = ["member", "student", "church_leader", "exploring"];
     const cleanProfileType = validProfileTypes.includes(profileType) ? profileType : "member";
 
+    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
     let assignedRole = "member";
-    if (cleanProfileType === "student") assignedRole = "student";
-    else if (cleanProfileType === "church_leader") assignedRole = "church_leader_pending";
+    if (adminEmail && cleanEmail === adminEmail) {
+      assignedRole = "admin";
+    } else if (cleanProfileType === "student") {
+      assignedRole = "student";
+    } else if (cleanProfileType === "church_leader") {
+      assignedRole = "church_leader_pending";
+    }
 
     if (cleanPassword.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
@@ -109,6 +115,14 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
     const valid = await bcrypt.compare(cleanPassword, user.password);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Auto-elevate the designated admin email if it somehow registered as member
+    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    if (adminEmail && cleanEmail === adminEmail && user.role !== "admin") {
+      await db.update(users).set({ role: "admin", isPro: true }).where(eq(users.id, user.id));
+      user.role = "admin";
+      user.isPro = true;
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
