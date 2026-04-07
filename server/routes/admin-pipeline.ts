@@ -888,9 +888,9 @@ router.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (req
 
     const result = await generateQuarterCompanions(quarterCode, { force: force !== false });
     return res.json({ success: true, result, mode: "quarter" });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Admin regenerate companion error:", err);
-    return res.status(500).json({ error: err.message || "Regeneration failed" });
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 

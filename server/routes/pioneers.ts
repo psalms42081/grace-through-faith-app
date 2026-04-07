@@ -69,9 +69,9 @@ router.post("/api/pioneers/:pioneerId/generate", requireAuth, async (req, res) =
 
     const result = await generatePioneerClip(pioneerId, translatedText, clipId.trim(), langCode);
     return res.json({ ...result, lang: langCode });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[pioneers] Generate error:", err);
-    return res.status(500).json({ error: err.message || "Failed to generate clip" });
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 

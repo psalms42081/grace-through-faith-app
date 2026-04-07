@@ -543,9 +543,9 @@ router.post("/api/webhooks/heygen", async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ received: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-topics] Webhook error:", err);
-    res.status(200).json({ received: true, error: err.message });
+    res.status(200).json({ received: true, error: "An error occurred. Please try again." });
   }
 });
 
@@ -847,7 +847,7 @@ router.post("/api/topic-videos/:videoId/generate", requireAuth, requirePipelineA
     runCinematicNarrativePipeline(topic.id, videoId).catch((err) => {
       console.error(`[video-topics] Pipeline failed for topicVideo=${videoId}:`, err);
       db.update(topicVideos)
-        .set({ assemblyStatus: `failed:${err.message?.substring(0, 200)}`, updatedAt: new Date() })
+        .set({ assemblyStatus: "failed", updatedAt: new Date() })
         .where(eq(topicVideos.id, videoId))
         .catch(() => {});
     });
@@ -910,9 +910,9 @@ router.post("/api/video-topics/cleanup-avatar-videos", requireAuth, requirePipel
       .where(sql`${videoTopics.avatarVideoUrl} IS NOT NULL AND ${videoTopics.avatarVideoUrl} != ''`)
       .returning({ id: videoTopics.id, title: videoTopics.title });
     res.json({ cleaned: result.length, topics: result });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-topics] Cleanup error:", err);
-    res.status(500).json({ error: err.message || "Failed to cleanup avatar videos" });
+    res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
@@ -922,9 +922,9 @@ router.post("/api/video-topics/:id/expand-cross-references", requireAuth, requir
     const maxReferences = parseInt(req.body.maxReferences) || 7;
     const result = await expandTopicCrossReferences(id, maxReferences);
     res.json(result);
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-topics] Cross-reference expansion error:", err);
-    res.status(500).json({ error: err.message || "Failed to expand cross-references" });
+    res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
@@ -937,9 +937,9 @@ router.post("/api/video-topics/expand-all-cross-references", requireAuth, requir
     }).catch((err) => {
       console.error("[cross-ref] Bulk expansion failed:", err);
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-topics] Bulk cross-reference error:", err);
-    res.status(500).json({ error: err.message || "Failed to start bulk expansion" });
+    res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
@@ -963,9 +963,9 @@ router.delete("/api/video-avatars/cleanup-unused", requireAuth, requirePipelineA
 
     console.log(`[cleanup] Deleted ${unusedAvatars.length} unused avatars: ${unusedAvatars.map(a => a.name).join(", ")}`);
     res.json({ message: `Deleted ${unusedAvatars.length} unused avatars`, deleted: unusedAvatars.length, names: unusedAvatars.map(a => a.name) });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[cleanup] Avatar cleanup error:", err);
-    res.status(500).json({ error: err.message || "Failed to cleanup avatars" });
+    res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 

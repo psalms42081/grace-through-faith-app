@@ -106,11 +106,11 @@ async function runPipeline(jobId: string, script: string, topic: string) {
     }
     await updateJobStatus(jobId, { status: "completed", brollVideoUrls: videoUrls });
     console.log(`[video-pipeline] Job ${jobId}: Pipeline completed with ${videoUrls.length} videos`);
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[video-pipeline] Job ${jobId} failed:`, err);
     await updateJobStatus(jobId, {
       status: "failed",
-      errorMessage: err?.message || "Unknown error",
+      errorMessage: "An error occurred. Please try again.",
     });
   }
 }
@@ -132,9 +132,9 @@ router.post("/api/video-pipeline/bible-story-script", requireAuth, async (req, r
     );
 
     return res.json(script);
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-pipeline] Bible story script error:", err);
-    return res.status(500).json({ error: err?.message || "Failed to generate Bible story script" });
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
@@ -161,11 +161,16 @@ router.post("/api/video-pipeline/bible-story-produce-internal", async (req, res)
         console.log(`[video-pipeline] Bible story production COMPLETE for "${title}": ${videoUrl}`);
       })
       .catch((err) => {
-        activePipelineJobs.set(episodeId, { status: "failed", startedAt: activePipelineJobs.get(episodeId)!.startedAt, error: err?.message || String(err) });
+        activePipelineJobs.set(episodeId, {
+          status: "failed",
+          startedAt: activePipelineJobs.get(episodeId)!.startedAt,
+          error: "An error occurred. Please try again.",
+        });
         console.error(`[video-pipeline] Bible story production FAILED for "${title}":`, err);
       });
-  } catch (err: any) {
-    return res.status(500).json({ error: err?.message || "Failed to start pipeline" });
+  } catch (err) {
+    console.error("[video-pipeline] bible-story-produce-internal error:", err);
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
@@ -210,12 +215,16 @@ router.post("/api/video-pipeline/bible-story-produce", requireAuth, async (req, 
         console.log(`[video-pipeline] Bible story production COMPLETE for "${title}": ${videoUrl}`);
       })
       .catch((err) => {
-        activePipelineJobs.set(episodeId, { status: "failed", startedAt: activePipelineJobs.get(episodeId)!.startedAt, error: err?.message || String(err) });
+        activePipelineJobs.set(episodeId, {
+          status: "failed",
+          startedAt: activePipelineJobs.get(episodeId)!.startedAt,
+          error: "An error occurred. Please try again.",
+        });
         console.error(`[video-pipeline] Bible story production FAILED for "${title}":`, err);
       });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[video-pipeline] Bible story produce error:", err);
-    return res.status(500).json({ error: err?.message || "Failed to start pipeline" });
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 

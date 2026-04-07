@@ -323,9 +323,9 @@ router.post("/api/reading-plans/generate-disabled", optionalAuth, async (req, re
       .orderBy(devotionalDays.dayNumber);
 
     return res.json({ plan: savedPlan, days: savedDays });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Generate reading plan error:", err);
-    return res.status(500).json({ error: err.message || "Failed to generate reading plan" });
+    return res.status(500).json({ error: "An error occurred. Please try again." });
   }
 });
 
