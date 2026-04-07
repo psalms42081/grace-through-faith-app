@@ -163,8 +163,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-const CACHE_KEY = "grace-through-faith-cache-v8";
-const OLD_CACHE_KEYS = ["grace-through-faith-cache", "grace-through-faith-cache-v2", "grace-through-faith-cache-v3", "grace-through-faith-cache-v4", "grace-through-faith-cache-v5", "grace-through-faith-cache-v6", "grace-through-faith-cache-v7"];
+const CACHE_KEY = "grace-through-faith-cache-v9";
+const OLD_CACHE_KEYS = ["grace-through-faith-cache", "grace-through-faith-cache-v2", "grace-through-faith-cache-v3", "grace-through-faith-cache-v4", "grace-through-faith-cache-v5", "grace-through-faith-cache-v6", "grace-through-faith-cache-v7", "grace-through-faith-cache-v8"];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
 AsyncStorage.multiRemove(OLD_CACHE_KEYS).catch(() => {});

@@ -10,7 +10,11 @@ import {
 import * as Haptics from "expo-haptics";
 import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
 
-const COACH_TIP_BG = "#1E88E5";
+/** Dark card + gold hairline (replaces former blue #1E88E5 fill). */
+const COACH_CARD_BG = "rgba(26,31,60,0.96)";
+const COACH_BORDER = "rgba(201,147,58,0.55)";
+const COACH_TEXT = "#F5EFE0";
+const COACH_GOLD = "#C9933A";
 const ARROW_W = 4;
 const ARROW_H = 6;
 
@@ -103,7 +107,9 @@ export default function InlineCoachTip({
 
 const s = StyleSheet.create({
   container: {
-    backgroundColor: COACH_TIP_BG,
+    backgroundColor: COACH_CARD_BG,
+    borderWidth: 1,
+    borderColor: COACH_BORDER,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -113,9 +119,14 @@ const s = StyleSheet.create({
     maxWidth: 300,
     alignSelf: "flex-start",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8 },
+      ios: {
+        shadowColor: COACH_GOLD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+      },
       android: { elevation: 8 },
-      web: { boxShadow: "0 3px 12px rgba(0,0,0,0.2)" } as any,
+      web: { boxShadow: `0 2px 14px rgba(201,147,58,0.12), 0 3px 12px rgba(0,0,0,0.25)` } as any,
     }),
   },
   arrow: {
@@ -129,12 +140,12 @@ const s = StyleSheet.create({
     borderBottomWidth: ARROW_H,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderBottomColor: COACH_TIP_BG,
+    borderBottomColor: COACH_CARD_BG,
   },
   text: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    lineHeight: 16,
+    color: COACH_TEXT,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: "Inter_500Medium",
   },
 });

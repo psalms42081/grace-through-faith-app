@@ -23,7 +23,11 @@ interface CoachMarkProps {
   visible?: boolean;
 }
 
-const TOOLTIP_BG = "#1E88E5";
+/** Dark card + gold hairline (replaces former blue #1E88E5 fill). */
+const COACH_CARD_BG = "rgba(26,31,60,0.96)";
+const COACH_BORDER = "rgba(201,147,58,0.55)";
+const COACH_TEXT = "#F5EFE0";
+const COACH_GOLD = "#C9933A";
 const ARROW_W = 4;
 const ARROW_H = 6;
 const MAX_W = 260;
@@ -129,7 +133,7 @@ export default function CoachMark({
         borderBottomWidth: ARROW_H,
         borderLeftColor: "transparent",
         borderRightColor: "transparent",
-        borderBottomColor: TOOLTIP_BG,
+        borderBottomColor: COACH_CARD_BG,
       };
       break;
     }
@@ -150,7 +154,7 @@ export default function CoachMark({
         borderTopWidth: ARROW_H,
         borderLeftColor: "transparent",
         borderRightColor: "transparent",
-        borderTopColor: TOOLTIP_BG,
+        borderTopColor: COACH_CARD_BG,
       };
       break;
     }
@@ -187,7 +191,7 @@ export default function CoachMark({
         borderLeftWidth: ARROW_W,
         borderTopColor: "transparent",
         borderBottomColor: "transparent",
-        borderLeftColor: TOOLTIP_BG,
+        borderLeftColor: COACH_CARD_BG,
       };
       break;
     }
@@ -240,7 +244,9 @@ const st = StyleSheet.create({
   },
   tooltip: {
     position: "absolute",
-    backgroundColor: TOOLTIP_BG,
+    backgroundColor: COACH_CARD_BG,
+    borderWidth: 1,
+    borderColor: COACH_BORDER,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -248,21 +254,21 @@ const st = StyleSheet.create({
     zIndex: 10000,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowColor: COACH_GOLD,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
       },
       android: { elevation: 8 },
       web: {
-        boxShadow: "0 3px 12px rgba(0,0,0,0.2)",
+        boxShadow: "0 2px 14px rgba(201,147,58,0.12), 0 3px 12px rgba(0,0,0,0.25)",
       },
     }),
   },
   tooltipText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    lineHeight: 16,
+    color: COACH_TEXT,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: "Inter_500Medium",
   },
 });

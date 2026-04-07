@@ -590,8 +590,14 @@ export default function VerseReaderScreen() {
 
   const resolvedTx = translationList.includes(txParam as string) ? (txParam as string) : (translationList.includes(globalTranslation) ? globalTranslation : "KJV");
   const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
+  const userOverrodeTranslation = useRef(false);
 
   useEffect(() => {
+    userOverrodeTranslation.current = false;
+  }, [txParam]);
+
+  useEffect(() => {
+    if (userOverrodeTranslation.current) return;
     if (txParam && translationList.includes(txParam) && txParam !== translation) {
       setTranslationLocal(txParam);
     } else if (!txParam && translationList.includes(globalTranslation) && globalTranslation !== translation) {
@@ -600,6 +606,7 @@ export default function VerseReaderScreen() {
   }, [txParam, globalTranslation, translationList]);
 
   const setTranslation = useCallback((t: Translation) => {
+    userOverrodeTranslation.current = true;
     setTranslationLocal(t);
     setGlobalTranslation(t);
   }, [setGlobalTranslation]);

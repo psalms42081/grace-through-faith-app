@@ -2136,10 +2136,14 @@ export default function StudyScreen() {
       const requested = params.tab as Tab;
       // When navigating directly from the Bible reader, skip the deep dive
       // intro and go straight to the requested tab regardless of layer order.
-      setShowDeepIntro(false);
-      setActiveTabRaw(requested);
+      // Use a short delay so this fires AFTER any async session restoration.
+      const t = setTimeout(() => {
+        setShowDeepIntro(false);
+        setActiveTabRaw(requested);
+      }, 80);
+      return () => clearTimeout(t);
     }
-  }, [params.tab]);
+  }, [params.tab, paramBookId, paramChapter]);
 
   const markCompleteMutation = useMutation({
     mutationFn: async (layer: string) => {
@@ -2566,10 +2570,17 @@ export default function StudyScreen() {
         {canTrack ? (
           <View style={{ flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const }}>
             <Pressable
-              onPress={() => safeGoBack(router, "/(tabs)/explore")}
+              onPress={() => {
+                if (params.bookId && params.chapter) {
+                  router.navigate(`/read/${params.bookId}/${params.chapter}` as any);
+                } else {
+                  setSharedBook(null);
+                  setSharedChapter(null);
+                }
+              }}
               hitSlop={12}
               style={{ marginRight: 10, padding: 4 }}
-              accessibilityLabel="Back to Study"
+              accessibilityLabel="Back"
             >
               <Ionicons name="chevron-back" size={22} color={theme.text} />
             </Pressable>
