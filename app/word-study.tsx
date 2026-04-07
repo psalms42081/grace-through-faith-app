@@ -40,19 +40,45 @@ interface WordMapping {
 
 export default function WordStudyScreen() {
   const params = useLocalSearchParams<{
-    verseId: string;
-    bookName: string;
-    chapter: string;
-    verse: string;
-    verseText: string;
+    verseId?: string;
+    book?: string;
+    bookName?: string;
+    chapter?: string;
+    verse?: string;
+    verseText?: string;
   }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { data: wordMappings, isLoading, error } = useQuery<WordMapping[]>({
-    queryKey: [`/api/strong/verse/${params.verseId}`],
-    enabled: !!params.verseId,
+  const resolvedVerse = params.verse || "1";
+  const needsVerseLookup = !params.verseId && !!params.book && !!params.chapter;
+  console.log("WordStudy params:", params);
+  console.log("resolvedVerse:", resolvedVerse);
+  console.log("needsVerseLookup:", needsVerseLookup);
+  const { data: lookedUpVerse } = useQuery<{ id: string; text: string }>({
+    queryKey: [`/api/verse?book=${params.book}&chapter=${params.chapter}&verse=${resolvedVerse}`],
+    enabled: needsVerseLookup,
   });
+
+  const resolvedVerseId = params.verseId || lookedUpVerse?.id || null;
+  console.log("lookedUpVerse:", lookedUpVerse);
+  console.log("resolvedVerseId:", resolvedVerseId);
+
+  const { data: allBooks } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/books"],
+    enabled: !!params.book && !params.bookName,
+  });
+  const displayBookName = params.bookName || allBooks?.find(b => b.id === Number(params.book))?.name || "";
+  const displayVerseText = params.verseText || lookedUpVerse?.text || "";
+
+  const { data: wordMappings, isLoading: mappingsLoading, error } = useQuery<WordMapping[]>({
+    queryKey: [`/api/strong/verse/${resolvedVerseId}`],
+    enabled: !!resolvedVerseId,
+  });
+  const isLoading = mappingsLoading || (needsVerseLookup && !lookedUpVerse);
+  console.log("wordMappings:", wordMappings);
+  console.log("isLoading:", isLoading);
+  console.log("error:", error);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -91,7 +117,7 @@ export default function WordStudyScreen() {
               { color: theme.textSecondary, fontFamily: "Inter_400Regular" },
             ]}
           >
-            {params.bookName} {params.chapter}:{params.verse}
+            {displayBookName} {params.chapter}:{params.verse}
           </Text>
         </View>
         <View style={{ width: 36 }} />
@@ -116,7 +142,7 @@ export default function WordStudyScreen() {
                 { color: theme.accent, fontFamily: "Inter_600SemiBold" },
               ]}
             >
-              {params.bookName} {params.chapter}:{params.verse}
+              {displayBookName} {params.chapter}:{params.verse}
             </Text>
             <View style={[styles.translationBadge, { backgroundColor: theme.accent + "18" }]}>
               <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
@@ -130,7 +156,7 @@ export default function WordStudyScreen() {
               { color: theme.text, fontFamily: "Lora_400Regular" },
             ]}
           >
-            {params.verseText}
+            {displayVerseText}
           </Text>
         </View>
 
