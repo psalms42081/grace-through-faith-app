@@ -88,6 +88,7 @@ function BottomSheetToolbar({
   chapter,
   translation,
   userId,
+  isAuthenticated,
   onDismiss,
   isDark,
   bottomPad,
@@ -98,6 +99,7 @@ function BottomSheetToolbar({
   chapter: string;
   translation: string;
   userId: string | null;
+  isAuthenticated: boolean;
   onDismiss: () => void;
   isDark: boolean;
   bottomPad: number;
@@ -109,7 +111,7 @@ function BottomSheetToolbar({
   const [underlineActive, setUnderlineActive] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const noteInputRef = useRef<TextInput>(null);
 
   const reference = `${bookName} ${chapter}:${verse.verse}`;
@@ -168,9 +170,11 @@ function BottomSheetToolbar({
     })
   ).current;
 
-  const showFeedback = (msg: string) => {
-    setFeedback(msg);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const showFeedback = (msg: string, isError = false) => {
+    setFeedback({ message: msg, isError });
+    Haptics.notificationAsync(
+      isError ? Haptics.NotificationFeedbackType.Error : Haptics.NotificationFeedbackType.Success
+    );
     setTimeout(() => {
       setFeedback(null);
       dismissSheet();
@@ -184,7 +188,9 @@ function BottomSheetToolbar({
       await apiRequest("POST", "/api/highlights", { userId, verseId: verse.id, color });
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       showFeedback("Highlighted!");
-    } catch { showFeedback("Failed"); }
+    } catch {
+      showFeedback("Failed to highlight", true);
+    }
   };
 
   const handleCopy = async () => {
@@ -197,22 +203,26 @@ function BottomSheetToolbar({
   };
 
   const handleBookmark = async () => {
-    if (!userId) { showFeedback("Sign in to save"); return; }
+    if (!isAuthenticated) { showFeedback("Sign in to save"); return; }
     try {
       await apiRequest("POST", "/api/bookmarks", { userId, verseId: verse.id, label: reference });
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       showFeedback("Saved!");
-    } catch { showFeedback("Failed"); }
+    } catch {
+      showFeedback("Failed to save", true);
+    }
   };
 
   const handleSaveNote = async () => {
-    if (!userId) { showFeedback("Sign in to add notes"); return; }
+    if (!isAuthenticated) { showFeedback("Sign in to add notes"); return; }
     if (!noteText.trim()) return;
     try {
       await apiRequest("POST", "/api/notes", { userId, verseId: verse.id, content: noteText.trim() });
       queryClient.invalidateQueries({ queryKey: [`/api/notes/${userId}`] });
       showFeedback("Note saved!");
-    } catch { showFeedback("Failed"); }
+    } catch {
+      showFeedback("Failed to save note", true);
+    }
   };
 
   const handleExplain = () => {
@@ -271,8 +281,19 @@ function BottomSheetToolbar({
 
         {feedback ? (
           <View style={sheetStyles.feedbackRow}>
-            <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            <Text style={[sheetStyles.feedbackText, { color: "#10B981" }]}>{feedback}</Text>
+            <Ionicons
+              name={feedback.isError ? "close-circle" : "checkmark-circle"}
+              size={18}
+              color={feedback.isError ? "#EF4444" : "#10B981"}
+            />
+            <Text
+              style={[
+                sheetStyles.feedbackText,
+                { color: feedback.isError ? "#EF4444" : "#10B981" },
+              ]}
+            >
+              {feedback.message}
+            </Text>
           </View>
         ) : showNoteInput ? (
           <View style={sheetStyles.noteContainer}>
@@ -557,7 +578,7 @@ const sheetStyles = StyleSheet.create({
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
   const { theme, isDark } = useTheme();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
   const { data: availableTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string }[]>({
@@ -767,13 +788,27 @@ export default function VerseReaderScreen() {
 
   const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef, bookName);
 
+  const readingHistoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (data?.book?.name && bookId && chapter) {
+    if (!data?.book?.name || !bookId || !chapter) return;
+
+    if (readingHistoryTimerRef.current) {
+      clearTimeout(readingHistoryTimerRef.current);
+      readingHistoryTimerRef.current = null;
+    }
+
+    const bookNameSnapshot = data.book.name;
+    const bookIdNum = Number(bookId);
+    const chapterNum = Number(chapter);
+
+    readingHistoryTimerRef.current = setTimeout(() => {
+      readingHistoryTimerRef.current = null;
       apiRequest("POST", "/api/reading-history", {
         userId,
-        bookId: Number(bookId),
-        bookName: data.book.name,
-        chapter: Number(chapter),
+        bookId: bookIdNum,
+        bookName: bookNameSnapshot,
+        chapter: chapterNum,
         translation,
       })
         .then(() => {
@@ -783,8 +818,15 @@ export default function VerseReaderScreen() {
           queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks/weekly?userId=${userId}`] });
         })
         .catch(() => {});
-    }
-  }, [data?.book?.name, bookId, chapter, translation]);
+    }, 60_000);
+
+    return () => {
+      if (readingHistoryTimerRef.current) {
+        clearTimeout(readingHistoryTimerRef.current);
+        readingHistoryTimerRef.current = null;
+      }
+    };
+  }, [data?.book?.name, bookId, chapter, translation, userId]);
 
   const prefetchedRef = useRef<string | null>(null);
 
@@ -799,8 +841,6 @@ export default function VerseReaderScreen() {
     const vrs = data.verses;
 
     queryClient.prefetchQuery({ queryKey: [`/api/chapter-context/${bId}/${ch}`] });
-    queryClient.prefetchQuery({ queryKey: [`/api/context?book=${bId}&chapter=${ch}`] });
-    queryClient.prefetchQuery({ queryKey: [`/api/commentary?book=${bId}&chapter=${ch}`] });
 
     const prefetchCount = Math.min(5, vrs.length);
     for (let i = 0; i < prefetchCount; i++) {
@@ -1212,6 +1252,7 @@ export default function VerseReaderScreen() {
                 chapter={chapter as string}
                 translation={translation}
                 userId={userId}
+                isAuthenticated={isAuthenticated}
                 onDismiss={dismissToolbar}
                 isDark={isDark}
                 bottomPad={bottomPad}
