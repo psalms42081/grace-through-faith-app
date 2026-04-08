@@ -86,6 +86,16 @@ async function stepWeeklyTrend(): Promise<number> {
         ON c.hierarchy_node_id = p.hierarchy_node_id
         AND c.topic = p.topic
         AND c.topic_type = p.topic_type
+    ),
+    deduped AS (
+      SELECT DISTINCT ON (hierarchy_node_id, topic)
+        hierarchy_node_id,
+        topic,
+        topic_type,
+        current_views,
+        prev_views
+      FROM combined
+      ORDER BY hierarchy_node_id, topic, current_views DESC
     )
     INSERT INTO topic_trend (id, hierarchy_node_id, topic, topic_type, current_week_views, previous_week_views, trend_percent, trend_direction, week_start_date, updated_at)
     SELECT
@@ -108,7 +118,7 @@ async function stepWeeklyTrend(): Promise<number> {
       END,
       ${currentWeekStart},
       now()
-    FROM combined
+    FROM deduped
     ON CONFLICT (hierarchy_node_id, week_start_date, topic)
     DO UPDATE SET
       current_week_views = EXCLUDED.current_week_views,
