@@ -44,7 +44,7 @@ export default function SabbathSchoolCard() {
 
   return (
     <Pressable
-      onPress={() => router.push("/(tabs)/study" as any)}
+      onPress={() => router.push("/sabbath-school" as any)}
       style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}
       testID="home-sabbath-school-card"
     >
