@@ -185,7 +185,7 @@ function ProgressRing({
 
 export default function PlansScreen() {
   const { theme, isDark } = useTheme();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -446,7 +446,20 @@ export default function PlansScreen() {
           slide={detailSlide}
           enrolling={enrollMutation.isPending}
           onClose={closeDetail}
-          onStart={() => enrollMutation.mutate(detailPlanId)}
+          onStart={() => {
+            if (!isAuthenticated) {
+              Alert.alert(
+                "Sign In Required",
+                "Create a free account to start reading plans and track your progress.",
+                [
+                  { text: "Not Now", style: "cancel" },
+                  { text: "Sign In", onPress: () => router.push("/(auth)/login") },
+                ],
+              );
+              return;
+            }
+            enrollMutation.mutate(detailPlanId);
+          }}
           theme={theme}
           isDark={isDark}
         />

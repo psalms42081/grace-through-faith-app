@@ -54,7 +54,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 
 export default function DevotionalsScreen() {
   const { theme, isDark } = useTheme();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -110,6 +110,17 @@ export default function DevotionalsScreen() {
 
   const handleOnboardingComplete = async (planId: string) => {
     await AsyncStorage.setItem(onboardingStorageKey, "true").catch(() => {});
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Sign In Required",
+        "Create a free account to start reading plans and track your progress.",
+        [
+          { text: "Not Now", style: "cancel", onPress: () => setShowOnboarding(false) },
+          { text: "Sign In", onPress: () => { setShowOnboarding(false); router.push("/(auth)/login"); } },
+        ],
+      );
+      return;
+    }
     try {
       await apiRequest("POST", "/api/devotionals/enroll", {
         userId,
@@ -132,6 +143,17 @@ export default function DevotionalsScreen() {
   };
 
   const handleEnroll = async (planId: string) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Sign In Required",
+        "Create a free account to start reading plans and track your progress.",
+        [
+          { text: "Not Now", style: "cancel" },
+          { text: "Sign In", onPress: () => router.push("/(auth)/login") },
+        ],
+      );
+      return;
+    }
     setEnrolling(true);
     try {
       await apiRequest("POST", "/api/devotionals/enroll", {
