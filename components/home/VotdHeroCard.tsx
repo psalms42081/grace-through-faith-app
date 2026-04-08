@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -55,12 +56,16 @@ export default function VotdHeroCard({
 
   const handleLike = async () => {
     if (!userId) return showAuthGate();
-    if (!verseId) return;
     try {
-      await apiRequest("POST", "/api/bookmarks", { verseId, label: "Verse of the Day" });
+      await apiRequest("POST", "/api/bookmarks", {
+        verseReference: verse.reference,
+        label: "Verse of the Day",
+      });
       setSaved((prev) => !prev);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {}
+    } catch {
+      setSaved((prev) => !prev);
+    }
   };
 
   const handleReflect = () => {
@@ -163,42 +168,47 @@ export default function VotdHeroCard({
       </Pressable>
 
       <Modal visible={showReflect} transparent animationType="fade">
-        <Pressable style={s.modalBackdrop} onPress={() => setShowReflect(false)}>
-          <Pressable style={s.modalSheet} onPress={() => {}}>
-            <Text style={[s.modalRef, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
-            <Text style={[s.modalVerse, { fontFamily: "Lora_400Regular_Italic" }]} numberOfLines={3}>
-              {`\u201C${verse.text}\u201D`}
-            </Text>
-            {reflectSaved ? (
-              <View style={s.modalSuccess}>
-                <Ionicons name="checkmark-circle" size={28} color={GOLD} />
-                <Text style={[s.modalSuccessText, { fontFamily: "Inter_500Medium" }]}>
-                  Reflection saved to your Prayer Journal
-                </Text>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={[s.modalInput, { fontFamily: "Inter_400Regular" }]}
-                  placeholder="What is God saying to you through this verse?"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  multiline
-                  value={reflectText}
-                  onChangeText={setReflectText}
-                  autoFocus
-                />
-                <View style={s.modalButtons}>
-                  <Pressable onPress={() => { setShowReflect(false); setReflectText(""); }} style={s.modalCancel}>
-                    <Text style={[s.modalCancelText, { fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-                  </Pressable>
-                  <Pressable onPress={submitReflection} style={[s.modalSave, { opacity: reflectText.trim() ? 1 : 0.4 }]}>
-                    <Text style={[s.modalSaveText, { fontFamily: "Inter_600SemiBold" }]}>Save</Text>
-                  </Pressable>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <Pressable style={s.modalBackdrop} onPress={() => setShowReflect(false)}>
+            <Pressable style={s.modalSheet} onPress={() => {}}>
+              <Text style={[s.modalRef, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
+              <Text style={[s.modalVerse, { fontFamily: "Lora_400Regular_Italic" }]} numberOfLines={3}>
+                {`\u201C${verse.text}\u201D`}
+              </Text>
+              {reflectSaved ? (
+                <View style={s.modalSuccess}>
+                  <Ionicons name="checkmark-circle" size={28} color={GOLD} />
+                  <Text style={[s.modalSuccessText, { fontFamily: "Inter_500Medium" }]}>
+                    Reflection saved to your Prayer Journal
+                  </Text>
                 </View>
-              </>
-            )}
+              ) : (
+                <>
+                  <TextInput
+                    style={[s.modalInput, { fontFamily: "Inter_400Regular" }]}
+                    placeholder="What is God saying to you through this verse?"
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    multiline
+                    value={reflectText}
+                    onChangeText={setReflectText}
+                    autoFocus
+                  />
+                  <View style={s.modalButtons}>
+                    <Pressable onPress={() => { setShowReflect(false); setReflectText(""); }} style={s.modalCancel}>
+                      <Text style={[s.modalCancelText, { fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+                    </Pressable>
+                    <Pressable onPress={submitReflection} style={[s.modalSave, { opacity: reflectText.trim() ? 1 : 0.4 }]}>
+                      <Text style={[s.modalSaveText, { fontFamily: "Inter_600SemiBold" }]}>Save</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
