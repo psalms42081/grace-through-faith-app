@@ -447,33 +447,123 @@ export async function seedDemoData(): Promise<{ success: boolean; message: strin
     counts.pastoral_care_alerts = alertBatch.length;
 
     console.log("[DemoSeed] Creating analytics cache entries...");
-    const allNodeIds = HIERARCHY_NODES.map(n => n.id);
     let cacheCount = 0;
     const cacheBatch: any[] = [];
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    for (const nodeId of [demoId("gc"), ...CONFERENCE_IDS.slice(0, 5), ...CHURCH_IDS.slice(0, 10)]) {
-      const node = HIERARCHY_NODES.find(n => n.id === nodeId)!;
-      const childChurches = CHURCH_IDS.filter(cId => {
-        const churchNode = HIERARCHY_NODES.find(n => n.id === cId);
-        return churchNode && buildPath(cId).includes(nodeId);
-      });
-      const memberCount = childChurches.length > 0 ? childChurches.length * randomInt(5, 10) : randomInt(5, 15);
+    const currentWeekStart = new Date(
+      Date.now() - new Date().getDay() * 86400000
+    ).toISOString().split("T")[0];
+    const previousWeekStart = new Date(
+      new Date(currentWeekStart).getTime() - 7 * 86400000
+    ).toISOString().split("T")[0];
+    const twoWeeksAgoStart = new Date(
+      new Date(currentWeekStart).getTime() - 14 * 86400000
+    ).toISOString().split("T")[0];
+    const cacheTimeRanges = [currentWeekStart, previousWeekStart, twoWeeksAgoStart];
 
-      for (const tr of ["this_week", "this_month", "this_quarter"]) {
+    for (const nodeId of [
+      demoId("gc"),
+      demoId("div-spd"),
+      demoId("div-iad"),
+      demoId("div-ted"),
+      demoId("union-nsw"),
+      demoId("union-nzp"),
+      demoId("union-png"),
+      demoId("union-tpum"),
+      demoId("union-wpum"),
+      ...CONFERENCE_IDS.slice(0, 5),
+      ...CHURCH_IDS.slice(0, 10),
+    ]) {
+      const isDivision = nodeId.startsWith("demo-div-");
+      const isUnion = nodeId.startsWith("demo-union-");
+      const isConference = nodeId.startsWith("demo-conf-");
+      const isChurch = nodeId.startsWith("demo-ch-");
+
+      const activeUsers = isDivision
+        ? randomInt(800, 1200)
+        : isUnion
+          ? randomInt(300, 600)
+          : isConference
+            ? randomInt(120, 260)
+            : isChurch
+              ? randomInt(25, 90)
+              : randomInt(1500, 2500);
+
+      const totalEngagements = isDivision
+        ? randomInt(3000, 5000)
+        : isUnion
+          ? randomInt(1000, 2000)
+          : isConference
+            ? randomInt(500, 1400)
+            : isChurch
+              ? randomInt(150, 700)
+              : randomInt(6000, 12000);
+
+      const bibleReadingSessions = isDivision
+        ? randomInt(400, 600)
+        : isUnion
+          ? randomInt(180, 320)
+          : isConference
+            ? randomInt(90, 220)
+            : isChurch
+              ? randomInt(20, 90)
+              : randomInt(700, 1200);
+
+      const plansCompleted = isDivision
+        ? randomInt(80, 120)
+        : isUnion
+          ? randomInt(35, 80)
+          : isConference
+            ? randomInt(20, 60)
+            : isChurch
+              ? randomInt(5, 25)
+              : randomInt(140, 220);
+
+      const videosWatched = isDivision
+        ? randomInt(200, 350)
+        : isUnion
+          ? randomInt(90, 180)
+          : isConference
+            ? randomInt(50, 130)
+            : isChurch
+              ? randomInt(10, 55)
+              : randomInt(350, 600);
+
+      const studySessions = isDivision
+        ? randomInt(150, 250)
+        : isUnion
+          ? randomInt(70, 140)
+          : isConference
+            ? randomInt(45, 110)
+            : isChurch
+              ? randomInt(10, 50)
+              : randomInt(280, 480);
+
+      const totalDurationSec = totalEngagements * randomInt(120, 240);
+      const prayerRequests = Math.max(
+        0,
+        Math.round(activeUsers * randomFloat(0.03, 0.12))
+      );
+
+      for (const tr of cacheTimeRanges) {
         cacheBatch.push({
-          id: demoId(`ac-${nodeId.replace("demo-", "")}-summary-${tr}`),
+          id: demoId(`ac-${nodeId.replace("demo-", "")}-${tr}`),
           hierarchyNodeId: nodeId,
-          cacheType: "dashboard_summary",
+          cacheType: "dashboard",
           timeRange: tr,
           data: {
-            active_member_count: memberCount,
-            average_engagement_pct: randomFloat(25, 75),
-            content_views: randomInt(100, 5000),
-            bible_reading_sessions: randomInt(50, 2000),
-            plans_completed: randomInt(10, 500),
-            videos_watched: randomInt(20, 800),
-            study_sessions: randomInt(30, 1200),
+            active_users: activeUsers,
+            total_engagements: totalEngagements,
+            total_duration_sec: totalDurationSec,
+            bible_reading_sessions: bibleReadingSessions,
+            plans_completed: plansCompleted,
+            videos_watched: videosWatched,
+            study_sessions: studySessions,
+            prayer_requests: prayerRequests,
+            new_members: randomInt(0, Math.max(1, Math.floor(activeUsers * 0.02))),
+            top_topics: [],
+            age_segments: {},
           },
           expiresAt,
         });
