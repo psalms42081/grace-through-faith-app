@@ -29,7 +29,7 @@ export default function VotdHeroCard({ verse, bgImage, bookImage, onPress }: Vot
         resizeMode="cover"
       >
         <LinearGradient
-          colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.75)"]}
+          colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.55)"]}
           locations={[0, 0.5, 1]}
           style={s.overlay}
         >
@@ -62,6 +62,8 @@ const s = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
+    marginHorizontal: -20,
+    marginTop: 8,
   },
   imageBg: {
     width: "100%",
@@ -83,7 +85,7 @@ const s = StyleSheet.create({
   },
   reference: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 6,
   },
   verseText: {
