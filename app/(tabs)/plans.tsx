@@ -6,10 +6,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  FlatList,
-  Modal,
   Animated as RNAnimated,
-  Dimensions,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -25,9 +22,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_W = 170;
-const CARD_H = 220;
 const GOLD = "#C9933A";
 
 interface ReadingPlan {
@@ -517,82 +511,146 @@ function DiscoverTab({
   bottomPad: number;
   onPlanPress: (id: string) => void;
 }) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  const categories = useMemo(
+    () => ["All", ...grouped.map((g) => g.category)],
+    [grouped]
+  );
+
+  const allPlans = useMemo(
+    () => grouped.flatMap((g) => g.items),
+    [grouped]
+  );
+
+  const filteredPlans = useMemo(() => {
+    let result = allPlans;
+    if (selectedTopic) {
+      const topic = selectedTopic.toLowerCase();
+      result = result.filter(
+        (p) =>
+          (p.category || "").toLowerCase().includes(topic) ||
+          (p.title || "").toLowerCase().includes(topic) ||
+          (p.description || "").toLowerCase().includes(topic)
+      );
+    }
+    if (selectedCategory !== "All") {
+      result = result.filter((p) => p.category === selectedCategory);
+    }
+    return result;
+  }, [allPlans, selectedTopic, selectedCategory]);
+
   return (
     <ScrollView
       contentContainerStyle={{ paddingBottom: bottomPad + 140 }}
       showsVerticalScrollIndicator={false}
     >
-      {grouped.map(({ category, items }) => (
-        <View key={category} style={st.section}>
-          <View style={st.sectionHeader}>
-            <Ionicons
-              name={CATEGORY_ICONS[category] || "library"}
-              size={18}
-              color={GOLD}
-            />
+      <LinearGradient
+        colors={["#1A1235", "#0D1B2A", "#050507"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={dt.heroBanner}
+      >
+        <Text style={[dt.heroLabel, { fontFamily: "Inter_600SemiBold" }]}>READING PLANS</Text>
+        <Text style={[dt.heroTitle, { fontFamily: "Lora_700Bold" }]}>Find Your Next Plan</Text>
+        <Text style={[dt.heroSubtitle, { fontFamily: "Inter_400Regular" }]}>
+          Discover plans for every season of faith
+        </Text>
+      </LinearGradient>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={dt.topicRow}
+      >
+        {TOPIC_PILLS.map((topic) => (
+          <Pressable
+            key={topic.label}
+            onPress={() => {
+              setSelectedTopic(selectedTopic === topic.label ? null : topic.label);
+              setSelectedCategory("All");
+            }}
+            style={[
+              dt.topicPill,
+              { backgroundColor: topic.color },
+              selectedTopic === topic.label && dt.topicPillSelected,
+            ]}
+          >
+            <Text style={[dt.topicPillText, { fontFamily: "Inter_600SemiBold" }]}>
+              {topic.label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={dt.categoryRow}
+      >
+        {categories.map((cat) => (
+          <Pressable
+            key={cat}
+            onPress={() => {
+              setSelectedCategory(cat);
+              setSelectedTopic(null);
+            }}
+            style={[
+              dt.categoryPill,
+              selectedCategory === cat && dt.categoryPillSelected,
+            ]}
+          >
             <Text
-              style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}
+              style={[
+                dt.categoryPillText,
+                { fontFamily: selectedCategory === cat ? "Inter_600SemiBold" : "Inter_500Medium" },
+              ]}
             >
-              {category}
+              {cat}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      <View style={dt.planList}>
+        {filteredPlans.map((item) => {
+          const grad = CATEGORY_GRADIENTS[item.category || ""] || ["#3B6CB5", "#1A3A6E"];
+          return (
+            <View key={item.id} style={dt.planRow}>
+              <LinearGradient colors={grad} style={dt.planCover} />
+              <View style={dt.planInfo}>
+                <View style={dt.planBadge}>
+                  <Text style={[dt.planBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+                    {item.durationDays} Days
+                  </Text>
+                </View>
+                <Text style={[dt.planTitle, { fontFamily: "Inter_700Bold" }]} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                {item.description ? (
+                  <Text style={[dt.planDesc, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                    {item.description}
+                  </Text>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => onPlanPress(item.id)}
+                style={({ pressed }) => [dt.startPill, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>Start</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        {filteredPlans.length === 0 && (
+          <View style={dt.emptyFilter}>
+            <Text style={[dt.emptyFilterText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              No plans match this filter
             </Text>
           </View>
-          <FlatList
-            horizontal
-            data={items}
-            keyExtractor={(p) => p.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}
-            renderItem={({ item }) => {
-              const grad = CATEGORY_GRADIENTS[item.category || ""] || ["#3B6CB5", "#1A3A6E"];
-              return (
-                <Pressable
-                  onPress={() => onPlanPress(item.id)}
-                  style={({ pressed }) => [
-                    st.cardShadow,
-                    { opacity: pressed ? 0.85 : 1, width: CARD_W, transform: [{ scale: pressed ? 0.97 : 1 }] },
-                  ]}
-                  testID={`plan-card-${item.id}`}
-                >
-                  <LinearGradient
-                    colors={grad}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={st.discoverCard}
-                  >
-                    <View style={st.cardInnerBorder}>
-                      <View style={st.durationBadge}>
-                        <Text style={st.durationText}>{item.durationDays} days</Text>
-                      </View>
-                      <Ionicons
-                        name={CATEGORY_ICONS[item.category || ""] || "book"}
-                        size={64}
-                        color="rgba(255,255,255,0.07)"
-                        style={st.cardBgIcon}
-                      />
-                      <LinearGradient
-                        colors={["transparent", "rgba(0,0,0,0.48)"]}
-                        style={st.cardGradientOverlay}
-                      >
-                        <Text
-                          style={[st.cardTitle, { fontFamily: "Lora_700Bold" }]}
-                          numberOfLines={3}
-                        >
-                          {item.title}
-                        </Text>
-                        {item.description ? (
-                          <Text style={st.cardDesc} numberOfLines={2}>
-                            {item.description}
-                          </Text>
-                        ) : null}
-                      </LinearGradient>
-                    </View>
-                  </LinearGradient>
-                </Pressable>
-              );
-            }}
-          />
-        </View>
-      ))}
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -1216,61 +1274,6 @@ const st = StyleSheet.create({
   tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24 },
   tabText: { fontSize: 14 },
 
-  section: { marginTop: 20 },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18 },
-
-  cardShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  discoverCard: {
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: 18,
-    overflow: "hidden",
-    justifyContent: "flex-end",
-  },
-  cardInnerBorder: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-  },
-  cardBgIcon: { position: "absolute", top: 16, right: -8 },
-  cardGradientOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CARD_H * 0.55,
-    justifyContent: "flex-end",
-    padding: 14,
-  },
-  cardTitle: { color: "#fff", fontSize: 15, lineHeight: 20 },
-  cardDesc: { color: "rgba(255,255,255,0.7)", fontSize: 11, lineHeight: 15, marginTop: 4, fontFamily: "Inter_400Regular" },
-  durationBadge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 2,
-  },
-  durationText: { color: "#fff", fontSize: 11, fontFamily: "Inter_500Medium" },
-
   myPlanCard: {
     borderRadius: 20,
     padding: 20,
@@ -1466,4 +1469,138 @@ const st = StyleSheet.create({
     borderRadius: 14,
   },
   durationPillText: { fontSize: 14 },
+});
+
+const TOPIC_PILLS = [
+  { label: "Salvation", color: "#8B5CF6" },
+  { label: "Prayer", color: "#2563EB" },
+  { label: "Sabbath", color: "#C9933A" },
+  { label: "Prophecy", color: "#DC2626" },
+  { label: "Identity", color: "#059669" },
+  { label: "Anxiety", color: "#0891B2" },
+];
+
+const dt = StyleSheet.create({
+  heroBanner: {
+    width: "100%",
+    height: 180,
+    justifyContent: "flex-end",
+    padding: 20,
+  },
+  heroLabel: {
+    color: GOLD,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+  },
+  topicRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  topicPill: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topicPillSelected: {
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  topicPillText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+  },
+  categoryRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  categoryPill: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  categoryPillSelected: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  categoryPillText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+  },
+  planList: {
+    paddingHorizontal: 20,
+  },
+  planRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  planCover: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  planInfo: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  planBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  planBadgeText: {
+    color: GOLD,
+    fontSize: 11,
+  },
+  planTitle: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  planDesc: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
+  },
+  startPill: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  startPillText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+  },
+  emptyFilter: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  emptyFilterText: {
+    fontSize: 14,
+  },
 });
