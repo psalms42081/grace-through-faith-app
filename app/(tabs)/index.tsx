@@ -1702,7 +1702,9 @@ function AdultHomeScreen() {
         lastActiveChildId={lastActiveChildId}
       />
 
-      <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} />
+      <View style={{ marginHorizontal: -20 }}>
+        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} />
+      </View>
 
       {isSabbathMode ? (
         <>

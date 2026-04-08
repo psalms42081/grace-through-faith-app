@@ -62,7 +62,6 @@ const s = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 16,
-    marginHorizontal: -20,
     marginTop: 12,
   },
   imageBg: {
