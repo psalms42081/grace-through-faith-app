@@ -9,6 +9,7 @@ import {
   Animated as RNAnimated,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -620,7 +621,15 @@ function DiscoverTab({
           const grad = CATEGORY_GRADIENTS[item.category || ""] || ["#3B6CB5", "#1A3A6E"];
           return (
             <View key={item.id} style={dt.planRow}>
-              <LinearGradient colors={grad} style={dt.planCover} />
+              {item.coverImageUrl ? (
+                <Image
+                  source={{ uri: item.coverImageUrl }}
+                  style={dt.planCover}
+                  resizeMode="cover"
+                />
+              ) : (
+                <LinearGradient colors={grad} style={dt.planCover} />
+              )}
               <View style={dt.planInfo}>
                 <View style={dt.planBadge}>
                   <Text style={[dt.planBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
