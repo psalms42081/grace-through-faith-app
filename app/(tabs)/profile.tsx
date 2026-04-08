@@ -151,6 +151,21 @@ function ProfileScreenInner() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: recentBookmarks } = useQuery<any[]>({
+    queryKey: [`/api/bookmarks/${uid}`],
+    enabled: isAuthenticated,
+  });
+
+  const { data: recentHighlights } = useQuery<any[]>({
+    queryKey: [`/api/highlights/${uid}`],
+    enabled: isAuthenticated,
+  });
+
+  const { data: recentNotes } = useQuery<any[]>({
+    queryKey: [`/api/notes?userId=${uid}`],
+    enabled: isAuthenticated,
+  });
+
   const [codeCopied, setCodeCopied] = useState(false);
   const [addChurchName, setAddChurchName] = useState("");
   const [addingChurch, setAddingChurch] = useState(false);
@@ -343,6 +358,62 @@ function ProfileScreenInner() {
           })}
         </ScrollView>
       </View>
+
+      {isAuthenticated && (
+        <View style={st.activitySection}>
+          <Text style={[st.sectionTitle, { fontFamily: "Lora_700Bold" }]}>Activity</Text>
+          {recentBookmarks?.slice(0, 3).map((b, i) => (
+            <View key={`bk-${i}`} style={st.activityRow}>
+              <View style={st.activityIcon}>
+                <Ionicons name="bookmark" size={16} color="#C9933A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
+                  Saved a verse
+                </Text>
+                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  {b.label || b.verseId}
+                </Text>
+              </View>
+            </View>
+          ))}
+          {recentHighlights?.slice(0, 3).map((h, i) => (
+            <View key={`hl-${i}`} style={st.activityRow}>
+              <View style={[st.activityIcon, { backgroundColor: "rgba(234,179,8,0.15)" }]}>
+                <Ionicons name="color-wand" size={16} color="#EAB308" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
+                  Highlighted a verse
+                </Text>
+                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  {h.verseId}
+                </Text>
+              </View>
+            </View>
+          ))}
+          {recentNotes?.slice(0, 3).map((n, i) => (
+            <View key={`nt-${i}`} style={st.activityRow}>
+              <View style={[st.activityIcon, { backgroundColor: "rgba(99,102,241,0.15)" }]}>
+                <Ionicons name="create-outline" size={16} color="#6366F1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
+                  Added a note
+                </Text>
+                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  {n.content}
+                </Text>
+              </View>
+            </View>
+          ))}
+          {!recentBookmarks?.length && !recentHighlights?.length && !recentNotes?.length && (
+            <Text style={[st.activityEmpty, { fontFamily: "Inter_400Regular" }]}>
+              Your reading activity will appear here.
+            </Text>
+          )}
+        </View>
+      )}
 
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
@@ -909,6 +980,42 @@ const st = StyleSheet.create({
   badgeLabel: {
     fontSize: 11,
     textAlign: "center",
+  },
+  activitySection: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+    gap: 12,
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(201,147,58,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activityLabel: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  activitySub: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+  },
+  activityEmpty: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 20,
   },
   sheetOverlay: {
     flex: 1,
