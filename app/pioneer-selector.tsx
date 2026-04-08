@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, FlatList, Platform } from "react-nat
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/contexts/ToastContext";
 import { usePioneer } from "@/contexts/PioneerContext";
@@ -13,6 +14,7 @@ const GOLD = "#C9933A";
 const INACTIVE_BG = "rgba(255,255,255,0.04)";
 const INACTIVE_BORDER = "rgba(255,255,255,0.08)";
 const ACTIVE_BG = "rgba(201,147,58,0.08)";
+const NARRATOR_VOICE_KEY = "@grace-through-faith/tts-voice";
 
 const PIONEER_META: Record<string, { initials: string; descriptor: string }> = {
   "ellen-white": { initials: "EW", descriptor: "Prophet & Author" },
@@ -59,8 +61,12 @@ export default function PioneerSelectorScreen() {
 
   const activeId = selectedPioneer?.id || "ellen-white";
 
-  const onSelect = (pioneerId: string) => {
+  const onSelect = async (pioneerId: string) => {
     selectPioneer(pioneerId);
+    const pioneer = PIONEERS.find((p) => p.id === pioneerId);
+    if (pioneer?.voiceKey) {
+      await AsyncStorage.setItem(NARRATOR_VOICE_KEY, pioneer.voiceKey);
+    }
     showToast("Guide updated", "info");
     router.back();
   };
