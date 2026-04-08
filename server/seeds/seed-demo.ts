@@ -472,8 +472,8 @@ export async function seedDemoData(): Promise<{ success: boolean; message: strin
       demoId("union-png"),
       demoId("union-tpum"),
       demoId("union-wpum"),
-      ...CONFERENCE_IDS.slice(0, 5),
-      ...CHURCH_IDS.slice(0, 10),
+      ...CONFERENCE_IDS,
+      ...CHURCH_IDS,
     ]) {
       const isDivision = nodeId.startsWith("demo-div-");
       const isUnion = nodeId.startsWith("demo-union-");
