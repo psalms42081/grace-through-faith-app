@@ -51,6 +51,7 @@ export default function VotdHeroCard({
   const [saved, setSaved] = useState(false);
   const [showReflect, setShowReflect] = useState(false);
   const [reflectText, setReflectText] = useState("");
+  const [reflectSaved, setReflectSaved] = useState(false);
 
   const handleLike = async () => {
     if (!userId) return showAuthGate();
@@ -70,14 +71,18 @@ export default function VotdHeroCard({
   const submitReflection = async () => {
     if (!reflectText.trim()) return;
     try {
-      await apiRequest("POST", "/api/notes", {
-        verseId: verseId || undefined,
-        content: `[VOTD] ${verse.reference}\n${reflectText}`,
+      await apiRequest("POST", "/api/prayers", {
+        content: `Reflection on ${verse.reference}:\n\n${reflectText}`,
+        isPrivate: true,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setReflectSaved(true);
+      setTimeout(() => {
+        setShowReflect(false);
+        setReflectText("");
+        setReflectSaved(false);
+      }, 1500);
     } catch {}
-    setShowReflect(false);
-    setReflectText("");
   };
 
   const handleShare = async () => {
@@ -164,23 +169,34 @@ export default function VotdHeroCard({
             <Text style={[s.modalVerse, { fontFamily: "Lora_400Regular_Italic" }]} numberOfLines={3}>
               {`\u201C${verse.text}\u201D`}
             </Text>
-            <TextInput
-              style={[s.modalInput, { fontFamily: "Inter_400Regular" }]}
-              placeholder="What is God saying to you through this verse?"
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              multiline
-              value={reflectText}
-              onChangeText={setReflectText}
-              autoFocus
-            />
-            <View style={s.modalButtons}>
-              <Pressable onPress={() => { setShowReflect(false); setReflectText(""); }} style={s.modalCancel}>
-                <Text style={[s.modalCancelText, { fontFamily: "Inter_500Medium" }]}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={submitReflection} style={[s.modalSave, { opacity: reflectText.trim() ? 1 : 0.4 }]}>
-                <Text style={[s.modalSaveText, { fontFamily: "Inter_600SemiBold" }]}>Save</Text>
-              </Pressable>
-            </View>
+            {reflectSaved ? (
+              <View style={s.modalSuccess}>
+                <Ionicons name="checkmark-circle" size={28} color={GOLD} />
+                <Text style={[s.modalSuccessText, { fontFamily: "Inter_500Medium" }]}>
+                  Reflection saved to your Prayer Journal
+                </Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  style={[s.modalInput, { fontFamily: "Inter_400Regular" }]}
+                  placeholder="What is God saying to you through this verse?"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  multiline
+                  value={reflectText}
+                  onChangeText={setReflectText}
+                  autoFocus
+                />
+                <View style={s.modalButtons}>
+                  <Pressable onPress={() => { setShowReflect(false); setReflectText(""); }} style={s.modalCancel}>
+                    <Text style={[s.modalCancelText, { fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable onPress={submitReflection} style={[s.modalSave, { opacity: reflectText.trim() ? 1 : 0.4 }]}>
+                    <Text style={[s.modalSaveText, { fontFamily: "Inter_600SemiBold" }]}>Save</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -299,5 +315,15 @@ const s = StyleSheet.create({
   modalSaveText: {
     color: "#fff",
     fontSize: 14,
+  },
+  modalSuccess: {
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 24,
+  },
+  modalSuccessText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
+    textAlign: "center",
   },
 });

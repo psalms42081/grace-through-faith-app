@@ -1503,6 +1503,21 @@ function AdultHomeScreen() {
     return getBookImage(bookName);
   }, [verse.reference]);
 
+  const { data: homeBooks } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/books"],
+  });
+
+  const votdParsed = useMemo(() => {
+    const ref = verse.reference;
+    const bookName = ref.replace(/\s+\d+.*$/, "");
+    const match = ref.match(/(\d+):\d+$/);
+    const chapter = match ? parseInt(match[1], 10) : undefined;
+    const book = homeBooks?.find(
+      (b) => b.name.toLowerCase() === bookName.toLowerCase()
+    );
+    return { bookId: book?.id, chapterNumber: chapter };
+  }, [verse.reference, homeBooks]);
+
   const { data: todayData } = useQuery<TodayResponse>({
     queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
@@ -1703,7 +1718,7 @@ function AdultHomeScreen() {
       />
 
       <View style={{ marginHorizontal: -20 }}>
-        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} userId={userId} />
+        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} userId={userId} bookId={votdParsed.bookId} chapterNumber={votdParsed.chapterNumber} />
       </View>
 
       {isSabbathMode ? (
