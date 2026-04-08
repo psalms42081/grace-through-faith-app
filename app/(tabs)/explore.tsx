@@ -23,6 +23,7 @@ const CATEGORY_IMAGES: Record<string, any> = {
   "learning-paths": require("@/assets/topic-cards/study-paths.png"),
   "study-tools": require("@/assets/topic-cards/maps-timeline.png"),
   "adventist-studies": require("@/assets/topic-cards/three-angels.png"),
+  "prophecy-end-times": require("@/assets/topic-cards/three-angels.png"),
   "spiritual-themes": require("@/assets/topic-cards/grace.png"),
 };
 
@@ -59,6 +60,12 @@ const CATEGORIES = [
     title: "Essentials",
     subtitle: "Core Adventist beliefs and distinctive doctrines",
     icon: "school" as const,
+  },
+  {
+    id: "prophecy-end-times",
+    title: "Prophecy & End Times",
+    subtitle: "Daniel, Revelation & the Great Controversy",
+    icon: "telescope" as const,
   },
   {
     id: "spiritual-themes",
@@ -201,8 +208,18 @@ export default function StudyScreen() {
               id={cat.id}
               title={cat.title}
               subtitle={cat.subtitle}
-              badge={cat.id === "study-scripture" ? "Start here" : undefined}
-              onPress={() => router.push({ pathname: "/study-category", params: { category: cat.id } } as any)}
+              badge={
+                cat.id === "study-scripture"
+                  ? "Start here"
+                  : cat.id === "prophecy-end-times"
+                  ? "SDA Distinctive"
+                  : undefined
+              }
+              onPress={() =>
+                cat.id === "prophecy-end-times"
+                  ? router.push("/prophecy-hub" as any)
+                  : router.push({ pathname: "/study-category", params: { category: cat.id } } as any)
+              }
             />
           ))}
         </View>
