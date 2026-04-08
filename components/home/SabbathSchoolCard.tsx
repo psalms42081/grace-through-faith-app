@@ -19,7 +19,7 @@ type SabbathSchoolCurrentResponse = {
   completedDays: number;
 };
 
-const CARD_BG_IMAGE = require("@/assets/home-cards/study.png");
+const CARD_BG_IMAGE = require("@/assets/home-cards/sabbath-school.png");
 
 export default function SabbathSchoolCard() {
   const { theme } = useTheme();
