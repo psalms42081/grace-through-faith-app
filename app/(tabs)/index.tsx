@@ -1459,7 +1459,7 @@ function AdultHomeScreen() {
   const { theme: baseTheme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
   const sabbath = useSabbath();
   const { t } = useTranslation();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
@@ -1664,7 +1664,9 @@ function AdultHomeScreen() {
       <View style={s.headerRow}>
         <View style={{ flex: 1, marginRight: 12 }}>
           <Text style={[s.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {greeting}
+            {user?.displayName
+              ? `${greeting}, ${user.displayName.split(" ")[0]}`
+              : greeting}
           </Text>
           <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             Grace Through Faith
