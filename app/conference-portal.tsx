@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,6 +33,7 @@ interface PricingTier {
   annualPrice: number;
   memberRange: string;
   icon: string;
+  features: string[];
 }
 
 const PRICING_TIERS: PricingTier[] = [
@@ -43,6 +45,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 299,
     memberRange: "< 100",
     icon: "home",
+    features: [
+      "Up to 100 members",
+      "Bible reading tracking",
+      "Sabbath School integration",
+      "Basic analytics",
+    ],
   },
   {
     id: "medium-church",
@@ -52,6 +60,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 799,
     memberRange: "100–500",
     icon: "business",
+    features: [
+      "Up to 500 members",
+      "Full analytics dashboard",
+      "Pioneer guide system",
+      "Priority support",
+    ],
   },
   {
     id: "large-church",
@@ -61,6 +75,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 1499,
     memberRange: "500+",
     icon: "globe",
+    features: [
+      "500+ members",
+      "Advanced analytics",
+      "Custom branding",
+      "Dedicated support",
+    ],
   },
   {
     id: "conference",
@@ -70,6 +90,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 4999,
     memberRange: "100 churches",
     icon: "git-network",
+    features: [
+      "Up to 100 churches",
+      "Conference analytics",
+      "Bulk member management",
+      "Pastor portal",
+    ],
   },
   {
     id: "union",
@@ -79,6 +105,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 14999,
     memberRange: "10 conferences",
     icon: "layers",
+    features: [
+      "Up to 10 conferences",
+      "Union-wide analytics",
+      "Division reporting",
+      "White-label option",
+    ],
   },
   {
     id: "division",
@@ -88,6 +120,12 @@ const PRICING_TIERS: PricingTier[] = [
     annualPrice: 39999,
     memberRange: "Unlimited",
     icon: "earth",
+    features: [
+      "Unlimited conferences",
+      "Full GC hierarchy",
+      "Global analytics",
+      "API access",
+    ],
   },
 ];
 
@@ -237,12 +275,11 @@ export default function ConferencePortalScreen() {
   }
 
   function handleRequestQuote() {
-    const msg = "Your quote request has been sent. Our team will contact you at your registered email within 24 hours.";
-    if (Platform.OS === "web") {
-      window.alert(msg);
-    } else {
-      Alert.alert("Quote Requested", msg);
-    }
+    const subject = encodeURIComponent("GTF Quote Request");
+    const body = encodeURIComponent(
+      `Quote Request\n\nTier: ${activeTier.name}\nChurches: ${churchCount}\nBilling: ${billingCycle}\nTotal: $${calcSummary.total.toFixed(2)}/${billingCycle === "monthly" ? "mo" : "yr"}\n\nPlease send me a formal quote.`
+    );
+    Linking.openURL(`mailto:joseph@gracethroughfaith.app?subject=${subject}&body=${body}`);
   }
 
   return (
@@ -349,6 +386,14 @@ export default function ConferencePortalScreen() {
                     </>
                   )}
                 </View>
+                <View style={styles.tierFeaturesList}>
+                  {tier.features.map((feature) => (
+                    <View key={`${tier.id}-${feature}`} style={styles.tierFeatureRow}>
+                      <Ionicons name="checkmark-circle" size={14} color={GOLD} />
+                      <Text style={styles.tierFeatureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
 
                 <Pressable
                   onPress={() => setSelectedTier(tier.id)}
@@ -401,7 +446,7 @@ export default function ConferencePortalScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.calcTierRow}
           >
-            {PRICING_TIERS.filter((t) => ["small-church", "medium-church", "large-church"].includes(t.id)).map((tier) => {
+            {PRICING_TIERS.map((tier) => {
               const isActive = activeTierId === tier.id;
               return (
                 <Pressable
@@ -587,8 +632,7 @@ export default function ConferencePortalScreen() {
 
         <Pressable
           onPress={() => {
-            const msg = "Contact us at joseph@gracethroughfaith.app or visit gracethroughfaith.app to discuss enterprise licensing.";
-            if (Platform.OS === "web") { window.alert(msg); } else { Alert.alert("Contact Sales", msg); }
+            Linking.openURL("mailto:joseph@gracethroughfaith.app?subject=GTF Conference Licensing Enquiry");
           }}
           style={styles.contactSalesBtn}
         >
@@ -850,6 +894,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "rgba(255,255,255,0.4)",
     marginBottom: 4,
+  },
+  tierFeaturesList: {
+    width: "100%",
+    gap: 6,
+    marginBottom: 16,
+  },
+  tierFeatureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tierFeatureText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    flex: 1,
   },
   selectBtn: {
     width: "100%",
