@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ImageBackground,
-  ImageSourcePropType,
   Dimensions,
   PanResponder,
   Pressable,
@@ -23,11 +21,6 @@ const AUTO_INTERVAL = 8000;
 const RESUME_DELAY = 10000;
 const SWIPE_THRESHOLD = 50;
 
-interface VerseData {
-  text: string;
-  reference: string;
-}
-
 interface TouchPointData {
   title: string;
   excerpt: string;
@@ -40,9 +33,6 @@ interface DevotionalData {
 }
 
 interface RotatingPanelProps {
-  verse: VerseData;
-  bgImage: string;
-  bookImage?: ImageSourcePropType | null;
   touchpoints: TouchPointData[];
   devotionals: DevotionalData[];
 }
@@ -55,9 +45,6 @@ function getDayIndex(len: number) {
 }
 
 export default function RotatingPanel({
-  verse,
-  bgImage,
-  bookImage,
   touchpoints,
   devotionals,
 }: RotatingPanelProps) {
@@ -73,7 +60,7 @@ export default function RotatingPanel({
   const startAutoRotate = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % 3);
+      setActiveIndex((prev) => (prev + 1) % 2);
     }, AUTO_INTERVAL);
   }, []);
 
@@ -109,55 +96,19 @@ export default function RotatingPanel({
       },
       onPanResponderRelease: () => {
         if (panXRef.current < -SWIPE_THRESHOLD) {
-          setActiveIndex((prev) => (prev + 1) % 3);
+          setActiveIndex((prev) => (prev + 1) % 2);
           pauseAutoRotate();
         } else if (panXRef.current > SWIPE_THRESHOLD) {
-          setActiveIndex((prev) => (prev - 1 + 3) % 3);
+          setActiveIndex((prev) => (prev - 1 + 2) % 2);
           pauseAutoRotate();
         }
       },
     })
   ).current;
 
-  const imageSource = bookImage || { uri: bgImage };
-
   return (
     <View style={panelStyles.wrapper} {...panResponder.panHandlers}>
       {activeIndex === 0 && (
-        <View style={panelStyles.cardWrap}>
-          <ImageBackground
-            source={imageSource}
-            style={panelStyles.imageBg}
-            imageStyle={panelStyles.imageStyle}
-            resizeMode="cover"
-          >
-            <LinearGradient
-              colors={["rgba(0,0,0,0.08)", "rgba(0,0,0,0.42)", "rgba(0,0,0,0.70)"]}
-              style={panelStyles.overlay}
-            >
-              <View style={panelStyles.badge}>
-                <View style={[panelStyles.badgeDot, { backgroundColor: GOLD }]} />
-                <Text style={[panelStyles.badgeText, { fontFamily: "Inter_600SemiBold" }]}>
-                  Verse of the Day
-                </Text>
-              </View>
-              <Text style={[panelStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-                {"\u201C"}{verse.text}{"\u201D"}
-              </Text>
-              <View style={panelStyles.footer}>
-                <View>
-                  <Text style={[panelStyles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
-                    {verse.reference}
-                  </Text>
-                  <Text style={[panelStyles.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </ImageBackground>
-        </View>
-      )}
-
-      {activeIndex === 1 && (
         <View style={panelStyles.cardWrap}>
           <LinearGradient
             colors={["#0D2B2B", "#0A2222", "#071A1A"]}
@@ -189,7 +140,7 @@ export default function RotatingPanel({
         </View>
       )}
 
-      {activeIndex === 2 && (
+      {activeIndex === 1 && (
         <View style={panelStyles.cardWrap}>
           <LinearGradient
             colors={["#1A1530", "#151025", "#0F0B1A"]}
@@ -214,7 +165,7 @@ export default function RotatingPanel({
       )}
 
       <View style={panelStyles.dots}>
-        {[0, 1, 2].map((i) => (
+        {[0, 1].map((i) => (
           <Pressable key={i} onPress={() => { setActiveIndex(i); pauseAutoRotate(); }}>
             <View
               style={[
@@ -237,13 +188,6 @@ const panelStyles = StyleSheet.create({
   cardWrap: {
     borderRadius: 18,
     overflow: "hidden",
-  },
-  imageBg: {
-    width: "100%",
-    minHeight: 220,
-  },
-  imageStyle: {
-    borderRadius: 18,
   },
   solidCard: {
     borderRadius: 18,
@@ -271,15 +215,6 @@ const panelStyles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
-  },
-  verseText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    lineHeight: 27,
-    marginBottom: 14,
-    textShadowColor: "rgba(0,0,0,0.4)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
   },
   topicTitle: {
     fontSize: 20,
@@ -310,8 +245,6 @@ const panelStyles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  verseRef: { color: GOLD, fontSize: 15, marginBottom: 2 },
-  verseTrans: { color: "rgba(255,255,255,0.5)", fontSize: 10 },
   explorePill: {
     paddingHorizontal: 14,
     paddingVertical: 6,

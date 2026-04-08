@@ -40,6 +40,7 @@ import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
 import RotatingPanel from "@/components/home/RotatingPanel";
+import VotdHeroCard from "@/components/home/VotdHeroCard";
 import { getBookImage } from "@/constants/bible-books";
 import ContinueCard from "@/components/home/ContinueCard";
 import { useResumeJourney } from "@/hooks/useResumeJourney";
@@ -1701,6 +1702,8 @@ function AdultHomeScreen() {
         lastActiveChildId={lastActiveChildId}
       />
 
+      <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} />
+
       {isSabbathMode ? (
         <>
           <AnimatedSection index={0}><SabbathBanner theme={theme} /></AnimatedSection>
@@ -1719,7 +1722,7 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={4}><RotatingPanel verse={verse} bgImage={bgImage} bookImage={verseBookImage} touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard
               item={resumeItem}
@@ -1802,7 +1805,7 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={1}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={3}><RotatingPanel verse={verse} bgImage={bgImage} bookImage={verseBookImage} touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={3}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={4}>
             <ContinueCard
               item={resumeItem}
