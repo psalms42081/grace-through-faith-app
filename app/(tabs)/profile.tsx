@@ -387,7 +387,9 @@ function ProfileScreenInner() {
                   Highlighted a verse
                 </Text>
                 <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                  {h.verseId}
+                  {h.bookName && h.chapter && h.verse
+                    ? `${h.bookName} ${h.chapter}:${h.verse}`
+                    : h.verseId}
                 </Text>
               </View>
             </View>
