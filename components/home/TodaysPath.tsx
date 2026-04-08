@@ -62,7 +62,7 @@ export default function TodaysPath({
   const items: PathItem[] = [
     {
       image: HOME_IMAGES.read,
-      label: dailyVerseRef ? `Read ${dailyVerseRef.replace(/:\d+$/, "")}` : "Read today's passage",
+      label: "Today's Reading",
       subtitle: "Open Scripture in quiet devotion",
       completed: hasRecentRead,
       onPress: () => {
@@ -116,13 +116,7 @@ export default function TodaysPath({
                   {item.subtitle}
                 </Text>
               </View>
-              {item.completed ? (
-                <View style={s.completedBadge}>
-                  <Ionicons name="checkmark" size={14} color="#fff" />
-                </View>
-              ) : (
-                <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
-              )}
+              <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
             </View>
           </LinearGradient>
         </Pressable>
