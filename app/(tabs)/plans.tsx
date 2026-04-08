@@ -422,16 +422,18 @@ export default function PlansScreen() {
         />
       )}
 
-      <Pressable
-        onPress={openAdd}
-        style={({ pressed }) => [
-          st.fab,
-          { bottom: bottomPad + 100, opacity: pressed ? 0.85 : 1 },
-        ]}
-        testID="plans-fab"
-      >
-        <Ionicons name="add" size={28} color="#fff" />
-      </Pressable>
+      {activeTab === "My Plans" && (
+        <Pressable
+          onPress={openAdd}
+          style={({ pressed }) => [
+            st.fab,
+            { bottom: bottomPad + 100, opacity: pressed ? 0.85 : 1 },
+          ]}
+          testID="plans-fab"
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </Pressable>
+      )}
 
       {detailPlanId && (
         <PlanDetailSheet
