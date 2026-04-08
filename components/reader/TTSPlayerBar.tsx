@@ -113,6 +113,33 @@ export default function TTSPlayerBar({
 
   const accentGold = theme.accent;
 
+  if (!audio.isActive) {
+    return (
+      <View style={[styles.container, styles.shadow]}>
+        <View style={[styles.minimalBar, { paddingBottom: bottomPad + 8 }]}>
+          <Pressable
+            onPress={audio.handlePlay}
+            style={styles.minimalPlayBtn}
+          >
+            <Ionicons name="play" size={20} color="#fff" />
+          </Pressable>
+          <Pressable style={styles.minimalChapterPill}>
+            <Pressable onPress={goToPrev} disabled={!canGoPrev} hitSlop={8} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
+              <Ionicons name="chevron-back" size={16} color={theme.text} />
+            </Pressable>
+            <Text style={[styles.minimalChapterText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+              {bookName} {chapter}
+            </Text>
+            <Pressable onPress={goToNext} disabled={!canGoNext} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
+              <Ionicons name="chevron-forward" size={16} color={theme.text} />
+            </Pressable>
+          </Pressable>
+          <View style={{ width: 36 }} />
+        </View>
+      </View>
+    );
+  }
+
   const content = (
     <View style={[styles.playerWrap, { paddingBottom: bottomPad + 10 }]}>
 
@@ -329,6 +356,38 @@ const styles = StyleSheet.create({
   playerWrap: {
     paddingTop: 8,
     paddingHorizontal: 20,
+  },
+  minimalBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: "transparent",
+  },
+  minimalPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#C9933A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  minimalChapterPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 12,
+    gap: 12,
+  },
+  minimalChapterText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 
   // ── Speed sheet ────────────────────────────────────────────

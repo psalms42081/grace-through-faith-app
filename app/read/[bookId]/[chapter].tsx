@@ -1227,30 +1227,6 @@ export default function VerseReaderScreen() {
             )}
             </View>
 
-            <View style={[styles.chapterNav, { backgroundColor: readerBg, borderTopColor: isDark ? DARK_BORDER : "#F0F0F0", paddingBottom: bottomPad + 4 }]}>
-              <Pressable
-                onPress={goToPrev}
-                hitSlop={12}
-                style={[styles.chapterNavBtn, { opacity: canGoPrev ? 1 : 0.25 }]}
-                disabled={!canGoPrev}
-              >
-                <Ionicons name="chevron-back" size={20} color={isDark ? "#888" : "#999"} />
-              </Pressable>
-              <Pressable style={styles.chapterNavCenter} hitSlop={8}>
-                <Text style={[styles.chapterNavLabel, { color: isDark ? "#AAA" : "#666" }]}>
-                  {bookName} {chapter}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={goToNext}
-                hitSlop={12}
-                style={[styles.chapterNavBtn, { opacity: canGoNext ? 1 : 0.25 }]}
-                disabled={!canGoNext}
-              >
-                <Ionicons name="chevron-forward" size={20} color={isDark ? "#888" : "#999"} />
-              </Pressable>
-            </View>
-
             {toolbarVerse && (
               <BottomSheetToolbar
                 verse={toolbarVerse}
