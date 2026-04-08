@@ -614,6 +614,14 @@ function ProfileScreenInner() {
               onPress={() => router.push("/admin-review" as any)}
               style={{ marginBottom: 6 }}
             />
+            <ListItem
+              icon="business-outline"
+              iconColor="#3B82F6"
+              title="Conference Portal"
+              subtitle="Manage church licensing"
+              onPress={() => router.push("/conference-portal" as any)}
+              style={{ marginBottom: 6 }}
+            />
           </View>
         </>
       )}
