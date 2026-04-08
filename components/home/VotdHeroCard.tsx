@@ -75,20 +75,24 @@ export default function VotdHeroCard({
   };
 
   const submitReflection = async () => {
-    if (!reflectText.trim()) return;
+    console.log("submitReflection called, text:", reflectText.trim());
+    if (!reflectText.trim()) {
+      console.log("empty text, returning");
+      return;
+    }
     try {
+      console.log("calling API...");
       await apiRequest("POST", "/api/prayers", {
         content: `Reflection on ${verse.reference}:\n\n${reflectText}`,
         isPrivate: true,
       });
+      console.log("API success");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setReflectSaved(true);
-      setTimeout(() => {
-        setShowReflect(false);
-        setReflectText("");
-        setReflectSaved(false);
-      }, 1500);
-    } catch {}
+    } catch (e) {
+      console.log("API error:", e);
+    }
+    setShowReflect(false);
+    setReflectText("");
   };
 
   const handleShare = async () => {
