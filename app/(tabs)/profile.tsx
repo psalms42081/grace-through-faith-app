@@ -361,7 +361,7 @@ function ProfileScreenInner() {
 
       {isAuthenticated && (
         <View style={st.activitySection}>
-          <Text style={[st.sectionTitle, { fontFamily: "Lora_700Bold" }]}>Activity</Text>
+          <Text style={[st.sectionTitle, { fontFamily: "Lora_700Bold", color: "#FFFFFF" }]}>Activity</Text>
           {recentBookmarks?.slice(0, 3).map((b, i) => (
             <View key={`bk-${i}`} style={st.activityRow}>
               <View style={st.activityIcon}>
@@ -985,6 +985,7 @@ const st = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 16,
+    backgroundColor: "transparent",
   },
   activityRow: {
     flexDirection: "row",
