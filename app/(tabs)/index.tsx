@@ -48,6 +48,7 @@ import { useResumeJourney } from "@/hooks/useResumeJourney";
 import DevotionalCard from "@/components/home/DevotionalCard";
 import SabbathBanner from "@/components/home/SabbathBanner";
 import SabbathOverlay from "@/components/home/SabbathOverlay";
+import SabbathSchoolCard from "@/components/home/SabbathSchoolCard";
 import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
@@ -1740,21 +1741,22 @@ function AdultHomeScreen() {
               onDismiss={handleCoachDismiss}
             />
           </AnimatedSection>
-          <AnimatedSection index={2}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
-          <AnimatedSection index={5}>
+          <AnimatedSection index={2}><SabbathSchoolCard /></AnimatedSection>
+          <AnimatedSection index={3}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={5}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={6}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={6}>
+          <AnimatedSection index={7}>
             <ReadingPlansCard theme={theme} isDark={isDark} />
           </AnimatedSection>
-          <AnimatedSection index={7}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={8}><GoldDivider theme={theme} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={7}>
+            <AnimatedSection index={8}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1765,7 +1767,7 @@ function AdultHomeScreen() {
             </AnimatedSection>
           )}
           {ssData?.companion && (
-            <AnimatedSection index={7}>
+            <AnimatedSection index={8}>
               <Pressable
                 onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
                 style={({ pressed }) => [
@@ -1797,7 +1799,7 @@ function AdultHomeScreen() {
               </Pressable>
             </AnimatedSection>
           )}
-          <AnimatedSection index={8}>
+          <AnimatedSection index={9}>
             <SpiritualRings theme={theme} isDark={isDark} />
             <InlineCoachTip
               id="home_formation_rings"
@@ -1823,21 +1825,22 @@ function AdultHomeScreen() {
               onDismiss={handleCoachDismiss}
             />
           </AnimatedSection>
-          <AnimatedSection index={1}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
-          <AnimatedSection index={3}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
-          <AnimatedSection index={4}>
+          <AnimatedSection index={1}><SabbathSchoolCard /></AnimatedSection>
+          <AnimatedSection index={2}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
+          <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={5}>
             <ContinueCard
               item={resumeItem}
               theme={theme}
               isDark={isDark}
             />
           </AnimatedSection>
-          <AnimatedSection index={5}>
+          <AnimatedSection index={6}>
             <ReadingPlansCard theme={theme} isDark={isDark} />
           </AnimatedSection>
-          <AnimatedSection index={6}><GoldDivider theme={theme} /></AnimatedSection>
+          <AnimatedSection index={7}><GoldDivider theme={theme} /></AnimatedSection>
           {!resumeItem && !hasActivePlan && (
-            <AnimatedSection index={6}>
+            <AnimatedSection index={7}>
               <DevotionalCard
                 hasActivePlan={false}
                 progress={0}
@@ -1848,7 +1851,7 @@ function AdultHomeScreen() {
             </AnimatedSection>
           )}
           {ssData?.companion && (
-            <AnimatedSection index={7}>
+            <AnimatedSection index={8}>
               <Pressable
                 onPress={() => router.push(`/resource-detail?slug=${ssData.companion!.slug}` as any)}
                 style={({ pressed }) => [
@@ -1880,7 +1883,7 @@ function AdultHomeScreen() {
               </Pressable>
             </AnimatedSection>
           )}
-          <AnimatedSection index={8}>
+          <AnimatedSection index={9}>
             <SpiritualRings theme={theme} isDark={isDark} />
             <InlineCoachTip
               id="home_formation_rings"
