@@ -56,10 +56,11 @@ export default function VotdHeroCard({
   const [reflectSaved, setReflectSaved] = useState(false);
 
   const handleLike = async () => {
-    if (!userId) return showAuthGate();
+    const isGuest = !userId || userId.startsWith("device-");
+    if (isGuest) return showAuthGate();
     try {
       await apiRequest("POST", "/api/bookmarks", {
-        verseReference: verse.reference,
+        verseId: verse.reference,
         label: "Verse of the Day",
       });
       setSaved((prev) => !prev);
@@ -83,8 +84,9 @@ export default function VotdHeroCard({
     try {
       console.log("calling API...");
       await apiRequest("POST", "/api/prayers", {
-        content: `Reflection on ${verse.reference}:\n\n${reflectText}`,
-        isPrivate: true,
+        title: `Reflection on ${verse.reference}`,
+        content: reflectText,
+        category: "personal",
       });
       console.log("API success");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
