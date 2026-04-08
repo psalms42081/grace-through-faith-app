@@ -117,6 +117,7 @@ export default function useBibleAudio(
         playerRef.current = null;
       }
       Speech.stop();
+      audioCtxRef.current.clearSession();
     };
   }, []);
 
