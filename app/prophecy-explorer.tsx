@@ -9,9 +9,11 @@ import {
   LayoutAnimation,
   UIManager,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { track } from "@/lib/analytics";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -58,6 +60,39 @@ interface ProphecySection {
   icon: string;
   color: string;
   symbols: ProphecySymbol[];
+}
+
+interface BibleBook {
+  id: number | string;
+  name: string;
+  abbreviation?: string;
+}
+
+function normalizeBookName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function navigateToBibleRef(ref: string, books: BibleBook[]) {
+  if (!ref || books.length === 0) return;
+
+  const primaryRef = ref.split(";")[0]?.trim() || ref.trim();
+  const match = primaryRef.match(/^((?:[1-3]\s*)?[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)/);
+  if (!match) return;
+
+  const bookName = normalizeBookName(match[1]);
+  const chapter = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(chapter) || chapter < 1) return;
+
+  const book = books.find((b) => {
+    const byName = normalizeBookName(b.name) === bookName;
+    const byAbbrev = b.abbreviation
+      ? normalizeBookName(b.abbreviation) === bookName
+      : false;
+    return byName || byAbbrev;
+  });
+  if (!book) return;
+
+  router.push(`/read/${book.id}/${chapter}` as any);
 }
 
 const PROPHECY_SECTIONS: ProphecySection[] = [
@@ -524,12 +559,14 @@ function SymbolCard({
   onToggle,
   theme,
   isViewed,
+  books,
 }: {
   symbol: ProphecySymbol;
   isExpanded: boolean;
   onToggle: () => void;
   theme: any;
   isViewed?: boolean;
+  books: BibleBook[];
 }) {
   return (
     <Pressable
@@ -556,7 +593,15 @@ function SymbolCard({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[scStyles.title, { color: theme.text }]}>{symbol.title}</Text>
-          <Text style={[scStyles.ref, { color: symbol.color }]}>{symbol.bibleRef}</Text>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              navigateToBibleRef(symbol.bibleRef, books);
+            }}
+            hitSlop={6}
+          >
+            <Text style={[scStyles.ref, scStyles.interactiveRef]}>{symbol.bibleRef}</Text>
+          </Pressable>
         </View>
         {symbol.dateRange && (
           <View style={[scStyles.dateBadge, { backgroundColor: symbol.color + "14" }]}>
@@ -587,8 +632,16 @@ function SymbolCard({
                 </Text>
               </View>
               <View style={[scStyles.refChip, { borderColor: symbol.color + "30", backgroundColor: symbol.color + "0A" }]}>
-                <Ionicons name="document-text-outline" size={12} color={symbol.color} />
-                <Text style={[scStyles.refChipText, { color: symbol.color }]}>{symbol.bibleRef}</Text>
+                <Ionicons name="document-text-outline" size={12} color="#C9933A" />
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigateToBibleRef(symbol.bibleRef, books);
+                  }}
+                  hitSlop={6}
+                >
+                  <Text style={[scStyles.refChipText, scStyles.interactiveRefChip]}>{symbol.bibleRef}</Text>
+                </Pressable>
               </View>
               <Text style={[scStyles.observationPrompt, { color: theme.text }]}>
                 {symbol.observation.prompt}
@@ -740,8 +793,16 @@ function SymbolCard({
                 </Text>
               </View>
               <View style={[scStyles.refChip, { borderColor: symbol.color + "30", backgroundColor: symbol.color + "0A" }]}>
-                <Ionicons name="document-text-outline" size={12} color={symbol.color} />
-                <Text style={[scStyles.refChipText, { color: symbol.color }]}>{symbol.bibleRef}</Text>
+                <Ionicons name="document-text-outline" size={12} color="#C9933A" />
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigateToBibleRef(symbol.bibleRef, books);
+                  }}
+                  hitSlop={6}
+                >
+                  <Text style={[scStyles.refChipText, scStyles.interactiveRefChip]}>{symbol.bibleRef}</Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -832,6 +893,10 @@ const scStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     marginTop: 1,
+  },
+  interactiveRef: {
+    color: "#C9933A",
+    textDecorationLine: "underline",
   },
   dateBadge: {
     paddingHorizontal: 6,
@@ -924,6 +989,10 @@ const scStyles = StyleSheet.create({
   refChipText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
+  },
+  interactiveRefChip: {
+    color: "#C9933A",
+    textDecorationLine: "underline",
   },
   observationPrompt: {
     fontFamily: "Lora_600SemiBold",
@@ -1025,6 +1094,7 @@ function SectionCard({
   onToggleSection,
   theme,
   viewedSymbols,
+  books,
 }: {
   section: ProphecySection;
   expandedSymbolId: string | null;
@@ -1033,6 +1103,7 @@ function SectionCard({
   onToggleSection: () => void;
   theme: any;
   viewedSymbols: Set<string>;
+  books: BibleBook[];
 }) {
   const viewedCount = section.symbols.filter((s) => viewedSymbols.has(s.id)).length;
   const allViewed = viewedCount === section.symbols.length && viewedCount > 0;
@@ -1164,6 +1235,7 @@ function SectionCard({
               onToggle={() => onToggleSymbol(symbol.id)}
               theme={theme}
               isViewed={viewedSymbols.has(symbol.id)}
+              books={books}
             />
           ))}
         </View>
@@ -1306,6 +1378,9 @@ export default function ProphecyExplorerScreen() {
   const [viewedSymbols, setViewedSymbols] = useState<Set<string>>(new Set());
   const scrollRef = useRef<ScrollView>(null);
   const sectionYPositions = useRef<Record<string, number>>({});
+  const { data: books = [] } = useQuery<BibleBook[]>({
+    queryKey: ["/api/books"],
+  });
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -1466,6 +1541,7 @@ export default function ProphecyExplorerScreen() {
               onToggleSection={() => toggleSection(section.id)}
               theme={theme}
               viewedSymbols={viewedSymbols}
+              books={books}
             />
           </View>
         ))}
