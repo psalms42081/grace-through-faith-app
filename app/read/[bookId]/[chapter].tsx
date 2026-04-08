@@ -931,11 +931,9 @@ export default function VerseReaderScreen() {
             </Pressable>
           ),
           headerTitle: () => (
-            <Pressable style={[styles.headerPill, { backgroundColor: headerPillBg }]}>
-              <Text style={[styles.headerPillText, { color: textColor }]} numberOfLines={1}>
-                {bookName} {chapter}
-              </Text>
-            </Pressable>
+            <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1}>
+              {bookName} {chapter}
+            </Text>
           ),
           headerRight: () => (
             <View style={styles.headerRow}>
@@ -954,9 +952,12 @@ export default function VerseReaderScreen() {
                   onPress={() => setShowTranslationPicker(!showTranslationPicker)}
                   style={[styles.headerPill, { backgroundColor: headerPillBg }]}
                 >
-                  <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
-                    {translation}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="globe-outline" size={13} color={isDark ? "#AAAAAA" : "#777"} />
+                    <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
+                      {translation}
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
             </View>
@@ -1281,6 +1282,10 @@ const styles = StyleSheet.create({
   headerPillText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  headerTitleText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
   },
   translationBadgeText: {
     fontSize: 13,
