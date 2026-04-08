@@ -1703,7 +1703,7 @@ function AdultHomeScreen() {
       />
 
       <View style={{ marginHorizontal: -20 }}>
-        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} />
+        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} userId={userId} />
       </View>
 
       {isSabbathMode ? (

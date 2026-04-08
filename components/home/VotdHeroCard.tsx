@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,56 +6,187 @@ import {
   ImageBackground,
   ImageSourcePropType,
   Pressable,
+  Share,
+  Alert,
+  Modal,
+  TextInput,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { apiRequest } from "@/lib/query-client";
+
+const GOLD = "#C9933A";
 
 interface VotdHeroCardProps {
   verse: { text: string; reference: string };
   bgImage?: string;
   bookImage?: ImageSourcePropType | null;
   onPress?: () => void;
+  userId?: string;
+  verseId?: string;
+  bookId?: number;
+  chapterNumber?: number;
 }
 
-export default function VotdHeroCard({ verse, bgImage, bookImage, onPress }: VotdHeroCardProps) {
-  const imageSource = bookImage || (bgImage ? { uri: bgImage } : undefined);
-
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.wrapper, pressed && { opacity: 0.95 }]}>
-      <ImageBackground
-        source={imageSource}
-        style={s.imageBg}
-        imageStyle={s.imageStyle}
-        resizeMode="cover"
-      >
-        <LinearGradient
-          colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.55)"]}
-          locations={[0, 0.5, 1]}
-          style={s.overlay}
-        >
-          <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
-          <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
-          <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>{verse.text}</Text>
-          <View style={s.engagementRow}>
-            {ACTIONS.map((a) => (
-              <View key={a.label} style={s.engageItem}>
-                <Ionicons name={a.icon as any} size={18} color="rgba(255,255,255,0.8)" />
-                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>{a.label}</Text>
-              </View>
-            ))}
-          </View>
-        </LinearGradient>
-      </ImageBackground>
-    </Pressable>
+function showAuthGate() {
+  Alert.alert(
+    "Sign In Required",
+    "Create a free account to save verses and reflect on God\u2019s Word.",
+    [
+      { text: "Not Now", style: "cancel" },
+      { text: "Sign In", onPress: () => router.push("/(auth)/login") },
+    ],
   );
 }
 
-const ACTIONS = [
-  { icon: "heart-outline", label: "Like" },
-  { icon: "chatbubble-outline", label: "Reflect" },
-  { icon: "share-outline", label: "Share" },
-  { icon: "ellipsis-horizontal", label: "More" },
-];
+export default function VotdHeroCard({
+  verse, bgImage, bookImage, onPress,
+  userId, verseId, bookId, chapterNumber,
+}: VotdHeroCardProps) {
+  const imageSource = bookImage || (bgImage ? { uri: bgImage } : undefined);
+  const [saved, setSaved] = useState(false);
+  const [showReflect, setShowReflect] = useState(false);
+  const [reflectText, setReflectText] = useState("");
+
+  const handleLike = async () => {
+    if (!userId) return showAuthGate();
+    if (!verseId) return;
+    try {
+      await apiRequest("POST", "/api/bookmarks", { verseId, label: "Verse of the Day" });
+      setSaved((prev) => !prev);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+  };
+
+  const handleReflect = () => {
+    if (!userId) return showAuthGate();
+    setShowReflect(true);
+  };
+
+  const submitReflection = async () => {
+    if (!reflectText.trim()) return;
+    try {
+      await apiRequest("POST", "/api/notes", {
+        verseId: verseId || undefined,
+        content: `[VOTD] ${verse.reference}\n${reflectText}`,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+    setShowReflect(false);
+    setReflectText("");
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({ message: `\u201C${verse.text}\u201D\n\u2014 ${verse.reference}` });
+    } catch {}
+  };
+
+  const handleMore = () => {
+    const options = ["Read Full Chapter", "Copy Verse", "Cancel"];
+    const cancelIndex = 2;
+
+    const actions: Record<number, () => void> = {
+      0: () => {
+        if (bookId && chapterNumber) {
+          router.push(`/read/${bookId}/${chapterNumber}` as any);
+        }
+      },
+      1: async () => {
+        await Clipboard.setStringAsync(`\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      },
+    };
+
+    if (Platform.OS === "ios") {
+      const { ActionSheetIOS } = require("react-native");
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex },
+        (idx: number) => actions[idx]?.(),
+      );
+    } else {
+      Alert.alert("More", undefined, [
+        { text: "Read Full Chapter", onPress: actions[0] },
+        { text: "Copy Verse", onPress: actions[1] },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
+  };
+
+  return (
+    <>
+      <Pressable onPress={onPress} style={({ pressed }) => [s.wrapper, pressed && { opacity: 0.95 }]}>
+        <ImageBackground source={imageSource} style={s.imageBg} imageStyle={s.imageStyle} resizeMode="cover">
+          <LinearGradient
+            colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.55)"]}
+            locations={[0, 0.5, 1]}
+            style={s.overlay}
+          >
+            <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
+            <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
+            <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+              {verse.text}
+            </Text>
+            <View style={s.engagementRow}>
+              <Pressable onPress={handleLike} style={s.engageItem}>
+                <Ionicons
+                  name={saved ? "heart" : "heart-outline"}
+                  size={18}
+                  color={saved ? GOLD : "rgba(255,255,255,0.8)"}
+                />
+                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Like</Text>
+              </Pressable>
+              <Pressable onPress={handleReflect} style={s.engageItem}>
+                <Ionicons name="chatbubble-outline" size={18} color="rgba(255,255,255,0.8)" />
+                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Reflect</Text>
+              </Pressable>
+              <Pressable onPress={handleShare} style={s.engageItem}>
+                <Ionicons name="share-outline" size={18} color="rgba(255,255,255,0.8)" />
+                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Share</Text>
+              </Pressable>
+              <Pressable onPress={handleMore} style={s.engageItem}>
+                <Ionicons name="ellipsis-horizontal" size={18} color="rgba(255,255,255,0.8)" />
+                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>More</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </ImageBackground>
+      </Pressable>
+
+      <Modal visible={showReflect} transparent animationType="fade">
+        <Pressable style={s.modalBackdrop} onPress={() => setShowReflect(false)}>
+          <Pressable style={s.modalSheet} onPress={() => {}}>
+            <Text style={[s.modalRef, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
+            <Text style={[s.modalVerse, { fontFamily: "Lora_400Regular_Italic" }]} numberOfLines={3}>
+              {`\u201C${verse.text}\u201D`}
+            </Text>
+            <TextInput
+              style={[s.modalInput, { fontFamily: "Inter_400Regular" }]}
+              placeholder="What is God saying to you through this verse?"
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              multiline
+              value={reflectText}
+              onChangeText={setReflectText}
+              autoFocus
+            />
+            <View style={s.modalButtons}>
+              <Pressable onPress={() => { setShowReflect(false); setReflectText(""); }} style={s.modalCancel}>
+                <Text style={[s.modalCancelText, { fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={submitReflection} style={[s.modalSave, { opacity: reflectText.trim() ? 1 : 0.4 }]}>
+                <Text style={[s.modalSaveText, { fontFamily: "Inter_600SemiBold" }]}>Save</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
 
 const s = StyleSheet.create({
   wrapper: {
@@ -111,5 +242,62 @@ const s = StyleSheet.create({
   engageLabel: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalSheet: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalRef: {
+    color: GOLD,
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  modalVerse: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalInput: {
+    color: "#fff",
+    fontSize: 15,
+    lineHeight: 22,
+    minHeight: 100,
+    textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  modalCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  modalCancelText: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 14,
+  },
+  modalSave: {
+    backgroundColor: GOLD,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  modalSaveText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });
