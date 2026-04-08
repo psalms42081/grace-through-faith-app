@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, ImageBackground } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +18,8 @@ type SabbathSchoolCurrentResponse = {
   } | null;
   completedDays: number;
 };
+
+const CARD_BG_IMAGE = require("@/assets/home-cards/study.png");
 
 export default function SabbathSchoolCard() {
   const { theme } = useTheme();
@@ -50,32 +52,37 @@ export default function SabbathSchoolCard() {
     >
       <View style={styles.leftAccent} />
 
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <View style={styles.labelRow}>
-            <Ionicons name="book-outline" size={14} color="#C9933A" />
-            <Text style={styles.label}>SABBATH SCHOOL</Text>
-          </View>
+      <View style={styles.contentWrap}>
+        <ImageBackground source={CARD_BG_IMAGE} style={styles.bgImage} resizeMode="cover">
+          <View style={styles.bgOverlay} />
+          <View style={styles.content}>
+            <View style={styles.topRow}>
+              <View style={styles.labelRow}>
+                <Ionicons name="book-outline" size={14} color="#C9933A" />
+                <Text style={styles.label}>SABBATH SCHOOL</Text>
+              </View>
 
-          {isSaturday && (
-            <View style={styles.badge}>
-              <Ionicons name="chatbubble-ellipses-outline" size={12} color="#050507" />
-              <Text style={styles.badgeText}>Discussion Guide Ready</Text>
+              {isSaturday && (
+                <View style={styles.badge}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={12} color="#050507" />
+                  <Text style={styles.badgeText}>Discussion Guide Ready</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        <Text style={styles.title} numberOfLines={2}>
-          {lesson.title}
-        </Text>
+            <Text style={styles.title} numberOfLines={2}>
+              {lesson.title}
+            </Text>
 
-        <Text style={[styles.progressText, { color: theme.textMuted }]} numberOfLines={1}>
-          {`Lesson ${lesson.lessonNumber} · ${completedDays} of ${totalDays} days completed`}
-        </Text>
+            <Text style={[styles.progressText, { color: theme.textMuted }]} numberOfLines={1}>
+              {`Lesson ${lesson.lessonNumber} · ${completedDays} of ${totalDays} days completed`}
+            </Text>
 
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
-        </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+            </View>
+          </View>
+        </ImageBackground>
       </View>
     </Pressable>
   );
@@ -104,6 +111,16 @@ const styles = StyleSheet.create({
     width: 3,
     backgroundColor: "#C9933A",
     borderRadius: 2,
+  },
+  contentWrap: {
+    flex: 1,
+  },
+  bgImage: {
+    flex: 1,
+  },
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
   content: {
     flex: 1,
