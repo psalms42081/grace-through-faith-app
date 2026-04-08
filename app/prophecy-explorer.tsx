@@ -8,6 +8,8 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
+  Linking,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +21,39 @@ import { track } from "@/lib/analytics";
 import ScreenHeader from "@/components/ScreenHeader";
 
 const PROPHECY_VIEWED_KEY = "prophecy_viewed";
+
+const PROPHECY_VIDEOS = {
+  daniel2: [{
+    id: "4V0p5R7Ga8I",
+    title: "Dream of the Empires",
+    teacher: "Doug Batchelor",
+    duration: "1h 30m",
+  }],
+  daniel7: [{
+    id: "DPzLucu9a0U",
+    title: "The Antichrist Beast",
+    teacher: "Doug Batchelor",
+    duration: "1h 28m",
+  }],
+  daniel89: [{
+    id: "-M2ZerrbD2o",
+    title: "The Longest Time Prophecy",
+    teacher: "Doug Batchelor",
+    duration: "1h 28m",
+  }],
+  revelation: [{
+    id: "c9PAPqa3pRQ",
+    title: "Bowing to the Beast",
+    teacher: "Doug Batchelor",
+    duration: "1h 29m",
+  }],
+  greatControversy: [{
+    id: "N_u66nrvfjE",
+    title: "What Is The Great Controversy?",
+    teacher: "Mark Finley",
+    duration: "1h 0m",
+  }],
+} as const;
 
 if (
   Platform.OS === "android" &&
@@ -549,6 +584,13 @@ const PROPHECY_SECTIONS: ProphecySection[] = [
       },
     ],
   },
+];
+
+const EXPLORER_TEACHER_VIDEOS = [
+  ...PROPHECY_VIDEOS.daniel2,
+  ...PROPHECY_VIDEOS.daniel7,
+  ...PROPHECY_VIDEOS.daniel89,
+  ...PROPHECY_VIDEOS.revelation,
 ];
 
 
@@ -1528,6 +1570,44 @@ export default function ProphecyExplorerScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.teacherVideosSection}>
+          <Text style={styles.teacherVideosHeading}>From SDA Teachers</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.teacherVideosRow}
+          >
+            {EXPLORER_TEACHER_VIDEOS.map((video) => (
+              <Pressable
+                key={video.id}
+                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.id}`)}
+                style={styles.teacherVideoCard}
+              >
+                <View style={styles.teacherThumbWrap}>
+                  <Image
+                    source={{ uri: `https://img.youtube.com/vi/${video.id}/mqdefault.jpg` }}
+                    style={styles.teacherThumb}
+                  />
+                  <View style={styles.teacherPlayOverlay}>
+                    <View style={styles.teacherPlayCircle}>
+                      <Ionicons name="play" size={20} color="#FFFFFF" />
+                    </View>
+                  </View>
+                  <View style={styles.teacherDurationBadge}>
+                    <Text style={styles.teacherDurationText}>{video.duration}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.teacherVideoTitle, { color: theme.text }]} numberOfLines={2}>
+                  {video.title}
+                </Text>
+                <Text style={[styles.teacherVideoTeacher, { color: theme.textMuted }]} numberOfLines={1}>
+                  {video.teacher}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
         {PROPHECY_SECTIONS.map((section) => (
           <View
             key={section.id}
@@ -1654,6 +1734,87 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#FFF",
     letterSpacing: 0.4,
+  },
+  teacherVideosSection: {
+    marginHorizontal: 4,
+    marginBottom: 20,
+    gap: 10,
+  },
+  teacherVideosHeading: {
+    fontFamily: "Lora_700Bold",
+    fontSize: 16,
+    lineHeight: 22,
+    color: "#C9933A",
+    marginLeft: 16,
+    marginBottom: 12,
+    letterSpacing: 0.1,
+  },
+  teacherVideosRow: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    gap: 12,
+  },
+  teacherVideoCard: {
+    width: 220,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    padding: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  teacherThumbWrap: {
+    position: "relative",
+    borderRadius: 14,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  teacherThumb: {
+    width: "100%",
+    height: 124,
+    backgroundColor: "#1F2937",
+  },
+  teacherPlayOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  teacherPlayCircle: {
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 20,
+    padding: 8,
+  },
+  teacherDurationBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#C9933A",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  teacherDurationText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: "#FFFFFF",
+  },
+  teacherVideoTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  teacherVideoTeacher: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    marginTop: 4,
   },
   closingCard: {
     marginHorizontal: 4,
