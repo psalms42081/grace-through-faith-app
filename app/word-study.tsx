@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { apiRequest, queryClient } from "@/lib/query-client";
 
 interface StrongEntry {
   id: string;
@@ -52,17 +53,12 @@ export default function WordStudyScreen() {
 
   const resolvedVerse = params.verse || "1";
   const needsVerseLookup = !params.verseId && !!params.book && !!params.chapter;
-  console.log("WordStudy params:", params);
-  console.log("resolvedVerse:", resolvedVerse);
-  console.log("needsVerseLookup:", needsVerseLookup);
   const { data: lookedUpVerse } = useQuery<{ id: string; text: string }>({
     queryKey: [`/api/verse?book=${params.book}&chapter=${params.chapter}&verse=${resolvedVerse}`],
     enabled: needsVerseLookup,
   });
 
   const resolvedVerseId = params.verseId || lookedUpVerse?.id || null;
-  console.log("lookedUpVerse:", lookedUpVerse);
-  console.log("resolvedVerseId:", resolvedVerseId);
 
   const { data: allBooks } = useQuery<{ id: number; name: string }[]>({
     queryKey: ["/api/books"],
@@ -75,10 +71,42 @@ export default function WordStudyScreen() {
     queryKey: [`/api/strong/verse/${resolvedVerseId}`],
     enabled: !!resolvedVerseId,
   });
-  const isLoading = mappingsLoading || (needsVerseLookup && !lookedUpVerse);
-  console.log("wordMappings:", wordMappings);
-  console.log("isLoading:", isLoading);
-  console.log("error:", error);
+
+  const generateMutation = useMutation<WordMapping[]>({
+    mutationFn: () =>
+      apiRequest("POST", "/api/strong/generate", {
+        verseId: resolvedVerseId,
+        bookName: displayBookName,
+        chapter: Number(params.chapter),
+        verse: Number(resolvedVerse),
+        verseText: displayVerseText,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/strong/verse/${resolvedVerseId}`] });
+    },
+  });
+
+  const generationAttempted = useRef(false);
+
+  useEffect(() => {
+    if (
+      wordMappings &&
+      wordMappings.length === 0 &&
+      resolvedVerseId &&
+      displayVerseText &&
+      !generateMutation.isPending &&
+      !generationAttempted.current
+    ) {
+      generationAttempted.current = true;
+      generateMutation.mutate();
+    }
+  }, [wordMappings, resolvedVerseId, displayVerseText]);
+
+  useEffect(() => {
+    generationAttempted.current = false;
+  }, [resolvedVerseId]);
+
+  const isLoading = mappingsLoading || (needsVerseLookup && !lookedUpVerse) || generateMutation.isPending;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -169,16 +197,16 @@ export default function WordStudyScreen() {
                 { color: theme.textMuted, fontFamily: "Inter_400Regular" },
               ]}
             >
-              Loading word analysis...
+              {generateMutation.isPending ? "Generating word analysis..." : "Loading word analysis..."}
             </Text>
           </View>
         )}
 
-        {error && (
+        {(error || generateMutation.isError) && (
           <View style={[styles.errorBox, { backgroundColor: theme.danger + "18", borderColor: theme.danger + "44" }]}>
             <Ionicons name="alert-circle" size={18} color={theme.danger} />
             <Text style={[styles.errorText, { color: theme.danger, fontFamily: "Inter_400Regular" }]}>
-              Failed to load word data
+              {generateMutation.isError ? "Failed to generate word study" : "Failed to load word data"}
             </Text>
           </View>
         )}

@@ -2075,11 +2075,14 @@ export default function StudyScreen() {
   const handleSharedChapterChange = useCallback((ch: number | null) => {
     setSharedChapter(ch);
     setAutoCompletionShown(false);
-    setActiveTabRaw("word");
-    if (ch !== null) {
+    const hasNavIntent = params.tab && validTabs.includes(params.tab as Tab);
+    if (!hasNavIntent) {
+      setActiveTabRaw("word");
+    }
+    if (ch !== null && !hasNavIntent) {
       setShowDeepIntro(true);
     }
-  }, []);
+  }, [params.tab]);
 
   const bookId = sharedBook?.id ?? null;
   const chapter = sharedChapter;
@@ -2125,11 +2128,13 @@ export default function StudyScreen() {
   }, [completedLayers]);
 
   useEffect(() => {
+    const hasNavIntent = params.tab && validTabs.includes(params.tab as Tab) && activeTab === (params.tab as Tab);
+    if (hasNavIntent) return;
     if (!isLayerAccessible(activeTab, completedLayers)) {
       const firstAccessible = LAYER_ORDER.find(l => isLayerAccessible(l, completedLayers)) ?? "word";
       setActiveTabRaw(firstAccessible);
     }
-  }, [completedLayers, activeTab, bookId, chapter]);
+  }, [completedLayers, activeTab, bookId, chapter, params.tab]);
 
   useEffect(() => {
     if (params.tab && validTabs.includes(params.tab as Tab)) {
