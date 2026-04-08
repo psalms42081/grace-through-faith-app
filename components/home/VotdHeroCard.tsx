@@ -35,7 +35,7 @@ export default function VotdHeroCard({ verse, bgImage, bookImage, onPress }: Vot
         >
           <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
           <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
-          <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>{verse.text}</Text>
+          <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>{verse.text}</Text>
           <View style={s.engagementRow}>
             {ACTIONS.map((a) => (
               <View key={a.label} style={s.engageItem}>
@@ -63,7 +63,7 @@ const s = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 16,
     marginHorizontal: -20,
-    marginTop: 8,
+    marginTop: 12,
   },
   imageBg: {
     width: "100%",
@@ -76,6 +76,7 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
     padding: 16,
+    paddingBottom: 20,
   },
   label: {
     color: "rgba(255,255,255,0.85)",
@@ -90,7 +91,7 @@ const s = StyleSheet.create({
   },
   verseText: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: 17,
     lineHeight: 30,
     marginBottom: 16,
     textShadowColor: "rgba(0,0,0,0.4)",
