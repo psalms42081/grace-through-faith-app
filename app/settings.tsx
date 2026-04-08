@@ -279,12 +279,7 @@ export default function SettingsScreen() {
           rightElement: !isPatron ? <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} /> : undefined,
         })}
         {renderRow("compass-outline", "Pioneer Guide", {
-          onPress: async () => {
-            try {
-              await apiRequest("POST", "/api/pioneer/onboarding-reset");
-            } catch {}
-            router.back();
-          },
+          onPress: () => router.push("/pioneer-selector" as any),
           showChevron: true,
           rightText: selectedPioneer.name,
           isLast: true,
