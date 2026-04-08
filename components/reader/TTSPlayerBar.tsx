@@ -363,7 +363,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: "transparent",
+    backgroundColor: "#050507",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
   },
   minimalPlayBtn: {
     width: 36,
