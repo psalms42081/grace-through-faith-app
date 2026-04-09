@@ -18,7 +18,7 @@ import { Router } from "express";
     kidsDailyQuests,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
-  import { optionalAuth, getEffectiveUserId } from "../middleware/auth";
+  import { optionalAuth, requireAuth, getEffectiveUserId } from "../middleware/auth";
   import { SHOP_ITEMS } from "../../constants/kids-shop";
   import { aiGenerationLimiter } from "../middleware/rate-limit";
   import {
@@ -256,7 +256,7 @@ async function checkAndAwardBadges(userId: string) {
   }
 }
 
-router.post("/api/kids/progress/complete", optionalAuth, async (req, res) => {
+router.post("/api/kids/progress/complete", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId } = req.body;
@@ -329,7 +329,7 @@ async function triggerParentBridge(storyId: string, quizScore: number, childProf
   console.log(`   🍽️ Dinner Question: ${topicData.dinnerQuestion}\n`);
 }
 
-router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
+router.post("/api/kids/progress/quiz", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId, score, childProfileId } = req.body;
@@ -377,7 +377,7 @@ router.post("/api/kids/progress/quiz", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/kids/progress/memorize", optionalAuth, async (req, res) => {
+router.post("/api/kids/progress/memorize", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId } = req.body;
@@ -474,7 +474,7 @@ router.get("/api/kids/streak", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/kids/streak/update", optionalAuth, async (req, res) => {
+router.post("/api/kids/streak/update", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const today = new Date().toISOString().split("T")[0];
@@ -815,7 +815,7 @@ router.get("/api/kids/audio-assets", (_req, res) => {
   });
 });
 
-router.post("/api/kids/story/award-points", optionalAuth, async (req, res) => {
+router.post("/api/kids/story/award-points", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { storyId, childProfileId: providedProfileId, points = 25 } = req.body;
@@ -1089,7 +1089,7 @@ router.get("/api/kids/shop/purchases", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/kids/shop/purchase", optionalAuth, async (req, res) => {
+router.post("/api/kids/shop/purchase", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { itemId, childId } = req.body;
@@ -1149,7 +1149,7 @@ router.post("/api/kids/shop/purchase", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/kids/shop/equip", optionalAuth, async (req, res) => {
+router.post("/api/kids/shop/equip", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { childId, itemId, category } = req.body;
@@ -1220,7 +1220,7 @@ router.get("/api/kids/quests/today", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("/api/kids/quests/complete", optionalAuth, async (req, res) => {
+router.post("/api/kids/quests/complete", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const { childId, questType } = req.body;
