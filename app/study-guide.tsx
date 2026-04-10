@@ -24,7 +24,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
-import InlineCoachTip from "@/components/InlineCoachTip";
 
 interface Message {
   role: "user" | "assistant";
@@ -640,11 +639,6 @@ export default function StudyGuideScreen() {
           );
         })}
       </View>
-
-      <InlineCoachTip
-        id="inductive_progress_bar"
-        text="Move through Observe Interpret and Apply as you study."
-      />
 
       <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard }]}>
         <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={3}>

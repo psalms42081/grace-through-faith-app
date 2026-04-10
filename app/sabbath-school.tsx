@@ -21,8 +21,6 @@ import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTranslation } from "react-i18next";
 import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
-import InlineCoachTip from "@/components/InlineCoachTip";
-import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sabbath"];
 
@@ -71,22 +69,6 @@ export default function SabbathSchoolScreen() {
   const { t } = useTranslation();
   const { tryAutoGuide } = useEllenWhite();
   const [showArchive, setShowArchive] = useState(false);
-
-  const { hasSeenTutorial, isLoaded: tutorialLoaded } = useTutorial();
-  const SS_COACH_SEQ: TutorialId[] = ["ss_depth_quick", "ss_depth_standard", "ss_depth_deep"];
-  const [activeSSCoach, setActiveSSCoach] = useState<TutorialId | null>(null);
-  useEffect(() => {
-    if (!tutorialLoaded) return;
-    const first = SS_COACH_SEQ.find(id => !hasSeenTutorial(id));
-    setActiveSSCoach(first ?? null);
-  }, [tutorialLoaded, hasSeenTutorial]);
-  const advanceSSCoach = useCallback(() => {
-    setActiveSSCoach(prev => {
-      const idx = SS_COACH_SEQ.indexOf(prev as TutorialId);
-      if (idx >= 0 && idx < SS_COACH_SEQ.length - 1) return SS_COACH_SEQ[idx + 1];
-      return null;
-    });
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -181,24 +163,6 @@ export default function SabbathSchoolScreen() {
           </View>
 
           <StudyDepthSelector compact />
-          <InlineCoachTip
-            id="ss_depth_quick"
-            text="Tap for a fast five minute lesson overview."
-            visible={activeSSCoach === "ss_depth_quick"}
-            onDismiss={advanceSSCoach}
-          />
-          <InlineCoachTip
-            id="ss_depth_standard"
-            text="Read and reflect at a comfortable pace."
-            visible={activeSSCoach === "ss_depth_standard"}
-            onDismiss={advanceSSCoach}
-          />
-          <InlineCoachTip
-            id="ss_depth_deep"
-            text="Go deep with full commentary and questions."
-            visible={activeSSCoach === "ss_depth_deep"}
-            onDismiss={advanceSSCoach}
-          />
 
           <View style={styles.progressSection}>
             <View style={styles.progressBar}>

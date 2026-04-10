@@ -106,38 +106,6 @@ function PointerArrow({ fromX, fromY, isTabTarget }: { fromX: number; fromY: num
   );
 }
 
-function TapHintDot({ visible }: { visible: boolean }) {
-  const pulse = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) {
-      pulse.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.3, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        false,
-      );
-    } else {
-      cancelAnimation(pulse);
-      pulse.value = 0;
-    }
-    return () => cancelAnimation(pulse);
-  }, [visible]);
-
-  const dotStyle = useAnimatedStyle(() => ({
-    opacity: visible ? pulse.value : 0,
-    transform: [{ scale: interpolate(pulse.value, [0.3, 1], [0.8, 1.2]) }],
-  }));
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View style={[styles.tapHintDot, dotStyle]} />
-  );
-}
-
 export default function EllenWhiteHologram() {
   const {
     isVisible,
@@ -324,12 +292,16 @@ export default function EllenWhiteHologram() {
   const isLastStep = currentStepIndex === currentSteps.length - 1;
   const pos = getPos(step.spotlightTarget);
   const isTabTarget = step.spotlightTarget.startsWith("tab-");
-  const showTapHint = !isSpeaking;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View style={[styles.overlay, overlayStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleNext}
+          accessibilityRole="button"
+          accessibilityLabel="Tap to continue tour"
+        />
       </Animated.View>
 
       <Animated.View
@@ -354,7 +326,7 @@ export default function EllenWhiteHologram() {
       >
         <Pressable onPress={handleNext} testID="ellen-white-portrait-tap" style={styles.portraitTouchable}>
           <PioneerPortrait pioneerId={selectedPioneer.id} size={PORTRAIT_SIZE} isSpeaking={isSpeaking} testID="pioneer-portrait" />
-          <TapHintDot visible={showTapHint} />
+          <Text style={styles.tapContinueText}>Tap to continue</Text>
         </Pressable>
       </Animated.View>
 
@@ -385,16 +357,12 @@ const styles = StyleSheet.create({
   },
   portraitTouchable: {
     padding: 8,
+    alignItems: "center",
   },
-  tapHintDot: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: GOLD,
-    borderWidth: 2,
-    borderColor: "rgba(5,5,7,0.9)",
+  tapContinueText: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.65)",
   },
 });

@@ -54,139 +54,8 @@ import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 import ChildPickerModal from "@/components/home/ChildPickerModal";
 import TodaysPath from "@/components/home/TodaysPath";
 import { DAILY_QUEST_STAR_REWARD, DAILY_CHAMPION_BONUS } from "@/constants/kids-shop";
-import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
-import { usePioneer } from "@/contexts/PioneerContext";
-import * as Haptics from "expo-haptics";
-import { Animated as RNAnimated } from "react-native";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const COACH_TIP_BG = "#1E88E5";
-const COACH_ARROW_W = 4;
-const COACH_ARROW_H = 6;
-
-function InlineCoachTip({
-  id,
-  text,
-  visible,
-  onDismiss,
-}: {
-  id: TutorialId;
-  text: string;
-  visible: boolean;
-  onDismiss: () => void;
-}) {
-  const { hasSeenTutorial, markTutorialSeen, isLoaded } = useTutorial();
-  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
-  const floatAnim = useRef(new RNAnimated.Value(0)).current;
-  const dismissed = useRef(false);
-
-  const shouldShow = isLoaded && visible && !hasSeenTutorial(id);
-
-  useEffect(() => {
-    if (shouldShow) {
-      dismissed.current = false;
-      fadeAnim.setValue(0);
-      RNAnimated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-
-      const loop = RNAnimated.loop(
-        RNAnimated.sequence([
-          RNAnimated.timing(floatAnim, {
-            toValue: -6,
-            duration: 750,
-            useNativeDriver: true,
-            easing: (t: number) => t * t * (3 - 2 * t),
-          }),
-          RNAnimated.timing(floatAnim, {
-            toValue: 0,
-            duration: 750,
-            useNativeDriver: true,
-            easing: (t: number) => t * t * (3 - 2 * t),
-          }),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    } else {
-      floatAnim.setValue(0);
-    }
-  }, [shouldShow]);
-
-  const handleDismiss = () => {
-    if (dismissed.current) return;
-    dismissed.current = true;
-    Haptics.selectionAsync();
-    RNAnimated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      markTutorialSeen(id);
-      onDismiss();
-    });
-  };
-
-  if (!shouldShow) return null;
-
-  return (
-    <Pressable onPress={handleDismiss} accessibilityRole="button" accessibilityLabel={`Dismiss tip: ${text}`}>
-      <RNAnimated.View
-        style={[
-          inlineCoachStyles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: floatAnim }],
-          },
-        ]}
-      >
-        <View style={inlineCoachStyles.arrow} />
-        <Text style={inlineCoachStyles.text} numberOfLines={1}>{text}</Text>
-      </RNAnimated.View>
-    </Pressable>
-  );
-}
-
-const inlineCoachStyles = StyleSheet.create({
-  container: {
-    backgroundColor: COACH_TIP_BG,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginHorizontal: 22,
-    marginTop: 6,
-    marginBottom: 4,
-    maxWidth: 260,
-    alignSelf: "flex-start",
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8 },
-      android: { elevation: 8 },
-      web: { boxShadow: "0 3px 12px rgba(0,0,0,0.2)" },
-    }),
-  },
-  arrow: {
-    position: "absolute",
-    top: -COACH_ARROW_H,
-    left: 24,
-    width: 0,
-    height: 0,
-    borderLeftWidth: COACH_ARROW_W,
-    borderRightWidth: COACH_ARROW_W,
-    borderBottomWidth: COACH_ARROW_H,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: COACH_TIP_BG,
-  },
-  text: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: "Inter_500Medium",
-  },
-});
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -1566,45 +1435,6 @@ function AdultHomeScreen() {
 
   const isSabbathMode = sabbath.isSabbath;
 
-  const { hasSeenTutorial, markTutorialSeen, isLoaded: tutorialLoaded } = useTutorial();
-  const { onboardingComplete: hologramDone, isVisible: hologramActive } = usePioneer();
-
-  const HOME_COACH_SEQUENCE: TutorialId[] = [
-    "home_daily_rhythm",
-    "home_formation_rings",
-    "home_kids_button",
-  ];
-
-  const HOME_COACH_TEXTS: Record<string, string> = {
-    home_daily_rhythm: "Tap Read or Reflect to start your day.",
-    home_formation_rings: "Tap a ring to see your daily progress.",
-    home_kids_button: "Switch to Kids Club content.",
-  };
-
-  const [activeCoachMark, setActiveCoachMark] = useState<TutorialId | null>(null);
-
-  useEffect(() => {
-    if (!tutorialLoaded) return;
-    if (hologramActive || !hologramDone) {
-      setActiveCoachMark(null);
-      return;
-    }
-    HOME_COACH_SEQUENCE.forEach(id => {
-      if (!hasSeenTutorial(id)) markTutorialSeen(id);
-    });
-    setActiveCoachMark(null);
-  }, [tutorialLoaded, hasSeenTutorial, hologramDone, hologramActive]);
-
-  const handleCoachDismiss = useCallback(() => {
-    setActiveCoachMark(prev => {
-      const idx = HOME_COACH_SEQUENCE.indexOf(prev as TutorialId);
-      if (idx >= 0 && idx < HOME_COACH_SEQUENCE.length - 1) {
-        return HOME_COACH_SEQUENCE[idx + 1];
-      }
-      return null;
-    });
-  }, []);
-
   const streakSection = weeklyData && (streak > 0 || weeklyData.daysRead.some(Boolean)) ? (
     <View style={[
       s.streakCard,
@@ -1702,13 +1532,6 @@ function AdultHomeScreen() {
         </View>
       </View>
 
-      <InlineCoachTip
-        id="home_kids_button"
-        text={HOME_COACH_TEXTS.home_kids_button}
-        visible={activeCoachMark === "home_kids_button"}
-        onDismiss={handleCoachDismiss}
-      />
-
       <ChildPickerModal
         visible={showChildPicker}
         onClose={() => setShowChildPicker(false)}
@@ -1733,12 +1556,6 @@ function AdultHomeScreen() {
               isDark={isDark}
               hasRecentRead={readToday}
               dailyVerseRef={verse.reference}
-            />
-            <InlineCoachTip
-              id="home_daily_rhythm"
-              text={HOME_COACH_TEXTS.home_daily_rhythm}
-              visible={activeCoachMark === "home_daily_rhythm"}
-              onDismiss={handleCoachDismiss}
             />
           </AnimatedSection>
           <AnimatedSection index={2}><SabbathSchoolCard /></AnimatedSection>
@@ -1801,12 +1618,6 @@ function AdultHomeScreen() {
           )}
           <AnimatedSection index={9}>
             <SpiritualRings theme={theme} isDark={isDark} />
-            <InlineCoachTip
-              id="home_formation_rings"
-              text={HOME_COACH_TEXTS.home_formation_rings}
-              visible={activeCoachMark === "home_formation_rings"}
-              onDismiss={handleCoachDismiss}
-            />
           </AnimatedSection>
         </>
       ) : (
@@ -1817,12 +1628,6 @@ function AdultHomeScreen() {
               isDark={isDark}
               hasRecentRead={readToday}
               dailyVerseRef={verse.reference}
-            />
-            <InlineCoachTip
-              id="home_daily_rhythm"
-              text={HOME_COACH_TEXTS.home_daily_rhythm}
-              visible={activeCoachMark === "home_daily_rhythm"}
-              onDismiss={handleCoachDismiss}
             />
           </AnimatedSection>
           <AnimatedSection index={1}><SabbathSchoolCard /></AnimatedSection>
@@ -1885,12 +1690,6 @@ function AdultHomeScreen() {
           )}
           <AnimatedSection index={9}>
             <SpiritualRings theme={theme} isDark={isDark} />
-            <InlineCoachTip
-              id="home_formation_rings"
-              text={HOME_COACH_TEXTS.home_formation_rings}
-              visible={activeCoachMark === "home_formation_rings"}
-              onDismiss={handleCoachDismiss}
-            />
           </AnimatedSection>
         </>
       )}

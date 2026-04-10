@@ -15,8 +15,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import InlineCoachTip from "@/components/InlineCoachTip";
-import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
 
 const TOPIC_IMAGES: Record<string, any> = {
   "quick-read": require("@/assets/topic-cards/quick-read.png"),
@@ -127,22 +125,6 @@ export default function StudyCategoryScreen() {
 
   const meta = CATEGORY_META[category || ""] || { title: "Study", subtitle: "" };
 
-  const { hasSeenTutorial, isLoaded: tutorialLoaded } = useTutorial();
-  const STUDY_COACH_SEQ: TutorialId[] = ["study_quick_read", "study_guided_study", "study_deep_dive"];
-  const [activeCoach, setActiveCoach] = useState<TutorialId | null>(null);
-  useEffect(() => {
-    if (!tutorialLoaded || category !== "study-scripture") return;
-    const first = STUDY_COACH_SEQ.find(id => !hasSeenTutorial(id));
-    setActiveCoach(first ?? null);
-  }, [tutorialLoaded, hasSeenTutorial, category]);
-  const advanceCoach = useCallback(() => {
-    setActiveCoach(prev => {
-      const idx = STUDY_COACH_SEQ.indexOf(prev as TutorialId);
-      if (idx >= 0 && idx < STUDY_COACH_SEQ.length - 1) return STUDY_COACH_SEQ[idx + 1];
-      return null;
-    });
-  }, []);
-
   const { data: recentReads } = useQuery<{ id: string; bookId: number; bookName: string; chapter: number; translation: string }[]>({
     queryKey: [`/api/reading-history/recent?userId=${userId}`],
     enabled: category === "study-scripture",
@@ -182,23 +164,11 @@ export default function StudyCategoryScreen() {
               subtitle="Read a passage without extra study layers"
               onPress={() => router.push("/book-picker" as any)}
             />
-            <InlineCoachTip
-              id="study_quick_read"
-              text="Tap to read Scripture with no distractions."
-              visible={activeCoach === "study_quick_read"}
-              onDismiss={advanceCoach}
-            />
             <TopicImageCard
               id="guided-study"
               title="Guided Study"
               subtitle="Choose a passage and explore it with guided questions"
               onPress={() => router.push("/study-guide" as any)}
-            />
-            <InlineCoachTip
-              id="study_guided_study"
-              text="Choose a passage and explore it with questions."
-              visible={activeCoach === "study_guided_study"}
-              onDismiss={advanceCoach}
             />
             <TopicImageCard
               id="deep-study"
@@ -206,12 +176,6 @@ export default function StudyCategoryScreen() {
               subtitle={deepStudyState.sub}
               badge="Guided"
               onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
-            />
-            <InlineCoachTip
-              id="study_deep_dive"
-              text="Study any passage across four detailed layers."
-              visible={activeCoach === "study_deep_dive"}
-              onDismiss={advanceCoach}
             />
           </>
         );

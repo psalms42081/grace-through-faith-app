@@ -16,7 +16,6 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
-import InlineCoachTip from "@/components/InlineCoachTip";
 
 interface DiscussionData {
   keyQuestions: string[];
@@ -98,11 +97,6 @@ export default function SabbathSchoolDiscussionScreen() {
                 Prepare Discussion Guide
               </Text>
             </Pressable>
-            <InlineCoachTip
-              id="ss_discussion_generate"
-              text="Tap to generate questions for your Sabbath class."
-            />
-
             <View style={[styles.previewFeatures, { borderColor: theme.border }]}>
               <Text style={[styles.previewFeaturesTitle, { color: theme.text }]}>
                 Your guide will include:
