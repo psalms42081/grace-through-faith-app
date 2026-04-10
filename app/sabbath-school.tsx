@@ -59,6 +59,10 @@ interface QuarterlyData {
   quarterCode?: string;
 }
 
+type UserPreferencesResponse = {
+  preferredCurriculum?: "adult" | "inverse" | string | null;
+};
+
 export default function SabbathSchoolScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -95,6 +99,11 @@ export default function SabbathSchoolScreen() {
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const { data: userPrefs } = useQuery<UserPreferencesResponse>({
+    queryKey: ["/api/user/preferences"],
+  });
+  const selectedCurriculum = userPrefs?.preferredCurriculum === "inverse" ? "inverse" : "adult";
+
   const { data, isLoading, error } = useQuery<{
     quarterly: QuarterlyData | null;
     currentLesson: LessonData | null;
@@ -104,7 +113,7 @@ export default function SabbathSchoolScreen() {
     todayDayNumber: number | null;
     companion: CompanionData | null;
   }>({
-    queryKey: [`/api/sabbath-school/current?userId=${userId}`],
+    queryKey: [`/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`],
   });
 
   const { data: archiveData } = useQuery<{ quarters: QuarterlyData[] }>({

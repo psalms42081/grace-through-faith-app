@@ -183,13 +183,19 @@ router.get("/api/user/preferences", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     if (userId === "guest") {
-      return res.json({ preferredLanguage: "en", preferredBibleTranslation: null, preferredNarrator: "george" });
+      return res.json({
+        preferredLanguage: "en",
+        preferredBibleTranslation: null,
+        preferredNarrator: "george",
+        preferredCurriculum: "adult",
+      });
     }
     const [user] = await db
       .select({
         preferredLanguage: users.preferredLanguage,
         preferredBibleTranslation: users.preferredBibleTranslation,
         preferredNarrator: users.preferredNarrator,
+        preferredCurriculum: users.preferredCurriculum,
       })
       .from(users)
       .where(eq(users.id, userId));
@@ -197,6 +203,7 @@ router.get("/api/user/preferences", optionalAuth, async (req, res) => {
       preferredLanguage: user?.preferredLanguage ?? "en",
       preferredBibleTranslation: user?.preferredBibleTranslation ?? null,
       preferredNarrator: user?.preferredNarrator ?? "george",
+      preferredCurriculum: user?.preferredCurriculum ?? "adult",
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -218,6 +225,11 @@ router.put("/api/user/preferences", requireAuth, async (req, res) => {
       const val = String(req.body.preferredNarrator);
       const valid = ["george", "sarah"];
       updates.preferredNarrator = valid.includes(val) ? val : "george";
+    }
+    if (req.body.preferredCurriculum !== undefined) {
+      const val = String(req.body.preferredCurriculum).toLowerCase();
+      const valid = ["adult", "inverse"];
+      updates.preferredCurriculum = valid.includes(val) ? val : "adult";
     }
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No valid preferences provided" });

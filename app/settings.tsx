@@ -42,6 +42,7 @@ const STORAGE_KEYS = {
   verseNumbers: "@gtf/setting-verse-numbers",
   downloadImages: "@gtf/setting-download-images",
   fontSize: "@gtf/setting-font-size",
+  curriculum: "@gtf/setting-curriculum",
 };
 
 const FONT_SIZE_OPTIONS = ["Small", "Medium", "Large"] as const;
@@ -107,23 +108,39 @@ export default function SettingsScreen() {
   const [verseNumbers, setVerseNumbers] = useState(true);
   const [downloadImages, setDownloadImages] = useState(false);
   const [fontSize, setFontSize] = useState<typeof FONT_SIZE_OPTIONS[number]>("Medium");
+  const [preferredCurriculum, setPreferredCurriculum] = useState<"adult" | "inverse">("adult");
 
   React.useEffect(() => {
     (async () => {
-      const [rl, vn, di, fs, nv] = await Promise.all([
+      const [rl, vn, di, fs, nv, curriculum] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.redLetters),
         AsyncStorage.getItem(STORAGE_KEYS.verseNumbers),
         AsyncStorage.getItem(STORAGE_KEYS.downloadImages),
         AsyncStorage.getItem(STORAGE_KEYS.fontSize),
         AsyncStorage.getItem(NARRATOR_VOICE_KEY),
+        AsyncStorage.getItem(STORAGE_KEYS.curriculum),
       ]);
       if (rl !== null) setRedLetters(rl === "true");
       if (vn !== null) setVerseNumbers(vn === "true");
       if (di !== null) setDownloadImages(di === "true");
       if (fs !== null && FONT_SIZE_OPTIONS.includes(fs as any)) setFontSize(fs as any);
       if (nv && PIONEERS.some((p) => p.voiceKey === nv)) setNarratorVoiceKey(nv);
+      if (curriculum === "adult" || curriculum === "inverse") setPreferredCurriculum(curriculum);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const res = await apiRequest("GET", "/api/user/preferences");
+        const data = await (res as any).json();
+        const pref = data?.preferredCurriculum === "inverse" ? "inverse" : "adult";
+        setPreferredCurriculum(pref);
+        await AsyncStorage.setItem(STORAGE_KEYS.curriculum, pref);
+      } catch {}
+    })();
+  }, [isAuthenticated]);
 
   const toggleRedLetters = useCallback(async (val: boolean) => {
     setRedLetters(val);
@@ -146,6 +163,20 @@ export default function SettingsScreen() {
     setFontSize(next);
     await AsyncStorage.setItem(STORAGE_KEYS.fontSize, next);
   }, [fontSize]);
+
+  const handleSelectCurriculum = useCallback(async (value: "adult" | "inverse") => {
+    setPreferredCurriculum(value);
+    await AsyncStorage.setItem(STORAGE_KEYS.curriculum, value);
+    if (isAuthenticated) {
+      try {
+        await apiRequest("PUT", "/api/user/preferences", { preferredCurriculum: value });
+      } catch {}
+    }
+    showToast(
+      value === "inverse" ? "Curriculum set to InVerse (Youth)" : "Curriculum set to Adult",
+      "success"
+    );
+  }, [isAuthenticated, showToast]);
 
   const narratorPioneer = PIONEERS.find((p) => p.voiceKey === narratorVoiceKey) ?? PIONEERS[0];
 
@@ -326,6 +357,23 @@ export default function SettingsScreen() {
         {renderRow("list-outline", "Show Verse Numbers", {
           rightElement: goldSwitch(verseNumbers, toggleVerseNumbers),
           showChevron: false,
+          isLast: false,
+        })}
+        {renderRow("school-outline", "Adult", {
+          onPress: () => handleSelectCurriculum("adult"),
+          showChevron: false,
+          rightElement:
+            preferredCurriculum === "adult" ? (
+              <Ionicons name="checkmark-circle" size={18} color={GOLD} style={{ marginRight: 4 }} />
+            ) : undefined,
+        })}
+        {renderRow("school-outline", "InVerse (Youth)", {
+          onPress: () => handleSelectCurriculum("inverse"),
+          showChevron: false,
+          rightElement:
+            preferredCurriculum === "inverse" ? (
+              <Ionicons name="checkmark-circle" size={18} color={GOLD} style={{ marginRight: 4 }} />
+            ) : undefined,
           isLast: true,
         })}
 

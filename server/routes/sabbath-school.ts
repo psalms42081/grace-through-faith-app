@@ -69,13 +69,39 @@ async function findCompanionsForQuarterly(quarterlyId: string) {
 router.get("/api/sabbath-school/current", async (req, res) => {
   try {
     const userId = extractUserId(req);
+    const curriculumParam = String(req.query.curriculum || "adult").toLowerCase();
+    const curriculum: "adult" | "inverse" = curriculumParam === "inverse" ? "inverse" : "adult";
 
-    let q = await getMostRecentQuarterly();
+    let q = (
+      await db
+        .select()
+        .from(sabbathSchoolQuarterlies)
+        .where(
+          and(
+            eq(sabbathSchoolQuarterlies.language, "en"),
+            eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
+          )
+        )
+        .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
+        .limit(1)
+    )[0] || null;
 
     if (!q) {
       try {
         await syncCurrentQuarter("en");
-        q = await getMostRecentQuarterly();
+        q = (
+          await db
+            .select()
+            .from(sabbathSchoolQuarterlies)
+            .where(
+              and(
+                eq(sabbathSchoolQuarterlies.language, "en"),
+                eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
+              )
+            )
+            .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
+            .limit(1)
+        )[0] || null;
       } catch {}
     }
 

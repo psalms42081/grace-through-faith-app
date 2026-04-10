@@ -14,12 +14,22 @@ import { buildSourcePacket } from "./source-packet-builder";
 const BASE_URL =
   "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
 
+type CurriculumType = "adult" | "inverse";
+
 function getCurrentQuarterCode(): string {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth() + 1;
   const quarter = month <= 3 ? "01" : month <= 6 ? "02" : month <= 9 ? "03" : "04";
   return `${year}-${quarter}`;
+}
+
+function getQuarterCodesForAllCurriculums(): Array<{ code: string; type: CurriculumType }> {
+  const base = getCurrentQuarterCode();
+  return [
+    { code: base, type: "adult" },
+    { code: `${base}-cq`, type: "inverse" },
+  ];
 }
 
 function getPreviousQuarterCode(code: string): string {
@@ -61,7 +71,12 @@ async function fetchText(url: string): Promise<string | null> {
   }
 }
 
-async function syncQuarter(quarterCodeToSync: string, lang: string = "en", generateCompanions: boolean = true): Promise<string | null> {
+async function syncQuarter(
+  quarterCodeToSync: string,
+  lang: string = "en",
+  generateCompanions: boolean = true,
+  curriculumType: CurriculumType = "adult"
+): Promise<string | null> {
   const infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCodeToSync}/info.yml`);
   if (!infoYml) return null;
 
@@ -91,6 +106,7 @@ async function syncQuarter(quarterCodeToSync: string, lang: string = "en", gener
         startDate: info.start_date || null,
         endDate: info.end_date || null,
         colorPrimary: info.color_primary || null,
+        curriculumType,
         lastSyncedAt: new Date(),
       })
       .where(eq(sabbathSchoolQuarterlies.id, quarterlyId));
@@ -100,6 +116,7 @@ async function syncQuarter(quarterCodeToSync: string, lang: string = "en", gener
       .values({
         quarterCode: activeQuarterCode,
         language: lang,
+        curriculumType,
         title: info.title || activeQuarterCode,
         description: info.description || null,
         humanDate: info.human_date || null,
@@ -237,17 +254,10 @@ async function syncQuarter(quarterCodeToSync: string, lang: string = "en", gener
 }
 
 export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
-  const quarterCode = getCurrentQuarterCode();
-
-  let result = await syncQuarter(quarterCode, lang, true);
-  if (!result) {
-    console.warn(`[SabbathSchool] No quarterly found for ${quarterCode}. Trying previous quarter...`);
-    const prev = getPreviousQuarterCode(quarterCode);
-    result = await syncQuarter(prev, lang, true);
-    if (!result) {
-      console.warn(`[SabbathSchool] No quarterly found for ${prev} either. Skipping sync.`);
-    }
-  }
+  const curriculums = getQuarterCodesForAllCurriculums();
+  await Promise.all(
+    curriculums.map(({ code, type }) => syncQuarter(code, lang, true, type))
+  );
 }
 
 function getNextQuarterCode(code: string): string {
