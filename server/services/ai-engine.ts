@@ -1711,7 +1711,7 @@ export async function generateDiscussionPrep(params: {
   const openai = createOpenAIClient();
 
   const questionCount = depth === "quick" ? 3 : depth === "deep" ? 8 : 5;
-  const promptCount = depth === "quick" ? 2 : depth === "deep" ? 5 : 3;
+  const promptCount = depth === "quick" ? 1 : depth === "deep" ? 3 : 2;
 
   const depthExtra =
     depth === "deep"
@@ -1735,7 +1735,16 @@ Return ONLY valid JSON in this format:
 
 For keyQuestions: Write ${questionCount} open-ended discussion questions suitable for Sabbath School class, small group, or family worship. Each should invite personal reflection and practical application, not just factual recall.
 
-For reflectionPrompts: Write ${promptCount} Life Application prompts — practical, personal challenges or encouragements the reader can act on this week. Frame them as invitations, not commands.`,
+For reflectionPrompts: Write ${promptCount} Life Application prompts for this specific lesson.
+
+Rules:
+- Each prompt must be directly tied to THIS lesson's theme - not generic faith advice
+- Each prompt must be ONE specific, concrete action - not vague encouragement
+- The action must be completable this week and reportable back to a Sabbath School class
+- Use second person, present tense, conversational tone - not preachy
+- Frame as an honest invitation from one believer to another
+- At least one prompt must connect the lesson theme to a real modern life situation (work, relationships, social media, family, doubt, loneliness)
+- End the final prompt with a question the person can bring to class on Sabbath`,
       },
       {
         role: "user",
