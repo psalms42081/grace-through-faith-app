@@ -113,32 +113,39 @@ function MarkdownRenderer({
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmedLine = line.trimStart();
 
-    if (line.startsWith(">")) {
+    if (trimmedLine.startsWith(">")) {
       blockquote.push(line);
       continue;
     }
     flushBlockquote();
 
-    if (line.startsWith("### ")) {
+    if (trimmedLine.startsWith("#### ")) {
+      elements.push(
+        <Text key={i} style={[styles.mdH4, { color: theme.text }]}>
+          {trimmedLine.replace(/^####\s*/, "")}
+        </Text>
+      );
+    } else if (trimmedLine.startsWith("### ")) {
       elements.push(
         <Text key={i} style={[styles.mdH3, { color: theme.text }]}>
-          {line.replace(/^###\s*/, "")}
+          {trimmedLine.replace(/^###\s*/, "")}
         </Text>
       );
-    } else if (line.startsWith("## ")) {
+    } else if (trimmedLine.startsWith("## ")) {
       elements.push(
         <Text key={i} style={[styles.mdH2, { color: theme.text }]}>
-          {line.replace(/^##\s*/, "")}
+          {trimmedLine.replace(/^##\s*/, "")}
         </Text>
       );
-    } else if (line.startsWith("# ")) {
+    } else if (trimmedLine.startsWith("# ")) {
       elements.push(
         <Text key={i} style={[styles.mdH1, { color: theme.text }]}>
-          {line.replace(/^#\s*/, "")}
+          {trimmedLine.replace(/^#\s*/, "")}
         </Text>
       );
-    } else if (line.startsWith("---")) {
+    } else if (trimmedLine.startsWith("---")) {
       elements.push(
         <View
           key={i}
@@ -168,7 +175,8 @@ function MarkdownRenderer({
 
 function formatInlineText(text: string, theme: any): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  let remaining = text;
+  // Normalize *italic* to _italic_ so both common styles render.
+  let remaining = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1_$2_");
   let key = 0;
 
   while (remaining.length > 0) {
@@ -549,6 +557,7 @@ const styles = StyleSheet.create({
   mdH1: { fontFamily: "Lora_700Bold", fontSize: 22, lineHeight: 30, marginTop: 16 },
   mdH2: { fontFamily: "Lora_600SemiBold", fontSize: 18, lineHeight: 26, marginTop: 14 },
   mdH3: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24, marginTop: 12 },
+  mdH4: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22, marginTop: 10 },
   mdParagraph: {
     fontFamily: "Inter_400Regular",
     fontSize: 15,
