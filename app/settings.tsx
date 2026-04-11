@@ -63,7 +63,7 @@ export default function SettingsScreen() {
   const { user, userId, isAuthenticated, logout } = useAuth();
   const { isPatron } = useProStatus();
   const { showToast } = useToast();
-  const { selectedPioneer, selectPioneer } = useEllenWhite();
+  const { selectedPioneer, selectPioneer, showOnboarding } = useEllenWhite();
   const { resetAllTutorials } = useTutorial();
   const { t } = useTranslation();
 
@@ -203,8 +203,15 @@ export default function SettingsScreen() {
   const handleResetGuideTour = useCallback(async () => {
     resetAllTutorials();
     await AsyncStorage.removeItem("@gtf/hologram-hint-shown");
+    await AsyncStorage.removeItem("@gtf/ellen-white-onboarding-complete");
+    if (isAuthenticated) {
+      try {
+        await apiRequest("POST", "/api/pioneer/onboarding-reset");
+      } catch {}
+    }
+    showOnboarding();
     showToast("Guide tour has been reset", "success");
-  }, [resetAllTutorials, showToast]);
+  }, [isAuthenticated, resetAllTutorials, showOnboarding, showToast]);
 
   const handleSignOut = useCallback(() => {
     if (Platform.OS === "web") {
