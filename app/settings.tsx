@@ -27,6 +27,7 @@ import { queryClient, apiRequest } from "@/lib/query-client";
 import { SUPPORTED_LANGUAGES, setLanguage, getSavedLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
+import { useTutorial } from "@/contexts/TutorialContext";
 
 const GOLD = "#C9933A";
 const BG = "#0D0F1A";
@@ -63,6 +64,7 @@ export default function SettingsScreen() {
   const { isPatron } = useProStatus();
   const { showToast } = useToast();
   const { selectedPioneer, selectPioneer } = useEllenWhite();
+  const { resetAllTutorials } = useTutorial();
   const { t } = useTranslation();
 
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -197,6 +199,12 @@ export default function SettingsScreen() {
     queryClient.clear();
     showToast("Cache cleared successfully", "success");
   }, [showToast]);
+
+  const handleResetGuideTour = useCallback(async () => {
+    resetAllTutorials();
+    await AsyncStorage.removeItem("@gtf/hologram-hint-shown");
+    showToast("Guide tour has been reset", "success");
+  }, [resetAllTutorials, showToast]);
 
   const handleSignOut = useCallback(() => {
     if (Platform.OS === "web") {
@@ -403,6 +411,9 @@ export default function SettingsScreen() {
         {renderSectionHeader("MORE")}
         {renderRow("trash-outline", "Clear Cache", {
           onPress: handleClearCache,
+        })}
+        {renderRow("refresh-outline", "Reset Guide Tour", {
+          onPress: handleResetGuideTour,
         })}
         {renderRow("information-circle-outline", "About Grace Through Faith", {
           onPress: () => showToast("Grace Through Faith — Spiritual Formation for Adventists", "info"),
