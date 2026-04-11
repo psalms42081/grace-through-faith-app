@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "@grace-through-faith/tutorials-seen";
+const HOLOGRAM_HINT_SHOWN_KEY = "@gtf/hologram-hint-shown";
 
 export type TutorialId =
   | "home"
@@ -107,6 +108,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     const next = new Set<string>();
     setSeenSet(next);
     persist(next);
+    AsyncStorage.removeItem(HOLOGRAM_HINT_SHOWN_KEY).catch(() => {});
   }, [persist]);
 
   return (

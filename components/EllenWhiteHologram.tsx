@@ -25,11 +25,14 @@ import PioneerPortrait from "./PioneerPortrait";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { getApiUrl } from "@/lib/query-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useToast } from "@/contexts/ToastContext";
 
 const PORTRAIT_SIZE = 64;
 const TAB_BAR_HEIGHT = 50;
 const WEB_BOTTOM_INSET = 34;
 const GOLD = "#C9933A";
+const HOLOGRAM_HINT_SHOWN_KEY = "@gtf/hologram-hint-shown";
 
 const SPRING_CONFIG = {
   damping: 18,
@@ -37,30 +40,42 @@ const SPRING_CONFIG = {
   mass: 0.8,
 };
 
-function getPositions(w: number, h: number, bottomInset: number) {
+function getPositions(w: number, h: number, topInset: number, bottomInset: number) {
   const tabBarTop = h - TAB_BAR_HEIGHT - (Platform.OS === "web" ? WEB_BOTTOM_INSET : bottomInset);
   const tabWidth = w / 5;
   const tabCenterY = tabBarTop - PORTRAIT_SIZE - 12;
+  const clamp = (x: number, y: number) => {
+    const clampedX = Math.min(Math.max(x, 20), w - PORTRAIT_SIZE - 20);
+    const clampedY = Math.min(
+      Math.max(y, topInset + 20),
+      h - PORTRAIT_SIZE - TAB_BAR_HEIGHT - 40
+    );
+    return { x: clampedX, y: clampedY };
+  };
+  const mk = (x: number, y: number, bubbleAlign: "left" | "right" | "center") => ({
+    ...clamp(x, y),
+    bubbleAlign,
+  });
 
   const positions: Record<string, { x: number; y: number; bubbleAlign: "left" | "right" | "center" }> = {
-    "verse-of-day":     { x: w - PORTRAIT_SIZE - 20, y: 120, bubbleAlign: "right" },
-    "continue-study":   { x: 20, y: 200, bubbleAlign: "left" },
-    "tab-read":         { x: tabWidth * 1 + tabWidth / 2 - PORTRAIT_SIZE / 2, y: tabCenterY, bubbleAlign: "center" },
-    "tab-connect":      { x: tabWidth * 2 + tabWidth / 2 - PORTRAIT_SIZE / 2, y: tabCenterY, bubbleAlign: "center" },
-    "tab-study":        { x: tabWidth * 3 + tabWidth / 2 - PORTRAIT_SIZE / 2, y: tabCenterY, bubbleAlign: "center" },
-    "tab-profile":      { x: tabWidth * 4 + tabWidth / 2 - PORTRAIT_SIZE / 2, y: tabCenterY, bubbleAlign: "center" },
-    "ss-lesson-card":   { x: 20, y: 160, bubbleAlign: "left" },
-    "ss-discussion-section": { x: w - PORTRAIT_SIZE - 20, y: 200, bubbleAlign: "right" },
-    "ss-content":       { x: w / 2 - PORTRAIT_SIZE / 2, y: 180, bubbleAlign: "center" },
-    "study-guide-content": { x: 20, y: 160, bubbleAlign: "left" },
-    "persona-selector": { x: w - PORTRAIT_SIZE - 20, y: 200, bubbleAlign: "right" },
-    "phase-indicators": { x: 20, y: 240, bubbleAlign: "left" },
-    "heatmap-grid":     { x: w - PORTRAIT_SIZE - 20, y: 160, bubbleAlign: "right" },
-    "analytics-overview": { x: 20, y: 160, bubbleAlign: "left" },
-    "timeline-view":    { x: w - PORTRAIT_SIZE - 20, y: 180, bubbleAlign: "right" },
-    "reader-view":      { x: 20, y: 160, bubbleAlign: "left" },
+    "verse-of-day": mk(w - PORTRAIT_SIZE - 20, 120, "right"),
+    "continue-study": mk(20, 200, "left"),
+    "tab-read": mk(tabWidth * 1 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
+    "tab-connect": mk(tabWidth * 2 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
+    "tab-study": mk(tabWidth * 3 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
+    "tab-profile": mk(tabWidth * 4 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
+    "ss-lesson-card": mk(20, 160, "left"),
+    "ss-discussion-section": mk(w - PORTRAIT_SIZE - 20, 200, "right"),
+    "ss-content": mk(w / 2 - PORTRAIT_SIZE / 2, 180, "center"),
+    "study-guide-content": mk(20, 160, "left"),
+    "persona-selector": mk(w - PORTRAIT_SIZE - 20, 200, "right"),
+    "phase-indicators": mk(20, 240, "left"),
+    "heatmap-grid": mk(w - PORTRAIT_SIZE - 20, 160, "right"),
+    "analytics-overview": mk(20, 160, "left"),
+    "timeline-view": mk(w - PORTRAIT_SIZE - 20, 180, "right"),
+    "reader-view": mk(20, 160, "left"),
   };
-  const defaultPos = { x: w - PORTRAIT_SIZE - 20, y: h - 240, bubbleAlign: "right" as const };
+  const defaultPos = mk(w - PORTRAIT_SIZE - 20, h - 240, "right");
   return { positions, defaultPos };
 }
 
@@ -115,6 +130,7 @@ export default function EllenWhiteHologram() {
     dismiss,
     selectedPioneer,
   } = usePioneer();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -128,8 +144,8 @@ export default function EllenWhiteHologram() {
   }, []);
 
   const { positions, defaultPos } = useMemo(
-    () => getPositions(screenW, screenH, insets.bottom),
-    [screenW, screenH, insets.bottom]
+    () => getPositions(screenW, screenH, insets.top, insets.bottom),
+    [screenW, screenH, insets.top, insets.bottom]
   );
 
   const getPos = useCallback((target: string) => positions[target] || defaultPos, [positions, defaultPos]);
@@ -238,6 +254,23 @@ export default function EllenWhiteHologram() {
   }, [isVisible]);
 
   useEffect(() => {
+    if (!isVisible || currentStepIndex !== 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const shown = await AsyncStorage.getItem(HOLOGRAM_HINT_SHOWN_KEY);
+        if (!shown && !cancelled) {
+          showToast("Tap the guide to continue the tour", "info");
+          await AsyncStorage.setItem(HOLOGRAM_HINT_SHOWN_KEY, "true");
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVisible, currentStepIndex, showToast]);
+
+  useEffect(() => {
     if (isVisible && currentSteps.length > 0) {
       const step = currentSteps[currentStepIndex];
       const pos = getPos(step.spotlightTarget);
@@ -289,9 +322,27 @@ export default function EllenWhiteHologram() {
   if (!isVisible || currentSteps.length === 0) return null;
 
   const step = currentSteps[currentStepIndex];
-  const isLastStep = currentStepIndex === currentSteps.length - 1;
   const pos = getPos(step.spotlightTarget);
   const isTabTarget = step.spotlightTarget.startsWith("tab-");
+  const getTabIndexForTarget = (target: string): number | null => {
+    switch (target) {
+      case "tab-read":
+      case "read-tab":
+        return 1;
+      case "tab-connect":
+      case "connect-tab":
+        return 2;
+      case "tab-study":
+      case "study-tab":
+        return 3;
+      case "tab-profile":
+      case "you-tab":
+        return 4;
+      default:
+        return null;
+    }
+  };
+  const tabIndex = getTabIndexForTarget(step.spotlightTarget);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -303,6 +354,20 @@ export default function EllenWhiteHologram() {
           accessibilityLabel="Tap to continue tour"
         />
       </Animated.View>
+
+      {tabIndex !== null && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.tabHighlightRing,
+            {
+              width: screenW / 5 - 12,
+              left: (screenW / 5) * tabIndex + 6,
+              bottom: (Platform.OS === "web" ? WEB_BOTTOM_INSET : insets.bottom) + 6,
+            },
+          ]}
+        />
+      )}
 
       <Animated.View
         style={[
@@ -326,7 +391,6 @@ export default function EllenWhiteHologram() {
       >
         <Pressable onPress={handleNext} testID="ellen-white-portrait-tap" style={styles.portraitTouchable}>
           <PioneerPortrait pioneerId={selectedPioneer.id} size={PORTRAIT_SIZE} isSpeaking={isSpeaking} testID="pioneer-portrait" />
-          <Text style={styles.tapContinueText}>Tap to continue</Text>
         </Pressable>
       </Animated.View>
 
@@ -357,12 +421,19 @@ const styles = StyleSheet.create({
   },
   portraitTouchable: {
     padding: 8,
-    alignItems: "center",
   },
-  tapContinueText: {
-    marginTop: 6,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.65)",
+  tabHighlightRing: {
+    position: "absolute",
+    height: 42,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: GOLD,
+    backgroundColor: "rgba(201,147,58,0.12)",
+    shadowColor: GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 9,
   },
 });
