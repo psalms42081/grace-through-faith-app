@@ -12,10 +12,32 @@ import { useEllenWhite } from "@/contexts/PioneerContext";
 function ClassicTabLayout() {
   const { isKidsMode } = useKidsMode();
   const { theme, isDark } = useTheme(isKidsMode);
+  const { isVisible, currentSteps, currentStepIndex } = useEllenWhite();
   const { t } = useTranslation();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
+  const spotlightTarget =
+    isVisible && currentSteps.length > 0
+      ? currentSteps[currentStepIndex]?.spotlightTarget
+      : null;
+  const GOLD = "#C9933A";
+
+  const isSpotlightTab = (tabName: "read" | "connect" | "study" | "profile") => {
+    if (!spotlightTarget) return false;
+    switch (tabName) {
+      case "read":
+        return spotlightTarget === "tab-read" || spotlightTarget === "read-tab";
+      case "connect":
+        return spotlightTarget === "tab-connect" || spotlightTarget === "connect-tab";
+      case "study":
+        return spotlightTarget === "tab-study" || spotlightTarget === "study-tab";
+      case "profile":
+        return spotlightTarget === "tab-profile" || spotlightTarget === "you-tab";
+      default:
+        return false;
+    }
+  };
 
   return (
     <Tabs
@@ -86,7 +108,7 @@ function ClassicTabLayout() {
           title: t("tabs.read"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
+            <Ionicons name="book" size={size} color={isSpotlightTab("read") ? GOLD : color} />
           ),
         }}
       />
@@ -96,7 +118,7 @@ function ClassicTabLayout() {
           title: t("tabs.connect"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
+            <Ionicons name="people" size={size} color={isSpotlightTab("connect") ? GOLD : color} />
           ),
         }}
       />
@@ -106,7 +128,7 @@ function ClassicTabLayout() {
           title: t("tabs.study"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="library" size={size} color={color} />
+            <Ionicons name="library" size={size} color={isSpotlightTab("study") ? GOLD : color} />
           ),
         }}
       />
@@ -116,7 +138,7 @@ function ClassicTabLayout() {
           title: t("tabs.you"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="person" size={size} color={isSpotlightTab("profile") ? GOLD : color} />
           ),
         }}
       />

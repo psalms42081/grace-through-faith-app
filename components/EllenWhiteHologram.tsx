@@ -31,8 +31,8 @@ import { useToast } from "@/contexts/ToastContext";
 const PORTRAIT_SIZE = 64;
 const TAB_BAR_HEIGHT = 50;
 const WEB_BOTTOM_INSET = 34;
-const GOLD = "#C9933A";
 const HOLOGRAM_HINT_SHOWN_KEY = "@gtf/hologram-hint-shown";
+const NARRATOR_VOICE_KEY = "@grace-through-faith/tts-voice";
 
 const SPRING_CONFIG = {
   damping: 18,
@@ -171,20 +171,28 @@ export default function EllenWhiteHologram() {
     if (mountedRef.current) setIsSpeaking(false);
   }, []);
 
-  const pioneerVoiceKey = selectedPioneer.voiceKey;
+  const getTourVoiceKey = useCallback(async () => {
+    try {
+      const storedVoiceKey = await AsyncStorage.getItem(NARRATOR_VOICE_KEY);
+      return storedVoiceKey || selectedPioneer.voiceKey;
+    } catch {
+      return selectedPioneer.voiceKey;
+    }
+  }, [selectedPioneer.voiceKey]);
 
   const speakText = useCallback((text: string) => {
     stopSpeaking();
 
     speechTimeoutRef.current = setTimeout(async () => {
       try {
+        const tourVoiceKey = await getTourVoiceKey();
         const apiUrl = getApiUrl();
         const prepareUrl = new URL("/api/tts/prepare", apiUrl).toString();
 
         const prepRes = await fetch(prepareUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, voice: pioneerVoiceKey }),
+          body: JSON.stringify({ text, voice: tourVoiceKey }),
         });
 
         if (!prepRes.ok) throw new Error(`TTS prepare failed: ${prepRes.status}`);
@@ -213,7 +221,7 @@ export default function EllenWhiteHologram() {
         console.warn("[ellen-white] TTS unavailable:", err);
       }
     }, 600);
-  }, [stopSpeaking]);
+  }, [getTourVoiceKey, stopSpeaking]);
 
   useEffect(() => {
     if (isVisible && currentSteps.length > 0) {
@@ -283,17 +291,20 @@ export default function EllenWhiteHologram() {
       const nextIdx = currentStepIndex + 1;
       if (nextIdx < currentSteps.length) {
         const nextText = currentSteps[nextIdx].text;
-        try {
-          const apiUrl = getApiUrl();
-          fetch(new URL("/api/tts/prepare", apiUrl).toString(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: nextText, voice: pioneerVoiceKey }),
-          }).catch(() => {});
-        } catch {}
+        (async () => {
+          try {
+            const tourVoiceKey = await getTourVoiceKey();
+            const apiUrl = getApiUrl();
+            fetch(new URL("/api/tts/prepare", apiUrl).toString(), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: nextText, voice: tourVoiceKey }),
+            }).catch(() => {});
+          } catch {}
+        })();
       }
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, currentSteps, getPos, getTourVoiceKey, isVisible, portraitX, portraitY, speakText]);
 
   const handleDismiss = useCallback(() => {
     stopSpeaking();
@@ -324,25 +335,6 @@ export default function EllenWhiteHologram() {
   const step = currentSteps[currentStepIndex];
   const pos = getPos(step.spotlightTarget);
   const isTabTarget = step.spotlightTarget.startsWith("tab-");
-  const getTabIndexForTarget = (target: string): number | null => {
-    switch (target) {
-      case "tab-read":
-      case "read-tab":
-        return 1;
-      case "tab-connect":
-      case "connect-tab":
-        return 2;
-      case "tab-study":
-      case "study-tab":
-        return 3;
-      case "tab-profile":
-      case "you-tab":
-        return 4;
-      default:
-        return null;
-    }
-  };
-  const tabIndex = getTabIndexForTarget(step.spotlightTarget);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -354,20 +346,6 @@ export default function EllenWhiteHologram() {
           accessibilityLabel="Tap to continue tour"
         />
       </Animated.View>
-
-      {tabIndex !== null && (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.tabHighlightRing,
-            {
-              width: screenW / 5 - 12,
-              left: (screenW / 5) * tabIndex + 6,
-              bottom: (Platform.OS === "web" ? WEB_BOTTOM_INSET : insets.bottom) + 6,
-            },
-          ]}
-        />
-      )}
 
       <Animated.View
         style={[
@@ -421,19 +399,5 @@ const styles = StyleSheet.create({
   },
   portraitTouchable: {
     padding: 8,
-  },
-  tabHighlightRing: {
-    position: "absolute",
-    height: 42,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: GOLD,
-    backgroundColor: "rgba(201,147,58,0.12)",
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 9,
   },
 });

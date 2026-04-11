@@ -179,12 +179,6 @@ export default function PioneerPortrait({
               source={photoSource}
               style={[
                 styles.image,
-                {
-                  width: size * 1.8,
-                  height: size * 1.8,
-                  marginLeft: -(size * 0.4),
-                  marginTop: -(size * 0.1),
-                },
                 faceStyle,
               ]}
               resizeMode="cover"
@@ -223,9 +217,11 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   image: {
-    position: "absolute",
+    ...StyleSheet.absoluteFillObject,
   },
   activeIndicator: {
     position: "absolute",
