@@ -175,14 +175,18 @@ export default function PioneerPortrait({
               { width: size, height: size, borderRadius },
             ]}
           >
-            <Animated.Image
-              source={photoSource}
+            <Animated.View
               style={[
                 styles.image,
                 faceStyle,
               ]}
+            >
+            <Animated.Image
+              source={photoSource}
+              style={styles.image}
               resizeMode="cover"
             />
+            </Animated.View>
           </View>
         </View>
         {isSpeaking && (
