@@ -8,6 +8,7 @@ import { KidsColors } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { useEllenWhite } from "@/contexts/PioneerContext";
+import { useSabbath } from "@/lib/sabbath";
 
 function ClassicTabLayout() {
   const { isKidsMode } = useKidsMode();
@@ -218,6 +219,7 @@ function ClassicTabLayout() {
 
 export default function TabLayout() {
   const { isReady, onboardingComplete, showOnboarding, syncOnboardingFromServer } = useEllenWhite();
+  const sabbath = useSabbath();
   const [serverChecked, setServerChecked] = useState(false);
 
   useEffect(() => {
@@ -229,12 +231,13 @@ export default function TabLayout() {
       if (cancelled) return;
       setServerChecked(true);
       if (!seen) {
-        setTimeout(() => showOnboarding(), 600);
+        const delay = sabbath.isSabbath ? 10000 : 600;
+        setTimeout(() => showOnboarding(), delay);
       }
     });
 
     return () => { cancelled = true; };
-  }, [isReady, onboardingComplete, serverChecked]);
+  }, [isReady, onboardingComplete, serverChecked, sabbath.isSabbath]);
 
   return <ClassicTabLayout />;
 }

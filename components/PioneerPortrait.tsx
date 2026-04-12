@@ -177,13 +177,13 @@ export default function PioneerPortrait({
           >
             <Animated.View
               style={[
-                styles.image,
+                { width: size, height: size },
                 faceStyle,
               ]}
             >
             <Animated.Image
               source={photoSource}
-              style={styles.image}
+              style={StyleSheet.absoluteFillObject}
               resizeMode="cover"
             />
             </Animated.View>
