@@ -175,18 +175,20 @@ export default function PioneerPortrait({
               { width: size, height: size, borderRadius },
             ]}
           >
-            <Animated.View
-              style={[
-                { width: size, height: size },
-                faceStyle,
-              ]}
-            >
             <Animated.Image
               source={photoSource}
-              style={StyleSheet.absoluteFillObject}
+              style={[
+                styles.image,
+                {
+                  width: size * 1.8,
+                  height: size * 1.8,
+                  marginLeft: -(size * 0.4),
+                  marginTop: -(size * 0.1),
+                },
+                faceStyle,
+              ]}
               resizeMode="cover"
             />
-            </Animated.View>
           </View>
         </View>
         {isSpeaking && (
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
   },
   activeIndicator: {
     position: "absolute",
