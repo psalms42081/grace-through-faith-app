@@ -118,7 +118,10 @@ export default function WordStudyScreen() {
   const hasData = wordMappings && wordMappings.length > 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.background }]}
+      pointerEvents="box-none"
+    >
       <View
         style={[
           styles.header,
@@ -157,6 +160,7 @@ export default function WordStudyScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View
           style={[
