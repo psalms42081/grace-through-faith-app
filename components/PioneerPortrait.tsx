@@ -222,13 +222,4 @@ const styles = StyleSheet.create({
   image: {
     position: "absolute",
   },
-  activeIndicator: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#C9933A",
-    borderWidth: 2,
-    borderColor: "#050507",
-  },
 });
