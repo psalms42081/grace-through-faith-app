@@ -1344,7 +1344,7 @@ function AdultHomeScreen() {
     const step = currentSteps[currentStepIndex];
     const scrollMap: Record<string, number> = {
       "verse-of-day": 0,
-      "continue-study": 1300,
+      "continue-study": 550,
       "tab-study": 800,
       "tab-connect": 800,
       "tab-read": 800,
