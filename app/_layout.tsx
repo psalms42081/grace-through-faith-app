@@ -13,7 +13,7 @@ import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TutorialProvider } from "@/contexts/TutorialContext";
 import { useTheme } from "@/hooks/useTheme";
-import { initI18n } from "@/lib/i18n";
+import i18n, { initI18n } from "@/lib/i18n";
 import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
@@ -198,7 +198,16 @@ export default function RootLayout() {
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
-    initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
+    AsyncStorage.getItem("@grace-through-faith/preferredLanguage").then((val) => {
+      console.log("DEBUG stored language:", val);
+    });
+    AsyncStorage.getItem("@grace-through-faith/firstLaunchDone").then((val) => {
+      console.log("DEBUG firstLaunch:", val);
+    });
+    initI18n().then(() => {
+      console.log("DEBUG i18n language after init:", i18n.language);
+      setI18nReady(true);
+    }).catch(() => setI18nReady(true));
     initAnalytics();
   }, []);
 
