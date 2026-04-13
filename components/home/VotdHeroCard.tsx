@@ -136,7 +136,7 @@ export default function VotdHeroCard({
 
   return (
     <>
-      <Pressable onPress={onPress} style={({ pressed }) => [s.wrapper, pressed && { opacity: 0.95 }]}>
+      <Pressable onPress={onPress} testID="verse-of-day" style={({ pressed }) => [s.wrapper, pressed && { opacity: 0.95 }]}>
         <ImageBackground source={imageSource} style={s.imageBg} imageStyle={s.imageStyle} resizeMode="cover">
           <LinearGradient
             colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.55)"]}

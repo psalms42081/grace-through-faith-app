@@ -31,7 +31,7 @@ export default function ContinueCard({ item, theme, isDark }: ContinueCardProps)
         s.card,
         { transform: [{ scale: pressed ? 0.98 : 1 }] },
       ]}
-      testID="home-continue-card"
+      testID="continue-study"
       accessibilityRole="button"
       accessibilityLabel={"Continue " + item.title}
     >
