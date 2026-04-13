@@ -28,7 +28,7 @@ import { getApiUrl } from "@/lib/query-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useToast } from "@/contexts/ToastContext";
 
-const PORTRAIT_SIZE = 64;
+const PORTRAIT_SIZE = 48;
 const TAB_BAR_HEIGHT = 50;
 const WEB_BOTTOM_INSET = 34;
 const HOLOGRAM_HINT_SHOWN_KEY = "@gtf/hologram-hint-shown";
