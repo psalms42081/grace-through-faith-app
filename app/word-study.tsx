@@ -180,7 +180,10 @@ export default function WordStudyScreen() {
               </Text>
             </View>
           </View>
-          <View style={styles.verseWordsContainer}>
+          <View
+            style={styles.verseWordsContainer}
+            onStartShouldSetResponder={() => false}
+          >
             {displayVerseText.split(" ").map((word, index) => {
               const clean = word.replace(/[^a-zA-Z]/g, "").toLowerCase();
               const mapping = wordMappings?.find(
@@ -195,6 +198,7 @@ export default function WordStudyScreen() {
                   style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                 >
                   <Text
+                    selectable={false}
                     style={[
                       styles.verseWord,
                       {
