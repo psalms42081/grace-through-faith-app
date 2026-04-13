@@ -184,40 +184,43 @@ export default function WordStudyScreen() {
               </Text>
             </View>
           </View>
-          <View
-            style={styles.verseWordsContainer}
-            onStartShouldSetResponder={() => false}
+          <Text
+            style={[
+              styles.verseText,
+              { color: theme.text, fontFamily: "Lora_400Regular" },
+            ]}
           >
-            {displayVerseText.split(" ").map((word, index) => {
-              const clean = word.replace(/[^a-zA-Z]/g, "").toLowerCase();
-              const mapping = wordMappings?.find(
-                (wm) => wm.map.translatedWord?.toLowerCase() === clean ||
-                        wm.map.wordPosition === index
-              );
-              const hasMeaning = !!mapping?.entry;
-              return (
-                <Pressable
-                  key={index}
-                  onPress={() => hasMeaning ? setSelectedWord(mapping!) : null}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-                >
-                  <Text
-                    selectable={false}
-                    style={[
-                      styles.verseWord,
+            {displayVerseText}
+          </Text>
+          {wordMappings && wordMappings.length > 0 && (
+            <View style={styles.wordPillsContainer}>
+              <Text style={[styles.wordPillsLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                Tap a word to study
+              </Text>
+              <View style={styles.wordPillsRow}>
+                {wordMappings.filter(wm => wm.entry).map((wm, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => setSelectedWord(wm)}
+                    style={({ pressed }) => [
+                      styles.wordPill,
                       {
-                        color: hasMeaning ? theme.accent : theme.text,
-                        fontFamily: "Lora_400Regular",
-                        textDecorationLine: hasMeaning ? "underline" : "none",
-                      },
+                        backgroundColor: pressed ? theme.accent : theme.accent + "18",
+                        borderColor: theme.accent,
+                      }
                     ]}
                   >
-                    {word}{" "}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text style={[styles.wordPillText, {
+                      color: theme.accent,
+                      fontFamily: "Inter_600SemiBold"
+                    }]}>
+                      {wm.map.translatedWord || wm.entry?.lemma}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {isLoading && (
@@ -384,14 +387,28 @@ const styles = StyleSheet.create({
   translationBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   translationText: { fontSize: 10 },
   verseText: { fontSize: 16, lineHeight: 26 },
-  verseWordsContainer: {
+  wordPillsContainer: {
+    marginTop: 16,
+    gap: 8,
+  },
+  wordPillsLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  wordPillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginVertical: 12,
+    gap: 8,
   },
-  verseWord: {
-    fontSize: 18,
-    lineHeight: 28,
+  wordPill: {
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+  },
+  wordPillText: {
+    fontSize: 13,
   },
   loadingBox: { alignItems: "center", paddingVertical: 40, gap: 12 },
   loadingText: { fontSize: 13 },
