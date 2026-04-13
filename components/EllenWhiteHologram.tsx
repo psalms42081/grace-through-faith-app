@@ -43,7 +43,7 @@ const SPRING_CONFIG = {
 function getPositions(w: number, h: number, topInset: number, bottomInset: number) {
   const tabBarTop = h - TAB_BAR_HEIGHT - (Platform.OS === "web" ? WEB_BOTTOM_INSET : bottomInset);
   const tabWidth = w / 5;
-  const tabCenterY = tabBarTop - PORTRAIT_SIZE - 12;
+  const tabCenterY = tabBarTop - PORTRAIT_SIZE - 28;
   const clamp = (x: number, y: number) => {
     const clampedX = Math.min(Math.max(x, 20), w - PORTRAIT_SIZE - 20);
     const clampedY = Math.min(
