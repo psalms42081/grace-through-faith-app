@@ -209,9 +209,12 @@ export default function SettingsScreen() {
         await apiRequest("POST", "/api/pioneer/onboarding-reset");
       } catch {}
     }
-    showOnboarding();
     showToast("Guide tour has been reset", "success");
-  }, [isAuthenticated, resetAllTutorials, showOnboarding, showToast]);
+    router.replace("/(tabs)");
+    setTimeout(() => {
+      showOnboarding();
+    }, 600);
+  }, [isAuthenticated, resetAllTutorials, showOnboarding, showToast, router]);
 
   const handleSignOut = useCallback(() => {
     if (Platform.OS === "web") {
