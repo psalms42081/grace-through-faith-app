@@ -1580,7 +1580,6 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}><SabbathSchoolCard /></AnimatedSection>
-          <AnimatedSection index={3}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={5}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={6}>
             <ContinueCard
@@ -1652,7 +1651,6 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={1}><SabbathSchoolCard /></AnimatedSection>
-          <AnimatedSection index={2}><FeaturedSeriesSection theme={theme} isDark={isDark} /></AnimatedSection>
           <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard

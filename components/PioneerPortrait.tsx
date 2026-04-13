@@ -195,17 +195,6 @@ export default function PioneerPortrait({
             />
           </View>
         </View>
-        {isSpeaking && (
-          <View
-            style={[
-              styles.activeIndicator,
-              {
-                right: 8,
-                bottom: 8,
-              },
-            ]}
-          />
-        )}
       </View>
     </Pressable>
   );

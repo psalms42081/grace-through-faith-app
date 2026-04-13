@@ -58,7 +58,7 @@ function getPositions(w: number, h: number, topInset: number, bottomInset: numbe
   });
 
   const positions: Record<string, { x: number; y: number; bubbleAlign: "left" | "right" | "center" }> = {
-    "verse-of-day": mk(w - PORTRAIT_SIZE - 20, 280, "right"),
+    "verse-of-day": mk(w - PORTRAIT_SIZE - 40, 300, "right"),
     "continue-study": mk(w - PORTRAIT_SIZE - 20, 520, "right"),
     "tab-read": mk(tabWidth * 1 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
     "tab-connect": mk(tabWidth * 2 + tabWidth / 2 - PORTRAIT_SIZE / 2, tabCenterY, "center"),
