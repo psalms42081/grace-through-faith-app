@@ -198,16 +198,7 @@ export default function RootLayout() {
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem("@grace-through-faith/preferredLanguage").then((val) => {
-      console.log("DEBUG stored language:", val);
-    });
-    AsyncStorage.getItem("@grace-through-faith/firstLaunchDone").then((val) => {
-      console.log("DEBUG firstLaunch:", val);
-    });
-    initI18n().then(() => {
-      console.log("DEBUG i18n language after init:", i18n.language);
-      setI18nReady(true);
-    }).catch(() => setI18nReady(true));
+    initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
     initAnalytics();
   }, []);
 
