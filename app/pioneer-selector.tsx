@@ -31,6 +31,9 @@ type SelectorPioneer = {
   descriptor: string;
   initials: string;
   photoAsset: any;
+  portraitScale: number;
+  portraitOffsetX: number;
+  portraitOffsetY: number;
 };
 
 export default function PioneerSelectorScreen() {
@@ -56,6 +59,9 @@ export default function PioneerSelectorScreen() {
           descriptor: meta.descriptor,
           initials: meta.initials,
           photoAsset: p.photoAsset,
+          portraitScale: p.portraitScale ?? 1.62,
+          portraitOffsetX: p.portraitOffsetX ?? 0,
+          portraitOffsetY: p.portraitOffsetY ?? 0.2,
         };
       }),
     []
@@ -96,6 +102,8 @@ export default function PioneerSelectorScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const active = item.id === activeId;
+          const avatarSize = 64;
+          const baseOffset = -((item.portraitScale - 1) / 2) * avatarSize;
           return (
             <Pressable
               onPress={() => onSelect(item.id)}
@@ -108,7 +116,13 @@ export default function PioneerSelectorScreen() {
               <View style={styles.avatarCircle}>
                 <Image
                   source={item.photoAsset}
-                  style={{ width: 64, height: 64, borderRadius: 32 }}
+                  style={{
+                    position: "absolute",
+                    width: avatarSize * item.portraitScale,
+                    height: avatarSize * item.portraitScale,
+                    left: baseOffset + item.portraitOffsetX * avatarSize,
+                    top: baseOffset + item.portraitOffsetY * avatarSize,
+                  }}
                   resizeMode="cover"
                 />
               </View>
@@ -183,10 +197,11 @@ const styles = StyleSheet.create({
     backgroundColor: INACTIVE_BG,
   },
   avatarCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: GOLD,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
