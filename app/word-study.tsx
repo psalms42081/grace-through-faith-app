@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -50,6 +51,7 @@ export default function WordStudyScreen() {
   }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const [selectedWord, setSelectedWord] = useState<WordMapping | null>(null);
 
   const resolvedVerse = params.verse || "1";
   const needsVerseLookup = !params.verseId && !!params.book && !!params.chapter;
@@ -178,14 +180,36 @@ export default function WordStudyScreen() {
               </Text>
             </View>
           </View>
-          <Text
-            style={[
-              styles.verseText,
-              { color: theme.text, fontFamily: "Lora_400Regular" },
-            ]}
-          >
-            {displayVerseText}
-          </Text>
+          <View style={styles.verseWordsContainer}>
+            {displayVerseText.split(" ").map((word, index) => {
+              const clean = word.replace(/[^a-zA-Z]/g, "").toLowerCase();
+              const mapping = wordMappings?.find(
+                (wm) => wm.map.translatedWord?.toLowerCase() === clean ||
+                        wm.map.wordPosition === index
+              );
+              const hasMeaning = !!mapping?.entry;
+              return (
+                <Pressable
+                  key={index}
+                  onPress={() => hasMeaning ? setSelectedWord(mapping!) : null}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                >
+                  <Text
+                    style={[
+                      styles.verseWord,
+                      {
+                        color: hasMeaning ? theme.accent : theme.text,
+                        fontFamily: "Lora_400Regular",
+                        textDecorationLine: hasMeaning ? "underline" : "none",
+                      },
+                    ]}
+                  >
+                    {word}{" "}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {isLoading && (
@@ -252,92 +276,60 @@ export default function WordStudyScreen() {
             >
               Original Language Words
             </Text>
-            {wordMappings.map((wm, i) => {
-              const entry = wm.entry;
-              if (!entry) return null;
-              return (
-                <View
-                  key={wm.map.id || i}
-                  style={[
-                    styles.wordCard,
-                    { backgroundColor: theme.backgroundCard, borderColor: theme.border },
-                  ]}
-                >
+            <Modal
+              visible={!!selectedWord}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setSelectedWord(null)}
+            >
+              <Pressable
+                style={styles.modalBackdrop}
+                onPress={() => setSelectedWord(null)}
+              />
+              {selectedWord?.entry && (
+                <View style={[styles.bottomSheet, { backgroundColor: theme.backgroundCard }]}>
+                  <View style={styles.bottomSheetHandle} />
                   <View style={styles.wordHeader}>
-                    <View style={styles.wordTitleRow}>
-                      <Text
-                        style={[
-                          styles.originalWord,
-                          { color: theme.text, fontFamily: "Lora_700Bold" },
-                        ]}
-                      >
-                        {entry.lemma}
+                    <Text style={[styles.originalWord, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                      {selectedWord.entry.lemma}
+                    </Text>
+                    <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
+                      <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        {selectedWord.entry.id}
                       </Text>
-                      <View style={[styles.langBadge, { backgroundColor: entry.language === "he" ? "#4A6741" + "22" : "#3B5998" + "22" }]}>
-                        <Text style={[styles.langText, { color: entry.language === "he" ? "#4A6741" : "#3B5998", fontFamily: "Inter_600SemiBold" }]}>
-                          {languageLabel(entry.language)}
-                        </Text>
-                      </View>
-                      <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                        <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-                          {entry.id}
-                        </Text>
-                      </View>
                     </View>
-                    {wm.map.translatedWord && (
-                      <View style={styles.translationRow}>
-                        <Ionicons name="arrow-forward" size={12} color={theme.textMuted} />
-                        <Text
-                          style={[
-                            styles.translatedWord,
-                            { color: theme.textSecondary, fontFamily: "Inter_500Medium" },
-                          ]}
-                        >
-                          "{wm.map.translatedWord}"
-                        </Text>
-                      </View>
-                    )}
                   </View>
-
-                  {entry.transliteration && (
+                  {selectedWord.map.translatedWord && (
+                    <Text style={[styles.translatedWord, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                      "{selectedWord.map.translatedWord}"
+                    </Text>
+                  )}
+                  {selectedWord.entry.transliteration && (
                     <View style={styles.detailRow}>
                       <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
                         Transliteration
                       </Text>
                       <Text style={[styles.detailValue, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                        {entry.transliteration}
-                        {entry.pronunciation ? ` (${entry.pronunciation})` : ""}
+                        {selectedWord.entry.transliteration}
+                        {selectedWord.entry.pronunciation ? ` (${selectedWord.entry.pronunciation})` : ""}
                       </Text>
                     </View>
                   )}
-
                   <View style={styles.detailRow}>
                     <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
                       Definition
                     </Text>
                     <Text style={[styles.detailValue, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-                      {entry.definition}
+                      {selectedWord.entry.definition}
                     </Text>
                   </View>
-
-                  {entry.extendedDefinition && (
-                    <View style={styles.detailRow}>
-                      <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-                        Extended
-                      </Text>
-                      <Text style={[styles.detailValue, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                        {entry.extendedDefinition}
-                      </Text>
-                    </View>
-                  )}
-
-                  {entry.kjvUsage && (
+                  {selectedWord.entry.kjvUsage && (
                     <View style={styles.usageSection}>
                       <Text style={[styles.detailLabel, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
                         KJV Usage
                       </Text>
                       <View style={styles.usagePills}>
-                        {entry.kjvUsage.split(",").map((u, j) => (
+                        {selectedWord.entry.kjvUsage.split(",").map((u, j) => (
                           <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
                             <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
                               {u.trim()}
@@ -347,18 +339,9 @@ export default function WordStudyScreen() {
                       </View>
                     </View>
                   )}
-
-                  {entry.derivation && (
-                    <View style={[styles.derivationRow, { borderTopColor: theme.border }]}>
-                      <Ionicons name="git-branch-outline" size={13} color={theme.textMuted} />
-                      <Text style={[styles.derivationText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {entry.derivation}
-                      </Text>
-                    </View>
-                  )}
                 </View>
-              );
-            })}
+              )}
+            </Modal>
           </>
         )}
       </ScrollView>
@@ -393,6 +376,15 @@ const styles = StyleSheet.create({
   translationBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   translationText: { fontSize: 10 },
   verseText: { fontSize: 16, lineHeight: 26 },
+  verseWordsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginVertical: 12,
+  },
+  verseWord: {
+    fontSize: 18,
+    lineHeight: 28,
+  },
   loadingBox: { alignItems: "center", paddingVertical: 40, gap: 12 },
   loadingText: { fontSize: 13 },
   errorBox: {
@@ -453,6 +445,24 @@ const styles = StyleSheet.create({
   usagePills: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   usagePill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   usagePillText: { fontSize: 11 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  bottomSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 48,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
   derivationRow: {
     flexDirection: "row",
     alignItems: "flex-start",
