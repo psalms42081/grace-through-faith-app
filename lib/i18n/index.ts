@@ -102,22 +102,28 @@ function getDeviceLanguage(): string {
 let initialized = false;
 
 export async function initI18n(): Promise<void> {
-  if (initialized) return;
-
   let lng = "en";
-  let isFirstLaunch = false;
   try {
     const stored = await AsyncStorage.getItem(LANGUAGE_KEY);
     if (stored && stored in resources) {
       lng = stored;
     } else {
-      const launchDone = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
-      if (!launchDone) isFirstLaunch = true;
       lng = getDeviceLanguage();
     }
   } catch {
     lng = getDeviceLanguage();
   }
+
+  if (initialized) {
+    await i18n.changeLanguage(lng);
+    return;
+  }
+
+  let isFirstLaunch = false;
+  try {
+    const launchDone = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+    if (!launchDone) isFirstLaunch = true;
+  } catch {}
 
   await i18n.use(initReactI18next).init({
     resources,
