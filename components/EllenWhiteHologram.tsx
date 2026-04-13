@@ -359,8 +359,6 @@ export default function EllenWhiteHologram() {
         </Pressable>
       </Animated.View>
 
-      <PointerArrow fromX={pos.x} fromY={pos.y} isTabTarget={isTabTarget} />
-
       <Animated.View
         style={[
           styles.portraitContainer,
