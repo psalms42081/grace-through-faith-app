@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, FlatList, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, FlatList, Platform, Image } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +30,7 @@ type SelectorPioneer = {
   years: string;
   descriptor: string;
   initials: string;
+  photoAsset: any;
 };
 
 export default function PioneerSelectorScreen() {
@@ -54,6 +55,7 @@ export default function PioneerSelectorScreen() {
           years: p.era.replace("-", "–"),
           descriptor: meta.descriptor,
           initials: meta.initials,
+          photoAsset: p.photoAsset,
         };
       }),
     []
@@ -104,7 +106,11 @@ export default function PioneerSelectorScreen() {
               ]}
             >
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{item.initials}</Text>
+                <Image
+                  source={item.photoAsset}
+                  style={{ width: 64, height: 64, borderRadius: 32 }}
+                  resizeMode="cover"
+                />
               </View>
 
               <Text style={styles.name} numberOfLines={1}>

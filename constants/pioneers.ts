@@ -6,6 +6,9 @@ export interface Pioneer {
   voiceKey: string;
   photoAsset: any;
   photoPath: string;
+  portraitScale?: number;
+  portraitOffsetX?: number;
+  portraitOffsetY?: number;
   era: string;
   role: string;
 }
@@ -19,6 +22,9 @@ export const PIONEERS: Pioneer[] = [
     voiceKey: "ellen_white",
     photoAsset: require("@/assets/images/ellen-white-portrait.png"),
     photoPath: "assets/images/ellen-white-portrait.png",
+    portraitScale: 1.8,
+    portraitOffsetX: -0.22,
+    portraitOffsetY: 0.22,
     era: "1827-1915",
     role: "Prophet & Co-Founder",
   },

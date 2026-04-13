@@ -32,6 +32,10 @@ export default function PioneerPortrait({
 }: PioneerPortraitProps) {
   const pioneer = PIONEERS.find((p) => p.id === pioneerId);
   const photoSource = pioneer?.photoAsset ?? PIONEERS[0].photoAsset;
+  const portraitScale = pioneer?.portraitScale ?? 1.8;
+  const baseOffset = -((portraitScale - 1) / 2) * size;
+  const portraitOffsetX = (pioneer?.portraitOffsetX ?? 0) * size;
+  const portraitOffsetY = (pioneer?.portraitOffsetY ?? 0) * size;
 
   const glowOpacity = useSharedValue(0.3);
   const glowScale = useSharedValue(1);
@@ -142,6 +146,7 @@ export default function PioneerPortrait({
   }));
 
   const borderRadius = size / 2;
+  console.log("PioneerPortrait render:", { pioneerId, photoSource, size });
 
   return (
     <Pressable onPress={onPress} testID={testID}>
@@ -180,10 +185,10 @@ export default function PioneerPortrait({
               style={[
                 styles.image,
                 {
-                  width: size * 1.8,
-                  height: size * 1.8,
-                  marginLeft: -(size * 0.4),
-                  marginTop: -(size * 0.1),
+                  width: size * portraitScale,
+                  height: size * portraitScale,
+                  left: baseOffset + portraitOffsetX,
+                  top: baseOffset + portraitOffsetY,
                 },
                 faceStyle,
               ]}
