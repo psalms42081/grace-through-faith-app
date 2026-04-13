@@ -126,13 +126,14 @@ export default function StudyGuideScreen() {
   const { tryAutoGuide } = useEllenWhite();
 
   useEffect(() => {
+    if (!hasVerseParams || !showPersonaPicker || checkingResume) return;
     const timer = setTimeout(() => {
       if (FEATURE_GUIDES["study-guide"]) {
         tryAutoGuide("study-guide", FEATURE_GUIDES["study-guide"]);
       }
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [hasVerseParams, showPersonaPicker, checkingResume]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
