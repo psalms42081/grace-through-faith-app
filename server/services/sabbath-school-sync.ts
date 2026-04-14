@@ -7,12 +7,10 @@ import {
   resources,
 } from "../../shared/schema";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
-import YAML from "yaml";
 import { fetchWithTimeout } from "./api-client";
 import { buildSourcePacket } from "./source-packet-builder";
 
-const BASE_URL =
-  "https://raw.githubusercontent.com/Adventech/sabbath-school-lessons/master/src";
+const BASE_URL = "https://sabbath-school.adventech.io/api/v2";
 
 type CurriculumType = "adult" | "inverse";
 
@@ -61,11 +59,193 @@ function todayUTCMidnight(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
-async function fetchText(url: string): Promise<string | null> {
+type JsonObject = Record<string, unknown>;
+
+function asObject(value: unknown): JsonObject | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as JsonObject;
+}
+
+function pickString(obj: JsonObject | null, keys: string[]): string | null {
+  if (!obj) return null;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function pickNumber(obj: JsonObject | null, keys: string[]): number | null {
+  if (!obj) return null;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = parseInt(value, 10);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+function extractCollection(payload: unknown, arrayKeys: string[]): JsonObject[] {
+  if (Array.isArray(payload)) {
+    return payload.map((item) => asObject(item)).filter((item): item is JsonObject => !!item);
+  }
+  const obj = asObject(payload);
+  if (!obj) return [];
+
+  for (const key of arrayKeys) {
+    const value = obj[key];
+    if (Array.isArray(value)) {
+      return value.map((item) => asObject(item)).filter((item): item is JsonObject => !!item);
+    }
+  }
+
+  const objValues = Object.values(obj);
+  if (objValues.every((v) => asObject(v))) {
+    return objValues.map((item) => asObject(item)).filter((item): item is JsonObject => !!item);
+  }
+
+  return [];
+}
+
+function parseLessonNumberFromCode(code: string | null): number | null {
+  if (!code) return null;
+  const parsed = parseInt(code, 10);
+  if (!Number.isNaN(parsed)) return parsed;
+  const match = code.match(/(\d{1,2})$/);
+  if (!match) return null;
+  const n = parseInt(match[1], 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+function getQuarterCodeFromItem(item: JsonObject): string | null {
+  return pickString(item, ["id", "quarter", "quarterCode", "code", "slug"]);
+}
+
+function getLessonCodeFromItem(item: JsonObject): string | null {
+  return pickString(item, ["id", "lesson", "lessonCode", "code", "slug"]);
+}
+
+function getLessonNumberFromItem(item: JsonObject, fallbackIndex: number): number {
+  const fromFields = pickNumber(item, ["index", "lessonNumber", "lesson_number", "week", "weekNumber"]);
+  if (fromFields !== null) return fromFields;
+  const fromCode = parseLessonNumberFromCode(getLessonCodeFromItem(item));
+  if (fromCode !== null) return fromCode;
+  return fallbackIndex + 1;
+}
+
+function getDayContentMarkdown(dayPayload: unknown): string {
+  const dayObj = asObject(dayPayload);
+  if (!dayObj) return "";
+  const candidates: unknown[] = [
+    dayObj.contentMarkdown,
+    dayObj.markdown,
+    dayObj.content,
+    dayObj.read,
+    dayObj.body,
+    dayObj.text,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+    if (Array.isArray(candidate)) {
+      const allStrings = candidate.every((x) => typeof x === "string");
+      if (allStrings) {
+        return (candidate as string[]).join("\n\n");
+      }
+    }
+    const nested = asObject(candidate);
+    if (nested) {
+      const nestedText = pickString(nested, ["markdown", "content", "text", "body"]);
+      if (nestedText) return nestedText;
+    }
+  }
+
+  return "";
+}
+
+function extractDayCodes(lessonItem: JsonObject): string[] {
+  const days = lessonItem.days;
+  if (!Array.isArray(days)) return [];
+  const codes = days
+    .map((d) => asObject(d))
+    .filter((d): d is JsonObject => !!d)
+    .map((d) => pickString(d, ["id", "day", "code", "slug"]))
+    .filter((d): d is string => !!d);
+  return codes;
+}
+
+function collectObjectsDeep(value: unknown, out: JsonObject[] = []): JsonObject[] {
+  const obj = asObject(value);
+  if (obj) {
+    out.push(obj);
+    for (const child of Object.values(obj)) {
+      collectObjectsDeep(child, out);
+    }
+    return out;
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      collectObjectsDeep(child, out);
+    }
+  }
+  return out;
+}
+
+function absolutizeMediaUrl(url: string): string {
+  try {
+    return new URL(url, `${BASE_URL}/`).toString();
+  } catch {
+    return url;
+  }
+}
+
+function getMediaUrl(entry: JsonObject, keys: string[]): string | null {
+  const url = pickString(entry, keys);
+  if (!url) return null;
+  return absolutizeMediaUrl(url);
+}
+
+function getLessonNumberFromMediaEntry(entry: JsonObject): number | null {
+  const direct = pickNumber(entry, ["lesson", "lessonNumber", "lesson_number", "week", "weekNumber"]);
+  if (direct !== null) return direct;
+  const lessonCode = pickString(entry, ["lessonCode", "lesson_id", "lessonId"]);
+  const fromCode = parseLessonNumberFromCode(lessonCode);
+  if (fromCode !== null) return fromCode;
+
+  const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
+  if (!probe) return null;
+  const slashMatch = probe.match(/lessons\/(\d{1,2})/i);
+  if (slashMatch) return parseInt(slashMatch[1], 10);
+  const wordMatch = probe.match(/lesson[^\d]{0,3}(\d{1,2})/i);
+  if (wordMatch) return parseInt(wordMatch[1], 10);
+  return null;
+}
+
+function getDayNumberFromMediaEntry(entry: JsonObject): number | null {
+  const direct = pickNumber(entry, ["day", "dayNumber", "day_number", "index"]);
+  if (direct !== null) return direct;
+
+  const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
+  if (!probe) return null;
+  const slashMatch = probe.match(/days\/(\d{1,2})/i);
+  if (slashMatch) return parseInt(slashMatch[1], 10);
+  const wordMatch = probe.match(/day[^\d]{0,3}(\d{1,2})/i);
+  if (wordMatch) return parseInt(wordMatch[1], 10);
+  return null;
+}
+
+async function fetchJson(url: string): Promise<unknown | null> {
   try {
     const res = await fetchWithTimeout(url, { service: "external", serviceLabel: "sabbath-school" });
     if (!res.ok) return null;
-    return await res.text();
+    return await res.json();
   } catch {
     return null;
   }
@@ -77,15 +257,23 @@ async function syncQuarter(
   generateCompanions: boolean = true,
   curriculumType: CurriculumType = "adult"
 ): Promise<string | null> {
-  const infoYml = await fetchText(`${BASE_URL}/${lang}/${quarterCodeToSync}/info.yml`);
-  if (!infoYml) return null;
+  const quarterlyIndex = await fetchJson(`${BASE_URL}/${lang}/quarterlies/index.json`);
+  if (!quarterlyIndex) return null;
 
   console.log(`[SabbathSchool] Syncing quarter ${quarterCodeToSync} (${lang})...`);
 
   const activeQuarterCode = quarterCodeToSync;
-
-  const rawInfo = infoYml.replace(/^---\s*\n/, "");
-  const info = YAML.parse(rawInfo);
+  const quarterItems = extractCollection(quarterlyIndex, ["quarterlies", "items", "data"]);
+  const quarterInfo = quarterItems.find((item) => getQuarterCodeFromItem(item) === activeQuarterCode) || null;
+  const quarterTitle = pickString(quarterInfo, ["title", "name"]) || activeQuarterCode;
+  const quarterDescription = pickString(quarterInfo, ["description", "intro", "subtitle"]);
+  const quarterHumanDate = pickString(quarterInfo, ["human_date", "humanDate", "date"]);
+  const quarterStartDate = pickString(quarterInfo, ["start_date", "startDate"]);
+  const quarterEndDate = pickString(quarterInfo, ["end_date", "endDate"]);
+  const quarterColorPrimary = pickString(quarterInfo, ["color_primary", "colorPrimary", "color"]);
+  const quarterCoverUrl =
+    pickString(quarterInfo, ["cover", "cover_url", "coverUrl", "image"]) ||
+    `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/cover.png`;
 
   const existing = await db
     .select()
@@ -100,12 +288,13 @@ async function syncQuarter(
     await db
       .update(sabbathSchoolQuarterlies)
       .set({
-        title: info.title || activeQuarterCode,
-        description: info.description || null,
-        humanDate: info.human_date || null,
-        startDate: info.start_date || null,
-        endDate: info.end_date || null,
-        colorPrimary: info.color_primary || null,
+        title: quarterTitle,
+        description: quarterDescription,
+        humanDate: quarterHumanDate,
+        startDate: quarterStartDate,
+        endDate: quarterEndDate,
+        colorPrimary: quarterColorPrimary,
+        coverUrl: quarterCoverUrl,
         curriculumType,
         lastSyncedAt: new Date(),
       })
@@ -117,13 +306,13 @@ async function syncQuarter(
         quarterCode: activeQuarterCode,
         language: lang,
         curriculumType,
-        title: info.title || activeQuarterCode,
-        description: info.description || null,
-        humanDate: info.human_date || null,
-        startDate: info.start_date || null,
-        endDate: info.end_date || null,
-        colorPrimary: info.color_primary || null,
-        coverUrl: `${BASE_URL}/${lang}/${activeQuarterCode}/cover.png`,
+        title: quarterTitle,
+        description: quarterDescription,
+        humanDate: quarterHumanDate,
+        startDate: quarterStartDate,
+        endDate: quarterEndDate,
+        colorPrimary: quarterColorPrimary,
+        coverUrl: quarterCoverUrl,
         lastSyncedAt: new Date(),
       })
       .returning();
@@ -131,16 +320,18 @@ async function syncQuarter(
   }
 
   const updatedLessonIds: string[] = [];
+  const lessonsIndex = await fetchJson(
+    `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/index.json`
+  );
+  const lessonItems = extractCollection(lessonsIndex, ["lessons", "items", "data"]);
 
-  for (let lessonNum = 1; lessonNum <= 13; lessonNum++) {
-    const lessonDir = String(lessonNum).padStart(2, "0");
-    const lessonInfoYml = await fetchText(
-      `${BASE_URL}/${lang}/${activeQuarterCode}/${lessonDir}/info.yml`
-    );
-    if (!lessonInfoYml) continue;
-
-    const rawLessonInfo = lessonInfoYml.replace(/^---\s*\n/, "");
-    const lessonInfo = YAML.parse(rawLessonInfo);
+  for (let i = 0; i < lessonItems.length; i++) {
+    const lessonItem = lessonItems[i];
+    const lessonNum = getLessonNumberFromItem(lessonItem, i);
+    const lessonCode = getLessonCodeFromItem(lessonItem) || String(lessonNum).padStart(2, "0");
+    const lessonTitle = pickString(lessonItem, ["title", "name"]) || `Lesson ${lessonNum}`;
+    const lessonStartDate = pickString(lessonItem, ["start_date", "startDate"]);
+    const lessonEndDate = pickString(lessonItem, ["end_date", "endDate"]);
 
     const existingLesson = await db
       .select()
@@ -160,9 +351,9 @@ async function syncQuarter(
       await db
         .update(sabbathSchoolLessons)
         .set({
-          title: lessonInfo.title || `Lesson ${lessonNum}`,
-          startDate: lessonInfo.start_date || null,
-          endDate: lessonInfo.end_date || null,
+          title: lessonTitle,
+          startDate: lessonStartDate,
+          endDate: lessonEndDate,
         })
         .where(eq(sabbathSchoolLessons.id, lessonId));
       updatedLessonIds.push(lessonId);
@@ -172,35 +363,33 @@ async function syncQuarter(
         .values({
           quarterlyId,
           lessonNumber: lessonNum,
-          title: lessonInfo.title || `Lesson ${lessonNum}`,
-          startDate: lessonInfo.start_date || null,
-          endDate: lessonInfo.end_date || null,
+          title: lessonTitle,
+          startDate: lessonStartDate,
+          endDate: lessonEndDate,
         })
         .returning();
       lessonId = insertedLesson.id;
       updatedLessonIds.push(lessonId);
     }
 
-    for (let dayNum = 1; dayNum <= 7; dayNum++) {
-      const dayFile = String(dayNum).padStart(2, "0");
-      const dayMd = await fetchText(
-        `${BASE_URL}/${lang}/${activeQuarterCode}/${lessonDir}/${dayFile}.md`
+    const extractedDayCodes = extractDayCodes(lessonItem);
+    const dayCodes =
+      extractedDayCodes.length > 0
+        ? extractedDayCodes
+        : Array.from({ length: 7 }, (_, idx) => String(idx + 1).padStart(2, "0"));
+
+    for (const dayCode of dayCodes) {
+      const dayNum = parseInt(dayCode, 10);
+      if (Number.isNaN(dayNum)) continue;
+      const dayPayload = await fetchJson(
+        `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/${lessonCode}/days/${dayCode}/read/index.json`
       );
-      if (!dayMd) continue;
+      if (!dayPayload) continue;
 
-      const frontmatterMatch = dayMd.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-      let dayTitle: string | null = null;
-      let dayDate: string | null = null;
-      let contentBody = dayMd;
-
-      if (frontmatterMatch) {
-        try {
-          const fm = YAML.parse(frontmatterMatch[1]);
-          dayTitle = fm.title || null;
-          dayDate = fm.date || null;
-        } catch {}
-        contentBody = frontmatterMatch[2];
-      }
+      const dayObj = asObject(dayPayload);
+      const dayTitle = pickString(dayObj, ["title", "name", "dayTitle"]);
+      const dayDate = pickString(dayObj, ["date", "fullDate", "dayDate"]);
+      const contentBody = getDayContentMarkdown(dayPayload);
 
       const existingDay = await db
         .select()
@@ -238,6 +427,17 @@ async function syncQuarter(
     }
   }
 
+  try {
+    await syncQuarterlyAudio(activeQuarterCode, lang);
+  } catch (err) {
+    console.error(`[SabbathSchool] Audio sync failed for ${activeQuarterCode}:`, err);
+  }
+  try {
+    await syncQuarterlyVideos(activeQuarterCode, lang);
+  } catch (err) {
+    console.error(`[SabbathSchool] Video sync failed for ${activeQuarterCode}:`, err);
+  }
+
   if (updatedLessonIds.length > 0) {
     await invalidateDiscussionCache(updatedLessonIds);
   }
@@ -251,6 +451,158 @@ async function syncQuarter(
   }
 
   return quarterlyId;
+}
+
+type VideoClipPayload = {
+  title: string | null;
+  src: string;
+  thumbnail: string | null;
+  duration: string | null;
+  target: string | null;
+  dayNumber: number | null;
+};
+
+type VideoArtistPayload = {
+  artist: string;
+  clips: VideoClipPayload[];
+};
+
+export async function syncQuarterlyAudio(quarterCode: string, lang: string = "en"): Promise<void> {
+  const audioPayload = await fetchJson(
+    `${BASE_URL}/${lang}/quarterlies/${quarterCode}/audio.json`
+  );
+  if (!audioPayload) return;
+
+  const [quarterly] = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
+    .limit(1);
+  if (!quarterly) return;
+
+  const lessons = await db
+    .select()
+    .from(sabbathSchoolLessons)
+    .where(eq(sabbathSchoolLessons.quarterlyId, quarterly.id));
+  if (lessons.length === 0) return;
+
+  const lessonIds = lessons.map((lesson) => lesson.id);
+  const lessonByNumber = new Map<number, string>(
+    lessons.map((lesson) => [lesson.lessonNumber, lesson.id])
+  );
+
+  const days = await db
+    .select()
+    .from(sabbathSchoolDays)
+    .where(inArray(sabbathSchoolDays.lessonId, lessonIds));
+  const dayByLessonAndNumber = new Map<string, string>();
+  for (const day of days) {
+    dayByLessonAndNumber.set(`${day.lessonId}:${day.dayNumber}`, day.id);
+  }
+
+  await db
+    .update(sabbathSchoolDays)
+    .set({ audioUrl: null })
+    .where(inArray(sabbathSchoolDays.lessonId, lessonIds));
+
+  const mediaEntries = collectObjectsDeep(audioPayload);
+  const updates = new Map<string, string>();
+
+  for (const entry of mediaEntries) {
+    const audioUrl = getMediaUrl(entry, ["mp3", "audio", "audioUrl", "src", "url", "href", "file", "path"]);
+    if (!audioUrl || !audioUrl.toLowerCase().includes(".mp3")) continue;
+
+    const lessonNumber = getLessonNumberFromMediaEntry(entry);
+    const dayNumber = getDayNumberFromMediaEntry(entry);
+    if (lessonNumber === null || dayNumber === null) continue;
+
+    const lessonId = lessonByNumber.get(lessonNumber);
+    if (!lessonId) continue;
+    const dayId = dayByLessonAndNumber.get(`${lessonId}:${dayNumber}`);
+    if (!dayId) continue;
+    updates.set(dayId, audioUrl);
+  }
+
+  for (const [dayId, audioUrl] of updates.entries()) {
+    await db
+      .update(sabbathSchoolDays)
+      .set({ audioUrl })
+      .where(eq(sabbathSchoolDays.id, dayId));
+  }
+}
+
+export async function syncQuarterlyVideos(quarterCode: string, lang: string = "en"): Promise<void> {
+  const videoPayload = await fetchJson(
+    `${BASE_URL}/${lang}/quarterlies/${quarterCode}/video.json`
+  );
+  if (!videoPayload) return;
+
+  const [quarterly] = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
+    .limit(1);
+  if (!quarterly) return;
+
+  const lessons = await db
+    .select()
+    .from(sabbathSchoolLessons)
+    .where(eq(sabbathSchoolLessons.quarterlyId, quarterly.id));
+  if (lessons.length === 0) return;
+
+  const lessonByNumber = new Map<number, { id: string }>(
+    lessons.map((lesson) => [lesson.lessonNumber, { id: lesson.id }])
+  );
+
+  await db
+    .update(sabbathSchoolLessons)
+    .set({ videoByArtist: null })
+    .where(eq(sabbathSchoolLessons.quarterlyId, quarterly.id));
+
+  const mediaEntries = collectObjectsDeep(videoPayload);
+  const lessonGroups = new Map<string, Map<string, VideoClipPayload[]>>();
+
+  for (const entry of mediaEntries) {
+    const videoUrl = getMediaUrl(entry, ["video", "videoUrl", "src", "url", "href", "file", "path"]);
+    if (!videoUrl) continue;
+    if (!/(youtube|youtu\.be|vimeo|\.mp4|\.m3u8)/i.test(videoUrl)) continue;
+
+    const lessonNumber = getLessonNumberFromMediaEntry(entry);
+    if (lessonNumber === null) continue;
+    const lesson = lessonByNumber.get(lessonNumber);
+    if (!lesson) continue;
+
+    const artist = pickString(entry, ["artist", "speaker", "presenter", "author", "name"]) || "Unknown";
+    const clip: VideoClipPayload = {
+      title: pickString(entry, ["title", "name", "description"]),
+      src: videoUrl,
+      thumbnail: getMediaUrl(entry, ["thumbnail", "thumbnailUrl", "thumb", "image"]),
+      duration: pickString(entry, ["duration", "length"]),
+      target: pickString(entry, ["target", "reference", "id"]),
+      dayNumber: getDayNumberFromMediaEntry(entry),
+    };
+
+    if (!lessonGroups.has(lesson.id)) {
+      lessonGroups.set(lesson.id, new Map<string, VideoClipPayload[]>());
+    }
+    const byArtist = lessonGroups.get(lesson.id)!;
+    if (!byArtist.has(artist)) {
+      byArtist.set(artist, []);
+    }
+    byArtist.get(artist)!.push(clip);
+  }
+
+  for (const [lessonId, artistMap] of lessonGroups.entries()) {
+    const payload: VideoArtistPayload[] = Array.from(artistMap.entries()).map(([artist, clips]) => ({
+      artist,
+      clips,
+    }));
+
+    await db
+      .update(sabbathSchoolLessons)
+      .set({ videoByArtist: payload })
+      .where(eq(sabbathSchoolLessons.id, lessonId));
+  }
 }
 
 export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {

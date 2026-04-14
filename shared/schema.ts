@@ -1715,6 +1715,7 @@ export const sabbathSchoolLessons = pgTable("sabbath_school_lesson", {
   title: text("title").notNull(),
   startDate: varchar("start_date", { length: 16 }),
   endDate: varchar("end_date", { length: 16 }),
+  videoByArtist: jsonb("video_by_artist"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1729,6 +1730,7 @@ export const sabbathSchoolDays = pgTable("sabbath_school_day", {
   title: text("title"),
   date: varchar("date", { length: 16 }),
   contentMarkdown: text("content_markdown"),
+  audioUrl: text("audio_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
