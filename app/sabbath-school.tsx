@@ -175,85 +175,93 @@ export default function SabbathSchoolScreen() {
           {lessonVideoClips.length > 0 && (
             <View style={styles.videoSection}>
               <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
-              {activeVideo && (
-                <View
-                  style={[
-                    styles.inlinePlayerCard,
-                    { backgroundColor: theme.backgroundCard, borderColor: theme.border },
-                  ]}
-                >
-                  <Video
-                    ref={videoRef}
-                    key={activeVideo.src}
-                    source={{ uri: activeVideo.src }}
-                    style={styles.inlineVideo}
-                    resizeMode={ResizeMode.CONTAIN}
-                    shouldPlay
-                    useNativeControls
-                  />
-                  <View style={styles.inlinePlayerMeta}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.videoModalTitle} numberOfLines={2}>
-                        {activeVideo.title}
-                      </Text>
-                      <Text style={styles.videoModalArtist} numberOfLines={1}>
-                        {activeVideo.artist}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={closeVideoModal}
-                      style={({ pressed }) => [
-                        styles.inlinePlayerCloseBtn,
-                        { opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <Ionicons name="close-circle" size={24} color={theme.textMuted} />
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.videoRow}
+              <View
+                style={[
+                  styles.videoLayerStack,
+                  activeVideo ? styles.videoLayerStackExpanded : null,
+                ]}
               >
-                {lessonVideoClips.map((clip, index) => {
-                  const isActive = activeVideo?.src === clip.src;
-                  return (
-                    <Pressable
-                      key={`${clip.src}-${index}`}
-                      onPress={() => {
-                        if (!canInlinePlay(clip.src)) {
-                          Linking.openURL(clip.src).catch(() => {});
-                          return;
-                        }
-                        if (isActive) {
-                          closeVideoModal();
-                          return;
-                        }
-                        setActiveVideo({
-                          src: clip.src,
-                          title: clip.title || "Lesson Clip",
-                          artist: clip.artist,
-                        });
-                      }}
-                      style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
-                    >
-                      {clip.thumbnail ? (
-                        <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
-                      )}
-                      <Text style={styles.videoTitle} numberOfLines={2}>
-                        {clip.title || "Lesson Clip"}
-                      </Text>
-                      <Text style={styles.videoArtist} numberOfLines={1}>
-                        {clip.artist}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.videoRow}
+                >
+                  {lessonVideoClips.map((clip, index) => {
+                    const isActive = activeVideo?.src === clip.src;
+                    return (
+                      <Pressable
+                        key={`${clip.src}-${index}`}
+                        onPress={() => {
+                          if (!canInlinePlay(clip.src)) {
+                            Linking.openURL(clip.src).catch(() => {});
+                            return;
+                          }
+                          if (isActive) {
+                            closeVideoModal();
+                            return;
+                          }
+                          setActiveVideo({
+                            src: clip.src,
+                            title: clip.title || "Lesson Clip",
+                            artist: clip.artist,
+                          });
+                        }}
+                        style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
+                      >
+                        {clip.thumbnail ? (
+                          <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
+                        ) : (
+                          <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
+                        )}
+                        <Text style={styles.videoTitle} numberOfLines={2}>
+                          {clip.title || "Lesson Clip"}
+                        </Text>
+                        <Text style={styles.videoArtist} numberOfLines={1}>
+                          {clip.artist}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                {activeVideo && (
+                  <View
+                    style={[
+                      styles.inlinePlayerCard,
+                      styles.inlinePlayerOverlay,
+                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                    ]}
+                  >
+                    <Video
+                      ref={videoRef}
+                      key={activeVideo.src}
+                      source={{ uri: activeVideo.src }}
+                      style={styles.inlineVideo}
+                      resizeMode={ResizeMode.CONTAIN}
+                      shouldPlay
+                      useNativeControls
+                    />
+                    <View style={styles.inlinePlayerMeta}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.videoModalTitle} numberOfLines={2}>
+                          {activeVideo.title}
+                        </Text>
+                        <Text style={styles.videoModalArtist} numberOfLines={1}>
+                          {activeVideo.artist}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={closeVideoModal}
+                        style={({ pressed }) => [
+                          styles.inlinePlayerCloseBtn,
+                          { opacity: pressed ? 0.7 : 1 },
+                        ]}
+                      >
+                        <Ionicons name="close-circle" size={24} color={theme.textMuted} />
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
           )}
 
@@ -680,10 +688,23 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingRight: 8,
   },
+  videoLayerStack: {
+    position: "relative",
+  },
+  videoLayerStackExpanded: {
+    minHeight: 300,
+  },
   inlinePlayerCard: {
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
+  },
+  inlinePlayerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
   inlineVideo: {
     width: "100%",
