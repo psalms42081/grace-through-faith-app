@@ -170,6 +170,48 @@ export default function SabbathSchoolScreen() {
             )}
           </View>
 
+          {lessonVideoClips.length > 0 && (
+            <View style={styles.videoSection}>
+              <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.videoRow}
+              >
+                {lessonVideoClips.map((clip, index) => {
+                  const isActive = activeVideo?.src === clip.src;
+                  return (
+                    <Pressable
+                      key={`${clip.src}-${index}`}
+                      onPress={() =>
+                        isActive
+                          ? closeVideoModal()
+                          : setActiveVideo({
+                              src: clip.src,
+                              title: clip.title || "Lesson Clip",
+                              artist: clip.artist,
+                            })
+                      }
+                      style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
+                    >
+                      {clip.thumbnail ? (
+                        <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
+                      )}
+                      <Text style={styles.videoTitle} numberOfLines={2}>
+                        {clip.title || "Lesson Clip"}
+                      </Text>
+                      <Text style={styles.videoArtist} numberOfLines={1}>
+                        {clip.artist}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.lessonHeader}>
             <View style={styles.lessonBadge}>
               <Text style={[styles.lessonBadgeText, { color: theme.accent }]}>
@@ -317,57 +359,6 @@ export default function SabbathSchoolScreen() {
                 A practical companion for deeper weekly study
               </Text>
             </Pressable>
-          )}
-
-          {lessonVideoClips.length > 0 && (
-            <View style={styles.videoSection}>
-              <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.videoRow}
-              >
-                {lessonVideoClips.map((clip, index) => {
-                  const isActive = activeVideo?.src === clip.src;
-                  return (
-                    <Pressable
-                      key={`${clip.src}-${index}`}
-                      onPress={() =>
-                        isActive
-                          ? closeVideoModal()
-                          : setActiveVideo({
-                              src: clip.src,
-                              title: clip.title || "Lesson Clip",
-                              artist: clip.artist,
-                            })
-                      }
-                      style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
-                    >
-                      {isActive ? (
-                        <Video
-                          ref={videoRef}
-                          source={{ uri: clip.src }}
-                          style={styles.videoThumb}
-                          resizeMode={ResizeMode.CONTAIN}
-                          shouldPlay
-                          useNativeControls
-                        />
-                      ) : clip.thumbnail ? (
-                        <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
-                      )}
-                      <Text style={styles.videoTitle} numberOfLines={isActive ? 1 : 2}>
-                        {clip.title || "Lesson Clip"}
-                      </Text>
-                      <Text style={styles.videoArtist} numberOfLines={1}>
-                        {clip.artist}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
           )}
 
           <Pressable
