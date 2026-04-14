@@ -8,8 +8,9 @@ import {
   ActivityIndicator,
   Platform,
   Image,
-  Linking,
+  Modal,
 } from "react-native";
+import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,6 +73,18 @@ export default function SabbathSchoolScreen() {
   const { t } = useTranslation();
   const { tryAutoGuide } = useEllenWhite();
   const [showArchive, setShowArchive] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<{src: string, title: string, artist: string} | null>(null);
+  const videoRef = React.useRef<Video | null>(null);
+
+  const closeVideoModal = async () => {
+    try {
+      if (videoRef.current) {
+        await videoRef.current.stopAsync();
+        await videoRef.current.unloadAsync();
+      }
+    } catch {}
+    setActiveVideo(null);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -318,9 +331,13 @@ export default function SabbathSchoolScreen() {
                 {lessonVideoClips.map((clip, index) => (
                   <Pressable
                     key={`${clip.src}-${index}`}
-                    onPress={() => {
-                      Linking.openURL(clip.src).catch(() => {});
-                    }}
+                    onPress={() =>
+                      setActiveVideo({
+                        src: clip.src,
+                        title: clip.title || "Lesson Clip",
+                        artist: clip.artist,
+                      })
+                    }
                     style={({ pressed }) => [
                       styles.videoCard,
                       { opacity: pressed ? 0.8 : 1 },
@@ -436,6 +453,33 @@ export default function SabbathSchoolScreen() {
           <SDAVerifiedBadge />
         </ScrollView>
       )}
+      <Modal
+        visible={!!activeVideo}
+        transparent
+        animationType="slide"
+        onRequestClose={closeVideoModal}
+      >
+        <Pressable style={styles.videoModalBackdrop} onPress={closeVideoModal} />
+        {activeVideo && (
+          <View style={styles.videoModalSheet}>
+            <Pressable style={styles.videoModalClose} onPress={closeVideoModal} hitSlop={8}>
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </Pressable>
+
+            <Video
+              ref={videoRef}
+              source={{ uri: activeVideo.src }}
+              style={styles.videoModalPlayer}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              useNativeControls
+            />
+
+            <Text style={styles.videoModalTitle}>{activeVideo.title}</Text>
+            <Text style={styles.videoModalArtist}>{activeVideo.artist}</Text>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -640,6 +684,39 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: "rgba(255,255,255,0.6)",
+  },
+  videoModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.95)",
+  },
+  videoModalSheet: {
+    marginTop: "auto",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: "#0B0B0E",
+    padding: 16,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  videoModalClose: {
+    alignSelf: "flex-end",
+  },
+  videoModalPlayer: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 10,
+    backgroundColor: "#000",
+  },
+  videoModalTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 16,
+    color: "#FFFFFF",
+    lineHeight: 22,
+  },
+  videoModalArtist: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#C9933A",
   },
   discussionBtn: {
     flexDirection: "row",
