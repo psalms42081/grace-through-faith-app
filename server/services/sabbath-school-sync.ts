@@ -717,6 +717,15 @@ export async function getCurrentLessonNumber(quarterlyId: string): Promise<numbe
 }
 
 export async function shouldSync(): Promise<boolean> {
+  const dayMissingAudio = await db
+    .select({ id: sabbathSchoolDays.id })
+    .from(sabbathSchoolDays)
+    .where(sql`${sabbathSchoolDays.audioUrl} IS NULL`)
+    .limit(1);
+  if (dayMissingAudio.length > 0) {
+    return true;
+  }
+
   const quarterCode = getCurrentQuarterCode();
 
   const currentQ = await db
