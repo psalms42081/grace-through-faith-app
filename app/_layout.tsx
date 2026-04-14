@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, asyncStoragePersister } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
@@ -183,6 +184,7 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
     Lora_400Regular,
     Lora_500Medium,
     Lora_600SemiBold,
