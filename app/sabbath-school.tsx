@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Platform,
   Image,
-  Modal,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
@@ -163,6 +162,28 @@ export default function SabbathSchoolScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
+          {activeVideo && (
+            <View style={styles.inlineVideoContainer}>
+              <Video
+                ref={videoRef}
+                source={{ uri: activeVideo.src }}
+                style={styles.inlineVideoPlayer}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                useNativeControls
+              />
+              <View style={styles.inlineVideoMeta}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.videoModalTitle}>{activeVideo.title}</Text>
+                  <Text style={styles.videoModalArtist}>{activeVideo.artist}</Text>
+                </View>
+                <Pressable onPress={closeVideoModal} hitSlop={8}>
+                  <Ionicons name="close-circle" size={28} color="rgba(255,255,255,0.7)" />
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           <View style={[styles.quarterlyCard, { backgroundColor: quarterly.colorPrimary || "#2E4161" }]}>
             <Text style={styles.quarterlyLabel}>{t("sabbathSchool.currentQuarter")}</Text>
             <Text style={styles.quarterlyTitle}>{quarterly.title}</Text>
@@ -453,33 +474,6 @@ export default function SabbathSchoolScreen() {
           <SDAVerifiedBadge />
         </ScrollView>
       )}
-      <Modal
-        visible={!!activeVideo}
-        transparent
-        animationType="slide"
-        onRequestClose={closeVideoModal}
-      >
-        <Pressable style={styles.videoModalBackdrop} onPress={closeVideoModal} />
-        {activeVideo && (
-          <View style={styles.videoModalSheet}>
-            <Pressable style={styles.videoModalClose} onPress={closeVideoModal} hitSlop={8}>
-              <Ionicons name="close" size={24} color="#FFFFFF" />
-            </Pressable>
-
-            <Video
-              ref={videoRef}
-              source={{ uri: activeVideo.src }}
-              style={styles.videoModalPlayer}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              useNativeControls
-            />
-
-            <Text style={styles.videoModalTitle}>{activeVideo.title}</Text>
-            <Text style={styles.videoModalArtist}>{activeVideo.artist}</Text>
-          </View>
-        )}
-      </Modal>
     </View>
   );
 }
@@ -685,27 +679,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.6)",
   },
-  videoModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.95)",
+  inlineVideoContainer: {
+    width: "100%",
+    backgroundColor: "#000",
+    borderRadius: 10,
+    overflow: "hidden",
+    marginBottom: 12,
   },
-  videoModalSheet: {
-    marginTop: "auto",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: "#0B0B0E",
-    padding: 16,
-    paddingBottom: 24,
-    gap: 10,
-  },
-  videoModalClose: {
-    alignSelf: "flex-end",
-  },
-  videoModalPlayer: {
+  inlineVideoPlayer: {
     width: "100%",
     aspectRatio: 16 / 9,
-    borderRadius: 10,
-    backgroundColor: "#000",
+  },
+  inlineVideoMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    gap: 8,
+    backgroundColor: "#0B0B0E",
   },
   videoModalTitle: {
     fontFamily: "Lora_600SemiBold",
