@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  Linking,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { router } from "expo-router";
@@ -74,6 +75,7 @@ export default function SabbathSchoolScreen() {
   const [showArchive, setShowArchive] = useState(false);
   const [activeVideo, setActiveVideo] = useState<{src: string, title: string, artist: string} | null>(null);
   const videoRef = React.useRef<Video | null>(null);
+  const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
 
   const closeVideoModal = async () => {
     try {
@@ -183,15 +185,21 @@ export default function SabbathSchoolScreen() {
                   return (
                     <Pressable
                       key={`${clip.src}-${index}`}
-                      onPress={() =>
-                        isActive
-                          ? closeVideoModal()
-                          : setActiveVideo({
-                              src: clip.src,
-                              title: clip.title || "Lesson Clip",
-                              artist: clip.artist,
-                            })
-                      }
+                      onPress={() => {
+                        if (!canInlinePlay(clip.src)) {
+                          Linking.openURL(clip.src).catch(() => {});
+                          return;
+                        }
+                        if (isActive) {
+                          closeVideoModal();
+                          return;
+                        }
+                        setActiveVideo({
+                          src: clip.src,
+                          title: clip.title || "Lesson Clip",
+                          artist: clip.artist,
+                        });
+                      }}
                       style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
                     >
                       {clip.thumbnail ? (
@@ -209,6 +217,43 @@ export default function SabbathSchoolScreen() {
                   );
                 })}
               </ScrollView>
+              {activeVideo && (
+                <View
+                  style={[
+                    styles.inlinePlayerCard,
+                    { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                  ]}
+                >
+                  <Video
+                    ref={videoRef}
+                    key={activeVideo.src}
+                    source={{ uri: activeVideo.src }}
+                    style={styles.inlineVideo}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay
+                    useNativeControls
+                  />
+                  <View style={styles.inlinePlayerMeta}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.videoModalTitle} numberOfLines={2}>
+                        {activeVideo.title}
+                      </Text>
+                      <Text style={styles.videoModalArtist} numberOfLines={1}>
+                        {activeVideo.artist}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={closeVideoModal}
+                      style={({ pressed }) => [
+                        styles.inlinePlayerCloseBtn,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Ionicons name="close-circle" size={24} color={theme.textMuted} />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
           )}
 
@@ -634,6 +679,27 @@ const styles = StyleSheet.create({
   videoRow: {
     gap: 10,
     paddingRight: 8,
+  },
+  inlinePlayerCard: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  inlineVideo: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#000",
+  },
+  inlinePlayerMeta: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  inlinePlayerCloseBtn: {
+    padding: 2,
   },
   videoCard: {
     width: 200,
