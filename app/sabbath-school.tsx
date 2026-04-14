@@ -162,28 +162,6 @@ export default function SabbathSchoolScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          {activeVideo && (
-            <View style={styles.inlineVideoContainer}>
-              <Video
-                ref={videoRef}
-                source={{ uri: activeVideo.src }}
-                style={styles.inlineVideoPlayer}
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-                useNativeControls
-              />
-              <View style={styles.inlineVideoMeta}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.videoModalTitle}>{activeVideo.title}</Text>
-                  <Text style={styles.videoModalArtist}>{activeVideo.artist}</Text>
-                </View>
-                <Pressable onPress={closeVideoModal} hitSlop={8}>
-                  <Ionicons name="close-circle" size={28} color="rgba(255,255,255,0.7)" />
-                </Pressable>
-              </View>
-            </View>
-          )}
-
           <View style={[styles.quarterlyCard, { backgroundColor: quarterly.colorPrimary || "#2E4161" }]}>
             <Text style={styles.quarterlyLabel}>{t("sabbathSchool.currentQuarter")}</Text>
             <Text style={styles.quarterlyTitle}>{quarterly.title}</Text>
@@ -349,38 +327,45 @@ export default function SabbathSchoolScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.videoRow}
               >
-                {lessonVideoClips.map((clip, index) => (
-                  <Pressable
-                    key={`${clip.src}-${index}`}
-                    onPress={() =>
-                      setActiveVideo({
-                        src: clip.src,
-                        title: clip.title || "Lesson Clip",
-                        artist: clip.artist,
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.videoCard,
-                      { opacity: pressed ? 0.8 : 1 },
-                    ]}
-                  >
-                    {clip.thumbnail ? (
-                      <Image
-                        source={{ uri: clip.thumbnail }}
-                        style={styles.videoThumb}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
-                    )}
-                    <Text style={styles.videoTitle} numberOfLines={2}>
-                      {clip.title || "Lesson Clip"}
-                    </Text>
-                    <Text style={styles.videoArtist} numberOfLines={1}>
-                      {clip.artist}
-                    </Text>
-                  </Pressable>
-                ))}
+                {lessonVideoClips.map((clip, index) => {
+                  const isActive = activeVideo?.src === clip.src;
+                  return (
+                    <Pressable
+                      key={`${clip.src}-${index}`}
+                      onPress={() =>
+                        isActive
+                          ? closeVideoModal()
+                          : setActiveVideo({
+                              src: clip.src,
+                              title: clip.title || "Lesson Clip",
+                              artist: clip.artist,
+                            })
+                      }
+                      style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
+                    >
+                      {isActive ? (
+                        <Video
+                          ref={videoRef}
+                          source={{ uri: clip.src }}
+                          style={styles.videoThumb}
+                          resizeMode={ResizeMode.CONTAIN}
+                          shouldPlay
+                          useNativeControls
+                        />
+                      ) : clip.thumbnail ? (
+                        <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
+                      )}
+                      <Text style={styles.videoTitle} numberOfLines={isActive ? 1 : 2}>
+                        {clip.title || "Lesson Clip"}
+                      </Text>
+                      <Text style={styles.videoArtist} numberOfLines={1}>
+                        {clip.artist}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </ScrollView>
             </View>
           )}
@@ -678,24 +663,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: "rgba(255,255,255,0.6)",
-  },
-  inlineVideoContainer: {
-    width: "100%",
-    backgroundColor: "#000",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginBottom: 12,
-  },
-  inlineVideoPlayer: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-  },
-  inlineVideoMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    gap: 8,
-    backgroundColor: "#0B0B0E",
   },
   videoModalTitle: {
     fontFamily: "Lora_600SemiBold",
