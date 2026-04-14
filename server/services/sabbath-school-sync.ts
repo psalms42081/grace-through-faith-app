@@ -221,6 +221,14 @@ function getLessonNumberFromMediaEntry(entry: JsonObject): number | null {
 
   const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
   if (!probe) return null;
+  const adventechVideoMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})$/);
+  if (adventechVideoMatch) {
+    return parseInt(adventechVideoMatch[1], 10);
+  }
+  const indexVideoMatch = probe.match(/^[a-z]{2,3}-\d{4}-\d{2}[^-]*-(\d{1,2})$/);
+  if (indexVideoMatch) {
+    return parseInt(indexVideoMatch[1], 10);
+  }
   // Parse Adventech target format: "en/2026-02/01/03"
   const adventechMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})\/(\d{1,2})$/);
   if (adventechMatch) {
