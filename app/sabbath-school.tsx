@@ -281,7 +281,6 @@ export default function SabbathSchoolScreen() {
             )}
           </View>
 
-          <StudyDepthSelector compact />
 
           <View style={styles.progressSection}>
             <View style={styles.progressBar}>
