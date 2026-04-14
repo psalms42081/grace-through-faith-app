@@ -184,7 +184,6 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
     Lora_400Regular,
     Lora_500Medium,
     Lora_600SemiBold,
