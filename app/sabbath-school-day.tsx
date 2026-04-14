@@ -222,6 +222,16 @@ function formatInlineText(text: string, theme: any): React.ReactNode[] {
   return parts;
 }
 
+function sanitizeContent(content: string): string {
+  console.log("[sanitize] input snippet:", content.slice(0, 200));
+  const result = content
+    .replace(/<\/?code\b[^>]*>/gi, "")
+    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1")
+    .replace(/<\/?[^>]+>/g, "");
+  console.log("[sanitize] output snippet:", result.slice(0, 200));
+  return result;
+}
+
 export default function SabbathSchoolDayScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -437,7 +447,7 @@ export default function SabbathSchoolDayScreen() {
           )}
 
           {day.contentMarkdown && (
-            <MarkdownRenderer content={day.contentMarkdown} theme={theme} />
+            <MarkdownRenderer content={sanitizeContent(day.contentMarkdown)} theme={theme} />
           )}
 
           <View style={[styles.sourceAttribution, { borderTopColor: theme.border }]}>
