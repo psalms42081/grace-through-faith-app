@@ -221,6 +221,16 @@ function getLessonNumberFromMediaEntry(entry: JsonObject): number | null {
 
   const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
   if (!probe) return null;
+  // Parse Adventech target format: "en/2026-02/01/03"
+  const adventechMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})\/(\d{1,2})$/);
+  if (adventechMatch) {
+    return parseInt(adventechMatch[1], 10);
+  }
+  // Fallback: parse targetIndex-like format "en-2026-02-01-03"
+  const indexMatch = probe.match(/[a-z]{2,3}-\d{4}-\d{2}[^-]*-(\d{1,2})-(\d{1,2})$/);
+  if (indexMatch) {
+    return parseInt(indexMatch[1], 10);
+  }
   const slashMatch = probe.match(/lessons\/(\d{1,2})/i);
   if (slashMatch) return parseInt(slashMatch[1], 10);
   const wordMatch = probe.match(/lesson[^\d]{0,3}(\d{1,2})/i);
@@ -234,6 +244,16 @@ function getDayNumberFromMediaEntry(entry: JsonObject): number | null {
 
   const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
   if (!probe) return null;
+  // Parse Adventech target format: "en/2026-02/01/03"
+  const adventechMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})\/(\d{1,2})$/);
+  if (adventechMatch) {
+    return parseInt(adventechMatch[2], 10);
+  }
+  // Fallback: parse targetIndex-like format "en-2026-02-01-03"
+  const indexMatch = probe.match(/[a-z]{2,3}-\d{4}-\d{2}[^-]*-(\d{1,2})-(\d{1,2})$/);
+  if (indexMatch) {
+    return parseInt(indexMatch[2], 10);
+  }
   const slashMatch = probe.match(/days\/(\d{1,2})/i);
   if (slashMatch) return parseInt(slashMatch[1], 10);
   const wordMatch = probe.match(/day[^\d]{0,3}(\d{1,2})/i);
