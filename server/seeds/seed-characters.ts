@@ -116,6 +116,33 @@ const INITIAL_CHARACTERS = [
     voiceId: ELEVENLABS_VOICES.sarah_warm,
     aliases: ["mary mother", "mother mary", "virgin mary", "the virgin"],
   },
+  {
+    name: "Sarah",
+    slug: "sarah-presenter",
+    characterType: "presenter",
+    gender: "female",
+    description: "Young woman presenter/host character with dark wavy hair and cross necklace",
+    voiceId: ELEVENLABS_VOICES.sarah_warm,
+    aliases: ["sarah", "sarah presenter"],
+    localAssets: [
+      "attached_assets/Video_Editing_Project_In_a_clean_studio_portrait_style_a_young_1776150727021.png",
+      "attached_assets/Video_Editing_Project_A_young_woman_with_dark_wavy_hair_stands_1776150727022.png",
+    ],
+  },
+  {
+    name: "Rachel",
+    slug: "rachel-presenter",
+    characterType: "presenter",
+    gender: "female",
+    description: "Young Black woman presenter/host character with curly hair",
+    voiceId: ELEVENLABS_VOICES.lauren,
+    aliases: ["rachel", "rachel presenter"],
+    localAssets: [
+      "attached_assets/Video_Editing_Project_In_a_photographic_portrait_style_a_perso_1776150727021.png",
+      "attached_assets/Video_Editing_Project_A_young_Black_woman_stands_centered_agai_1776150727022.png",
+      "attached_assets/Video_Editing_Project_In_a_natural_light_portrait_photography__1776150727022.png",
+    ],
+  },
 ];
 
 export async function seedCharacters() {
