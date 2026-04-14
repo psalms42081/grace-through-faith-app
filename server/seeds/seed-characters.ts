@@ -122,7 +122,7 @@ const INITIAL_CHARACTERS = [
     characterType: "presenter",
     gender: "female",
     description: "Young woman presenter/host character with dark wavy hair and cross necklace",
-    voiceId: ELEVENLABS_VOICES.sarah_warm,
+    voiceId: "tzWbJkiOdmIRHTvWzqUi",
     aliases: ["sarah", "sarah presenter"],
     localAssets: [
       "attached_assets/Video_Editing_Project_In_a_clean_studio_portrait_style_a_young_1776150727021.png",
@@ -135,7 +135,7 @@ const INITIAL_CHARACTERS = [
     characterType: "presenter",
     gender: "female",
     description: "Young Black woman presenter/host character with curly hair",
-    voiceId: ELEVENLABS_VOICES.lauren,
+    voiceId: "9it9e7YrudC3YYtEwZq8",
     aliases: ["rachel", "rachel presenter"],
     localAssets: [
       "attached_assets/Video_Editing_Project_In_a_photographic_portrait_style_a_perso_1776150727021.png",
