@@ -138,8 +138,8 @@ const INITIAL_CHARACTERS = [
     voiceId: "9it9e7YrudC3YYtEwZq8",
     aliases: ["rachel", "rachel presenter"],
     localAssets: [
-      "attached_assets/Video_Editing_Project_In_a_photographic_portrait_style_a_perso_1776150727021.png",
       "attached_assets/Video_Editing_Project_A_young_Black_woman_stands_centered_agai_1776150727022.png",
+      "attached_assets/Video_Editing_Project_In_a_photographic_portrait_style_a_perso_1776150727021.png",
       "attached_assets/Video_Editing_Project_In_a_natural_light_portrait_photography__1776150727022.png",
     ],
   },

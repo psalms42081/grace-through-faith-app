@@ -64,11 +64,13 @@ export async function generateLifeApplicationVideo(
       return;
     }
 
-    // Build script from reflection prompts
-    const script = reflectionPrompts
+    const intro = `Hey! Let's talk about this week's lesson — "${lessonTitle}." Here are some things to really think about.`;
+    const prompts = reflectionPrompts
       .slice(0, 3)
-      .join(" ... ")
-      .substring(0, 500);
+      .map((p, i) => `Number ${i + 1}. ${p.trim()}`)
+      .join("\n\n");
+    const outro = `Those are some powerful questions, right? Take a moment this week to really sit with them. I'll see you next time!`;
+    const script = `${intro}\n\n${prompts}\n\n${outro}`.substring(0, 800);
 
     if (!script.trim()) {
       console.warn("[life-app-video] Empty script, skipping");
@@ -76,8 +78,8 @@ export async function generateLifeApplicationVideo(
     }
 
     console.log(`[life-app-video] Generating for lesson: ${lessonTitle}`);
+    console.log(`[life-app-video] Script (${script.length} chars): ${script.substring(0, 120)}...`);
 
-    // Step 1: Generate audio via ElevenLabs
     const audioRes = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${rachel.voiceId}?output_format=mp3_44100_128`,
       {
@@ -90,10 +92,10 @@ export async function generateLifeApplicationVideo(
           text: script,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.85,
-            similarity_boost: 0.75,
-            style: 0.10,
-            use_speaker_boost: false,
+            stability: 0.45,
+            similarity_boost: 0.80,
+            style: 0.55,
+            use_speaker_boost: true,
           },
         }),
       }
