@@ -279,14 +279,6 @@ export default function WordStudyScreen() {
 
         {hasData && (
           <>
-            <Text
-              style={[
-                styles.sectionLabel,
-                { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" },
-              ]}
-            >
-              Original Language Words
-            </Text>
             <Modal
               visible={!!selectedWord}
               transparent
