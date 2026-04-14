@@ -403,6 +403,24 @@ router.post(
         })
         .onConflictDoNothing();
 
+      // Fire video generation in background — non-blocking
+      const [inserted] = await db
+        .select({ id: sabbathSchoolDiscussionPrep.id })
+        .from(sabbathSchoolDiscussionPrep)
+        .where(eq(sabbathSchoolDiscussionPrep.lessonId, lessonId))
+        .limit(1);
+
+      if (inserted?.id) {
+        import("../services/lifeApplicationVideoService")
+          .then(({ generateLifeApplicationVideo }) => {
+            generateLifeApplicationVideo(
+              inserted.id,
+              result.reflectionPrompts,
+              lesson[0].title
+            ).catch(console.error);
+          });
+      }
+
       return res.json({
         ...result,
         cached: false,

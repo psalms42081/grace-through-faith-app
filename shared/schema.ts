@@ -1757,6 +1757,7 @@ export const sabbathSchoolDiscussionPrep = pgTable("sabbath_school_discussion_pr
   keyQuestions: jsonb("key_questions").notNull(),
   aiSummary: text("ai_summary").notNull(),
   reflectionPrompts: jsonb("reflection_prompts").notNull(),
+  lifeApplicationVideoUrl: text("life_application_video_url"),
   depth: varchar("depth", { length: 16 }).default("standard").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
