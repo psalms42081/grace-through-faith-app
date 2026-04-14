@@ -1642,7 +1642,8 @@ function AdultHomeScreen() {
         </>
       ) : (
         <>
-          <AnimatedSection index={0}>
+          <AnimatedSection index={0}><SabbathSchoolCard /></AnimatedSection>
+          <AnimatedSection index={1}>
             <TodaysPath
               theme={theme}
               isDark={isDark}
@@ -1650,7 +1651,6 @@ function AdultHomeScreen() {
               dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
-          <AnimatedSection index={1}><SabbathSchoolCard /></AnimatedSection>
           <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard
