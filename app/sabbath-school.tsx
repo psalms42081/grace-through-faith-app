@@ -175,6 +175,43 @@ export default function SabbathSchoolScreen() {
           {lessonVideoClips.length > 0 && (
             <View style={styles.videoSection}>
               <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
+              {activeVideo && (
+                <View
+                  style={[
+                    styles.inlinePlayerCard,
+                    { backgroundColor: theme.backgroundCard, borderColor: theme.border },
+                  ]}
+                >
+                  <Video
+                    ref={videoRef}
+                    key={activeVideo.src}
+                    source={{ uri: activeVideo.src }}
+                    style={styles.inlineVideo}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay
+                    useNativeControls
+                  />
+                  <View style={styles.inlinePlayerMeta}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.videoModalTitle} numberOfLines={2}>
+                        {activeVideo.title}
+                      </Text>
+                      <Text style={styles.videoModalArtist} numberOfLines={1}>
+                        {activeVideo.artist}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={closeVideoModal}
+                      style={({ pressed }) => [
+                        styles.inlinePlayerCloseBtn,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Ionicons name="close-circle" size={24} color={theme.textMuted} />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -202,22 +239,12 @@ export default function SabbathSchoolScreen() {
                       }}
                       style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
                     >
-                      {isActive ? (
-                        <Video
-                          ref={videoRef}
-                          key={activeVideo?.src}
-                          source={{ uri: clip.src }}
-                          style={styles.videoThumb}
-                          resizeMode={ResizeMode.CONTAIN}
-                          shouldPlay
-                          useNativeControls
-                        />
-                      ) : clip.thumbnail ? (
+                      {clip.thumbnail ? (
                         <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
                       ) : (
                         <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
                       )}
-                      <Text style={styles.videoTitle} numberOfLines={isActive ? 1 : 2}>
+                      <Text style={styles.videoTitle} numberOfLines={2}>
                         {clip.title || "Lesson Clip"}
                       </Text>
                       <Text style={styles.videoArtist} numberOfLines={1}>
@@ -653,6 +680,26 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingRight: 8,
   },
+  inlinePlayerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  inlineVideo: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#000",
+  },
+  inlinePlayerMeta: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  inlinePlayerCloseBtn: {
+    padding: 2,
+  },
   videoCard: {
     width: 200,
     gap: 6,
@@ -672,6 +719,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: "rgba(255,255,255,0.6)",
+  },
+  videoModalTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 16,
+    color: "#FFFFFF",
+    lineHeight: 22,
+  },
+  videoModalArtist: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#C9933A",
   },
   discussionBtn: {
     flexDirection: "row",
