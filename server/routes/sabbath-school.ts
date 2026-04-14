@@ -358,6 +358,17 @@ router.post(
         .limit(1);
 
       if (cached.length > 0) {
+        // Fire video generation if not yet done
+        if (!cached[0].lifeApplicationVideoUrl) {
+          import("../services/lifeApplicationVideoService")
+            .then(({ generateLifeApplicationVideo }) => {
+              generateLifeApplicationVideo(
+                cached[0].id,
+                cached[0].reflectionPrompts as string[],
+                "Lesson"
+              ).catch(console.error);
+            });
+        }
         return res.json({
           keyQuestions: cached[0].keyQuestions,
           aiSummary: cached[0].aiSummary,
