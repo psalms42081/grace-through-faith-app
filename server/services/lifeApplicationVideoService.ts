@@ -90,11 +90,11 @@ export async function generateLifeApplicationVideo(
         },
         body: JSON.stringify({
           text: script,
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_turbo_v2_5",
           voice_settings: {
-            stability: 0.45,
-            similarity_boost: 0.80,
-            style: 0.55,
+            stability: 0.70,
+            similarity_boost: 0.85,
+            style: 0.15,
             use_speaker_boost: true,
           },
         }),
