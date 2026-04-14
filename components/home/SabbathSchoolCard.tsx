@@ -7,16 +7,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 
 type SabbathSchoolCurrentResponse = {
+  quarterly: {
+    coverUrl: string | null;
+    title: string;
+  } | null;
   currentLesson: {
     title: string;
     lessonNumber: number;
     days?: Array<{
       id: string;
       dayNumber: number;
+      title: string | null;
       completed: boolean;
     }>;
   } | null;
   completedDays: number;
+  todayDayNumber: number | null;
 };
 
 const CARD_BG_IMAGE = require("@/assets/home-cards/sabbath-school.png");
@@ -43,6 +49,13 @@ export default function SabbathSchoolCard() {
   const totalDays = lesson.days?.length || 7;
   const completedDays = Math.min(data.completedDays || 0, totalDays);
   const progressPct = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
+  const todayDay = lesson.days?.find(
+    (d) => d.dayNumber === data.todayDayNumber
+  );
+  const todayLabel = todayDay?.title
+    ? `Day ${todayDay.dayNumber} · ${todayDay.title}`
+    : `${completedDays} of ${totalDays} days completed`;
+  const coverUri = data.quarterly?.coverUrl || null;
 
   return (
     <Pressable
@@ -53,7 +66,11 @@ export default function SabbathSchoolCard() {
       <View style={styles.leftAccent} />
 
       <View style={styles.contentWrap}>
-        <ImageBackground source={CARD_BG_IMAGE} style={styles.bgImage} resizeMode="cover">
+        <ImageBackground
+          source={coverUri ? { uri: coverUri } : CARD_BG_IMAGE}
+          style={styles.bgImage}
+          resizeMode="cover"
+        >
           <View style={styles.bgOverlay} />
           <View style={styles.content}>
             <View style={styles.topRow}>
@@ -75,7 +92,7 @@ export default function SabbathSchoolCard() {
             </Text>
 
             <Text style={[styles.progressText, { color: theme.textMuted }]} numberOfLines={1}>
-              {`Lesson ${lesson.lessonNumber} · ${completedDays} of ${totalDays} days completed`}
+              {`Lesson ${lesson.lessonNumber} · ${todayLabel}`}
             </Text>
 
             <View style={styles.progressBar}>
