@@ -197,10 +197,12 @@ export default function RootLayout() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [i18nReady, setI18nReady] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
+  AsyncStorage.setItem("@grace-through-faith/preferredLanguage", "en").then(() => {
     initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
-    initAnalytics();
-  }, []);
+  });
+  initAnalytics();
+}, []);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
