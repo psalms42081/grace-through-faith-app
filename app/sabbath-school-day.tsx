@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { Audio } from "expo-av";
 
 interface DayData {
   id: string;
@@ -24,6 +25,7 @@ interface DayData {
   title: string | null;
   date: string | null;
   contentMarkdown: string | null;
+  audioUrl?: string | null;
   completed: boolean;
   journalEntry: string | null;
 }
@@ -252,6 +254,65 @@ export default function SabbathSchoolDayScreen() {
   const [journalText, setJournalText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
   const [showCompletionState, setShowCompletionState] = useState(false);
+  const [audioSound, setAudioSound] = useState<Audio.Sound | null>(null);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (audioSound) {
+        audioSound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [audioSound]);
+
+  React.useEffect(() => {
+    if (!audioSound) return;
+    audioSound.unloadAsync().catch(() => {});
+    setAudioSound(null);
+    setIsAudioPlaying(false);
+    setIsAudioLoading(false);
+  }, [day?.id]);
+
+  const toggleAudioPlayback = async () => {
+    if (!day?.audioUrl) return;
+
+    try {
+      if (audioSound) {
+        const status = await audioSound.getStatusAsync();
+        if (status.isLoaded && status.isPlaying) {
+          await audioSound.pauseAsync();
+          setIsAudioPlaying(false);
+        } else if (status.isLoaded) {
+          await audioSound.playAsync();
+          setIsAudioPlaying(true);
+        }
+        return;
+      }
+
+      setIsAudioLoading(true);
+      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: day.audioUrl },
+        { shouldPlay: true },
+        (status) => {
+          if (!status.isLoaded) return;
+          setIsAudioPlaying(status.isPlaying ?? false);
+          if (status.didJustFinish) {
+            setIsAudioPlaying(false);
+          }
+        }
+      );
+
+      setAudioSound(sound);
+      setIsAudioPlaying(true);
+    } catch {
+      setIsAudioPlaying(false);
+    } finally {
+      setIsAudioLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     if (day) {
@@ -354,6 +415,25 @@ export default function SabbathSchoolDayScreen() {
             <Text style={[styles.dayMainTitle, { color: theme.text }]}>
               {day.title}
             </Text>
+          )}
+
+          {day.audioUrl && (
+            <View style={styles.audioRow}>
+              <Pressable
+                onPress={toggleAudioPlayback}
+                disabled={isAudioLoading}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name={isAudioPlaying ? "pause-circle-outline" : "play-circle-outline"}
+                  size={32}
+                  color="#C9933A"
+                />
+              </Pressable>
+              <Text style={styles.audioLabel}>
+                {isAudioLoading ? "Loading audio..." : "Listen to Today's Lesson"}
+              </Text>
+            </View>
           )}
 
           {day.contentMarkdown && (
@@ -552,6 +632,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 30,
     marginBottom: 8,
+  },
+  audioRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  audioLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.72)",
   },
   mdContainer: { gap: 4 },
   mdH1: { fontFamily: "Lora_700Bold", fontSize: 22, lineHeight: 30, marginTop: 16 },

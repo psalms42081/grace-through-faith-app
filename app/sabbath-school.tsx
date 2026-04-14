@@ -7,6 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  Image,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +42,7 @@ interface LessonData {
   startDate: string | null;
   endDate: string | null;
   days: DayData[];
+  videoByArtist?: Array<{artist: string, clips: Array<{src: string, title: string, thumbnail: string, target: string}>}> | null;
 }
 
 interface CompanionData {
@@ -109,6 +112,15 @@ export default function SabbathSchoolScreen() {
   const completedCount = data?.completedDays || 0;
   const todayDayNumber = data?.todayDayNumber || null;
   const companion = data?.companion || null;
+  const lessonVideoClips = (lesson?.videoByArtist ?? [])
+    .flatMap((group) =>
+      (group?.clips ?? []).map((clip) => ({
+        ...clip,
+        artist: group.artist,
+      }))
+    )
+    .filter((clip) => !!clip.src)
+    .slice(0, 5);
 
   const pastQuarters = (archiveData?.quarters || []).filter(
     (q) => quarterly && q.id !== quarterly.id
@@ -293,6 +305,46 @@ export default function SabbathSchoolScreen() {
                 A practical companion for deeper weekly study
               </Text>
             </Pressable>
+          )}
+
+          {lessonVideoClips.length > 0 && (
+            <View style={styles.videoSection}>
+              <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.videoRow}
+              >
+                {lessonVideoClips.map((clip, index) => (
+                  <Pressable
+                    key={`${clip.src}-${index}`}
+                    onPress={() => {
+                      Linking.openURL(clip.src).catch(() => {});
+                    }}
+                    style={({ pressed }) => [
+                      styles.videoCard,
+                      { opacity: pressed ? 0.8 : 1 },
+                    ]}
+                  >
+                    {clip.thumbnail ? (
+                      <Image
+                        source={{ uri: clip.thumbnail }}
+                        style={styles.videoThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
+                    )}
+                    <Text style={styles.videoTitle} numberOfLines={2}>
+                      {clip.title || "Lesson Clip"}
+                    </Text>
+                    <Text style={styles.videoArtist} numberOfLines={1}>
+                      {clip.artist}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
           )}
 
           <Pressable
@@ -555,6 +607,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginLeft: 48,
+  },
+  videoSection: {
+    gap: 10,
+    marginTop: 4,
+  },
+  videoSectionTitle: {
+    fontFamily: "Lora_600SemiBold",
+    fontSize: 16,
+    color: "#C9933A",
+  },
+  videoRow: {
+    gap: 10,
+    paddingRight: 8,
+  },
+  videoCard: {
+    width: 200,
+    gap: 6,
+  },
+  videoThumb: {
+    width: 200,
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+  },
+  videoTitle: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: "#FFFFFF",
+    lineHeight: 17,
+  },
+  videoArtist: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.6)",
   },
   discussionBtn: {
     flexDirection: "row",
