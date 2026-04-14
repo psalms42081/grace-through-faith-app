@@ -63,8 +63,6 @@ export default function SabbathSchoolCard() {
       style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}
       testID="home-sabbath-school-card"
     >
-      <View style={styles.leftAccent} />
-
       <View style={styles.contentWrap}>
         <ImageBackground
           source={coverUri ? { uri: coverUri } : CARD_BG_IMAGE}
@@ -98,6 +96,12 @@ export default function SabbathSchoolCard() {
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
             </View>
+            <Pressable
+              style={styles.ctaButton}
+              onPress={() => router.push("/sabbath-school" as any)}
+            >
+              <Text style={styles.ctaText}>Open Today's Lesson →</Text>
+            </Pressable>
           </View>
         </ImageBackground>
       </View>
@@ -107,13 +111,9 @@ export default function SabbathSchoolCard() {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 20,
     overflow: "hidden",
-    minHeight: 136,
+    minHeight: 220,
     marginBottom: 16,
   },
   skeletonCard: {
@@ -124,11 +124,6 @@ const styles = StyleSheet.create({
     minHeight: 136,
     marginBottom: 16,
   },
-  leftAccent: {
-    width: 3,
-    backgroundColor: "#C9933A",
-    borderRadius: 2,
-  },
   contentWrap: {
     flex: 1,
   },
@@ -137,13 +132,14 @@ const styles = StyleSheet.create({
   },
   bgOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 10,
+    justifyContent: "flex-end",
   },
   topRow: {
     flexDirection: "row",
@@ -166,8 +162,8 @@ const styles = StyleSheet.create({
   title: {
     color: "#FFFFFF",
     fontFamily: "Lora_700Bold",
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 26,
+    lineHeight: 32,
   },
   progressText: {
     fontFamily: "Inter_400Regular",
@@ -184,6 +180,19 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 3,
     backgroundColor: "#C9933A",
+  },
+  ctaButton: {
+    backgroundColor: "#C9933A",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  ctaText: {
+    color: "#050507",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
   },
   badge: {
     flexDirection: "row",
