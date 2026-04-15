@@ -132,9 +132,9 @@ export async function getBookCover(bookId: number, size: "small" | "medium" | "l
 // My Life Today = 821, Morning Watch = 137,
 // With God at Dawn = 822, Reflecting Christ = 823
 const EGW_DEVOTIONAL_BOOKS = [
-  { id: 821, title: "My Life Today" },
-  { id: 137, title: "Morning Watch" },
-  { id: 822, title: "With God at Dawn" },
+  { id: 108, title: "Steps to Christ" },
+  { id: 130, title: "The Desire of Ages" },
+  { id: 15, title: "Christ's Object Lessons" },
 ];
 
 export async function getEgwDailyDevotion(
@@ -159,23 +159,25 @@ export async function getEgwDailyDevotion(
 
     // Fetch table of contents for the book
     const toc = await egwFetch(`/content/books/${book.id}/toc`, { lang });
-    if (!toc?.children?.length) return null;
+    if (!Array.isArray(toc) || !toc.length) return null;
 
     // Pick chapter based on day of month
     const dayOfMonth = now.getDate() - 1;
-    const chapters = toc.children;
+    const chapters = toc.filter((c: any) => c.level === 1);
     const chapter = chapters[dayOfMonth % chapters.length];
     if (!chapter) return null;
 
     // Fetch chapter content
     const content = await egwFetch(
-      `/content/books/${book.id}/chapter/${chapter.id}`,
+      `/content/books/${book.id}/chapter/${chapter.para_id}`,
       { lang }
     );
     if (!content) return null;
 
-    // Strip HTML tags from content
-    const text = (content.content || "")
+    const rawText = Array.isArray(content)
+      ? content.filter((p: any) => p.element_type === "p").map((p: any) => p.content || "").join(" ")
+      : (content.content || "");
+    const text = rawText
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
