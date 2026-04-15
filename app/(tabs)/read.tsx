@@ -15,8 +15,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "@/context/TranslationContext";
-import FeatureTutorial from "@/components/FeatureTutorial";
-import { BIBLE_READER_STEPS } from "@/lib/tutorial-steps";
 
 interface BibleBook {
   id: number;
@@ -58,7 +56,6 @@ export default function ReadScreen() {
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
-      <FeatureTutorial tutorialId="bible-reader" steps={BIBLE_READER_STEPS} />
       <View
         style={[
           styles.stickyHeader,
