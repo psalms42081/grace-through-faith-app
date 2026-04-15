@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireRole } from "../middleware/auth";
 import {
   isEgwConfigured,
   getBooks,
@@ -140,6 +141,33 @@ router.get("/devotional/today", async (req, res) => {
   } catch (err) {
     console.error("[egw] Devotional endpoint error:", err);
     return res.status(500).json({ error: "Failed to fetch devotional" });
+  }
+});
+
+let seedRunning = false;
+
+router.post("/seed-excerpts", requireRole("admin"), async (req, res) => {
+  if (!isEgwConfigured()) {
+    return res.status(503).json({ error: "EGW API credentials not configured" });
+  }
+  if (seedRunning) {
+    return res.status(409).json({ error: "Seed already in progress" });
+  }
+  try {
+    seedRunning = true;
+    const { seedEgwExcerpts } = await import("../seed-egw-excerpts");
+    res.json({ status: "started" });
+    seedEgwExcerpts().then(result => {
+      console.log("[EGW] Seed complete:", result);
+    }).catch(err => {
+      console.error("[EGW] Seed failed:", err);
+    }).finally(() => {
+      seedRunning = false;
+    });
+  } catch (error: any) {
+    seedRunning = false;
+    console.error("[EGW] Seed error:", error.message);
+    res.status(500).json({ error: "Failed to start seeding" });
   }
 });
 

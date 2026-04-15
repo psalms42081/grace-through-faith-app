@@ -110,8 +110,8 @@ export async function searchWritings(query: string, lang = "en"): Promise<EgwSea
   const results = data.results || data.items || [];
   return results.map((r: any) => ({
     refcode: r.refcode_short || r.refcode || "",
-    text: r.content || r.text || "",
-    bookTitle: r.book_title || r.title || "",
+    text: r.snippet || r.content || r.text || "",
+    bookTitle: r.pub_name || r.book_title || r.title || "",
     paraId: r.para_id || "",
   }));
 }

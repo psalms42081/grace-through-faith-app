@@ -29,6 +29,13 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 - **Key files:** `server/seeds/seed-demo.ts`, `server/routes/demo.ts`, `server/routes/analytics.ts` (getDemoScope + sqlArray helper)
 - **Admin panel tab:** DemoDataTab in `app/admin-review.tsx` — seed/clear buttons with status indicator
 
+### Recent Fixes (v10.1)
+- **EGW Search API Fix:** `searchWritings` now maps `snippet` and `pub_name` fields correctly from the EGW API — searches return actual prose quotes instead of empty text
+- **EGW Devotional Excerpts Seeded:** 140 devotional days now have `historicVoiceExcerpt` populated from real EGW books (Steps to Christ, Desire of Ages, Patriarchs & Prophets, etc.) via `server/seed-egw-excerpts.ts`. Concordance/dictionary entries filtered out
+- **YouTube Route Registered:** `server/routes/youtube.ts` was an orphaned route file never registered in `server/routes.ts` — now registered and returning SDA speaker videos
+- **Sabbath Window Log Spam Fixed:** Console log that fired every 60s now only logs when Sabbath is active and in dev mode
+- **EGW Seed Admin Worker:** Added `egw_excerpts` to admin workers list for re-running EGW excerpt seeding via `/api/admin/workers/run`
+
 ### Known Issues
 - Port conflicts occasionally occur on workflow restart
 

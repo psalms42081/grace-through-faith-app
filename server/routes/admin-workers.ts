@@ -3,10 +3,11 @@ import { requireRole } from "../middleware/auth";
 import { runAnalyticsRollup } from "../workers/analyticsRollupWorker";
 import { runHeatmapTiles } from "../workers/heatmapTileWorker";
 import { runActivityPattern } from "../workers/activityPatternWorker";
+import { seedEgwExcerpts } from "../seed-egw-excerpts";
 
 const router = Router();
 
-const VALID_WORKERS = ["analytics_rollup", "heatmap_tiles", "activity_pattern"] as const;
+const VALID_WORKERS = ["analytics_rollup", "heatmap_tiles", "activity_pattern", "egw_excerpts"] as const;
 
 router.post(
   "/run",
@@ -27,6 +28,10 @@ router.post(
         await runAnalyticsRollup();
       } else if (worker_name === "heatmap_tiles") {
         await runHeatmapTiles();
+      } else if (worker_name === "egw_excerpts") {
+        const result = await seedEgwExcerpts();
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        return res.json({ success: true, worker: worker_name, elapsed_sec: parseFloat(elapsed), ...result });
       } else {
         await runActivityPattern();
       }

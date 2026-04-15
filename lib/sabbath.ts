@@ -301,7 +301,9 @@ export function useSabbath(enabled: boolean = true): SabbathState {
 
     function update() {
       const window = getSabbathWindow(location!.lat, location!.lng);
-      console.log(`[Sabbath] Window: start=${window.start.toISOString()}, end=${window.end.toISOString()}, active=${window.isActive}, closing=${window.closingReflectionActive}`);
+      if (__DEV__ && window.isActive) {
+        console.log(`[Sabbath] Window active: start=${window.start.toISOString()}, end=${window.end.toISOString()}`);
+      }
       setSabbathInfo({
         isSabbath: window.isActive,
         closingReflectionActive: window.closingReflectionActive,
