@@ -32,6 +32,15 @@ interface VotdHeroCardProps {
   verseId?: string;
   bookId?: number;
   chapterNumber?: number;
+  signpost?: {
+    title: string;
+    excerpt: string;
+    id?: string;
+  } | null;
+  reflection?: {
+    thought: string;
+    source: string;
+  } | null;
 }
 
 function showAuthGate() {
@@ -48,9 +57,11 @@ function showAuthGate() {
 export default function VotdHeroCard({
   verse, bgImage, bookImage, onPress,
   userId, verseId, bookId, chapterNumber,
+  signpost, reflection,
 }: VotdHeroCardProps) {
   const imageSource = bookImage || (bgImage ? { uri: bgImage } : undefined);
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<"verse" | "signpost" | "reflection">("verse");
   const [showReflect, setShowReflect] = useState(false);
   const [reflectText, setReflectText] = useState("");
   const [reflectSaved, setReflectSaved] = useState(false);
@@ -143,33 +154,115 @@ export default function VotdHeroCard({
             locations={[0, 0.5, 1]}
             style={s.overlay}
           >
-            <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
-            <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
-            <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-              {verse.text}
-            </Text>
-            <View style={s.engagementRow}>
-              <Pressable onPress={handleLike} style={s.engageItem}>
-                <Ionicons
-                  name={saved ? "heart" : "heart-outline"}
-                  size={18}
-                  color={saved ? GOLD : "rgba(255,255,255,0.8)"}
-                />
-                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Like</Text>
+            {/* Tab Switcher */}
+            <View style={s.tabRow}>
+              <Pressable
+                onPress={() => setActiveTab("verse")}
+                style={[s.tab, activeTab === "verse" && s.tabActive]}
+              >
+                <Ionicons name="book-outline" size={12} color={activeTab === "verse" ? "#050507" : "rgba(255,255,255,0.7)"} />
+                <Text style={[s.tabText, { fontFamily: "Inter_600SemiBold" }, activeTab === "verse" && s.tabTextActive]}>
+                  VERSE
+                </Text>
               </Pressable>
-              <Pressable onPress={handleReflect} style={s.engageItem}>
-                <Ionicons name="chatbubble-outline" size={18} color="rgba(255,255,255,0.8)" />
-                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Reflect</Text>
+              <Pressable
+                onPress={() => setActiveTab("signpost")}
+                style={[s.tab, activeTab === "signpost" && s.tabActive]}
+              >
+                <Ionicons name="compass-outline" size={12} color={activeTab === "signpost" ? "#050507" : "rgba(255,255,255,0.7)"} />
+                <Text style={[s.tabText, { fontFamily: "Inter_600SemiBold" }, activeTab === "signpost" && s.tabTextActive]}>
+                  SIGNPOST
+                </Text>
               </Pressable>
-              <Pressable onPress={handleShare} style={s.engageItem}>
-                <Ionicons name="share-outline" size={18} color="rgba(255,255,255,0.8)" />
-                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Share</Text>
-              </Pressable>
-              <Pressable onPress={handleMore} style={s.engageItem}>
-                <Ionicons name="ellipsis-horizontal" size={18} color="rgba(255,255,255,0.8)" />
-                <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>More</Text>
+              <Pressable
+                onPress={() => setActiveTab("reflection")}
+                style={[s.tab, activeTab === "reflection" && s.tabActive]}
+              >
+                <Ionicons name="sunny-outline" size={12} color={activeTab === "reflection" ? "#050507" : "rgba(255,255,255,0.7)"} />
+                <Text style={[s.tabText, { fontFamily: "Inter_600SemiBold" }, activeTab === "reflection" && s.tabTextActive]}>
+                  REFLECTION
+                </Text>
               </Pressable>
             </View>
+
+            {/* VERSE TAB */}
+            {activeTab === "verse" && (
+              <>
+                <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
+                <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
+                <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                  {verse.text}
+                </Text>
+                <View style={s.engagementRow}>
+                  <Pressable onPress={handleLike} style={s.engageItem}>
+                    <Ionicons name={saved ? "heart" : "heart-outline"} size={18} color={saved ? GOLD : "rgba(255,255,255,0.8)"} />
+                    <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Like</Text>
+                  </Pressable>
+                  <Pressable onPress={handleReflect} style={s.engageItem}>
+                    <Ionicons name="chatbubble-outline" size={18} color="rgba(255,255,255,0.8)" />
+                    <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Reflect</Text>
+                  </Pressable>
+                  <Pressable onPress={handleShare} style={s.engageItem}>
+                    <Ionicons name="share-outline" size={18} color="rgba(255,255,255,0.8)" />
+                    <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>Share</Text>
+                  </Pressable>
+                  <Pressable onPress={handleMore} style={s.engageItem}>
+                    <Ionicons name="ellipsis-horizontal" size={18} color="rgba(255,255,255,0.8)" />
+                    <Text style={[s.engageLabel, { fontFamily: "Inter_400Regular" }]}>More</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            {/* SIGNPOST TAB */}
+            {activeTab === "signpost" && signpost && (
+              <>
+                <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>SIGNPOST OF THE DAY</Text>
+                <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{signpost.title}</Text>
+                <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                  {signpost.excerpt}
+                </Text>
+                <Pressable
+                  onPress={() => signpost.id && router.push(`/touchpoints/${signpost.id}` as any)}
+                  style={s.ctaButton}
+                >
+                  <Text style={[s.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Explore Topic →</Text>
+                </Pressable>
+              </>
+            )}
+            {activeTab === "signpost" && !signpost && (
+              <>
+                <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>SIGNPOST OF THE DAY</Text>
+                <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                  What does the Bible say about life's toughest questions?
+                </Text>
+                <Pressable
+                  onPress={() => router.push("/touchpoints" as any)}
+                  style={s.ctaButton}
+                >
+                  <Text style={[s.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Explore Signposts →</Text>
+                </Pressable>
+              </>
+            )}
+
+            {/* REFLECTION TAB */}
+            {activeTab === "reflection" && reflection && (
+              <>
+                <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>DAILY REFLECTION</Text>
+                <Text numberOfLines={5} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                  "{reflection.thought}"
+                </Text>
+                <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{reflection.source}</Text>
+              </>
+            )}
+            {activeTab === "reflection" && !reflection && (
+              <>
+                <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>DAILY REFLECTION</Text>
+                <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                  Take a moment to be still and know that He is God.
+                </Text>
+              </>
+            )}
           </LinearGradient>
         </ImageBackground>
       </Pressable>
@@ -347,5 +440,46 @@ const s = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     textAlign: "center",
+  },
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  tab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  tabActive: {
+    backgroundColor: "#C9933A",
+    borderColor: "#C9933A",
+  },
+  tabText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  tabTextActive: {
+    color: "#050507",
+  },
+  ctaButton: {
+    backgroundColor: "rgba(201,147,58,0.2)",
+    borderWidth: 1,
+    borderColor: "#C9933A",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignSelf: "flex-start",
+    marginTop: 8,
+  },
+  ctaText: {
+    color: "#C9933A",
+    fontSize: 13,
   },
 });

@@ -1407,6 +1407,21 @@ function AdultHomeScreen() {
     );
     return { bookId: book?.id, chapterNumber: chapter };
   }, [verse.reference, homeBooks]);
+  const { data: dailySignpost } = useQuery<{
+    id: string;
+    title: string;
+    description: string;
+  }>({
+    queryKey: ["/api/signposts/daily"],
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
+  const todayReflection = useMemo(() => {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+    );
+    return DAILY_REFLECTIONS[dayOfYear % DAILY_REFLECTIONS.length];
+  }, []);
 
   const { data: todayData } = useQuery<TodayResponse>({
     queryKey: [`/api/devotionals/today?userId=${userId}`],
@@ -1565,7 +1580,20 @@ function AdultHomeScreen() {
       />
 
       <View style={{ marginHorizontal: -20 }}>
-        <VotdHeroCard verse={verse} bgImage={bgImage} bookImage={verseBookImage} userId={userId} bookId={votdParsed.bookId} chapterNumber={votdParsed.chapterNumber} />
+        <VotdHeroCard
+          verse={verse}
+          bgImage={bgImage}
+          bookImage={verseBookImage}
+          userId={userId}
+          bookId={votdParsed.bookId}
+          chapterNumber={votdParsed.chapterNumber}
+          signpost={dailySignpost ? {
+            id: dailySignpost.id,
+            title: dailySignpost.title,
+            excerpt: dailySignpost.description,
+          } : null}
+          reflection={todayReflection ?? null}
+        />
       </View>
 
       {isSabbathMode ? (

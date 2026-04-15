@@ -9,6 +9,26 @@ import { getErrorStatusCode } from "../services/ai-semaphore";
 
 const router = Router();
 
+router.get("/api/signposts/daily", (req, res) => {
+  try {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+    );
+    const topic = TOUCHPOINTS_DATA[dayOfYear % TOUCHPOINTS_DATA.length];
+    if (!topic) {
+      return res.status(404).json({ error: "No signpost available" });
+    }
+    return res.json({
+      id: topic.id,
+      title: topic.title,
+      description: topic.overview,
+    });
+  } catch (err) {
+    console.error("[signposts/daily]", err);
+    return res.status(500).json({ error: "Failed to fetch daily signpost" });
+  }
+});
+
 router.get("/api/touchpoints", (req, res) => {
   const { search } = req.query;
   const topics = search
