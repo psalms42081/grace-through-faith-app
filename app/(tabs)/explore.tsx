@@ -44,24 +44,6 @@ const CATEGORIES = [
     icon: "calendar" as const,
   },
   {
-    id: "learning-paths",
-    title: "Learning Paths",
-    subtitle: "Study Paths, Devotional Plans",
-    icon: "trail-sign" as const,
-  },
-  {
-    id: "study-tools",
-    title: "Study Tools",
-    subtitle: "Historic Voices, Bible Maps, Timeline",
-    icon: "compass" as const,
-  },
-  {
-    id: "adventist-studies",
-    title: "Essentials",
-    subtitle: "Core Adventist beliefs and distinctive doctrines",
-    icon: "school" as const,
-  },
-  {
     id: "prophecy-end-times",
     title: "Prophecy & End Times",
     subtitle: "Daniel, Revelation & the Great Controversy",
@@ -72,6 +54,18 @@ const CATEGORIES = [
     title: "Spiritual Themes",
     subtitle: "Love, Faith, Prayer, Peace, Hope & more",
     icon: "heart" as const,
+  },
+  {
+    id: "adventist-studies",
+    title: "New Believers",
+    subtitle: "Core Adventist beliefs — start your journey here",
+    icon: "school" as const,
+  },
+  {
+    id: "study-tools",
+    title: "Study Tools",
+    subtitle: "Historic Voices, Bible Maps, Timeline",
+    icon: "compass" as const,
   },
 ];
 
@@ -213,6 +207,8 @@ export default function StudyScreen() {
                   ? "Start here"
                   : cat.id === "prophecy-end-times"
                   ? "SDA Distinctive"
+                  : cat.id === "adventist-studies"
+                  ? "New to faith?"
                   : undefined
               }
               onPress={() =>
@@ -222,14 +218,6 @@ export default function StudyScreen() {
               }
             />
           ))}
-        </View>
-
-        <View style={st.dividerRow}>
-          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
-          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
-          <View style={[st.dividerDotCenter, { backgroundColor: "rgba(201,147,58,0.75)" }]} />
-          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
-          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
         </View>
 
         <View style={st.infoGroup}>
@@ -260,34 +248,14 @@ export default function StudyScreen() {
               </View>
             </LinearGradient>
           </Pressable>
+        </View>
 
-          <Pressable
-            onPress={() => router.push("/biblical-sabbaths" as any)}
-            testID="biblical-sabbaths-card"
-            style={({ pressed }) => [
-              st.infoCard,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <Image source={SABBATH_IMAGE} style={st.infoBg} resizeMode="cover" />
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.30)", "rgba(0,0,0,0.70)"]}
-              locations={[0, 0.35, 1]}
-              style={st.infoOverlay}
-            >
-              <View style={st.infoContent}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[st.infoTitle, { fontFamily: "Inter_600SemiBold" }]}>
-                    The Biblical Sabbaths
-                  </Text>
-                  <Text style={[st.infoSub, { fontFamily: "Inter_400Regular" }]}>
-                    Weekly, Annual, Sabbatical & Jubilee — God's rhythm of rest
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
-              </View>
-            </LinearGradient>
-          </Pressable>
+        <View style={st.dividerRow}>
+          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
+          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
+          <View style={[st.dividerDotCenter, { backgroundColor: "rgba(201,147,58,0.75)" }]} />
+          <View style={[st.dividerDot, { backgroundColor: "rgba(201,147,58,0.5)" }]} />
+          <View style={[st.dividerLine, { backgroundColor: "rgba(201,147,58,0.35)" }]} />
         </View>
 
         <EnrolledTracksPreview theme={theme} />
