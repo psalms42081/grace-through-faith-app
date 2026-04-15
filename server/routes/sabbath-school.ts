@@ -367,8 +367,8 @@ router.post(
 //                cached[0].reflectionPrompts as string[],
 //                "Lesson"
 //              ).catch(console.error);
-            });
-        }
+//            });
+//        }
         return res.json({
           keyQuestions: cached[0].keyQuestions,
           aiSummary: cached[0].aiSummary,
@@ -429,8 +429,8 @@ router.post(
 //              result.reflectionPrompts,
 //              lesson[0].title
 //            ).catch(console.error);
-          });
-      }
+//          });
+//      }
 
       return res.json({
         ...result,
