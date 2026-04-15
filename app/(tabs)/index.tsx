@@ -40,7 +40,6 @@ import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
-import RotatingPanel from "@/components/home/RotatingPanel";
 import VotdHeroCard from "@/components/home/VotdHeroCard";
 import { getBookImage } from "@/constants/bible-books";
 import ContinueCard from "@/components/home/ContinueCard";
@@ -1297,23 +1296,6 @@ const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
 ];
 
-const TOUCHPOINT_TOPICS = [
-  { title: "The Sanctuary", excerpt: "Christ's ministry in the heavenly sanctuary reveals God's plan to restore us fully to His image and eradicate sin forever.", route: "/touchpoint-topic?topicId=sanctuary" },
-  { title: "The Sabbath Rest", excerpt: "The seventh-day Sabbath is a gift of time \u2014 a weekly invitation to cease striving and rest in the finished work of our Creator.", route: "/touchpoint-topic?topicId=sabbath" },
-  { title: "The Second Coming", excerpt: "The blessed hope of Christ's literal, visible return is the culmination of the gospel and the answer to every longing heart.", route: "/touchpoint-topic?topicId=second-coming" },
-  { title: "Righteousness by Faith", excerpt: "We are justified by grace alone through faith in Christ, not by any merit of our own, yet genuine faith always bears fruit.", route: "/touchpoint-topic?topicId=trust" },
-  { title: "The State of the Dead", excerpt: "Death is a sleep, not a doorway. The Bible's clear teaching frees us from fear and points us to the resurrection morning.", route: "/touchpoint-topic?topicId=state-of-dead" },
-  { title: "The Three Angels' Messages", excerpt: "Heaven's final appeal calls every nation to worship the Creator, come out of confusion, and stand faithful in the last days.", route: "/touchpoint-topic?topicId=three-angels" },
-  { title: "Health & Wholeness", excerpt: "God cares for the whole person \u2014 body, mind, and spirit. Biblical health principles are an expression of His love for us.", route: "/touchpoint-topic?topicId=health-message" },
-  { title: "The Gift of Prophecy", excerpt: "The prophetic gift, manifested in the life and writings of Ellen G. White, continues to guide and encourage God's remnant people.", route: "/touchpoint-topic?topicId=prophecy" },
-  { title: "Christian Stewardship", excerpt: "Everything we have belongs to God. Faithful stewardship of time, talents, and treasure is an act of worship and trust.", route: "/touchpoint-topic?topicId=generosity" },
-  { title: "The Law of God", excerpt: "The Ten Commandments reveal God's character of love. Through Christ, obedience becomes not a burden but a joyful response to grace.", route: "/touchpoint-topic?topicId=integrity" },
-  { title: "Baptism & New Life", excerpt: "Baptism by immersion symbolises death to the old life and resurrection to walk in newness of life with Jesus.", route: "/touchpoint-topic?topicId=purpose" },
-  { title: "The Great Controversy", excerpt: "The cosmic conflict between Christ and Satan explains the origin of suffering and assures us of God's ultimate victory.", route: "/touchpoint-topic?topicId=great-controversy" },
-  { title: "Unity in the Body", excerpt: "Christ calls His church to unity in diversity, reflecting the love of the Godhead and witnessing to the world.", route: "/touchpoint-topic?topicId=forgiveness" },
-  { title: "The Remnant Church", excerpt: "In the last days God has a faithful people who keep His commandments and hold to the testimony of Jesus.", route: "/touchpoint-topic?topicId=remnant" },
-];
-
 const DAILY_REFLECTIONS = [
   { thought: "Grace is not a doctrine to be memorised but a Person to be embraced. Today, let Christ's unmerited favour reshape every anxious thought.", source: "Reflection on Ephesians 2:8-9" },
   { thought: "The cross does not merely pardon the past; it empowers the present. Walk today in the strength of the One who conquered death.", source: "Reflection on Galatians 2:20" },
@@ -1518,6 +1500,15 @@ function AdultHomeScreen() {
     </View>
   ) : null;
 
+  const reflectionCardStyle = {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  };
+
   return (
     <>
     <SabbathOverlay
@@ -1613,8 +1604,35 @@ function AdultHomeScreen() {
               dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
+          <AnimatedSection index={2}>
+            <Pressable
+              style={reflectionCardStyle}
+              onPress={() => router.push("/daily-reflection" as any)}
+            >
+              <Text style={[{
+                color: "#C9933A",
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 11,
+                letterSpacing: 1,
+                marginBottom: 8,
+              }]}>• DAILY REFLECTION</Text>
+              <Text style={[{
+                color: "#FFFFFF",
+                fontFamily: "Lora_700Bold",
+                fontSize: 20,
+                lineHeight: 28,
+                marginBottom: 8,
+              }]} numberOfLines={3}>
+                "{todayReflection?.thought}"
+              </Text>
+              <Text style={[{
+                color: "rgba(255,255,255,0.5)",
+                fontFamily: "Inter_400Regular",
+                fontSize: 13,
+              }]}>{todayReflection?.source}</Text>
+            </Pressable>
+          </AnimatedSection>
           <AnimatedSection index={2}><SabbathSchoolCard /></AnimatedSection>
-          <AnimatedSection index={5}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
           <AnimatedSection index={6}>
             <ContinueCard
               item={resumeItem}
@@ -1685,7 +1703,34 @@ function AdultHomeScreen() {
               dailyVerseRef={verse.reference}
             />
           </AnimatedSection>
-          <AnimatedSection index={4}><RotatingPanel touchpoints={TOUCHPOINT_TOPICS} devotionals={DAILY_REFLECTIONS} /></AnimatedSection>
+          <AnimatedSection index={2}>
+            <Pressable
+              style={reflectionCardStyle}
+              onPress={() => router.push("/daily-reflection" as any)}
+            >
+              <Text style={[{
+                color: "#C9933A",
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 11,
+                letterSpacing: 1,
+                marginBottom: 8,
+              }]}>• DAILY REFLECTION</Text>
+              <Text style={[{
+                color: "#FFFFFF",
+                fontFamily: "Lora_700Bold",
+                fontSize: 20,
+                lineHeight: 28,
+                marginBottom: 8,
+              }]} numberOfLines={3}>
+                "{todayReflection?.thought}"
+              </Text>
+              <Text style={[{
+                color: "rgba(255,255,255,0.5)",
+                fontFamily: "Inter_400Regular",
+                fontSize: 13,
+              }]}>{todayReflection?.source}</Text>
+            </Pressable>
+          </AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard
               item={resumeItem}
