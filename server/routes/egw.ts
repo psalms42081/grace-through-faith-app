@@ -127,7 +127,7 @@ router.get("/covers/:bookId", async (req, res) => {
   }
 });
 
-router.get("/api/egw/devotional/today", async (req, res) => {
+router.get("/devotional/today", async (req, res) => {
   try {
     const lang = String(req.query.lang || "en");
     const devotion = await getEgwDailyDevotion(lang);
