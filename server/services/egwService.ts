@@ -128,6 +128,72 @@ export async function getBookCover(bookId: number, size: "small" | "medium" | "l
   return `${EGW_API_BASE}/covers/${bookId}?type=${size}`;
 }
 
+// Known EGW devotional book IDs from egwwritings.org
+// My Life Today = 821, Morning Watch = 137,
+// With God at Dawn = 822, Reflecting Christ = 823
+const EGW_DEVOTIONAL_BOOKS = [
+  { id: 821, title: "My Life Today" },
+  { id: 137, title: "Morning Watch" },
+  { id: 822, title: "With God at Dawn" },
+];
+
+export async function getEgwDailyDevotion(
+  lang: string = "en"
+): Promise<{
+  title: string;
+  content: string;
+  bookTitle: string;
+  bookId: number;
+  date: string;
+} | null> {
+  try {
+    // Use day of year to pick consistent daily entry
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - start.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    // Pick book based on month (rotate through devotionals)
+    const bookIndex = now.getMonth() % EGW_DEVOTIONAL_BOOKS.length;
+    const book = EGW_DEVOTIONAL_BOOKS[bookIndex];
+
+    // Fetch table of contents for the book
+    const toc = await egwFetch(`/content/books/${book.id}/toc`, { lang });
+    if (!toc?.children?.length) return null;
+
+    // Pick chapter based on day of month
+    const dayOfMonth = now.getDate() - 1;
+    const chapters = toc.children;
+    const chapter = chapters[dayOfMonth % chapters.length];
+    if (!chapter) return null;
+
+    // Fetch chapter content
+    const content = await egwFetch(
+      `/content/books/${book.id}/chapter/${chapter.id}`,
+      { lang }
+    );
+    if (!content) return null;
+
+    // Strip HTML tags from content
+    const text = (content.content || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .substring(0, 600);
+
+    return {
+      title: chapter.title || `Day ${dayOfMonth + 1}`,
+      content: text,
+      bookTitle: book.title,
+      bookId: book.id,
+      date: now.toISOString().split("T")[0],
+    };
+  } catch (err) {
+    console.error("[egw] Daily devotion fetch failed:", err);
+    return null;
+  }
+}
+
 export function isEgwConfigured(): boolean {
   return !!(process.env.EGW_CLIENT_ID && process.env.EGW_CLIENT_SECRET);
 }

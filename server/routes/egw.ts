@@ -8,6 +8,7 @@ import {
   searchByScripture,
   searchTopical,
   getBookCover,
+  getEgwDailyDevotion,
 } from "../services/egwService";
 
 const router = Router();
@@ -123,6 +124,22 @@ router.get("/covers/:bookId", async (req, res) => {
   } catch (error: any) {
     console.error("[EGW] Cover error:", error.message);
     res.status(500).json({ error: "Failed to get cover URL" });
+  }
+});
+
+router.get("/api/egw/devotional/today", async (req, res) => {
+  try {
+    const lang = String(req.query.lang || "en");
+    const devotion = await getEgwDailyDevotion(lang);
+    if (!devotion) {
+      return res.status(404).json({
+        error: "No devotional available",
+      });
+    }
+    return res.json(devotion);
+  } catch (err) {
+    console.error("[egw] Devotional endpoint error:", err);
+    return res.status(500).json({ error: "Failed to fetch devotional" });
   }
 });
 
