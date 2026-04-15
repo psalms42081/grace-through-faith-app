@@ -743,7 +743,7 @@ function DiscoverTab({
               return (
                 <Pressable
                   key={dp.id}
-                  onPress={() => router.push("/devotionals")}
+                  onPress={() => router.push({ pathname: "/devotionals", params: { planId: dp.id } })}
                   style={({ pressed }) => [dt.planRow, pressed && { opacity: 0.8 }]}
                 >
                   <LinearGradient colors={grad} style={[dt.planCover, { alignItems: "center", justifyContent: "center" }]}>

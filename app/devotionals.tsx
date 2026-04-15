@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,9 +56,11 @@ export default function DevotionalsScreen() {
   const { theme, isDark } = useTheme();
   const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ planId?: string }>();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [deepLinkedPlanId] = useState(params.planId || null);
 
   const { data: plans, isLoading } = useQuery<Plan[]>({
     queryKey: ["/api/devotionals/plans?traditionKey=all"],
@@ -69,12 +71,26 @@ export default function DevotionalsScreen() {
     enabled: !!selectedPlan,
   });
 
+  useEffect(() => {
+    if (deepLinkedPlanId && plans && plans.length > 0 && !selectedPlan) {
+      const match = plans.find(p => p.id === deepLinkedPlanId);
+      if (match) {
+        setSelectedPlan(match);
+        setShowOnboarding(false);
+      }
+    }
+  }, [deepLinkedPlanId, plans, selectedPlan]);
+
   const onboardingStorageKey = `${ONBOARDING_KEY}:${userId || "guest"}`;
   useEffect(() => {
+    if (deepLinkedPlanId) {
+      setShowOnboarding(false);
+      return;
+    }
     AsyncStorage.getItem(onboardingStorageKey)
       .then(v => setShowOnboarding(v !== "true"))
       .catch(() => setShowOnboarding(true));
-  }, [onboardingStorageKey]);
+  }, [onboardingStorageKey, deepLinkedPlanId]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
