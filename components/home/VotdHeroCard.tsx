@@ -150,7 +150,7 @@ export default function VotdHeroCard({
       <Pressable onPress={onPress} testID="verse-of-day" style={({ pressed }) => [s.wrapper, pressed && { opacity: 0.95 }]}>
         <ImageBackground source={imageSource} style={s.imageBg} imageStyle={s.imageStyle} resizeMode="cover">
           <LinearGradient
-            colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.55)"]}
+            colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.65)"]}
             locations={[0, 0.5, 1]}
             style={s.overlay}
           >
@@ -328,16 +328,16 @@ const s = StyleSheet.create({
   },
   imageBg: {
     width: "100%",
-    height: 280,
+    height: 360,
   },
   imageStyle: {
     borderRadius: 16,
   },
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     padding: 16,
-    paddingBottom: 20,
+    paddingTop: 20,
   },
   label: {
     color: "rgba(255,255,255,0.85)",
