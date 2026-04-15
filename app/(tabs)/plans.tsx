@@ -235,6 +235,7 @@ export default function PlansScreen() {
   const [showCustomSheet, setShowCustomSheet] = useState(false);
   const [customBookId, setCustomBookId] = useState<number | null>(null);
   const [customDuration, setCustomDuration] = useState(7);
+  const [enrollingDevotionalId, setEnrollingDevotionalId] = useState<string | null>(null);
 
   const detailSlide = useRef(new RNAnimated.Value(0)).current;
   const addSlide = useRef(new RNAnimated.Value(0)).current;
@@ -316,6 +317,27 @@ export default function PlansScreen() {
       Alert.alert("Error", "Failed to create custom plan.");
     },
   });
+
+  const handleOpenDevotional = useCallback(async (planId: string) => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Sign In Required",
+        "Create a free account to access devotional plans.",
+        [
+          { text: "Not Now", style: "cancel" },
+          { text: "Sign In", onPress: () => router.push("/(auth)/login") },
+        ],
+      );
+      return;
+    }
+    setEnrollingDevotionalId(planId);
+    try {
+      await apiRequest("POST", "/api/devotionals/enroll", { userId, planId });
+    } catch {}
+    qc.invalidateQueries({ queryKey: [`/api/devotionals/today`] });
+    setEnrollingDevotionalId(null);
+    router.push(`/devotional-day?planId=${planId}`);
+  }, [isAuthenticated, userId, qc]);
 
   const openDetail = useCallback((id: string) => {
     setDetailPlanId(id);
@@ -450,6 +472,8 @@ export default function PlansScreen() {
           onPlanPress={openDetail}
           devotionalPlans={devotionalPlans || []}
           odbRecent={odbRecent || []}
+          onDevotionalPress={handleOpenDevotional}
+          enrollingDevotionalId={enrollingDevotionalId}
         />
       )}
 
@@ -563,6 +587,8 @@ function DiscoverTab({
   onPlanPress,
   devotionalPlans,
   odbRecent,
+  onDevotionalPress,
+  enrollingDevotionalId,
 }: {
   grouped: { category: string; items: ReadingPlan[] }[];
   books: BibleBook[] | undefined;
@@ -572,6 +598,8 @@ function DiscoverTab({
   onPlanPress: (id: string) => void;
   devotionalPlans: DevotionalPlan[];
   odbRecent: OdbDevotional[];
+  onDevotionalPress: (planId: string) => void;
+  enrollingDevotionalId: string | null;
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -743,11 +771,16 @@ function DiscoverTab({
               return (
                 <Pressable
                   key={dp.id}
-                  onPress={() => router.push({ pathname: "/devotionals", params: { planId: dp.id } })}
-                  style={({ pressed }) => [dt.planRow, pressed && { opacity: 0.8 }]}
+                  onPress={() => onDevotionalPress(dp.id)}
+                  disabled={enrollingDevotionalId === dp.id}
+                  style={({ pressed }) => [dt.planRow, (pressed || enrollingDevotionalId === dp.id) && { opacity: 0.6 }]}
                 >
                   <LinearGradient colors={grad} style={[dt.planCover, { alignItems: "center", justifyContent: "center" }]}>
-                    <Ionicons name="flame" size={24} color="rgba(255,255,255,0.6)" />
+                    {enrollingDevotionalId === dp.id ? (
+                      <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
+                    ) : (
+                      <Ionicons name="flame" size={24} color="rgba(255,255,255,0.6)" />
+                    )}
                   </LinearGradient>
                   <View style={dt.planInfo}>
                     <View style={[dt.planBadge, { backgroundColor: "#8B5CF6" }]}>
@@ -765,7 +798,7 @@ function DiscoverTab({
                     ) : null}
                   </View>
                   <View style={dt.startPill}>
-                    <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>View</Text>
+                    <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>Open</Text>
                   </View>
                 </Pressable>
               );
