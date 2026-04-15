@@ -347,11 +347,11 @@ export default function VotdHeroCard({
         animationType="slide"
         onRequestClose={() => setShowSignpostSheet(false)}
       >
-        <Pressable
-          style={s.sheetBackdrop}
-          onPress={() => setShowSignpostSheet(false)}
-          accessible={false}
-        >
+        <View style={s.sheetBackdrop}>
+          <Pressable 
+            style={s.sheetDismissArea}
+            onPress={() => setShowSignpostSheet(false)}
+          />
           <View style={s.sheetContainer}>
             {/* Header with topic color */}
             <View style={[s.sheetHeader, {
@@ -430,7 +430,7 @@ export default function VotdHeroCard({
               </Pressable>
             </View>
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </>
   );
@@ -603,6 +603,9 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
+  },
+  sheetDismissArea: {
+    flex: 1,
   },
   sheetContainer: {
     backgroundColor: "#0A0A0F",
