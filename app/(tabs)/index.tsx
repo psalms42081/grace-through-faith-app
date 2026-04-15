@@ -1411,6 +1411,11 @@ function AdultHomeScreen() {
     id: string;
     title: string;
     description: string;
+  questions?: Array<{
+    question: string;
+    verses: Array<{ ref: string; text: string }>;
+    commentary?: string;
+  }>;
   }>({
     queryKey: ["/api/signposts/daily"],
     staleTime: 1000 * 60 * 60 * 24,
@@ -1591,6 +1596,7 @@ function AdultHomeScreen() {
             id: dailySignpost.id,
             title: dailySignpost.title,
             excerpt: dailySignpost.description,
+            questions: dailySignpost.questions,
           } : null}
           reflection={todayReflection ?? null}
         />

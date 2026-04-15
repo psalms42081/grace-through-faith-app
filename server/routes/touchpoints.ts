@@ -22,6 +22,11 @@ router.get("/api/signposts/daily", (req, res) => {
       id: topic.id,
       title: topic.title,
       description: topic.overview,
+      questions: topic.questions.map(q => ({
+        question: q.question,
+        verses: q.verses,
+        commentary: q.commentary,
+      })),
     });
   } catch (err) {
     console.error("[signposts/daily]", err);

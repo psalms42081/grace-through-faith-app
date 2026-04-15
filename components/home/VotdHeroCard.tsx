@@ -20,8 +20,26 @@ import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
+import { useQuery } from "@tanstack/react-query";
 
 const GOLD = "#C9933A";
+const SIGNPOST_COLORS: Record<string, string> = {
+  "abandonment": "#0D7377",
+  "addiction": "#8B2635",
+  "anger": "#C4622D",
+  "anxiety": "#4A6FA5",
+  "forgiveness": "#2D6A4F",
+  "grief": "#6B2D8B",
+  "depression": "#1A3A5C",
+  "loneliness": "#5C4033",
+  "fear": "#7B3F00",
+  "identity": "#1B4332",
+  "purpose": "#744210",
+  "relationships": "#6B2737",
+  "stress": "#4A4E69",
+  "doubt": "#2C3E50",
+  "hope": "#1A5276",
+};
 
 interface VotdHeroCardProps {
   verse: { text: string; reference: string };
@@ -36,6 +54,11 @@ interface VotdHeroCardProps {
     title: string;
     excerpt: string;
     id?: string;
+    questions?: Array<{
+      question: string;
+      verses: Array<{ ref: string; text: string }>;
+      commentary?: string;
+    }>;
   } | null;
   reflection?: {
     thought: string;
@@ -62,6 +85,7 @@ export default function VotdHeroCard({
   const imageSource = bookImage || (bgImage ? { uri: bgImage } : undefined);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<"verse" | "signpost" | "reflection">("verse");
+  const [showSignpostSheet, setShowSignpostSheet] = useState(false);
   const [showReflect, setShowReflect] = useState(false);
   const [reflectText, setReflectText] = useState("");
   const [reflectSaved, setReflectSaved] = useState(false);
@@ -223,7 +247,7 @@ export default function VotdHeroCard({
                   {signpost.excerpt}
                 </Text>
                 <Pressable
-                  onPress={() => signpost.id && router.push(`/touchpoints/${signpost.id}` as any)}
+                  onPress={() => setShowSignpostSheet(true)}
                   style={s.ctaButton}
                 >
                   <Text style={[s.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Explore Topic →</Text>
@@ -314,6 +338,93 @@ export default function VotdHeroCard({
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Signpost Bottom Sheet */}
+      <Modal
+        visible={showSignpostSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSignpostSheet(false)}
+      >
+        <Pressable
+          style={s.sheetBackdrop}
+          onPress={() => setShowSignpostSheet(false)}
+        >
+          <Pressable style={s.sheetContainer} onPress={() => {}}>
+            {/* Header with topic color */}
+            <View style={[s.sheetHeader, {
+              backgroundColor: signpost?.id ?
+                SIGNPOST_COLORS[signpost.id] || "#4A6FA5" : "#4A6FA5"
+            }]}>
+              <View style={s.sheetHandleBar} />
+              <Text style={[s.sheetTopicLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                SIGNPOST OF THE DAY
+              </Text>
+              <Text style={[s.sheetTopicTitle, { fontFamily: "Lora_700Bold" }]}>
+                {signpost?.title}
+              </Text>
+            </View>
+
+            {/* Scripture content */}
+            <ScrollView
+              style={s.sheetScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={[s.sheetOverview, { fontFamily: "Inter_400Regular" }]}>
+                {signpost?.excerpt}
+              </Text>
+
+              {signpost?.questions?.map((q: any, idx: number) => (
+                <View key={idx} style={s.sheetQuestion}>
+                  <Text style={[s.sheetQuestionText, { fontFamily: "Inter_600SemiBold" }]}>
+                    {q.question}
+                  </Text>
+                  {q.verses?.map((v: any, vi: number) => (
+                    <View key={vi} style={s.sheetVerse}>
+                      <Text style={[s.sheetVerseRef, { fontFamily: "Lora_600SemiBold" }]}>
+                        {v.ref}
+                      </Text>
+                      <Text style={[s.sheetVerseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                        {v.text}
+                      </Text>
+                      {q.commentary && vi === 0 && (
+                        <View style={s.sheetCommentary}>
+                          <Text style={[s.sheetCommentaryText, { fontFamily: "Inter_400Regular" }]}>
+                            {q.commentary}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ))}
+
+              <View style={{ height: 100 }} />
+            </ScrollView>
+
+            {/* Bottom CTA */}
+            <View style={s.sheetFooter}>
+              <Pressable
+                onPress={() => {
+                  setShowSignpostSheet(false);
+                  if (signpost?.id) {
+                    router.push(`/touchpoint-topic?topicId=${signpost.id}` as any);
+                  }
+                }}
+                style={[s.sheetCta, {
+                  backgroundColor: signpost?.id ?
+                    SIGNPOST_COLORS[signpost.id] || "#4A6FA5" : "#4A6FA5"
+                }]}
+              >
+                <Ionicons name="compass" size={16} color="#fff" />
+                <Text style={[s.sheetCtaText, { fontFamily: "Inter_600SemiBold" }]}>
+                  Go to {signpost?.title}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </>
   );
@@ -481,5 +592,105 @@ const s = StyleSheet.create({
   ctaText: {
     color: "#C9933A",
     fontSize: 13,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  sheetContainer: {
+    backgroundColor: "#0A0A0F",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+  },
+  sheetHeader: {
+    padding: 24,
+    paddingTop: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  sheetHandleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  sheetTopicLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  sheetTopicTitle: {
+    color: "#fff",
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  sheetScroll: {
+    paddingHorizontal: 20,
+  },
+  sheetOverview: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 14,
+    lineHeight: 22,
+    paddingVertical: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+    marginBottom: 8,
+  },
+  sheetQuestion: {
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  sheetQuestionText: {
+    color: "#fff",
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  sheetVerse: {
+    marginBottom: 12,
+  },
+  sheetVerseRef: {
+    color: "#C9933A",
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  sheetVerseText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  sheetCommentary: {
+    marginTop: 8,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#C9933A",
+  },
+  sheetCommentaryText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  sheetFooter: {
+    padding: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  sheetCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  sheetCtaText: {
+    color: "#fff",
+    fontSize: 15,
   },
 });
