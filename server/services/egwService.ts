@@ -167,15 +167,15 @@ export async function getEgwDailyDevotion(
     const chapter = chapters[dayOfMonth % chapters.length];
     if (!chapter) return null;
 
-    // Fetch chapter content
+    const chapterParaId = chapter.para_id.includes(".") ? chapter.para_id.split(".").pop() : chapter.para_id;
     const content = await egwFetch(
-      `/content/books/${book.id}/chapter/${chapter.para_id}`,
+      `/content/books/${book.id}/chapter/${chapterParaId}`,
       { lang }
     );
     if (!content) return null;
 
     const rawText = Array.isArray(content)
-      ? content.filter((p: any) => p.element_type === "p").map((p: any) => p.content || "").join(" ")
+      ? content.filter((p: any) => p.element_type === "p" && !p.content.includes("non-egw-foreword") && p.content.length > 50).map((p: any) => p.content || "").join(" ")
       : (content.content || "");
     const text = rawText
       .replace(/<[^>]+>/g, " ")
