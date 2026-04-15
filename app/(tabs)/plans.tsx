@@ -51,6 +51,23 @@ const DEVOTIONAL_THEME_GRADIENTS: Record<string, [string, string]> = {
   "Prophetic Hope": ["#7C3AED", "#5B21B6"],
 };
 
+interface OdbDevotional {
+  id: number;
+  title: string;
+  date: string;
+  author: string;
+  verse: string;
+  verseRef: string;
+  passage: string;
+  content: string;
+  thought: string;
+  response: string;
+  insights: string;
+  bibleInAYear: string;
+  url: string;
+  imageUrl: string | null;
+}
+
 interface ReadingPlan {
   id: string;
   title: string;
@@ -245,6 +262,12 @@ export default function PlansScreen() {
     queryKey: ["/api/devotionals/plans"],
   });
 
+  const { data: odbRecent } = useQuery<OdbDevotional[]>({
+    queryKey: ["/api/odb/recent?count=7"],
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: true,
+  });
+
   const invalidateAll = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["/api/user-plans"] });
     qc.invalidateQueries({ queryKey: ["/api/plans"] });
@@ -426,6 +449,7 @@ export default function PlansScreen() {
           bottomPad={bottomPad}
           onPlanPress={openDetail}
           devotionalPlans={devotionalPlans || []}
+          odbRecent={odbRecent || []}
         />
       )}
 
@@ -538,6 +562,7 @@ function DiscoverTab({
   bottomPad,
   onPlanPress,
   devotionalPlans,
+  odbRecent,
 }: {
   grouped: { category: string; items: ReadingPlan[] }[];
   books: BibleBook[] | undefined;
@@ -546,6 +571,7 @@ function DiscoverTab({
   bottomPad: number;
   onPlanPress: (id: string) => void;
   devotionalPlans: DevotionalPlan[];
+  odbRecent: OdbDevotional[];
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -740,6 +766,68 @@ function DiscoverTab({
                   </View>
                   <View style={dt.startPill}>
                     <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>View</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {odbRecent.length > 0 && (
+        <View style={dt.devotionalSection}>
+          <LinearGradient
+            colors={["#0A2A1A", "#0D1B2A", "#050507"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={dt.heroBanner}
+          >
+            <Text style={[dt.heroLabel, { fontFamily: "Inter_600SemiBold" }]}>OUR DAILY BREAD</Text>
+            <Text style={[dt.heroTitle, { fontFamily: "Lora_700Bold" }]}>Daily Devotionals</Text>
+            <Text style={[dt.heroSubtitle, { fontFamily: "Inter_400Regular" }]}>
+              Timeless devotional readings from Our Daily Bread
+            </Text>
+          </LinearGradient>
+
+          <View style={dt.planList}>
+            {odbRecent.map((odb) => {
+              const dateLabel = (() => {
+                try {
+                  const d = new Date(odb.date + "T00:00:00");
+                  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                } catch {
+                  return odb.date;
+                }
+              })();
+              return (
+                <Pressable
+                  key={odb.id}
+                  onPress={() => router.push({ pathname: "/odb-devotional", params: { id: String(odb.id) } })}
+                  style={({ pressed }) => [dt.planRow, pressed && { opacity: 0.8 }]}
+                >
+                  <LinearGradient
+                    colors={["#2D6A4F", "#1B4332"]}
+                    style={[dt.planCover, { alignItems: "center", justifyContent: "center" }]}
+                  >
+                    <Ionicons name="sunny-outline" size={24} color="rgba(255,255,255,0.6)" />
+                  </LinearGradient>
+                  <View style={dt.planInfo}>
+                    <View style={[dt.planBadge, { backgroundColor: "#2D6A4F" }]}>
+                      <Text style={[dt.planBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+                        {dateLabel}
+                      </Text>
+                    </View>
+                    <Text style={[dt.planTitle, { fontFamily: "Inter_700Bold" }]} numberOfLines={2}>
+                      {odb.title}
+                    </Text>
+                    {odb.author ? (
+                      <Text style={[dt.planDesc, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                        {odb.author}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={dt.startPill}>
+                    <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>Read</Text>
                   </View>
                 </Pressable>
               );

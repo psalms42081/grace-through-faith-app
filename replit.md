@@ -30,6 +30,8 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 - **Admin panel tab:** DemoDataTab in `app/admin-review.tsx` — seed/clear buttons with status indicator
 
 ### Recent Fixes (v10.1)
+- **Our Daily Bread Integration:** Full ODB devotionals pulled from odb.org WordPress API. Backend: `server/routes/odb.ts` with 15-min cache, 10s fetch timeout, HTML stripping. Three endpoints: `/api/odb/today`, `/api/odb/recent?count=N`, `/api/odb/post/:id`. Frontend: `app/odb-devotional.tsx` detail screen with verse card, prayer, insights, reflection, share, and link to odb.org. Last 7 ODB devotionals displayed in Plans Discover tab under "OUR DAILY BREAD" section
+- **Plans Tab Unified:** `app/(tabs)/plans.tsx` now shows three sections in Discover: Reading Plans, Devotional Plans, and Our Daily Bread devotionals
 - **EGW Search API Fix:** `searchWritings` now maps `snippet` and `pub_name` fields correctly from the EGW API — searches return actual prose quotes instead of empty text
 - **EGW Devotional Excerpts Seeded:** 140 devotional days now have `historicVoiceExcerpt` populated from real EGW books (Steps to Christ, Desire of Ages, Patriarchs & Prophets, etc.) via `server/seed-egw-excerpts.ts`. Concordance/dictionary entries filtered out
 - **YouTube Route Registered:** `server/routes/youtube.ts` was an orphaned route file never registered in `server/routes.ts` — now registered and returning SDA speaker videos

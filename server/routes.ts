@@ -51,6 +51,7 @@ import egwRoutes from "./routes/egw";
 import pioneerRoutes from "./routes/pioneers";
 import demoRoutes from "./routes/demo";
 import youtubeRoutes from "./routes/youtube";
+import odbRoutes from "./routes/odb";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -177,6 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(pioneerRoutes);
   app.use("/api/demo", demoRoutes);
   app.use(youtubeRoutes);
+  app.use(odbRoutes);
 
   recoverStuckHeyGenJobs().catch((err) => {
     console.error("[startup] HeyGen recovery job failed:", err);
