@@ -109,13 +109,55 @@ router.get("/api/sabbath-school/current", async (req, res) => {
       return res.json({ quarterly: null, currentLesson: null, message: "No quarterly available" });
     }
 
-    const currentLessonNum = await getCurrentLessonNumber(q.id);
-
-    const lessons = await db
+    let lessons = await db
       .select()
       .from(sabbathSchoolLessons)
       .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
       .orderBy(sabbathSchoolLessons.lessonNumber);
+
+    if (lessons.length === 0) {
+      try {
+        await syncCurrentQuarter("en");
+        lessons = await db
+          .select()
+          .from(sabbathSchoolLessons)
+          .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
+          .orderBy(sabbathSchoolLessons.lessonNumber);
+      } catch {}
+    }
+
+    if (lessons.length === 0) {
+      const allQuarters = await db
+        .select()
+        .from(sabbathSchoolQuarterlies)
+        .where(
+          and(
+            eq(sabbathSchoolQuarterlies.language, "en"),
+            eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
+          )
+        )
+        .orderBy(desc(sabbathSchoolQuarterlies.quarterCode));
+
+      for (const candidate of allQuarters) {
+        if (candidate.id === q.id) continue;
+        const candidateLessons = await db
+          .select()
+          .from(sabbathSchoolLessons)
+          .where(eq(sabbathSchoolLessons.quarterlyId, candidate.id))
+          .limit(1);
+        if (candidateLessons.length > 0) {
+          q = candidate;
+          lessons = await db
+            .select()
+            .from(sabbathSchoolLessons)
+            .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
+            .orderBy(sabbathSchoolLessons.lessonNumber);
+          break;
+        }
+      }
+    }
+
+    const currentLessonNum = await getCurrentLessonNumber(q.id);
 
     const currentLesson = lessons.find((l) => l.lessonNumber === currentLessonNum) || lessons[0];
 
