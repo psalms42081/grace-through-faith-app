@@ -359,14 +359,14 @@ router.post(
 
       if (cached.length > 0) {
         // Fire video generation if not yet done
-        if (!cached[0].lifeApplicationVideoUrl) {
-          import("../services/lifeApplicationVideoService")
-            .then(({ generateLifeApplicationVideo }) => {
-              generateLifeApplicationVideo(
-                cached[0].id,
-                cached[0].reflectionPrompts as string[],
-                "Lesson"
-              ).catch(console.error);
+//        if (!cached[0].lifeApplicationVideoUrl) {
+//          import("../services/lifeApplicationVideoService")
+//            .then(({ generateLifeApplicationVideo }) => {
+//              generateLifeApplicationVideo(
+//                cached[0].id,
+//                cached[0].reflectionPrompts as string[],
+//                "Lesson"
+//              ).catch(console.error);
             });
         }
         return res.json({
@@ -421,14 +421,14 @@ router.post(
         .where(eq(sabbathSchoolDiscussionPrep.lessonId, lessonId))
         .limit(1);
 
-      if (inserted?.id) {
-        import("../services/lifeApplicationVideoService")
-          .then(({ generateLifeApplicationVideo }) => {
-            generateLifeApplicationVideo(
-              inserted.id,
-              result.reflectionPrompts,
-              lesson[0].title
-            ).catch(console.error);
+//      if (inserted?.id) {
+//        import("../services/lifeApplicationVideoService")
+//          .then(({ generateLifeApplicationVideo }) => {
+//            generateLifeApplicationVideo(
+//              inserted.id,
+//              result.reflectionPrompts,
+//              lesson[0].title
+//            ).catch(console.error);
           });
       }
 
