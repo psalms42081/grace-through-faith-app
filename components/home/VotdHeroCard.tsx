@@ -352,7 +352,7 @@ export default function VotdHeroCard({
           onPress={() => setShowSignpostSheet(false)}
           accessible={false}
         >
-          <Pressable style={s.sheetContainer} onPress={() => {}}>
+          <View style={s.sheetContainer}>
             {/* Header with topic color */}
             <View style={[s.sheetHeader, {
               backgroundColor: signpost?.id ?
@@ -429,7 +429,7 @@ export default function VotdHeroCard({
                 </Text>
               </Pressable>
             </View>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </>
