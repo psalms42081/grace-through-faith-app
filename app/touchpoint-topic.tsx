@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,8 +60,7 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
-  const isLong = (video.durationMinutes ?? 0) > 30;
-  const opensExternal = isLong || video.allowEmbed === false;
+  const opensExternal = true;
   const youtubeUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
   const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=https://gracethroughfaith.app`;
 
@@ -110,8 +110,15 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
       style={({ pressed }) => [vStyles.card, { backgroundColor: cardBg, borderColor, opacity: pressed ? 0.85 : 1 }]}
     >
       <View style={vStyles.thumbnailWrap}>
-        <View style={vStyles.thumbnail}>
-          <Ionicons name="play-circle" size={44} color={GOLD} />
+        <Image
+          source={{ uri: `https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg` }}
+          style={vStyles.thumbnail}
+          resizeMode="cover"
+        />
+        <View style={vStyles.playOverlay}>
+          <View style={vStyles.playBtn}>
+            <Ionicons name="play" size={24} color="#fff" />
+          </View>
         </View>
         <View style={vStyles.durationBadge}>
           <Text style={vStyles.durationText}>{video.duration}</Text>
@@ -339,6 +346,20 @@ const vStyles = StyleSheet.create({
     justifyContent: "center",
   },
   thumbnail: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  playBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(201,147,58,0.9)",
     alignItems: "center",
     justifyContent: "center",
   },
