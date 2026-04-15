@@ -163,7 +163,7 @@ export async function getEgwDailyDevotion(
 
     // Pick chapter based on day of month
     const dayOfMonth = now.getDate() - 1;
-    const chapters = toc.filter((c: any) => c.level === 1);
+    const chapters = toc.filter((c: any) => c.level === 1 && c.title && !c.dup);
     const chapter = chapters[dayOfMonth % chapters.length];
     if (!chapter) return null;
 
