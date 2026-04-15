@@ -58,17 +58,6 @@ export default function TopicScreen() {
     return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
   }, []);
 
-  const shuffledMedia = useMemo(() => {
-    const items = [...topic.media];
-    let seed = todaySeed;
-    for (let i = items.length - 1; i > 0; i--) {
-      seed = (seed * 16807) % 2147483647;
-      const j = seed % (i + 1);
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    return items;
-  }, [id, todaySeed]);
-
   const shuffledVerses = useMemo(() => {
     const items = [...topic.verses];
     let seed = todaySeed + 31;
@@ -208,53 +197,6 @@ export default function TopicScreen() {
           ))}
         </View>
 
-        <View style={styles.mediaSection}>
-          <Text style={[styles.sectionLabel, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Sermons & Teaching
-          </Text>
-          <Text style={[styles.sectionSubLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Refreshed daily from pastors and worship artists
-          </Text>
-
-          {shuffledMedia.map((item, idx) => {
-            const avatarColor = getSpeakerColor(item.source);
-            const avatarInitials = getSpeakerInitials(item.source);
-            return (
-              <Pressable
-                key={idx}
-                onPress={() => openLink(item.url)}
-                style={({ pressed }) => [
-                  styles.mediaCard,
-                  { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
-                ]}
-                testID={`media-card-${idx}`}
-              >
-                <View style={[styles.speakerAvatar, { backgroundColor: avatarColor }]}>
-                  <Text style={[styles.speakerInitials, { fontFamily: "Inter_700Bold" }]}>{avatarInitials}</Text>
-                </View>
-                <View style={styles.mediaInfo}>
-                  <View style={styles.mediaTopRow}>
-                    <Text style={[styles.mediaTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <View style={[styles.mediaTypeBadge, { backgroundColor: topic.gradient[0] + "18" }]}>
-                      <Text style={[styles.mediaTypeText, { color: topic.gradient[0], fontFamily: "Inter_600SemiBold" }]}>
-                        {MEDIA_TYPE_LABEL[item.type] || item.type}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.mediaSource, { color: theme.accent, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                    {item.source}
-                  </Text>
-                  <Text style={[styles.mediaDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                </View>
-                <Ionicons name="open-outline" size={16} color={theme.textMuted} />
-              </Pressable>
-            );
-          })}
-        </View>
       </ScrollView>
     </>
   );
