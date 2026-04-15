@@ -25,6 +25,32 @@ import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 
 const GOLD = "#C9933A";
 
+interface DevotionalPlan {
+  id: string;
+  title: string;
+  description: string;
+  totalDays: number;
+  theme: string | null;
+  category: string | null;
+  targetGoals: string[] | null;
+  difficultyLevel: string | null;
+  estimatedMinutesPerDay: number | null;
+  isPublished: boolean;
+}
+
+const DEVOTIONAL_THEME_GRADIENTS: Record<string, [string, string]> = {
+  "Character Studies": ["#8B5CF6", "#5B2EA6"],
+  "Kingdom of God": ["#C9933A", "#8A6420"],
+  "Core Doctrines": ["#3B6CB5", "#1A3A6E"],
+  "Spiritual Growth": ["#4ECCA3", "#2E8B6E"],
+  "Christian Living": ["#E8456B", "#A02040"],
+  "Prayer Life": ["#6366F1", "#4338CA"],
+  "Biblical Wisdom": ["#F59E0B", "#B45309"],
+  "God's Love": ["#EC4899", "#BE185D"],
+  "End Times": ["#DC2626", "#991B1B"],
+  "Prophetic Hope": ["#7C3AED", "#5B21B6"],
+};
+
 interface ReadingPlan {
   id: string;
   title: string;
@@ -215,6 +241,10 @@ export default function PlansScreen() {
     queryKey: ["/api/books"],
   });
 
+  const { data: devotionalPlans } = useQuery<DevotionalPlan[]>({
+    queryKey: ["/api/devotionals/plans"],
+  });
+
   const invalidateAll = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["/api/user-plans"] });
     qc.invalidateQueries({ queryKey: ["/api/plans"] });
@@ -358,7 +388,7 @@ export default function PlansScreen() {
     <View style={[st.container, { backgroundColor: bg }]}>
       <View style={[st.header, { paddingTop: topPad + 12 }]}>
         <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-          Reading Plans
+          Plans
         </Text>
         <View style={st.tabRow}>
           {TABS.map((tab) => (
@@ -395,6 +425,7 @@ export default function PlansScreen() {
           isDark={isDark}
           bottomPad={bottomPad}
           onPlanPress={openDetail}
+          devotionalPlans={devotionalPlans || []}
         />
       )}
 
@@ -506,6 +537,7 @@ function DiscoverTab({
   isDark,
   bottomPad,
   onPlanPress,
+  devotionalPlans,
 }: {
   grouped: { category: string; items: ReadingPlan[] }[];
   books: BibleBook[] | undefined;
@@ -513,6 +545,7 @@ function DiscoverTab({
   isDark: boolean;
   bottomPad: number;
   onPlanPress: (id: string) => void;
+  devotionalPlans: DevotionalPlan[];
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -662,6 +695,58 @@ function DiscoverTab({
           </View>
         )}
       </View>
+
+      {devotionalPlans.length > 0 && (
+        <View style={dt.devotionalSection}>
+          <LinearGradient
+            colors={["#1A0A2E", "#0D1B2A", "#050507"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={dt.heroBanner}
+          >
+            <Text style={[dt.heroLabel, { fontFamily: "Inter_600SemiBold" }]}>DEVOTIONAL PLANS</Text>
+            <Text style={[dt.heroTitle, { fontFamily: "Lora_700Bold" }]}>Grow Deeper in Faith</Text>
+            <Text style={[dt.heroSubtitle, { fontFamily: "Inter_400Regular" }]}>
+              Guided devotionals with Scripture, reflection, and Ellen White insights
+            </Text>
+          </LinearGradient>
+
+          <View style={dt.planList}>
+            {devotionalPlans.map((dp) => {
+              const grad = DEVOTIONAL_THEME_GRADIENTS[dp.theme || ""] || ["#6366F1", "#4338CA"];
+              return (
+                <Pressable
+                  key={dp.id}
+                  onPress={() => router.push("/devotionals")}
+                  style={({ pressed }) => [dt.planRow, pressed && { opacity: 0.8 }]}
+                >
+                  <LinearGradient colors={grad} style={[dt.planCover, { alignItems: "center", justifyContent: "center" }]}>
+                    <Ionicons name="flame" size={24} color="rgba(255,255,255,0.6)" />
+                  </LinearGradient>
+                  <View style={dt.planInfo}>
+                    <View style={[dt.planBadge, { backgroundColor: "#8B5CF6" }]}>
+                      <Text style={[dt.planBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
+                        {dp.totalDays} Days
+                      </Text>
+                    </View>
+                    <Text style={[dt.planTitle, { fontFamily: "Inter_700Bold" }]} numberOfLines={2}>
+                      {dp.title}
+                    </Text>
+                    {dp.theme ? (
+                      <Text style={[dt.planDesc, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                        {dp.theme}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={dt.startPill}>
+                    <Text style={[dt.startPillText, { fontFamily: "Inter_600SemiBold" }]}>View</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -1613,5 +1698,8 @@ const dt = StyleSheet.create({
   },
   emptyFilterText: {
     fontSize: 14,
+  },
+  devotionalSection: {
+    marginTop: 8,
   },
 });
