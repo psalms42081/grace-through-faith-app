@@ -1389,6 +1389,17 @@ function AdultHomeScreen() {
     );
     return { bookId: book?.id, chapterNumber: chapter };
   }, [verse.reference, homeBooks]);
+  const { data: egwDevotion } = useQuery<{
+    title: string;
+    content: string;
+    bookTitle: string;
+    bookId: number;
+    date: string;
+  }>({
+    queryKey: ["/api/egw/devotional/today"],
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
   const { data: dailySignpost } = useQuery<{
     id: string;
     title: string;
@@ -1589,7 +1600,10 @@ function AdultHomeScreen() {
             excerpt: dailySignpost.description,
             questions: dailySignpost.questions,
           } : null}
-          reflection={todayReflection ?? null}
+          reflection={egwDevotion ? {
+            thought: egwDevotion.content,
+            source: `${egwDevotion.title} — ${egwDevotion.bookTitle}`,
+          } : todayReflection ?? null}
         />
       </View>
 

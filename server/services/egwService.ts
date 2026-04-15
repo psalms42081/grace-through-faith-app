@@ -128,9 +128,7 @@ export async function getBookCover(bookId: number, size: "small" | "medium" | "l
   return `${EGW_API_BASE}/covers/${bookId}?type=${size}`;
 }
 
-// Known EGW devotional book IDs from egwwritings.org
-// My Life Today = 821, Morning Watch = 137,
-// With God at Dawn = 822, Reflecting Christ = 823
+// Confirmed EGW book IDs from /api/egw/books
 const EGW_DEVOTIONAL_BOOKS = [
   { id: 108, title: "Steps to Christ" },
   { id: 130, title: "The Desire of Ages" },
