@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
-import YoutubePlayer from "react-native-youtube-iframe";
 import { useTheme } from "@/hooks/useTheme";
 import { getSpeakerColor, getSpeakerInitials } from "@/constants/speakers";
 import { TOPICS } from "@/data/topics";
@@ -54,18 +53,6 @@ export default function TopicScreen() {
     queryKey: [`/api/topic-reflection/${id}`],
     enabled: !!id,
   });
-  const { data: videoData } = useQuery<{
-    videos: Array<{
-      videoId: string;
-      title: string;
-      speaker: string;
-      thumbnail: string;
-    }>;
-  }>({
-    queryKey: [`/api/youtube/topic-videos?topic=${id}`],
-    enabled: !!id,
-    staleTime: 1000 * 60 * 60, // cache 1 hour
-  });
 
   const todaySeed = useMemo(() => {
     const d = new Date();
@@ -82,8 +69,6 @@ export default function TopicScreen() {
     }
     return items;
   }, [id, todaySeed]);
-  const [activeVideoId, setActiveVideoId] =
-    useState<string | null>(null);
 
   const openLink = (url: string) => {
     Linking.openURL(url);
@@ -213,68 +198,6 @@ export default function TopicScreen() {
           ))}
         </View>
 
-        {videoData?.videos && videoData.videos.length > 0 && (
-          <View style={styles.videoSection}>
-            <Text style={[styles.videoSectionTitle, {
-              color: theme.text,
-              fontFamily: "Lora_700Bold"
-            }]}>
-              Messages & Teaching
-            </Text>
-            <Text style={[styles.videoSectionSub, {
-              color: theme.textMuted,
-              fontFamily: "Inter_400Regular"
-            }]}>
-              From Adventist pastors and speakers
-            </Text>
-            {videoData.videos.map((video, idx) => (
-              <View key={idx} style={styles.videoCard}>
-                {activeVideoId === video.videoId ? (
-                  <YoutubePlayer
-                    height={200}
-                    videoId={video.videoId}
-                    play={true}
-                  />
-                ) : (
-                  <Pressable
-                    onPress={() => setActiveVideoId(video.videoId)}
-                    style={styles.videoThumb}
-                  >
-                    <Image
-                      source={{ uri: video.thumbnail }}
-                      style={styles.videoThumbImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.videoPlayOverlay}>
-                      <View style={styles.videoPlayBtn}>
-                        <Ionicons
-                          name="play"
-                          size={24}
-                          color="#fff"
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.videoInfo}>
-                      <Text style={[styles.videoTitle, {
-                        color: theme.text,
-                        fontFamily: "Inter_600SemiBold"
-                      }]} numberOfLines={2}>
-                        {video.title}
-                      </Text>
-                      <Text style={[styles.videoSpeaker, {
-                        color: theme.accent,
-                        fontFamily: "Inter_400Regular"
-                      }]}>
-                        {video.speaker}
-                      </Text>
-                    </View>
-                  </Pressable>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
       </ScrollView>
     </>
   );
@@ -329,55 +252,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 24,
     gap: 12,
-  },
-  videoSection: {
-    paddingHorizontal: 22,
-    paddingTop: 24,
-    gap: 12,
-  },
-  videoSectionTitle: {
-    fontSize: 20,
-  },
-  videoSectionSub: {
-    fontSize: 13,
-    marginTop: -6,
-  },
-  videoCard: {
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  videoThumb: {
-    position: "relative",
-  },
-  videoThumbImage: {
-    width: "100%",
-    height: 200,
-  },
-  videoPlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  videoPlayBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(201,147,58,0.9)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  videoInfo: {
-    padding: 14,
-    gap: 4,
-  },
-  videoTitle: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  videoSpeaker: {
-    fontSize: 12,
   },
   sectionLabel: { fontSize: 22, marginBottom: 4 },
   sectionSubLabel: { fontSize: 13, marginBottom: 8, marginTop: -4 },
