@@ -350,6 +350,7 @@ export default function VotdHeroCard({
         <Pressable
           style={s.sheetBackdrop}
           onPress={() => setShowSignpostSheet(false)}
+          accessible={false}
         >
           <Pressable style={s.sheetContainer} onPress={() => {}}>
             {/* Header with topic color */}
@@ -370,6 +371,11 @@ export default function VotdHeroCard({
             <ScrollView
               style={s.sheetScroll}
               showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+              bounces={true}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              contentContainerStyle={{ paddingBottom: 20 }}
             >
               <Text style={[s.sheetOverview, { fontFamily: "Inter_400Regular" }]}>
                 {signpost?.excerpt}
