@@ -288,11 +288,17 @@ const rStyles = StyleSheet.create({
 });
 
 export default function DevotionalDayScreen() {
-  const { planId, groupId } = useLocalSearchParams<{ planId?: string; groupId?: string }>();
+  const { planId, groupId, depth: depthParam } = useLocalSearchParams<{ planId?: string; groupId?: string; depth?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const { depth } = useStudyDepth();
+  const { depth, setDepth } = useStudyDepth();
+
+  useEffect(() => {
+    if (depthParam === "quick" || depthParam === "standard" || depthParam === "deep") {
+      setDepth(depthParam);
+    }
+  }, []);
   const { triggerMissionInvite } = useProStatus();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);

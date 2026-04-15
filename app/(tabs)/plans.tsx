@@ -336,7 +336,7 @@ export default function PlansScreen() {
     } catch {}
     qc.invalidateQueries({ queryKey: [`/api/devotionals/today`] });
     setEnrollingDevotionalId(null);
-    router.push(`/devotional-day?planId=${planId}`);
+    router.push(`/devotional-day?planId=${planId}&depth=quick`);
   }, [isAuthenticated, userId, qc]);
 
   const openDetail = useCallback((id: string) => {
