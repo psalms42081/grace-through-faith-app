@@ -62,7 +62,7 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
   const isLong = (video.durationMinutes ?? 0) > 30;
   const opensExternal = isLong || video.allowEmbed === false;
   const youtubeUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
-  const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?rel=0&modestbranding=1&playsinline=1`;
+  const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=https://gracethroughfaith.app`;
 
   const handlePress = () => {
     if (opensExternal) {
@@ -88,8 +88,11 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
               source={{ uri: embedUrl }}
               style={{ flex: 1, borderRadius: 12 }}
               allowsInlineMediaPlayback
+              allowsFullscreenVideo
               mediaPlaybackRequiresUserAction={false}
               javaScriptEnabled
+              domStorageEnabled
+              startInLoadingState
             />
           )}
         </View>

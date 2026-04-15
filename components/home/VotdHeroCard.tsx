@@ -358,7 +358,12 @@ export default function VotdHeroCard({
               backgroundColor: signpost?.id ?
                 SIGNPOST_COLORS[signpost.id] || "#4A6FA5" : "#4A6FA5"
             }]}>
-              <View style={s.sheetHandleBar} />
+              <Pressable 
+                onPress={() => setShowSignpostSheet(false)}
+                style={{ alignItems: "center", paddingBottom: 8 }}
+              >
+                <View style={s.sheetHandleBar} />
+              </Pressable>
               <Text style={[s.sheetTopicLabel, { fontFamily: "Inter_600SemiBold" }]}>
                 SIGNPOST OF THE DAY
               </Text>
