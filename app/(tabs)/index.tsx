@@ -1619,10 +1619,7 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}>
-            <Pressable
-              style={reflectionCardStyle}
-              onPress={() => router.push("/daily-reflection" as any)}
-            >
+            <View style={reflectionCardStyle}>
               <Text style={[{
                 color: "#C9933A",
                 fontFamily: "Inter_600SemiBold",
@@ -1636,15 +1633,15 @@ function AdultHomeScreen() {
                 fontSize: 20,
                 lineHeight: 28,
                 marginBottom: 8,
-              }]} numberOfLines={3}>
-                "{todayReflection?.thought}"
+              }]} numberOfLines={4}>
+                "{egwDevotion ? egwDevotion.content : todayReflection?.thought}"
               </Text>
               <Text style={[{
                 color: "rgba(255,255,255,0.5)",
                 fontFamily: "Inter_400Regular",
                 fontSize: 13,
-              }]}>{todayReflection?.source}</Text>
-            </Pressable>
+              }]}>{egwDevotion ? `${egwDevotion.title} — ${egwDevotion.bookTitle}` : todayReflection?.source}</Text>
+            </View>
           </AnimatedSection>
           <AnimatedSection index={2}><SabbathSchoolCard /></AnimatedSection>
           <AnimatedSection index={6}>
@@ -1718,10 +1715,7 @@ function AdultHomeScreen() {
             />
           </AnimatedSection>
           <AnimatedSection index={2}>
-            <Pressable
-              style={reflectionCardStyle}
-              onPress={() => router.push("/daily-reflection" as any)}
-            >
+            <View style={reflectionCardStyle}>
               <Text style={[{
                 color: "#C9933A",
                 fontFamily: "Inter_600SemiBold",
@@ -1735,15 +1729,15 @@ function AdultHomeScreen() {
                 fontSize: 20,
                 lineHeight: 28,
                 marginBottom: 8,
-              }]} numberOfLines={3}>
-                "{todayReflection?.thought}"
+              }]} numberOfLines={4}>
+                "{egwDevotion ? egwDevotion.content : todayReflection?.thought}"
               </Text>
               <Text style={[{
                 color: "rgba(255,255,255,0.5)",
                 fontFamily: "Inter_400Regular",
                 fontSize: 13,
-              }]}>{todayReflection?.source}</Text>
-            </Pressable>
+              }]}>{egwDevotion ? `${egwDevotion.title} — ${egwDevotion.bookTitle}` : todayReflection?.source}</Text>
+            </View>
           </AnimatedSection>
           <AnimatedSection index={5}>
             <ContinueCard
