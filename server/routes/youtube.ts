@@ -35,7 +35,7 @@ router.get("/api/youtube/topic-videos", async (req, res) => {
         const query = encodeURIComponent(
           `${speaker} ${topic} Adventist sermon`
         );
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&maxResults=2&key=${apiKey}`;
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&maxResults=2&videoEmbeddable=true&key=${apiKey}`;
         const response = await fetch(url);
         const data = await response.json() as any;
 
