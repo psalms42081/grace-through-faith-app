@@ -6,3 +6,15 @@ id = "w4RrmDXJcFJcRZ5YfV8QT"
 uri = "file://CODE_REVIEW_REPORT.md"
 type = "text"
 title = "Grace by Faith — Full Code Review Report"
+
+[[outputs]]
+id = "5f5_V89lz8DsLpKQ3s-Ur"
+uri = "file://downloads/youversion-screenshots.tar.gz"
+type = "unspecified"
+title = "YouVersion Screenshots (11 images)"
+
+[[outputs]]
+id = "uOVJoYA_emmsLqi9SuEk_"
+uri = "file://downloads/life-bible-screenshots.tar.gz"
+type = "unspecified"
+title = "Life Bible Screenshots (11 images)"
