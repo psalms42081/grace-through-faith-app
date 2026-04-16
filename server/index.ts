@@ -215,6 +215,11 @@ function configureExpoAndLanding(app: express.Application) {
     etag: true,
   }));
 
+  app.use("/comparison-deck", express.static(path.resolve(process.cwd(), "comparison-deck"), {
+    maxAge: "5m",
+    etag: true,
+  }));
+
   const privacyPath = path.resolve(process.cwd(), "server", "templates", "privacy.html");
   const privacyHtml = fs.readFileSync(privacyPath, "utf-8");
   app.get("/privacy", (_req: Request, res: Response) => {

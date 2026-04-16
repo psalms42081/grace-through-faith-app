@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GTF vs YouVersion vs Life Bible — Competitive Comparison</title>
+<style>
+  :root {
+    --bg: #050507;
+    --panel: #0E0E14;
+    --panel-2: #14141C;
+    --gold: #C9933A;
+    --gold-dim: rgba(201,147,58,0.15);
+    --text: #F5F1E8;
+    --muted: #8A8A95;
+    --border: rgba(255,255,255,0.08);
+    --yv: #FF3D00;
+    --lb: #2BA3D9;
+    --gtf: #C9933A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .deck {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px 100px;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(5,5,7,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin: -40px -24px 24px;
+  }
+  .toolbar h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+  .toolbar h1 span { color: var(--gold); }
+  .toolbar .meta { font-size: 12px; color: var(--muted); }
+  .slide {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 32px;
+    margin-bottom: 32px;
+    page-break-after: always;
+  }
+  .slide-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  }
+  .slide-num {
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .slide h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin-top: 4px;
+  }
+  .slide .subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 1000px) { .grid-3 { grid-template-columns: 1fr; } }
+  .col {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex; flex-direction: column;
+  }
+  .col-yv  { border-top: 3px solid var(--yv); }
+  .col-lb  { border-top: 3px solid var(--lb); }
+  .col-gtf { border-top: 3px solid var(--gtf); }
+  .col-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .col-title h3 { font-size: 15px; font-weight: 700; }
+  .badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge-yv  { background: rgba(255,61,0,0.15); color: #FF7A4D; }
+  .badge-lb  { background: rgba(43,163,217,0.15); color: #6FCBED; }
+  .badge-gtf { background: rgba(201,147,58,0.15); color: #E0AE5A; }
+  .col img {
+    width: 100%; height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #000;
+    display: block;
+  }
+  .col .placeholder {
+    width: 100%;
+    aspect-ratio: 9/19.5;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    background: rgba(201,147,58,0.04);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding: 16px;
+  }
+  .col .notes {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .col .notes strong { color: var(--text); }
+  .compare-box {
+    margin-top: 22px;
+    background: rgba(201,147,58,0.06);
+    border: 1px solid rgba(201,147,58,0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+  }
+  .compare-box .lbl {
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .compare-box p { font-size: 13.5px; }
+
+  /* Cover slide */
+  .cover {
+    text-align: center;
+    padding: 80px 32px;
+    background: radial-gradient(ellipse at top, rgba(201,147,58,0.12), transparent 60%), var(--panel);
+  }
+  .cover h1 {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+    margin-bottom: 12px;
+  }
+  .cover h1 span { color: var(--gold); }
+  .cover p { color: var(--muted); font-size: 16px; max-width: 600px; margin: 0 auto 28px; }
+  .cover .pills { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .pill {
+    padding: 8px 16px; border-radius: 999px; font-size: 13px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  }
+  .pill.yv  { color: #FF7A4D; border-color: rgba(255,61,0,0.3); }
+  .pill.lb  { color: #6FCBED; border-color: rgba(43,163,217,0.3); }
+  .pill.gtf { color: #E0AE5A; border-color: rgba(201,147,58,0.4); background: rgba(201,147,58,0.08); }
+
+  /* Feature matrix */
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .matrix th, .matrix td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .matrix thead th {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .matrix tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .matrix .feat { font-weight: 600; color: var(--text); width: 28%; }
+  .matrix .y { color: #4ADE80; font-weight: 700; }
+  .matrix .n { color: #F87171; font-weight: 700; }
+  .matrix .p { color: var(--gold); font-weight: 700; }
+  .matrix small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; font-size: 11px; }
+
+  .section-divider {
+    text-align: center;
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 36px 0 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+
+  @media print {
+    .toolbar { display: none; }
+    .slide { page-break-inside: avoid; box-shadow: none; }
+    body { background: white; color: #111; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1><span>GTF</span> &nbsp;vs&nbsp; YouVersion &nbsp;vs&nbsp; Life Bible</h1>
+  <div class="meta">Competitive Screen-by-Screen Comparison · Internal Reference</div>
+</div>
+
+<div class="deck">
+
+  <!-- COVER -->
+  <section class="slide cover">
+    <h1>Grace Through Faith <span>vs</span><br/>YouVersion &amp; Life Bible</h1>
+    <p>A screen-by-screen comparison and feature inventory across the three apps,
+       framed for product positioning of the GTF Adventist spiritual formation experience.</p>
+    <div class="pills">
+      <span class="pill yv">YouVersion · 600M+ installs</span>
+      <span class="pill lb">Life Bible · Tyndale (Premium model)</span>
+      <span class="pill gtf">GTF · Adventist-rooted, AI-assisted</span>
+    </div>
+  </section>
+
+  <!-- FEATURE MATRIX -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 1 · Feature Matrix</div>
+        <h2>What each app does at a glance</h2>
+        <div class="subtitle">Y = built-in · P = partial / behind paywall · — = not present</div>
+      </div>
+    </div>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th class="feat">Feature</th>
+          <th>YouVersion</th>
+          <th>Life Bible</th>
+          <th>GTF</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="feat">Bible reader (multi-translation)<small>2,500+ vs ~50 vs curated SDA-friendly set</small></td>
+            <td class="y">Y · 2,500+ versions</td><td class="y">Y · 50+ (premium tiers)</td><td class="y">Y · curated</td></tr>
+        <tr><td class="feat">Audio Bible</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y · TTS + ElevenLabs</td></tr>
+        <tr><td class="feat">Verse of the Day (home)</td><td class="y">Y · large image card</td><td class="y">Y · "VERSE" tab</td><td class="y">Y · daily verse</td></tr>
+        <tr><td class="feat">Reading Plans</td><td class="y">Y · 40,000+</td><td class="y">Y · curated + Book Club</td><td class="y">Y · 21 plans + custom</td></tr>
+        <tr><td class="feat">Devotional plans</td><td class="y">Y · social + plans</td><td class="y">Y · "DEVO" tab</td><td class="y">Y · 21 with EGW</td></tr>
+        <tr><td class="feat">Topic-based Q&amp;A</td><td class="p">P · Search</td><td class="y">Y · TouchPoints (500 topics)</td><td class="p">P · roadmap</td></tr>
+        <tr><td class="feat">AI verse search / questions</td><td class="n">—</td><td class="y">Y · "How do I…" search</td><td class="y">Y · OpenAI integration</td></tr>
+        <tr><td class="feat">Highlights / Notes / Bookmarks</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td></tr>
+        <tr><td class="feat">Cross-references in reader</td><td class="y">Y · tappable</td><td class="y">Y · linked chapters</td><td class="y">Y · verse map</td></tr>
+        <tr><td class="feat">Strong's / original languages</td><td class="p">P · select versions</td><td class="y">Y · premium</td><td class="y">Y · Strong's verse map</td></tr>
+        <tr><td class="feat">Commentaries</td><td class="n">—</td><td class="y">Y · Matthew Henry, Believer's, Life App</td><td class="p">P · EGW / SDA Bible Commentary</td></tr>
+        <tr><td class="feat">Study Bibles</td><td class="n">—</td><td class="y">Y · MacArthur, ESV Study (paid)</td><td class="n">—</td></tr>
+        <tr><td class="feat">Ellen G. White writings</td><td class="n">—</td><td class="n">—</td><td class="y">Y · egwwritings.org integration</td></tr>
+        <tr><td class="feat">Sabbath School lessons</td><td class="n">—</td><td class="n">—</td><td class="y">Y · Adventech sync, weekly</td></tr>
+        <tr><td class="feat">Sabbath-aware UI / mode</td><td class="n">—</td><td class="n">—</td><td class="y">Y · auto Sabbath theme</td></tr>
+        <tr><td class="feat">Church directory</td><td class="y">Y · Add Your Church</td><td class="n">—</td><td class="y">Y · 96k+ churches, hierarchy</td></tr>
+        <tr><td class="feat">Friends / Social feed</td><td class="y">Y · Community tab</td><td class="n">—</td><td class="n">— (intentional)</td></tr>
+        <tr><td class="feat">Prayer list</td><td class="y">Y · Guided Prayer</td><td class="y">Y · personal + group</td><td class="y">Y · prayer journal</td></tr>
+        <tr><td class="feat">Streaks / badges / gamification</td><td class="y">Y · streaks + 6+ badges</td><td class="y">Y · streak flame</td><td class="y">Y · spiritual rings</td></tr>
+        <tr><td class="feat">Kids content</td><td class="y">Y · separate Bible App for Kids</td><td class="n">—</td><td class="y">Y · in-app Kids Sabbath School</td></tr>
+        <tr><td class="feat">Giving / donations</td><td class="y">Y · Give Now</td><td class="n">—</td><td class="n">—</td></tr>
+        <tr><td class="feat">Events / church bulletins</td><td class="y">Y</td><td class="n">—</td><td class="n">—</td></tr>
+        <tr><td class="feat">Videos (Bible Project, etc.)</td><td class="y">Y</td><td class="n">—</td><td class="y">Y · cinematic AI videos</td></tr>
+        <tr><td class="feat">Premium / paid tier</td><td class="n">— (free)</td><td class="y">Y · Premium subscription</td><td class="p">P · "Pro" upgrade flow</td></tr>
+        <tr><td class="feat">Offline mode</td><td class="y">Y</td><td class="y">Y · premium</td><td class="p">P · partial</td></tr>
+        <tr><td class="feat">Doctrinal alignment guard</td><td class="n">—</td><td class="n">—</td><td class="y">Y · "Aligned with SDA Beliefs"</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="section-divider">— Screen-by-Screen Comparison —</div>
+
+  <!-- HOME -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 2 · Home Screen</div>
+        <h2>The first thing the user sees</h2>
+        <div class="subtitle">How each app prioritises content on launch</div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063829_Bible_1776372009537.jpg" alt="YouVersion home" />
+        <div class="notes">
+          <strong>Today / Community tabs.</strong> Personal greeting, large Verse-of-the-Day image
+          (likes / comments / share counts visible), then Guided Scripture, Guided Prayer, plan progress,
+          and "Share YouVersion" promo. Heavy social signals.
+        </div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064151_Life_Bible_1776372280145.jpg" alt="Life Bible home" />
+        <div class="notes">
+          <strong>Verse / TouchPoint / Devo tri-toggle.</strong> Big search bar at top
+          ("Search Bible, Topics, or Questions"), Verse of the Day card, then a TouchPoint topical card
+          ("How do you trust God when…"). Search-and-topic-first.
+        </div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF home screenshot<br/>(Daily Reflection · Sabbath School card · Today's Path · Continue · Plans · Spiritual Rings)</div>
+        <div class="notes">
+          <strong>Sabbath-aware home.</strong> Sabbath School card surfaces on the home screen,
+          followed by Today's Path, EGW Daily Reflection, Continue Reading, Reading Plans, and
+          Spiritual Rings. Sabbath mode auto-applies on Saturday.
+        </div>
+      </div>
+    </div>
+    <div class="compare-box">
+      <div class="lbl">GTF takeaway</div>
+      <p>YouVersion leads with social proof, Life Bible leads with search/topics, GTF leads with
+         <strong>this week's Sabbath School lesson + EGW reflection</strong> — a denominationally
+         distinct opening hook neither competitor offers.</p>
+    </div>
+  </section>
+
+  <!-- HOME — secondary content -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 3 · Home — Secondary Content</div>
+        <h2>What's "below the fold" on home</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063836_Bible_1776372009540.jpg" alt="YouVersion More for you" />
+        <div class="notes">"More for you" surfaces active plan day cards and a Share-the-App promo.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064318_Life_Bible_1776372280169.jpg" alt="Life Bible reading plans" />
+        <div class="notes">"My Reading Plans" with Suggested Plans (Healing Church Hurt, Bible Recap),
+          then TouchPoints chips ("Lying", "Victory", "Hospitality").</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF "Continue Reading" + Reading Plans card + Devotional Card screenshot</div>
+        <div class="notes">Resume-Journey pattern: surfaces the last passage read or active plan day.
+          Distinct from YV's social cards — more focused on continuation.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMUNITY / TOPICS -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 4 · Community vs Topics vs ?</div>
+        <h2>The "social vs study" divergence</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion · Community</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063841_Bible_1776372009544.jpg" alt="YouVersion community" />
+        <div class="notes"><strong>Friends-feed model.</strong> "Surround Yourself" CTA to add friends.
+          Activity stream of badges earned, plans started, highlights — like-and-comment social loop.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible · TouchPoints</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064324_Life_Bible_1776372280173.jpg" alt="Life Bible TouchPoints" />
+        <div class="notes"><strong>Topical-answers model.</strong> "I'm wondering about…" with chips:
+          Lying, Victory, Hospitality, Complacency, Gossip, Loyalty, Worry. 500 life-topic Q&amp;A library.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">No friend feed. Could become "Discussion Guide Ready" group prep on Sabbath, or topical EGW lookup.</div>
+        <div class="notes"><strong>Opportunity:</strong> GTF can blend both — a TouchPoint-style
+          "Aligned with SDA Beliefs" topical answer library backed by EGW + scripture, without the
+          social-pressure feed YouVersion creates.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BIBLE READER -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 5 · Bible Reader</div>
+        <h2>Reading the actual scripture</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063850_Bible_1776372009551.jpg" alt="YouVersion bible reader" />
+        <div class="notes">Minimal chrome. Audio · Search · Menu · Translation pill. Cross-reference
+          icons at line level. Bottom chapter navigator with prev/next.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064358_Life_Bible_1776372280186.jpg" alt="Life Bible reader" />
+        <div class="notes"><strong>Power-reader.</strong> Multi-pane: Add view, Replace view,
+          Unlink chapters, Unlink verses. Designed for parallel translations / commentary side-by-side.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF Bible reader screenshot<br/>(Highlights, Bookmarks, Verse Map, Strong's overlay)</div>
+        <div class="notes">GTF reader has Strong's verse map + highlights + bookmarks + verse-level
+          actions. Lacks parallel-pane reading (Life Bible's strength). Lacks cross-reference popovers
+          at YV's polish level.</div>
+      </div>
+    </div>
+    <div class="compare-box">
+      <div class="lbl">Gap to close</div>
+      <p>Add a <strong>parallel translation pane</strong> (Life-Bible-style) and
+         <strong>tappable cross-reference popovers</strong> (YV-style) to make the reader
+         feel competitive with the dominant apps.</p>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 6 · Plans Discovery</div>
+        <h2>How users find what to read next</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063902_Bible_1776372009555.jpg" alt="YouVersion plans" />
+        <div class="notes">My Plans / Find Plans / Saved / Completed tabs. Hero plan ("Everyday Faith"),
+          colored emotion chips (LOVE / HEALING / ANXIETY / ANGER), tag pills (New, Relationships,
+          Listen &amp; Watch).</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064409_Life_Bible_1776372280195.jpg" alt="Life Bible plans" />
+        <div class="notes">Discover / My Plans / Today tabs. Search-by-title, Hero plan, "Life Bible
+          Book Club" branded card, "Book of the Month 2026" carousel (James, Acts, Psalms, Philippians).</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF Plans Discover<br/>(Reading Plans · Devotional Plans · Our Daily Bread)</div>
+        <div class="notes"><strong>Three-section Discover</strong>: Reading Plans (Bible book-by-book),
+          21 Devotional Plans with EGW excerpts, and Our Daily Bread integration. Plus custom-plan
+          generator (any book, any duration).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISCOVER / SEARCH -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 7 · Discover / Search</div>
+        <h2>Topical exploration entry points</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion · Discover</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063910_Bible_1776372009560.jpg" alt="YouVersion discover" />
+        <div class="notes">Search bar + 4 quick-tiles (Plans · Videos · Churches · Partners) + emotion
+          grid (Anger, Love, Healing, Anxiety, Hope, Depression, Peace, Fear, Stress…). Visual-first.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible · Search</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064404_Life_Bible_1776372280189.jpg" alt="Life Bible search" />
+        <div class="notes"><strong>AI-powered search.</strong> Word search examples + "AI Verse Search
+          Examples" ("How do I handle my stress?", "Where is that verse that talks about God wanting
+          us to trust Him with our money?"). Filters: Books, Translations, Favourites.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF search/discover screen<br/>(or roadmap placeholder)</div>
+        <div class="notes">GTF has OpenAI integration but no dedicated topical-search surface yet.
+          <strong>Strong opportunity</strong> to combine Life Bible's AI search prompts with
+          EGW + SDA Bible Commentary as the answer source.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMENTARY / STORE -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 8 · Commentary / Store</div>
+        <h2>Going deeper into study material</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <div class="placeholder">YouVersion has no in-app commentary store. Plans are the depth-mechanism.</div>
+        <div class="notes"><strong>No store.</strong> Free model. Cross-references and plan-driven
+          reflection are the depth tools.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible · Study Further</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064344_Life_Bible_1776372280183.jpg" alt="Life Bible commentaries" />
+        <div class="notes"><strong>Tyndale-backed store.</strong> Matthew Henry's Concise (free),
+          Believer's Bible, Thru the Bible, Life Application Bible. Plus 150+ titles "Newly Added"
+          (MacArthur Study Bible, etc.). Premium subscription gates most of it.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF EGW writings + SDA Bible Commentary access screenshot</div>
+        <div class="notes"><strong>EGW writings + SDA Bible Commentary</strong> as native depth layer
+          — denominationally unique. Could mirror Life Bible's "Study Further" UX with SDA-aligned
+          resources (no third-party commentary clutter).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROFILE / YOU -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 9 · Profile / You</div>
+        <h2>The personal tab</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063916_Bible_1776372009564.jpg" alt="YouVersion profile" />
+        <div class="notes">Share Profile · Add Your Church · Saved / Prayer / Giving · App Streak ·
+          6 Badges (with progress) · Activity feed. Heavy on identity and gamification.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064412_Life_Bible_1776372280202.jpg" alt="Life Bible more menu" />
+        <div class="notes"><strong>"Explore More" sheet</strong> instead of a profile tab:
+          TouchPoints, Prayers, Store, Settings, Try Premium. Functional, not identity-driven.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF profile screen<br/>(Spiritual Rings · Streak · Church · Settings)</div>
+        <div class="notes">GTF has spiritual rings and church hierarchy. <strong>Could borrow YV's
+          identity card</strong> (large name, badges, streak hero) without YV's social feed.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVITY / BADGES -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 10 · Activity &amp; Badges</div>
+        <h2>Engagement loops</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063926_Bible_1776372009569.jpg" alt="YouVersion activity" />
+        <div class="notes">Filter pills: All · Highlights · Notes · Plans · Badges. Each event is
+          a like-and-comment card (Plan Subscription Badge, Plan Started, Highlight Badge…).</div>
+      </div>
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion · highlight detail</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063933_Bible_1776372009573.jpg" alt="YouVersion highlight" />
+        <div class="notes">Highlights surface as social posts inside Activity — your John 1:3 ESV
+          highlight becomes a card others can react to.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF spiritual rings + streak + journey timeline</div>
+        <div class="notes">GTF rings (Study/Prayer/Engage) are <strong>private</strong> — closer to
+          Apple-Watch model than YV's social-feed model. Strong fit for users who want growth without
+          performative sharing.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MORE / SETTINGS -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 11 · More / Settings</div>
+        <h2>Auxiliary destinations</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-yv">
+        <div class="col-title"><h3>YouVersion · More</h3><span class="badge badge-yv">YV</span></div>
+        <img src="screens/Screenshot_20260417_063949_Bible_1776372009578.jpg" alt="YouVersion more" />
+        <div class="notes">Events · Verse of the Day (settings) · Giving (Give Now CTA) · Share
+          YouVersion · About · Help. <strong>Giving</strong> is monetisation entry point.</div>
+      </div>
+      <div class="col col-lb">
+        <div class="col-title"><h3>Life Bible · Newly Added</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064330_Life_Bible_1776372280176.jpg" alt="Life Bible newly added" />
+        <div class="notes">"150+ titles" library teaser → Premium upsell. ESV MacArthur Study Bible
+          featured. Store-driven monetisation.</div>
+      </div>
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder">GTF settings / Pro upgrade / church settings</div>
+        <div class="notes">GTF Pro mission-invite flow exists but no Giving entry, no commerce store.
+          Possible roadmap: Adventist tithing integration, conference event calendar.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI SEARCH HIGHLIGHT -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 12 · AI Search Spotlight</div>
+        <h2>Life Bible's killer feature</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-lb" style="grid-column: span 1;">
+        <div class="col-title"><h3>The prompt UX</h3><span class="badge badge-lb">LB</span></div>
+        <img src="screens/Screenshot_20260417_064335_Life_Bible_1776372280180.jpg" alt="Life Bible AI search" />
+        <div class="notes">"The Bible has the answers to your life questions. Find them with Search."
+          Live-suggestion list pre-populated with reframed questions ("Is the Bible reliable?",
+          "Why does God allow suffering?"). <strong>Best onboarding to AI search I've seen.</strong></div>
+      </div>
+      <div class="col col-gtf" style="grid-column: span 2;">
+        <div class="col-title"><h3>GTF · How to beat it</h3><span class="badge badge-gtf">GTF</span></div>
+        <div class="placeholder" style="aspect-ratio: auto; padding: 24px; min-height: 280px;">
+          <div style="text-align: left; color: var(--text); font-size: 13px; line-height: 1.7;">
+            <strong style="color: var(--gold);">GTF advantages over Life Bible's AI search:</strong>
+            <ul style="margin: 12px 0 0 18px; color: var(--muted);">
+              <li><strong style="color:var(--text);">Grounded answers</strong> — cite EGW + SDA Bible Commentary, not generic LLM output</li>
+              <li><strong style="color:var(--text);">Doctrinal guard rail</strong> — "Aligned with SDA Beliefs" badge already exists in devotional flow</li>
+              <li><strong style="color:var(--text);">Free</strong> — Life Bible AI search is behind Premium</li>
+              <li><strong style="color:var(--text);">Sabbath-aware</strong> — different prompts on Sabbath (rest-focused vs study-focused)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="notes" style="margin-top: 12px;"><strong>Recommended next build:</strong>
+          mirror Life Bible's prompt-suggestion UX exactly — but seed it with SDA-distinctive questions
+          ("What does Scripture teach about the state of the dead?", "Why do Adventists keep the
+          seventh-day Sabbath?", "What is the Investigative Judgment?").</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POSITIONING -->
+  <section class="slide">
+    <div class="slide-header">
+      <div>
+        <div class="slide-num">Slide 13 · Positioning Summary</div>
+        <h2>Where GTF wins, ties, and trails</h2>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="col col-gtf">
+        <div class="col-title"><h3>GTF wins</h3><span class="badge badge-gtf">WIN</span></div>
+        <div class="notes" style="margin-top: 0;">
+          • Sabbath School integration (weekly lessons, Adventech sync)<br/>
+          • Sabbath-aware mode (auto theme + content shift)<br/>
+          • EGW writings as a first-class layer<br/>
+          • "Aligned with SDA Beliefs" doctrinal guard<br/>
+          • Church hierarchy + 96k+ church directory<br/>
+          • AI-generated cinematic videos (no competitor offers)<br/>
+          • Custom plan generator (any book, any duration)<br/>
+          • Private spiritual rings (no social pressure)
+        </div>
+      </div>
+      <div class="col" style="border-top: 3px solid var(--muted);">
+        <div class="col-title"><h3>GTF ties</h3><span class="badge" style="background: rgba(255,255,255,0.1); color: var(--muted);">TIE</span></div>
+        <div class="notes" style="margin-top: 0;">
+          • Bible reader (good but lacks parallel panes)<br/>
+          • Highlights / bookmarks / notes<br/>
+          • Reading plans (curated quality &gt; quantity)<br/>
+          • Audio Bible (TTS + ElevenLabs is competitive)<br/>
+          • Streaks / gamification<br/>
+          • Verse of the Day<br/>
+          • Daily devotional / reflection
+        </div>
+      </div>
+      <div class="col" style="border-top: 3px solid #F87171;">
+        <div class="col-title"><h3>GTF trails</h3><span class="badge" style="background: rgba(248,113,113,0.15); color: #F87171;">GAP</span></div>
+        <div class="notes" style="margin-top: 0;">
+          • Translation count (curated vs YV's 2,500+)<br/>
+          • Topical Q&amp;A library (Life Bible's TouchPoints)<br/>
+          • AI search prompt UX (Life Bible nailed it)<br/>
+          • Parallel-pane reading (Life Bible)<br/>
+          • Friend feed (YouVersion — but intentionally avoided)<br/>
+          • Giving / tithing entry (YouVersion)<br/>
+          • Events / church bulletins (YouVersion)<br/>
+          • Commentary breadth (Life Bible's Tyndale store)
+        </div>
+      </div>
+    </div>
+    <div class="compare-box">
+      <div class="lbl">Strategic recommendation</div>
+      <p>Don't try to out-feature YouVersion's social or Life Bible's commentary store.
+         <strong>Double down on the Adventist moat</strong> (Sabbath School, EGW, doctrinal guard,
+         church hierarchy) and selectively port the two killer competitor patterns:
+         <strong>(1) Life Bible's AI search prompt UX</strong> grounded in EGW/SDA-BC, and
+         <strong>(2) YouVersion's tappable cross-references</strong> in the reader.</p>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>
