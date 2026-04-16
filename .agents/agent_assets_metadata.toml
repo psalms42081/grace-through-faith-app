@@ -18,3 +18,9 @@ id = "uOVJoYA_emmsLqi9SuEk_"
 uri = "file://downloads/life-bible-screenshots.tar.gz"
 type = "unspecified"
 title = "Life Bible Screenshots (11 images)"
+
+[[outputs]]
+id = "CUI-B30xrPVpVZH7DBzD0"
+uri = "file://downloads/comparison-deck.tar.gz"
+type = "unspecified"
+title = "Comparison Deck (HTML + all screenshots)"
