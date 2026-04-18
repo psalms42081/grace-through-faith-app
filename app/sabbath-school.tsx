@@ -25,7 +25,7 @@ import { useTranslation } from "react-i18next";
 import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sabbath"];
+const DAY_LABELS = ["Sabbath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
 interface DayData {
   id: string;

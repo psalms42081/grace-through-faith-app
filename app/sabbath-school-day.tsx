@@ -352,7 +352,7 @@ export default function SabbathSchoolDayScreen() {
     },
   });
 
-  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sabbath"];
+  const DAY_NAMES = ["Sabbath", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const currentDayName = DAY_NAMES[dayNumber - 1] || `Day ${dayNumber}`;
   const hasNextDay = dayNumber < totalDays;
   const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
