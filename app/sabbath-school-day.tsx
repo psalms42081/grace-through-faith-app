@@ -380,7 +380,7 @@ export default function SabbathSchoolDayScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>
-            {DAY_NAMES[dayNumber - 1] || `Day ${dayNumber}`}
+            {currentDayName}
           </Text>
           <Text style={[styles.headerSub, { color: theme.textMuted }]}>
             Lesson {lessonNumber}
@@ -570,7 +570,7 @@ export default function SabbathSchoolDayScreen() {
                   ]}
                 >
                   <Text style={styles.completionPrimaryText}>
-                    Continue to {DAY_NAMES[dayNumber] || `Day ${dayNumber + 1}`}
+                    Continue to {DAY_NAMES_FALLBACK[dayNumber] || `Day ${dayNumber + 1}`}
                   </Text>
                   <Ionicons name="arrow-forward" size={16} color="#050507" />
                 </Pressable>
