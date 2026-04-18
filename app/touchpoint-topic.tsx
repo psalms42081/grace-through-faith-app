@@ -149,7 +149,7 @@ export default function TouchPointTopicScreen() {
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: topic, isLoading } = useQuery<TouchPointTopic>({
+  const { data: topic, isLoading, isFetching, error } = useQuery<TouchPointTopic>({
     queryKey: [`/api/touchpoints/${topicId}`],
     enabled: !!topicId,
   });
@@ -191,7 +191,7 @@ export default function TouchPointTopicScreen() {
 
   const videos = topic?.bibleProjectVideos || [];
 
-  if (isLoading) {
+  if (isLoading || isFetching || !topicId) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.header, { paddingTop: topPad + 12 }]}>
@@ -209,7 +209,26 @@ export default function TouchPointTopicScreen() {
   if (!topic) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.text, textAlign: "center", marginTop: 100 }}>Topic not found</Text>
+        <View style={[styles.header, { paddingTop: topPad + 12 }]}>
+          <Pressable onPress={() => safeGoBack(router, "/touchpoints")} hitSlop={12}>
+            <Ionicons name="chevron-back" size={24} color={theme.text} />
+          </Pressable>
+        </View>
+        <View style={{ padding: 24, marginTop: 60, alignItems: "center" }}>
+          <Ionicons name="compass-outline" size={48} color={theme.textMuted} style={{ marginBottom: 12 }} />
+          <Text style={{ color: theme.text, textAlign: "center", fontSize: 17, fontFamily: "Inter_600SemiBold", marginBottom: 6 }}>
+            Topic not found
+          </Text>
+          <Text style={{ color: theme.textMuted, textAlign: "center", fontSize: 13, marginBottom: 20 }}>
+            {error ? String((error as Error).message || error) : `We couldn't load "${topicId}". Try again or browse all topics.`}
+          </Text>
+          <Pressable
+            onPress={() => router.replace("/touchpoints")}
+            style={{ backgroundColor: GOLD, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}
+          >
+            <Text style={{ color: "#050507", fontFamily: "Inter_600SemiBold" }}>Browse all topics</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
