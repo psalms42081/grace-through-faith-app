@@ -26,6 +26,17 @@ import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
 
 const DAY_LABELS = ["Sabbath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sabbath"];
+
+function labelFromDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  const m = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (!m) return null;
+  const [, dd, mm, yyyy] = m;
+  const d = new Date(Date.UTC(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd)));
+  if (isNaN(d.getTime())) return null;
+  return WEEKDAY_LABELS[d.getUTCDay()];
+}
 
 interface DayData {
   id: string;
@@ -308,7 +319,7 @@ export default function SabbathSchoolScreen() {
           <View style={styles.daysGrid}>
             {days.map((day, index) => {
               const isToday = todayDayNumber === day.dayNumber;
-              const dayLabel = DAY_LABELS[index] || `Day ${day.dayNumber}`;
+              const dayLabel = labelFromDate(day.date) || DAY_LABELS[index] || `Day ${day.dayNumber}`;
               const isCompleted = day.completed;
               const isPast = todayDayNumber !== null && day.dayNumber < todayDayNumber && !isCompleted;
 

@@ -352,8 +352,17 @@ export default function SabbathSchoolDayScreen() {
     },
   });
 
-  const DAY_NAMES = ["Sabbath", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const currentDayName = DAY_NAMES[dayNumber - 1] || `Day ${dayNumber}`;
+  const DAY_NAMES_FALLBACK = ["Sabbath", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sabbath"];
+  const dateMatch = (day?.date || "").match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  let currentDayName = DAY_NAMES_FALLBACK[dayNumber - 1] || `Day ${dayNumber}`;
+  if (dateMatch) {
+    const [, dd, mm, yyyy] = dateMatch;
+    const parsed = new Date(Date.UTC(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd)));
+    if (!isNaN(parsed.getTime())) {
+      currentDayName = WEEKDAY_NAMES[parsed.getUTCDay()];
+    }
+  }
   const hasNextDay = dayNumber < totalDays;
   const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
   const newCompletedCount = isCompleted ? Math.max(completedDays, (data?.lesson?.days?.filter(d => d.completed || d.dayNumber === dayNumber).length || 0)) : completedDays;
