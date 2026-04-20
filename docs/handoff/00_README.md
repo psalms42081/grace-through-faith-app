@@ -129,26 +129,37 @@ Read this to answer: "what do the frontend and backend talk about?"
 
 ---
 
-## The canvas exports (attached as PNGs)
+## The Canvas — live visual specification
 
-The three specification documents tell you WHAT to build. The canvas 
-exports show you HOW IT SHOULD LOOK. Keep both open while coding.
+You have Replit access to this project. The full visual specification 
+lives on the main canvas at the URLs / coordinates below. Scroll to 
+each section rather than downloading — the canvas is the source of 
+truth and will be updated if anything changes.
 
-Files attached:
-- `01_kit.png` — shared component kit (design tokens, nav patterns, 
-  KPI cards, privacy components)
-- `02_pastor_dashboard.png` — light + dark + drill-down + rationale
-- `03_conference_dashboard.png` — same pattern
-- `04_union_dashboard.png` — same pattern
-- `05_division_dashboard.png` — same pattern
-- `06_gc_dashboard.png` — the flagship, global topic heatmap
-- `07_privacy_architecture_inset.png` — board-level privacy matrix
-- `08_drill_down_audit_inset.png` — 5-level drill/audit matrix
-- `09_pay_for_anchors_inset.png` — commercial positioning inset
-- `10_main_app_v11.png` — mobile app 5-screen system
-- `11_kids_club.png` — 3-screen Kids Club system
-- `12_juniors_club.png` — 3-screen Juniors Club system
-- `13_parent_onboarding.png` — 2-screen parent bridge
+**Canvas sections and their y-coordinates:**
+
+- `y=0` — GTF v11 Main App (5 mobile screens, Home / Bible Reader / 
+  Discover / Sabbath School Detail / Profile, light + dark)
+- `y=13,600` — Age-Banded Experience (Kids Club, Juniors Club, 
+  Parent Onboarding, 8 screens)
+- `y=25,100` — GTF Analytics Shared Component Kit
+- `y=27,800` — Strategic Framing + Discipline Notes + Cluster Anchors
+- `y=28,400` — Pastor Dashboard (light + dark + drill-down + 
+  4-paragraph rationale)
+- `y=31,000` — Conference Dashboard (same pattern)
+- `y=33,500` — Union Dashboard
+- `y=36,000` — Division Dashboard
+- `y=38,600` — General Conference Flagship Dashboard
+- `y=42,000` — Privacy Architecture Inset
+- `y=42,600` — Drill-Down & Audit Inset
+- `y=43,200` — Pay-For Anchors Inset
+
+Use the anchor nav strip at `y=24,940` for fast navigation across 
+analytics sections.
+
+Read the rationale columns on the right-hand side of each dashboard. 
+They explain the WHY behind every design decision — especially the 
+privacy architecture and the Adventech content attribution.
 
 ---
 
