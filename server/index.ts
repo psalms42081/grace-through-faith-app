@@ -42,11 +42,6 @@ function setupCors(app: express.Application) {
       });
     }
 
-    // Allow Railway deployment domain
-    if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-      origins.add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
-    }
-
     // Allow any explicitly configured public domain
     if (process.env.PUBLIC_DOMAIN) {
       origins.add(`https://${process.env.PUBLIC_DOMAIN}`);
@@ -63,7 +58,7 @@ function setupCors(app: express.Application) {
     // React Native apps don't send Origin headers — allow all non-browser requests
     const isMobileApp = !origin;
 
-    if (isMobileApp || (origin && (origins.has(origin) || isLocalhost || origin.endsWith(".railway.app")))) {
+    if (isMobileApp || (origin && (origins.has(origin) || isLocalhost))) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",

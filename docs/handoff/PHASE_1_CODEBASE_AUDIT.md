@@ -200,7 +200,14 @@ Based on observed dependencies and risk:
 
 ---
 
-## Section 6 — Open Questions for Mohd
+## Section 6 — Open Questions (resolved answers inline, Aug 8 2026)
+
+> **Resolutions (owner decisions):**
+> - **Q1 — Hosting:** No AWS migration. **Replit is production** (grace-through-faith.replit.app → Replit PostgreSQL). Railway was an abandoned experiment; `railway.json` and the Railway CORS allowances have been **deleted from the repo**.
+> - **Q2 — Tab labels:** **Home / Bible / Discover / Study / Profile.** "Study" chosen over "Sabbath School" to leave room for more than SS.
+> - **Q4 — Canonical Sabbath School surface:** **`app/sabbath-school.tsx` → `sabbath-school-quarter.tsx` → `sabbath-school-day.tsx`** is canonical — this chain is the one wired to the Adventech v2 API sync (`server/services/sabbath-school-sync.ts` → `sabbathSchoolQuarterlies/Lessons/Days` tables → `server/routes/sabbath-school.ts`). `sabbath-school-discussion.tsx` is a companion AI feature on the same data. **Deprecated / not canonical for SS:** `app/lesson/[id].tsx` (general structured-learning system, Sabbath toggle is cosmetic only) and `app/kids/sabbath-school.tsx` (hardcoded kids lessons, not Adventech).
+> - **Q5 — Study Tutor:** Confirmed **net-new** persona/feature; nothing existing maps to it. Phase decision (Phase 1 vs parked) still open — flagged as a scope-creep risk.
+> - **Q11 — Dark background:** **`#050507` wins** (design-system canonical, YouVersion benchmark). `constants/colors.ts` has been corrected from the drifted `#13141C`.
 
 1. **Is the AWS migration actually done?** I see Railway config still in the repo and no AWS-specific env or build artifacts. The brief references "post-AWS migration" — confirm hosting state so I don't recommend infra changes against the wrong target.
 

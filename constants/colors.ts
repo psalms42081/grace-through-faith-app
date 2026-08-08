@@ -33,7 +33,7 @@ const Colors = {
     shimmer2: "#F5EFE0",
   },
   dark: {
-    background: "#13141C",
+    background: "#050507",
     backgroundSecondary: "#191A25",
     backgroundCard: "#21222E",
     backgroundElevated: "#292A38",
