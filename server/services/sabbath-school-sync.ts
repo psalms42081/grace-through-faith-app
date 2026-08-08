@@ -272,9 +272,13 @@ function getDayNumberFromMediaEntry(entry: JsonObject): number | null {
 async function fetchJson(url: string): Promise<unknown | null> {
   try {
     const res = await fetchWithTimeout(url, { service: "external", serviceLabel: "sabbath-school" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[SabbathSchool] Fetch failed (${res.status}) for ${url}`);
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (err) {
+    console.error(`[SabbathSchool] Fetch error for ${url}:`, err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -302,6 +306,20 @@ async function syncQuarter(
   const quarterCoverUrl =
     pickString(quarterInfo, ["cover", "cover_url", "coverUrl", "image"]) ||
     `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/cover.png`;
+
+  // Fetch the lessons index BEFORE writing the quarterly row, so a failed or
+  // empty lessons fetch can't leave behind a "fresh" quarterly with no lessons
+  // (which previously suppressed resync for 24h via shouldSync).
+  const lessonsIndex = await fetchJson(
+    `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/index.json`
+  );
+  const lessonItems = extractCollection(lessonsIndex, ["lessons", "items", "data"]);
+  if (lessonItems.length === 0) {
+    console.error(
+      `[SabbathSchool] Lessons index for ${activeQuarterCode} (${lang}) returned no lessons — aborting sync of this quarter so it will be retried.`
+    );
+    return null;
+  }
 
   const existing = await db
     .select()
@@ -348,10 +366,6 @@ async function syncQuarter(
   }
 
   const updatedLessonIds: string[] = [];
-  const lessonsIndex = await fetchJson(
-    `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/index.json`
-  );
-  const lessonItems = extractCollection(lessonsIndex, ["lessons", "items", "data"]);
 
   for (let i = 0; i < lessonItems.length; i++) {
     const lessonItem = lessonItems[i];
@@ -655,9 +669,14 @@ function getNextQuarterCode(code: string): string {
 async function syncAdjacentQuarters(lang: string = "en", pastCount: number = 8): Promise<void> {
   const currentCode = getCurrentQuarterCode();
 
+  // Only treat a quarter as "existing" if it actually has lessons — a
+  // quarterly row with zero lessons is a partial sync and must be retried.
   const existingQuarters = await db
     .select({ quarterCode: sabbathSchoolQuarterlies.quarterCode })
-    .from(sabbathSchoolQuarterlies);
+    .from(sabbathSchoolQuarterlies)
+    .where(
+      sql`EXISTS (SELECT 1 FROM ${sabbathSchoolLessons} WHERE ${sabbathSchoolLessons.quarterlyId} = ${sabbathSchoolQuarterlies.id})`
+    );
   const existingCodes = new Set(existingQuarters.map(q => q.quarterCode));
 
   const codesToSync: string[] = [];
@@ -763,6 +782,20 @@ export async function shouldSync(): Promise<boolean> {
     .limit(1);
 
   if (currentQ.length > 0) {
+    // A quarterly with no lessons is a partial/failed sync — always repair it,
+    // regardless of how recently lastSyncedAt was stamped.
+    const lessonCount = await db
+      .select({ id: sabbathSchoolLessons.id })
+      .from(sabbathSchoolLessons)
+      .where(eq(sabbathSchoolLessons.quarterlyId, currentQ[0].id))
+      .limit(1);
+    if (lessonCount.length === 0) {
+      console.warn(
+        `[SabbathSchool] Quarterly ${currentQ[0].quarterCode} exists but has zero lessons — forcing resync.`
+      );
+      return true;
+    }
+
     const lastSynced = currentQ[0].lastSyncedAt;
     if (lastSynced) {
       const hoursSinceSync = (Date.now() - lastSynced.getTime()) / (1000 * 60 * 60);

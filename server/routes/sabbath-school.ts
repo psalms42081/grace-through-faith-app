@@ -102,7 +102,9 @@ router.get("/api/sabbath-school/current", async (req, res) => {
             .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
             .limit(1)
         )[0] || null;
-      } catch {}
+      } catch (err) {
+        console.error("[SabbathSchool] On-demand quarterly sync failed:", err instanceof Error ? err.message : err);
+      }
     }
 
     if (!q) {
@@ -123,7 +125,9 @@ router.get("/api/sabbath-school/current", async (req, res) => {
           .from(sabbathSchoolLessons)
           .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
           .orderBy(sabbathSchoolLessons.lessonNumber);
-      } catch {}
+      } catch (err) {
+        console.error("[SabbathSchool] On-demand lesson repair sync failed:", err instanceof Error ? err.message : err);
+      }
     }
 
     if (lessons.length === 0) {
