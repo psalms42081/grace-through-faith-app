@@ -24,6 +24,7 @@ externalPort = 3001
 [[ports]]
 localPort = 5173
 externalPort = 5173
+exposeLocalhost = true
 
 [[ports]]
 localPort = 8081
@@ -40,6 +41,10 @@ externalPort = 3002
 [[ports]]
 localPort = 9090
 externalPort = 4200
+
+[[ports]]
+localPort = 23636
+externalPort = 3003
 
 [env]
 PORT = "5000"
@@ -67,10 +72,6 @@ args = "Start Frontend"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Start Backend"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Mockup Sandbox"
 
 [[workflows.workflow]]
 name = "Start App"
@@ -108,18 +109,6 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
-
-[[workflows.workflow]]
-name = "Mockup Sandbox"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/mockup-sandbox && npx vite"
-waitForPort = 3333
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [userenv]
 
