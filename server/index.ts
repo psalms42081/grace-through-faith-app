@@ -350,6 +350,22 @@ function setupErrorHandler(app: express.Application) {
 
   if (process.env.NODE_ENV === "development") {
     const { createProxyMiddleware } = require("http-proxy-middleware");
+
+    // Mockup sandbox proxy — must come BEFORE the Metro catch-all
+    const mockupProxy = createProxyMiddleware({
+      target: "http://localhost:3333",
+      changeOrigin: true,
+      ws: true,
+      logger: undefined,
+      timeout: 120000,
+      proxyTimeout: 120000,
+      selfHandleResponse: false,
+    });
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith("/__mockup")) return mockupProxy(req, res, next);
+      next();
+    });
+
     const metroProxy = createProxyMiddleware({
       target: "http://localhost:8081",
       changeOrigin: true,

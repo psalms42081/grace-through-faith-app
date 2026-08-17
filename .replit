@@ -10,12 +10,20 @@ build = ["bash", "scripts/deploy-build.sh"]
 run = ["bash", "-c", "PORT=8081 npm run server:prod"]
 
 [[ports]]
+localPort = 3333
+externalPort = 6000
+
+[[ports]]
 localPort = 5000
 externalPort = 5000
 
 [[ports]]
 localPort = 5099
 externalPort = 3001
+
+[[ports]]
+localPort = 5173
+externalPort = 5173
 
 [[ports]]
 localPort = 8081
@@ -60,6 +68,10 @@ args = "Start Frontend"
 task = "workflow.run"
 args = "Start Backend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Mockup Sandbox"
+
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -96,6 +108,18 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "Mockup Sandbox"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/mockup-sandbox && npx vite"
+waitForPort = 3333
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [userenv]
 
