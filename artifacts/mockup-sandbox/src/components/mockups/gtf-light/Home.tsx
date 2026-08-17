@@ -148,8 +148,8 @@ export function Home() {
         {[
           { l: "Home", i: "🏠", active: true },
           { l: "Bible", i: "📖" },
+          { l: "Plans", i: "🗓️" },
           { l: "Discover", i: "🧭" },
-          { l: "Study", i: "🎓" },
           { l: "Profile", i: "👤" },
         ].map(t => (
           <div key={t.l} className="flex flex-col items-center gap-1 w-14">
