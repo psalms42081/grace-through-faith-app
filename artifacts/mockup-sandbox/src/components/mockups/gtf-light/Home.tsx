@@ -3,6 +3,8 @@
 // Lora = large headings + verse text only. Inter = everything else.
 
 const ACCENT = "#E8604C";
+// Darker coral for SMALL text on light surfaces (WCAG: #E8604C on white is ~3.3:1, fails at small sizes)
+const ACCENT_INK = "#C24431";
 const INK = "#1A1A1A";
 const MUTED = "#75706A";
 
@@ -77,7 +79,7 @@ export function Home() {
           </div>
           {/* VOTD */}
           <div className="px-6 pt-6 pb-2">
-            <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase" style={{ color: ACCENT }}>Verse of the Day</p>
+            <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase" style={{ color: ACCENT_INK }}>Verse of the Day</p>
             <p className="font-['Lora'] text-[22px] leading-[1.45] mt-3" style={{ color: INK }}>
               “For by grace are ye saved through faith; and that not of yourselves: it is the gift of God.”
             </p>
@@ -96,7 +98,7 @@ export function Home() {
         {/* Sabbath School card — vibrant gradient cover */}
         <div className="mx-5 mt-5 rounded-[28px] overflow-hidden shadow-[0_4px_24px_rgba(26,26,26,0.10)]">
           <div className="relative px-6 pt-6 pb-5 text-white"
-               style={{ background: "linear-gradient(140deg,#4B3FBF 0%,#7C4DD6 45%,#C05299 100%)" }}>
+               style={{ background: "linear-gradient(140deg,#0B7285 0%,#13A0A2 55%,#2FC4A0 100%)" }}>
             <div className="flex items-center justify-between">
               <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-white/75">Sabbath School · Q3 2026</p>
               <span className="text-[11px] font-semibold bg-white/20 rounded-full px-2.5 py-1">Lesson 7 of 13</span>
@@ -106,7 +108,7 @@ export function Home() {
               <div className="h-1.5 rounded-full bg-white" style={{ width: "54%" }} />
             </div>
             <div className="mt-4 flex items-center gap-2.5">
-              <button className="px-5 py-2.5 rounded-full bg-white text-[13.5px] font-semibold" style={{ color: "#5B3FC0" }}>
+              <button className="px-5 py-2.5 rounded-full bg-white text-[13.5px] font-semibold" style={{ color: "#0B7285" }}>
                 Continue — Wednesday
               </button>
               <button className="px-4 py-2.5 rounded-full bg-white/20 text-white text-[13.5px] font-semibold">▶ Watch</button>
@@ -152,7 +154,7 @@ export function Home() {
         ].map(t => (
           <div key={t.l} className="flex flex-col items-center gap-1 w-14">
             <span className="text-[19px]" style={{ opacity: t.active ? 1 : 0.45 }}>{t.i}</span>
-            <span className="text-[10.5px] font-semibold" style={{ color: t.active ? ACCENT : MUTED }}>{t.l}</span>
+            <span className="text-[10.5px] font-semibold" style={{ color: t.active ? ACCENT_INK : MUTED }}>{t.l}</span>
           </div>
         ))}
       </div>
