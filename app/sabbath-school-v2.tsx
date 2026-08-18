@@ -23,7 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
-import { useEllenWhite } from "@/contexts/EllenWhiteContext";
+import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
 import { HV2, F } from "@/components/home-v2/theme";
 
