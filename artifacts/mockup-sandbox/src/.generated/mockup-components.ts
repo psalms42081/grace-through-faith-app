@@ -8,5 +8,6 @@ export const modules: ModuleMap = {
   "./components/mockups/gtf-light/Plans.tsx": () => import("../components/mockups/gtf-light/Plans.tsx"),
   "./components/mockups/gtf-light/Profile.tsx": () => import("../components/mockups/gtf-light/Profile.tsx"),
   "./components/mockups/gtf-light/SabbathSchool.tsx": () => import("../components/mockups/gtf-light/SabbathSchool.tsx"),
+  "./components/mockups/gtf-light/StyleShelf.tsx": () => import("../components/mockups/gtf-light/StyleShelf.tsx"),
   "./components/mockups/home-layouts/HomeRhythmSpine.tsx": () => import("../components/mockups/home-layouts/HomeRhythmSpine.tsx")
 };
