@@ -171,5 +171,30 @@ function getSabbathTheme(base: typeof Colors.dark | typeof Colors.light, isDark:
   };
 }
 
-export { KidsColors, getSabbathTheme };
+// ── Path B (light) tokens — v12 light-first redesign ─────────────────────────
+// Added alongside legacy tokens (90+ screens still reference Colors above —
+// do not delete old tokens until every screen has migrated).
+// ⚠️ Production ink is #1F1A12. Some canvas frames used a blue token as a
+// rendering workaround — never port that blue.
+const PathB = {
+  surface: "#FBF7EE", // app background, light default
+  surfaceCard: "#FFFFFF", // card surfaces
+  ink: "#1F1A12", // primary text
+  inkMuted: "#8A8A8A", // secondary text, metadata
+  coral: "#E8604C", // brand accent: primary buttons, active tab, streak, progress
+  coralInk: "#C24431", // small coral text (eyebrows, active tab labels) — WCAG-safe
+  gold: "#C9933A", // heritage: streak flame + analytics only
+  // Category tokens
+  catSabbath: "#2A8C82", // teal — Sabbath School
+  catEGW: "#C77A2B", // amber — EGW / devotionals
+  catPlans: "#6E4FB8", // violet — Reading Plans
+  catBible: "#5B6B7A", // blue-grey — Bible
+  catSignpost: "#3A6FA8", // blue — Signposts/topics
+  catHealth: "#7A9B76", // sage
+  catSun: "#E8C25C", // soft yellow
+  // SS gradient (deep teal → sea-green)
+  ssGradient: ["#1F7A70", "#4CAF8E"] as const,
+};
+
+export { KidsColors, getSabbathTheme, PathB };
 export default Colors;

@@ -1,6 +1,10 @@
 {
   "tabs": {
     "home": "Home",
+    "bible": "Bible",
+    "plans": "Plans",
+    "discover": "Discover",
+    "profile": "Profile",
     "read": "Read",
     "connect": "Connect",
     "study": "Study",

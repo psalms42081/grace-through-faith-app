@@ -2,9 +2,10 @@ import { Tabs } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { House, BookOpen, CalendarDays, Compass, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KidsColors } from "@/constants/colors";
+import { KidsColors, PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { useEllenWhite } from "@/contexts/PioneerContext";
@@ -44,8 +45,8 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.accent,
-        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarActiveTintColor: isKidsMode ? theme.accent : PathB.coral,
+        tabBarInactiveTintColor: isKidsMode ? theme.tabIconDefault : PathB.inkMuted,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS
@@ -99,17 +100,17 @@ function ClassicTabLayout() {
         options={{
           title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <House size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="read"
         options={{
-          title: t("tabs.read"),
+          title: t("tabs.bible"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={isSpotlightTab("read") ? GOLD : color} />
+            <BookOpen size={size} color={isSpotlightTab("read") ? GOLD : color} />
           ),
         }}
       />
@@ -117,7 +118,8 @@ function ClassicTabLayout() {
         name="connect"
         options={{
           title: t("tabs.connect"),
-          href: isKidsMode ? null : undefined,
+          // Removed from nav in Path B Phase 0 — screen stays in the codebase and routable
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={isSpotlightTab("connect") ? GOLD : color} />
           ),
@@ -127,29 +129,40 @@ function ClassicTabLayout() {
         name="explore"
         options={{
           title: t("tabs.study"),
-          href: isKidsMode ? null : undefined,
+          // Removed from nav in Path B Phase 0 — study surfaces stay routable via existing links
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={isSpotlightTab("study") ? GOLD : color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="plans"
         options={{
-          title: t("tabs.you"),
+          title: t("tabs.plans"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={isSpotlightTab("profile") ? GOLD : color} />
+            <CalendarDays size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="plans"
+        name="search"
         options={{
-          title: "Plans",
-          href: null,
+          title: t("tabs.discover"),
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
+            <Compass size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t("tabs.profile"),
+          href: isKidsMode ? null : undefined,
+          tabBarIcon: ({ color, size }) => (
+            <User size={size} color={isSpotlightTab("profile") ? GOLD : color} />
           ),
         }}
       />
@@ -160,16 +173,6 @@ function ClassicTabLayout() {
           href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: "Search",
-          href: null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
           ),
         }}
       />
