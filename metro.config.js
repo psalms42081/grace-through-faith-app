@@ -9,7 +9,7 @@ config.watcher = {
 };
 
 const blockList = [
-  new RegExp(path.resolve(__dirname, ".local/state/workflow-logs").replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "/.*"),
+  new RegExp(path.resolve(__dirname, ".local").replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "/.*"),
   new RegExp(path.resolve(__dirname, "artifacts/mockup-sandbox").replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "/.*"),
 ];
 
