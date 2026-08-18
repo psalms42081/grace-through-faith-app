@@ -353,7 +353,7 @@ export default function ChurchConnectScreen() {
           {isLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
           ) : churchList.length === 0 ? (
-            <EmptyState
+            <EmptyState appearance="dark"
               icon="business-outline"
               title="No churches found nearby"
               description="Try a different search or expand your radius"

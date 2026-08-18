@@ -9,13 +9,20 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/useTheme";
+// Path B light sweep: shared button pinned to coral/light (approved micro-task)
+const CORAL = "#E8604C";
+const DARK_CARD = "#21222E";
+const CORAL_INK = "#C24431"; // small coral text on light surfaces
+const MUTED = "#6B6660";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "icon";
+type ButtonAppearance = "light" | "dark";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
   variant?: ButtonVariant;
+  /** "dark" keeps the button readable on not-yet-converted dark screens */
+  appearance?: ButtonAppearance;
   size?: ButtonSize;
   title?: string;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -36,6 +43,7 @@ const sizeConfig: Record<ButtonSize, { paddingH: number; paddingV: number; fontS
 
 export default function Button({
   variant = "primary",
+  appearance = "light",
   size = "md",
   title,
   icon,
@@ -47,16 +55,16 @@ export default function Button({
   textStyle,
   testID,
 }: ButtonProps) {
-  const { theme, isDark } = useTheme();
   const cfg = sizeConfig[size];
   const finalIconSize = customIconSize || cfg.iconSize;
 
+  const fg = appearance === "dark" ? CORAL : CORAL_INK;
   const getVariantStyle = (): { container: ViewStyle; text: TextStyle; iconColor: string } => {
     switch (variant) {
       case "primary":
         return {
           container: {
-            backgroundColor: disabled ? theme.textMuted : theme.accent,
+            backgroundColor: disabled ? MUTED : CORAL_INK,
             borderRadius: 12,
           },
           text: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold" as const },
@@ -65,13 +73,13 @@ export default function Button({
       case "secondary":
         return {
           container: {
-            backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
+            backgroundColor: appearance === "dark" ? DARK_CARD : "#FFFFFF",
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: theme.accent + "40",
+            borderColor: CORAL + "40",
           },
-          text: { color: theme.accent, fontFamily: "Inter_600SemiBold" as const },
-          iconColor: theme.accent,
+          text: { color: fg, fontFamily: "Inter_600SemiBold" as const },
+          iconColor: fg,
         };
       case "ghost":
         return {
@@ -79,13 +87,13 @@ export default function Button({
             backgroundColor: "transparent",
             borderRadius: 12,
           },
-          text: { color: theme.accent, fontFamily: "Inter_600SemiBold" as const },
-          iconColor: theme.accent,
+          text: { color: fg, fontFamily: "Inter_600SemiBold" as const },
+          iconColor: fg,
         };
       case "icon":
         return {
           container: {
-            backgroundColor: theme.accent + "12",
+            backgroundColor: CORAL + "12",
             borderRadius: cfg.minHeight / 2,
             width: cfg.minHeight,
             height: cfg.minHeight,
@@ -94,8 +102,8 @@ export default function Button({
             alignItems: "center" as const,
             justifyContent: "center" as const,
           },
-          text: { color: theme.accent, fontFamily: "Inter_600SemiBold" as const },
-          iconColor: theme.accent,
+          text: { color: fg, fontFamily: "Inter_600SemiBold" as const },
+          iconColor: fg,
         };
     }
   };

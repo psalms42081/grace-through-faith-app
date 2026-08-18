@@ -163,13 +163,13 @@ export default function GroupsScreen() {
         <Text style={[s.emptyDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
           Create an account to join groups, prayer rooms, and live Bible studies
         </Text>
-        <Button
+        <Button appearance="dark"
           variant="primary"
           title="Create Account"
           onPress={() => router.push("/(auth)/register")}
           style={{ marginTop: 8, borderRadius: 24, paddingHorizontal: 28 }}
         />
-        <Button
+        <Button appearance="dark"
           variant="ghost"
           title="Already have an account? Sign In"
           size="sm"
@@ -310,14 +310,14 @@ export default function GroupsScreen() {
       {tab === "my" ? (
         <>
           <View style={s.actionRow}>
-            <Button
+            <Button appearance="dark"
               variant="primary"
               title="Create Group"
               icon="add"
               onPress={() => { setError(""); setShowCreate(true); }}
               style={{ flex: 1 }}
             />
-            <Button
+            <Button appearance="dark"
               variant="secondary"
               title="Join Group"
               icon="enter"
@@ -333,7 +333,7 @@ export default function GroupsScreen() {
               <SpeakerCardSkeleton />
             </View>
           ) : groups.length === 0 ? (
-            <EmptyState
+            <EmptyState appearance="dark"
               icon="people-outline"
               title="No Groups Yet"
               description="Join a small group to grow in faith with others. Browse public groups or enter a join code."
@@ -400,7 +400,7 @@ export default function GroupsScreen() {
               <SpeakerCardSkeleton />
             </View>
           ) : (publicGroups || []).length === 0 ? (
-            <EmptyState
+            <EmptyState appearance="dark"
               icon="globe-outline"
               title="No Groups Found"
               description="No public groups match your search. Try a different filter or create your own group."
@@ -496,13 +496,13 @@ export default function GroupsScreen() {
               </Pressable>
 
               <View style={s.modalActions}>
-                <Button
+                <Button appearance="dark"
                   variant="secondary"
                   title="Cancel"
                   onPress={() => setShowCreate(false)}
                   style={{ flex: 1 }}
                 />
-                <Button
+                <Button appearance="dark"
                   variant="primary"
                   title="Create"
                   onPress={() => createMutation.mutate()}
@@ -536,13 +536,13 @@ export default function GroupsScreen() {
               maxLength={9}
             />
             <View style={s.modalActions}>
-              <Button
+              <Button appearance="dark"
                 variant="secondary"
                 title="Cancel"
                 onPress={() => setShowJoin(false)}
                 style={{ flex: 1 }}
               />
-              <Button
+              <Button appearance="dark"
                 variant="primary"
                 title="Join"
                 onPress={() => joinMutation.mutate()}

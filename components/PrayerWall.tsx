@@ -356,7 +356,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       )}
 
       {activePrayers.length === 0 && !showForm && (
-        <EmptyState
+        <EmptyState appearance="dark"
           icon="flame-outline"
           title="No prayer requests yet"
           description={isGroupMode ? "Lift your group up in prayer together" : "Lift your family up in prayer together"}

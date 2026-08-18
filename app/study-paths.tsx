@@ -173,7 +173,7 @@ export default function StudyPathsScreen() {
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
       ) : tracks.length === 0 ? (
-        <EmptyState
+        <EmptyState appearance="dark"
           icon="trail-sign"
           title="No study paths available yet"
           description="Study paths will appear here once they are available. Check back soon!"
