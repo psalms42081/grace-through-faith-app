@@ -601,7 +601,7 @@ export default function StudyGuideScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
-            Inductive Study
+            Guided Study
           </Text>
           <Text style={[styles.headerSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
             {params.verseReference}

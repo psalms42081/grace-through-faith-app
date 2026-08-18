@@ -19,3 +19,9 @@ description: Locked design decisions for the YouVersion-inspired light-first res
 ## Pastoral-quiet rule (Joe, Aug 2026 — canon)
 Topic pages for pastoral subjects (grief, addiction, abuse, anxiety, depression, loneliness, suffering, abandonment and similar) stay QUIET: no gamified elements, no streak nudges, no playful furniture. Applies to the Signposts topic-page light restyle and any future surface touching these topics.
 **How to apply:** when sweeping touchpoint-topic/touchpoint-study to Path B light, use category token tints per topic but strip/omit streaks, celebration moments, sparkle icons, and playful CTAs on pastoral topics.
+
+## Tutor-removal scope (Joe, Aug 2026 — confirmed)
+Tutor personas (Scholarly / Pastoral / Ellen White) in "Choose Your Tutor" STAY — content voice, not walkthrough. ONLY the hologram dot/avatar and the walkthrough guide system are removed. The gold-ringed EGW avatar floats on the Guided (OIA) session screen, so study surfaces are in the removal's blast radius — the Study-tab restyle brief is sequenced AFTER tutor removal.
+
+## Study surfaces theme reality (Aug 2026 audit — trust this over "Study tab is dark")
+constants/light-sweep.ts SWEEP_LIGHT is the pinned-light palette; useTheme() ALWAYS returns Colors.dark (hardcoded isDark=true), so "theme-driven" = renders dark. ALREADY PINNED LIGHT: entire Study tab app/(tabs)/study.tsx (single useTheme at ~2030, theme=SWEEP_LIGHT passed to all Deep Dive/layer/Application subcomponents), study-guide.tsx, word-study.tsx. STILL DARK (theme-driven): study-category, study-paths, study-path/[id], deep-study-picker (v1), touchpoints, touchpoint-topic, touchpoint-study. Audit-subagent caveat: explorers miss the SWEEP_LIGHT pin and wrongly report pinned screens as dark — grep for `= SWEEP_LIGHT` before believing a theme audit.
