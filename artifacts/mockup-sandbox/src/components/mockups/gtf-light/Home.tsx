@@ -55,6 +55,10 @@ export function Home() {
           </div>
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-[0_1px_6px_rgba(26,26,26,0.07)]">
+              <span className="text-[14px]">🧒</span>
+              <span className="text-[13px] font-semibold" style={{ color: INK }}>Kids</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-[0_1px_6px_rgba(26,26,26,0.07)]">
               <span className="text-[14px]">🔥</span>
               <span className="text-[13.5px] font-bold" style={{ color: INK }}>47</span>
             </div>
