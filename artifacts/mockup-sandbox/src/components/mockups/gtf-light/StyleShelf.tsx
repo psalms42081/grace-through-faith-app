@@ -6,7 +6,7 @@ const MUTED = "#75706A";
 const ART = "/__mockup/images/gtf-art/";
 
 const tiles = [
-  { src: "plan-prayer.png", label: "Prayer" },
+  { src: "plan-prayer-v3.png", label: "Prayer" },
   { src: "plan-prophecy.png", label: "Prophecy" },
   { src: "plan-youth.png", label: "Youth" },
   { src: "plan-new-believers.png", label: "New Believers" },
@@ -27,7 +27,7 @@ const icons = [
 const covers = [
   { src: "cover-steps-to-christ.png", label: "Steps to Christ" },
   { src: "cover-desire-of-ages.png", label: "The Desire of Ages" },
-  { src: "cover-joshua.png", label: "Book of Joshua" },
+  { src: "cover-joshua-v2.png", label: "Book of Joshua" },
   { src: "cover-daniel.png", label: "Daniel" },
   { src: "cover-bible-year.png", label: "Bible in a Year" },
 ];
