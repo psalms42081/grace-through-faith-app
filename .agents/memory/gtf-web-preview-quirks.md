@@ -15,3 +15,6 @@ Study, Explore, Connect, Family tabs have `href: null` in the tab layout — not
 
 ## Tester computed-style probes lie on RN-web
 Pressable fills live on the wrapper node; probes on inner Text report transparent bg or wrong colors. When a probe contradicts the code, trust the code (grep the literal) before re-fixing.
+
+## Two lookalike EllenWhite contexts (Aug 2026)
+The real `useEllenWhite` lives in `contexts/PioneerContext.tsx` (PioneerProvider mounted at app root). `contexts/EllenWhiteContext.tsx` is legacy and its provider is never mounted — importing from it crashes with "useEllenWhite must be used within an EllenWhiteProvider". Also: Metro can serve stale bundles after import fixes; if a fixed error message reappears verbatim, restart Start Frontend before re-diagnosing.
