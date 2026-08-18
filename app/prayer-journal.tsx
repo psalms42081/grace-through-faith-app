@@ -54,7 +54,20 @@ function formatDate(dateStr: string) {
 }
 
 export default function PrayerJournalScreen() {
-  const { theme, isDark } = useTheme();
+  useTheme(); // Path B light sweep: screen is pinned light
+  const theme = {
+    background: "#FBF7EE",
+    backgroundSecondary: "#F1EBDD",
+    backgroundCard: "#FFFFFF",
+    backgroundElevated: "#FFFFFF",
+    text: "#1F1A12",
+    textSecondary: "#3F3A31",
+    textMuted: "#6B6660",
+    accent: "#E8604C",
+    accentInk: "#C24431",
+    success: "#3F7A52",
+    error: "#D64545",
+  };
   const { userId } = useAuth();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -161,14 +174,14 @@ export default function PrayerJournalScreen() {
       />
       <View style={[styles.container, { backgroundColor: theme.background }]}>
 
-        <View style={[styles.filterRow, { backgroundColor: isDark ? theme.backgroundSecondary : "#FFF8EC" }]}>
+        <View style={[styles.filterRow, { backgroundColor: theme.backgroundSecondary }]}>
           {(["active", "answered"] as const).map((f) => (
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
               style={[
                 styles.filterBtn,
-                filter === f && { backgroundColor: theme.accent },
+                filter === f && { backgroundColor: theme.accentInk },
               ]}
               testID={`filter-${f}`}
             >
@@ -211,7 +224,7 @@ export default function PrayerJournalScreen() {
             return (
               <View
                 key={prayer.id}
-                style={[styles.prayerCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}
+                style={[styles.prayerCard, { backgroundColor: theme.backgroundCard }]}
               >
                 <View style={styles.prayerCardHeader}>
                   <View style={[styles.catBadge, { backgroundColor: cat.color + "18" }]}>
@@ -271,7 +284,7 @@ export default function PrayerJournalScreen() {
 
         <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalBox, { backgroundColor: isDark ? theme.backgroundElevated : "#fff" }]}>
+            <View style={[styles.modalBox, { backgroundColor: theme.backgroundElevated }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>New Prayer</Text>
                 <Pressable onPress={() => setShowAdd(false)} hitSlop={12}>
@@ -284,7 +297,7 @@ export default function PrayerJournalScreen() {
                 onChangeText={setNewTitle}
                 placeholder="Prayer title..."
                 placeholderTextColor={theme.textMuted}
-                style={[styles.input, { color: theme.text, backgroundColor: isDark ? theme.backgroundCard : "#F5F0E5", fontFamily: "Inter_400Regular" }]}
+                style={[styles.input, { color: theme.text, backgroundColor: "#F1EBDD", fontFamily: "Inter_400Regular" }]}
                 testID="prayer-title-input"
               />
 
@@ -295,7 +308,7 @@ export default function PrayerJournalScreen() {
                 placeholderTextColor={theme.textMuted}
                 multiline
                 numberOfLines={4}
-                style={[styles.input, styles.textArea, { color: theme.text, backgroundColor: isDark ? theme.backgroundCard : "#F5F0E5", fontFamily: "Inter_400Regular" }]}
+                style={[styles.input, styles.textArea, { color: theme.text, backgroundColor: "#F1EBDD", fontFamily: "Inter_400Regular" }]}
                 testID="prayer-content-input"
               />
 
@@ -308,7 +321,7 @@ export default function PrayerJournalScreen() {
                     style={[
                       styles.catChip,
                       {
-                        backgroundColor: newCategory === cat.id ? cat.color + "20" : isDark ? theme.backgroundCard : "#F5F0E5",
+                        backgroundColor: newCategory === cat.id ? cat.color + "20" : "#F1EBDD",
                         borderColor: newCategory === cat.id ? cat.color : "transparent",
                         borderWidth: 1.5,
                       },
@@ -384,6 +397,11 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 12,
     gap: 10,
+    shadowColor: "#1A1A1A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   prayerCardHeader: {
     flexDirection: "row",

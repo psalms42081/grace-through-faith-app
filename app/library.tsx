@@ -62,6 +62,18 @@ interface EnrichedBookmark {
 
 type TabKey = "notes" | "highlights" | "bookmarks";
 
+// Path B light sweep tokens
+const LIGHT_THEME = {
+  background: "#FBF7EE",
+  backgroundCard: "#FFFFFF",
+  text: "#1F1A12",
+  textSecondary: "#3F3A31",
+  textMuted: "#6B6660",
+  accent: "#E8604C",
+  accentInk: "#C24431",
+  error: "#D64545",
+};
+
 const HIGHLIGHT_COLORS: Record<string, string> = {
   yellow: "#FFD700",
   pink: "#FF96C8",
@@ -97,13 +109,13 @@ function navigateToVerse(bookId: number | null, chapter: number | null) {
   }
 }
 
-function NoteItem({ item, theme, isDark }: { item: EnrichedNote; theme: any; isDark: boolean }) {
+function NoteItem({ item, theme }: { item: EnrichedNote; theme: any }) {
   return (
     <Pressable
       onPress={() => navigateToVerse(item.bookId, item.chapter)}
       style={({ pressed }) => [
         styles.itemCard,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
       ]}
     >
       <View style={styles.itemHeader}>
@@ -135,14 +147,14 @@ function NoteItem({ item, theme, isDark }: { item: EnrichedNote; theme: any; isD
   );
 }
 
-function HighlightItem({ item, theme, isDark }: { item: EnrichedHighlight; theme: any; isDark: boolean }) {
+function HighlightItem({ item, theme }: { item: EnrichedHighlight; theme: any }) {
   const dotColor = HIGHLIGHT_COLORS[item.color] || HIGHLIGHT_COLORS.yellow;
   return (
     <Pressable
       onPress={() => navigateToVerse(item.bookId, item.chapter)}
       style={({ pressed }) => [
         styles.itemCard,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
       ]}
     >
       <View style={styles.itemHeader}>
@@ -175,12 +187,10 @@ function HighlightItem({ item, theme, isDark }: { item: EnrichedHighlight; theme
 function BookmarkItem({
   item,
   theme,
-  isDark,
   onDelete,
 }: {
   item: EnrichedBookmark;
   theme: any;
-  isDark: boolean;
   onDelete: (id: string) => void;
 }) {
   return (
@@ -188,12 +198,12 @@ function BookmarkItem({
       onPress={() => navigateToVerse(item.bookId, item.chapter)}
       style={({ pressed }) => [
         styles.itemCard,
-        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.85 : 1 },
       ]}
     >
       <View style={styles.itemHeader}>
-        <View style={[styles.itemIconWrap, { backgroundColor: "#2563EB15" }]}>
-          <Ionicons name="bookmark" size={16} color="#2563EB" />
+        <View style={[styles.itemIconWrap, { backgroundColor: "#1F1A1210" }]}>
+          <Ionicons name="bookmark" size={16} color="#1F1A12" />
         </View>
         <View style={styles.itemMeta}>
           <Text style={[styles.itemRef, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
@@ -217,7 +227,7 @@ function BookmarkItem({
           }}
           hitSlop={12}
         >
-          <Ionicons name="trash-outline" size={18} color={theme.error || "#E57373"} />
+          <Ionicons name="trash-outline" size={18} color={theme.error} />
         </Pressable>
       </View>
       {item.label && (
@@ -235,7 +245,8 @@ function BookmarkItem({
 }
 
 export default function LibraryScreen() {
-  const { theme, isDark } = useTheme();
+  useTheme(); // Path B light sweep: screen is pinned light
+  const theme = LIGHT_THEME;
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("notes");
@@ -357,19 +368,19 @@ export default function LibraryScreen() {
                 }}
                 style={[
                   styles.tab,
-                  active && { borderBottomColor: theme.accent, borderBottomWidth: 2 },
+                  active && { borderBottomColor: theme.accentInk, borderBottomWidth: 2 },
                 ]}
               >
                 <Ionicons
                   name={tab.icon}
                   size={18}
-                  color={active ? theme.accent : theme.textMuted}
+                  color={active ? theme.accentInk : theme.textMuted}
                 />
                 <Text
                   style={[
                     styles.tabLabel,
                     {
-                      color: active ? theme.accent : theme.textMuted,
+                      color: active ? theme.accentInk : theme.textMuted,
                       fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
                     },
                   ]}
@@ -377,7 +388,7 @@ export default function LibraryScreen() {
                   {tab.label}
                 </Text>
                 {tab.count > 0 && (
-                  <View style={[styles.tabBadge, { backgroundColor: active ? theme.accent : theme.textMuted + "30" }]}>
+                  <View style={[styles.tabBadge, { backgroundColor: active ? theme.accentInk : theme.textMuted + "30" }]}>
                     <Text style={[styles.tabBadgeText, { color: active ? "#fff" : theme.textMuted }]}>
                       {tab.count}
                     </Text>
@@ -388,7 +399,7 @@ export default function LibraryScreen() {
           })}
         </View>
 
-        <View style={[styles.searchBar, { backgroundColor: isDark ? theme.backgroundCard : "#F5F0E6" }]}>
+        <View style={[styles.searchBar, { backgroundColor: "#F1EBDD" }]}>
           <Ionicons name="search" size={16} color={theme.textMuted} />
           <TextInput
             value={search}
@@ -412,7 +423,7 @@ export default function LibraryScreen() {
           <FlatList
             data={filteredNotes}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <NoteItem item={item} theme={theme} isDark={isDark} />}
+            renderItem={({ item }) => <NoteItem item={item} theme={theme} />}
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
             ListEmptyComponent={renderEmptyState}
             scrollEnabled={filteredNotes.length > 0}
@@ -421,7 +432,7 @@ export default function LibraryScreen() {
           <FlatList
             data={filteredHighlights}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <HighlightItem item={item} theme={theme} isDark={isDark} />}
+            renderItem={({ item }) => <HighlightItem item={item} theme={theme} />}
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
             ListEmptyComponent={renderEmptyState}
             scrollEnabled={filteredHighlights.length > 0}
@@ -431,7 +442,7 @@ export default function LibraryScreen() {
             data={filteredBookmarks}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <BookmarkItem item={item} theme={theme} isDark={isDark} onDelete={(id) => deleteBookmark.mutate(id)} />
+              <BookmarkItem item={item} theme={theme} onDelete={(id) => deleteBookmark.mutate(id)} />
             )}
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
             ListEmptyComponent={renderEmptyState}
@@ -500,6 +511,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    shadowColor: "#1A1A1A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   itemHeader: {
     flexDirection: "row",

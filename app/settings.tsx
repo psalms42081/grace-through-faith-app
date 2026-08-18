@@ -29,12 +29,14 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { useTutorial } from "@/contexts/TutorialContext";
 
-const GOLD = "#C9933A";
-const BG = "#0D0F1A";
-const TEXT = "#F0EBE0";
-const TEXT_MUTED = "rgba(240,235,224,0.45)";
-const ROW_BORDER = "rgba(240,235,224,0.08)";
-const CARD_BG = "rgba(255,255,255,0.04)";
+// Path B light sweep tokens
+const CORAL = "#E8604C";
+const CORAL_INK = "#C24431"; // small coral text
+const BG = "#FBF7EE";
+const TEXT = "#1F1A12";
+const TEXT_MUTED = "#6B6660";
+const ROW_BORDER = "rgba(31,26,18,0.08)";
+const CARD_BG = "#FFFFFF";
 
 const NARRATOR_VOICE_KEY = "@grace-through-faith/tts-voice";
 
@@ -57,7 +59,7 @@ function safeGoBack(router: any) {
 }
 
 export default function SettingsScreen() {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme(); // Path B light sweep: screen is pinned light
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, userId, isAuthenticated, logout } = useAuth();
@@ -234,10 +236,10 @@ export default function SettingsScreen() {
 
   const renderSectionHeader = (title: string) => (
     <View style={s.sectionHeaderWrap}>
-      <Text style={[s.sectionHeader, { color: GOLD, fontFamily: "Lora_700Bold" }]}>
+      <Text style={[s.sectionHeader, { color: CORAL_INK, fontFamily: "Lora_700Bold" }]}>
         {title}
       </Text>
-      <View style={[s.sectionLine, { backgroundColor: `${GOLD}25` }]} />
+      <View style={[s.sectionLine, { backgroundColor: `${CORAL_INK}25` }]} />
     </View>
   );
 
@@ -255,7 +257,7 @@ export default function SettingsScreen() {
     const { onPress, rightText, rightElement, showChevron = true, isLast = false } = options || {};
     const content = (
       <View style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ROW_BORDER }]}>
-        <Ionicons name={icon} size={20} color={GOLD} style={s.rowIcon} />
+        <Ionicons name={icon} size={20} color={CORAL} style={s.rowIcon} />
         <Text style={[s.rowLabel, { color: TEXT, fontFamily: "Inter_500Medium" }]}>
           {label}
         </Text>
@@ -286,9 +288,9 @@ export default function SettingsScreen() {
     <Switch
       value={value}
       onValueChange={onValueChange}
-      trackColor={{ false: "#333333", true: "#C9933A" }}
+      trackColor={{ false: "#D8D0BE", true: "#E8604C" }}
       thumbColor="#FFFFFF"
-      ios_backgroundColor="#333333"
+      ios_backgroundColor="#D8D0BE"
       style={{ marginRight: 4 }}
     />
   );
@@ -314,18 +316,18 @@ export default function SettingsScreen() {
         {renderRow("person-outline", "Edit Profile", {
           onPress: () => comingSoon("Edit Profile"),
           showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} />,
+          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
         })}
         {renderRow("notifications-outline", "Notification Settings", {
           onPress: () => comingSoon("Notification Settings"),
           showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} />,
+          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
         })}
         {renderRow("diamond-outline", isPatron ? "Mission Partner" : "Go Premium", {
           onPress: () => comingSoon(isPatron ? "Mission Partner" : "Go Premium"),
           showChevron: false,
           rightText: isPatron ? "Active" : undefined,
-          rightElement: !isPatron ? <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} /> : undefined,
+          rightElement: !isPatron ? <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} /> : undefined,
         })}
         {renderRow("compass-outline", "Pioneer Guide", {
           onPress: () => router.push("/pioneer-selector" as any),
@@ -382,7 +384,7 @@ export default function SettingsScreen() {
           showChevron: false,
           rightElement:
             preferredCurriculum === "adult" ? (
-              <Ionicons name="checkmark-circle" size={18} color={GOLD} style={{ marginRight: 4 }} />
+              <Ionicons name="checkmark-circle" size={18} color={CORAL} style={{ marginRight: 4 }} />
             ) : undefined,
         })}
         {renderRow("school-outline", "InVerse (Youth)", {
@@ -390,7 +392,7 @@ export default function SettingsScreen() {
           showChevron: false,
           rightElement:
             preferredCurriculum === "inverse" ? (
-              <Ionicons name="checkmark-circle" size={18} color={GOLD} style={{ marginRight: 4 }} />
+              <Ionicons name="checkmark-circle" size={18} color={CORAL} style={{ marginRight: 4 }} />
             ) : undefined,
           isLast: true,
         })}
@@ -400,12 +402,12 @@ export default function SettingsScreen() {
           onPress: () => comingSoon("Daily Reminder Time"),
           showChevron: false,
           rightText: "9:00 AM",
-          rightElement: <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} />,
+          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
         })}
         {renderRow("flame-outline", "Streak Notifications", {
           onPress: () => comingSoon("Streak Notifications"),
           showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={theme.textMuted} style={{ marginRight: 4 }} />,
+          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
           isLast: true,
         })}
 
@@ -520,7 +522,7 @@ export default function SettingsScreen() {
           onRequestClose={picker.onClose}
         >
           <View style={s.modalOverlay}>
-            <View style={[s.modalSheet, { backgroundColor: "#1A1C2E" }]}>
+            <View style={[s.modalSheet, { backgroundColor: "#FFFFFF" }]}>
               <View style={s.modalHandle} />
               <Text style={[s.modalTitle, { color: TEXT, fontFamily: "Inter_700Bold" }]}>
                 {picker.title}
@@ -541,14 +543,14 @@ export default function SettingsScreen() {
                       onPress={() => picker.onSelect(item)}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.voiceName, { color: isSelected ? GOLD : TEXT, fontFamily: "Inter_600SemiBold" }]}>
+                        <Text style={[s.voiceName, { color: isSelected ? CORAL_INK : TEXT, fontFamily: "Inter_600SemiBold" }]}>
                           {item.name}
                         </Text>
                         <Text style={[s.voiceRole, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
                           {item.role} · {item.era}
                         </Text>
                       </View>
-                      {isSelected && <Ionicons name="checkmark-circle" size={20} color={GOLD} />}
+                      {isSelected && <Ionicons name="checkmark-circle" size={20} color={CORAL} />}
                     </TouchableOpacity>
                   );
                 }}
@@ -573,7 +575,7 @@ export default function SettingsScreen() {
         onRequestClose={() => setShowLangPicker(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={[s.modalSheet, { backgroundColor: "#1A1C2E" }]}>
+          <View style={[s.modalSheet, { backgroundColor: "#FFFFFF" }]}>
             <View style={s.modalHandle} />
             <Text style={[s.modalTitle, { color: TEXT, fontFamily: "Inter_700Bold" }]}>
               {t("profile.language", "App Language")}
@@ -583,7 +585,7 @@ export default function SettingsScreen() {
               style={[s.langRow, s.langRowFirst, { borderColor: ROW_BORDER }]}
               onPress={handleUseDeviceLang}
             >
-              <Ionicons name="phone-portrait-outline" size={18} color={GOLD} style={{ marginRight: 12 }} />
+              <Ionicons name="phone-portrait-outline" size={18} color={CORAL} style={{ marginRight: 12 }} />
               <Text style={[s.langLabel, { color: TEXT }]}>
                 {t("profile.useDeviceLanguage", "Use Device Language")}
               </Text>
@@ -602,7 +604,7 @@ export default function SettingsScreen() {
                   >
                     <Text style={[s.langLabel, { color: TEXT, flex: 1 }]}>{item.label}</Text>
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={18} color={GOLD} />
+                      <Ionicons name="checkmark-circle" size={18} color={CORAL} />
                     )}
                   </TouchableOpacity>
                 );
@@ -691,7 +693,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(31,26,18,0.15)",
     alignSelf: "center",
     marginBottom: 16,
   },

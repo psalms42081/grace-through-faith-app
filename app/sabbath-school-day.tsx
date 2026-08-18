@@ -233,7 +233,16 @@ function sanitizeContent(content: string): string {
 }
 
 export default function SabbathSchoolDayScreen() {
-  const { theme } = useTheme();
+  useTheme(); // Path B light sweep: pinned light; teal = Sabbath School category token
+  const theme = {
+    background: "#FBF7EE",
+    backgroundCard: "#FFFFFF",
+    text: "#1F1A12",
+    textSecondary: "#3F3A31",
+    textMuted: "#6B6660",
+    border: "#E7E0D2",
+    accent: "#1F7A70",
+  };
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();
@@ -446,7 +455,7 @@ export default function SabbathSchoolDayScreen() {
                 <Ionicons
                   name={isAudioPlaying ? "pause-circle-outline" : "play-circle-outline"}
                   size={32}
-                  color="#C9933A"
+                  color="#1F7A70"
                 />
               </Pressable>
               <Text style={styles.audioLabel}>
@@ -512,18 +521,18 @@ export default function SabbathSchoolDayScreen() {
               ]}
             >
               {completeMutation.isPending ? (
-                <ActivityIndicator size="small" color="#050507" />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Ionicons
                   name={isCompleted ? "checkmark-circle" : "checkmark-circle-outline"}
                   size={22}
-                  color={isCompleted ? "#22C55E" : "#050507"}
+                  color={isCompleted ? "#22C55E" : "#FFFFFF"}
                 />
               )}
               <Text
                 style={[
                   styles.completeBtnText,
-                  { color: isCompleted ? "#22C55E" : "#050507" },
+                  { color: isCompleted ? "#22C55E" : "#FFFFFF" },
                 ]}
               >
                 {isCompleted ? "Completed" : "Mark as Complete"}
@@ -572,7 +581,7 @@ export default function SabbathSchoolDayScreen() {
                   <Text style={styles.completionPrimaryText}>
                     Continue to {DAY_NAMES_FALLBACK[dayNumber] || `Day ${dayNumber + 1}`}
                   </Text>
-                  <Ionicons name="arrow-forward" size={16} color="#050507" />
+                  <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                 </Pressable>
               ) : (
                 <Pressable
@@ -661,7 +670,7 @@ const styles = StyleSheet.create({
   audioLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "rgba(255,255,255,0.72)",
+    color: "#6B6660",
   },
   mdContainer: { gap: 4 },
   mdH1: { fontFamily: "Lora_700Bold", fontSize: 22, lineHeight: 30, marginTop: 16 },
@@ -788,7 +797,7 @@ const styles = StyleSheet.create({
   completionPrimaryText: {
     fontFamily: "Inter_700Bold",
     fontSize: 14,
-    color: "#050507",
+    color: "#FFFFFF",
   },
   completionSecondaryBtn: {
     flexDirection: "row" as const,
