@@ -552,7 +552,7 @@ export default function DiscoverV2Screen() {
                   tint="#DFF6F2"
                   ink="#14655D"
                   title="Guided Study"
-                  sub="Pick a verse and be walked through it step by step"
+                  sub="Walked through observation, meaning, and response"
                   onPress={() => router.push("/study-guide" as any)}
                   testID="discover2-study-guided"
                 />
@@ -564,15 +564,6 @@ export default function DiscoverV2Screen() {
                   sub="Explore a chapter across history, language, and meaning"
                   onPress={() => router.push("/deep-study-picker" as any)}
                   testID="discover2-study-deep"
-                />
-                <StudyRow
-                  icon="search-outline"
-                  tint="#FFF0D9"
-                  ink="#8A5A10"
-                  title="Inductive Study"
-                  sub="Observe, interpret, and apply a passage yourself"
-                  onPress={() => router.push("/study-guide" as any)}
-                  testID="discover2-study-inductive"
                 />
               </View>
             </View>
