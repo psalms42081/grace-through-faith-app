@@ -1539,6 +1539,7 @@ export default function VerseReaderScreen() {
                 { label: "Word Study", sub: "Greek & Hebrew", icon: "language-outline" as const, go: () => router.push(`/word-study?book=${bookId}&chapter=${chapter}` as any) },
                 { label: "Application", sub: "Then & Now", icon: "heart-outline" as const, go: () => router.push({ pathname: "/(tabs)/study", params: { tab: "application", bookId: String(bookId), chapter: String(chapter) } } as any) },
                 { label: "Deep Dive", sub: "Full chapter study", icon: "layers-outline" as const, go: () => router.push({ pathname: "/(tabs)/study", params: { bookId: String(bookId), chapter: String(chapter) } } as any) },
+                { label: "Guided Study", sub: "Step-by-step with a tutor", icon: "chatbubbles-outline" as const, go: () => router.push("/study-guide" as any) },
               ].map((row) => (
                 <Pressable
                   key={row.label}
