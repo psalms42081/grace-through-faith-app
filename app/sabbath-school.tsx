@@ -155,6 +155,17 @@ export default function SabbathSchoolScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScreenHeader title={t("sabbathSchool.title")} />
 
+      {/* Brief 03 Phase A preview pill — remove at swap */}
+      <Pressable
+        onPress={() => router.push("/sabbath-school-v2" as any)}
+        style={({ pressed }) => [styles.previewPill, { opacity: pressed ? 0.8 : 1 }]}
+        testID="ss-preview-pill"
+      >
+        <Ionicons name="sparkles-outline" size={14} color="#FFFFFF" />
+        <Text style={styles.previewPillText}>Preview the new look</Text>
+        <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.85)" />
+      </Pressable>
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
@@ -518,6 +529,22 @@ export default function SabbathSchoolScreen() {
 }
 
 const styles = StyleSheet.create({
+  previewPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "center",
+    backgroundColor: "#1F7A70",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  previewPillText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12.5,
+    color: "#FFFFFF",
+  },
   container: { flex: 1 },
   loadingContainer: {
     flex: 1,
