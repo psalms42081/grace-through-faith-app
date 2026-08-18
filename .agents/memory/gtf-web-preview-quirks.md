@@ -9,3 +9,9 @@ description: Why Expo web preview screenshots look blank/broken and what to trus
 - **How to apply:** When web preview looks broken, run the e2e tester before touching code; treat CORS errors in browser logs as noise.
 - Deep links never work on web: app/_layout.tsx does router.replace("/onboarding") on EVERY launch, and onboarding always exits to /(tabs). Any hidden route must have an in-app entry point (client-side nav) for both testers and Joe's on-device review.
 - Web browser audio/TTS is broken in the test env for BOTH readers (expo-av "sound is not loaded", blocked cross-origin audio). Not a regression signal — verify audio on device only.
+
+## Hidden study surfaces (Path B Phase 0)
+Study, Explore, Connect, Family tabs have `href: null` in the tab layout — not in bottom nav. Study surfaces are reached ONLY via the Bible reader's "Study this chapter" menu (Word Study / Application / Deep Dive). The Guided Study hub (/study-guide) has no shallow in-app entry on web (verse actions show Copy/Explain/Note/Compare/Save/Share only; remaining entries are buried in atlas entity pages), so e2e testers cannot reach it — verify it by code inspection + tsc and flag as visually unverified.
+
+## Tester computed-style probes lie on RN-web
+Pressable fills live on the wrapper node; probes on inner Text report transparent bg or wrong colors. When a probe contradicts the code, trust the code (grep the literal) before re-fixing.
