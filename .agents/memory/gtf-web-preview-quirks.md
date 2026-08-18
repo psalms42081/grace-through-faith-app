@@ -11,7 +11,7 @@ description: Why Expo web preview screenshots look blank/broken and what to trus
 - Web browser audio/TTS is broken in the test env for BOTH readers (expo-av "sound is not loaded", blocked cross-origin audio). Not a regression signal — verify audio on device only.
 
 ## Hidden study surfaces (Path B Phase 0)
-Study, Explore, Connect, Family tabs have `href: null` in the tab layout — not in bottom nav. Study surfaces are reached ONLY via the Bible reader's "Study this chapter" menu (Word Study / Application / Deep Dive). The Guided Study hub (/study-guide) has no shallow in-app entry on web (verse actions show Copy/Explain/Note/Compare/Save/Share only; remaining entries are buried in atlas entity pages), so e2e testers cannot reach it — verify it by code inspection + tsc and flag as visually unverified.
+Study, Explore, Connect, Family tabs have `href: null` in the tab layout — not in bottom nav. Study surfaces are reached ONLY via the Bible reader's "Study this chapter" menu (Word Study / Application / Deep Dive). The Guided Study hub (/study-guide) is reached via the reader sheet's "Guided Study" row (added Aug 2026 as the permanent interim entry; Discover's "Ways to Study" becomes the second entry later).
 
 ## Tester computed-style probes lie on RN-web
 Pressable fills live on the wrapper node; probes on inner Text report transparent bg or wrong colors. When a probe contradicts the code, trust the code (grep the literal) before re-fixing.
