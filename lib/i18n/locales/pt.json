@@ -4,7 +4,11 @@
     "read": "Ler",
     "connect": "Conectar",
     "study": "Estudar",
-    "you": "Perfil"
+    "you": "Perfil",
+    "bible": "Bíblia",
+    "plans": "Planos",
+    "discover": "Descobrir",
+    "profile": "Perfil"
   },
   "home": {
     "verseOfTheDay": "Versiculo do dia",

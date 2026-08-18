@@ -4,7 +4,11 @@
     "read": "阅读",
     "connect": "连接",
     "study": "学习",
-    "you": "我的"
+    "you": "我的",
+    "bible": "圣经",
+    "plans": "计划",
+    "discover": "发现",
+    "profile": "个人资料"
   },
   "home": {
     "verseOfTheDay": "每日经文",
