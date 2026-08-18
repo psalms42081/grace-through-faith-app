@@ -25,6 +25,7 @@ import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
+import RelatedContent from "@/components/reader/RelatedContent";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import useBibleAudio from "@/hooks/useBibleAudio";
 
@@ -52,29 +53,6 @@ const HIGHLIGHT_COLORS = {
 } as const;
 
 type HighlightColorKey = keyof typeof HIGHLIGHT_COLORS;
-
-// ── Path B reader-v2 (Brief 02) ─────────────────────────────────────────────
-// Canon 4 highlight colours. Legacy pink/purple highlights are remapped at
-// RENDER time only (data untouched): pink → orange, purple → blue.
-const CANON_HIGHLIGHTS: HighlightColorKey[] = ["yellow", "green", "blue", "orange"];
-const LEGACY_HIGHLIGHT_MAP: Partial<Record<HighlightColorKey, HighlightColorKey>> = {
-  pink: "orange",
-  purple: "blue",
-};
-function canonHighlightBg(colorKey: string): string | null {
-  const key = colorKey as HighlightColorKey;
-  const mapped = LEGACY_HIGHLIGHT_MAP[key] ?? key;
-  return HIGHLIGHT_COLORS[mapped]?.bg ?? null;
-}
-
-const RV2_SURFACE = "#FBF7EE";   // PathB.surface
-const RV2_INK = "#1F1A12";       // PathB.ink
-const RV2_INK_MUTED = "#6B6660"; // WCAG-safe muted (HV2.inkMutedText)
-const RV2_CORAL = "#E8604C";     // ONLY the Listen play button
-const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
-const RV2_BORDER = "#E7E0D2";
-const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
-const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SPLIT_MODE_KEY = "@grace-through-faith/split-mode";
 const SPLIT_TRANSLATION_KEY = "@grace-through-faith/split-translation";
@@ -192,16 +170,12 @@ function BottomSheetToolbar({
     })
   ).current;
 
-  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current); }, []);
   const showFeedback = (msg: string, isError = false) => {
     setFeedback({ message: msg, isError });
     Haptics.notificationAsync(
       isError ? Haptics.NotificationFeedbackType.Error : Haptics.NotificationFeedbackType.Success
     );
-    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
-    feedbackTimerRef.current = setTimeout(() => {
-      feedbackTimerRef.current = null;
+    setTimeout(() => {
       setFeedback(null);
       dismissSheet();
     }, 800);
@@ -297,7 +271,7 @@ function BottomSheetToolbar({
         </View>
 
         <View style={sheetStyles.selectedVerse}>
-          <Text style={[sheetStyles.selectedRef, { color: "#6B6660" }]} numberOfLines={1}>
+          <Text style={[sheetStyles.selectedRef, { color: GOLD }]} numberOfLines={1}>
             {reference}
           </Text>
           <Text style={[sheetStyles.selectedText, { color: isDark ? DARK_TEXT : LIGHT_TEXT }]} numberOfLines={2}>
@@ -356,10 +330,10 @@ function BottomSheetToolbar({
                 onPress={() => setUnderlineActive(!underlineActive)}
                 style={[sheetStyles.underlineBtn, underlineActive && { backgroundColor: (isDark ? "#333" : "#EEE") }]}
               >
-                <Ionicons name="remove-outline" size={20} color={underlineActive ? "#1F1A12" : "#999"} />
+                <Ionicons name="remove-outline" size={20} color={underlineActive ? GOLD : (isDark ? "#888" : "#999")} />
               </Pressable>
               <View style={sheetStyles.colorDots}>
-                {CANON_HIGHLIGHTS.map((key) => (
+                {(Object.keys(HIGHLIGHT_COLORS) as HighlightColorKey[]).map((key) => (
                   <Pressable
                     key={key}
                     onPress={() => handleHighlight(key)}
@@ -597,14 +571,13 @@ const sheetStyles = StyleSheet.create({
   },
   noteCancelBtn: { paddingHorizontal: 14, paddingVertical: 8 },
   noteCancelText: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  noteSaveBtn: { backgroundColor: "#1F1A12", paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 },
+  noteSaveBtn: { backgroundColor: GOLD, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 },
   noteSaveText: { fontSize: 14, color: "#fff", fontFamily: "Inter_600SemiBold" },
 });
 
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
-  const { theme } = useTheme();
-  const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
+  const { theme, isDark } = useTheme();
   const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
@@ -708,44 +681,6 @@ export default function VerseReaderScreen() {
   const verseTapFadeAnim = useRef(new Animated.Value(0)).current;
 
 
-
-  // reader-v2: text size (AA sheet), chapter picker, strip visibility
-  const [fontScale, setFontScale] = useState(1);
-  const [showTextSizeSheet, setShowTextSizeSheet] = useState(false);
-  const [showChapterPicker, setShowChapterPicker] = useState(false);
-  const [showStudySheet, setShowStudySheet] = useState(false);
-  const stripAnim = useRef(new Animated.Value(0)).current; // 0 shown, 1 hidden
-  const stripHiddenRef = useRef(false);
-  const [stripHidden, setStripHiddenState] = useState(false);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    AsyncStorage.getItem(RV2_FONT_SCALE_KEY).then((v) => {
-      const n = v ? parseFloat(v) : NaN;
-      if (!isNaN(n) && FONT_SCALE_STEPS.includes(n as any)) setFontScale(n);
-    });
-  }, []);
-
-  const applyFontScale = useCallback((n: number) => {
-    setFontScale(n);
-    AsyncStorage.setItem(RV2_FONT_SCALE_KEY, String(n));
-  }, []);
-
-  const setStripHidden = useCallback((hidden: boolean) => {
-    if (stripHiddenRef.current === hidden) return;
-    stripHiddenRef.current = hidden;
-    setStripHiddenState(hidden);
-    Animated.timing(stripAnim, { toValue: hidden ? 1 : 0, duration: 180, useNativeDriver: true }).start();
-  }, [stripAnim]);
-
-  const handleReaderScroll = useCallback((event: any) => {
-    const y = event.nativeEvent.contentOffset.y;
-    const dy = y - lastScrollY.current;
-    lastScrollY.current = y;
-    if (y < 40) { setStripHidden(false); return; }
-    if (dy > 6) setStripHidden(true);
-    else if (dy < -6) setStripHidden(false);
-  }, [setStripHidden]);
 
   const [showVerseTapHint, setShowVerseTapHint] = useState(false);
   useEffect(() => {
@@ -925,14 +860,14 @@ export default function VerseReaderScreen() {
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
       audio.handleStop();
-      router.replace(`/read-v2/${bookId}/${chapterNum - 1}?translation=${translation}` as any);
+      router.replace(`/read-legacy/${bookId}/${chapterNum - 1}?translation=${translation}`);
     }
   }, [bookId, chapterNum, canGoPrev, translation, audio.handleStop]);
 
   const goToNext = useCallback(() => {
     if (canGoNext) {
       audio.handleStop();
-      router.replace(`/read-v2/${bookId}/${chapterNum + 1}?translation=${translation}` as any);
+      router.replace(`/read-legacy/${bookId}/${chapterNum + 1}?translation=${translation}`);
     }
   }, [bookId, chapterNum, canGoNext, translation, audio.handleStop]);
 
@@ -957,71 +892,30 @@ export default function VerseReaderScreen() {
     setActiveVerse(null);
   }, []);
 
-  // A.3 strip actions
-  const [stripToast, setStripToast] = useState<string | null>(null);
-  const stripToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showStripToast = useCallback((msg: string) => {
-    setStripToast(msg);
-    if (stripToastTimer.current) clearTimeout(stripToastTimer.current);
-    stripToastTimer.current = setTimeout(() => setStripToast(null), 1600);
-  }, []);
-  useEffect(() => () => { if (stripToastTimer.current) clearTimeout(stripToastTimer.current); }, []);
-
-  const firstVerseId = verses[0]?.id;
-  const chapterBookmarked = firstVerseId ? bookmarkedVerseIds.has(firstVerseId) : false;
-
-  const handleChapterBookmark = useCallback(async () => {
-    if (!isAuthenticated) { showStripToast("Sign in to save"); return; }
-    if (!firstVerseId) return;
-    try {
-      await apiRequest("POST", "/api/bookmarks", { userId, verseId: firstVerseId, label: `${bookName} ${chapter}` });
-      queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showStripToast("Chapter saved");
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showStripToast("Failed to save");
-    }
-  }, [isAuthenticated, firstVerseId, userId, bookName, chapter, showStripToast]);
-
-  const handleStripHighlight = useCallback(async (color: HighlightColorKey) => {
-    if (!activeVerse) { showStripToast("Tap a verse first"); return; }
-    if (!userId) { showStripToast("Sign in to highlight"); return; }
-    const v = verses.find((x) => x.verse === activeVerse);
-    if (!v) return;
-    try {
-      await apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color });
-      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showStripToast("Highlighted");
-    } catch {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showStripToast("Failed to highlight");
-    }
-  }, [activeVerse, userId, verses, showStripToast]);
-
   const getHighlightBg = useCallback((verseId: string, verseNum: number, index: number): string => {
     if (highlightedFromNav === verseNum) {
-      return `rgba(255, 241, 118, ${navHighlightAlpha})`;
+      return `rgba(201, 147, 58, ${navHighlightAlpha})`;
     }
     if (index === audio.speakingVerseIndex) {
-      return "rgba(255, 241, 118, 0.28)";
+      return isDark ? "rgba(201, 147, 58, 0.15)" : "rgba(255, 215, 0, 0.2)";
     }
     const hColor = highlightColorMap.get(verseId);
+    if (hColor && HIGHLIGHT_COLORS[hColor as HighlightColorKey]) {
+      const c = HIGHLIGHT_COLORS[hColor as HighlightColorKey].bg;
+      return isDark ? c + "30" : c + "50";
+    }
     if (hColor) {
-      const c = canonHighlightBg(hColor);
-      if (c) return c + "50";
-      return "rgba(255, 241, 118, 0.28)";
+      return isDark ? "rgba(201, 147, 58, 0.15)" : "rgba(255, 215, 0, 0.2)";
     }
     return "transparent";
-  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap]);
+  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap, isDark]);
 
-  const readerBg = RV2_SURFACE;
-  const textColor = RV2_INK;
-  const verseNumColor = "rgba(31,26,18,0.40)"; // inkMuted grey — never coral, never gold
-  const chapterNumColor = "rgba(31,26,18,0.07)"; // ghosted chapter number on cream
-  const headerPillBg = RV2_PILL;
-  const headerBorderColor = RV2_BORDER;
+  const readerBg = isDark ? DARK_BG : LIGHT_BG;
+  const textColor = isDark ? DARK_TEXT : LIGHT_TEXT;
+  const verseNumColor = isDark ? "rgba(245,240,232,0.40)" : "rgba(26,26,26,0.40)";
+  const chapterNumColor = isDark ? "rgba(245,240,232,0.10)" : "rgba(26,26,26,0.06)";
+  const headerPillBg = isDark ? DARK_SURFACE : LIGHT_SURFACE;
+  const headerBorderColor = isDark ? "#2A2A2A" : "#E8E8E8";
 
   return (
     <>
@@ -1037,18 +931,9 @@ export default function VerseReaderScreen() {
             </Pressable>
           ),
           headerTitle: () => (
-            <Pressable
-              onPress={() => setShowChapterPicker(true)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={`${bookName} chapter ${chapter}, open chapter selector`}
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1}>
-                {bookName} {chapter}
-              </Text>
-              <Ionicons name="chevron-down" size={14} color={RV2_INK_MUTED} />
-            </Pressable>
+            <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1}>
+              {bookName} {chapter}
+            </Text>
           ),
           headerRight: () => (
             <View style={styles.headerRow}>
@@ -1059,16 +944,7 @@ export default function VerseReaderScreen() {
                 onPress={toggleSplitMode}
                 style={styles.headerIconBtn}
               >
-                <Ionicons name="tablet-landscape-outline" size={18} color={splitMode ? RV2_INK : RV2_INK_MUTED} />
-              </Pressable>
-              <Pressable
-                hitSlop={12}
-                onPress={() => setShowTextSizeSheet(true)}
-                accessibilityLabel="Text size"
-                accessibilityRole="button"
-                style={styles.headerIconBtn}
-              >
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: RV2_INK, letterSpacing: -0.5 }}>AA</Text>
+                <Ionicons name="tablet-landscape-outline" size={18} color={splitMode ? GOLD : (isDark ? DARK_MUTED : "#999")} />
               </Pressable>
               <View>
                 <Pressable
@@ -1091,7 +967,7 @@ export default function VerseReaderScreen() {
       <View style={[styles.container, { backgroundColor: readerBg }]}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={RV2_INK_MUTED} />
+            <ActivityIndicator size="large" color={GOLD} />
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -1140,13 +1016,13 @@ export default function VerseReaderScreen() {
                         }}
                         style={[
                           styles.translationOption,
-                          isActiveT && { backgroundColor: "#1F1A12" + "10" },
+                          isActiveT && { backgroundColor: GOLD + "12" },
                         ]}
                       >
                         <Text style={[
                           styles.translationOptionText,
                           {
-                            color: isActiveT ? "#1F1A12" : textColor,
+                            color: isActiveT ? GOLD : textColor,
                             fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
                           },
                         ]}>
@@ -1170,10 +1046,7 @@ export default function VerseReaderScreen() {
                 if (toolbarVerse) dismissToolbar();
                 setShowTranslationPicker(false);
               }}
-              onScroll={(e) => {
-                handleReaderScroll(e);
-                if (splitMode) handlePrimaryScroll(e);
-              }}
+              onScroll={splitMode ? handlePrimaryScroll : undefined}
               scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
@@ -1195,14 +1068,14 @@ export default function VerseReaderScreen() {
               {showVerseTapHint && verses.length > 0 && (
                 <Pressable
                   onPress={dismissVerseTapHint}
-                  style={[styles.verseTapHint, { backgroundColor: RV2_PILL }]}
+                  style={[styles.verseTapHint, { backgroundColor: isDark ? "rgba(201,147,58,0.06)" : "rgba(201,147,58,0.05)" }]}
                   testID="verse-tap-hint"
                 >
-                  <Ionicons name="hand-left-outline" size={14} color={RV2_INK_MUTED} />
-                  <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
+                  <Ionicons name="hand-left-outline" size={14} color={GOLD} />
+                  <Text style={[styles.verseTapHintText, { color: GOLD }]}>
                     Tap a verse to select. Long press for actions.
                   </Text>
-                  <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
+                  <Ionicons name="close" size={12} color={isDark ? "#444" : "#CCC"} />
                 </Pressable>
               )}
 
@@ -1215,7 +1088,7 @@ export default function VerseReaderScreen() {
                   const isSpeaking = i === audio.speakingVerseIndex && audio.isSpeaking && !audio.isPaused;
 
                   const verseBg = isActive
-                    ? "rgba(31,26,18,0.06)"
+                    ? `rgba(201, 147, 58, 0.10)`
                     : hasHighlightBg
                       ? highlightBg
                       : "transparent";
@@ -1232,17 +1105,17 @@ export default function VerseReaderScreen() {
                           backgroundColor: verseBg,
                           borderRadius: (isActive || hasHighlightBg) ? 8 : 4,
                           borderLeftWidth: isSpeaking ? 2 : 0,
-                          borderLeftColor: isSpeaking ? RV2_INK_MUTED : "transparent",
+                          borderLeftColor: isSpeaking ? GOLD : "transparent",
                         },
                       ]}
                     >
-                      <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                        <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
+                      <Text style={[styles.verseText, { color: textColor }]}>
+                        <Text style={[styles.verseNumInline, { color: verseNumColor }]}>
                           {v.verse}{" "}
                         </Text>
                         {v.text}
                         {isBookmarked && (
-                          <Text style={{ color: RV2_INK_MUTED, fontSize: 10 }}> ◆</Text>
+                          <Text style={{ color: GOLD, fontSize: 10 }}> ◆</Text>
                         )}
                       </Text>
                     </Pressable>
@@ -1251,38 +1124,25 @@ export default function VerseReaderScreen() {
               </View>
 
               <View style={styles.chapterCompleteRow}>
-                <View style={[styles.chapterCompleteLine, { backgroundColor: RV2_BORDER }]} />
-                <View style={[styles.chapterCompleteBadge, { backgroundColor: RV2_PILL }]}>
-                  <Ionicons name="checkmark-circle" size={14} color={RV2_INK_MUTED} />
-                  <Text style={[styles.chapterCompleteText, { color: RV2_INK_MUTED }]}>
+                <View style={[styles.chapterCompleteLine, { backgroundColor: isDark ? "#1F1F1F" : "#E5E5E5" }]} />
+                <View style={[styles.chapterCompleteBadge, { backgroundColor: isDark ? "#111" : "#F5F0E6" }]}>
+                  <Ionicons name="checkmark-circle" size={14} color={GOLD} />
+                  <Text style={[styles.chapterCompleteText, { color: GOLD }]}>
                     Chapter Complete
                   </Text>
                 </View>
-                <View style={[styles.chapterCompleteLine, { backgroundColor: RV2_BORDER }]} />
+                <View style={[styles.chapterCompleteLine, { backgroundColor: isDark ? "#1F1F1F" : "#E5E5E5" }]} />
               </View>
 
-              {/* A.6: scripture ends with completion mark + two quiet rows */}
-              <View style={{ marginTop: 20, gap: 4, paddingBottom: 8 }}>
-                {canGoNext && (
-                  <Pressable
-                    onPress={goToNext}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.quietRow, { opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <Text style={[styles.quietRowText, { color: RV2_INK }]}>Continue Reading</Text>
-                    <Text style={[styles.quietRowMeta, { color: RV2_INK_MUTED }]}>{bookName} {chapterNum + 1}</Text>
-                    <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={() => setShowStudySheet(true)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.quietRow, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <Text style={[styles.quietRowText, { color: RV2_INK_MUTED }]}>Study this chapter</Text>
-                  <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
-                </Pressable>
-              </View>
+              <RelatedContent
+                bookId={Number(bookId)}
+                bookName={bookName}
+                chapter={chapterNum}
+                totalChapters={totalChapters}
+                translation={translation}
+                theme={theme}
+                isDark={isDark}
+              />
             </ScrollView>
 
             {splitMode && (
@@ -1319,13 +1179,13 @@ export default function VerseReaderScreen() {
                             }}
                             style={[
                               styles.translationOption,
-                              isActiveT && { backgroundColor: "#1F1A12" + "10" },
+                              isActiveT && { backgroundColor: GOLD + "12" },
                             ]}
                           >
                             <Text style={[
                               styles.translationOptionText,
                               {
-                                color: isActiveT ? "#1F1A12" : textColor,
+                                color: isActiveT ? GOLD : textColor,
                                 fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
                               },
                             ]}>
@@ -1354,8 +1214,8 @@ export default function VerseReaderScreen() {
                   <View style={styles.proseContainer}>
                     {splitVerses.map((v) => (
                       <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
-                        <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                          <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
+                        <Text style={[styles.verseText, { color: textColor }]}>
+                          <Text style={[styles.verseNumInline, { color: verseNumColor }]}>
                             {v.verse}{" "}
                           </Text>
                           {v.text}
@@ -1383,175 +1243,19 @@ export default function VerseReaderScreen() {
               />
             )}
 
-            {/* A.3: reader controls strip — hides on scroll-down, reappears on scroll-up */}
-            {!audio.isActive && !toolbarVerse && (
-              <Animated.View
-                style={[
-                  styles.controlsStrip,
-                  {
-                    bottom: bottomPad + 54,
-                    opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-                    transform: [{ translateY: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 70] }) }],
-                  },
-                ]}
-                pointerEvents={stripHidden ? "none" : "auto"}
-              >
-                <Pressable
-                  onPress={audio.handlePlay}
-                  accessibilityLabel="Listen to chapter"
-                  accessibilityRole="button"
-                  style={styles.listenBtn}
-                >
-                  <Ionicons name="play" size={18} color="#fff" style={{ marginLeft: 2 }} />
-                </Pressable>
-                <Pressable
-                  onPress={handleChapterBookmark}
-                  accessibilityLabel="Bookmark chapter"
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  style={styles.stripIconBtn}
-                >
-                  <Ionicons name={chapterBookmarked ? "bookmark" : "bookmark-outline"} size={20} color={RV2_INK} />
-                </Pressable>
-                <View style={styles.stripDivider} />
-                {CANON_HIGHLIGHTS.map((key) => (
-                  <Pressable
-                    key={key}
-                    onPress={() => handleStripHighlight(key)}
-                    accessibilityLabel={`Highlight selected verse ${HIGHLIGHT_COLORS[key].label}`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.stripDot,
-                      { backgroundColor: HIGHLIGHT_COLORS[key].bg, opacity: activeVerse ? (pressed ? 0.6 : 1) : 0.35 },
-                    ]}
-                  />
-                ))}
-              </Animated.View>
-            )}
-            {stripToast && (
-              <View style={[styles.stripToast, { bottom: bottomPad + 112 }]}>
-                <Text style={styles.stripToastText}>{stripToast}</Text>
-              </View>
-            )}
-
-            {/* Chapter prev/next pill stays at the bottom, restyled light */}
-            {!audio.isActive && (
-              <View style={[styles.bottomPillWrap, { paddingBottom: bottomPad + 8 }]}>
-                <View style={styles.bottomPill}>
-                  <Pressable onPress={goToPrev} disabled={!canGoPrev} hitSlop={8} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
-                    <Ionicons name="chevron-back" size={16} color={RV2_INK} />
-                  </Pressable>
-                  <Text style={styles.bottomPillText}>{bookName} {chapter}</Text>
-                  <Pressable onPress={goToNext} disabled={!canGoNext} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
-                    <Ionicons name="chevron-forward" size={16} color={RV2_INK} />
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {/* Active audio keeps the full player bar */}
-            {audio.isActive && (
-              <TTSPlayerBar
-                theme={theme}
-                isDark={isDark}
-                audio={audio}
-                verses={verses}
-                bookName={bookName}
-                chapter={chapter}
-                canGoPrev={canGoPrev}
-                canGoNext={canGoNext}
-                goToPrev={goToPrev}
-                goToNext={goToNext}
-                bottomPad={bottomPad}
-              />
-            )}
-          </>
-        )}
-
-        {/* A.2: chapter selector sheet */}
-        {showChapterPicker && totalChapters > 0 && (
-          <>
-            <Pressable style={[StyleSheet.absoluteFill, styles.modalDim]} onPress={() => setShowChapterPicker(false)} />
-            <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
-              <View style={styles.sheetHandleLight} />
-              <Text style={styles.lightSheetTitle}>{bookName}</Text>
-              <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={styles.chapterGrid} showsVerticalScrollIndicator={false}>
-                {Array.from({ length: totalChapters }, (_, i) => i + 1).map((n) => {
-                  const isCurrent = n === chapterNum;
-                  return (
-                    <Pressable
-                      key={n}
-                      onPress={() => {
-                        setShowChapterPicker(false);
-                        if (!isCurrent) {
-                          audio.handleStop();
-                          router.replace(`/read-v2/${bookId}/${n}?translation=${translation}` as any);
-                        }
-                      }}
-                      style={[styles.chapterCell, isCurrent && { backgroundColor: RV2_INK }]}
-                    >
-                      <Text style={[styles.chapterCellText, { color: isCurrent ? "#FFFFFF" : RV2_INK }]}>{n}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </>
-        )}
-
-        {/* A.2: AA text-size sheet (theme toggle slot arrives with dark mode) */}
-        {showTextSizeSheet && (
-          <>
-            <Pressable style={[StyleSheet.absoluteFill, styles.modalDim]} onPress={() => setShowTextSizeSheet(false)} />
-            <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
-              <View style={styles.sheetHandleLight} />
-              <Text style={styles.lightSheetTitle}>Text Size</Text>
-              <View style={styles.fontScaleRow}>
-                <Text style={{ fontFamily: "Lora_600SemiBold", fontSize: 14, color: RV2_INK_MUTED }}>A</Text>
-                <View style={styles.fontScaleTrack}>
-                  {FONT_SCALE_STEPS.map((s) => (
-                    <Pressable
-                      key={s}
-                      onPress={() => applyFontScale(s)}
-                      hitSlop={10}
-                      accessibilityLabel={`Text size ${Math.round(s * 100)} percent`}
-                      style={[styles.fontScaleStop, fontScale === s && styles.fontScaleStopActive]}
-                    />
-                  ))}
-                </View>
-                <Text style={{ fontFamily: "Lora_600SemiBold", fontSize: 24, color: RV2_INK_MUTED }}>A</Text>
-              </View>
-              <Text style={[styles.fontScalePreview, { fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                For by grace are ye saved through faith.
-              </Text>
-            </View>
-          </>
-        )}
-
-        {/* A.6: Study this chapter sheet */}
-        {showStudySheet && (
-          <>
-            <Pressable style={[StyleSheet.absoluteFill, styles.modalDim]} onPress={() => setShowStudySheet(false)} />
-            <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
-              <View style={styles.sheetHandleLight} />
-              <Text style={styles.lightSheetTitle}>Study this chapter</Text>
-              {[
-                { label: "Word Study", sub: "Greek & Hebrew", icon: "language-outline" as const, go: () => router.push(`/word-study?book=${bookId}&chapter=${chapter}` as any) },
-                { label: "Application", sub: "Then & Now", icon: "heart-outline" as const, go: () => router.push({ pathname: "/(tabs)/study", params: { tab: "application", bookId: String(bookId), chapter: String(chapter) } } as any) },
-                { label: "Deep Dive", sub: "Full chapter study", icon: "layers-outline" as const, go: () => router.push({ pathname: "/(tabs)/study", params: { bookId: String(bookId), chapter: String(chapter) } } as any) },
-              ].map((row) => (
-                <Pressable
-                  key={row.label}
-                  onPress={() => { setShowStudySheet(false); row.go(); }}
-                  style={({ pressed }) => [styles.studyRow, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <Ionicons name={row.icon} size={20} color={RV2_INK} />
-                  <Text style={styles.studyRowLabel}>{row.label}</Text>
-                  <Text style={styles.studyRowSub}>{row.sub}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
-                </Pressable>
-              ))}
-            </View>
+            <TTSPlayerBar
+              theme={theme}
+              isDark={isDark}
+              audio={audio}
+              verses={verses}
+              bookName={bookName}
+              chapter={chapter}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              goToPrev={goToPrev}
+              goToNext={goToNext}
+              bottomPad={bottomPad}
+            />
           </>
         )}
 
@@ -1580,8 +1284,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
   headerTitleText: {
-    fontSize: 17,
-    fontFamily: "Lora_600SemiBold",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
   },
   translationBadgeText: {
     fontSize: 13,
@@ -1742,206 +1446,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  // ── reader-v2 additions ────────────────────────────────────
-  controlsStrip: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "rgba(241,235,221,0.96)",
-    borderRadius: 26,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E7E0D2",
-    ...Platform.select({
-      ios: { shadowColor: "#1A1A1A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10 },
-      android: { elevation: 4 },
-      web: { boxShadow: "0 2px 10px rgba(26,26,26,0.08)" },
-    }),
-  },
-  listenBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#E8604C", // the ONLY coral on this screen
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stripIconBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stripDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 22,
-    backgroundColor: "#D8D0BE",
-  },
-  stripDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    marginLeft: 2,
-  },
-  stripToast: {
-    position: "absolute",
-    alignSelf: "center",
-    backgroundColor: "#1F1A12",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  stripToastText: {
-    color: "#FBF7EE",
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-  },
-  bottomPillWrap: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingTop: 8,
-    backgroundColor: "rgba(251,247,238,0.96)",
-  },
-  bottomPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: "#F1EBDD",
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-  },
-  bottomPillText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#1F1A12",
-  },
-  modalDim: {
-    backgroundColor: "rgba(0,0,0,0.35)",
-    zIndex: 2000,
-  },
-  lightSheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 20,
-    zIndex: 2001,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.2, shadowRadius: 16 },
-      android: { elevation: 16 },
-      web: { boxShadow: "0 -4px 24px rgba(0,0,0,0.25)" },
-    }),
-  },
-  sheetHandleLight: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D8D0BE",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  lightSheetTitle: {
-    fontSize: 16,
-    fontFamily: "Lora_600SemiBold",
-    color: "#1F1A12",
-    marginBottom: 12,
-  },
-  chapterGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingBottom: 8,
-  },
-  chapterCell: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: "#F1EBDD",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chapterCellText: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-  },
-  fontScaleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 16,
-  },
-  fontScaleTrack: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F1EBDD",
-    paddingHorizontal: 12,
-  },
-  fontScaleStop: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#D8D0BE",
-  },
-  fontScaleStopActive: {
-    backgroundColor: "#1F1A12",
-    transform: [{ scale: 1.35 }],
-  },
-  fontScalePreview: {
-    fontFamily: "Lora_400Regular",
-    color: "#1F1A12",
-    paddingBottom: 8,
-  },
-  quietRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  quietRowText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  quietRowMeta: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  studyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#F0EAD9",
-  },
-  studyRowLabel: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: "#1F1A12",
-  },
-  studyRowSub: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#6B6660",
-    textAlign: "right",
   },
 });
