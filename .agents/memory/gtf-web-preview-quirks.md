@@ -18,3 +18,7 @@ Pressable fills live on the wrapper node; probes on inner Text report transparen
 
 ## Two lookalike EllenWhite contexts (Aug 2026)
 The real `useEllenWhite` lives in `contexts/PioneerContext.tsx` (PioneerProvider mounted at app root). `contexts/EllenWhiteContext.tsx` is legacy and its provider is never mounted — importing from it crashes with "useEllenWhite must be used within an EllenWhiteProvider". Also: Metro can serve stale bundles after import fixes; if a fixed error message reappears verbatim, restart Start Frontend before re-diagnosing.
+
+## Stale image assets after overwriting same-named files
+Overwriting a PNG in assets/ under the same filename can keep serving old art: Metro's cache lives in /tmp/metro-cache + /tmp/metro-file-map-* (NOT node_modules/.cache), and a long-lived tester browser can keep showing stale pixels even when it claims cache-disabled contexts.
+**How to fix:** rm -rf /tmp/metro-* , restart Start Frontend (expect ~45s of 502s while it rebuilds), verify served bytes with curl on `/assets/?unstable_path=.%2Fassets%2F...` + md5sum, and use a brand-NEW named tester for the visual check — don't trust the old tester's screenshots.
