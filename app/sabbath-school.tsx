@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+// Sabbath School — Path B light (Brief 03, swapped in as canonical in Phase B).
+// Rollback: previous dark screen is in git history (pre-swap checkpoint).
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,24 +13,42 @@ import {
   Linking,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import ScreenHeader from "@/components/ScreenHeader";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStudyDepth } from "@/contexts/StudyDepthContext";
-import StudyDepthSelector from "@/components/StudyDepthSelector";
-import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTranslation } from "react-i18next";
+import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useEllenWhite } from "@/contexts/PioneerContext";
 import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
+import { HV2, F } from "@/components/home-v2/theme";
 
-const DAY_LABELS = ["Sabbath", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sabbath"];
+// ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
+const SS2 = {
+  surface: "#FBF7EE",
+  card: "#FFFFFF",
+  ink: "#1F1A12",
+  inkMuted: HV2.inkMutedText, // #6B6660 — ≥4.5:1 on cream/white
+  teal: "#1F7A70",
+  tealTint: "rgba(31,122,112,0.08)",
+  tealBorder: "rgba(31,122,112,0.25)",
+  coral: "#E8604C", // today-dot ONLY
+  sage: "#557C55", // done check (icon, ≥3:1 on white)
+  pending: "#C9C4B8",
+  dark: "#050507", // THE memory-verse surface (locked canon)
+  cream: "#F0EBE0",
+  creamMuted: "rgba(240,235,224,0.72)",
+  tealSoft: "#7FC8BE", // MEMORY VERSE label on #050507 (≈9:1)
+  border: "rgba(31,26,18,0.08)",
+  violet: "#7C3AED",
+};
 
-function labelFromDate(dateStr: string | null | undefined): string | null {
+const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sabbath"];
+const DAY_FALLBACK = ["Sabbath", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+function weekdayFromDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
   const m = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (!m) return null;
@@ -36,6 +56,24 @@ function labelFromDate(dateStr: string | null | undefined): string | null {
   const d = new Date(Date.UTC(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd)));
   if (isNaN(d.getTime())) return null;
   return WEEKDAY_LABELS[d.getUTCDay()];
+}
+
+// Memory verse lives in day 1's contentMarkdown as:
+// <blockquote><p>Memory Text:</p> “…verse…” (<a …>Reference, NKJV</a>).</blockquote>
+function parseMemoryVerse(html: string | null | undefined): { verse: string; reference: string | null } | null {
+  if (!html) return null;
+  const blocks = [...html.matchAll(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi)].map((m) => m[1]);
+  const block = blocks.find((b) => /memory text/i.test(b));
+  if (!block) return null;
+  const stripped = block
+    .replace(/<p>\s*Memory Text:\s*<\/p>/i, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const refMatch = stripped.match(/\(([^()]+)\)\s*\.?\s*$/);
+  const verse = (refMatch ? stripped.slice(0, refMatch.index) : stripped).trim();
+  const reference = refMatch ? refMatch[1].trim() : null;
+  return verse ? { verse, reference } : null;
 }
 
 interface DayData {
@@ -46,7 +84,6 @@ interface DayData {
   completed: boolean;
   contentMarkdown: string | null;
 }
-
 interface LessonData {
   id: string;
   lessonNumber: number;
@@ -54,16 +91,8 @@ interface LessonData {
   startDate: string | null;
   endDate: string | null;
   days: DayData[];
-  videoByArtist?: Array<{artist: string, clips: Array<{src: string, title: string, thumbnail: string, target: string}>}> | null;
+  videoByArtist?: Array<{ artist: string; clips: Array<{ src: string; title: string; thumbnail: string; target: string }> }> | null;
 }
-
-interface CompanionData {
-  id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-}
-
 interface QuarterlyData {
   id: string;
   title: string;
@@ -71,20 +100,26 @@ interface QuarterlyData {
   colorPrimary: string | null;
   quarterCode?: string;
 }
+interface CompanionData { id: string; slug: string; title: string; description: string | null }
 
-type UserPreferencesResponse = {
-  preferredCurriculum?: "adult" | "inverse" | string | null;
-};
-
-export default function SabbathSchoolScreen() {
-  const { theme, isDark } = useTheme();
+export default function SabbathSchoolV2Screen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const { depth } = useStudyDepth();
   const { t } = useTranslation();
   const { tryAutoGuide } = useEllenWhite();
   const [showArchive, setShowArchive] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<{src: string, title: string, artist: string} | null>(null);
+
+  React.useEffect(() => {
+    // Same first-visit guide as the canonical screen (spotlights are fixed
+    // positions, so they land on the hero/discussion areas here too).
+    const timer = setTimeout(() => {
+      if (FEATURE_GUIDES["sabbath-school"]) {
+        tryAutoGuide("sabbath-school", FEATURE_GUIDES["sabbath-school"]);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+  const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
   const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
 
@@ -98,23 +133,12 @@ export default function SabbathSchoolScreen() {
     setActiveVideo(null);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (FEATURE_GUIDES["sabbath-school"]) {
-        tryAutoGuide("sabbath-school", FEATURE_GUIDES["sabbath-school"]);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-
-  const { data: userPrefs } = useQuery<UserPreferencesResponse>({
+  const { data: userPrefs } = useQuery<{ preferredCurriculum?: string | null }>({
     queryKey: ["/api/user/preferences"],
   });
   const selectedCurriculum = userPrefs?.preferredCurriculum === "inverse" ? "inverse" : "adult";
 
-  const { data, isLoading, error } = useQuery<{
+  const { data, isLoading } = useQuery<{
     quarterly: QuarterlyData | null;
     currentLesson: LessonData | null;
     currentLessonNumber: number;
@@ -135,79 +159,116 @@ export default function SabbathSchoolScreen() {
   const lesson = data?.currentLesson;
   const days = lesson?.days || [];
   const completedCount = data?.completedDays || 0;
-  const todayDayNumber = data?.todayDayNumber || null;
+  const todayDayNumber = data?.todayDayNumber ?? null;
   const companion = data?.companion || null;
+  const totalLessons = data?.totalLessons || 13;
+
+  const memoryVerse = useMemo(
+    () => parseMemoryVerse(days.find((d) => d.dayNumber === 1)?.contentMarkdown),
+    [days]
+  );
+
+  const currentDay = useMemo(() => {
+    if (!days.length) return null;
+    if (todayDayNumber != null) {
+      const today = days.find((d) => d.dayNumber === todayDayNumber);
+      if (today) return today;
+    }
+    return days.find((d) => !d.completed) ?? days[days.length - 1];
+  }, [days, todayDayNumber]);
+
   const lessonVideoClips = (lesson?.videoByArtist ?? [])
-    .flatMap((group) =>
-      (group?.clips ?? []).map((clip) => ({
-        ...clip,
-        artist: group.artist,
-      }))
-    )
+    .flatMap((group) => (group?.clips ?? []).map((clip) => ({ ...clip, artist: group.artist })))
     .filter((clip) => !!clip.src)
     .slice(0, 5);
 
-  const pastQuarters = (archiveData?.quarters || []).filter(
-    (q) => quarterly && q.id !== quarterly.id
-  );
+  const pastQuarters = (archiveData?.quarters || []).filter((q) => quarterly && q.id !== quarterly.id);
+
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const openDay = (d: DayData) => {
+    const qc = quarterly?.quarterCode ? `&quarterCode=${quarterly.quarterCode}` : "";
+    router.push(`/sabbath-school-day?lessonNumber=${lesson!.lessonNumber}&dayNumber=${d.dayNumber}${qc}` as any);
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenHeader title={t("sabbathSchool.title")} />
-
-      {/* Brief 03 Phase A preview pill — remove at swap */}
-      <Pressable
-        onPress={() => router.push("/sabbath-school-v2" as any)}
-        style={({ pressed }) => [styles.previewPill, { opacity: pressed ? 0.8 : 1 }]}
-        testID="ss-preview-pill"
-      >
-        <Ionicons name="sparkles-outline" size={14} color="#FFFFFF" />
-        <Text style={styles.previewPillText}>Preview the new look</Text>
-        <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.85)" />
-      </Pressable>
+    <View style={s.container}>
+      {/* Top bar */}
+      <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/home-v2" as any))}
+          style={({ pressed }) => [s.backBtn, { opacity: pressed ? 0.6 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="chevron-back" size={24} color={SS2.ink} />
+        </Pressable>
+        <Text style={s.topTitle}>{t("sabbathSchool.title", { defaultValue: "Sabbath School" })}</Text>
+        <View style={s.backBtn} />
+      </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.accent} />
-          <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-            {t("sabbathSchool.loading")}
-          </Text>
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={SS2.teal} />
+          <Text style={s.centerText}>{t("sabbathSchool.loading", { defaultValue: "Loading…" })}</Text>
         </View>
       ) : !quarterly || !lesson ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="book-outline" size={48} color={theme.textMuted} />
-          <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-            {t("sabbathSchool.syncing")}
-          </Text>
+        <View style={s.center}>
+          <Ionicons name="book-outline" size={48} color={SS2.inkMuted} />
+          <Text style={s.centerText}>{t("sabbathSchool.syncing", { defaultValue: "Lesson content is syncing. Check back shortly." })}</Text>
         </View>
       ) : (
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
+          style={{ flex: 1 }}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.quarterlyCard, { backgroundColor: quarterly.colorPrimary || "#2E4161" }]}>
-            <Text style={styles.quarterlyLabel}>{t("sabbathSchool.currentQuarter")}</Text>
-            <Text style={styles.quarterlyTitle}>{quarterly.title}</Text>
-            {quarterly.humanDate && (
-              <Text style={styles.quarterlyDate}>{quarterly.humanDate}</Text>
-            )}
+          {/* 1. Lesson hero — the screen's ONE gradient */}
+          <View style={s.heroWrap}>
+            <LinearGradient
+              colors={[...HV2.ssGradientSafe]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={s.heroInner}
+            >
+              <Text style={s.heroEyebrow} numberOfLines={1}>
+                {quarterly.title.toUpperCase()} · {selectedCurriculum === "inverse" ? "INVERSE" : "ADULT"} QUARTERLY
+              </Text>
+              <View style={s.heroBadge}>
+                <Text style={s.heroBadgeText}>
+                  Lesson {data?.currentLessonNumber || lesson.lessonNumber} of {totalLessons}
+                </Text>
+              </View>
+              <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
+              <Text style={s.heroMeta} numberOfLines={2}>
+                {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
+                {memoryVerse?.reference ? `  ·  Memory verse: ${memoryVerse.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
+              </Text>
+              <View style={s.heroTrack}>
+                <View style={[s.heroFill, { width: `${Math.round((completedCount / Math.max(days.length, 1)) * 100)}%` }]} />
+              </View>
+              <Text style={s.heroProgressText}>{completedCount} of {days.length || 7} days</Text>
+              {currentDay && (
+                <Pressable
+                  onPress={() => openDay(currentDay)}
+                  style={({ pressed }) => [s.heroCta, { opacity: pressed ? 0.85 : 1 }]}
+                  accessibilityRole="button"
+                  testID="ss2-hero-cta"
+                >
+                  <Text style={s.heroCtaText} numberOfLines={1}>
+                    Continue — {weekdayFromDate(currentDay.date) || DAY_FALLBACK[currentDay.dayNumber - 1] || `Day ${currentDay.dayNumber}`}
+                    {currentDay.title ? `: ${currentDay.title}` : ""}
+                  </Text>
+                </Pressable>
+              )}
+            </LinearGradient>
           </View>
 
+          {/* 2. Watch This Lesson */}
           {lessonVideoClips.length > 0 && (
-            <View style={styles.videoSection}>
-              <Text style={styles.videoSectionTitle}>Watch This Lesson</Text>
-              <View
-                style={[
-                  styles.videoLayerStack,
-                  activeVideo ? styles.videoLayerStackExpanded : null,
-                ]}
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.videoRow}
-                >
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>Watch This Lesson</Text>
+              <View style={[s.videoLayerStack, activeVideo ? { minHeight: 300 } : null]}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.videoRow}>
                   {lessonVideoClips.map((clip, index) => {
                     const isActive = activeVideo?.src === clip.src;
                     return (
@@ -218,67 +279,42 @@ export default function SabbathSchoolScreen() {
                             Linking.openURL(clip.src).catch(() => {});
                             return;
                           }
-                          if (isActive) {
-                            closeVideoModal();
-                            return;
-                          }
-                          setActiveVideo({
-                            src: clip.src,
-                            title: clip.title || "Lesson Clip",
-                            artist: clip.artist,
-                          });
+                          if (isActive) { closeVideoModal(); return; }
+                          setActiveVideo({ src: clip.src, title: clip.title || "Lesson Clip", artist: clip.artist });
                         }}
-                        style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.8 : 1 }]}
+                        style={({ pressed }) => [s.videoCard, { opacity: pressed ? 0.85 : 1 }]}
                       >
                         {clip.thumbnail ? (
-                          <Image source={{ uri: clip.thumbnail }} style={styles.videoThumb} resizeMode="cover" />
+                          <Image source={{ uri: clip.thumbnail }} style={s.videoThumb} resizeMode="cover" />
                         ) : (
-                          <View style={[styles.videoThumb, { backgroundColor: "rgba(255,255,255,0.08)" }]} />
+                          <View style={[s.videoThumb, { backgroundColor: SS2.tealTint }]} />
                         )}
-                        <Text style={styles.videoTitle} numberOfLines={2}>
-                          {clip.title || "Lesson Clip"}
-                        </Text>
-                        <Text style={styles.videoArtist} numberOfLines={1}>
-                          {clip.artist}
-                        </Text>
+                        <View style={s.videoCardMeta}>
+                          <Text style={s.videoTitle} numberOfLines={2}>{clip.title || "Lesson Clip"}</Text>
+                          <Text style={s.videoArtist} numberOfLines={1}>{clip.artist}</Text>
+                        </View>
                       </Pressable>
                     );
                   })}
                 </ScrollView>
                 {activeVideo && (
-                  <View
-                    style={[
-                      styles.inlinePlayerCard,
-                      styles.inlinePlayerOverlay,
-                      { backgroundColor: theme.backgroundCard, borderColor: theme.border },
-                    ]}
-                  >
+                  <View style={s.inlinePlayerCard}>
                     <Video
                       ref={videoRef}
                       key={activeVideo.src}
                       source={{ uri: activeVideo.src }}
-                      style={styles.inlineVideo}
+                      style={s.inlineVideo}
                       resizeMode={ResizeMode.CONTAIN}
                       shouldPlay
                       useNativeControls
                     />
-                    <View style={styles.inlinePlayerMeta}>
+                    <View style={s.inlinePlayerMeta}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.videoModalTitle} numberOfLines={2}>
-                          {activeVideo.title}
-                        </Text>
-                        <Text style={styles.videoModalArtist} numberOfLines={1}>
-                          {activeVideo.artist}
-                        </Text>
+                        <Text style={s.videoModalTitle} numberOfLines={2}>{activeVideo.title}</Text>
+                        <Text style={s.videoModalArtist} numberOfLines={1}>{activeVideo.artist}</Text>
                       </View>
-                      <Pressable
-                        onPress={closeVideoModal}
-                        style={({ pressed }) => [
-                          styles.inlinePlayerCloseBtn,
-                          { opacity: pressed ? 0.7 : 1 },
-                        ]}
-                      >
-                        <Ionicons name="close-circle" size={24} color={theme.textMuted} />
+                      <Pressable onPress={closeVideoModal} style={({ pressed }) => ({ padding: 2, opacity: pressed ? 0.7 : 1 })}>
+                        <Ionicons name="close-circle" size={24} color={SS2.inkMuted} />
                       </Pressable>
                     </View>
                   </View>
@@ -287,206 +323,99 @@ export default function SabbathSchoolScreen() {
             </View>
           )}
 
-          <View style={styles.lessonHeader}>
-            <View style={styles.lessonBadge}>
-              <Text style={[styles.lessonBadgeText, { color: theme.accent }]}>
-                {t("sabbathSchool.lesson")} {data?.currentLessonNumber || lesson.lessonNumber}
-              </Text>
+          {/* 3. Memory Verse — THE dark surface (locked canon) */}
+          {memoryVerse && (
+            <View style={s.memoryCard} testID="ss2-memory-verse">
+              <Text style={s.memoryLabel}>MEMORY VERSE</Text>
+              <Text style={s.memoryText}>{memoryVerse.verse}</Text>
+              {memoryVerse.reference && <Text style={s.memoryRef}>{memoryVerse.reference}</Text>}
             </View>
-            <Text style={[styles.lessonTitle, { color: theme.text }]}>
-              {lesson.title}
-            </Text>
-            {lesson.startDate && lesson.endDate && (
-              <Text style={[styles.lessonDates, { color: theme.textMuted }]}>
-                {lesson.startDate} — {lesson.endDate}
-              </Text>
-            )}
-          </View>
+          )}
 
-
-          <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    backgroundColor: theme.accent,
-                    width: `${(completedCount / Math.max(days.length, 1)) * 100}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.progressText, { color: theme.textMuted }]}>
-              {t("sabbathSchool.daysCompleted", { completed: completedCount, total: days.length })}
-            </Text>
-          </View>
-
-          <View style={styles.dailyStudyHeader}>
-            <Text style={[styles.dailyStudyLabel, { color: theme.textSecondary }]}>
-              {t("sabbathSchool.dailyStudy", { defaultValue: "Daily Study Guide" })}
-            </Text>
-          </View>
-
-          <View style={styles.daysGrid}>
-            {days.map((day, index) => {
-              const isToday = todayDayNumber === day.dayNumber;
-              const dayLabel = labelFromDate(day.date) || DAY_LABELS[index] || `Day ${day.dayNumber}`;
-              const isCompleted = day.completed;
-              const isPast = todayDayNumber !== null && day.dayNumber < todayDayNumber && !isCompleted;
-
-              return (
-                <Pressable
-                  key={day.id}
-                  onPress={() =>
-                    router.push(
-                      `/sabbath-school-day?lessonNumber=${lesson.lessonNumber}&dayNumber=${day.dayNumber}` as any
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.dayCard,
-                    {
-                      backgroundColor: isToday
-                        ? "rgba(201, 147, 58, 0.15)"
-                        : isCompleted
-                          ? "rgba(34, 197, 94, 0.06)"
-                          : theme.backgroundCard,
-                      borderColor: isToday
-                        ? "rgba(201, 147, 58, 0.5)"
-                        : isCompleted
-                          ? "rgba(34, 197, 94, 0.2)"
-                          : theme.border,
-                      borderWidth: isToday ? 1.5 : 1,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.dayCardTop}>
-                    <View style={styles.dayLabelRow}>
-                      <Text
-                        style={[
-                          styles.dayLabel,
-                          {
-                            color: isToday ? theme.accent : isCompleted ? "#22C55E" : theme.textMuted,
-                            fontFamily: isToday ? "Inter_700Bold" : "Inter_600SemiBold",
-                          },
-                        ]}
-                      >
-                        {dayLabel}
-                      </Text>
-                      {isToday && (
-                        <View style={styles.todayBadge}>
-                          <Text style={styles.todayBadgeText}>Today</Text>
-                        </View>
+          {/* 4. This Week */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>This Week</Text>
+            <View style={s.weekCard}>
+              {days.map((day, index) => {
+                const isToday = todayDayNumber === day.dayNumber;
+                const label = weekdayFromDate(day.date) || DAY_FALLBACK[index] || `Day ${day.dayNumber}`;
+                return (
+                  <Pressable
+                    key={day.id}
+                    onPress={() => openDay(day)}
+                    style={({ pressed }) => [
+                      s.dayRow,
+                      isToday && s.dayRowToday,
+                      index < days.length - 1 && s.dayRowDivider,
+                      { opacity: pressed ? 0.7 : 1 },
+                    ]}
+                    testID={`ss2-day-${day.dayNumber}`}
+                  >
+                    <View style={s.dayStatus}>
+                      {day.completed ? (
+                        <Ionicons name="checkmark-circle" size={20} color={SS2.sage} />
+                      ) : isToday ? (
+                        <View style={s.todayDot} />
+                      ) : (
+                        <Ionicons name="ellipse-outline" size={18} color={SS2.pending} />
                       )}
                     </View>
-                    {isCompleted ? (
-                      <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-                    ) : isToday ? (
-                      <Ionicons name="arrow-forward-circle" size={20} color={theme.accent} />
-                    ) : (
-                      <Ionicons name="ellipse-outline" size={20} color={theme.border} />
-                    )}
-                  </View>
-                  <Text
-                    style={[styles.dayTitle, { color: isCompleted ? theme.textSecondary : theme.text }]}
-                    numberOfLines={2}
-                  >
-                    {day.title || `Day ${day.dayNumber}`}
-                  </Text>
-                  {day.date && (
-                    <Text style={[styles.dayDate, { color: theme.textMuted }]}>
-                      {day.date}
-                    </Text>
-                  )}
-                </Pressable>
-              );
-            })}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.dayLabel, isToday && { color: SS2.teal }]}>{label}{isToday ? "  ·  Today" : ""}</Text>
+                      <Text style={s.dayTitle} numberOfLines={2}>{day.title || `Day ${day.dayNumber}`}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={SS2.inkMuted} />
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
+          {/* Companion + discussion (kept — do-not-regress) */}
           {companion && (
             <Pressable
               onPress={() => router.push(`/resource-detail?slug=${companion.slug}` as any)}
-              style={({ pressed }) => [
-                styles.companionCard,
-                {
-                  backgroundColor: isDark ? "rgba(139, 92, 246, 0.1)" : "rgba(139, 92, 246, 0.06)",
-                  borderColor: isDark ? "rgba(139, 92, 246, 0.25)" : "rgba(139, 92, 246, 0.15)",
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
+              style={({ pressed }) => [s.companionCard, { opacity: pressed ? 0.85 : 1 }]}
             >
-              <View style={styles.companionCardHeader}>
-                <View style={styles.companionCardIcon}>
-                  <Ionicons name="book" size={18} color="#8B5CF6" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.companionCardLabel, { color: "#8B5CF6" }]}>
-                    Lesson Companion
-                  </Text>
-                  <Text style={[styles.companionCardTitle, { color: theme.text }]} numberOfLines={2}>
-                    {companion.title.replace(/^Companion:\s*/i, "")}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+              <View style={s.companionIcon}>
+                <Ionicons name="book" size={18} color={SS2.violet} />
               </View>
-              <Text style={[styles.companionCardSub, { color: theme.textSecondary }]}>
-                A practical companion for deeper weekly study
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.companionLabel}>LESSON COMPANION</Text>
+                <Text style={s.companionTitle} numberOfLines={2}>{companion.title.replace(/^Companion:\s*/i, "")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={SS2.inkMuted} />
             </Pressable>
           )}
 
           <Pressable
             onPress={() =>
-              router.push(
-                `/sabbath-school-discussion?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}` as any
-              )
+              router.push(`/sabbath-school-discussion?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}` as any)
             }
-            style={({ pressed }) => [
-              styles.discussionBtn,
-              {
-                backgroundColor: theme.accent,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
+            style={({ pressed }) => [s.discussionBtn, { opacity: pressed ? 0.85 : 1 }]}
           >
-            <Ionicons name="chatbubbles" size={22} color="#050507" />
+            <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.discussionBtnTitle}>Lesson Discussion Guide</Text>
-              <Text style={styles.discussionBtnSub}>
-                Discussion questions, key themes, and talk prompts
-              </Text>
+              <Text style={s.discussionTitle}>Lesson Discussion Guide</Text>
+              <Text style={s.discussionSub}>Discussion questions, key themes, and talk prompts</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#050507" />
+            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.8)" />
           </Pressable>
 
+          {/* Archive → quarter screens */}
           <Pressable
             onPress={() => setShowArchive(!showArchive)}
-            style={({ pressed }) => [
-              styles.archiveToggle,
-              {
-                backgroundColor: theme.backgroundCard,
-                borderColor: theme.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
+            style={({ pressed }) => [s.archiveToggle, { opacity: pressed ? 0.7 : 1 }]}
           >
-            <Ionicons name="library-outline" size={18} color={theme.textSecondary} />
-            <Text style={[styles.archiveToggleText, { color: theme.text }]}>
-              {t("sabbathSchool.viewArchive")}
-            </Text>
-            <Ionicons
-              name={showArchive ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={theme.textMuted}
-            />
+            <Ionicons name="library-outline" size={18} color={SS2.teal} />
+            <Text style={s.archiveToggleText}>{t("sabbathSchool.viewArchive", { defaultValue: "Past Quarters" })}</Text>
+            <Ionicons name={showArchive ? "chevron-up" : "chevron-down"} size={16} color={SS2.inkMuted} />
           </Pressable>
 
           {showArchive && (
-            <View style={styles.archiveSection}>
+            <View style={{ gap: 10 }}>
               {pastQuarters.length === 0 ? (
-                <Text style={[styles.archiveEmpty, { color: theme.textMuted }]}>
-                  {t("sabbathSchool.noArchive")}
-                </Text>
+                <Text style={s.archiveEmpty}>{t("sabbathSchool.noArchive", { defaultValue: "No past quarters yet." })}</Text>
               ) : (
                 pastQuarters.map((q) => (
                   <Pressable
@@ -496,31 +425,22 @@ export default function SabbathSchoolScreen() {
                         `/sabbath-school-quarter?quarterCode=${(q as any).quarterCode}&title=${encodeURIComponent(q.title)}` as any
                       )
                     }
-                    style={({ pressed }) => [
-                      styles.archiveCard,
-                      {
-                        backgroundColor: q.colorPrimary || "#2E4161",
-                        opacity: pressed ? 0.8 : 1,
-                      },
-                    ]}
+                    style={({ pressed }) => [s.archiveCard, { opacity: pressed ? 0.85 : 1 }]}
                   >
-                    <Text style={styles.archiveCardTitle}>{q.title}</Text>
-                    {q.humanDate && (
-                      <Text style={styles.archiveCardDate}>{q.humanDate}</Text>
-                    )}
+                    <Text style={s.archiveCardTitle}>{q.title}</Text>
+                    {q.humanDate && <Text style={s.archiveCardDate}>{q.humanDate}</Text>}
                   </Pressable>
                 ))
               )}
             </View>
           )}
 
-          <View style={styles.sourceFooter}>
-            <Ionicons name="library-outline" size={12} color={theme.textMuted} />
-            <Text style={[styles.sourceFooterText, { color: theme.textMuted }]}>
-              {t("sabbathSchool.sourceAttribution")}
+          <View style={s.sourceFooter}>
+            <Ionicons name="library-outline" size={12} color={SS2.inkMuted} />
+            <Text style={s.sourceFooterText}>
+              {t("sabbathSchool.sourceAttribution", { defaultValue: "Lesson content courtesy of the Adventech Sabbath School project." })}
             </Text>
           </View>
-
           <SDAVerifiedBadge />
         </ScrollView>
       )}
@@ -528,335 +448,74 @@ export default function SabbathSchoolScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  previewPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "center",
-    backgroundColor: "#1F7A70",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginBottom: 4,
-  },
-  previewPillText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12.5,
-    color: "#FFFFFF",
-  },
-  container: { flex: 1 },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: { fontFamily: "Inter_400Regular", fontSize: 14 },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-    gap: 12,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  scroll: { flex: 1 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: SS2.surface },
+  topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingBottom: 8 },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  topTitle: { flex: 1, textAlign: "center", fontFamily: F.interSemi, fontSize: 16, color: SS2.ink },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
+  centerText: { fontFamily: F.inter, fontSize: 14, color: SS2.inkMuted, textAlign: "center", lineHeight: 22 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
-  quarterlyCard: {
-    borderRadius: 16,
-    padding: 20,
-    gap: 6,
-  },
-  quarterlyLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
-    letterSpacing: 1.5,
-  },
-  quarterlyTitle: {
-    fontFamily: "Lora_700Bold",
-    fontSize: 20,
-    color: "#fff",
-    lineHeight: 28,
-  },
-  quarterlyDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-  },
-  lessonHeader: { gap: 4 },
-  lessonBadge: { marginBottom: 4 },
-  lessonBadgeText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  lessonTitle: {
-    fontFamily: "Lora_600SemiBold",
-    fontSize: 20,
-    lineHeight: 28,
-  },
-  lessonDates: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  progressSection: { gap: 6 },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(201, 147, 58, 0.15)",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-  },
-  dailyStudyHeader: {
-    paddingTop: 4,
-    paddingBottom: 2,
-  },
-  dailyStudyLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  daysGrid: { gap: 8 },
-  dayCard: {
-    borderRadius: 14,
-    padding: 14,
-    gap: 4,
-  },
-  dayCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  dayLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  dayLabel: {
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  todayBadge: {
-    backgroundColor: "rgba(201, 147, 58, 0.2)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  todayBadgeText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 9,
-    color: "#C9933A",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  dayTitle: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  dayDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-  },
-  companionCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
-  },
-  companionCardHeader: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-  },
-  companionCardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "rgba(139, 92, 246, 0.12)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  companionCardLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
-  },
-  companionCardTitle: {
-    fontFamily: "Lora_600SemiBold",
-    fontSize: 15,
-    lineHeight: 21,
-    marginTop: 2,
-  },
-  companionCardSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    lineHeight: 17,
-    marginLeft: 48,
-  },
-  videoSection: {
-    gap: 10,
-    marginTop: 4,
-  },
-  videoSectionTitle: {
-    fontFamily: "Lora_600SemiBold",
-    fontSize: 16,
-    color: "#C9933A",
-  },
-  videoRow: {
-    gap: 10,
-    paddingRight: 8,
-  },
-  videoLayerStack: {
-    position: "relative",
-  },
-  videoLayerStackExpanded: {
-    minHeight: 300,
-  },
-  inlinePlayerCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  inlinePlayerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-  },
-  inlineVideo: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    backgroundColor: "#000",
-  },
-  inlinePlayerMeta: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  inlinePlayerCloseBtn: {
-    padding: 2,
-  },
-  videoCard: {
-    width: 200,
-    gap: 6,
-  },
-  videoThumb: {
-    width: 200,
-    aspectRatio: 16 / 9,
-    borderRadius: 8,
-  },
-  videoTitle: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    color: "#FFFFFF",
-    lineHeight: 17,
-  },
-  videoArtist: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
-  },
-  videoModalTitle: {
-    fontFamily: "Lora_600SemiBold",
-    fontSize: 16,
-    color: "#FFFFFF",
-    lineHeight: 22,
-  },
-  videoModalArtist: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: "#C9933A",
-  },
-  discussionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    marginTop: 4,
-  },
-  discussionBtnTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: "#050507",
-  },
-  discussionBtnSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(5, 5, 7, 0.6)",
-    marginTop: 1,
-  },
-  archiveToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  archiveToggleText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    flex: 1,
-  },
-  archiveSection: { gap: 10 },
-  archiveEmpty: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 12,
-  },
-  archiveCard: {
-    borderRadius: 14,
-    padding: 16,
-    gap: 4,
-  },
-  archiveCardTitle: {
-    fontFamily: "Lora_600SemiBold",
-    fontSize: 16,
-    color: "#fff",
-    lineHeight: 22,
-  },
-  archiveCardDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.7)",
-  },
-  sourceFooter: {
-    flexDirection: "row" as const,
-    alignItems: "flex-start" as const,
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 2,
-  },
-  sourceFooterText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    lineHeight: 16,
-    flex: 1,
-  },
+
+  heroWrap: { borderRadius: 24, overflow: "hidden", ...HV2.cardShadow },
+  heroInner: { padding: 22 },
+  heroEyebrow: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.6, color: "#FFFFFF", marginBottom: 10 },
+  heroBadge: { alignSelf: "flex-start", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
+  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 10 },
+  heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18 },
+  heroTrack: { marginTop: 14, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" },
+  heroFill: { height: 6, borderRadius: 3, backgroundColor: "#FFFFFF" },
+  heroProgressText: { fontFamily: F.interSemi, fontSize: 11.5, color: "#FFFFFF", marginTop: 6 },
+  heroCta: { marginTop: 14, alignSelf: "flex-start", backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 18, paddingVertical: 11, maxWidth: "100%" },
+  heroCtaText: { fontFamily: F.interSemi, fontSize: 13.5, color: SS2.teal },
+
+  section: { gap: 10 },
+  sectionTitle: { fontFamily: F.loraSemi, fontSize: 17, color: SS2.ink },
+
+  videoLayerStack: { position: "relative" },
+  videoRow: { gap: 10, paddingRight: 8 },
+  videoCard: { width: 200, backgroundColor: SS2.card, borderRadius: 12, overflow: "hidden", ...HV2.rowShadow },
+  videoThumb: { width: 200, aspectRatio: 16 / 9 },
+  videoCardMeta: { paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  videoTitle: { fontFamily: F.interMed, fontSize: 12, color: SS2.ink, lineHeight: 17 },
+  videoArtist: { fontFamily: F.inter, fontSize: 11, color: SS2.inkMuted },
+  inlinePlayerCard: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 2, borderRadius: 12, borderWidth: 1, borderColor: SS2.border, overflow: "hidden", backgroundColor: SS2.card },
+  inlineVideo: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#000" },
+  inlinePlayerMeta: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
+  videoModalTitle: { fontFamily: F.loraSemi, fontSize: 15, color: SS2.ink, lineHeight: 21 },
+  videoModalArtist: { fontFamily: F.interMed, fontSize: 12, color: SS2.inkMuted },
+
+  memoryCard: { backgroundColor: SS2.dark, borderRadius: 20, padding: 22, gap: 10 },
+  memoryLabel: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.8, color: SS2.tealSoft },
+  memoryText: { fontFamily: "Lora_400Regular_Italic", fontStyle: "italic", fontSize: 17, lineHeight: 27, color: SS2.cream },
+  memoryRef: { fontFamily: F.interMed, fontSize: 12.5, color: SS2.creamMuted },
+
+  weekCard: { backgroundColor: SS2.card, borderRadius: 16, overflow: "hidden", ...HV2.rowShadow },
+  dayRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  dayRowToday: { backgroundColor: SS2.tealTint },
+  dayRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: SS2.border },
+  dayStatus: { width: 22, alignItems: "center" },
+  todayDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: SS2.coral },
+  dayLabel: { fontFamily: F.interSemi, fontSize: 11.5, letterSpacing: 0.4, color: SS2.inkMuted, textTransform: "uppercase" },
+  dayTitle: { fontFamily: F.interMed, fontSize: 14, lineHeight: 19, color: SS2.ink, marginTop: 2 },
+
+  companionCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: SS2.card, borderRadius: 14, padding: 16, ...HV2.rowShadow },
+  companionIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(124,58,237,0.10)", alignItems: "center", justifyContent: "center" },
+  companionLabel: { fontFamily: F.interSemi, fontSize: 10, letterSpacing: 1, color: SS2.violet },
+  companionTitle: { fontFamily: F.loraSemi, fontSize: 15, lineHeight: 21, color: SS2.ink, marginTop: 2 },
+
+  discussionBtn: { flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 15, backgroundColor: SS2.teal },
+  discussionTitle: { fontFamily: F.interSemi, fontSize: 15, color: "#FFFFFF" },
+  discussionSub: { fontFamily: F.inter, fontSize: 12, color: "#FFFFFF", marginTop: 1 },
+
+  archiveToggle: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, borderColor: SS2.tealBorder, backgroundColor: SS2.card, paddingHorizontal: 16, paddingVertical: 14 },
+  archiveToggleText: { fontFamily: F.interSemi, fontSize: 14, color: SS2.ink, flex: 1 },
+  archiveEmpty: { fontFamily: F.inter, fontSize: 13, color: SS2.inkMuted, textAlign: "center", paddingVertical: 12 },
+  archiveCard: { backgroundColor: SS2.card, borderRadius: 14, padding: 16, gap: 4, borderLeftWidth: 3, borderLeftColor: SS2.teal, ...HV2.rowShadow },
+  archiveCardTitle: { fontFamily: F.loraSemi, fontSize: 16, color: SS2.ink, lineHeight: 22 },
+  archiveCardDate: { fontFamily: F.inter, fontSize: 11, color: SS2.inkMuted },
+
+  sourceFooter: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 12, paddingHorizontal: 2 },
+  sourceFooterText: { fontFamily: F.inter, fontSize: 11, lineHeight: 16, color: SS2.inkMuted, flex: 1 },
 });
