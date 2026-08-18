@@ -21,17 +21,20 @@ function Chip({ label, bg, fg }: { label: string; bg: string; fg: string }) {
 }
 
 function ContentTile({
-  bg, fg, badge, title, meta,
-}: { bg: string; fg: string; badge: string; title: string; meta: string }) {
+  bg, fg, badge, title, meta, img, alt,
+}: { bg: string; fg: string; badge: string; title: string; meta: string; img?: string; alt?: string }) {
   return (
     <div className="w-[168px] shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_8px_rgba(26,26,26,0.06)]">
-      {/* Flat colour thumbnail — no gradients */}
-      <div className="h-[96px] flex flex-col justify-between p-3" style={{ background: bg }}>
-        <span className="self-start text-[10px] font-bold tracking-[0.08em] uppercase rounded-full px-2 py-0.5"
+      {/* Thumbnail — cover art when available, flat token colour otherwise */}
+      <div className="relative h-[96px] flex flex-col justify-between p-3" style={{ background: bg }}>
+        {img && (
+          <img src={img} alt={alt ?? title} className="absolute inset-0 w-full h-full object-cover" />
+        )}
+        <span className="relative self-start text-[10px] font-bold tracking-[0.08em] uppercase rounded-full px-2 py-0.5"
               style={{ background: "rgba(255,255,255,0.85)", color: fg }}>
           {badge}
         </span>
-        <span className="text-[22px] leading-none self-end">▶</span>
+        <span className="relative text-[22px] leading-none self-end" style={img ? { color: "#FFFFFF", textShadow: "0 1px 4px rgba(26,26,26,0.35)" } : undefined}>▶</span>
       </div>
       <div className="p-3">
         <p className="font-['Inter'] text-[13.5px] font-semibold leading-snug" style={{ color: INK }}>{title}</p>
@@ -42,12 +45,12 @@ function ContentTile({
 }
 
 function StudyMethodRow({
-  icon, iconBg, title, desc,
-}: { icon: string; iconBg: string; title: string; desc: string }) {
+  icon, iconBg, title, desc, img, alt,
+}: { icon: string; iconBg: string; title: string; desc: string; img?: string; alt?: string }) {
   return (
     <div className="flex items-center gap-3.5 bg-white rounded-2xl px-4 py-3.5 shadow-[0_1px_8px_rgba(26,26,26,0.06)]">
       <div className="w-11 h-11 rounded-xl flex items-center justify-center text-[19px] shrink-0" style={{ background: iconBg }}>
-        {icon}
+        {img ? <img src={img} alt={alt ?? title} className="w-7 h-7 object-contain" /> : icon}
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-['Inter'] text-[15px] font-semibold truncate" style={{ color: INK }}>{title}</p>
@@ -71,8 +74,8 @@ export function Discover() {
               <span className="text-[14px]">🔥</span>
               <span className="text-[13.5px] font-bold" style={{ color: INK }}>47</span>
             </div>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[15px] font-bold"
-                 style={{ background: "linear-gradient(135deg,#E8604C,#F2935C)" }}>J</div>
+            <img src="/__mockup/images/gtf-art/avatar-coral.png" alt="Your profile — J"
+                 className="w-10 h-10 rounded-full object-cover shadow-[0_1px_6px_rgba(26,26,26,0.10)]" />
           </div>
         </div>
 
@@ -86,17 +89,22 @@ export function Discover() {
 
         {/* Featured hero — the ONE gradient on this screen (teal = Sabbath School) */}
         <div className="mx-5 mt-5 rounded-[28px] overflow-hidden shadow-[0_4px_24px_rgba(26,26,26,0.10)]">
-          <div className="relative px-6 pt-6 pb-6 text-white"
-               style={{ background: "linear-gradient(140deg,#0B7285 0%,#13A0A2 55%,#2FC4A0 100%)" }}>
-            <div className="flex items-center justify-between">
+          <div className="relative px-6 pt-6 pb-6 text-white">
+            <img src="/__mockup/images/gtf-art/cover-joshua-v2.png"
+                 alt="Walls Fall — Joshua and Jericho series cover art"
+                 className="absolute inset-0 w-full h-full object-cover" />
+            {/* Teal treatment preserved as overlay for legibility */}
+            <div className="absolute inset-0"
+                 style={{ background: "linear-gradient(140deg,rgba(11,114,133,0.92) 0%,rgba(19,160,162,0.82) 55%,rgba(47,196,160,0.70) 100%)" }} />
+            <div className="relative flex items-center justify-between">
               <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-white/75">Featured Series</p>
               <span className="text-[11px] font-semibold bg-white/20 rounded-full px-2.5 py-1">5 episodes</span>
             </div>
-            <h2 className="font-['Lora'] text-[22px] font-semibold mt-3 leading-snug">Walls Fall: Faith Lessons from Jericho</h2>
-            <p className="text-[13px] mt-2 text-white/85 leading-relaxed">
+            <h2 className="relative font-['Lora'] text-[22px] font-semibold mt-3 leading-snug">Walls Fall: Faith Lessons from Jericho</h2>
+            <p className="relative text-[13px] mt-2 text-white/85 leading-relaxed">
               A video companion to this quarter's study of Joshua — how obedience precedes the miracle.
             </p>
-            <div className="mt-4 flex items-center gap-2.5">
+            <div className="relative mt-4 flex items-center gap-2.5">
               <button className="px-5 py-2.5 rounded-full bg-white text-[13.5px] font-semibold" style={{ color: "#0B7285" }}>
                 ▶ Watch Episode 1
               </button>
@@ -132,11 +140,17 @@ export function Discover() {
           </div>
           <div className="flex gap-3 mt-3.5 px-5 overflow-x-auto">
             <ContentTile bg="#DFF6F2" fg="#0E8F7E" badge="Video · 12 min"
-                         title="The Crossing of Jordan" meta="Joshua 3 · Sabbath School" />
+                         title="The Crossing of Jordan" meta="Joshua 3 · Sabbath School"
+                         img="/__mockup/images/gtf-art/cover-joshua-v2.png"
+                         alt="Joshua series cover — the crossing of Jordan" />
             <ContentTile bg="#EAE6FA" fg="#6A4FD0" badge="Video · 8 min"
-                         title="What Is Righteousness by Faith?" meta="Romans 3 · Doctrine" />
+                         title="What Is Righteousness by Faith?" meta="Romans 3 · Doctrine"
+                         img="/__mockup/images/gtf-art/plan-doctrine.png"
+                         alt="Doctrine study series tile" />
             <ContentTile bg="#FFF0D9" fg="#C07716" badge="Video · 15 min"
-                         title="The Sanctuary Explained" meta="Hebrews 8 · Series" />
+                         title="The Sanctuary Explained" meta="Hebrews 8 · Series"
+                         img="/__mockup/images/gtf-art/cover-daniel.png"
+                         alt="Daniel and the sanctuary series cover" />
           </div>
         </div>
 
@@ -148,11 +162,17 @@ export function Discover() {
           </div>
           <div className="flex gap-3 mt-3.5 px-5 overflow-x-auto">
             <ContentTile bg="#FDE8E4" fg="#C24431" badge="Devotional · 5 min"
-                         title="Steps to Christ — Consecration" meta="Ellen G. White · Ch. 5" />
+                         title="Steps to Christ — Consecration" meta="Ellen G. White · Ch. 5"
+                         img="/__mockup/images/gtf-art/cover-steps-to-christ.png"
+                         alt="Steps to Christ book cover" />
             <ContentTile bg="#DDF0FB" fg="#1D7FC4" badge="Devotional · 4 min"
-                         title="Morning Watch: Be Strong" meta="Joshua 1:9 · KJV" />
+                         title="Morning Watch: Be Strong" meta="Joshua 1:9 · KJV"
+                         img="/__mockup/images/gtf-art/cover-bible-year.png"
+                         alt="Bible in a year — morning watch cover" />
             <ContentTile bg="#FCE1EC" fg="#C2367C" badge="Devotional · 6 min"
-                         title="The Desire of Ages — At Bethany" meta="Ellen G. White · Ch. 62" />
+                         title="The Desire of Ages — At Bethany" meta="Ellen G. White · Ch. 62"
+                         img="/__mockup/images/gtf-art/cover-desire-of-ages.png"
+                         alt="The Desire of Ages book cover" />
           </div>
         </div>
 
@@ -162,7 +182,9 @@ export function Discover() {
           <p className="text-[13px] mt-1" style={{ color: MUTED }}>Pick a method that fits how you learn.</p>
           <div className="flex flex-col gap-2.5 mt-3.5">
             <StudyMethodRow icon="🧭" iconBg="#FDE8E4" title="Guided Study"
-                            desc="Step-by-step through a passage with prompts" />
+                            desc="Step-by-step through a passage with prompts"
+                            img="/__mockup/images/gtf-art/rhythm-plan.png"
+                            alt="Open book illustration" />
             <StudyMethodRow icon="🔎" iconBg="#E3F2F7" title="Deep Dive"
                             desc="Cross-references, Greek & Hebrew word studies" />
             <StudyMethodRow icon="📝" iconBg="#EAE6FA" title="Inductive Study"

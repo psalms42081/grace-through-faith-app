@@ -24,8 +24,8 @@ function RhythmRow({
 }: { icon: string; iconBg: string; title: string; meta: string; done?: boolean }) {
   return (
     <div className="flex items-center gap-3.5 bg-white rounded-2xl px-4 py-3.5 shadow-[0_1px_8px_rgba(26,26,26,0.06)]">
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center text-[19px] shrink-0" style={{ background: iconBg }}>
-        {icon}
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
+        <img src={icon} alt="" className="w-7 h-7 object-contain" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-['Inter'] text-[15px] font-semibold truncate" style={{ color: INK }}>{title}</p>
@@ -62,8 +62,7 @@ export function Home() {
               <span className="text-[14px]">🔥</span>
               <span className="text-[13.5px] font-bold" style={{ color: INK }}>47</span>
             </div>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[15px] font-bold"
-                 style={{ background: "linear-gradient(135deg,#E8604C,#F2935C)" }}>J</div>
+            <img src="/__mockup/images/gtf-art/avatar-coral.png" alt="Joe" className="w-10 h-10 rounded-full object-cover" />
           </div>
         </div>
 
@@ -127,9 +126,9 @@ export function Home() {
             <span className="text-[13px] font-semibold" style={{ color: MUTED }}>1 of 3 done</span>
           </div>
           <div className="flex flex-col gap-2.5 mt-3.5">
-            <RhythmRow icon="📖" iconBg="#FDE8E4" title="Today's Plan — Steps to Christ" meta="Ch. 4 · Confession · 6 min" done />
-            <RhythmRow icon="🕊️" iconBg="#EAE6FA" title="Sabbath School" meta="Wednesday — The Crossing" />
-            <RhythmRow icon="✨" iconBg="#E3F2F7" title="Evening Reflection" meta="2 min · with Ellen White" />
+            <RhythmRow icon="/__mockup/images/gtf-art/rhythm-plan.png" iconBg="#EAE6FA" title="Today's Plan — Steps to Christ" meta="Ch. 4 · Confession · 6 min" done />
+            <RhythmRow icon="/__mockup/images/gtf-art/rhythm-ss.png" iconBg="#DFF6F2" title="Sabbath School" meta="Wednesday — The Crossing" />
+            <RhythmRow icon="/__mockup/images/gtf-art/rhythm-reflection-candle.png" iconBg="#FFF0D9" title="Evening Reflection" meta="2 min · with Ellen White" />
           </div>
         </div>
 

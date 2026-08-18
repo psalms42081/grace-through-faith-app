@@ -32,16 +32,16 @@ function ProgressRing({ pct, color }: { pct: number; color: string }) {
 }
 
 function ActivePlanCard({
-  emoji, tileBg, eyebrow, eyebrowColor, title, meta, pct, ringColor, cta, ctaBg, ctaColor,
+  art, artAlt, tileBg, eyebrow, eyebrowColor, title, meta, pct, ringColor, cta, ctaBg, ctaColor,
 }: {
-  emoji: string; tileBg: string; eyebrow: string; eyebrowColor: string; title: string;
+  art: string; artAlt: string; tileBg: string; eyebrow: string; eyebrowColor: string; title: string;
   meta: string; pct: number; ringColor: string; cta: string; ctaBg: string; ctaColor: string;
 }) {
   return (
     <div className="bg-white rounded-[24px] p-4 shadow-[0_2px_16px_rgba(26,26,26,0.07)]">
       <div className="flex items-center gap-3.5">
-        <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-[24px] shrink-0" style={{ background: tileBg }}>
-          {emoji}
+        <div className="w-[52px] h-[52px] rounded-2xl overflow-hidden shrink-0" style={{ background: tileBg }}>
+          <img src={art} alt={artAlt} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10.5px] font-bold tracking-[0.13em] uppercase" style={{ color: eyebrowColor }}>{eyebrow}</p>
@@ -60,11 +60,11 @@ function ActivePlanCard({
   );
 }
 
-function PlanTile({ bg, fg, emoji, title, meta }: { bg: string; fg: string; emoji: string; title: string; meta: string }) {
+function PlanTile({ bg, fg, art, artAlt, title, meta }: { bg: string; fg: string; art: string; artAlt: string; title: string; meta: string }) {
   return (
     <div className="rounded-[20px] overflow-hidden bg-white shadow-[0_2px_14px_rgba(26,26,26,0.07)]">
-      <div className="h-[92px] flex items-center justify-center text-[34px]" style={{ background: bg }}>
-        <span>{emoji}</span>
+      <div className="h-[92px]" style={{ background: bg }}>
+        <img src={art} alt={artAlt} className="w-full h-full object-cover" />
       </div>
       <div className="px-3.5 pt-3 pb-3.5">
         <p className="text-[13.5px] font-semibold leading-snug" style={{ color: INK }}>{title}</p>
@@ -114,8 +114,8 @@ export function Plans() {
             {/* Today's reading — primary active plan */}
             <div className="bg-white rounded-[24px] p-4 shadow-[0_2px_16px_rgba(26,26,26,0.07)]">
               <div className="flex items-center gap-3.5">
-                <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-[24px] shrink-0" style={{ background: PLUM_TINT }}>
-                  📖
+                <div className="w-[52px] h-[52px] rounded-2xl overflow-hidden shrink-0" style={{ background: PLUM_TINT }}>
+                  <img src="/__mockup/images/gtf-art/cover-steps-to-christ.png" alt="Steps to Christ book cover" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10.5px] font-bold tracking-[0.13em] uppercase" style={{ color: PLUM_INK }}>Reading Plan · Day 7 of 13</p>
@@ -126,7 +126,7 @@ export function Plans() {
               </div>
               {/* Today's reading affordance */}
               <div className="mt-3.5 rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: "#F8F6FD" }}>
-                <span className="text-[16px]">☀️</span>
+                <img src="/__mockup/images/gtf-art/rhythm-morning.png" alt="Rising sun icon" className="w-6 h-6 object-contain shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold" style={{ color: INK }}>Today — Ch. 4 · Confession</p>
                   <p className="font-['Inter'] text-[12.5px] italic mt-0.5 truncate" style={{ color: MUTED }}>
@@ -145,7 +145,8 @@ export function Plans() {
 
             {/* Sabbath School — teal category */}
             <ActivePlanCard
-              emoji="🕊️"
+              art="/__mockup/images/gtf-art/cover-joshua-v2.png"
+              artAlt="The Book of Joshua study cover"
               tileBg="#DFF6F2"
               eyebrow="Sabbath School · Q3 2026"
               eyebrowColor="#0B7285"
@@ -162,17 +163,23 @@ export function Plans() {
 
         {/* Featured plan — the ONE gradient, purple-led */}
         <div className="mx-5 mt-7 rounded-[28px] overflow-hidden shadow-[0_4px_24px_rgba(26,26,26,0.10)]">
-          <div className="relative px-6 pt-6 pb-5 text-white"
-               style={{ background: "linear-gradient(140deg,#4C3AA8 0%,#6A4FD0 55%,#9B7BE8 100%)" }}>
-            <div className="flex items-center justify-between">
+          <div className="relative px-6 pt-6 pb-5 text-white">
+            <img
+              src="/__mockup/images/gtf-art/cover-desire-of-ages.png"
+              alt="The Desire of Ages cover art"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0"
+                 style={{ background: "linear-gradient(140deg,rgba(76,58,168,0.92) 0%,rgba(106,79,208,0.86) 55%,rgba(155,123,232,0.78) 100%)" }} />
+            <div className="relative flex items-center justify-between">
               <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase text-white/75">Featured Plan</p>
               <span className="text-[11px] font-semibold bg-white/20 rounded-full px-2.5 py-1">21 days</span>
             </div>
-            <h2 className="font-['Lora'] text-[21px] font-semibold mt-3 leading-snug">The Desire of Ages: Walking with Jesus</h2>
-            <p className="text-[13px] mt-2 text-white/85 leading-relaxed">
+            <h2 className="relative font-['Lora'] text-[21px] font-semibold mt-3 leading-snug">The Desire of Ages: Walking with Jesus</h2>
+            <p className="relative text-[13px] mt-2 text-white/85 leading-relaxed">
               Three weeks through the life of Christ — one chapter and one Gospel passage a day.
             </p>
-            <div className="mt-4 flex items-center gap-2.5">
+            <div className="relative mt-4 flex items-center gap-2.5">
               <button className="px-5 py-2.5 rounded-full bg-white text-[13.5px] font-semibold" style={{ color: "#4C3AA8" }}>
                 Start Plan
               </button>
@@ -200,12 +207,12 @@ export function Plans() {
 
           {/* Plan library grid — flat colour covers */}
           <div className="grid grid-cols-2 gap-3 px-5 mt-4">
-            <PlanTile bg="#FFF0D9" fg="#C07716" emoji="🙏" title="30 Days of Prayer" meta="Prayer · 30 days" />
-            <PlanTile bg="#DDF0FB" fg="#1D7FC4" emoji="📜" title="Daniel: Kingdoms & Prophecy" meta="Prophecy · 12 days" />
-            <PlanTile bg="#FCE1EC" fg="#C2367C" emoji="🌱" title="First Steps: New in Christ" meta="New Believers · 14 days" />
-            <PlanTile bg="#DFF6F2" fg="#0E8F7E" emoji="🌅" title="Sabbath Rest Reset" meta="Sabbath · 7 days" />
-            <PlanTile bg="#EAE6FA" fg="#6A4FD0" emoji="⚡" title="Revelation for Youth" meta="Youth · 21 days" />
-            <PlanTile bg="#FDE8E4" fg="#C24431" emoji="🍎" title="The Ministry of Healing" meta="Health · 10 days" />
+            <PlanTile bg="#FFF0D9" fg="#C07716" art="/__mockup/images/gtf-art/plan-prayer-v3.png" artAlt="30 Days of Prayer plan art" title="30 Days of Prayer" meta="Prayer · 30 days" />
+            <PlanTile bg="#DDF0FB" fg="#1D7FC4" art="/__mockup/images/gtf-art/plan-prophecy.png" artAlt="Daniel prophecy plan art" title="Daniel: Kingdoms & Prophecy" meta="Prophecy · 12 days" />
+            <PlanTile bg="#FCE1EC" fg="#C2367C" art="/__mockup/images/gtf-art/plan-new-believers.png" artAlt="New believers plan art" title="First Steps: New in Christ" meta="New Believers · 14 days" />
+            <PlanTile bg="#DFF6F2" fg="#0E8F7E" art="/__mockup/images/gtf-art/plan-sabbath.png" artAlt="Sabbath rest plan art" title="Sabbath Rest Reset" meta="Sabbath · 7 days" />
+            <PlanTile bg="#EAE6FA" fg="#6A4FD0" art="/__mockup/images/gtf-art/plan-youth.png" artAlt="Revelation for Youth plan art" title="Revelation for Youth" meta="Youth · 21 days" />
+            <PlanTile bg="#FDE8E4" fg="#C24431" art="/__mockup/images/gtf-art/plan-health.png" artAlt="Ministry of Healing health plan art" title="The Ministry of Healing" meta="Health · 10 days" />
           </div>
         </div>
 

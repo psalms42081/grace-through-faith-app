@@ -67,12 +67,11 @@ export function Profile() {
 
         {/* Identity */}
         <div className="px-5 mt-4 flex flex-col items-center">
-          <div
-            className="w-[84px] h-[84px] rounded-full flex items-center justify-center text-white text-[32px] font-bold shadow-[0_4px_16px_rgba(232,96,76,0.28)]"
-            style={{ background: "linear-gradient(135deg,#E8604C,#F2935C)" }}
-          >
-            J
-          </div>
+          <img
+            src="/__mockup/images/gtf-art/avatar-coral.png"
+            alt="Joe's profile avatar"
+            className="w-[84px] h-[84px] rounded-full object-cover shadow-[0_4px_16px_rgba(232,96,76,0.28)]"
+          />
           <h2 className="font-['Lora'] text-[22px] font-semibold mt-3.5" style={{ color: INK }}>Joe</h2>
           <p className="text-[13px] font-medium mt-1" style={{ color: MUTED }}>Walking through Scripture since March 2024</p>
         </div>
