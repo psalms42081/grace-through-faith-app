@@ -152,15 +152,16 @@ export function SabbathSchool() {
         </div>
 
         {/* Memory verse */}
-        <div className="mx-5 mt-5 rounded-[24px] bg-white px-6 pt-5 pb-6 shadow-[0_2px_16px_rgba(26,26,26,0.07)]">
-          <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase" style={{ color: TEAL_INK }}>
+        {/* Deliberately the one dark surface on the screen — this is the verse being memorised */}
+        <div className="mx-5 mt-5 rounded-[24px] px-6 pt-5 pb-6 shadow-[0_4px_20px_rgba(5,5,7,0.25)]" style={{ background: "#050507" }}>
+          <p className="text-[11.5px] font-bold tracking-[0.14em] uppercase" style={{ color: "#7FD6CB" }}>
             Memory Verse
           </p>
-          <p className="font-['Lora'] text-[19px] leading-[1.5] mt-3" style={{ color: INK }}>
+          <p className="font-['Lora'] text-[19px] leading-[1.5] mt-3" style={{ color: "#FBF7EE" }}>
             “Have not I commanded thee? Be strong and of a good courage; be not afraid, neither be thou
             dismayed: for the Lord thy God is with thee whithersoever thou goest.”
           </p>
-          <p className="text-[13px] font-semibold mt-3" style={{ color: MUTED }}>Joshua 1:9 · KJV</p>
+          <p className="text-[13px] font-semibold mt-3" style={{ color: "rgba(251,247,238,0.55)" }}>Joshua 1:9 · KJV</p>
         </div>
 
         {/* This week's days */}
