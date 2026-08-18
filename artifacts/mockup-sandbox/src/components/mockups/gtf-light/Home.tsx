@@ -62,7 +62,7 @@ export function Home() {
               <span className="text-[14px]">🔥</span>
               <span className="text-[13.5px] font-bold" style={{ color: INK }}>47</span>
             </div>
-            <img src="/__mockup/images/gtf-art/avatar-coral.png" alt="Joe" className="w-10 h-10 rounded-full object-cover" />
+            <img src="/__mockup/images/gtf-art/avatar-sky.png" alt="Joe" className="w-10 h-10 rounded-full object-cover" />
           </div>
         </div>
 

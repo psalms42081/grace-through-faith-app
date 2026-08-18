@@ -68,7 +68,7 @@ export function Profile() {
         {/* Identity */}
         <div className="px-5 mt-4 flex flex-col items-center">
           <img
-            src="/__mockup/images/gtf-art/avatar-coral.png"
+            src="/__mockup/images/gtf-art/avatar-sky.png"
             alt="Joe's profile avatar"
             className="w-[84px] h-[84px] rounded-full object-cover shadow-[0_4px_16px_rgba(232,96,76,0.28)]"
           />
