@@ -21,6 +21,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
@@ -119,7 +120,7 @@ function LayerProgressBar({
 }) {
   const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
-  const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
+  const depthColor = depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted;
 
   return (
     <View style={lpStyles.container}>
@@ -157,7 +158,7 @@ function LayerProgressBar({
                 lpStyles.segment,
                 i === 0 && lpStyles.segmentFirst,
                 i === LAYER_ORDER.length - 1 && lpStyles.segmentLast,
-                isActive && { backgroundColor: theme.accent },
+                isActive && { backgroundColor: theme.accentDark },
                 !isActive && { backgroundColor: theme.backgroundSecondary },
                 isLocked && { opacity: 0.4 },
               ]}
@@ -197,7 +198,7 @@ function LayerProgressBar({
       {allDone && (
         <View style={lpStyles.nextStepRow}>
           <Ionicons name="checkmark-done-circle" size={14} color={theme.accent} />
-          <Text style={[lpStyles.nextStepText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[lpStyles.nextStepText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
             All 4 layers complete
           </Text>
         </View>
@@ -268,7 +269,7 @@ function NextLayerCTA({
       )}
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [ctaStyles.btn, { backgroundColor: theme.accent, opacity: pressed ? 0.88 : 1 }]}
+        style={({ pressed }) => [ctaStyles.btn, { backgroundColor: theme.accentDark, opacity: pressed ? 0.88 : 1 }]}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         testID={allDone || isLastLayer ? "view-study-complete" : isCompleted ? "next-layer" : "mark-layer-complete"}
       >
@@ -334,7 +335,7 @@ function LayerCoachBanner({ activeTab, theme }: { activeTab: Tab; theme: typeof 
         }}>
           <Ionicons name={tip.icon} size={16} color={theme.accent} />
         </View>
-        <Text style={{ flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.accent }}>
+        <Text style={{ flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.accentDark }}>
           {tip.title}
         </Text>
         <Pressable
@@ -386,7 +387,7 @@ function StudyCompletionScreen({
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const depthColor = depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted;
+  const depthColor = depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted;
 
   const observeFilled = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
   const contextFilled = CONTEXT_SECTIONS.filter((s) => contextJournalMap.has(s.key));
@@ -442,7 +443,7 @@ function StudyCompletionScreen({
         style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, marginBottom: 12 }}
       >
         <Ionicons name="chevron-back" size={18} color={theme.accent} />
-        <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
+        <Text style={{ fontSize: 13, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
       </Pressable>
       <View style={{ alignItems: "center" as const, marginBottom: 24 }}>
         <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: theme.accent + "18", alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 14, marginTop: 8 }}>
@@ -451,7 +452,7 @@ function StudyCompletionScreen({
         <Text style={{ fontSize: 20, color: theme.text, fontFamily: "Lora_700Bold", textAlign: "center" as const, marginBottom: 4 }}>
           Study Complete
         </Text>
-        <Text style={{ fontSize: 15, color: theme.accent, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 10 }}>
+        <Text style={{ fontSize: 15, color: theme.accentDark, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 10 }}>
           {reference}
         </Text>
         {depthLabel && (
@@ -484,7 +485,7 @@ function StudyCompletionScreen({
             if (layerEntries.length === 0) return null;
             return (
               <View key={layerLabel} style={{ backgroundColor: theme.backgroundCard, borderRadius: 12, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border, marginBottom: 10 }}>
-                <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5, textTransform: "uppercase" as const, marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5, textTransform: "uppercase" as const, marginBottom: 10 }}>
                   {WRAP_UP_LABELS[layerLabel] ?? layerLabel}
                 </Text>
                 {layerEntries.map((entry, i) => (
@@ -534,7 +535,7 @@ function StudyCompletionScreen({
                   testID="share-study-summary"
                 >
                   <Ionicons name="share-outline" size={15} color={theme.accent} />
-                  <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_500Medium" }}>
+                  <Text style={{ fontSize: 13, color: theme.accentDark, fontFamily: "Inter_500Medium" }}>
                     Share
                   </Text>
                 </Pressable>
@@ -551,7 +552,7 @@ function StudyCompletionScreen({
           testID="save-prayer-from-completion"
         >
           <Ionicons name="bookmark-outline" size={16} color={theme.accent} />
-          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.accent }}>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.accentDark }}>
             Save Prayer Response
           </Text>
         </Pressable>
@@ -560,7 +561,7 @@ function StudyCompletionScreen({
       {hasNextChapter && (
         <Pressable
           onPress={onNextChapter}
-          style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+          style={({ pressed }) => ({ width: "100%" as const, backgroundColor: theme.accentDark, borderRadius: 14, paddingVertical: 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
           testID="study-next-chapter"
         >
           <Ionicons name="arrow-forward" size={18} color="#fff" />
@@ -572,11 +573,11 @@ function StudyCompletionScreen({
 
       <Pressable
         onPress={onStudyAnother}
-        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: hasNextChapter ? theme.accent + "12" : theme.accent, borderRadius: 14, paddingVertical: hasNextChapter ? 14 : 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
+        style={({ pressed }) => ({ width: "100%" as const, backgroundColor: hasNextChapter ? theme.accent + "12" : theme.accentDark, borderRadius: 14, paddingVertical: hasNextChapter ? 14 : 16, alignItems: "center" as const, justifyContent: "center" as const, flexDirection: "row" as const, gap: 8, opacity: pressed ? 0.85 : 1, marginBottom: 10 })}
         testID="study-another-passage"
       >
         <Ionicons name="book-outline" size={hasNextChapter ? 16 : 18} color={hasNextChapter ? theme.accent : "#fff"} />
-        <Text style={{ fontSize: hasNextChapter ? 14 : 16, fontFamily: hasNextChapter ? "Inter_500Medium" : "Inter_600SemiBold", color: hasNextChapter ? theme.accent : "#fff" }}>
+        <Text style={{ fontSize: hasNextChapter ? 14 : 16, fontFamily: hasNextChapter ? "Inter_500Medium" : "Inter_600SemiBold", color: hasNextChapter ? theme.accentDark : "#fff" }}>
           Study Another Passage
         </Text>
       </Pressable>
@@ -587,7 +588,7 @@ function StudyCompletionScreen({
         testID="review-study"
       >
         <Ionicons name="arrow-back" size={16} color={theme.accent} />
-        <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accent }}>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accentDark }}>
           Review This Study
         </Text>
       </Pressable>
@@ -646,7 +647,7 @@ function DeepStudyEntryButton({
       onPress={onStart}
       style={({ pressed }) => [
         dsStyles.entryBtn,
-        { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 },
+        { backgroundColor: theme.accentDark, opacity: pressed ? 0.9 : 1 },
       ]}
       testID="start-deep-study"
     >
@@ -683,13 +684,13 @@ const FOUR_LAYERS = [
     icon: "book-outline" as const,
     title: "Observe",
     desc: "Read the passage closely. What words stand out? What patterns emerge? Start with what the text actually says.",
-    color: "#C9933A",
+    color: "#C24431",
   },
   {
     icon: "time-outline" as const,
     title: "Context",
     desc: "Who wrote this, and why? What was happening historically? Context transforms how you understand each verse.",
-    color: "#3B6CB5",
+    color: "#C24431",
   },
   {
     icon: "chatbubble-ellipses-outline" as const,
@@ -842,7 +843,7 @@ function FourLayerIntro({
         testID="layer-intro-action"
         onPress={hasPassage ? onContinue : onPickPassage}
         style={({ pressed }) => ({
-          backgroundColor: theme.accent,
+          backgroundColor: theme.accentDark,
           borderRadius: 14,
           paddingVertical: 16,
           alignItems: "center",
@@ -878,7 +879,7 @@ function FourLayerIntro({
           })}
         >
           <Ionicons name="book-outline" size={16} color={theme.accent} />
-          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accent }}>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.accentDark }}>
             Choose a Different Passage
           </Text>
         </Pressable>
@@ -1002,7 +1003,7 @@ function DeepStudyIntro({
       )}
 
       <View style={[introStyles.bigIdeaCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-        <Text style={[introStyles.bigIdeaLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+        <Text style={[introStyles.bigIdeaLabel, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
           STUDY FOCUS
         </Text>
         {!hasSeenIntro && (
@@ -1030,7 +1031,7 @@ function DeepStudyIntro({
               ]}
             >
               <Ionicons name={opt.icon} size={18} color={studyFocus === opt.id ? theme.accent : theme.textMuted} />
-              <Text style={{ fontSize: 11, color: studyFocus === opt.id ? theme.accent : theme.textSecondary, fontFamily: "Inter_500Medium", marginTop: 4, textAlign: "center" as const }}>
+              <Text style={{ fontSize: 11, color: studyFocus === opt.id ? theme.accentDark : theme.textSecondary, fontFamily: "Inter_500Medium", marginTop: 4, textAlign: "center" as const }}>
                 {opt.label}
               </Text>
             </Pressable>
@@ -1060,7 +1061,7 @@ function DeepStudyIntro({
                     },
                   ]}
                 >
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: selectedSectionIdx === i ? theme.accent : theme.textMuted + "30", alignItems: "center" as const, justifyContent: "center" as const }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: selectedSectionIdx === i ? theme.accentDark : theme.textMuted + "30", alignItems: "center" as const, justifyContent: "center" as const }}>
                     <Text style={{ fontSize: 12, color: selectedSectionIdx === i ? "#fff" : theme.textMuted, fontFamily: "Inter_600SemiBold" }}>
                       {i + 1}
                     </Text>
@@ -1142,7 +1143,7 @@ function DeepStudyIntro({
 
       <Pressable
         onPress={handleBegin}
-        style={({ pressed }) => [introStyles.beginBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+        style={({ pressed }) => [introStyles.beginBtn, { backgroundColor: theme.accentDark, opacity: pressed ? 0.9 : 1 }]}
         testID="begin-deep-study"
       >
         <Ionicons name="book-outline" size={18} color="#fff" />
@@ -1322,7 +1323,7 @@ function DeepSessionBar({
       <View style={dsStyles.sessionBarLeft}>
         <View style={[dsStyles.sessionBadge, { backgroundColor: theme.accent + "18" }]}>
           <Ionicons name="compass" size={12} color={theme.accent} />
-          <Text style={[dsStyles.sessionBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[dsStyles.sessionBadgeText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
             DEEP DIVE
           </Text>
         </View>
@@ -1385,7 +1386,7 @@ function DeepSessionAdvanceButton({
     <View style={dsStyles.advanceContainer}>
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [dsStyles.advanceBtn, { backgroundColor: theme.accent, opacity: pressed ? 0.88 : 1 }]}
+        style={({ pressed }) => [dsStyles.advanceBtn, { backgroundColor: theme.accentDark, opacity: pressed ? 0.88 : 1 }]}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         testID="deep-study-advance"
       >
@@ -1574,7 +1575,7 @@ function DeepSessionSummary({
           You moved from reading to response. Scripture shaped both your understanding and your next step.
         </Text>
         {reference ? (
-          <Text style={[dsStyles.summaryRef, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[dsStyles.summaryRef, { color: theme.accentDark, fontFamily: "Lora_700Bold" }]}>
             {reference}
           </Text>
         ) : null}
@@ -1601,7 +1602,7 @@ function DeepSessionSummary({
                 ]}>
                   {LAYER_FULL_NAMES[layer]}
                 </Text>
-                {done && <Text style={[dsStyles.summaryLayerCheck, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>Complete</Text>}
+                {done && <Text style={[dsStyles.summaryLayerCheck, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>Complete</Text>}
               </View>
             );
           })}
@@ -1611,10 +1612,10 @@ function DeepSessionSummary({
             <Ionicons
               name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
               size={14}
-              color={depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted}
+              color={depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted}
             />
             <Text style={[dsStyles.summaryDepthText, {
-              color: depthLabel === "Transforming" ? "#C9933A" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#3B6CB5" : theme.textMuted,
+              color: depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted,
               fontFamily: "Inter_500Medium",
             }]}>
               Study Depth: {depthLabel}
@@ -1688,7 +1689,7 @@ function DeepSessionSummary({
                   testID="share-summary"
                 >
                   <Ionicons name="share-outline" size={15} color={theme.accent} />
-                  <Text style={[dsStyles.summaryActionText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[dsStyles.summaryActionText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                     Share
                   </Text>
                 </Pressable>
@@ -1705,14 +1706,14 @@ function DeepSessionSummary({
             style={({ pressed }) => [dsStyles.summaryCTASecondary, { borderColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
           >
             <Ionicons name="bookmark-outline" size={16} color={theme.accent} />
-            <Text style={[dsStyles.summaryCTASecondaryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[dsStyles.summaryCTASecondaryText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               Save Prayer Response
             </Text>
           </Pressable>
         )}
         <Pressable
           onPress={onDone}
-          style={({ pressed }) => [dsStyles.summaryCTAPrimary, { backgroundColor: theme.accent, opacity: pressed ? 0.9 : 1 }]}
+          style={({ pressed }) => [dsStyles.summaryCTAPrimary, { backgroundColor: theme.accentDark, opacity: pressed ? 0.9 : 1 }]}
           testID="deep-study-done"
         >
           <Text style={[dsStyles.summaryCTAPrimaryText, { fontFamily: "Inter_600SemiBold" }]}>
@@ -1741,23 +1742,23 @@ interface PromptSection {
 }
 
 const OBSERVE_SECTIONS: PromptSection[] = [
-  { key: "observations", title: "What stands out?", icon: "eye-outline", color: "#C9933A", placeholder: "What repeats, surprises, or feels important?" },
-  { key: "questions_raised", title: "Questions", icon: "help-circle-outline", color: "#3B6CB5", placeholder: "What questions come to mind?" },
+  { key: "observations", title: "What stands out?", icon: "eye-outline", color: "#C24431", placeholder: "What repeats, surprises, or feels important?" },
+  { key: "questions_raised", title: "Questions", icon: "help-circle-outline", color: "#C24431", placeholder: "What questions come to mind?" },
 ];
 
 const CONTEXT_SECTIONS: PromptSection[] = [
-  { key: "context_notes", title: "What the context reveals", icon: "compass-outline", color: "#C9933A", placeholder: "What do you notice about the author, audience, or setting?" },
+  { key: "context_notes", title: "What the context reveals", icon: "compass-outline", color: "#C24431", placeholder: "What do you notice about the author, audience, or setting?" },
   { key: "context_changes", title: "How it changes your reading", icon: "swap-horizontal-outline", color: "#8B5CF6", placeholder: "How does knowing this context change what you see in the passage?" },
 ];
 
 const INSIGHT_SECTIONS: PromptSection[] = [
-  { key: "revelation_of_god", title: "What does this reveal about God?", icon: "eye-outline", color: "#3B6CB5", placeholder: "What does this passage show about God's character?" },
+  { key: "revelation_of_god", title: "What does this reveal about God?", icon: "eye-outline", color: "#C24431", placeholder: "What does this passage show about God's character?" },
   { key: "revelation_of_humanity", title: "What does this reveal about us?", icon: "people-outline", color: "#2E7D32", placeholder: "What does this teach about the human condition?" },
   { key: "narrative_connection", title: "What biblical theme stands out?", icon: "git-merge-outline", color: "#8B5CF6", placeholder: "How does this connect to the larger biblical story?" },
 ];
 
 const TRANSFORMATION_SECTIONS: PromptSection[] = [
-  { key: "belief_challenged", title: "What is God calling me to notice or change?", icon: "bulb-outline", color: "#C9933A", placeholder: "What conviction or challenge do you sense?" },
+  { key: "belief_challenged", title: "What is God calling me to notice or change?", icon: "bulb-outline", color: "#C24431", placeholder: "What conviction or challenge do you sense?" },
   { key: "habit_shaped", title: "What will I do this week?", icon: "footsteps-outline", color: "#2E7D32", placeholder: "One specific step you will take..." },
   { key: "prayer_response", title: "A short prayer", icon: "hand-left-outline", color: "#8B5CF6", placeholder: "Write a prayer in response to this passage..." },
 ];
@@ -2026,7 +2027,8 @@ interface CommentaryResult {
 
 
 export default function StudyScreen() {
-  const { theme, isDark } = useTheme();
+  useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();
@@ -2476,7 +2478,7 @@ export default function StudyScreen() {
           style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4, paddingHorizontal: 24, marginBottom: 8 }}
         >
           <Ionicons name="chevron-back" size={18} color={theme.accent} />
-          <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
+          <Text style={{ fontSize: 13, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>Back to Study</Text>
         </Pressable>
         <FourLayerIntro
           theme={theme}
@@ -2615,7 +2617,7 @@ export default function StudyScreen() {
               hitSlop={8}
             >
               <Ionicons name="chevron-back" size={16} color={theme.accent} />
-              <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+              <Text style={{ fontSize: 13, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>
                 Back to Study
               </Text>
             </Pressable>
@@ -2641,7 +2643,7 @@ export default function StudyScreen() {
             >
               <Ionicons name="compass-outline" size={18} color={theme.accent} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.accent, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                <Text style={{ color: theme.accentDark, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
                   {pausedLayerIndex !== null ? "Resume Deep Dive" : "Start Deep Dive"}
                 </Text>
                 <Text style={{ color: theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
@@ -2669,7 +2671,7 @@ export default function StudyScreen() {
           testID="resume-guided-bar"
         >
           <Ionicons name="play-circle" size={18} color={theme.accent} />
-          <Text style={{ flex: 1, fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={{ flex: 1, fontSize: 13, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>
             Resume Deep Dive
           </Text>
           <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
@@ -2706,7 +2708,7 @@ export default function StudyScreen() {
                       borderRadius: 15,
                       borderWidth: 2,
                       borderColor: isActive ? theme.accent : isCompleted ? theme.accent : theme.border,
-                      backgroundColor: isActive ? theme.accent : "transparent",
+                      backgroundColor: isActive ? theme.accentDark : "transparent",
                       alignItems: "center" as const,
                       justifyContent: "center" as const,
                       marginBottom: 5,
@@ -2724,7 +2726,7 @@ export default function StudyScreen() {
                     <Text
                       style={{
                         fontSize: 11,
-                        color: isActive ? theme.accent : isLocked ? theme.textMuted : theme.textSecondary,
+                        color: isActive ? theme.accentDark : isLocked ? theme.textMuted : theme.textSecondary,
                         fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                       }}
                       numberOfLines={1}
@@ -2740,7 +2742,7 @@ export default function StudyScreen() {
             {LAYER_ORDER.every((l) => completedLayers.has(l)) ? (
               <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 6 }}>
                 <Ionicons name="checkmark-done-circle" size={14} color={theme.accent} />
-                <Text style={{ color: theme.accent, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                <Text style={{ color: theme.accentDark, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
                   All four layers complete. Scroll down to view your summary.
                 </Text>
               </View>
@@ -2886,7 +2888,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     return (
       <View style={styles.tabContent}>
         <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+          <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
             OBSERVE
           </Text>
           <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
@@ -2897,7 +2899,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
         {verseStart != null && verseStart > 0 && verseEnd != null && verseEnd > 0 && (
           <View style={{ backgroundColor: theme.accent + "0C", borderRadius: 8, padding: 10, marginBottom: 12, flexDirection: "row", alignItems: "center" as const, gap: 8 }}>
             <Ionicons name="filter-outline" size={14} color={theme.accent} />
-            <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_500Medium" }}>
+            <Text style={{ fontSize: 12, color: theme.accentDark, fontFamily: "Inter_500Medium" }}>
               Studying verses {verseStart}{verseEnd !== verseStart ? `-${verseEnd}` : ""}
             </Text>
           </View>
@@ -2910,7 +2912,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             <Text style={{ fontSize: 17, lineHeight: 30, color: theme.text, fontFamily: "Lora_400Regular" }}>
               {filteredVerses.map((v) => (
                 <React.Fragment key={v.id}>
-                  <Text style={{ color: theme.accent + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={{ color: theme.accentDark + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
                     {v.verse}{" "}
                   </Text>
                   {v.text}{"  "}
@@ -2969,7 +2971,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               <>
                 <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
                   <Ionicons name="chevron-back" size={16} color={theme.accent} />
-                  <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                     All Verses
                   </Text>
                 </Pressable>
@@ -2978,7 +2980,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                   <View style={[styles.verseCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
                     <View style={styles.verseRefRow}>
                       <Ionicons name="book-outline" size={14} color={theme.accent} />
-                      <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.verseRef, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                         {selectedBook.name} {selectedChapter}:{selectedVerse}
                       </Text>
                     </View>
@@ -3021,7 +3023,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                               </Text>
                             </View>
                             <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                              <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                              <Text style={[styles.strongNum, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                                 {entry.id}
                               </Text>
                             </View>
@@ -3046,7 +3048,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                             <View style={styles.usagePills}>
                               {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
                                 <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
-                                  <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                  <Text style={[styles.usagePillText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                                     {u.trim()}
                                   </Text>
                                 </View>
@@ -3090,7 +3092,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
     return (
       <View style={styles.tabContent}>
         <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+          <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
             OBSERVE
           </Text>
           <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
@@ -3105,7 +3107,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             <Text style={{ fontSize: 17, lineHeight: 30, color: theme.text, fontFamily: "Lora_400Regular" }}>
               {allVerses.map((v) => (
                 <React.Fragment key={v.id}>
-                  <Text style={{ color: theme.accent + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                  <Text style={{ color: theme.accentDark + "90", fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
                     {v.verse}{" "}
                   </Text>
                   {v.text}{"  "}
@@ -3164,7 +3166,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
               <>
                 <Pressable onPress={() => setSelectedVerse(null)} style={styles.backRow}>
                   <Ionicons name="chevron-back" size={16} color={theme.accent} />
-                  <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                     All Verses
                   </Text>
                 </Pressable>
@@ -3173,7 +3175,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                   <View style={[styles.verseCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
                     <View style={styles.verseRefRow}>
                       <Ionicons name="book-outline" size={14} color={theme.accent} />
-                      <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.verseRef, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                         {selectedBook.name} {selectedChapter}:{selectedVerse}
                       </Text>
                     </View>
@@ -3216,7 +3218,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                               </Text>
                             </View>
                             <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                              <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                              <Text style={[styles.strongNum, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                                 {entry.id}
                               </Text>
                             </View>
@@ -3241,7 +3243,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                             <View style={styles.usagePills}>
                               {entry.kjvUsage.split(",").slice(0, 5).map((u, j) => (
                                 <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
-                                  <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                  <Text style={[styles.usagePillText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                                     {u.trim()}
                                   </Text>
                                 </View>
@@ -3265,7 +3267,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                     </Text>
                     <Pressable
                       onPress={() => generateWordsMutation.mutate()}
-                      style={[styles.generateBtn, { backgroundColor: theme.accent }]}
+                      style={[styles.generateBtn, { backgroundColor: theme.accentDark }]}
                     >
                       <Text style={[styles.generateBtnText, { fontFamily: "Inter_600SemiBold" }]}>
                         Try Again
@@ -3304,7 +3306,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                 <Pressable
                   key={val}
                   onPress={() => setConcordanceLang(val)}
-                  style={[styles.commentatorChip, { backgroundColor: concordanceLang === val ? theme.accent : theme.backgroundCard }]}
+                  style={[styles.commentatorChip, { backgroundColor: concordanceLang === val ? theme.accentDark : theme.backgroundCard }]}
                 >
                   <Text style={[styles.commentatorChipText, { color: concordanceLang === val ? "#fff" : theme.textSecondary, fontFamily: concordanceLang === val ? "Inter_600SemiBold" : "Inter_500Medium" }]}>
                     {label}
@@ -3344,7 +3346,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                       </Text>
                     </View>
                     <View style={[styles.concordanceIdBadge, { backgroundColor: theme.accent + "18" }]}>
-                      <Text style={[styles.concordanceIdText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.concordanceIdText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                         {entry.id}
                       </Text>
                     </View>
@@ -3361,7 +3363,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                     <>
                       {entry.derivation && (
                         <View style={{ marginTop: 10 }}>
-                          <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          <Text style={[styles.concordanceSubLabel, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                             Derivation
                           </Text>
                           <Text style={[styles.concordanceSubText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
@@ -3371,13 +3373,13 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                       )}
                       {entry.kjvUsage && (
                         <View style={{ marginTop: 10 }}>
-                          <Text style={[styles.concordanceSubLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          <Text style={[styles.concordanceSubLabel, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                             KJV Usage
                           </Text>
                           <View style={styles.kjvUsagePills}>
                             {entry.kjvUsage.split(",").map((u, ui) => (
                               <View key={ui} style={[styles.kjvUsagePill, { backgroundColor: theme.accent + "10" }]}>
-                                <Text style={[styles.kjvUsagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                                <Text style={[styles.kjvUsagePillText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                                   {u.trim()}
                                 </Text>
                               </View>
@@ -3398,7 +3400,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
             })}
 
             <Pressable onPress={() => setStudyMode("verse")} style={{ paddingVertical: 12, alignItems: "center" as const }}>
-              <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 13 }}>Close Concordance</Text>
+              <Text style={{ color: theme.accentDark, fontFamily: "Inter_500Medium", fontSize: 13 }}>Close Concordance</Text>
             </Pressable>
           </>
         ) : (
@@ -3479,7 +3481,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
         <>
           <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); setSelectedVerse(null); }} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               All Books
             </Text>
           </Pressable>
@@ -3643,7 +3645,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
         <>
           <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               All Books
             </Text>
           </Pressable>
@@ -3673,7 +3675,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
         <>
           <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               {selectedBook.name}
             </Text>
           </Pressable>
@@ -3682,7 +3684,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
           </Text>
 
           <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
-            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
               CONTEXT
             </Text>
             <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
@@ -3708,7 +3710,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                 <View style={{ marginTop: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
                     <Ionicons name="time-outline" size={14} color={theme.accent} />
-                    <Text style={{ color: theme.accent, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={{ color: theme.accentDark, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
                       Historical Background
                     </Text>
                   </View>
@@ -3720,7 +3722,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                 <View style={{ marginTop: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
                     <Ionicons name="globe-outline" size={14} color={theme.accent} />
-                    <Text style={{ color: theme.accent, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={{ color: theme.accentDark, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontFamily: "Inter_600SemiBold" }}>
                       Cultural Notes
                     </Text>
                   </View>
@@ -3754,8 +3756,8 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
               {card.themes && card.themes.length > 0 && (
                 <View style={[styles.themePills, { marginTop: 16 }]}>
                   {card.themes.map((t, i) => (
-                    <View key={i} style={[styles.themePill, { backgroundColor: theme.primary + "22" }]}>
-                      <Text style={[styles.themePillText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
+                    <View key={i} style={[styles.themePill, { backgroundColor: theme.accent + "12" }]}>
+                      <Text style={[styles.themePillText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                         {t}
                       </Text>
                     </View>
@@ -3791,7 +3793,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                 style={({ pressed }) => [
                   {
                     marginTop: 14,
-                    backgroundColor: theme.accent,
+                    backgroundColor: theme.accentDark,
                     paddingVertical: 12,
                     paddingHorizontal: 24,
                     borderRadius: 12,
@@ -3808,7 +3810,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
                 </Text>
               </Pressable>
               {generateMutation.isError && (
-                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.emptyBody, { color: theme.error, marginTop: 8, fontFamily: "Inter_400Regular" }]}>
                   Failed to generate. Please try again.
                 </Text>
               )}
@@ -3845,7 +3847,7 @@ const COMMENTATOR_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; c
   "Jamieson, Fausset & Brown": { icon: "library", color: "#0891B2" },
   "Adam Clarke": { icon: "school", color: "#059669" },
   "John Gill": { icon: "document-text", color: "#D97706" },
-  "Ellen G. White": { icon: "sparkles", color: "#C9933A" },
+  "Ellen G. White": { icon: "sparkles", color: "#B8860B" },
 };
 
 function extractLeadInsight(content: string): { lead: string; rest: string } {
@@ -3901,7 +3903,7 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
         </View>
         {cr.entry.verseStart && (
           <View style={{ backgroundColor: theme.accent + "14", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+            <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>
               vv. {cr.entry.verseStart}{cr.entry.verseEnd && cr.entry.verseEnd !== cr.entry.verseStart ? `\u2013${cr.entry.verseEnd}` : ""}
             </Text>
           </View>
@@ -3936,7 +3938,7 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
             opacity: pressed ? 0.7 : 1,
           }]}
         >
-          <Text style={{ fontSize: 12, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+          <Text style={{ fontSize: 12, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>
             {expanded ? "Less" : "Read More"}
           </Text>
           <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={theme.accent} />
@@ -4096,7 +4098,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
         <>
           <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               All Books
             </Text>
           </Pressable>
@@ -4123,7 +4125,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
         <>
           <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               {selectedBook.name}
             </Text>
           </Pressable>
@@ -4132,7 +4134,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
           </Text>
 
           <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
-            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
               INSIGHT
             </Text>
             <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
@@ -4153,7 +4155,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                 onPress={() => setActiveCommentator(null)}
                 style={[
                   styles.commentatorChip,
-                  { backgroundColor: !activeCommentator ? theme.accent : (theme.backgroundCard) },
+                  { backgroundColor: !activeCommentator ? theme.accentDark : (theme.backgroundCard) },
                 ]}
                 testID="filter-all-commentators"
               >
@@ -4167,7 +4169,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                   onPress={() => setActiveCommentator(activeCommentator === name ? null : name!)}
                   style={[
                     styles.commentatorChip,
-                    { backgroundColor: activeCommentator === name ? theme.accent : (theme.backgroundCard) },
+                    { backgroundColor: activeCommentator === name ? theme.accentDark : (theme.backgroundCard) },
                   ]}
                   testID={`filter-commentator-${name}`}
                 >
@@ -4225,7 +4227,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                     })}
                   >
                     <Ionicons name="add-circle-outline" size={16} color={theme.accent} />
-                    <Text style={{ fontSize: 13, color: theme.accent, fontFamily: "Inter_600SemiBold" }}>
+                    <Text style={{ fontSize: 13, color: theme.accentDark, fontFamily: "Inter_600SemiBold" }}>
                       {remaining.length} more {remaining.length === 1 ? "voice" : "voices"}
                     </Text>
                   </Pressable>
@@ -4263,7 +4265,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                 style={({ pressed }) => [
                   {
                     marginTop: 14,
-                    backgroundColor: theme.accent,
+                    backgroundColor: theme.accentDark,
                     paddingVertical: 12,
                     paddingHorizontal: 24,
                     borderRadius: 12,
@@ -4280,7 +4282,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                 </Text>
               </Pressable>
               {generateCommentaryMutation.isError && (
-                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.emptyBody, { color: theme.error, marginTop: 8, fontFamily: "Inter_400Regular" }]}>
                   Failed to generate. Please try again.
                 </Text>
               )}
@@ -4324,7 +4326,7 @@ function RespondBackground({ template, theme }: { template: AppTemplate; theme: 
             <View style={[styles.appCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <View style={styles.appCardHeader}>
                 <Ionicons name="time-outline" size={16} color={theme.accent} />
-                <Text style={[styles.appCardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[styles.appCardLabel, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                   Then
                 </Text>
               </View>
@@ -4458,7 +4460,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
         <>
           <Pressable onPress={() => { setSelectedBook(null); setSelectedChapter(null); }} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               All Books
             </Text>
           </Pressable>
@@ -4488,7 +4490,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
         <>
           <Pressable onPress={() => setSelectedChapter(null)} style={styles.backRow}>
             <Ionicons name="chevron-back" size={16} color={theme.accent} />
-            <Text style={[styles.backText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.backText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               {selectedBook.name}
             </Text>
           </Pressable>
@@ -4497,7 +4499,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
           </Text>
 
           <View style={{ backgroundColor: theme.accent + "08", borderRadius: 12, padding: 14, marginBottom: 12 }}>
-            <Text style={{ fontSize: 11, color: theme.accent, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
+            <Text style={{ fontSize: 11, color: theme.accentDark, fontFamily: "Inter_600SemiBold", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 }}>
               RESPOND
             </Text>
             <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
@@ -4512,7 +4514,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
                 <View style={{ height: 10, width: "90%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 8 }} />
                 <View style={{ height: 10, width: "75%", backgroundColor: theme.border, borderRadius: 5 }} />
               </View>
-              <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: theme.primary + "20" }}>
+              <View style={{ backgroundColor: theme.backgroundCard, borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: theme.accent + "20" }}>
                 <View style={{ height: 10, width: "80%", backgroundColor: theme.border, borderRadius: 5, marginBottom: 8 }} />
                 <View style={{ height: 10, width: "55%", backgroundColor: theme.border, borderRadius: 5 }} />
               </View>
@@ -4536,7 +4538,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
           )}
 
           {template?.prayerPrompt && (
-            <View style={{ backgroundColor: theme.primary + "08", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: theme.primary + "40" }}>
+            <View style={{ backgroundColor: theme.accent + "08", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: theme.accent + "40" }}>
               <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Lora_400Regular", fontStyle: "italic" as const, lineHeight: 20 }}>
                 {template.prayerPrompt}
               </Text>
@@ -4569,7 +4571,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
                 style={({ pressed }) => [
                   {
                     marginTop: 14,
-                    backgroundColor: theme.accent,
+                    backgroundColor: theme.accentDark,
                     paddingVertical: 12,
                     paddingHorizontal: 24,
                     borderRadius: 12,
@@ -4586,7 +4588,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
                 </Text>
               </Pressable>
               {generateAppMutation.isError && (
-                <Text style={[styles.emptyBody, { color: "#e74c3c", marginTop: 8, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.emptyBody, { color: theme.error, marginTop: 8, fontFamily: "Inter_400Regular" }]}>
                   Failed to generate. Please try again.
                 </Text>
               )}
@@ -4823,8 +4825,8 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 4,
   },
-  appLayerTitle: { color: "#EDE5D5", fontSize: 17, marginBottom: 8 },
-  appLayerSub: { color: "rgba(237,229,213,0.7)", fontSize: 13, lineHeight: 20 },
+  appLayerTitle: { color: "#1F1A12", fontSize: 17, marginBottom: 8 },
+  appLayerSub: { color: "#6B6660", fontSize: 13, lineHeight: 20 },
   layerRow: {
     flexDirection: "row",
     gap: 14,
@@ -5419,7 +5421,7 @@ const dsStyles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(31,26,18,0.08)",
   },
   summaryDepthText: {
     fontSize: 12,
@@ -5435,7 +5437,7 @@ const dsStyles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(31,26,18,0.08)",
   },
   summaryTextContent: {
     fontSize: 12,

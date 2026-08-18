@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
@@ -111,7 +112,8 @@ function AnimatedPhaseDot({
 }
 
 export default function StudyGuideScreen() {
-  const { theme } = useTheme();
+  useTheme(); // Path B light sweep: screen is pinned light
+  const theme = SWEEP_LIGHT;
   const { userId } = useAuth();
   const { triggerMissionInvite } = useProStatus();
   const insets = useSafeAreaInsets();
@@ -125,15 +127,6 @@ export default function StudyGuideScreen() {
 
   const { tryAutoGuide } = useEllenWhite();
 
-  useEffect(() => {
-    if (!hasVerseParams || !showPersonaPicker || checkingResume) return;
-    const timer = setTimeout(() => {
-      if (FEATURE_GUIDES["study-guide"]) {
-        tryAutoGuide("study-guide", FEATURE_GUIDES["study-guide"]);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [hasVerseParams, showPersonaPicker, checkingResume]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -278,6 +271,16 @@ export default function StudyGuideScreen() {
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
   const hasVerseParams = !!(params.verseReference && params.verseText);
+
+  useEffect(() => {
+    if (!hasVerseParams || !showPersonaPicker || checkingResume) return;
+    const timer = setTimeout(() => {
+      if (FEATURE_GUIDES["study-guide"]) {
+        tryAutoGuide("study-guide", FEATURE_GUIDES["study-guide"]);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [hasVerseParams, showPersonaPicker, checkingResume]);
 
   const { data: recentSessions, isLoading: sessionsLoading } = useQuery<any[]>({
     queryKey: [`/api/study-guide/sessions?userId=${userId}`],
@@ -459,18 +462,18 @@ export default function StudyGuideScreen() {
                   {activeSessions.map((s: any) => (
                     <Pressable
                       key={s.id}
-                      style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#C9933A" }]}
+                      style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#E8604C" }]}
                       onPress={() => router.replace({
                         pathname: "/study-guide" as any,
                         params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
                       })}
                     >
                       <View style={styles.hubSessionTop}>
-                        <Text style={[styles.hubSessionRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        <Text style={[styles.hubSessionRef, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                           {s.verseReference}
                         </Text>
-                        <View style={[styles.hubPhaseBadge, { backgroundColor: "#C9933A20" }]}>
-                          <Text style={[styles.hubPhaseText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                        <View style={[styles.hubPhaseBadge, { backgroundColor: "rgba(232,96,76,0.14)" }]}>
+                          <Text style={[styles.hubPhaseText, { color: "#C24431", fontFamily: "Inter_600SemiBold" }]}>
                             Continue
                           </Text>
                         </View>
@@ -558,7 +561,7 @@ export default function StudyGuideScreen() {
         )}
         <View style={styles.messageContent}>
           {isAI && (
-            <Text style={[styles.messageRole, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.messageRole, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
               {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Scholarly"} Tutor
             </Text>
           )}
@@ -625,7 +628,7 @@ export default function StudyGuideScreen() {
                 style={[
                   styles.phaseLabel,
                   {
-                    color: isActive ? theme.accent : isDone ? "#2E7D32" : theme.textMuted + "80",
+                    color: isActive ? theme.accentDark : isDone ? "#2E7D32" : theme.textMuted + "80",
                     fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                     opacity: isDone ? 0.7 : isActive ? 1 : 0.5,
                   },
@@ -645,7 +648,7 @@ export default function StudyGuideScreen() {
         <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={3}>
           "{params.verseText}"
         </Text>
-        <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+        <Text style={[styles.verseRef, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
           {params.verseReference}
         </Text>
       </View>
@@ -654,7 +657,7 @@ export default function StudyGuideScreen() {
         <View style={[styles.resumedBanner, { backgroundColor: theme.accent + "15" }]}>
           <View style={styles.resumedBannerLeft}>
             <Ionicons name="chatbubbles-outline" size={16} color={theme.accent} />
-            <Text style={[styles.resumedText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            <Text style={[styles.resumedText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
               Session resumed
             </Text>
           </View>
@@ -713,7 +716,7 @@ export default function StudyGuideScreen() {
                       <Ionicons name={p.icon} size={22} color={isSelected ? theme.accent : theme.textMuted} />
                     </View>
                     <View style={styles.personaInfo}>
-                      <Text style={[styles.personaLabel, { color: isSelected ? theme.accent : theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.personaLabel, { color: isSelected ? theme.accentDark : theme.text, fontFamily: "Inter_600SemiBold" }]}>
                         {p.label}
                       </Text>
                       <Text style={[styles.personaDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -731,7 +734,7 @@ export default function StudyGuideScreen() {
             </View>
             <Pressable
               onPress={() => handleStartWithPersona(selectedPersona)}
-              style={[styles.beginBtn, { backgroundColor: theme.accent }]}
+              style={[styles.beginBtn, { backgroundColor: theme.accentDark }]}
               testID="begin-study-btn"
             >
               <Ionicons name="chatbubbles-outline" size={16} color="#fff" />
@@ -755,7 +758,7 @@ export default function StudyGuideScreen() {
             </Text>
             <Pressable
               onPress={handleRetry}
-              style={[styles.retryBtn, { backgroundColor: theme.accent }]}
+              style={[styles.retryBtn, { backgroundColor: theme.accentDark }]}
               testID="study-retry-btn"
             >
               <Ionicons name="refresh" size={16} color="#fff" />
@@ -795,7 +798,7 @@ export default function StudyGuideScreen() {
                 <Text style={[styles.completeTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
                   Study Complete
                 </Text>
-                <Text style={[styles.completeVerse, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                <Text style={[styles.completeVerse, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                   {params.verseReference}
                 </Text>
                 {studySummary ? (
@@ -823,7 +826,7 @@ export default function StudyGuideScreen() {
                   />
                   <Pressable
                     onPress={() => safeGoBack(router, "/(tabs)/explore")}
-                    style={[styles.doneBtn, { backgroundColor: theme.accent }]}
+                    style={[styles.doneBtn, { backgroundColor: theme.accentDark }]}
                     testID="study-done-btn"
                   >
                     <Text style={[styles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>Done</Text>
@@ -847,7 +850,7 @@ export default function StudyGuideScreen() {
                   disabled={!input.trim() || respondMutation.isPending}
                   style={[
                     styles.sendBtn,
-                    { backgroundColor: input.trim() ? theme.accent : theme.textMuted + "30" },
+                    { backgroundColor: input.trim() ? theme.accentDark : theme.textMuted + "30" },
                   ]}
                   testID="study-send-btn"
                   accessibilityRole="button"
@@ -1055,7 +1058,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "rgba(201,147,58,0.12)",
+    backgroundColor: "rgba(232,96,76,0.12)",
     alignItems: "center" as const,
     justifyContent: "center" as const,
     marginBottom: 4,

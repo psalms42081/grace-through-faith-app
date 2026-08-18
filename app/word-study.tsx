@@ -14,6 +14,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { apiRequest, queryClient } from "@/lib/query-client";
 
 interface StrongEntry {
@@ -49,7 +50,8 @@ export default function WordStudyScreen() {
     verse?: string;
     verseText?: string;
   }>();
-  const { theme, isDark } = useTheme();
+  useTheme(); // Path B light sweep: screen is pinned light
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const [selectedWord, setSelectedWord] = useState<WordMapping | null>(null);
 
@@ -173,13 +175,13 @@ export default function WordStudyScreen() {
             <Text
               style={[
                 styles.verseRef,
-                { color: theme.accent, fontFamily: "Inter_600SemiBold" },
+                { color: theme.accentDark, fontFamily: "Inter_600SemiBold" },
               ]}
             >
               {displayBookName} {params.chapter}:{params.verse}
             </Text>
             <View style={[styles.translationBadge, { backgroundColor: theme.accent + "18" }]}>
-              <Text style={[styles.translationText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[styles.translationText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                 KJV
               </Text>
             </View>
@@ -205,13 +207,13 @@ export default function WordStudyScreen() {
                     style={({ pressed }) => [
                       styles.wordPill,
                       {
-                        backgroundColor: pressed ? theme.accent : theme.accent + "18",
+                        backgroundColor: pressed ? theme.accent + "30" : theme.accent + "18",
                         borderColor: theme.accent,
                       }
                     ]}
                   >
                     <Text style={[styles.wordPillText, {
-                      color: theme.accent,
+                      color: theme.accentDark,
                       fontFamily: "Inter_600SemiBold"
                     }]}>
                       {wm.map.translatedWord || wm.entry?.lemma}
@@ -297,7 +299,7 @@ export default function WordStudyScreen() {
                       {selectedWord.entry.lemma}
                     </Text>
                     <View style={[styles.strongBadge, { backgroundColor: theme.accent + "18" }]}>
-                      <Text style={[styles.strongNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.strongNum, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
                         {selectedWord.entry.id}
                       </Text>
                     </View>
@@ -334,7 +336,7 @@ export default function WordStudyScreen() {
                       <View style={styles.usagePills}>
                         {selectedWord.entry.kjvUsage.split(",").map((u, j) => (
                           <View key={j} style={[styles.usagePill, { backgroundColor: theme.accent + "12" }]}>
-                            <Text style={[styles.usagePillText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                            <Text style={[styles.usagePillText, { color: theme.accentDark, fontFamily: "Inter_500Medium" }]}>
                               {u.trim()}
                             </Text>
                           </View>
@@ -476,7 +478,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(31,26,18,0.15)",
     alignSelf: "center",
     marginBottom: 16,
   },
