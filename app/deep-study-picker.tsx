@@ -127,6 +127,19 @@ export default function DeepStudyPickerScreen() {
         </View>
       </View>
 
+      {/* Preview pill — Deep Dive light conversion. Removed at swap. */}
+      <View style={{ paddingHorizontal: 24, paddingBottom: 12 }}>
+        <Pressable
+          onPress={() => router.push("/deep-study-picker-v2" as any)}
+          style={({ pressed }) => [styles.previewPill, { opacity: pressed ? 0.8 : 1 }]}
+          testID="deep-dive-preview-pill"
+        >
+          <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+          <Text style={styles.previewPillText}>Preview the new look</Text>
+          <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
@@ -239,6 +252,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  previewPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#1F7A70",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  previewPillText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 12.5 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 8 },

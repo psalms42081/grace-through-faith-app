@@ -175,6 +175,8 @@ function RootLayoutNav() {
       <Stack.Screen name="touchpoints" options={{ headerShown: false }} />
       {/* Discover v2 (Brief 05) — hidden route, reached only via the preview pill until approval */}
       <Stack.Screen name="discover-v2" options={{ headerShown: false }} />
+      {/* Deep Dive picker light conversion — hidden route until approval */}
+      <Stack.Screen name="deep-study-picker-v2" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-topic" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
       <Stack.Screen name="connect-media" options={{ headerShown: false }} />
