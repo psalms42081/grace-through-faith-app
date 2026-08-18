@@ -133,6 +133,22 @@ export default function SabbathSchoolV2Screen() {
     setActiveVideo(null);
   };
 
+  // Release the video player when this screen unmounts (navigation away /
+  // reload). Without this, Android tears the player down during host destroy
+  // on a background thread → ExoPlayer "accessed on the wrong thread" crash.
+  React.useEffect(() => {
+    return () => {
+      const v = videoRef.current;
+      videoRef.current = null;
+      if (v) {
+        v.stopAsync()
+          .catch(() => {})
+          .then(() => v.unloadAsync())
+          .catch(() => {});
+      }
+    };
+  }, []);
+
   const { data: userPrefs } = useQuery<{ preferredCurriculum?: string | null }>({
     queryKey: ["/api/user/preferences"],
   });

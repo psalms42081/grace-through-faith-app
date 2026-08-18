@@ -1222,13 +1222,27 @@ function VideoStoryPlayer({
 
   useEffect(() => {
     if (isActive && videoRef.current && isLoaded && !hasError) {
-      videoRef.current.playAsync();
+      videoRef.current.playAsync().catch(() => {});
       setIsPlaying(true);
     } else if (!isActive && videoRef.current) {
-      videoRef.current.pauseAsync();
+      videoRef.current.pauseAsync().catch(() => {});
       setIsPlaying(false);
     }
   }, [isActive, isLoaded, hasError]);
+
+  // Release the player on unmount — otherwise Android destroys it during host
+  // teardown on a background thread (ExoPlayer wrong-thread crash on reload/nav).
+  useEffect(() => {
+    return () => {
+      const v = videoRef.current as Video | null;
+      if (v) {
+        v.stopAsync()
+          .catch(() => {})
+          .then(() => v.unloadAsync())
+          .catch(() => {});
+      }
+    };
+  }, []);
 
   const handlePlaybackStatus = (status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
