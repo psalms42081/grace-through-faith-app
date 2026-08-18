@@ -24,3 +24,31 @@ id = "CUI-B30xrPVpVZH7DBzD0"
 uri = "file://downloads/comparison-deck.tar.gz"
 type = "unspecified"
 title = "Comparison Deck (HTML + all screenshots)"
+
+[[outputs]]
+id = "28GnBCtnjHZ23BpJWFLtz"
+uri = "file://attached_assets/generated_images/tile-identity-v2.png"
+type = "image"
+title = "Identity — v2 (flat)"
+description = "Solid violet hand mirror, one cream star, zero highlights."
+
+[[outputs]]
+id = "fydu_XfA3JTOetsy-HrZc"
+uri = "file://attached_assets/generated_images/tile-mental-health-v2.png"
+type = "image"
+title = "Mental Health — v2 (flat)"
+description = "One flat lotus (4 solid petals), two flat ripple lines, sage + blue."
+
+[[outputs]]
+id = "AsVlS8ZH1-Ni4KvLKj5F-"
+uri = "file://attached_assets/generated_images/tile-seasonal-v2.png"
+type = "image"
+title = "Seasonal — v2 (flat)"
+description = "One branch, solid flat leaves in exactly two colours (green + amber)."
+
+[[outputs]]
+id = "0-Lmjm4znYPsXj2qX8dB3"
+uri = "file://attached_assets/generated_images/tile-spiritual-growth-v2.png"
+type = "image"
+title = "Spiritual Growth — v2 (flat)"
+description = "Simple tree above a ground line, single flat root shape below, sage/cream/ink."
