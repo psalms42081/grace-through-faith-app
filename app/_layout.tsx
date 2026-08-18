@@ -160,6 +160,8 @@ function RootLayoutNav() {
       <Stack.Screen name="sabbath-experience" options={{ headerShown: false }} />
       <Stack.Screen name="great-controversy" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school" options={{ headerShown: false }} />
+      {/* Brief 04 Phase A: hidden preview route — reached only via the preview pill until swap approval */}
+      <Stack.Screen name="plans-v2" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school-day" options={{ headerShown: false }} />
       <Stack.Screen name="sabbath-school-discussion" options={{ headerShown: false }} />
       <Stack.Screen name="prophecy-explorer" options={{ headerShown: false }} />

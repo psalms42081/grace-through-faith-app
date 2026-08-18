@@ -435,6 +435,16 @@ export default function PlansScreen() {
         <Text style={[st.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Plans
         </Text>
+        {/* Brief 04 Phase A preview pill — remove at swap */}
+        <Pressable
+          onPress={() => router.push("/plans-v2" as any)}
+          style={({ pressed }) => [st.previewPill, { opacity: pressed ? 0.8 : 1 }]}
+          testID="plans-preview-pill"
+        >
+          <Ionicons name="sparkles-outline" size={14} color="#FFFFFF" />
+          <Text style={st.previewPillText}>Preview the new look</Text>
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.85)" />
+        </Pressable>
         <View style={st.tabRow}>
           {TABS.map((tab) => (
             <Pressable
@@ -1484,6 +1494,22 @@ function CustomPlanSheet({
 }
 
 const st = StyleSheet.create({
+  previewPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#1F7A70",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  previewPillText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12.5,
+    color: "#FFFFFF",
+  },
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 8 },
   title: { fontSize: 28, marginBottom: 16 },
