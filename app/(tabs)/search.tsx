@@ -184,6 +184,17 @@ export default function SearchScreen() {
           Find verses, passages & topics
         </Text>
 
+        {/* Preview pill — Discover v2 (Brief 05). Removed at swap. */}
+        <Pressable
+          onPress={() => router.push("/discover-v2" as any)}
+          style={({ pressed }) => [styles.previewPill, { opacity: pressed ? 0.8 : 1 }]}
+          testID="discover-preview-pill"
+        >
+          <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+          <Text style={styles.previewPillText}>Preview the new look</Text>
+          <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+        </Pressable>
+
         <Pressable
           onPress={() => router.push("/semantic-search")}
           style={({ pressed }) => [
@@ -571,6 +582,18 @@ const styles = StyleSheet.create({
   errorSub: { fontSize: 14, textAlign: "center" as const },
   emptyState: { alignItems: "center" as const, gap: 12, paddingTop: 60 },
   emptyText: { fontSize: 15, textAlign: "center" as const },
+  previewPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#1F7A70",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  previewPillText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 12.5 },
   aiSearchBanner: {
     flexDirection: "row",
     alignItems: "center",

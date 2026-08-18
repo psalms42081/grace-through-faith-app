@@ -173,6 +173,8 @@ function RootLayoutNav() {
       <Stack.Screen name="study-category" options={{ headerShown: false }} />
       <Stack.Screen name="kids" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoints" options={{ headerShown: false }} />
+      {/* Discover v2 (Brief 05) — hidden route, reached only via the preview pill until approval */}
+      <Stack.Screen name="discover-v2" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-topic" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
       <Stack.Screen name="connect-media" options={{ headerShown: false }} />
