@@ -86,7 +86,7 @@ export default function DeepStudyPickerV2Screen() {
     return (
       <View style={styles.wrapper}>
         <View style={[styles.stickyHeader, { paddingTop: topPad + 12 }]}>
-          <Pressable onPress={() => setSelectedBook(null)} hitSlop={12} style={styles.backBtn} testID="deep2-back-to-books">
+          <Pressable onPress={() => setSelectedBook(null)} hitSlop={12} style={styles.backBtn} testID="deep2-back-to-books" accessibilityRole="button" accessibilityLabel="Back to books">
             <Ionicons name="chevron-back" size={24} color={HV2.ink} />
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -119,7 +119,7 @@ export default function DeepStudyPickerV2Screen() {
   return (
     <View style={styles.wrapper}>
       <View style={[styles.stickyHeader, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} hitSlop={12} style={styles.backBtn} testID="deep2-back">
+        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} hitSlop={12} style={styles.backBtn} testID="deep2-back" accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={24} color={HV2.ink} />
         </Pressable>
         <View style={{ flex: 1 }}>
