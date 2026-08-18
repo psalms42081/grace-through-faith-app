@@ -20,7 +20,7 @@ const tiles = [
 const icons = [
   { src: "rhythm-plan.png", label: "Today's Plan" },
   { src: "rhythm-ss.png", label: "Sabbath School" },
-  { src: "rhythm-reflection.png", label: "Reflection" },
+  { src: "rhythm-reflection-candle.png", label: "Reflection" },
   { src: "rhythm-morning.png", label: "Morning" },
   { src: "rhythm-listen.png", label: "Listen" },
 ];
