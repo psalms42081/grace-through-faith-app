@@ -124,6 +124,7 @@ function RootLayoutNav() {
       <Stack.Screen name="deep-study-picker" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
+      <Stack.Screen name="read-v2/[bookId]/[chapter]" options={{ headerShown: true }} />
       <Stack.Screen
         name="verse-actions"
         options={{
