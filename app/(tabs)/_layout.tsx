@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, router, usePathname } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,18 @@ function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
+  const pathname = usePathname();
+
+  // Path B Phase 1: keep the visible Home in sync with kids mode.
+  // Adults use home-v2; kids keep the legacy index Home. href:null only hides
+  // a tab, so redirect explicitly when the mode flips while Home is selected.
+  useEffect(() => {
+    if (isKidsMode && pathname === "/home-v2") {
+      router.replace("/(tabs)" as any);
+    } else if (!isKidsMode && pathname === "/") {
+      router.replace("/(tabs)/home-v2" as any);
+    }
+  }, [isKidsMode, pathname]);
   const spotlightTarget =
     isVisible && currentSteps.length > 0
       ? currentSteps[currentStepIndex]?.spotlightTarget
@@ -95,10 +107,24 @@ function ClassicTabLayout() {
         tabBarIconStyle: isKidsMode ? { marginTop: 4 } : undefined,
       }}
     >
+      {/* Path B Phase 1: Home tab points at home-v2 for adults.
+          Rollback: swap the two href lines below (index.tsx is untouched). */}
       <Tabs.Screen
         name="index"
         options={{
           title: t("tabs.home"),
+          // Kids mode keeps the legacy Home (kids UI lives in index.tsx)
+          href: isKidsMode ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <House size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="home-v2"
+        options={{
+          title: t("tabs.home"),
+          href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <House size={size} color={color} />
           ),
