@@ -121,7 +121,6 @@ function RootLayoutNav() {
       <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="book-picker" options={{ headerShown: false }} />
-      <Stack.Screen name="deep-study-picker" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
       <Stack.Screen name="read-legacy/[bookId]/[chapter]" options={{ headerShown: true }} />
