@@ -175,7 +175,7 @@ export default function StudyCategoryScreen() {
               title="Deep Dive"
               subtitle={deepStudyState.sub}
               badge="Guided"
-              onPress={() => router.push({ pathname: "/deep-study-picker", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
+              onPress={() => router.push({ pathname: "/deep-study-picker-v2", params: { ...deepStudyState.routeParams, _t: String(Date.now()) } } as any)}
             />
           </>
         );

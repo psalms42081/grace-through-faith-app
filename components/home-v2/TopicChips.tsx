@@ -4,14 +4,14 @@ import { router } from "expo-router";
 import { HV2, F } from "./theme";
 
 // Pastel chips tinted with category tokens (§1.2).
-// TODO (Discover brief): deep-link each chip to Discover pre-filtered by topic.
-// Discover filtering isn't wired yet, so chips open Discover un-filtered for now.
+// Each chip deep-links to Discover, which opens the matching topic directly
+// (matched case-insensitively by title in discover-v2's ?topic= handler).
 const CHIPS = [
-  { label: "Anxiety", bg: "#FCE1EC", fg: "#C2367C" },
-  { label: "Hope", bg: "#DDF0FB", fg: HV2.catSignpost },
-  { label: "Sabbath", bg: "#DFF6F2", fg: HV2.catSabbath },
-  { label: "Prayer", bg: "#FFF0D9", fg: HV2.catEGW },
-  { label: "Grace", bg: "#EAE6FA", fg: HV2.catPlans },
+  { label: "Anxiety", topic: "anxiety", bg: "#FCE1EC", fg: "#C2367C" },
+  { label: "Hope", topic: "hope", bg: "#DDF0FB", fg: HV2.catSignpost },
+  { label: "Sabbath", topic: "sabbath", bg: "#DFF6F2", fg: HV2.catSabbath },
+  { label: "Prayer", topic: "prayer", bg: "#FFF0D9", fg: HV2.catEGW },
+  { label: "Grace", topic: "gods-grace", bg: "#EAE6FA", fg: HV2.catPlans },
 ];
 
 export default function TopicChips() {
@@ -27,7 +27,7 @@ export default function TopicChips() {
           <Pressable
             key={c.label}
             style={[s.chip, { backgroundColor: c.bg }]}
-            onPress={() => router.push("/(tabs)/search" as any)}
+            onPress={() => router.push(`/(tabs)/search?topic=${encodeURIComponent(c.topic)}` as any)}
             accessibilityRole="button"
             accessibilityLabel={`Explore ${c.label}`}
           >

@@ -125,7 +125,7 @@ export default function RelatedStudiesSection({
       onPress: () => {
         if (parsed) {
           router.push({
-            pathname: "/deep-study-picker",
+            pathname: "/deep-study-picker-v2",
             params: {
               bookId: String(parsed.bookId),
               chapter: String(parsed.chapter),

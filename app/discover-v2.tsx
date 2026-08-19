@@ -562,7 +562,7 @@ export default function DiscoverV2Screen() {
                   ink="#3A4E8C"
                   title="Deep Dive"
                   sub="Explore a chapter across history, language, and meaning"
-                  onPress={() => router.push("/deep-study-picker" as any)}
+                  onPress={() => router.push("/deep-study-picker-v2" as any)}
                   testID="discover2-study-deep"
                 />
               </View>
