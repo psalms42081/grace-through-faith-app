@@ -20,6 +20,10 @@ description: Locked design decisions for the YouVersion-inspired light-first res
 Topic pages for pastoral subjects (grief, addiction, abuse, anxiety, depression, loneliness, suffering, abandonment and similar) stay QUIET: no gamified elements, no streak nudges, no playful furniture. Applies to the Signposts topic-page light restyle and any future surface touching these topics.
 **How to apply:** when sweeping touchpoint-topic/touchpoint-study to Path B light, use category token tints per topic but strip/omit streaks, celebration moments, sparkle icons, and playful CTAs on pastoral topics.
 
+## No-grading rule (Joe, Aug 2026 — canon, sits alongside pastoral-quiet)
+No grading, assessment, or competency labels anywhere in the app. Recording what someone DID (layers completed, chapters read, factual journal record) is fine; EVALUATING it is not — no rubric tiers like "Emerging/Growing/Deep/Transforming", no "Study Depth" ratings, no proficiency labels on time spent with Scripture. **Why:** a devotional app must not hand someone a competency rating on prayer/study — same instinct as pastoral-quiet ("the app doesn't gamify grief, and it shouldn't grade prayer"). AI-generated features love reinventing progress rubrics — reject them at design time.
+**How to apply:** the Study Depth rubric was stripped from the Study tab (Aug 2026). Any new feature proposing levels/tiers/scores over a user's spiritual activity gets the factual-record treatment instead. (StudyDepthSelector's "Choose Your Study Depth" is a pre-study preference choice, not an evaluation — allowed.)
+
 ## Tutor-removal scope (Joe, Aug 2026 — confirmed)
 Tutor personas (Scholarly / Pastoral / Ellen White) in "Choose Your Tutor" STAY — content voice, not walkthrough. ONLY the hologram dot/avatar and the walkthrough guide system are removed. The gold-ringed EGW avatar floats on the Guided (OIA) session screen, so study surfaces are in the removal's blast radius — the Study-tab restyle brief is sequenced AFTER tutor removal.
 

@@ -53,15 +53,6 @@ const LAYER_PURPOSE: Record<Tab, string> = {
   application: "What will you do with what you've learned?",
 };
 
-const DEPTH_INFO: Record<string, { encouragement: string; description: string }> = {
-  Emerging: { encouragement: "You've begun reflecting on this passage.\nContinue responding to deepen your study.", description: "First steps into the Word" },
-  Growing: { encouragement: "Your study is gaining depth.\nKeep engaging with Insight and Respond layers.", description: "Building understanding" },
-  Deep: { encouragement: "You're dwelling richly in the Word.\nScripture is taking root in your thinking.", description: "Rooted in the Word" },
-  Transforming: { encouragement: "Scripture is shaping how you see and live.\nThis is the heart of discipleship.", description: "The Word at work in you" },
-};
-
-const DEPTH_LEVELS = ["Emerging", "Growing", "Deep", "Transforming"];
-
 interface LayerCompletionEntry {
   bookId: number;
   chapter: number;
@@ -109,38 +100,17 @@ function LayerProgressBar({
   onTabPress,
   theme,
   nextStepText,
-  depthLabel,
 }: {
   activeTab: Tab;
   completedLayers: Set<string>;
   onTabPress: (tab: Tab) => void;
   theme: typeof Colors.light;
   nextStepText: string | null;
-  depthLabel: string | null;
 }) {
   const allDone = LAYER_ORDER.every((l) => completedLayers.has(l));
 
-  const depthColor = depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted;
-
   return (
     <View style={lpStyles.container}>
-      {depthLabel && (
-        <View style={lpStyles.depthRow}>
-          <Ionicons
-            name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
-            size={13}
-            color={depthColor}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={[lpStyles.depthLabel, { color: depthColor, fontFamily: "Inter_500Medium" }]}>
-              Study Depth: {depthLabel}
-            </Text>
-            <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-              {DEPTH_INFO[depthLabel]?.encouragement.split("\n")[0]}
-            </Text>
-          </View>
-        </View>
-      )}
       <View style={lpStyles.bar}>
         {LAYER_ORDER.map((layer, i) => {
           const isActive = activeTab === layer;
@@ -356,7 +326,6 @@ function LayerCoachBanner({ activeTab, theme }: { activeTab: Tab; theme: typeof 
 function StudyCompletionScreen({
   reference,
   completedLayers,
-  depthLabel,
   observeJournalMap,
   contextJournalMap,
   insightJournalMap,
@@ -371,7 +340,6 @@ function StudyCompletionScreen({
 }: {
   reference: string;
   completedLayers: Set<string>;
-  depthLabel: string | null;
   observeJournalMap: Map<string, string>;
   contextJournalMap: Map<string, string>;
   insightJournalMap: Map<string, string>;
@@ -387,8 +355,6 @@ function StudyCompletionScreen({
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const depthColor = depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted;
-
   const observeFilled = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
   const contextFilled = CONTEXT_SECTIONS.filter((s) => contextJournalMap.has(s.key));
   const insightFilled = INSIGHT_SECTIONS.filter((s) => insightJournalMap.has(s.key));
@@ -400,8 +366,8 @@ function StudyCompletionScreen({
     ...transformFilled.map((s) => ({ ...s, content: transformJournalMap.get(s.key) ?? "", layerLabel: "Respond" })),
   ];
   const summaryText = useMemo(
-    () => formatStudySummary(reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel),
-    [reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel]
+    () => formatStudySummary(reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap),
+    [reference, completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]
   );
 
   const handleCopy = useCallback(async () => {
@@ -455,11 +421,6 @@ function StudyCompletionScreen({
         <Text style={{ fontSize: 15, color: theme.accentDark, fontFamily: "Lora_600SemiBold", textAlign: "center" as const, marginBottom: 10 }}>
           {reference}
         </Text>
-        {depthLabel && (
-          <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" as const, lineHeight: 19 }}>
-            {DEPTH_INFO[depthLabel]?.encouragement?.replace("\n", " ")}
-          </Text>
-        )}
       </View>
 
       <View style={{ flexDirection: "row" as const, gap: 6, marginBottom: 20 }}>
@@ -1413,7 +1374,6 @@ function formatStudySummary(
   contextJournalMap: Map<string, string>,
   insightJournalMap: Map<string, string>,
   transformJournalMap: Map<string, string>,
-  depthLabel: string | null,
 ): string {
   const lines: string[] = [];
   lines.push("STUDY SUMMARY");
@@ -1426,11 +1386,6 @@ function formatStudySummary(
     lines.push(`  ${status} ${LAYER_FULL_NAMES[layer]}`);
   }
   lines.push("");
-
-  if (depthLabel) {
-    lines.push(`Study Depth: ${depthLabel}`);
-    lines.push("");
-  }
 
   const filledObserve = OBSERVE_SECTIONS.filter((s) => observeJournalMap.has(s.key));
   if (filledObserve.length > 0) {
@@ -1501,7 +1456,6 @@ function DeepSessionSummary({
   hasPrayerContent,
   theme,
   reference,
-  depthLabel,
 }: {
   completedDuring: string[];
   allCompletedLayers: Set<string>;
@@ -1515,7 +1469,6 @@ function DeepSessionSummary({
   hasPrayerContent: boolean;
   theme: typeof Colors.light;
   reference: string;
-  depthLabel: string | null;
 }) {
   const elapsed = Math.round((Date.now() - startedAt) / 60000);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -1534,8 +1487,8 @@ function DeepSessionSummary({
   ];
 
   const summaryText = useMemo(
-    () => formatStudySummary(reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel),
-    [reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap, depthLabel]
+    () => formatStudySummary(reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap),
+    [reference, allCompletedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]
   );
 
   const handleCopy = useCallback(async () => {
@@ -1607,21 +1560,6 @@ function DeepSessionSummary({
             );
           })}
         </View>
-        {depthLabel && (
-          <View style={dsStyles.summaryDepthRow}>
-            <Ionicons
-              name={depthLabel === "Transforming" ? "diamond" : depthLabel === "Deep" ? "flame" : depthLabel === "Growing" ? "trending-up" : "leaf-outline"}
-              size={14}
-              color={depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted}
-            />
-            <Text style={[dsStyles.summaryDepthText, {
-              color: depthLabel === "Transforming" ? "#C24431" : depthLabel === "Deep" ? "#8B5CF6" : depthLabel === "Growing" ? "#C24431" : theme.textMuted,
-              fontFamily: "Inter_500Medium",
-            }]}>
-              Study Depth: {depthLabel}
-            </Text>
-          </View>
-        )}
       </View>
 
       {allEntries.length > 0 && (
@@ -2409,18 +2347,6 @@ export default function StudyScreen() {
     [completedLayers, layerProgress, activeTab]
   );
 
-  const studyDepthLabel = useMemo(() => {
-    const l1l2Done = completedLayers.has("word") && completedLayers.has("context");
-    const l3l4Done = completedLayers.has("voices") && completedLayers.has("application");
-    const allPromptsCount = observeJournalMap.size + contextJournalMap.size + insightJournalMap.size + transformJournalMap.size;
-    const insightCount = insightJournalMap.size;
-    if (l1l2Done && l3l4Done && allPromptsCount >= 10) return "Transforming";
-    if (l1l2Done && l3l4Done && allPromptsCount >= 5) return "Deep";
-    if (l1l2Done && insightCount >= 2) return "Growing";
-    if (completedLayers.size > 0 || allPromptsCount > 0) return "Emerging";
-    return null;
-  }, [completedLayers, observeJournalMap, contextJournalMap, insightJournalMap, transformJournalMap]);
-
   const activeLayerHasEntries = useMemo(() => {
     if (activeTab === "word") return observeJournalMap.size > 0;
     if (activeTab === "context") return contextJournalMap.size > 0;
@@ -2525,7 +2451,6 @@ export default function StudyScreen() {
           hasPrayerContent={prayerContent.length > 0}
           theme={theme}
           reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "Study Session"}
-          depthLabel={studyDepthLabel}
         />
       </View>
     );
@@ -2538,7 +2463,6 @@ export default function StudyScreen() {
         <StudyCompletionScreen
           reference={sharedBook?.name && chapter ? `${sharedBook.name} ${chapter}` : "This Passage"}
           completedLayers={completedLayers}
-          depthLabel={studyDepthLabel}
           observeJournalMap={observeJournalMap}
           contextJournalMap={contextJournalMap}
           insightJournalMap={insightJournalMap}
@@ -5060,18 +4984,6 @@ const lpStyles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
   },
-  depthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-    paddingHorizontal: 2,
-  },
-  depthLabel: {
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: "uppercase" as const,
-  },
 });
 
 const ctaStyles = StyleSheet.create({
@@ -5413,20 +5325,6 @@ const dsStyles = StyleSheet.create({
   summaryRef: {
     fontSize: 16,
     marginTop: 4,
-  },
-  summaryDepthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(31,26,18,0.08)",
-  },
-  summaryDepthText: {
-    fontSize: 12,
-    letterSpacing: 0.3,
-    textTransform: "uppercase" as const,
   },
   summaryToggleRow: {
     flexDirection: "row",
