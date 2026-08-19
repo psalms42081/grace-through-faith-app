@@ -181,6 +181,10 @@ export default function EllenWhiteHologram() {
   }, [selectedPioneer.voiceKey]);
 
   const speakText = useCallback((text: string) => {
+    // Interim mute (Joe, Aug 2026): auto-narration double-fires on Guided Study
+    // (two mount effects race the same intro). The whole walkthrough narration
+    // system is slated for removal — don't patch the race, just silence it.
+    return;
     stopSpeaking();
 
     speechTimeoutRef.current = setTimeout(async () => {
