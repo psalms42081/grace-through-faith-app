@@ -6,7 +6,9 @@ import {
   chapterPassageSections,
   bibleBooks,
   bibleVerses,
+  searchCache,
 } from "../../shared/schema";
+import { SDA_LENS_VERSION } from "./sda-lens";
 import { eq, and } from "drizzle-orm";
 import {
   generateContextCards,
@@ -169,7 +171,44 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
   return true;
 }
 
+const SDA_LENS_MARKER_HASH = "sda-lens-cache-version";
+
+/**
+ * One-time purge of persistent AI-generated content caches whenever the
+ * canonical SDA lens prompt version changes. These tables are keyed only by
+ * book/chapter (no version column), so without this purge, content generated
+ * under an older/generic prompt would keep serving indefinitely.
+ */
+export async function ensureSdaLensCacheVersion(): Promise<void> {
+  const [marker] = await db.select().from(searchCache)
+    .where(eq(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
+  const stored = (marker?.results as { version?: string } | null)?.version;
+  if (stored === SDA_LENS_VERSION) return;
+
+  console.log(`[sda-lens] Cache version changed (${stored || "none"} -> ${SDA_LENS_VERSION}); purging generated content caches...`);
+  await db.delete(contextCards);
+  await db.delete(applicationTemplates);
+  await db.delete(chapterContextCache);
+
+  const farFuture = new Date("2099-01-01");
+  await db.insert(searchCache).values({
+    queryText: "SDA lens cache version marker",
+    queryHash: SDA_LENS_MARKER_HASH,
+    results: { version: SDA_LENS_VERSION },
+    expiresAt: farFuture,
+  }).onConflictDoUpdate({
+    target: searchCache.queryHash,
+    set: { results: { version: SDA_LENS_VERSION }, expiresAt: farFuture },
+  });
+  console.log("[sda-lens] Purge complete — caches will regenerate under the current lens.");
+}
+
 export async function runCacheWarmup(): Promise<void> {
+  try {
+    await ensureSdaLensCacheVersion();
+  } catch (err: any) {
+    console.error("[sda-lens] Cache version check failed:", err.message);
+  }
   console.log(`[cache-warmup] Starting background warm-up for ${POPULAR_CHAPTERS.length} popular chapters...`);
 
   const allBooks = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks);

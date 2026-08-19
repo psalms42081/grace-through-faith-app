@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withSdaLens } from "./sda-lens";
 import fetch from "node-fetch";
 
 function createOpenAIClient(): OpenAI {
@@ -154,7 +155,7 @@ export async function generateVideoScript(
   const categoryKey = category || "Faith";
   const categoryContext = CATEGORY_CONTEXT[categoryKey] || CATEGORY_CONTEXT["Faith"];
 
-  const systemPrompt = `You write narration scripts for cinematic short-form faith videos aimed at ${targetAgeGroup}. Seventh-day Adventist theology. These scripts will be voiced over cinematic video scenes — every line you write will play over a beautiful, intimate visual of a real teenager in a real moment. Write for the screen, not the page.
+  const systemPrompt = withSdaLens(`You write narration scripts for cinematic short-form faith videos aimed at ${targetAgeGroup}. Seventh-day Adventist theology. These scripts will be voiced over cinematic video scenes — every line you write will play over a beautiful, intimate visual of a real teenager in a real moment. Write for the screen, not the page.
 
 ${categoryContext}
 
@@ -284,7 +285,7 @@ WHAT RIGHT SOUNDS LIKE — absorb the energy, never copy these:
 - Typing fast in a group chat when something actually matters
 - That moment in a movie where the character finally says the thing out loud — quiet, shaky, real
 
-Return ONLY the script text. No stage directions, no labels, no formatting.`;
+Return ONLY the script text. No stage directions, no labels, no formatting.`);
 
   const userPrompt = `Topic: ${topicTitle}
 Category: ${categoryKey}
@@ -391,7 +392,7 @@ export async function generateBibleStoryScript(
     ? `Here is the EXACT Bible text to use. Do NOT paraphrase, rewrite, or alter these words. This IS the script:\n\n${passageText}`
     : `Look up the full text of ${scriptureReference} (NLT preferred). Use the EXACT Bible text. Do NOT paraphrase, rewrite, or alter the words of scripture. The Bible text IS the script.`;
 
-  const systemPrompt = `You are a cinematic Bible story video director. You take ACTUAL BIBLE TEXT and structure it into a production-ready video script with scene-by-scene direction.
+  const systemPrompt = withSdaLens(`You are a cinematic Bible story video director. You take ACTUAL BIBLE TEXT and structure it into a production-ready video script with scene-by-scene direction.
 
 ═══════════════════════════════════════
 ABSOLUTE RULE: THE BIBLE TEXT IS THE SCRIPT
@@ -501,7 +502,7 @@ Return ONLY valid JSON matching this structure:
   "scenes": [ { scene objects } ]
 }
 
-No markdown. No code fences. No explanation. Just the JSON.`;
+No markdown. No code fences. No explanation. Just the JSON.`);
 
   const userPrompt = `Scripture Reference: ${scriptureReference}
 Episode Title: ${title}

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
@@ -88,7 +89,7 @@ async function generateEgwInsight(bookName: string, chapter: number): Promise<st
       messages: [
         {
           role: "system",
-          content: `You are an Adventist Bible study assistant. Provide a brief Adventist perspective on the given Bible chapter, drawing on themes commonly found in Ellen G. White's writings. Focus on the Great Controversy theme, character of God, practical Christian living, and the Sabbath where relevant. Do NOT fabricate specific EGW quotes — instead summarize thematic insights she emphasized. Keep the tone reverent and educational. Write in third person ("White emphasized..." not "I wrote..."). Limit to 2-3 paragraphs.`,
+          content: withSdaLens(`You are an Adventist Bible study assistant. Provide a brief Adventist perspective on the given Bible chapter, drawing on themes commonly found in Ellen G. White's writings. Focus on the Great Controversy theme, character of God, practical Christian living, and the Sabbath where relevant. Do NOT fabricate specific EGW quotes — instead summarize thematic insights she emphasized. Keep the tone reverent and educational. Write in third person ("White emphasized..." not "I wrote..."). Limit to 2-3 paragraphs.`),
         },
         {
           role: "user",
@@ -120,7 +121,7 @@ async function generatePioneerInsight(pioneer: typeof ADVENTIST_PIONEERS[number]
       messages: [
         {
           role: "system",
-          content: `You are an Adventist Bible study assistant. Provide a brief thematic summary of how ${pioneer.name} (${pioneer.dates}), an early Adventist pioneer, would have approached the given Bible chapter based on their known theological emphases: ${pioneer.focus}. Do NOT fabricate specific quotes — instead summarize thematic insights ${pioneer.name.split(" ").pop()} was known to emphasize. Write in third person ("${pioneer.name.split(" ").pop()} emphasized..." or "${pioneer.name.split(" ").pop()} argued..."). Keep the tone reverent and educational. Limit to 2-3 paragraphs.`,
+          content: withSdaLens(`You are an Adventist Bible study assistant. Provide a brief thematic summary of how ${pioneer.name} (${pioneer.dates}), an early Adventist pioneer, would have approached the given Bible chapter based on their known theological emphases: ${pioneer.focus}. Do NOT fabricate specific quotes — instead summarize thematic insights ${pioneer.name.split(" ").pop()} was known to emphasize. Write in third person ("${pioneer.name.split(" ").pop()} emphasized..." or "${pioneer.name.split(" ").pop()} argued..."). Keep the tone reverent and educational. Limit to 2-3 paragraphs.`),
         },
         {
           role: "user",

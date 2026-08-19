@@ -1,5 +1,7 @@
 # Memory Index
 
+- [SDA lens prompt rule](gtf-sda-lens.md) — all generative AI calls must prepend the shared lens from sda-lens.ts; bump SDA_LENS_VERSION on prompt changes to bust caches.
+
 - [Workflow rules with Joe](gtf-workflow-rules.md) — phase stops go BEFORE nav swaps; task-approval UI often mis-registers approvals as cancelled — confirm verbally, do small work in-session.
 
 - [Sabbath School sync partial-quarterly trap](sabbath-school-sync-partials.md) — Adventech publishes quarter indexes before lessons; sync must reject empty lesson lists or orphan quarterlies suppress resync.

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withSdaLens } from "./sda-lens";
 import { db } from "../db";
 import { videoTopics, topicVideos } from "../../shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -39,7 +40,7 @@ export async function expandTopicCrossReferences(
   const anchorScripture = topic.scriptureAnchor || "";
   const client = createOpenAIClient();
 
-  const prompt = `You are a Bible scholar with deep knowledge of scripture cross-references. Given a topic and its anchor scripture, return cross-reference scriptures that offer DIFFERENT ANGLES on the same topic.
+  const prompt = withSdaLens(`You are a Bible scholar with deep knowledge of scripture cross-references. Given a topic and its anchor scripture, return cross-reference scriptures that offer DIFFERENT ANGLES on the same topic.
 
 RULES:
 - Return exactly ${maxReferences} cross-references
@@ -58,7 +59,7 @@ Description: ${topic.description || ""}
 Anchor Scripture: ${anchorScripture}
 
 Return ONLY a JSON array of objects with: "scripture", "angle", "emotionalTone"
-No markdown, no explanation.`;
+No markdown, no explanation.`);
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",

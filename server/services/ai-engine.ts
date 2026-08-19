@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withSdaLens } from "./sda-lens";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
 
@@ -85,7 +86,7 @@ export async function generateStrongWordStudy(params: {
     messages: [
       {
         role: "system",
-        content: `You are a ${lang} Bible lexicographer. Analyze key words from Bible verses and provide Strong's Concordance-style data. Return valid JSON only, no markdown.`,
+        content: withSdaLens(`You are a ${lang} Bible lexicographer. Analyze key words from Bible verses and provide Strong's Concordance-style data. Return valid JSON only, no markdown.`),
       },
       {
         role: "user",
@@ -198,7 +199,7 @@ export async function generateContextCards(params: {
     messages: [
       {
         role: "system",
-        content: `You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and respectful of all Christian traditions. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`,
+        content: withSdaLens(`You are a Bible scholar providing historical and cultural context for Scripture passages. Return valid JSON only, no markdown. Be scholarly, balanced, and faithful to Seventh-day Adventist understanding. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`),
       },
       {
         role: "user",
@@ -279,7 +280,7 @@ export async function generateApplicationStudy(params: {
     messages: [
       {
         role: "system",
-        content: `You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm, practical, and applicable across all Christian traditions. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`,
+        content: withSdaLens(`You are a pastoral Bible teacher skilled at bridging ancient Scripture to modern life. Return valid JSON only, no markdown. Be warm and practical, faithful to Seventh-day Adventist understanding. CRITICAL FORMATTING: This content is read on mobile phones. Write 1-2 sentences per paragraph. Separate every paragraph with \\n\\n. Each thought gets its own short paragraph. Never combine more than 2 sentences into one paragraph. ${depthGuide}`),
       },
       {
         role: "user",
@@ -376,7 +377,7 @@ RESPONSE RULES:
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withSdaLens(systemPrompt) },
       { role: "user", content: userPrompt },
     ],
     max_tokens: 300,
@@ -464,7 +465,7 @@ For INTERPRET/APPLY phases, just the quality tag is needed.`;
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withSdaLens(systemPrompt) },
       ...formattedMessages,
     ],
     max_tokens: 280,
@@ -622,11 +623,11 @@ export async function generateStudySummary(params: {
     messages: [
       {
         role: "system",
-        content: `You write brief study completion summaries based on what the student actually said. Follow this exact 3-part structure:
+        content: withSdaLens(`You write brief study completion summaries based on what the student actually said. Follow this exact 3-part structure:
 1. "You observed that [specific thing from their observe answers]."
 2. "You reflected that [specific insight from their interpret answers]."
 3. "Your takeaway was [their specific personal application from apply answers]."
-Use their actual words and ideas, not generic doctrine. Keep it under 60 words total. No theatrical language. Use second person.`,
+Use their actual words and ideas, not generic doctrine. Keep it under 60 words total. No theatrical language. Use second person.`),
       },
       {
         role: "user",
@@ -657,7 +658,7 @@ export async function generateVerseMap(params: {
     messages: [
       {
         role: "system",
-        content: "You are a Bible scholar providing cross-references and context for specific verses. Return valid JSON only, no markdown. Be scholarly and accurate.",
+        content: withSdaLens("You are a Bible scholar providing cross-references and context for specific verses. Return valid JSON only, no markdown. Be scholarly and accurate."),
       },
       {
         role: "user",
@@ -716,7 +717,7 @@ export async function generateChapterContext(params: {
     messages: [
       {
         role: "system",
-        content: "You are a Bible scholar providing immersive contextual data for Bible chapters. Return valid JSON only, no markdown. Be historically accurate and engaging.",
+        content: withSdaLens("You are a Bible scholar providing immersive contextual data for Bible chapters. Return valid JSON only, no markdown. Be historically accurate and engaging."),
       },
       {
         role: "user",
@@ -798,7 +799,7 @@ export async function generatePauseAndWonder(
     messages: [
       {
         role: "system",
-        content: `You are creating interactive "Pause & Wonder" moments for a children's Bible story called "${storyTitle}". The audience is ${ageHint}.
+        content: withSdaLens(`You are creating interactive "Pause & Wonder" moments for a children's Bible story called "${storyTitle}". The audience is ${ageHint}.
 
 For each excerpt I provide, generate ONE imaginative question that invites the child to pause and think about the story. The question should spark curiosity and wonder (e.g., "How do you think Noah felt when the first raindrop hit?" or "What would YOU have done if you were David?").
 
@@ -818,7 +819,7 @@ Respond in JSON array format:
   }
 ]
 
-Keep answer labels under 6 words. Make questions warm and inviting, never quizzy.`,
+Keep answer labels under 6 words. Make questions warm and inviting, never quizzy.`),
       },
       {
         role: "user",
@@ -868,7 +869,7 @@ export async function generateDinnerTableTopic(params: {
     messages: [
       {
         role: "system",
-        content: `You are a family faith coach helping parents connect with their children about Bible stories. A child just finished a quiz on a Bible story. Generate a push notification message and dinner-table conversation prompts.
+        content: withSdaLens(`You are a family faith coach helping parents connect with their children about Bible stories. A child just finished a quiz on a Bible story. Generate a push notification message and dinner-table conversation prompts.
 
 The notification should be warm, celebratory, and specific to the story. The dinner question should be open-ended, connecting the story's theme to the child's everyday life (school, friends, family). Follow-up questions should go deeper into application.
 
@@ -881,7 +882,7 @@ Respond in JSON:
     "A follow-up that connects to family values",
     "A creative follow-up that sparks imagination"
   ]
-}`,
+}`),
       },
       {
         role: "user",
@@ -929,7 +930,7 @@ export async function generateConversationStarter(
     messages: [
       {
         role: "system",
-        content: `You are a warm, encouraging family faith guide. A parent wants to talk with their child about Bible stories the child has been learning. Generate a natural conversation starter and follow-up discussion questions.
+        content: withSdaLens(`You are a warm, encouraging family faith guide. A parent wants to talk with their child about Bible stories the child has been learning. Generate a natural conversation starter and follow-up discussion questions.
 
 The child's name is "${childName}". They recently completed these stories: ${storyList || "no stories yet"}.
 
@@ -942,7 +943,7 @@ Respond in JSON:
     "Follow-up question 3 — encouraging the child to share what they found interesting"
   ]
 }
-If no stories are completed, create a general faith conversation starter encouraging the child to explore Bible stories together with the parent.`,
+If no stories are completed, create a general faith conversation starter encouraging the child to explore Bible stories together with the parent.`),
       },
     ],
     max_tokens: 400,
@@ -999,7 +1000,7 @@ export async function generateStoryScenes(
     messages: [
       {
         role: "system",
-        content: `You are a master children's Bible storyteller creating an interactive, scene-by-scene storybook. Your task is to break a Bible story into 5-7 vivid scenes that children can flip through like pages of a picture book.
+        content: withSdaLens(`You are a master children's Bible storyteller creating an interactive, scene-by-scene storybook. Your task is to break a Bible story into 5-7 vivid scenes that children can flip through like pages of a picture book.
 
 Target audience: ${ageLabel}.
 
@@ -1035,7 +1036,7 @@ Respond in JSON:
       }
     }
   ]
-}`,
+}`),
       },
       {
         role: "user",
@@ -1172,7 +1173,7 @@ export async function generateScripturalEncouragement(
     messages: [
       {
         role: "system",
-        content: `You are a compassionate biblical counselor. ${languageInstruction} Given a prayer request, respond with a single relevant Bible verse and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`,
+        content: withSdaLens(`You are a compassionate biblical counselor. ${languageInstruction} Given a prayer request, respond with a single relevant Bible verse and a 1-sentence comfort note. Return valid JSON: {"verse": "Book Chapter:Verse - 'The verse text...'", "note": "A warm, compassionate 1-sentence encouragement connecting the verse to their situation."}`),
       },
       {
         role: "user",
@@ -1221,7 +1222,7 @@ export async function generateReflectionResponse(params: {
     messages: [
       {
         role: "system",
-        content: `You are a warm, encouraging Bible study discussion partner. You engage thoughtfully with the student's reflection answers, affirming genuine insights while gently deepening understanding.
+        content: withSdaLens(`You are a warm, encouraging Bible study discussion partner. You engage thoughtfully with the student's reflection answers, affirming genuine insights while gently deepening understanding.
 
 Your response style:
 - Start by acknowledging what the student shared (1 sentence)
@@ -1231,7 +1232,7 @@ Your response style:
 - Use KJV language when quoting scripture
 - Maximum 4 sentences total for your response
 
-Also provide ONE brief follow-up question that goes deeper into what they shared. The follow-up should feel natural, not like a quiz. If no natural follow-up exists, return null.`,
+Also provide ONE brief follow-up question that goes deeper into what they shared. The follow-up should feel natural, not like a quiz. If no natural follow-up exists, return null.`),
       },
       {
         role: "user",
@@ -1278,7 +1279,7 @@ export async function generateSemanticSearch(query: string): Promise<SemanticSea
     messages: [
       {
         role: "system",
-        content: `You are a Seventh-day Adventist Bible search engine. Given a natural language query, find the most relevant Bible passages. Return 8-12 results ranked by relevance.
+        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, find the most relevant Bible passages. Return 8-12 results ranked by relevance.
 
 You serve Adventist believers, so when interpreting queries:
 - Prioritize passages that align with SDA doctrinal understanding (e.g., for "what happens when we die," include passages supporting soul sleep like Ecclesiastes 9:5, Psalms 115:17, John 11:11-14)
@@ -1302,7 +1303,7 @@ Return valid JSON only, no markdown:
 
 Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66
 
-Use KJV text for verse quotations. Include a mix of well-known and lesser-known passages. Provide the full verse text when possible.`,
+Use KJV text for verse quotations. Include a mix of well-known and lesser-known passages. Provide the full verse text when possible.`),
       },
       {
         role: "user",
@@ -1409,7 +1410,7 @@ export async function generateReadingPlan(params: {
     messages: [
       {
         role: "system",
-        content: `You are a Seventh-day Adventist Bible study curriculum designer with deep knowledge of SDA theology, the 28 Fundamental Beliefs, the three angels' messages, the sanctuary doctrine, the Sabbath, the state of the dead, the investigative judgment, healthful living, and the writings of Ellen G. White.
+        content: withSdaLens(`You are a Seventh-day Adventist Bible study curriculum designer with deep knowledge of SDA theology, the 28 Fundamental Beliefs, the three angels' messages, the sanctuary doctrine, the Sabbath, the state of the dead, the investigative judgment, healthful living, and the writings of Ellen G. White.
 
 Create personalized reading plans that guide Adventist believers through Scripture on a specific topic. ALL content MUST align with official Seventh-day Adventist doctrinal positions:
 
@@ -1452,7 +1453,7 @@ Every day MUST include ALL of these five elements:
 
 ${difficultyGuide}
 
-Return valid JSON only, no markdown. Use KJV book names exactly as they appear in the Bible (e.g., "Genesis", "1 Corinthians", "Psalms").`,
+Return valid JSON only, no markdown. Use KJV book names exactly as they appear in the Bible (e.g., "Genesis", "1 Corinthians", "Psalms").`),
       },
       {
         role: "user",
@@ -1548,7 +1549,7 @@ export async function generateQuickInsight(params: {
     messages: [
       {
         role: "system",
-        content: `You are a concise, warm Bible teacher. Generate a quick 5-minute devotional insight from a Bible passage. Return valid JSON only, no markdown. Be practical and encouraging.`,
+        content: withSdaLens(`You are a concise, warm Bible teacher. Generate a quick 5-minute devotional insight from a Bible passage. Return valid JSON only, no markdown. Be practical and encouraging.`),
       },
       {
         role: "user",
@@ -1609,7 +1610,7 @@ export async function generateVerseExplanation(params: {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withSdaLens(systemPrompt) },
       { role: "user", content: userPrompt },
     ],
     max_tokens: 300,
@@ -1671,7 +1672,7 @@ Return JSON:
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withSdaLens(systemPrompt) },
       { role: "user", content: userPrompt },
     ],
     max_tokens: 1200,
@@ -1724,7 +1725,7 @@ export async function generateDiscussionPrep(params: {
     messages: [
       {
         role: "system",
-        content: `You are a Seventh-day Adventist Sabbath School discussion facilitator preparing a Lesson Discussion Guide. Generate content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
+        content: withSdaLens(`You are a Seventh-day Adventist Sabbath School discussion facilitator preparing a Lesson Discussion Guide. Generate content that is biblically grounded, theologically sound, and aligned with the 28 Fundamental Beliefs of the SDA Church. NEVER promote Sunday sacredness, eternal hellfire/torment, or the immortality of the soul. The Sabbath is the seventh day (Saturday). The dead are unconscious until the resurrection. Destruction of the wicked is final annihilation, not eternal torture.${depthExtra}
 
 Return ONLY valid JSON in this format:
 {
@@ -1744,7 +1745,7 @@ Rules:
 - Use second person, present tense, conversational tone - not preachy
 - Frame as an honest invitation from one believer to another
 - At least one prompt must connect the lesson theme to a real modern life situation (work, relationships, social media, family, doubt, loneliness)
-- End the final prompt with a question the person can bring to class on Sabbath`,
+- End the final prompt with a question the person can bring to class on Sabbath`),
       },
       {
         role: "user",

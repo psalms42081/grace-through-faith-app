@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
@@ -282,7 +283,7 @@ router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, re
   try {
     const { topicId } = req.params;
     const today = new Date().toISOString().split("T")[0];
-    const queryHash = `topic-reflection-${topicId}-${today}`;
+    const queryHash = `topic-reflection-${SDA_LENS_VERSION}-${topicId}-${today}`;
 
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, queryHash))
@@ -302,12 +303,12 @@ router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, re
       messages: [
         {
           role: "system",
-          content: `You are a Seventh-day Adventist Bible teacher. Generate a fresh daily reflection for the topic "${topicId}". Include:
+          content: withSdaLens(`You are a Seventh-day Adventist Bible teacher. Generate a fresh daily reflection for the topic "${topicId}". Include:
 1. A thought-provoking reflection (3-4 sentences) connecting the topic to daily life
 2. A discussion question for small groups or personal journaling
 3. A practical application challenge for today
 4. A lesser-known Bible verse related to this topic (different from common ones)
-Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`,
+Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`),
         },
         {
           role: "user",
@@ -558,7 +559,7 @@ router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
       return res.status(400).json({ error: "bookName, chapter, and verse are required" });
     }
 
-    const cacheKey = `explain-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
+    const cacheKey = `explain-${SDA_LENS_VERSION}-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, cacheKey))
       .limit(1);
@@ -577,13 +578,13 @@ router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
+          content: withSdaLens(`You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
 1. Clarifies its meaning in historical and literary context
 2. Shows how it connects to God's larger plan of salvation
 3. Points to Jesus Christ and the gospel
 4. Offers a practical application for daily life
 5. Cites 1-2 cross-references that illuminate the passage
-Keep the explanation warm, clear, and between 150-250 words. Write in second person ("you") to make it personal.`,
+Keep the explanation warm, clear, and between 150-250 words. Write in second person ("you") to make it personal.`),
         },
         {
           role: "user",
@@ -640,7 +641,7 @@ router.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => 
       messages: [
         {
           role: "system",
-          content: `You are a Bible scholar. Given a verse reference, provide 4-6 of the most relevant cross-references.
+          content: withSdaLens(`You are a Bible scholar. Given a verse reference, provide 4-6 of the most relevant cross-references.
 For each cross-reference, provide:
 1. The exact reference (e.g., "John 3:16")
 2. The verse text (from the specified translation or KJV)
@@ -657,7 +658,7 @@ Focus on cross-references that:
 - Share thematic connections
 - Use similar language or imagery
 - Illuminate the same doctrine or truth
-- Point to Christ and the gospel`,
+- Point to Christ and the gospel`),
         },
         {
           role: "user",

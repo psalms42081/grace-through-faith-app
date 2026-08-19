@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
 import { TOUCHPOINTS_DATA, TOUCHPOINT_CATEGORIES, searchTouchpoints } from "../data/touchpoints";
 import { BIBLE_PROJECT_VIDEOS } from "../data/bibleProjectVideos";
 import { db } from "../db";
@@ -62,7 +63,7 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
     const topic = TOUCHPOINTS_DATA.find(t => t.id === req.params.topicId);
     if (!topic) return res.status(404).json({ error: "Topic not found" });
 
-    const cacheKey = `touchpoint-study-${topic.id}`;
+    const cacheKey = `touchpoint-study-${SDA_LENS_VERSION}-${topic.id}`;
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, cacheKey))
       .limit(1);
@@ -85,7 +86,7 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
       messages: [
         {
           role: "system",
-          content: `You are a faithful Bible teacher creating a structured Bible study. Generate a complete Bible study on the topic of "${topic.title}" that:
+          content: withSdaLens(`You are a faithful Bible teacher creating a structured Bible study. Generate a complete Bible study on the topic of "${topic.title}" that:
 1. Points to Jesus Christ and the gospel
 2. Grounds every point in Scripture
 3. Encourages fellowship and church community
@@ -109,7 +110,7 @@ Format as JSON:
   "groupDiscussion": ["3-4 discussion questions for small groups"]
 }
 
-Use 3-5 sections. Keep it warm, personal, and Christ-centered.`,
+Use 3-5 sections. Keep it warm, personal, and Christ-centered.`),
         },
         {
           role: "user",

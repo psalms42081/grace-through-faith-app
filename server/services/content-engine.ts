@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withSdaLens } from "./sda-lens";
 import { z } from "zod";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
@@ -73,16 +74,9 @@ function slugify(text: string): string {
     .substring(0, 200);
 }
 
-const SDA_SYSTEM_PROMPT = `You are a Seventh-day Adventist Bible study content generator. All content must:
-- Be doctrinally sound from an SDA perspective
-- Uphold the authority of Scripture as the Word of God
-- Affirm the seventh-day Sabbath (Saturday) as God's holy day
-- Support the Three Angels' Messages and the sanctuary doctrine
-- Reference Ellen G. White writings topically (cite book and chapter, not inline quotes)
-- Emphasize the soon return of Jesus Christ
-- Promote health reform and wholistic living where contextually appropriate
-- Be warm, accessible, and encouraging — not preachy or condemning
-- Return valid JSON only, no markdown fences`;
+const SDA_SYSTEM_PROMPT = withSdaLens(
+  `You are a Seventh-day Adventist Bible study content generator. Return valid JSON only, no markdown fences.`
+);
 
 export interface SabbathSchoolCompanionContent {
   overview: string;
