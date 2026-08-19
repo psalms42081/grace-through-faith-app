@@ -22,3 +22,8 @@ The real `useEllenWhite` lives in `contexts/PioneerContext.tsx` (PioneerProvider
 ## Stale image assets after overwriting same-named files
 Overwriting a PNG in assets/ under the same filename can keep serving old art: Metro's cache lives in /tmp/metro-cache + /tmp/metro-file-map-* (NOT node_modules/.cache), and a long-lived tester browser can keep showing stale pixels even when it claims cache-disabled contexts.
 **How to fix:** rm -rf /tmp/metro-* , restart Start Frontend (expect ~45s of 502s while it rebuilds), verify served bytes with curl on `/assets/?unstable_path=.%2Fassets%2F...` + md5sum, and use a brand-NEW named tester for the visual check — don't trust the old tester's screenshots.
+
+## Zombie-port outage recovery (Aug 2026 incident)
+Symptom: "Expo crashed"/app won't load; frontend log stuck at "Port 8081 is running this app in another window ... Use port 8082 instead?" and backend logs EADDRINUSE:5000 — but curls return 200 (the STALE orphans are serving old code).
+Cause: crashed/duplicated workflow runs leave orphan process trees holding 8081/5000/23636; WorkflowsRestart does NOT kill orphans from prior runs, so restarts stack new stuck instances behind them.
+Fix: `ps -eo pid,ppid,etime,args | grep -E "expo|tsx server|vite"` — orphans are the OLD-etime trees whose ppid is gone; `kill -9` them, then restart workflows. `lsof`, `fuser`, `ss` are NOT installed; use ps + etime. Verify with `curl localhost:8081/status` (packager-status:running) and a real bundle probe, and check the LATEST log file by `ls -t` — greps easily hit stale logs from earlier runs in /tmp/logs.
