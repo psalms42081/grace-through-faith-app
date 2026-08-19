@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "887953990628",
+    "project_id": "grace-through-faith-d2009",
+    "storage_bucket": "grace-through-faith-d2009.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:887953990628:android:74fbb9ddeb7ecf63685df1",
+        "android_client_info": {
+          "package_name": "com.gracethroughfaith.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDW7AZFPP8ijUkQNYelb0p7U2XKIazhYXs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
