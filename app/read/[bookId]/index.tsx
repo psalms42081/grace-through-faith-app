@@ -13,7 +13,31 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Read-state recolor (Batch 1 review packet) — gold is reserved for
+// streak/analytics and teal for Sabbath School, so read indicators remap.
+// Joe picks one on sight; flip READ_STATE below to apply.
+const READ_STATE_OPTIONS = {
+  coral: {
+    chipBg: "rgba(232,96,76,0.10)",
+    chipText: "#C24431",
+    cellBg: "rgba(232,96,76,0.08)",
+    cellBorder: "rgba(232,96,76,0.45)",
+    cellText: "#C24431",
+    dot: "#E8604C",
+  },
+  green: {
+    chipBg: "rgba(46,125,50,0.08)",
+    chipText: "#1B5E20", // darker green — keeps the 11px chip label at 4.5:1 on the tint
+    cellBg: "rgba(46,125,50,0.10)",
+    cellBorder: "rgba(46,125,50,0.45)",
+    cellText: "#2E7D32",
+    dot: "#2E7D32",
+  },
+} as const;
+const READ_STATE = READ_STATE_OPTIONS.coral;
 
 interface BibleBook {
   id: number;
@@ -24,7 +48,8 @@ interface BibleBook {
 
 export default function ChapterPickerScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
-  const { theme } = useTheme();
+  useTheme();
+  const theme = SWEEP_LIGHT; // Path B — pinned light (Batch 1 Bible-tab sweep)
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
 
@@ -54,6 +79,8 @@ export default function ChapterPickerScreen() {
       <Stack.Screen
         options={{
           title: book?.name ?? "Chapters",
+          headerStyle: { backgroundColor: SWEEP_LIGHT.background },
+          headerTintColor: SWEEP_LIGHT.text,
         }}
       />
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -73,16 +100,16 @@ export default function ChapterPickerScreen() {
           </View>
         ) : (
           <>
-            <View style={[styles.infoCard, { backgroundColor: theme.primary }]}>
+            <View style={[styles.infoCard, { backgroundColor: theme.backgroundCard, borderWidth: 1, borderColor: theme.border }]}>
               <View style={styles.infoRow}>
-                <View style={[styles.testamentBadge, { backgroundColor: "rgba(201,147,58,0.25)" }]}>
+                <View style={[styles.testamentBadge, { backgroundColor: theme.accentSoft }]}>
                   <Text style={[styles.testamentText, { fontFamily: "Inter_600SemiBold" }]}>
                     {book.testament === "OT" ? "Old Testament" : "New Testament"}
                   </Text>
                 </View>
                 {chaptersReadCount > 0 && (
-                  <View style={[styles.testamentBadge, { backgroundColor: "rgba(78,204,163,0.18)", marginLeft: 8 }]}>
-                    <Text style={[styles.testamentText, { color: "#4ECCA3", fontFamily: "Inter_600SemiBold" }]}>
+                  <View style={[styles.testamentBadge, { backgroundColor: READ_STATE.chipBg, marginLeft: 8 }]}>
+                    <Text style={[styles.testamentText, { color: READ_STATE.chipText, fontFamily: "Inter_600SemiBold" }]}>
                       {chaptersReadCount}/{chapterCount} read
                     </Text>
                   </View>
@@ -110,20 +137,20 @@ export default function ChapterPickerScreen() {
                     style={({ pressed }) => [
                       styles.chapterCell,
                       {
-                        backgroundColor: isRead ? "rgba(201,147,58,0.18)" : theme.backgroundCard,
-                        borderColor: isRead ? "rgba(201,147,58,0.55)" : theme.border,
+                        backgroundColor: isRead ? READ_STATE.cellBg : theme.backgroundCard,
+                        borderColor: isRead ? READ_STATE.cellBorder : theme.border,
                         opacity: pressed ? 0.6 : 1,
                       },
                     ]}
                   >
                     <Text style={[
                       styles.chapterNum,
-                      { color: isRead ? "#C9933A" : theme.text, fontFamily: isRead ? "Lora_700Bold" : "Lora_600SemiBold" }
+                      { color: isRead ? READ_STATE.cellText : theme.text, fontFamily: isRead ? "Lora_700Bold" : "Lora_600SemiBold" }
                     ]}>
                       {item}
                     </Text>
                     {isRead && (
-                      <View style={styles.readDot} />
+                      <View style={[styles.readDot, { backgroundColor: READ_STATE.dot }]} />
                     )}
                   </Pressable>
                 );
@@ -154,9 +181,9 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: "row", marginBottom: 10 },
   testamentBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  testamentText: { color: "#C9933A", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" as const },
-  bookTitle: { color: "#EDE5D5", fontSize: 24, marginBottom: 4 },
-  chapterInfo: { color: "rgba(237,229,213,0.6)", fontSize: 13 },
+  testamentText: { color: "#C24431", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" as const },
+  bookTitle: { color: "#1F1A12", fontSize: 24, marginBottom: 4 },
+  chapterInfo: { color: "#6B6660", fontSize: 13 },
   selectLabel: {
     fontSize: 11,
     letterSpacing: 1.2,
@@ -181,6 +208,5 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#C9933A",
   },
 });

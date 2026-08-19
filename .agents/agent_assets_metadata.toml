@@ -52,3 +52,10 @@ uri = "file://attached_assets/generated_images/tile-spiritual-growth-v2.png"
 type = "image"
 title = "Spiritual Growth — v2 (flat)"
 description = "Simple tree above a ground line, single flat root shape below, sage/cream/ink."
+
+[[outputs]]
+id = "y1_LYRdB3uxCNNJgb_ACW"
+uri = "file://screenshots/read-state-options.html"
+type = "text"
+title = "Read-state recolor — Option A (coral) vs Option B (green)"
+description = "Side-by-side of the READ chip and read-chapter cells in both remap options. Coral is currently live in the app."

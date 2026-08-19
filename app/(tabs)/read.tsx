@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useTranslation } from "@/context/TranslationContext";
 
 interface BibleBook {
@@ -32,7 +33,9 @@ const DEFAULT_TRANSLATIONS = [
 ];
 
 export default function ReadScreen() {
-  const { theme, isDark } = useTheme();
+  useTheme();
+  const theme = SWEEP_LIGHT; // Path B — pinned light (Batch 1 Bible-tab sweep)
+  const isDark = false;
   const insets = useSafeAreaInsets();
   const { translation, setTranslation } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
