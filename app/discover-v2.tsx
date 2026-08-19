@@ -177,8 +177,8 @@ export default function DiscoverV2Screen() {
     [topicById],
   );
 
-  // Deep link: /discover?topic=X (also works on this hidden route as
-  // /discover-v2?topic=X) — opens the topic directly (§A.2.3).
+  // Deep link: /(tabs)/search?topic=X (also works as /discover-v2?topic=X) —
+  // opens the topic directly (§A.2.3). Home chips use this.
   const handledTopicParam = useRef<string | null>(null);
   useEffect(() => {
     const t = typeof params.topic === "string" ? params.topic : undefined;

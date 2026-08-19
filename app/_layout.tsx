@@ -173,9 +173,9 @@ function RootLayoutNav() {
       <Stack.Screen name="study-category" options={{ headerShown: false }} />
       <Stack.Screen name="kids" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoints" options={{ headerShown: false }} />
-      {/* Discover v2 (Brief 05) — hidden route, reached only via the preview pill until approval */}
+      {/* Discover v2 (Brief 05) — live; also rendered by the Discover tab ((tabs)/search) */}
       <Stack.Screen name="discover-v2" options={{ headerShown: false }} />
-      {/* Deep Dive picker light conversion — hidden route until approval */}
+      {/* Deep Dive picker light conversion — live; all callers route here */}
       <Stack.Screen name="deep-study-picker-v2" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-topic" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
