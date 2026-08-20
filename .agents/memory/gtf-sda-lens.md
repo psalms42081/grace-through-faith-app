@@ -10,3 +10,4 @@ Rule: every user-facing generative AI feature must prepend the one canonical sha
 **How to apply:**
 - Any material change to the lens prompt must bump the lens version constant — it is baked into generated-content cache keys, and a startup check purges the unversioned DB content caches when it changes, so stale content regenerates in every environment (including production after publish).
 - Keep the lens pastoral: it explicitly instructs not to force distinctives where the topic doesn't raise them — preserve that when editing.
+- **Protected refresh boundary:** `context_card` and `application_template` mix or may mix generated and curated material but have no provenance marker. Never bulk-delete them during a lens refresh. Add reliable generated-vs-curated provenance first, then refresh only AI-generated rows. User-authored study sessions, responses, prayers, notes, journals, progress, highlights, and bookmarks are always untouchable.
