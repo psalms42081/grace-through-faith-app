@@ -59,6 +59,9 @@ else
   npx tsx scripts/ensure-tables.ts
 fi
 
+echo "=== Applying hologram and Guided Study retirement migration ==="
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_remove_hologram_and_scholarly_persona.sql
+
 echo "=== Verifying critical tables ==="
 npx tsx scripts/ensure-tables.ts
 

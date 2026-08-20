@@ -20,14 +20,12 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProStatus } from "@/contexts/ProContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useEllenWhite } from "@/contexts/PioneerContext";
 import { PIONEERS } from "@/constants/pioneers";
 import type { Pioneer } from "@/constants/pioneers";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import { SUPPORTED_LANGUAGES, setLanguage, getSavedLanguage, useDeviceLanguage } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-import { useTutorial } from "@/contexts/TutorialContext";
 
 // Path B light sweep tokens
 const CORAL = "#E8604C";
@@ -65,8 +63,6 @@ export default function SettingsScreen() {
   const { user, userId, isAuthenticated, logout } = useAuth();
   const { isPatron } = useProStatus();
   const { showToast } = useToast();
-  const { selectedPioneer, selectPioneer, showOnboarding } = useEllenWhite();
-  const { resetAllTutorials } = useTutorial();
   const { t } = useTranslation();
 
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -74,7 +70,6 @@ export default function SettingsScreen() {
 
   // Voice pickers
   const [showNarratorPicker, setShowNarratorPicker] = useState(false);
-  const [showTutorPicker, setShowTutorPicker] = useState(false);
   const [narratorVoiceKey, setNarratorVoiceKey] = useState("ellen_white");
 
   useEffect(() => {
@@ -191,32 +186,10 @@ export default function SettingsScreen() {
     showToast(`Narrator set to ${pioneer.shortName}`, "success");
   }, [showToast]);
 
-  const handleSelectTutor = useCallback((pioneer: Pioneer) => {
-    setShowTutorPicker(false);
-    selectPioneer(pioneer.id);
-    showToast(`Study tutor set to ${pioneer.shortName}`, "success");
-  }, [selectPioneer, showToast]);
-
   const handleClearCache = useCallback(async () => {
     queryClient.clear();
     showToast("Cache cleared successfully", "success");
   }, [showToast]);
-
-  const handleResetGuideTour = useCallback(async () => {
-    resetAllTutorials();
-    await AsyncStorage.removeItem("@gtf/hologram-hint-shown");
-    await AsyncStorage.removeItem("@gtf/ellen-white-onboarding-complete");
-    if (isAuthenticated) {
-      try {
-        await apiRequest("POST", "/api/pioneer/onboarding-reset");
-      } catch {}
-    }
-    showToast("Guide tour has been reset", "success");
-    router.replace("/(tabs)");
-    setTimeout(() => {
-      showOnboarding();
-    }, 600);
-  }, [isAuthenticated, resetAllTutorials, showOnboarding, showToast, router]);
 
   const handleSignOut = useCallback(() => {
     if (Platform.OS === "web") {
@@ -329,13 +302,6 @@ export default function SettingsScreen() {
           rightText: isPatron ? "Active" : undefined,
           rightElement: !isPatron ? <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} /> : undefined,
         })}
-        {renderRow("compass-outline", "Pioneer Guide", {
-          onPress: () => router.push("/pioneer-selector" as any),
-          showChevron: true,
-          rightText: selectedPioneer.name,
-          isLast: true,
-        })}
-
         {renderSectionHeader("GENERAL")}
         {renderRow("language-outline", "Language", {
           onPress: () => setShowLangPicker(true),
@@ -357,11 +323,6 @@ export default function SettingsScreen() {
           onPress: () => setShowNarratorPicker(true),
           showChevron: true,
           rightText: narratorPioneer.shortName,
-        })}
-        {renderRow("school-outline", "Study Tutor", {
-          onPress: () => setShowTutorPicker(true),
-          showChevron: true,
-          rightText: selectedPioneer.shortName,
           isLast: true,
         })}
 
@@ -423,9 +384,6 @@ export default function SettingsScreen() {
         {renderSectionHeader("MORE")}
         {renderRow("trash-outline", "Clear Cache", {
           onPress: handleClearCache,
-        })}
-        {renderRow("refresh-outline", "Reset Guide Tour", {
-          onPress: handleResetGuideTour,
         })}
         {renderRow("information-circle-outline", "About Grace Through Faith", {
           onPress: () => showToast("Grace Through Faith — Spiritual Formation for Adventists", "info"),
@@ -493,7 +451,7 @@ export default function SettingsScreen() {
         )}
       </ScrollView>
 
-      {/* ── Voice Picker Modal (reusable) ────────────────────────────────── */}
+      {/* ── Bible narrator voice picker ──────────────────────────────────── */}
       {[
         {
           visible: showNarratorPicker,
@@ -503,15 +461,6 @@ export default function SettingsScreen() {
           matchKey: (p: Pioneer) => p.voiceKey,
           onSelect: handleSelectNarrator,
           onClose: () => setShowNarratorPicker(false),
-        },
-        {
-          visible: showTutorPicker,
-          title: "Study Tutor",
-          subtitle: "Your guide through deep-dive study & devotionals",
-          selectedKey: selectedPioneer.id,
-          matchKey: (p: Pioneer) => p.id,
-          onSelect: handleSelectTutor,
-          onClose: () => setShowTutorPicker(false),
         },
       ].map((picker) => (
         <Modal

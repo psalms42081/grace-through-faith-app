@@ -106,7 +106,6 @@ __export(schema_exports, {
   organizationMembers: () => organizationMembers,
   organizations: () => organizations,
   pastoralCareAlert: () => pastoralCareAlert,
-  pioneerVideos: () => pioneerVideos,
   planDays: () => planDays,
   prayerGroupMembers: () => prayerGroupMembers,
   prayerGroups: () => prayerGroups,
@@ -154,7 +153,7 @@ __export(schema_exports, {
   videoPipelineJobs: () => videoPipelineJobs,
   videoTopics: () => videoTopics
 });
-var import_drizzle_orm, import_pg_core, import_drizzle_zod, users, organizations, organizationMembers, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, heygenVideos, pioneerVideos, bibleTranslations, bibleBooks, bibleVerses, bibleCache, bibleCacheStats, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback, deviceTokens, leaderRequests, videoPipelineJobs, videoAvatars, videoTopics, topicVideos, biblicalSeries, biblicalEpisodes, readingPlans, planDays, userPlans, sabbathTypes, sabbathScriptures, characters, churchHierarchy, hierarchyMembership, topicEngagement, topicEngagementDaily, topicTrend, pastoralCareAlert, memberPastoralOptin, analyticsCache, userLocation, heatmapTile, activityPatternTile, hierarchyBroadcast, hierarchyBroadcastReceipt, contentTranslations;
+var import_drizzle_orm, import_pg_core, import_drizzle_zod, users, organizations, organizationMembers, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, heygenVideos, bibleTranslations, bibleBooks, bibleVerses, bibleCache, bibleCacheStats, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback, deviceTokens, leaderRequests, videoPipelineJobs, videoAvatars, videoTopics, topicVideos, biblicalSeries, biblicalEpisodes, readingPlans, planDays, userPlans, sabbathTypes, sabbathScriptures, characters, churchHierarchy, hierarchyMembership, topicEngagement, topicEngagementDaily, topicTrend, pastoralCareAlert, memberPastoralOptin, analyticsCache, userLocation, heatmapTile, activityPatternTile, hierarchyBroadcast, hierarchyBroadcastReceipt, contentTranslations;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -182,7 +181,6 @@ var init_schema = __esm({
       organizationType: (0, import_pg_core.varchar)("organization_type", { length: 12 }),
       hierarchyNodeId: (0, import_pg_core.varchar)("hierarchy_node_id"),
       ageGroup: (0, import_pg_core.varchar)("age_group", { length: 16 }),
-      hologramOnboardingSeen: (0, import_pg_core.boolean)("hologram_onboarding_seen").default(false),
       createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
     });
     organizations = (0, import_pg_core.pgTable)("organizations", {
@@ -319,26 +317,6 @@ var init_schema = __esm({
       (table) => ({
         videoIdIdx: (0, import_pg_core.index)("heygen_video_id_idx").on(table.videoId),
         userIdx: (0, import_pg_core.index)("heygen_video_user_idx").on(table.userId)
-      })
-    );
-    pioneerVideos = (0, import_pg_core.pgTable)(
-      "pioneer_video",
-      {
-        id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
-        pioneerId: (0, import_pg_core.varchar)("pioneer_id", { length: 50 }).notNull(),
-        clipId: (0, import_pg_core.varchar)("clip_id", { length: 100 }).notNull(),
-        script: (0, import_pg_core.text)("script").notNull(),
-        voiceId: (0, import_pg_core.varchar)("voice_id", { length: 50 }),
-        audioUrl: (0, import_pg_core.text)("audio_url"),
-        videoUrl: (0, import_pg_core.text)("video_url"),
-        status: (0, import_pg_core.varchar)("status", { length: 20 }).notNull().default("pending"),
-        heygenVideoId: (0, import_pg_core.varchar)("heygen_video_id"),
-        createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull(),
-        updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow().notNull()
-      },
-      (table) => ({
-        pioneerClipIdx: (0, import_pg_core.uniqueIndex)("pioneer_clip_idx").on(table.pioneerId, table.clipId),
-        statusIdx: (0, import_pg_core.index)("pioneer_video_status_idx").on(table.status)
       })
     );
     bibleTranslations = (0, import_pg_core.pgTable)("bible_translation", {
@@ -948,7 +926,7 @@ var init_schema = __esm({
         chapter: (0, import_pg_core.integer)("chapter").notNull(),
         verse: (0, import_pg_core.integer)("verse").notNull(),
         phase: (0, import_pg_core.varchar)("phase", { length: 20 }).default("observe").notNull(),
-        persona: (0, import_pg_core.varchar)("persona", { length: 20 }).default("scholarly").notNull(),
+        persona: (0, import_pg_core.varchar)("persona", { length: 20 }).default("pastoral").notNull(),
         messages: (0, import_pg_core.text)("messages").default("[]").notNull(),
         progression: (0, import_pg_core.text)("progression").default("{}").notNull(),
         summary: (0, import_pg_core.text)("summary"),
@@ -2544,8 +2522,8 @@ ${jsonShape}`
   };
 }
 async function generateStudyGuideStart(params) {
-  const { verseReference, verseText, persona = "scholarly" } = params;
-  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
+  const { verseReference, verseText, persona = "pastoral" } = params;
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
   const systemPrompt = `${p.identity} You guide students through the Inductive Bible Study Method (Observe \u2192 Interpret \u2192 Apply). You never give the answer directly \u2014 you ask focused questions that help the student discover truth in the text.
 
 ${p.style}
@@ -2597,8 +2575,8 @@ Begin the OBSERVE phase. Write a brief intro sentence setting up the study (1 se
   return completion.choices[0]?.message?.content || "Let's begin by reading the verse carefully. What is the first thing you notice about this text?";
 }
 async function generateStudyGuideResponse(params) {
-  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "scholarly" } = params;
-  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
+  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
   const phaseInstructions = {
     observe: "Continue in the OBSERVE phase. Ask about a DIFFERENT observation category than what the student already covered. Observation categories: speaker, people mentioned, titles, actions, source of authority, repeated words, contrasts, structure. Pick a category the student has NOT yet addressed.",
     interpret: targetPhase === "interpret" && currentPhase === "observe" ? "The student has finished observing. Transition to the INTERPRET phase. Briefly note the shift: 'Now let\\'s think about what this means.' Then ask your first interpretation question about the meaning or significance of something they observed." : "Continue in the INTERPRET phase. Ask about meaning, purpose, theological significance, or historical context. Build on what the student said previously.",
@@ -3129,8 +3107,8 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
   try {
     const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
     const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq58 } = await import("drizzle-orm");
-    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq58(kidsStoryScenes2.id, sceneId)).limit(1);
+    const { eq: eq56 } = await import("drizzle-orm");
+    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, sceneId)).limit(1);
     if (scene?.imageUrl) {
       if (scene.imageUrl.startsWith("data:image")) {
         return scene.imageUrl;
@@ -3153,11 +3131,11 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
         const base64 = buffer.toString("base64");
         const contentType = imgResponse.headers.get("content-type") || "image/png";
         const dataUrl = `data:${contentType};base64,${base64}`;
-        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq58(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq56(kidsStoryScenes2.id, sceneId));
         return dataUrl;
       } catch (fetchErr) {
         console.error("Failed to fetch/convert DALL-E image to base64:", fetchErr);
-        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq58(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq56(kidsStoryScenes2.id, sceneId));
         return generatedUrl;
       }
     }
@@ -3169,10 +3147,10 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
 }
 async function fallbackLocalImage(sceneId) {
   try {
-    const fs12 = await import("fs");
-    const path13 = await import("path");
-    const filePath = path13.resolve(process.cwd(), "assets", "kids-scenes", `${sceneId}.png`);
-    if (fs12.existsSync(filePath)) {
+    const fs10 = await import("fs");
+    const path11 = await import("path");
+    const filePath = path11.resolve(process.cwd(), "assets", "kids-scenes", `${sceneId}.png`);
+    if (fs10.existsSync(filePath)) {
       return `/assets/kids-scenes/${sceneId}.png`;
     }
     return null;
@@ -3715,10 +3693,6 @@ var init_ai_engine = __esm({
       "Revelation"
     ];
     PERSONA_PROMPTS = {
-      scholarly: {
-        identity: "You are a Bible study tutor with expertise in the original languages (Greek and Hebrew) and historical context.",
-        style: "Be precise and text-focused. Reference Greek/Hebrew words when directly relevant to the verse. Keep language clear and accessible \u2014 avoid unnecessary academic jargon. Sound like a knowledgeable teacher, not a textbook."
-      },
       pastoral: {
         identity: "You are a Bible study tutor who helps people connect Scripture to their daily lives.",
         style: "Be warm and reflective. Help the student think about how the passage relates to their experiences and relationships. Focus on personal application. Avoid sounding preachy or sermon-like \u2014 keep it conversational."
@@ -5734,9 +5708,9 @@ async function getAccessToken() {
   console.log("[EGW] Access token obtained, expires in", data.expires_in, "seconds");
   return tokenCache.accessToken;
 }
-async function egwFetch(path13, params) {
+async function egwFetch(path11, params) {
   const token = await getAccessToken();
-  const url = new URL(path13, EGW_API_BASE);
+  const url = new URL(path11, EGW_API_BASE);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
@@ -6065,7 +6039,7 @@ function id(prefix, n) {
   return `${prefix}-${String(n).padStart(3, "0")}`;
 }
 async function seedFormationData(db2) {
-  const [existing] = await db2.select({ c: (0, import_drizzle_orm52.count)() }).from(formationTracks);
+  const [existing] = await db2.select({ c: (0, import_drizzle_orm50.count)() }).from(formationTracks);
   if (existing && existing.c > 0) return;
   console.log("Seeding formation tracks...");
   const trackBeliefs = "track-beliefs";
@@ -6607,11 +6581,11 @@ The climax of Daniel 7 is not the little horn's persecution but the judgment and
   ]);
   console.log("Formation tracks seeded successfully.");
 }
-var import_drizzle_orm52;
+var import_drizzle_orm50;
 var init_seed_formation = __esm({
   "server/seed-formation.ts"() {
     "use strict";
-    import_drizzle_orm52 = require("drizzle-orm");
+    import_drizzle_orm50 = require("drizzle-orm");
     init_schema();
   }
 });
@@ -9873,7 +9847,7 @@ __export(seed_beliefs_wave1_exports, {
   seedBeliefsWave1: () => seedBeliefsWave1
 });
 async function seedBeliefsWave1(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w1l-1-2")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm51.eq)(formationLessons.id, "w1l-1-2")).limit(1);
   if (check) {
     return;
   }
@@ -9888,7 +9862,7 @@ async function seedBeliefsWave1(db2) {
     "bmod-007"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm53.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm51.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief1Lessons,
@@ -9945,11 +9919,11 @@ async function seedBeliefsWave1(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 1 beliefs content seeded successfully.");
 }
-var import_drizzle_orm53;
+var import_drizzle_orm51;
 var init_seed_beliefs_wave1 = __esm({
   "server/seed-beliefs-wave1.ts"() {
     "use strict";
-    import_drizzle_orm53 = require("drizzle-orm");
+    import_drizzle_orm51 = require("drizzle-orm");
     init_schema();
     init_wave1_beliefs_1_2();
     init_wave1_beliefs_3_4();
@@ -12100,14 +12074,14 @@ __export(seed_beliefs_wave2_exports, {
   seedBeliefsWave2: () => seedBeliefsWave2
 });
 async function seedBeliefsWave2(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w2l-8-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm52.eq)(formationLessons.id, "w2l-8-1")).limit(1);
   if (check) {
     return;
   }
   console.log("Seeding Wave 2 beliefs content (Beliefs 8-11)...");
   const moduleIds = ["bmod-008", "bmod-009", "bmod-010", "bmod-011"];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm54.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm52.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief8Lessons,
@@ -12152,11 +12126,11 @@ async function seedBeliefsWave2(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 2 beliefs content seeded successfully.");
 }
-var import_drizzle_orm54;
+var import_drizzle_orm52;
 var init_seed_beliefs_wave2 = __esm({
   "server/seed-beliefs-wave2.ts"() {
     "use strict";
-    import_drizzle_orm54 = require("drizzle-orm");
+    import_drizzle_orm52 = require("drizzle-orm");
     init_schema();
     init_wave2_belief_8();
     init_wave2_belief_9();
@@ -15998,7 +15972,7 @@ __export(seed_beliefs_wave3_exports, {
   seedBeliefsWave3: () => seedBeliefsWave3
 });
 async function seedBeliefsWave3(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm55.eq)(formationLessons.id, "w3l-12-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w3l-12-1")).limit(1);
   if (check) {
     return;
   }
@@ -16013,7 +15987,7 @@ async function seedBeliefsWave3(db2) {
     "bmod-018"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm55.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm53.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief12Lessons,
@@ -16070,11 +16044,11 @@ async function seedBeliefsWave3(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 3 beliefs content seeded successfully.");
 }
-var import_drizzle_orm55;
+var import_drizzle_orm53;
 var init_seed_beliefs_wave3 = __esm({
   "server/seed-beliefs-wave3.ts"() {
     "use strict";
-    import_drizzle_orm55 = require("drizzle-orm");
+    import_drizzle_orm53 = require("drizzle-orm");
     init_schema();
     init_wave3_beliefs_12_13();
     init_wave3_beliefs_14_15();
@@ -21981,7 +21955,7 @@ __export(seed_beliefs_wave4_exports, {
   seedBeliefsWave4: () => seedBeliefsWave4
 });
 async function seedBeliefsWave4(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm56.eq)(formationLessons.id, "w4l-19-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w4l-19-1")).limit(1);
   if (check) {
     return;
   }
@@ -21999,7 +21973,7 @@ async function seedBeliefsWave4(db2) {
     "bmod-028"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm56.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm54.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief19Lessons,
@@ -22068,11 +22042,11 @@ async function seedBeliefsWave4(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 4 beliefs content seeded successfully.");
 }
-var import_drizzle_orm56;
+var import_drizzle_orm54;
 var init_seed_beliefs_wave4 = __esm({
   "server/seed-beliefs-wave4.ts"() {
     "use strict";
-    import_drizzle_orm56 = require("drizzle-orm");
+    import_drizzle_orm54 = require("drizzle-orm");
     init_schema();
     init_wave4_beliefs_19_20();
     init_wave4_beliefs_21_22();
@@ -22094,7 +22068,7 @@ async function seedGlobalChurches() {
     );
     if (auChurches.length > 0) {
       await db.transaction(async (tx) => {
-        await tx.delete(sdaChurches).where((0, import_drizzle_orm57.eq)(sdaChurches.country, "Australia"));
+        await tx.delete(sdaChurches).where((0, import_drizzle_orm55.eq)(sdaChurches.country, "Australia"));
         for (let i = 0; i < auChurches.length; i += 100) {
           const batch = auChurches.slice(i, i + 100).map((c) => ({
             name: c.name,
@@ -22150,13 +22124,13 @@ async function seedGlobalChurches() {
     console.error("Error seeding churches:", err);
   }
 }
-var import_drizzle_orm57, GLOBAL_CHURCHES;
+var import_drizzle_orm55, GLOBAL_CHURCHES;
 var init_seed_global_churches = __esm({
   "scripts/seed-global-churches.ts"() {
     "use strict";
     init_db();
     init_schema();
-    import_drizzle_orm57 = require("drizzle-orm");
+    import_drizzle_orm55 = require("drizzle-orm");
     GLOBAL_CHURCHES = [
       // ─── NORTH AMERICA ───────────────────────────────────────────────────
       {
@@ -34574,19 +34548,19 @@ async function deduplicateSeries(database) {
   if (duplicateIds.length > 0) {
     console.log(`[seed-series] Removing ${duplicateIds.length} duplicate series: ${duplicateIds.join(", ")}`);
     for (const dupId of duplicateIds) {
-      await database.delete(biblicalEpisodes).where((0, import_drizzle_orm58.eq)(biblicalEpisodes.seriesId, dupId));
-      await database.delete(biblicalSeries).where((0, import_drizzle_orm58.eq)(biblicalSeries.id, dupId));
+      await database.delete(biblicalEpisodes).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.seriesId, dupId));
+      await database.delete(biblicalSeries).where((0, import_drizzle_orm56.eq)(biblicalSeries.id, dupId));
     }
     console.log("[seed-series] Duplicates removed.");
   }
 }
 async function ensureCompletedEpisodes(database) {
   for (const [title, data] of Object.entries(COMPLETED_EPISODES)) {
-    const [ep] = await database.select({ id: biblicalEpisodes.id, videoUrl: biblicalEpisodes.videoUrl, status: biblicalEpisodes.status }).from(biblicalEpisodes).where((0, import_drizzle_orm58.eq)(biblicalEpisodes.title, title)).limit(1);
+    const [ep] = await database.select({ id: biblicalEpisodes.id, videoUrl: biblicalEpisodes.videoUrl, status: biblicalEpisodes.status }).from(biblicalEpisodes).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.title, title)).limit(1);
     if (ep && ep.videoUrl === data.videoUrl && ep.status === "complete") {
       console.log(`[seed-series] "${title}" already has video URL`);
     } else if (ep) {
-      await database.update(biblicalEpisodes).set({ videoUrl: data.videoUrl, duration: data.duration, status: "complete" }).where((0, import_drizzle_orm58.eq)(biblicalEpisodes.id, ep.id));
+      await database.update(biblicalEpisodes).set({ videoUrl: data.videoUrl, duration: data.duration, status: "complete" }).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.id, ep.id));
       console.log(`[seed-series] Updated "${title}" with video URL`);
     }
   }
@@ -34838,12 +34812,12 @@ async function seedBiblicalSeries(database) {
     throw err;
   }
 }
-var import_drizzle_orm58, COMPLETED_EPISODES;
+var import_drizzle_orm56, COMPLETED_EPISODES;
 var init_seed_series = __esm({
   "server/seed-series.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm58 = require("drizzle-orm");
+    import_drizzle_orm56 = require("drizzle-orm");
     COMPLETED_EPISODES = {
       "He Is Risen": {
         videoUrl: "https://res.cloudinary.com/dy77gwpzu/video/upload/v1774827906/grace-through-faith/easter-story/episode6-he-is-risen.mp4",
@@ -34861,7 +34835,7 @@ __export(seed_reading_plans_exports, {
 async function seedReadingPlans(database) {
   try {
     console.log("[seed-plans] Starting reading plans seed check...");
-    const existingReadyMade = await database.select({ id: readingPlans.id }).from(readingPlans).where((0, import_drizzle_orm59.eq)(readingPlans.type, "ready-made")).limit(1);
+    const existingReadyMade = await database.select({ id: readingPlans.id }).from(readingPlans).where((0, import_drizzle_orm57.eq)(readingPlans.type, "ready-made")).limit(1);
     console.log(`[seed-plans] Found ${existingReadyMade.length} existing ready-made plans`);
     if (existingReadyMade.length > 0) {
       console.log("[seed-plans] Ready-made reading plans already seeded, skipping.");
@@ -34897,12 +34871,12 @@ async function seedReadingPlans(database) {
     throw err;
   }
 }
-var import_drizzle_orm59, READING_PLAN_SEEDS;
+var import_drizzle_orm57, READING_PLAN_SEEDS;
 var init_seed_reading_plans = __esm({
   "server/seed-reading-plans.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm59 = require("drizzle-orm");
+    import_drizzle_orm57 = require("drizzle-orm");
     READING_PLAN_SEEDS = [
       {
         title: "7 Days of Psalms for Stronger Faith",
@@ -35039,7 +35013,7 @@ async function fixDevotionalCategories(database) {
     const correctCategory = CATEGORY_MAP[plan.title];
     if (!correctCategory) continue;
     if (plan.category !== correctCategory) {
-      await database.update(devotionalPlans).set({ category: correctCategory }).where((0, import_drizzle_orm60.eq)(devotionalPlans.id, plan.id));
+      await database.update(devotionalPlans).set({ category: correctCategory }).where((0, import_drizzle_orm58.eq)(devotionalPlans.id, plan.id));
       console.log(`[fix-categories] "${plan.title}": ${plan.category} \u2192 ${correctCategory}`);
       updated++;
     }
@@ -35050,12 +35024,12 @@ async function fixDevotionalCategories(database) {
     console.log(`[fix-categories] Updated ${updated} plan categories.`);
   }
 }
-var import_drizzle_orm60, CATEGORY_MAP;
+var import_drizzle_orm58, CATEGORY_MAP;
 var init_fix_devotional_categories = __esm({
   "server/fix-devotional-categories.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm60 = require("drizzle-orm");
+    import_drizzle_orm58 = require("drizzle-orm");
     CATEGORY_MAP = {
       "Foundations of Faith": "foundations",
       "The Life of Christ": "foundations",
@@ -35085,7 +35059,7 @@ __export(cache_warmup_exports, {
   runCacheWarmup: () => runCacheWarmup
 });
 async function warmContextCards(bookId, chapter, bookName) {
-  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm63.and)((0, import_drizzle_orm63.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm63.eq)(contextCards.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm61.eq)(contextCards.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateContextCards({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(contextCards).values({
@@ -35103,7 +35077,7 @@ async function warmContextCards(bookId, chapter, bookName) {
   return true;
 }
 async function warmApplicationTemplates(bookId, chapter, bookName) {
-  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm63.and)((0, import_drizzle_orm63.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm63.eq)(applicationTemplates.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm61.eq)(applicationTemplates.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateApplicationStudy({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(applicationTemplates).values({
@@ -35118,7 +35092,7 @@ async function warmApplicationTemplates(bookId, chapter, bookName) {
   return true;
 }
 async function warmChapterContext(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm63.and)((0, import_drizzle_orm63.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm63.eq)(chapterContextCache.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm61.eq)(chapterContextCache.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateChapterContext({ bookId, chapter, bookName });
   await db.insert(chapterContextCache).values({
@@ -35133,9 +35107,9 @@ async function warmChapterContext(bookId, chapter, bookName) {
   return true;
 }
 async function warmPassageSections(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm63.and)((0, import_drizzle_orm63.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm63.eq)(chapterPassageSections.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm61.eq)(chapterPassageSections.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
-  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm63.and)((0, import_drizzle_orm63.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm63.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm61.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
   if (verses.length === 0) return false;
   const totalVerses = verses.length;
   const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
@@ -35187,7 +35161,7 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
   return true;
 }
 async function ensureSdaLensCacheVersion() {
-  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm63.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
+  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm61.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
   const stored = marker?.results?.version;
   if (stored === SDA_LENS_VERSION) return;
   console.log(`[sda-lens] Cache version changed (${stored || "none"} -> ${SDA_LENS_VERSION}); purging generated content caches...`);
@@ -35244,14 +35218,14 @@ async function runCacheWarmup() {
   }
   console.log(`[cache-warmup] Complete: ${generated} generated, ${skipped} already cached, ${errors} errors`);
 }
-var import_drizzle_orm63, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
+var import_drizzle_orm61, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
 var init_cache_warmup = __esm({
   "server/services/cache-warmup.ts"() {
     "use strict";
     init_db();
     init_schema();
     init_sda_lens();
-    import_drizzle_orm63 = require("drizzle-orm");
+    import_drizzle_orm61 = require("drizzle-orm");
     init_ai_engine();
     POPULAR_CHAPTERS = [
       { bookId: 1, chapter: 1 },
@@ -35345,7 +35319,7 @@ function logSecurityPosture() {
 }
 
 // server/index.ts
-var import_express41 = __toESM(require("express"));
+var import_express39 = __toESM(require("express"));
 var import_helmet = __toESM(require("helmet"));
 var import_compression = __toESM(require("compression"));
 
@@ -35353,7 +35327,7 @@ var import_compression = __toESM(require("compression"));
 var import_node_http = require("node:http");
 init_db();
 init_schema();
-var import_drizzle_orm61 = require("drizzle-orm");
+var import_drizzle_orm59 = require("drizzle-orm");
 
 // server/middleware/auth.ts
 var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
@@ -35489,7 +35463,7 @@ function generateCode() {
 }
 
 // server/routes.ts
-var import_drizzle_orm62 = require("drizzle-orm");
+var import_drizzle_orm60 = require("drizzle-orm");
 init_ai_semaphore();
 
 // server/middleware/response-cache.ts
@@ -35873,8 +35847,7 @@ router.get("/api/auth/me", async (req, res) => {
         isPro: user.isPro,
         isPatron: user.isPatron,
         role: user.role,
-        organizationId: user.organizationId,
-        hologramOnboardingSeen: user.hologramOnboardingSeen ?? false
+        organizationId: user.organizationId
       },
       isGuest: false
     });
@@ -37885,13 +37858,13 @@ router8.get("/api/study-guide/active", async (req, res) => {
 });
 router8.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "scholarly" } = req.body;
+    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "pastoral" } = req.body;
     const userId = extractUserId(req);
     if (!verseReference || !verseText) {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
-    const validPersonas = ["scholarly", "pastoral", "ellen-white"];
-    const resolvedPersona = validPersonas.includes(persona) ? persona : "scholarly";
+    const validPersonas = ["pastoral", "ellen-white"];
+    const resolvedPersona = validPersonas.includes(persona) ? persona : "pastoral";
     if (!forceNew) {
       const [existingActive] = await db.select().from(studyGuideSessions).where(
         (0, import_drizzle_orm10.and)(
@@ -38874,47 +38847,6 @@ function toGoogleLangCode(appLang) {
 }
 function makeContentKey(text2) {
   return import_crypto.default.createHash("md5").update(text2.trim()).digest("hex");
-}
-async function translateText(text2, targetLang) {
-  if (!text2?.trim() || targetLang === "en") return text2;
-  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
-  if (!apiKey) {
-    console.warn("[translate] GOOGLE_TRANSLATE_API_KEY not set \u2014 returning original");
-    return text2;
-  }
-  const contentKey = makeContentKey(text2);
-  const googleLang = toGoogleLangCode(targetLang);
-  const [cached] = await db.select({ translatedText: contentTranslations.translatedText }).from(contentTranslations).where(
-    (0, import_drizzle_orm14.and)(
-      (0, import_drizzle_orm14.eq)(contentTranslations.contentKey, contentKey),
-      (0, import_drizzle_orm14.eq)(contentTranslations.langCode, targetLang)
-    )
-  ).limit(1);
-  if (cached) return cached.translatedText;
-  try {
-    const res = await fetch(`${GOOGLE_TRANSLATE_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        q: text2,
-        source: "en",
-        target: googleLang,
-        format: "text"
-      })
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[translate] Google API error:", res.status, err);
-      return text2;
-    }
-    const json = await res.json();
-    const translated = json?.data?.translations?.[0]?.translatedText ?? text2;
-    await db.insert(contentTranslations).values({ contentKey, langCode: targetLang, originalText: text2, translatedText: translated }).onConflictDoNothing();
-    return translated;
-  } catch (err) {
-    console.error("[translate] Error:", err);
-    return text2;
-  }
 }
 async function translateBatch(texts, targetLang) {
   if (!texts.length || targetLang === "en") return texts;
@@ -41610,9 +41542,9 @@ router15.get("/api/streams/:id/token", async (req, res) => {
 });
 router15.get("/api/streams/livekit-client.umd.js", async (_req, res) => {
   try {
-    const fs12 = await import("fs");
+    const fs10 = await import("fs");
     const filePath = import_path.default.join(process.cwd(), "server", "templates", "livekit-client.umd.js");
-    const content = fs12.readFileSync(filePath, "utf-8");
+    const content = fs10.readFileSync(filePath, "utf-8");
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=86400, immutable");
     return res.send(content);
@@ -41637,9 +41569,9 @@ router15.get("/api/streams/:id/room", async (req, res) => {
     }
     const token = await generateToken(session.roomUrl, displayName, isHost);
     const wsUrl = getLiveKitUrl();
-    const fs12 = await import("fs");
+    const fs10 = await import("fs");
     const htmlPath = import_path.default.join(process.cwd(), "server", "templates", "livekit-room.html");
-    let html = fs12.readFileSync(htmlPath, "utf-8");
+    let html = fs10.readFileSync(htmlPath, "utf-8");
     html = html.replace(
       "<!--SERVER_INJECTED_CONFIG-->",
       `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName, isHost, canShare })};</script>`
@@ -53947,294 +53879,15 @@ router32.patch("/api/characters/:id/toggle-active", requireAdmin, async (req, re
 });
 var characters_default = router32;
 
-// server/routes/ellenWhite.ts
-var import_express33 = require("express");
-
-// server/services/ellenWhiteService.ts
-init_api_client();
-var import_cloudinary6 = require("cloudinary");
-var import_fs9 = __toESM(require("fs"));
-var import_path10 = __toESM(require("path"));
-var ELLEN_WHITE_VOICE = "XrExE9yKIg1WjnnlVkGX";
-var ONBOARDING_STEPS = [
-  {
-    id: "welcome-verse",
-    order: 1,
-    title: "Welcome",
-    text: "This is your daily verse \u2014 a fresh word from the Lord each morning to anchor your day in His promises.",
-    spotlightTarget: "verse-of-day"
-  },
-  {
-    id: "continue-study",
-    order: 2,
-    title: "Your Study Path",
-    text: "Your current study awaits here. Tap to continue where you left off and let the Spirit guide your understanding.",
-    spotlightTarget: "continue-study"
-  },
-  {
-    id: "study-tab",
-    order: 3,
-    title: "Study",
-    text: "The Study tab holds all your lessons, prophecy timelines, and topical deep dives. This is where understanding grows.",
-    spotlightTarget: "tab-study"
-  },
-  {
-    id: "connect-tab",
-    order: 4,
-    title: "Community",
-    text: "Here in Connect, you will find your church family \u2014 local congregations, study groups, and fellow seekers of truth.",
-    spotlightTarget: "tab-connect"
-  },
-  {
-    id: "read-tab",
-    order: 5,
-    title: "Read",
-    text: "Open the Scriptures here. Compare translations side by side, listen to narrated chapters, and let the Word speak to your heart.",
-    spotlightTarget: "tab-read"
-  },
-  {
-    id: "profile-growth",
-    order: 6,
-    title: "Your Growth",
-    text: "Visit your profile to see how your spiritual journey unfolds. Track your reading, your studies, and your faithfulness over time.",
-    spotlightTarget: "tab-profile"
-  }
-];
-var FEATURE_GUIDES = {
-  heatmap: {
-    featureId: "heatmap",
-    title: "Engagement Heatmap",
-    text: "Welcome to your heatmap. Here you can see when your members are most active in their studies. The brighter the cell, the deeper the engagement. Use this to plan your outreach at the moments your flock is most receptive.",
-    spotlightTarget: "heatmap-grid"
-  },
-  "leader-analytics": {
-    featureId: "leader-analytics",
-    title: "Member Analytics",
-    text: "This is your shepherd's view. See how many souls are growing in the Word, which studies draw the most hearts, and where your pastoral attention may be most needed.",
-    spotlightTarget: "analytics-overview"
-  },
-  "prophecy-timeline": {
-    featureId: "prophecy-timeline",
-    title: "Prophecy Timeline",
-    text: "The great controversy between Christ and Satan is laid out before you here. Each point on this timeline connects Scripture to history, revealing God's hand through the ages.",
-    spotlightTarget: "timeline-view"
-  },
-  "bible-reader": {
-    featureId: "bible-reader",
-    title: "Bible Reader",
-    text: "Here you may read the sacred Word. Compare translations, highlight verses that speak to your soul, and listen as the Scriptures are read aloud to you.",
-    spotlightTarget: "reader-view"
-  }
-};
-function getOnboardingSteps() {
-  return ONBOARDING_STEPS;
-}
-function getFeatureGuide(featureId) {
-  return FEATURE_GUIDES[featureId] || null;
-}
-function getAllFeatureGuides() {
-  return Object.values(FEATURE_GUIDES);
-}
-function ensureCloudinary() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error("Missing Cloudinary credentials");
-  }
-  import_cloudinary6.v2.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
-}
-async function generateHologramClip(text2, clipId) {
-  const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
-  const heygenKey = process.env.HEYGEN_API_KEY;
-  if (!elevenLabsKey) throw new Error("ELEVENLABS_API_KEY not set");
-  if (!heygenKey) throw new Error("HEYGEN_API_KEY not set");
-  console.log(`[ellen-white] Generating hologram clip: ${clipId}`);
-  const audioResponse = await fetchWithTimeout(
-    `https://api.elevenlabs.io/v1/text-to-speech/${ELLEN_WHITE_VOICE}?output_format=mp3_44100_128`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": elevenLabsKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text2,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.9,
-          similarity_boost: 0.7,
-          style: 0.05,
-          use_speaker_boost: false
-        }
-      })
-    },
-    6e4
-  );
-  if (!audioResponse.ok) {
-    const errText = await audioResponse.text();
-    throw new Error(`ElevenLabs TTS failed: ${audioResponse.status} ${errText}`);
-  }
-  const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
-  const localPath = import_path10.default.join("/tmp", `ellen-white-clip-${clipId}-${Date.now()}.mp3`);
-  import_fs9.default.writeFileSync(localPath, audioBuffer);
-  console.log(`[ellen-white] Audio: ${audioBuffer.length} bytes`);
-  ensureCloudinary();
-  const audioUpload = await import_cloudinary6.v2.uploader.upload(localPath, {
-    resource_type: "video",
-    folder: "grace-through-faith/ellen-white-hologram",
-    public_id: `${clipId}-audio`,
-    overwrite: true
-  });
-  const audioUrl = audioUpload.secure_url;
-  console.log(`[ellen-white] Audio uploaded: ${audioUrl}`);
-  const photoPath = import_path10.default.join(process.cwd(), "attached_assets", "3._Ellen_G._White_circa_1859_1774997674516.jpg");
-  if (!import_fs9.default.existsSync(photoPath)) {
-    throw new Error(`Ellen White photo not found at ${photoPath}`);
-  }
-  const imgBuffer = import_fs9.default.readFileSync(photoPath);
-  const uploadRes = await fetch("https://upload.heygen.com/v1/talking_photo", {
-    method: "POST",
-    headers: {
-      "X-Api-Key": heygenKey,
-      "Content-Type": "image/jpeg"
-    },
-    body: imgBuffer
-  });
-  if (!uploadRes.ok) {
-    const errText = await uploadRes.text();
-    throw new Error(`HeyGen talking photo upload failed: ${uploadRes.status} ${errText}`);
-  }
-  const uploadData = await uploadRes.json();
-  const talkingPhotoId = uploadData.data?.talking_photo_id;
-  if (!talkingPhotoId) throw new Error(`No talking_photo_id: ${JSON.stringify(uploadData)}`);
-  console.log(`[ellen-white] Talking photo ID: ${talkingPhotoId}`);
-  const genRes = await fetch("https://api.heygen.com/v2/video/generate", {
-    method: "POST",
-    headers: {
-      "X-Api-Key": heygenKey,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      video_inputs: [{
-        character: {
-          type: "talking_photo",
-          talking_photo_id: talkingPhotoId
-        },
-        voice: {
-          type: "audio",
-          audio_url: audioUrl
-        }
-      }],
-      dimension: { width: 720, height: 1280 },
-      title: `Ellen White Hologram - ${clipId}`
-    })
-  });
-  if (!genRes.ok) {
-    const errText = await genRes.text();
-    throw new Error(`HeyGen generate failed: ${genRes.status} ${errText}`);
-  }
-  const genData = await genRes.json();
-  const videoId = genData.data?.video_id;
-  if (!videoId) throw new Error(`No video_id: ${JSON.stringify(genData)}`);
-  console.log(`[ellen-white] Video ID: ${videoId}, polling...`);
-  const videoUrl = await pollHeyGenVideo(videoId, heygenKey);
-  const videoResponse = await fetch(videoUrl);
-  const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-  const videoLocalPath = import_path10.default.join("/tmp", `ellen-white-clip-${clipId}-${Date.now()}.mp4`);
-  import_fs9.default.writeFileSync(videoLocalPath, videoBuffer);
-  const videoUpload = await import_cloudinary6.v2.uploader.upload(videoLocalPath, {
-    resource_type: "video",
-    folder: "grace-through-faith/ellen-white-hologram",
-    public_id: `${clipId}-video`,
-    overwrite: true
-  });
-  console.log(`[ellen-white] Video uploaded to Cloudinary: ${videoUpload.secure_url}`);
-  import_fs9.default.unlinkSync(localPath);
-  import_fs9.default.unlinkSync(videoLocalPath);
-  return { audioUrl, videoUrl: videoUpload.secure_url };
-}
-async function pollHeyGenVideo(videoId, apiKey) {
-  const maxAttempts = 120;
-  const pollIntervalMs = 5e3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const response = await fetch(
-      `https://api.heygen.com/v1/video_status.get?video_id=${videoId}`,
-      { headers: { "X-Api-Key": apiKey, "Accept": "application/json" } }
-    );
-    if (!response.ok) {
-      await new Promise((r) => setTimeout(r, pollIntervalMs));
-      continue;
-    }
-    const data = await response.json();
-    const status = data.data?.status;
-    console.log(`[ellen-white] HeyGen status: ${status} (${attempt}/${maxAttempts})`);
-    if (status === "completed") {
-      const url = data.data?.video_url;
-      if (!url) throw new Error("HeyGen completed but no video_url");
-      return url;
-    }
-    if (status === "failed") {
-      throw new Error(`HeyGen video failed: ${JSON.stringify(data.data?.error || "Unknown")}`);
-    }
-    await new Promise((r) => setTimeout(r, pollIntervalMs));
-  }
-  throw new Error(`HeyGen video ${videoId} timed out`);
-}
-
-// server/routes/ellenWhite.ts
-var router33 = (0, import_express33.Router)();
-router33.get("/onboarding", (_req, res) => {
-  const steps = getOnboardingSteps();
-  res.json({ steps });
-});
-router33.get("/guides", (_req, res) => {
-  const guides = getAllFeatureGuides();
-  res.json({ guides });
-});
-router33.get("/guide/:featureId", (req, res) => {
-  const guide = getFeatureGuide(req.params.featureId);
-  if (!guide) {
-    res.status(404).json({ error: "Feature guide not found" });
-    return;
-  }
-  res.json({ guide });
-});
-var CLIP_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
-var MAX_TEXT_LENGTH = 1e3;
-router33.post("/generate", requireAuth, async (req, res) => {
-  try {
-    const { text: text2, clipId } = req.body;
-    if (!text2 || !clipId) {
-      res.status(400).json({ error: "text and clipId are required" });
-      return;
-    }
-    if (typeof text2 !== "string" || text2.length > MAX_TEXT_LENGTH) {
-      res.status(400).json({ error: `text must be a string under ${MAX_TEXT_LENGTH} characters` });
-      return;
-    }
-    if (typeof clipId !== "string" || !CLIP_ID_REGEX.test(clipId)) {
-      res.status(400).json({ error: "clipId must be alphanumeric, dashes, or underscores (1-64 chars)" });
-      return;
-    }
-    const result = await generateHologramClip(text2, clipId);
-    res.json(result);
-  } catch (error) {
-    console.error("[ellen-white] Generation error:", error.message);
-    res.status(500).json({ error: "Video generation failed" });
-  }
-});
-var ellenWhite_default = router33;
-
 // server/routes/admin-workers.ts
-var import_express34 = require("express");
+var import_express33 = require("express");
 init_analyticsRollupWorker();
 init_heatmapTileWorker();
 init_activityPatternWorker();
 init_seed_egw_excerpts();
-var router34 = (0, import_express34.Router)();
+var router33 = (0, import_express33.Router)();
 var VALID_WORKERS = ["analytics_rollup", "heatmap_tiles", "activity_pattern", "egw_excerpts"];
-router34.post(
+router33.post(
   "/run",
   requireRole("admin"),
   async (req, res) => {
@@ -54272,10 +53925,10 @@ router34.post(
     }
   }
 );
-var admin_workers_default = router34;
+var admin_workers_default = router33;
 
 // server/routes/news.ts
-var import_express35 = require("express");
+var import_express34 = require("express");
 
 // server/services/annFeedService.ts
 var import_rss_parser = __toESM(require("rss-parser"));
@@ -54339,8 +53992,8 @@ function getAnnFeedCacheStatus() {
 }
 
 // server/routes/news.ts
-var router35 = (0, import_express35.Router)();
-router35.get("/api/news/adventist", async (_req, res) => {
+var router34 = (0, import_express34.Router)();
+router34.get("/api/news/adventist", async (_req, res) => {
   try {
     const articles = await fetchAnnFeed();
     res.json({ articles, count: articles.length, source: "Adventist News Network" });
@@ -54349,7 +54002,7 @@ router35.get("/api/news/adventist", async (_req, res) => {
     res.status(500).json({ error: "Failed to fetch news feed" });
   }
 });
-router35.get("/api/news/adventist/refresh", async (_req, res) => {
+router34.get("/api/news/adventist/refresh", async (_req, res) => {
   try {
     const articles = await fetchAnnFeed(true);
     res.json({ articles, count: articles.length, refreshed: true });
@@ -54358,23 +54011,23 @@ router35.get("/api/news/adventist/refresh", async (_req, res) => {
     res.status(500).json({ error: "Failed to refresh news feed" });
   }
 });
-router35.get("/api/news/status", async (_req, res) => {
+router34.get("/api/news/status", async (_req, res) => {
   const status = getAnnFeedCacheStatus();
   res.json(status);
 });
-var news_default = router35;
+var news_default = router34;
 
 // server/routes/egw.ts
-var import_express36 = require("express");
+var import_express35 = require("express");
 init_egwService();
-var router36 = (0, import_express36.Router)();
-router36.get("/status", (_req, res) => {
+var router35 = (0, import_express35.Router)();
+router35.get("/status", (_req, res) => {
   res.json({
     configured: isEgwConfigured(),
     message: isEgwConfigured() ? "EGW Writings API is configured and ready" : "EGW_CLIENT_ID and EGW_CLIENT_SECRET environment variables are required"
   });
 });
-router36.get("/books", async (req, res) => {
+router35.get("/books", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54387,7 +54040,7 @@ router36.get("/books", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch EGW books" });
   }
 });
-router36.get("/books/:bookId/toc", async (req, res) => {
+router35.get("/books/:bookId/toc", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54399,7 +54052,7 @@ router36.get("/books/:bookId/toc", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch table of contents" });
   }
 });
-router36.get("/books/:bookId/chapter/:paraId", async (req, res) => {
+router35.get("/books/:bookId/chapter/:paraId", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54411,7 +54064,7 @@ router36.get("/books/:bookId/chapter/:paraId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch chapter content" });
   }
 });
-router36.get("/search", async (req, res) => {
+router35.get("/search", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54428,7 +54081,7 @@ router36.get("/search", async (req, res) => {
     res.status(500).json({ error: "Failed to search EGW writings" });
   }
 });
-router36.get("/search/scripture", async (req, res) => {
+router35.get("/search/scripture", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54445,7 +54098,7 @@ router36.get("/search/scripture", async (req, res) => {
     res.status(500).json({ error: "Failed to search by scripture reference" });
   }
 });
-router36.get("/search/topical", async (req, res) => {
+router35.get("/search/topical", async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54462,7 +54115,7 @@ router36.get("/search/topical", async (req, res) => {
     res.status(500).json({ error: "Failed to search by topic" });
   }
 });
-router36.get("/covers/:bookId", async (req, res) => {
+router35.get("/covers/:bookId", async (req, res) => {
   try {
     const size = req.query.size || "medium";
     const coverUrl = await getBookCover(parseInt(req.params.bookId), size);
@@ -54472,7 +54125,7 @@ router36.get("/covers/:bookId", async (req, res) => {
     res.status(500).json({ error: "Failed to get cover URL" });
   }
 });
-router36.get("/devotional/today", async (req, res) => {
+router35.get("/devotional/today", async (req, res) => {
   try {
     const lang = String(req.query.lang || "en");
     const devotion = await getEgwDailyDevotion(lang);
@@ -54488,7 +54141,7 @@ router36.get("/devotional/today", async (req, res) => {
   }
 });
 var seedRunning = false;
-router36.post("/seed-excerpts", requireRole("admin"), async (req, res) => {
+router35.post("/seed-excerpts", requireRole("admin"), async (req, res) => {
   if (!isEgwConfigured()) {
     return res.status(503).json({ error: "EGW API credentials not configured" });
   }
@@ -54512,305 +54165,15 @@ router36.post("/seed-excerpts", requireRole("admin"), async (req, res) => {
     res.status(500).json({ error: "Failed to start seeding" });
   }
 });
-var egw_default = router36;
-
-// server/routes/pioneers.ts
-var import_express37 = require("express");
-init_db();
-init_schema();
-var import_drizzle_orm50 = require("drizzle-orm");
-
-// server/services/pioneerService.ts
-init_api_client();
-var import_cloudinary7 = require("cloudinary");
-init_db();
-init_schema();
-var import_drizzle_orm49 = require("drizzle-orm");
-var import_fs10 = __toESM(require("fs"));
-var import_path11 = __toESM(require("path"));
-var PIONEER_CONFIGS = [
-  { id: "ellen-white", name: "Ellen G. White", voiceId: "XrExE9yKIg1WjnnlVkGX", photoPath: "assets/images/ellen-white-portrait.jpg" },
-  { id: "james-white", name: "James White", voiceId: "6sFKzaJr574YWVu4UuJF", photoPath: "assets/images/james-white.jpg" },
-  { id: "joseph-bates", name: "Joseph Bates", voiceId: "HAvvFKatz0uu0Fv55Riy", photoPath: "assets/images/joseph-bates.webp" },
-  { id: "uriah-smith", name: "Uriah Smith", voiceId: "jXkeB46JcPXXUSxzn3MD", photoPath: "assets/images/uriah-smith.webp" },
-  { id: "jn-andrews", name: "J.N. Andrews", voiceId: "zlTgutz4OiRUmJHbkQju", photoPath: "assets/images/john-andrews.jpg" }
-];
-function getPioneerConfig(pioneerId) {
-  return PIONEER_CONFIGS.find((p) => p.id === pioneerId);
-}
-function getAllPioneerConfigs() {
-  return PIONEER_CONFIGS;
-}
-function ensureCloudinary2() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error("Missing Cloudinary credentials");
-  }
-  import_cloudinary7.v2.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
-}
-async function generatePioneerClip(pioneerId, text2, clipId, langCode = "en") {
-  const pioneer = getPioneerConfig(pioneerId);
-  if (!pioneer) throw new Error(`Unknown pioneer: ${pioneerId}`);
-  const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
-  const heygenKey = process.env.HEYGEN_API_KEY;
-  if (!elevenLabsKey) throw new Error("ELEVENLABS_API_KEY not set");
-  if (!heygenKey) throw new Error("HEYGEN_API_KEY not set");
-  const existing = await db.query.pioneerVideos.findFirst({
-    where: (0, import_drizzle_orm49.and)(
-      (0, import_drizzle_orm49.eq)(pioneerVideos.pioneerId, pioneerId),
-      (0, import_drizzle_orm49.eq)(pioneerVideos.clipId, clipId),
-      (0, import_drizzle_orm49.eq)(pioneerVideos.status, "completed")
-    )
-  });
-  if (existing?.videoUrl && existing?.audioUrl) {
-    console.log(`[pioneer] Clip already exists: ${pioneerId}/${clipId}`);
-    return { audioUrl: existing.audioUrl, videoUrl: existing.videoUrl };
-  }
-  console.log(`[pioneer] Generating clip: ${pioneerId}/${clipId}`);
-  const audioResponse = await fetchWithTimeout(
-    `https://api.elevenlabs.io/v1/text-to-speech/${pioneer.voiceId}?output_format=mp3_44100_128`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": elevenLabsKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text2,
-        model_id: "eleven_multilingual_v2",
-        ...langCode && langCode !== "en" ? { language_code: langCode } : {},
-        voice_settings: {
-          stability: 0.9,
-          similarity_boost: 0.7,
-          style: 0.05,
-          use_speaker_boost: false
-        }
-      })
-    },
-    6e4
-  );
-  if (!audioResponse.ok) {
-    const errText = await audioResponse.text();
-    throw new Error(`ElevenLabs TTS failed: ${audioResponse.status} ${errText}`);
-  }
-  const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
-  const localAudioPath = import_path11.default.join("/tmp", `pioneer-clip-${pioneerId}-${clipId}-${Date.now()}.mp3`);
-  import_fs10.default.writeFileSync(localAudioPath, audioBuffer);
-  console.log(`[pioneer] Audio: ${audioBuffer.length} bytes for ${pioneer.name}`);
-  ensureCloudinary2();
-  const audioUpload = await import_cloudinary7.v2.uploader.upload(localAudioPath, {
-    resource_type: "video",
-    folder: `grace-through-faith/pioneer-hologram/${pioneerId}`,
-    public_id: `${clipId}-audio`,
-    overwrite: true
-  });
-  const audioUrl = audioUpload.secure_url;
-  console.log(`[pioneer] Audio uploaded: ${audioUrl}`);
-  const photoPath = import_path11.default.join(process.cwd(), pioneer.photoPath);
-  if (!import_fs10.default.existsSync(photoPath)) {
-    throw new Error(`Pioneer photo not found at ${photoPath}`);
-  }
-  const imgBuffer = import_fs10.default.readFileSync(photoPath);
-  const contentType = pioneer.photoPath.endsWith(".webp") ? "image/webp" : pioneer.photoPath.endsWith(".png") ? "image/png" : "image/jpeg";
-  const uploadRes = await fetch("https://upload.heygen.com/v1/talking_photo", {
-    method: "POST",
-    headers: {
-      "X-Api-Key": heygenKey,
-      "Content-Type": contentType
-    },
-    body: imgBuffer
-  });
-  if (!uploadRes.ok) {
-    const errText = await uploadRes.text();
-    throw new Error(`HeyGen talking photo upload failed: ${uploadRes.status} ${errText}`);
-  }
-  const uploadData = await uploadRes.json();
-  const talkingPhotoId = uploadData.data?.talking_photo_id;
-  if (!talkingPhotoId) throw new Error(`No talking_photo_id: ${JSON.stringify(uploadData)}`);
-  console.log(`[pioneer] Talking photo ID for ${pioneer.name}: ${talkingPhotoId}`);
-  const genRes = await fetch("https://api.heygen.com/v2/video/generate", {
-    method: "POST",
-    headers: {
-      "X-Api-Key": heygenKey,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      video_inputs: [{
-        character: {
-          type: "talking_photo",
-          talking_photo_id: talkingPhotoId
-        },
-        voice: {
-          type: "audio",
-          audio_url: audioUrl
-        }
-      }],
-      dimension: { width: 720, height: 1280 },
-      title: `${pioneer.name} Hologram - ${clipId}`
-    })
-  });
-  if (!genRes.ok) {
-    const errText = await genRes.text();
-    throw new Error(`HeyGen generate failed: ${genRes.status} ${errText}`);
-  }
-  const genData = await genRes.json();
-  const heygenVideoId = genData.data?.video_id;
-  if (!heygenVideoId) throw new Error(`No video_id: ${JSON.stringify(genData)}`);
-  console.log(`[pioneer] HeyGen video ID: ${heygenVideoId}, polling...`);
-  await db.insert(pioneerVideos).values({
-    pioneerId,
-    clipId,
-    script: text2,
-    voiceId: pioneer.voiceId,
-    audioUrl,
-    status: "processing",
-    heygenVideoId
-  }).onConflictDoUpdate({
-    target: [pioneerVideos.pioneerId, pioneerVideos.clipId],
-    set: { status: "processing", heygenVideoId, audioUrl, updatedAt: /* @__PURE__ */ new Date() }
-  });
-  const videoUrl = await pollHeyGenVideo2(heygenVideoId, heygenKey);
-  const videoResponse = await fetch(videoUrl);
-  const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-  const videoLocalPath = import_path11.default.join("/tmp", `pioneer-clip-${pioneerId}-${clipId}-${Date.now()}.mp4`);
-  import_fs10.default.writeFileSync(videoLocalPath, videoBuffer);
-  const videoUpload = await import_cloudinary7.v2.uploader.upload(videoLocalPath, {
-    resource_type: "video",
-    folder: `grace-through-faith/pioneer-hologram/${pioneerId}`,
-    public_id: `${clipId}-video`,
-    overwrite: true
-  });
-  const finalVideoUrl = videoUpload.secure_url;
-  console.log(`[pioneer] Video uploaded: ${finalVideoUrl}`);
-  await db.update(pioneerVideos).set({ status: "completed", videoUrl: finalVideoUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm49.and)((0, import_drizzle_orm49.eq)(pioneerVideos.pioneerId, pioneerId), (0, import_drizzle_orm49.eq)(pioneerVideos.clipId, clipId)));
-  import_fs10.default.unlinkSync(localAudioPath);
-  import_fs10.default.unlinkSync(videoLocalPath);
-  return { audioUrl, videoUrl: finalVideoUrl };
-}
-async function pollHeyGenVideo2(videoId, apiKey) {
-  const maxAttempts = 120;
-  const pollIntervalMs = 5e3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const response = await fetch(
-      `https://api.heygen.com/v1/video_status.get?video_id=${videoId}`,
-      { headers: { "X-Api-Key": apiKey, "Accept": "application/json" } }
-    );
-    if (!response.ok) {
-      await new Promise((r) => setTimeout(r, pollIntervalMs));
-      continue;
-    }
-    const data = await response.json();
-    const status = data.data?.status;
-    console.log(`[pioneer] HeyGen status: ${status} (${attempt}/${maxAttempts})`);
-    if (status === "completed") {
-      const url = data.data?.video_url;
-      if (!url) throw new Error("HeyGen completed but no video_url");
-      return url;
-    }
-    if (status === "failed") {
-      throw new Error(`HeyGen video failed: ${JSON.stringify(data.data?.error || "Unknown")}`);
-    }
-    await new Promise((r) => setTimeout(r, pollIntervalMs));
-  }
-  throw new Error(`HeyGen video ${videoId} timed out`);
-}
-async function getPioneerClipStatus(pioneerId, clipId) {
-  return db.query.pioneerVideos.findFirst({
-    where: (0, import_drizzle_orm49.and)(
-      (0, import_drizzle_orm49.eq)(pioneerVideos.pioneerId, pioneerId),
-      (0, import_drizzle_orm49.eq)(pioneerVideos.clipId, clipId)
-    )
-  });
-}
-async function getAllPioneerClips(pioneerId) {
-  return db.select().from(pioneerVideos).where((0, import_drizzle_orm49.eq)(pioneerVideos.pioneerId, pioneerId));
-}
-
-// server/routes/pioneers.ts
-init_languageAwareContent();
-var router37 = (0, import_express37.Router)();
-router37.get("/api/pioneers", (_req, res) => {
-  const configs = getAllPioneerConfigs();
-  return res.json(configs.map((p) => ({
-    id: p.id,
-    name: p.name,
-    voiceId: p.voiceId
-  })));
-});
-router37.get("/api/pioneers/:pioneerId/clips", requireAuth, async (req, res) => {
-  try {
-    const clips = await getAllPioneerClips(req.params.pioneerId);
-    return res.json(clips);
-  } catch (err) {
-    console.error("[pioneers] Error fetching clips:", err);
-    return res.status(500).json({ error: "Failed to fetch clips" });
-  }
-});
-router37.get("/api/pioneers/:pioneerId/clips/:clipId", requireAuth, async (req, res) => {
-  try {
-    const clip = await getPioneerClipStatus(req.params.pioneerId, req.params.clipId);
-    if (!clip) {
-      return res.status(404).json({ error: "Clip not found" });
-    }
-    return res.json(clip);
-  } catch (err) {
-    console.error("[pioneers] Error fetching clip:", err);
-    return res.status(500).json({ error: "Failed to fetch clip" });
-  }
-});
-router37.post("/api/pioneers/:pioneerId/generate", requireAuth, async (req, res) => {
-  try {
-    const { pioneerId } = req.params;
-    const { text: text2, clipId, lang } = req.body;
-    if (!text2?.trim() || !clipId?.trim()) {
-      return res.status(400).json({ error: "text and clipId are required" });
-    }
-    const config = getPioneerConfig(pioneerId);
-    if (!config) {
-      return res.status(404).json({ error: `Unknown pioneer: ${pioneerId}` });
-    }
-    const langCode = normalizeLanguageCode(lang);
-    const translatedText = langCode !== "en" ? await translateText(text2.trim(), langCode) : text2.trim();
-    const result = await generatePioneerClip(pioneerId, translatedText, clipId.trim(), langCode);
-    return res.json({ ...result, lang: langCode });
-  } catch (err) {
-    console.error("[pioneers] Generate error:", err);
-    return res.status(500).json({ error: "An error occurred. Please try again." });
-  }
-});
-router37.post("/api/pioneer/onboarding-complete", requireAuth, async (req, res) => {
-  try {
-    const userId = getAuthUserId2(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    await db.update(users).set({ hologramOnboardingSeen: true }).where((0, import_drizzle_orm50.eq)(users.id, userId));
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("[pioneer] onboarding-complete error:", err);
-    return res.status(500).json({ error: "Failed to update" });
-  }
-});
-router37.post("/api/pioneer/onboarding-reset", requireAuth, async (req, res) => {
-  try {
-    const userId = getAuthUserId2(req);
-    if (!userId) return res.status(401).json({ error: "Not authenticated" });
-    await db.update(users).set({ hologramOnboardingSeen: false }).where((0, import_drizzle_orm50.eq)(users.id, userId));
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("[pioneer] onboarding-reset error:", err);
-    return res.status(500).json({ error: "Failed to update" });
-  }
-});
-var pioneers_default = router37;
+var egw_default = router35;
 
 // server/routes/demo.ts
-var import_express38 = require("express");
+var import_express36 = require("express");
 
 // server/seeds/seed-demo.ts
 init_db();
 init_schema();
-var import_drizzle_orm51 = require("drizzle-orm");
+var import_drizzle_orm49 = require("drizzle-orm");
 var DEMO_PREFIX = "demo-";
 var DEMO_EMAIL_DOMAIN = "@demo.gracethroughfaith.app";
 function demoId(suffix) {
@@ -55069,7 +54432,7 @@ var PASTORAL_ALERT_CONFIGS = [
 async function seedDemoData() {
   const counts = {};
   try {
-    const existing = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm51.like)(churchHierarchy.id, "demo-%")).limit(1);
+    const existing = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm49.like)(churchHierarchy.id, "demo-%")).limit(1);
     if (existing.length > 0) {
       return { success: false, message: "Demo data already exists. Clear it first.", counts: {} };
     }
@@ -55377,35 +54740,35 @@ async function clearDemoData() {
   const counts = {};
   try {
     console.log("[DemoSeed] Clearing demo data...");
-    const demoUserRows = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm51.like)(users.email, `%${DEMO_EMAIL_DOMAIN}`));
+    const demoUserRows = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm49.like)(users.email, `%${DEMO_EMAIL_DOMAIN}`));
     const demoUserIds = demoUserRows.map((r) => r.id);
     counts.demo_users_found = demoUserIds.length;
     if (demoUserIds.length > 0) {
       const idList = demoUserIds.map((id2) => `'${id2}'`).join(",");
-      await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM topic_engagement WHERE user_id IN (${idList})`));
-      await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM reading_streak WHERE user_id IN (${idList})`));
-      await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM hierarchy_membership WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_engagement WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM reading_streak WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM hierarchy_membership WHERE user_id IN (${idList})`));
       const BATCH = 50;
       for (let i = 0; i < demoUserIds.length; i += BATCH) {
         const batch = demoUserIds.slice(i, i + BATCH);
         const batchList = batch.map((id2) => `'${id2}'`).join(",");
-        await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM users WHERE id IN (${batchList})`));
+        await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM users WHERE id IN (${batchList})`));
       }
       counts.users_deleted = demoUserIds.length;
     }
-    const delTed = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM topic_engagement_daily WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delTed = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_engagement_daily WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.topic_engagement_daily_deleted = delTed.rowCount ?? 0;
-    const delTt = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM topic_trend WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delTt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_trend WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.topic_trends_deleted = delTt.rowCount ?? 0;
-    const delPca = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM pastoral_care_alert WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delPca = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM pastoral_care_alert WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.pastoral_alerts_deleted = delPca.rowCount ?? 0;
-    const delApt = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM activity_pattern_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delApt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM activity_pattern_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.activity_patterns_deleted = delApt.rowCount ?? 0;
-    const delHt = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM heatmap_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delHt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM heatmap_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.heatmap_tiles_deleted = delHt.rowCount ?? 0;
-    const delAc = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM analytics_cache WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delAc = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM analytics_cache WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.analytics_cache_deleted = delAc.rowCount ?? 0;
-    const delCh = await db.execute(import_drizzle_orm51.sql.raw(`DELETE FROM church_hierarchy WHERE id LIKE 'demo-%'`));
+    const delCh = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM church_hierarchy WHERE id LIKE 'demo-%'`));
     counts.hierarchy_nodes_deleted = delCh.rowCount ?? 0;
     console.log("[DemoSeed] Demo data cleared successfully!");
     return {
@@ -55419,13 +54782,13 @@ async function clearDemoData() {
   }
 }
 async function isDemoDataLoaded() {
-  const result = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm51.like)(churchHierarchy.id, "demo-%")).limit(1);
+  const result = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm49.like)(churchHierarchy.id, "demo-%")).limit(1);
   return result.length > 0;
 }
 
 // server/routes/demo.ts
-var router38 = (0, import_express38.Router)();
-router38.get("/seed", requireAdmin, async (_req, res) => {
+var router36 = (0, import_express36.Router)();
+router36.get("/seed", requireAdmin, async (_req, res) => {
   try {
     const result = await seedDemoData();
     return res.json(result);
@@ -55434,7 +54797,7 @@ router38.get("/seed", requireAdmin, async (_req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
-router38.get("/clear", requireAdmin, async (_req, res) => {
+router36.get("/clear", requireAdmin, async (_req, res) => {
   try {
     const result = await clearDemoData();
     return res.json(result);
@@ -55443,7 +54806,7 @@ router38.get("/clear", requireAdmin, async (_req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
-router38.get("/status", requireAdmin, async (_req, res) => {
+router36.get("/status", requireAdmin, async (_req, res) => {
   try {
     const loaded = await isDemoDataLoaded();
     return res.json({ demo_data_loaded: loaded });
@@ -55452,12 +54815,12 @@ router38.get("/status", requireAdmin, async (_req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
-var demo_default = router38;
+var demo_default = router36;
 
 // server/routes/youtube.ts
-var import_express39 = require("express");
+var import_express37 = require("express");
 var import_node_fetch2 = __toESM(require("node-fetch"));
-var router39 = (0, import_express39.Router)();
+var router37 = (0, import_express37.Router)();
 var SDA_SPEAKERS = [
   "Doug Batchelor",
   "Mark Finley",
@@ -55468,7 +54831,7 @@ var SDA_SPEAKERS = [
   "Wes Peppers",
   "Stephen Bohr"
 ];
-router39.get("/api/youtube/topic-videos", async (req, res) => {
+router37.get("/api/youtube/topic-videos", async (req, res) => {
   try {
     const { topic } = req.query;
     if (!topic) {
@@ -55504,11 +54867,11 @@ router39.get("/api/youtube/topic-videos", async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch videos" });
   }
 });
-var youtube_default = router39;
+var youtube_default = router37;
 
 // server/routes/odb.ts
-var import_express40 = require("express");
-var router40 = (0, import_express40.Router)();
+var import_express38 = require("express");
+var router38 = (0, import_express38.Router)();
 var ODB_API = "https://odb.org/wp-json/wp/v2/posts";
 var CACHE_TTL = 15 * 60 * 1e3;
 var todayCache = null;
@@ -55540,7 +54903,7 @@ function mapPost(p) {
     imageUrl: p.jetpack_featured_media_url || null
   };
 }
-router40.get("/api/odb/today", async (_req, res) => {
+router38.get("/api/odb/today", async (_req, res) => {
   try {
     if (todayCache && Date.now() - todayCache.ts < CACHE_TTL) {
       return res.json(todayCache.data);
@@ -55564,7 +54927,7 @@ router40.get("/api/odb/today", async (_req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-router40.get("/api/odb/recent", async (req, res) => {
+router38.get("/api/odb/recent", async (req, res) => {
   try {
     const count2 = Math.max(1, Math.min(parseInt(req.query.count) || 7, 30));
     if (recentCache && Date.now() - recentCache.ts < CACHE_TTL && recentCache.data.length >= count2) {
@@ -55586,7 +54949,7 @@ router40.get("/api/odb/recent", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-router40.get("/api/odb/post/:id", async (req, res) => {
+router38.get("/api/odb/post/:id", async (req, res) => {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 1e4);
@@ -55602,7 +54965,7 @@ router40.get("/api/odb/post/:id", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-var odb_default = router40;
+var odb_default = router38;
 
 // server/routes.ts
 async function registerRoutes(app2) {
@@ -55707,11 +55070,9 @@ async function registerRoutes(app2) {
   app2.use(touchpoints_default);
   app2.use(sabbath_types_default);
   app2.use(characters_default);
-  app2.use("/api/ellen-white", ellenWhite_default);
   app2.use("/api/admin/workers", admin_workers_default);
   app2.use(news_default);
   app2.use("/api/egw", egw_default);
-  app2.use(pioneers_default);
   app2.use("/api/demo", demo_default);
   app2.use(youtube_default);
   app2.use(odb_default);
@@ -55721,7 +55082,7 @@ async function registerRoutes(app2) {
   (async () => {
     try {
       const { videoTopics: videoTopics2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq58, ne, sql: sql31, and: and35, isNotNull, notInArray } = await import("drizzle-orm");
+      const { eq: eq56, ne, sql: sql31, and: and34, isNotNull, notInArray } = await import("drizzle-orm");
       const result = await db.update(videoTopics2).set({ pipelineMode: "cinematic", updatedAt: /* @__PURE__ */ new Date() }).where(ne(videoTopics2.pipelineMode, "cinematic"));
       const busyStatuses = ["queued", "scene-directing", "generating-anchor", "generating-scene-videos", "generating-voiceover", "computing-timing", "assembling-video", "generating-edl", "extracting-timestamps", "generating-broll-images", "generating-broll-videos"];
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1e3);
@@ -55785,13 +55146,13 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
     let dbStatus = "ok";
     let resourceStats = { published: 0, draft: 0 };
     try {
-      await db.execute(import_drizzle_orm62.sql`SELECT 1`);
+      await db.execute(import_drizzle_orm60.sql`SELECT 1`);
     } catch {
       dbStatus = "unreachable";
     }
     if (dbStatus === "ok") {
       try {
-        const counts = await db.execute(import_drizzle_orm62.sql`
+        const counts = await db.execute(import_drizzle_orm60.sql`
           SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
         `);
         for (const row of counts.rows) {
@@ -55829,7 +55190,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
       let safeEmail = email?.trim()?.substring(0, 255) || null;
       let displayName = "Anonymous";
       if (userId) {
-        const [userRow] = await db.select({ displayName: users.displayName, username: users.username, email: users.email }).from(users).where((0, import_drizzle_orm61.eq)(users.id, userId));
+        const [userRow] = await db.select({ displayName: users.displayName, username: users.username, email: users.email }).from(users).where((0, import_drizzle_orm59.eq)(users.id, userId));
         if (userRow) {
           displayName = userRow.displayName || userRow.username || (userRow.email ? userRow.email.split("@")[0] : null) || "Anonymous";
           if (!safeEmail && userRow.email) {
@@ -55910,12 +55271,12 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
   app2.get("/api/growth-map", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const prayerRows = await db.select().from(prayerRequests).where((0, import_drizzle_orm61.eq)(prayerRequests.userId, userId));
-      const readingRows = await db.select().from(readingHistory).where((0, import_drizzle_orm61.eq)(readingHistory.userId, userId));
-      const groupMemberRows = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm61.eq)(prayerGroupMembers.userId, userId));
-      const discussionRows = await db.select().from(groupDiscussions).where((0, import_drizzle_orm61.eq)(groupDiscussions.userId, userId));
-      const layerRows = await db.select().from(layerCompletions).where((0, import_drizzle_orm61.eq)(layerCompletions.userId, userId));
-      const progressTrackRows = await db.select().from(progressTracks).where((0, import_drizzle_orm61.eq)(progressTracks.userId, userId));
+      const prayerRows = await db.select().from(prayerRequests).where((0, import_drizzle_orm59.eq)(prayerRequests.userId, userId));
+      const readingRows = await db.select().from(readingHistory).where((0, import_drizzle_orm59.eq)(readingHistory.userId, userId));
+      const groupMemberRows = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm59.eq)(prayerGroupMembers.userId, userId));
+      const discussionRows = await db.select().from(groupDiscussions).where((0, import_drizzle_orm59.eq)(groupDiscussions.userId, userId));
+      const layerRows = await db.select().from(layerCompletions).where((0, import_drizzle_orm59.eq)(layerCompletions.userId, userId));
+      const progressTrackRows = await db.select().from(progressTracks).where((0, import_drizzle_orm59.eq)(progressTracks.userId, userId));
       const uniqueChapters = new Set(
         readingRows.map((r) => `${r.bookId}-${r.chapter}`)
       );
@@ -55959,9 +55320,9 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
 }
 
 // server/index.ts
-var fs11 = __toESM(require("fs"));
-var path12 = __toESM(require("path"));
-var app = (0, import_express41.default)();
+var fs9 = __toESM(require("fs"));
+var path10 = __toESM(require("path"));
+var app = (0, import_express39.default)();
 app.set("trust proxy", 1);
 var log = console.log;
 function setupCacheControl(app2) {
@@ -56009,20 +55370,20 @@ function setupCors(app2) {
 }
 function setupBodyParsing(app2) {
   app2.use(
-    import_express41.default.json({
+    import_express39.default.json({
       limit: "1mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       }
     })
   );
-  app2.use(import_express41.default.urlencoded({ extended: false, limit: "1mb" }));
+  app2.use(import_express39.default.urlencoded({ extended: false, limit: "1mb" }));
 }
 var AI_PATH_PATTERNS = ["/generate", "/study-guide", "/context", "/semantic", "/tts", "/scene/"];
 var SLOW_THRESHOLD_NORMAL = 2e3;
 var SLOW_THRESHOLD_AI = 15e3;
-function isAIRoute(path13) {
-  return AI_PATH_PATTERNS.some((p) => path13.includes(p));
+function isAIRoute(path11) {
+  return AI_PATH_PATTERNS.some((p) => path11.includes(p));
 }
 var errorCounts = { validation: 0, auth: 0, not_found: 0, rate_limit: 0, server: 0, total: 0 };
 function setupRequestLogging(app2) {
@@ -56046,8 +55407,8 @@ function setupRequestLogging(app2) {
 }
 function getAppName() {
   try {
-    const appJsonPath = path12.resolve(process.cwd(), "app.json");
-    const appJsonContent = fs11.readFileSync(appJsonPath, "utf-8");
+    const appJsonPath = path10.resolve(process.cwd(), "app.json");
+    const appJsonContent = fs9.readFileSync(appJsonPath, "utf-8");
     const appJson = JSON.parse(appJsonContent);
     return appJson.expo?.name || "App Landing Page";
   } catch {
@@ -56055,19 +55416,19 @@ function getAppName() {
   }
 }
 function serveExpoManifest(platform, res) {
-  const manifestPath = path12.resolve(
+  const manifestPath = path10.resolve(
     process.cwd(),
     "static-build",
     platform,
     "manifest.json"
   );
-  if (!fs11.existsSync(manifestPath)) {
+  if (!fs9.existsSync(manifestPath)) {
     return res.status(404).json({ error: `Manifest not found for platform: ${platform}` });
   }
   res.setHeader("expo-protocol-version", "1");
   res.setHeader("expo-sfv-version", "0");
   res.setHeader("content-type", "application/json");
-  const manifest = fs11.readFileSync(manifestPath, "utf-8");
+  const manifest = fs9.readFileSync(manifestPath, "utf-8");
   res.send(manifest);
 }
 function serveLandingPage({
@@ -56089,41 +55450,41 @@ function serveLandingPage({
   res.status(200).send(html);
 }
 function configureExpoAndLanding(app2) {
-  const templatePath = path12.resolve(
+  const templatePath = path10.resolve(
     process.cwd(),
     "server",
     "templates",
     "landing-page.html"
   );
-  const landingPageTemplate = fs11.readFileSync(templatePath, "utf-8");
+  const landingPageTemplate = fs9.readFileSync(templatePath, "utf-8");
   const appName = getAppName();
   const isDev = process.env.NODE_ENV === "development";
   log("Serving static Expo files with dynamic manifest routing");
-  app2.use("/assets/kids-scenes", import_express41.default.static(path12.resolve(process.cwd(), "assets", "kids-scenes"), {
+  app2.use("/assets/kids-scenes", import_express39.default.static(path10.resolve(process.cwd(), "assets", "kids-scenes"), {
     maxAge: "1h",
     etag: true
   }));
-  app2.use("/assets", import_express41.default.static(path12.resolve(process.cwd(), "assets"), {
+  app2.use("/assets", import_express39.default.static(path10.resolve(process.cwd(), "assets"), {
     maxAge: "1h",
     etag: true
   }));
-  app2.use("/comparison-deck", import_express41.default.static(path12.resolve(process.cwd(), "comparison-deck"), {
+  app2.use("/comparison-deck", import_express39.default.static(path10.resolve(process.cwd(), "comparison-deck"), {
     maxAge: "5m",
     etag: true
   }));
-  const privacyPath = path12.resolve(process.cwd(), "server", "templates", "privacy.html");
-  const privacyHtml = fs11.readFileSync(privacyPath, "utf-8");
+  const privacyPath = path10.resolve(process.cwd(), "server", "templates", "privacy.html");
+  const privacyHtml = fs9.readFileSync(privacyPath, "utf-8");
   app2.get("/privacy", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.status(200).send(privacyHtml);
   });
-  const robotsTxt = fs11.readFileSync(path12.resolve(process.cwd(), "server", "templates", "robots.txt"), "utf-8");
+  const robotsTxt = fs9.readFileSync(path10.resolve(process.cwd(), "server", "templates", "robots.txt"), "utf-8");
   app2.get("/robots.txt", (_req, res) => {
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.status(200).send(robotsTxt);
   });
-  const sitemapXml = fs11.readFileSync(path12.resolve(process.cwd(), "server", "templates", "sitemap.xml"), "utf-8");
+  const sitemapXml = fs9.readFileSync(path10.resolve(process.cwd(), "server", "templates", "sitemap.xml"), "utf-8");
   app2.get("/sitemap.xml", (_req, res) => {
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=86400");
@@ -56145,12 +55506,12 @@ function configureExpoAndLanding(app2) {
     }
     next();
   });
-  app2.use(import_express41.default.static(path12.resolve(process.cwd(), "static-build")));
-  const webDistPath = path12.resolve(process.cwd(), "dist");
-  const webIndexPath = path12.join(webDistPath, "index.html");
-  const hasWebBuild = fs11.existsSync(webIndexPath);
+  app2.use(import_express39.default.static(path10.resolve(process.cwd(), "static-build")));
+  const webDistPath = path10.resolve(process.cwd(), "dist");
+  const webIndexPath = path10.join(webDistPath, "index.html");
+  const hasWebBuild = fs9.existsSync(webIndexPath);
   if (hasWebBuild) {
-    app2.use(import_express41.default.static(webDistPath, { maxAge: "1h", index: false }));
+    app2.use(import_express39.default.static(webDistPath, { maxAge: "1h", index: false }));
     app2.use((req, res, next) => {
       if (req.path.startsWith("/api")) {
         return next();
@@ -56292,21 +55653,21 @@ function setupErrorHandler(app2) {
       try {
         const { db: startupDb } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq58 } = await import("drizzle-orm");
-        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq58(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
+        const { eq: eq56 } = await import("drizzle-orm");
+        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
         if (scene.length && scene[0].imageUrl === "/assets/kids-scenes/creation-animals-scene-2.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq58(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq56(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
           console.log("[startup] Updated creation-animals-scene-2 image URL with cache buster");
         }
-        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq58(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
+        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
         if (relScene3.length && relScene3[0].imageUrl === "/assets/kids-scenes/teen-relationships-scene-3.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq58(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq56(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
           console.log("[startup] Updated teen-relationships-scene-3 image URL with cache buster");
         }
         const { like: like3 } = await import("drizzle-orm");
         const whoseScenes = await startupDb.select({ id: kidsStoryScenes2.id, narration: kidsStoryScenes2.narration }).from(kidsStoryScenes2).where(like3(kidsStoryScenes2.narration, "%knowing exactly whose you are%"));
         for (const s of whoseScenes) {
-          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq58(kidsStoryScenes2.id, s.id));
+          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq56(kidsStoryScenes2.id, s.id));
           console.log("[startup] Fixed 'whose' -> 'who' in scene", s.id);
         }
       } catch (err) {

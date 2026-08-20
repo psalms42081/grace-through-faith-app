@@ -58,14 +58,14 @@ router.get("/api/study-guide/active", async (req, res) => {
 
 router.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "scholarly" } = req.body;
+    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "pastoral" } = req.body;
     const userId = extractUserId(req);
     if (!verseReference || !verseText) {
       return res.status(400).json({ error: "verseReference and verseText are required" });
     }
 
-    const validPersonas = ["scholarly", "pastoral", "ellen-white"];
-    const resolvedPersona = validPersonas.includes(persona) ? persona : "scholarly";
+    const validPersonas = ["pastoral", "ellen-white"];
+    const resolvedPersona = validPersonas.includes(persona) ? persona : "pastoral";
 
     if (!forceNew) {
       const [existingActive] = await db

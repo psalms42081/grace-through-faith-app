@@ -34,7 +34,6 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { usePioneer } from "@/contexts/PioneerContext";
 import { useSabbath } from "@/lib/sabbath";
 import SpiritualRings from "@/components/SpiritualRings";
 import type { AgeGroup } from "@/context/KidsModeContext";
@@ -1313,30 +1312,12 @@ function AdultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId, user } = useAuth();
-  const { currentSteps, currentStepIndex, isVisible } = usePioneer();
   const sabbath = useSabbath();
   const { t } = useTranslation();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    if (!isVisible || !scrollRef.current || !currentSteps.length) return;
-    const step = currentSteps[currentStepIndex];
-    const scrollMap: Record<string, number> = {
-      "verse-of-day": 0,
-      "continue-study": 650,
-      "tab-study": 800,
-      "tab-connect": 800,
-      "tab-read": 800,
-      "tab-profile": 800,
-    };
-    const y = scrollMap[step?.spotlightTarget];
-    if (y !== undefined) {
-      scrollRef.current.scrollTo({ y, animated: true });
-    }
-  }, [currentStepIndex, isVisible]);
 
   useEffect(() => {
     (async () => {

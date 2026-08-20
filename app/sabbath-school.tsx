@@ -21,8 +21,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
-import { useEllenWhite } from "@/contexts/PioneerContext";
-import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
 import { HV2, F } from "@/components/home-v2/theme";
 
 // ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
@@ -102,23 +100,19 @@ interface QuarterlyData {
 }
 interface CompanionData { id: string; slug: string; title: string; description: string | null }
 
+const EMPTY_LESSON_DAYS: DayData[] = [];
+
+function getLessonDays(lesson: LessonData | null | undefined): DayData[] {
+  return lesson?.days ?? EMPTY_LESSON_DAYS;
+}
+
 export default function SabbathSchoolV2Screen() {
+  "use no memo";
+
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { t } = useTranslation();
-  const { tryAutoGuide } = useEllenWhite();
   const [showArchive, setShowArchive] = useState(false);
-
-  React.useEffect(() => {
-    // Same first-visit guide as the canonical screen (spotlights are fixed
-    // positions, so they land on the hero/discussion areas here too).
-    const timer = setTimeout(() => {
-      if (FEATURE_GUIDES["sabbath-school"]) {
-        tryAutoGuide("sabbath-school", FEATURE_GUIDES["sabbath-school"]);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
   const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
   const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
@@ -173,7 +167,7 @@ export default function SabbathSchoolV2Screen() {
 
   const quarterly = data?.quarterly;
   const lesson = data?.currentLesson;
-  const days = lesson?.days || [];
+  const days = getLessonDays(lesson);
   const completedCount = data?.completedDays || 0;
   const todayDayNumber = data?.todayDayNumber ?? null;
   const companion = data?.companion || null;

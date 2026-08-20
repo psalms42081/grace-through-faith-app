@@ -1,5 +1,5 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { Stack, router } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -19,8 +19,6 @@ import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { PioneerProvider } from "@/contexts/PioneerContext";
-import EllenWhiteHologram from "@/components/EllenWhiteHologram";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
 import * as Notifications from "expo-notifications";
@@ -123,7 +121,7 @@ function RootLayoutNav() {
       <Stack.Screen name="book-picker" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
-      <Stack.Screen name="read-legacy/[bookId]/[chapter]" options={{ headerShown: true }} />
+      <Stack.Screen name="read-legacy/[bookId]/[chapter]" options={{ headerShown: false }} />
       <Stack.Screen
         name="verse-actions"
         options={{
@@ -187,6 +185,8 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const initialPathRef = React.useRef(pathname);
   const [fontsLoaded] = useFonts({
   ...Ionicons.font,
     Lora_400Regular,
@@ -222,8 +222,12 @@ useEffect(() => {
   useEffect(() => {
     if (fontsLoaded && onboardingChecked && i18nReady) {
       SplashScreen.hideAsync().catch(() => {});
+      if (initialPathRef.current.startsWith("/read-legacy/")) {
+        return;
+      }
       // Always show the splash/intro on every launch
-      setTimeout(() => router.replace("/onboarding"), 50);
+      const timer = setTimeout(() => router.replace("/onboarding"), 50);
+      return () => clearTimeout(timer);
     }
   }, [fontsLoaded, onboardingChecked, needsOnboarding, i18nReady]);
 
@@ -246,11 +250,8 @@ useEffect(() => {
                         <GestureHandlerRootView style={{ flex: 1 }}>
                           <KeyboardProvider>
                             <ToastProvider>
-                              <PioneerProvider>
-                                <RootLayoutNav />
-                                <MiniPlayer />
-                                <EllenWhiteHologram />
-                              </PioneerProvider>
+                              <RootLayoutNav />
+                              <MiniPlayer />
                             </ToastProvider>
                           </KeyboardProvider>
                         </GestureHandlerRootView>

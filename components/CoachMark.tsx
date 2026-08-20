@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
-import { usePioneer } from "@/contexts/PioneerContext";
 
 export type ArrowDirection = "up" | "down" | "left" | "right";
 
@@ -42,12 +41,11 @@ export default function CoachMark({
   visible = true,
 }: CoachMarkProps) {
   const { hasSeenTutorial, markTutorialSeen, isLoaded } = useTutorial();
-  const { isVisible: hologramActive, onboardingComplete } = usePioneer();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const dismissed = useRef(false);
 
-  const shouldShow = isLoaded && visible && !hasSeenTutorial(id) && targetLayout !== null && !hologramActive && onboardingComplete;
+  const shouldShow = isLoaded && visible && !hasSeenTutorial(id) && targetLayout !== null;
 
   useEffect(() => {
     if (shouldShow) {

@@ -3,18 +3,15 @@ import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { House, BookOpen, CalendarDays, Compass, User } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { KidsColors, PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
-import { useEllenWhite } from "@/contexts/PioneerContext";
-import { useSabbath } from "@/lib/sabbath";
 
 function ClassicTabLayout() {
   const { isKidsMode } = useKidsMode();
   const { theme, isDark } = useTheme(isKidsMode);
-  const { isVisible, currentSteps, currentStepIndex } = useEllenWhite();
   const { t } = useTranslation();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -31,28 +28,6 @@ function ClassicTabLayout() {
       router.replace("/(tabs)/home-v2" as any);
     }
   }, [isKidsMode, pathname]);
-  const spotlightTarget =
-    isVisible && currentSteps.length > 0
-      ? currentSteps[currentStepIndex]?.spotlightTarget
-      : null;
-  const GOLD = "#C9933A";
-
-  const isSpotlightTab = (tabName: "read" | "connect" | "study" | "profile") => {
-    if (!spotlightTarget) return false;
-    switch (tabName) {
-      case "read":
-        return spotlightTarget === "tab-read" || spotlightTarget === "read-tab";
-      case "connect":
-        return spotlightTarget === "tab-connect" || spotlightTarget === "connect-tab";
-      case "study":
-        return spotlightTarget === "tab-study" || spotlightTarget === "study-tab";
-      case "profile":
-        return spotlightTarget === "tab-profile" || spotlightTarget === "you-tab";
-      default:
-        return false;
-    }
-  };
-
   return (
     <Tabs
       screenOptions={{
@@ -136,7 +111,7 @@ function ClassicTabLayout() {
           title: t("tabs.bible"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={isSpotlightTab("read") ? GOLD : color} />
+            <BookOpen size={size} color={color} />
           ),
         }}
       />
@@ -147,7 +122,7 @@ function ClassicTabLayout() {
           // Removed from nav in Path B Phase 0 — screen stays in the codebase and routable
           href: null,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={isSpotlightTab("connect") ? GOLD : color} />
+            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />
@@ -158,7 +133,7 @@ function ClassicTabLayout() {
           // Removed from nav in Path B Phase 0 — study surfaces stay routable via existing links
           href: null,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="library" size={size} color={isSpotlightTab("study") ? GOLD : color} />
+            <Ionicons name="library" size={size} color={color} />
           ),
         }}
       />
@@ -188,7 +163,7 @@ function ClassicTabLayout() {
           title: t("tabs.profile"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <User size={size} color={isSpotlightTab("profile") ? GOLD : color} />
+            <User size={size} color={color} />
           ),
         }}
       />
@@ -247,26 +222,5 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  const { isReady, onboardingComplete, showOnboarding, syncOnboardingFromServer } = useEllenWhite();
-  const sabbath = useSabbath();
-  const [serverChecked, setServerChecked] = useState(false);
-
-  useEffect(() => {
-    // Only run once per session: skip if not ready, already complete, or already checked
-    if (!isReady || onboardingComplete || serverChecked) return;
-    let cancelled = false;
-
-    syncOnboardingFromServer().then((seen) => {
-      if (cancelled) return;
-      setServerChecked(true);
-      if (!seen) {
-        const delay = sabbath.isSabbath ? 10000 : 600;
-        setTimeout(() => showOnboarding(), delay);
-      }
-    });
-
-    return () => { cancelled = true; };
-  }, [isReady, onboardingComplete, serverChecked, sabbath.isSabbath]);
-
   return <ClassicTabLayout />;
 }

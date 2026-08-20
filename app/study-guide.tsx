@@ -23,8 +23,6 @@ import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
-import { useEllenWhite } from "@/contexts/PioneerContext";
-import { FEATURE_GUIDES } from "@/constants/ellenWhiteSteps";
 
 interface Message {
   role: "user" | "assistant";
@@ -46,10 +44,9 @@ interface Progression {
   apply: StageProgress;
 }
 
-type Persona = "scholarly" | "pastoral" | "ellen-white";
+type Persona = "pastoral" | "ellen-white";
 
 const PERSONAS: { id: Persona; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
-  { id: "scholarly", label: "Scholarly", icon: "school-outline", desc: "Academic depth with Greek & Hebrew focus" },
   { id: "pastoral", label: "Pastoral", icon: "heart-circle-outline", desc: "Warm, life-focused spiritual guidance" },
   { id: "ellen-white", label: "Ellen White", icon: "book-outline", desc: "Spirit of Prophecy insights from her writings" },
 ];
@@ -125,9 +122,6 @@ export default function StudyGuideScreen() {
     verse: string;
   }>();
 
-  const { tryAutoGuide } = useEllenWhite();
-
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -136,7 +130,7 @@ export default function StudyGuideScreen() {
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState(false);
   const [isResumed, setIsResumed] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState<Persona>("scholarly");
+  const [selectedPersona, setSelectedPersona] = useState<Persona>("pastoral");
   const [showPersonaPicker, setShowPersonaPicker] = useState(true);
   const [checkingResume, setCheckingResume] = useState(true);
   const [progression, setProgression] = useState<Progression | null>(null);
@@ -150,7 +144,7 @@ export default function StudyGuideScreen() {
     setCurrentPhase(data.session.phase);
     setIsComplete(data.session.phase === "complete" || !!data.session.completedAt);
     setIsResumed(!!data.resumed);
-    setSelectedPersona(data.session.persona || "scholarly");
+    setSelectedPersona(data.session.persona === "ellen-white" ? "ellen-white" : "pastoral");
     if (data.session.progression) setProgression(data.session.progression);
     if (data.session.summary) setStudySummary(data.session.summary);
     setShowPersonaPicker(false);
@@ -271,16 +265,6 @@ export default function StudyGuideScreen() {
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
   const hasVerseParams = !!(params.verseReference && params.verseText);
-
-  useEffect(() => {
-    if (!hasVerseParams || !showPersonaPicker || checkingResume) return;
-    const timer = setTimeout(() => {
-      if (FEATURE_GUIDES["study-guide"]) {
-        tryAutoGuide("study-guide", FEATURE_GUIDES["study-guide"]);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [hasVerseParams, showPersonaPicker, checkingResume]);
 
   const { data: recentSessions, isLoading: sessionsLoading } = useQuery<any[]>({
     queryKey: [`/api/study-guide/sessions?userId=${userId}`],
@@ -562,7 +546,7 @@ export default function StudyGuideScreen() {
         <View style={styles.messageContent}>
           {isAI && (
             <Text style={[styles.messageRole, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
-              {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Scholarly"} Tutor
+              {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Pastoral"} Tutor
             </Text>
           )}
           {isAI ? (

@@ -312,10 +312,6 @@ ${jsonShape}`,
 }
 
 const PERSONA_PROMPTS: Record<string, { identity: string; style: string }> = {
-  scholarly: {
-    identity: "You are a Bible study tutor with expertise in the original languages (Greek and Hebrew) and historical context.",
-    style: "Be precise and text-focused. Reference Greek/Hebrew words when directly relevant to the verse. Keep language clear and accessible — avoid unnecessary academic jargon. Sound like a knowledgeable teacher, not a textbook.",
-  },
   pastoral: {
     identity: "You are a Bible study tutor who helps people connect Scripture to their daily lives.",
     style: "Be warm and reflective. Help the student think about how the passage relates to their experiences and relationships. Focus on personal application. Avoid sounding preachy or sermon-like — keep it conversational.",
@@ -331,9 +327,9 @@ export async function generateStudyGuideStart(params: {
   verseText: string;
   persona?: string;
 }): Promise<string> {
-  const { verseReference, verseText, persona = "scholarly" } = params;
+  const { verseReference, verseText, persona = "pastoral" } = params;
 
-  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
 
   const systemPrompt = `${p.identity} You guide students through the Inductive Bible Study Method (Observe → Interpret → Apply). You never give the answer directly — you ask focused questions that help the student discover truth in the text.
 
@@ -394,9 +390,9 @@ export async function generateStudyGuideResponse(params: {
   currentPhase: string;
   persona?: string;
 }): Promise<string> {
-  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "scholarly" } = params;
+  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
 
-  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.scholarly;
+  const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
 
   const phaseInstructions: Record<string, string> = {
     observe: "Continue in the OBSERVE phase. Ask about a DIFFERENT observation category than what the student already covered. Observation categories: speaker, people mentioned, titles, actions, source of authority, repeated words, contrasts, structure. Pick a category the student has NOT yet addressed.",

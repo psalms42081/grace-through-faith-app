@@ -43,7 +43,6 @@ export const users = pgTable("users", {
   organizationType: varchar("organization_type", { length: 12 }),
   hierarchyNodeId: varchar("hierarchy_node_id"),
   ageGroup: varchar("age_group", { length: 16 }),
-  hologramOnboardingSeen: boolean("hologram_onboarding_seen").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -249,33 +248,6 @@ export const heygenVideos = pgTable(
 );
 
 export type HeygenVideo = typeof heygenVideos.$inferSelect;
-
-// ─── PIONEER VIDEOS ──────────────────────────────────────────────────────────
-
-export const pioneerVideos = pgTable(
-  "pioneer_video",
-  {
-    id: varchar("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    pioneerId: varchar("pioneer_id", { length: 50 }).notNull(),
-    clipId: varchar("clip_id", { length: 100 }).notNull(),
-    script: text("script").notNull(),
-    voiceId: varchar("voice_id", { length: 50 }),
-    audioUrl: text("audio_url"),
-    videoUrl: text("video_url"),
-    status: varchar("status", { length: 20 }).notNull().default("pending"),
-    heygenVideoId: varchar("heygen_video_id"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => ({
-    pioneerClipIdx: uniqueIndex("pioneer_clip_idx").on(table.pioneerId, table.clipId),
-    statusIdx: index("pioneer_video_status_idx").on(table.status),
-  })
-);
-
-export type PioneerVideo = typeof pioneerVideos.$inferSelect;
 
 // ─── BIBLE ────────────────────────────────────────────────────────────────────
 
@@ -1146,7 +1118,7 @@ export const studyGuideSessions = pgTable(
     chapter: integer("chapter").notNull(),
     verse: integer("verse").notNull(),
     phase: varchar("phase", { length: 20 }).default("observe").notNull(),
-    persona: varchar("persona", { length: 20 }).default("scholarly").notNull(),
+    persona: varchar("persona", { length: 20 }).default("pastoral").notNull(),
     messages: text("messages").default("[]").notNull(),
     progression: text("progression").default("{}").notNull(),
     summary: text("summary"),
