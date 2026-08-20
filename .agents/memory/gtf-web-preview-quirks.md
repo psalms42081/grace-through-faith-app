@@ -20,6 +20,11 @@ React Compiler hoisted nullable property reads (`lesson.days`, then `lesson.less
 **Why:** Optional chaining and conditional JSX looked safe, but the served Metro bundle memoized the property itself before the API result existed.
 **How to apply:** For API-heavy screens that crash on a guarded nullable field, inspect the served bundle. Move access into a plain helper or add `"use no memo"` to the component, then verify the transformed output directly.
 
+## Expo route groups can hide native navigation failures
+Navigation through explicit route-group paths can work on web while native reports an unhandled nested navigator action. Prefer concrete URL paths for tab destinations and canonical root-stack paths for detail screens.
+**Why:** The web router flattened a grouped Home CTA successfully, but the same action failed on a physical device with an unhandled `REPLACE`.
+**How to apply:** When a navigation bug is device-only, replace grouped path targets with concrete public paths and retest adjacent CTAs that use the same pattern.
+
 ## Stale image assets after overwriting same-named files
 Overwriting a PNG in assets/ under the same filename can keep serving old art: Metro's cache lives in /tmp/metro-cache + /tmp/metro-file-map-* (NOT node_modules/.cache), and a long-lived tester browser can keep showing stale pixels even when it claims cache-disabled contexts.
 **How to fix:** rm -rf /tmp/metro-* , restart Start Frontend (expect ~45s of 502s while it rebuilds), verify served bytes with curl on `/assets/?unstable_path=.%2Fassets%2F...` + md5sum, and use a brand-NEW named tester for the visual check — don't trust the old tester's screenshots.

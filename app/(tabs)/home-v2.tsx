@@ -115,7 +115,7 @@ export default function HomeV2Screen() {
         ? `Day ${todayData.today.dayNumber} · ${todayData.today.title}`
         : "Choose a reading plan",
       done: readToday,
-      onPress: () => router.push("/(tabs)/plans" as any),
+      onPress: () => router.push("/plans" as any),
     },
     {
       key: "ss",
@@ -154,7 +154,7 @@ export default function HomeV2Screen() {
         streak={streak}
         initial={(user?.displayName?.[0] ?? "G").toUpperCase()}
         onKidsPress={() => setShowChildPicker(true)}
-        onAvatarPress={() => router.push("/(tabs)/profile" as any)}
+        onAvatarPress={() => router.push("/profile" as any)}
       />
 
       <HeroCard
@@ -186,7 +186,7 @@ export default function HomeV2Screen() {
           setShowChildPicker(false);
           enterKidsMode(child.id, child.name, child.ageGroup as AgeGroup);
           // Kids Home lives in the legacy index route
-          router.replace("/(tabs)" as any);
+          router.replace("/" as any);
         }}
         userId={userId}
         lastActiveChildId={lastActiveChildId}

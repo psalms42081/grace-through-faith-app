@@ -4,8 +4,7 @@ import { router } from "expo-router";
 import { HV2, F } from "./theme";
 
 // Pastel chips tinted with category tokens (§1.2).
-// Each chip deep-links to Discover, which opens the matching topic directly
-// (matched case-insensitively by title in discover-v2's ?topic= handler).
+// Each chip opens the canonical topic screen directly.
 const CHIPS = [
   { label: "Anxiety", topic: "anxiety", bg: "#FCE1EC", fg: "#C2367C" },
   { label: "Hope", topic: "hope", bg: "#DDF0FB", fg: HV2.catSignpost },
@@ -27,7 +26,12 @@ export default function TopicChips() {
           <Pressable
             key={c.label}
             style={[s.chip, { backgroundColor: c.bg }]}
-            onPress={() => router.push(`/(tabs)/search?topic=${encodeURIComponent(c.topic)}` as any)}
+            onPress={() =>
+              router.push({
+                pathname: "/touchpoint-topic",
+                params: { topicId: c.topic },
+              } as any)
+            }
             accessibilityRole="button"
             accessibilityLabel={`Explore ${c.label}`}
           >

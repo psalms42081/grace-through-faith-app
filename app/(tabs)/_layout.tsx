@@ -23,9 +23,9 @@ function ClassicTabLayout() {
   // a tab, so redirect explicitly when the mode flips while Home is selected.
   useEffect(() => {
     if (isKidsMode && pathname === "/home-v2") {
-      router.replace("/(tabs)" as any);
+      router.replace("/" as any);
     } else if (!isKidsMode && pathname === "/") {
-      router.replace("/(tabs)/home-v2" as any);
+      router.replace("/home-v2" as any);
     }
   }, [isKidsMode, pathname]);
   return (

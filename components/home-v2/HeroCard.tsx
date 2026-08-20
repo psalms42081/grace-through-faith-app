@@ -15,7 +15,7 @@ interface Props {
   bookId?: number;
   chapterNumber?: number;
   userId?: string;
-  signpost?: { title: string; description: string } | null;
+  signpost?: { id: string; title: string; description: string } | null;
   reflection: { thought: string; source: string };
 }
 
@@ -119,7 +119,14 @@ export default function HeroCard({
         {activeTab === "signpost" ? (
           <Pressable
             style={s.primary}
-            onPress={() => router.push("/(tabs)/search" as any)}
+            onPress={() =>
+              signpost?.id
+                ? router.push({
+                    pathname: "/touchpoint-topic",
+                    params: { topicId: signpost.id },
+                  } as any)
+                : router.push("/discover-v2" as any)
+            }
             accessibilityRole="button"
             accessibilityLabel="Explore this topic"
           >
