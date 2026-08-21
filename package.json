@@ -15,8 +15,10 @@
     "test:devotional-authorship": "npm run test:devotional-catalog && node server/tests/devotional-authorship.test.mjs && npm run test:devotional-authorship-api",
     "test:devotional-authorship-api": "tsx server/tests/devotional-authorship-api.test.ts",
     "start": "npx expo start",
+    "typecheck": "tsc --noEmit",
     "lint": "npx expo lint",
-    "lint:fix": "npx expo lint --fix"
+    "lint:fix": "npx expo lint --fix",
+    "check": "npm run typecheck && npm run lint"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -32,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.23.1",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",

@@ -8,8 +8,8 @@ type KidsTheme = typeof KidsColors.light;
 
 export function useTheme(isKidsMode: true): { theme: KidsTheme; isDark: boolean; colorScheme: ColorScheme };
 export function useTheme(isKidsMode?: false): { theme: RegularTheme; isDark: boolean; colorScheme: ColorScheme };
-export function useTheme(isKidsMode?: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme };
-export function useTheme(isKidsMode?: boolean) {
+export function useTheme(isKidsMode: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme };
+export function useTheme(isKidsMode?: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme } {
   const colorScheme: ColorScheme = useColorScheme();
   // App is always dark-themed regardless of device setting
   const isDark = true;
@@ -17,5 +17,5 @@ export function useTheme(isKidsMode?: boolean) {
     ? KidsColors.dark
     : Colors.dark;
 
-  return { theme, isDark, colorScheme } as const;
+  return { theme, isDark, colorScheme };
 }

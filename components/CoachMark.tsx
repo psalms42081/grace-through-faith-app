@@ -171,7 +171,7 @@ export default function CoachMark({
         borderRightWidth: ARROW_W,
         borderTopColor: "transparent",
         borderBottomColor: "transparent",
-        borderRightColor: TOOLTIP_BG,
+        borderRightColor: COACH_CARD_BG,
       };
       break;
     }

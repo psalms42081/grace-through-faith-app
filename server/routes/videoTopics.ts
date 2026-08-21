@@ -219,7 +219,7 @@ router.get("/api/video-topics", requireAuth, requirePipelineAccess, async (req, 
 
 router.post("/api/video-topics/:id/generate-script", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [topic] = await db
       .select()
@@ -261,14 +261,14 @@ router.post("/api/video-topics/:id/generate-script", requireAuth, requirePipelin
     res.json(updated);
   } catch (err: any) {
     console.error("Failed to generate script:", err);
-    const { id } = req.params;
+    const catchId = String(req.params.id);
     const [current] = await db.select({ status: videoTopics.status, avatarVideoUrl: videoTopics.avatarVideoUrl })
-      .from(videoTopics).where(eq(videoTopics.id, id)).catch(() => []);
+      .from(videoTopics).where(eq(videoTopics.id, catchId)).catch(() => []);
     const restoreStatus = current?.avatarVideoUrl ? "avatar-ready" : (current?.status === "generating" ? "script-ready" : current?.status || "failed");
     await db
       .update(videoTopics)
       .set({ status: restoreStatus, updatedAt: new Date() })
-      .where(eq(videoTopics.id, id))
+      .where(eq(videoTopics.id, catchId))
       .catch(() => {});
     res.status(500).json({ error: "Failed to generate script" });
   }
@@ -276,7 +276,7 @@ router.post("/api/video-topics/:id/generate-script", requireAuth, requirePipelin
 
 router.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { generatedScript } = req.body;
 
     if (typeof generatedScript !== "string" || !generatedScript.trim()) {
@@ -311,7 +311,7 @@ router.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, async 
 
 router.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [topic] = await db
       .select()
@@ -428,11 +428,11 @@ router.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelineA
     });
   } catch (err: any) {
     console.error("[video-topics] Submit to HeyGen failed:", err);
-    const { id } = req.params;
+    const catchId = String(req.params.id);
     await db
       .update(videoTopics)
       .set({ status: "failed", updatedAt: new Date() })
-      .where(eq(videoTopics.id, id))
+      .where(eq(videoTopics.id, catchId))
       .catch(() => {});
     res.status(500).json({ error: "Failed to submit to HeyGen" });
   }
@@ -551,7 +551,7 @@ router.post("/api/webhooks/heygen", async (req: Request, res: Response) => {
 
 router.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [topic] = await db
       .select()
@@ -603,7 +603,7 @@ router.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePipe
 
 router.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [topic] = await db
       .select()
@@ -659,7 +659,7 @@ router.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePipe
 
 router.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { action, notes } = req.body;
 
     if (!action || (action !== "approve" && action !== "reject")) {
@@ -711,7 +711,7 @@ router.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAccess,
 
 router.get("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const videos = await db
       .select()
       .from(topicVideos)
@@ -727,7 +727,7 @@ router.get("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAcces
 
 router.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { scriptureAnchor } = req.body;
 
     if (!scriptureAnchor?.trim()) {
@@ -774,7 +774,7 @@ router.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAcce
 
 router.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { videoId } = req.params;
+    const videoId = String(req.params.videoId);
     const [deleted] = await db
       .delete(topicVideos)
       .where(eq(topicVideos.id, videoId))
@@ -793,7 +793,7 @@ router.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess, 
 
 router.post("/api/topic-videos/:videoId/generate", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { videoId } = req.params;
+    const videoId = String(req.params.videoId);
 
     const [topicVideo] = await db
       .select()
@@ -918,7 +918,7 @@ router.post("/api/video-topics/cleanup-avatar-videos", requireAuth, requirePipel
 
 router.post("/api/video-topics/:id/expand-cross-references", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const maxReferences = parseInt(req.body.maxReferences) || 7;
     const result = await expandTopicCrossReferences(id, maxReferences);
     res.json(result);

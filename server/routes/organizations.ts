@@ -182,7 +182,7 @@ router.get("/api/organizations/my-org", requireAuth, async (req, res) => {
 router.get("/api/organizations/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
 
     const [membership] = await db.select()
       .from(organizationMembers)
@@ -225,7 +225,7 @@ router.get("/api/organizations/:id", requireAuth, async (req, res) => {
 router.get("/api/organizations/:id/members", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
 
     const [membership] = await db.select()
       .from(organizationMembers)
@@ -256,8 +256,8 @@ router.get("/api/organizations/:id/members", requireAuth, async (req, res) => {
 router.put("/api/organizations/:id/members/:userId/role", requireAuth, async (req, res) => {
   try {
     const requesterId = req.authUserId!;
-    const orgId = req.params.id;
-    const targetUserId = req.params.userId;
+    const orgId = String(req.params.id);
+    const targetUserId = String(req.params.userId);
     const { role } = req.body;
 
     if (role !== "elder" && role !== "member") {
@@ -301,8 +301,8 @@ router.put("/api/organizations/:id/members/:userId/role", requireAuth, async (re
 router.delete("/api/organizations/:id/members/:userId", requireAuth, async (req, res) => {
   try {
     const requesterId = req.authUserId!;
-    const orgId = req.params.id;
-    const targetUserId = req.params.userId;
+    const orgId = String(req.params.id);
+    const targetUserId = String(req.params.userId);
 
     const [requesterMembership] = await db.select()
       .from(organizationMembers)
@@ -350,7 +350,7 @@ router.delete("/api/organizations/:id/members/:userId", requireAuth, async (req,
 router.post("/api/organizations/:id/churches", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const conferenceId = req.params.id;
+    const conferenceId = String(req.params.id);
     const { name } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
@@ -401,7 +401,7 @@ router.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
   res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId!;
-    const conferenceId = req.params.id;
+    const conferenceId = String(req.params.id);
 
     const [conference] = await db.select()
       .from(organizations)
@@ -435,7 +435,7 @@ router.get("/api/organizations/:id/churches", requireAuth, async (req, res) => {
 router.post("/api/organizations/:id/announcement", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
 

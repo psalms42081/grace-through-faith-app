@@ -42,8 +42,9 @@ async function generateVoiceover(): Promise<{ audioUrl: string; localPath: strin
           use_speaker_boost: false,
         },
       }),
-    },
-    60000
+      service: "elevenlabs",
+      serviceLabel: "ellen-white-poc-voiceover",
+    }
   );
 
   if (!response.ok) {

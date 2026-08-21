@@ -12,14 +12,14 @@ let hits = 0;
 let misses = 0;
 
 const CLEANUP_INTERVAL = 60_000;
-setInterval(() => {
+(setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of cache) {
     if (now > entry.expiresAt) {
       cache.delete(key);
     }
   }
-}, CLEANUP_INTERVAL).unref();
+}, CLEANUP_INTERVAL) as unknown as NodeJS.Timeout).unref();
 
 export function getCacheStats() {
   return {

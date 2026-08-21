@@ -73,6 +73,14 @@ args = "Start Frontend"
 task = "workflow.run"
 args = "Start Backend"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "typecheck"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "lint"
+
 [[workflows.workflow]]
 name = "Start App"
 author = "agent"
@@ -109,6 +117,28 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "typecheck"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run typecheck"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "lint"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run lint"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [userenv]
 

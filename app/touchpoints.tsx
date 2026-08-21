@@ -221,7 +221,7 @@ export default function TouchPointsScreen() {
                     },
                   ]}
                 >
-                  <Text style={styles.tileTitle} numberOfLines={2} lineBreakMode="word">
+                  <Text style={styles.tileTitle} numberOfLines={2} lineBreakMode="tail">
                     {topic.title}
                   </Text>
                   <Ionicons

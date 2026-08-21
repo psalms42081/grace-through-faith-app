@@ -117,7 +117,7 @@ router.get("/api/admin/users", requireAdmin, async (req: Request, res: Response)
 
 router.get("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [user] = await db
       .select({
@@ -213,7 +213,7 @@ router.get("/api/admin/users/:id", requireAdmin, async (req: Request, res: Respo
 
 router.patch("/api/admin/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { role } = req.body;
 
     const validRoles = ["member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
@@ -237,7 +237,7 @@ router.patch("/api/admin/users/:id/role", requireAdmin, async (req: Request, res
 
 router.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     if (id === req.authUserId) {
       return res.status(400).json({ error: "Cannot delete your own account" });

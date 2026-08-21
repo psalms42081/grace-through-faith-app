@@ -18,7 +18,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { apiRequest } from "@/lib/query-client";
 import Colors from "@/constants/colors";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
@@ -384,9 +384,9 @@ function StudyCompletionScreen({
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) return;
-      const fileUri = FileSystem.cacheDirectory + "study-summary.txt";
-      await FileSystem.writeAsStringAsync(fileUri, summaryText, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(fileUri, { mimeType: "text/plain", dialogTitle: "Share Study Summary" });
+      const file = new File(Paths.cache, "study-summary.txt");
+      file.write(summaryText);
+      await Sharing.shareAsync(file.uri, { mimeType: "text/plain", dialogTitle: "Share Study Summary" });
     } catch {}
   }, [summaryText]);
 
@@ -1507,9 +1507,9 @@ function DeepSessionSummary({
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) return;
-      const fileUri = FileSystem.cacheDirectory + "study-summary.txt";
-      await FileSystem.writeAsStringAsync(fileUri, summaryText, { encoding: FileSystem.EncodingType.UTF8 });
-      await Sharing.shareAsync(fileUri, { mimeType: "text/plain", dialogTitle: "Share Study Summary" });
+      const file = new File(Paths.cache, "study-summary.txt");
+      file.write(summaryText);
+      await Sharing.shareAsync(file.uri, { mimeType: "text/plain", dialogTitle: "Share Study Summary" });
     } catch {}
   }, [summaryText]);
 

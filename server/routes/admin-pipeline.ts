@@ -311,7 +311,7 @@ router.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, re
 
 router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [resource] = await db
       .select({
@@ -479,7 +479,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, as
 
 router.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [resource] = await db
       .select({
@@ -603,7 +603,7 @@ router.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, async
 
 router.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, async (req, res) => {
   try {
-    const { quarterCode } = req.params;
+    const quarterCode = String(req.params.quarterCode);
 
     const quarterly = await db
       .select()
@@ -763,7 +763,7 @@ router.get("/api/admin/pipeline/quarters", requirePipelineAccess, async (_req, r
 
 router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { role } = req.body;
 
     if (!role || !["member", "student", "church_leader_pending", "church_leader", "editor", "admin"].includes(role)) {
@@ -804,7 +804,7 @@ router.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
 
 router.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAccess, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const notes = await db
       .select({
@@ -823,7 +823,7 @@ router.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAcc
       .orderBy(desc(resourceReviewNotes.createdAt));
 
     const userIds = [...new Set(notes.map(n => n.createdBy))];
-    const userMap: Record<string, { displayName: string | null; email: string; role: string | null }> = {};
+    const userMap: Record<string, { displayName: string | null; email: string | null; role: string | null }> = {};
 
     if (userIds.length > 0) {
       for (const uid of userIds) {

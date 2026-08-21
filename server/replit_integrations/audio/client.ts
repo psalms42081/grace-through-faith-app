@@ -14,11 +14,11 @@ const _openai = new OpenAI({
   timeout: getTimeout("openai"),
 });
 
-const origChatCreate = _openai.chat.completions.create.bind(_openai.chat.completions);
+const origChatCreate: (...args: any[]) => any = _openai.chat.completions.create.bind(_openai.chat.completions);
 _openai.chat.completions.create = ((...args: any[]) =>
   withAIConcurrency(() => origChatCreate(...args))) as any;
 
-const origTranscCreate = _openai.audio.transcriptions.create.bind(_openai.audio.transcriptions);
+const origTranscCreate: (...args: any[]) => any = _openai.audio.transcriptions.create.bind(_openai.audio.transcriptions);
 _openai.audio.transcriptions.create = ((...args: any[]) =>
   withAIConcurrency(() => origTranscCreate(...args))) as any;
 

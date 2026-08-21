@@ -13,7 +13,7 @@ import {
   analyticsCache,
 } from "../../shared/schema";
 import { eq, sql, like, and } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const DEMO_PREFIX = "demo-";
 const DEMO_EMAIL_DOMAIN = "@demo.gracethroughfaith.app";

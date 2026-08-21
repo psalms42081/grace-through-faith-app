@@ -23,7 +23,12 @@ import { useToast } from "@/contexts/ToastContext";
 import { PIONEERS } from "@/constants/pioneers";
 import type { Pioneer } from "@/constants/pioneers";
 import { queryClient, apiRequest } from "@/lib/query-client";
-import { SUPPORTED_LANGUAGES, setLanguage, getSavedLanguage, useDeviceLanguage } from "@/lib/i18n";
+import {
+  SUPPORTED_LANGUAGES,
+  setLanguage,
+  getSavedLanguage,
+  useDeviceLanguage as setDeviceLanguage,
+} from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 
@@ -85,7 +90,7 @@ export default function SettingsScreen() {
 
   const handleUseDeviceLang = useCallback(async () => {
     setShowLangPicker(false);
-    await useDeviceLanguage();
+    await setDeviceLanguage();
     setCurrentLang(i18n.language || "en");
     showToast(t("profile.languageChanged", "Language updated"), "success");
   }, [showToast, t]);

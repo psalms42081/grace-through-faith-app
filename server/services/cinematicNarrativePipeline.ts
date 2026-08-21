@@ -560,7 +560,7 @@ export async function runCinematicNarrativePipeline(
         await dbRetry(() =>
           db.insert(topicVideos).values({
             topicId,
-            scriptureAnchor: topic.scriptureAnchor,
+            scriptureAnchor: topic.scriptureAnchor ?? "",
             finalVideoUrl: assembledVideoUrl,
             assembledVideoUrl,
             thumbnailUrl,

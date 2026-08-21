@@ -84,7 +84,7 @@ router.post("/api/characters", requireAdmin, async (req: Request, res: Response)
 
 router.put("/api/characters/:id", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { name, slug, characterType, gender, description, cloudinaryUrl, thumbnailUrl, voiceId, aliases } = req.body;
 
     if (aliases !== undefined && (!Array.isArray(aliases) || !aliases.every((a: unknown) => typeof a === "string"))) {
@@ -130,7 +130,7 @@ router.post(
   upload.single("image"),
   async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
 
       const char = await getCharacterById(id);
       if (!char) {
@@ -162,7 +162,7 @@ router.post(
 
 router.patch("/api/characters/:id/toggle-active", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const char = await toggleCharacterActive(id);
 
     if (!char) {

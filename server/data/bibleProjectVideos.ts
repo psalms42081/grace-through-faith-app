@@ -3,7 +3,7 @@ export interface BibleProjectVideo {
   title: string;
   youtubeId: string;
   duration: string;
-  durationMinutes: number;
+  durationMinutes?: number;
   allowEmbed?: boolean;
   description: string;
   series: string;

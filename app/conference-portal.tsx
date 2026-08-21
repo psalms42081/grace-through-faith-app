@@ -231,7 +231,7 @@ export default function ConferencePortalScreen() {
   async function handleAddChurch(church: SdaChurchResult) {
     if (!conferenceId) return;
     try {
-      await apiRequest(`/api/organizations/${conferenceId}/churches`, "POST", { name: church.name }, token || undefined);
+      await apiRequest("POST", `/api/organizations/${conferenceId}/churches`, { name: church.name });
       queryClient.invalidateQueries({ queryKey: [`/api/organizations/${conferenceId}/churches`] });
       setShowAddChurch(false);
       setChurchSearch("");

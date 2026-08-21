@@ -198,9 +198,7 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
         ...(Platform.OS === "android" ? { channelId: "daily-reminders" } : {}),
       },
       trigger: {
-        type: mod.SchedulableTriggerInputTypes?.DAILY
-          ? mod.SchedulableTriggerInputTypes.DAILY
-          : ("daily" as any),
+        type: mod.SchedulableTriggerInputTypes.DAILY,
         hour,
         minute,
         repeats: true,

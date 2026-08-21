@@ -43,7 +43,7 @@ router.post("/api/video-pipeline/generate", requireAuth, async (req, res) => {
 
 router.get("/api/video-pipeline/status/:jobId", requireAuth, async (req, res) => {
   try {
-    const { jobId } = req.params;
+    const jobId = String(req.params.jobId);
 
     const [job] = await db
       .select()
@@ -229,7 +229,7 @@ router.post("/api/video-pipeline/bible-story-produce", requireAuth, async (req, 
 });
 
 router.get("/api/video-pipeline/bible-story-status/:episodeId", requireAuth, async (req, res) => {
-  const { episodeId } = req.params;
+  const episodeId = String(req.params.episodeId);
   const job = activePipelineJobs.get(episodeId);
 
   if (!job) {

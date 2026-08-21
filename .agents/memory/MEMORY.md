@@ -13,3 +13,4 @@
 - [Path B WCAG deviations](gtf-path-b-wcag.md) — brief's SS gradient light end and #8A8A8A muted text fail 4.5:1 on cream; use ssGradientSafe + inkMutedText from home-v2 theme for all future Path B screens.
 - [Devotions boundary and rollout](gtf-devotions-boundary.md) — Devotions gathers plans, ODB, EGW, and series in one landing; Sabbath School stays separate; review behind preview routes before live swaps.
 - [Devotional authorship boundary](gtf-devotional-authorship.md) — catalog devotionals need human-curated provenance; hide legacy/AI records without breaking enrolled journeys.
+- [Typecheck scope boundary](gtf-typecheck-scope.md) — root checks include operational scripts and seeds; exclude only standalone artifacts, generated output, and test harnesses.

@@ -80,7 +80,7 @@ export default function PassageContextScreen() {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {isGenerating ? "Generating study materials..." : "Loading study materials..."}
+              {"Loading study materials..."}
             </Text>
           </View>
         ) : !hasContent ? (

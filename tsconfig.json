@@ -17,5 +17,15 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "artifacts/**",
+    "comparison-deck/**",
+    "dist/**",
+    "server_dist/**",
+    "server/tests/**",
+    "**/.generated/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

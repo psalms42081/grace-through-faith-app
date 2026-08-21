@@ -26,7 +26,7 @@ router.get("/api/plans", cachedResponse(300), async (_req, res) => {
 
 router.get("/api/plans/:id", cachedResponse(300), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [plan] = await db
       .select()
       .from(readingPlans)
@@ -130,7 +130,8 @@ router.get("/api/user-plans", requireAuth, async (req, res) => {
 router.patch("/api/user-plans/:id/day/:day", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id, day } = req.params;
+    const id = String(req.params.id);
+    const day = String(req.params.day);
     const dayNum = parseInt(day, 10);
 
     if (isNaN(dayNum) || dayNum < 1) {

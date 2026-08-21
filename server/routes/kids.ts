@@ -662,7 +662,7 @@ router.get("/api/kids/story/:id/scenes", async (req, res) => {
 
 router.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const existing = await db
       .select()
@@ -717,7 +717,7 @@ router.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, a
 
 router.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const scene = await db
       .select()
       .from(kidsStoryScenes)

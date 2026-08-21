@@ -190,7 +190,7 @@ async function linkUserToChurch(userId: string) {
 
   await db.insert(hierarchyMembership).values({
     userId,
-    hierarchyNodeId: CHURCH_ID,
+    hierarchyNodeId: CHURCH_A_ID,
     role: "pastor",
     isPrimary: true,
   });

@@ -68,8 +68,11 @@ const ONBOARDING_KEY = "@grace-through-faith/onboarded";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-if (typeof globalThis !== "undefined" && !globalThis.__rejectionHandlerSet) {
-  globalThis.__rejectionHandlerSet = true;
+type RejectionHandlerGlobal = typeof globalThis & { __rejectionHandlerSet?: boolean };
+const rejectionHandlerGlobal = globalThis as RejectionHandlerGlobal;
+
+if (!rejectionHandlerGlobal.__rejectionHandlerSet) {
+  rejectionHandlerGlobal.__rejectionHandlerSet = true;
   const handler = (event: any) => {
     const reason = event?.reason || event;
     const msg = reason instanceof Error ? reason.message : String(reason);

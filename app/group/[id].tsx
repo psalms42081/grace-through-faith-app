@@ -858,6 +858,87 @@ export default function GroupDetailScreen() {
           </View>
         </View>
       ) : null}
+
+      {manageMember && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setManageMember(null)}>
+          <Pressable style={s.modalOverlay} onPress={() => setManageMember(null)}>
+            <View style={[s.memberSheet, { backgroundColor: isDark ? "#1A1A24" : "#fff" }]}>
+              <Text style={[s.memberSheetTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {manageMember.displayName || "Member"}
+              </Text>
+              <Text style={[s.memberSheetRole, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Current role: {manageMember.role}
+              </Text>
+
+              {manageMember.role !== "leader" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "leader" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="shield" size={20} color={theme.accent} />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    Promote to Leader
+                  </Text>
+                </Pressable>
+              )}
+
+              {manageMember.role !== "moderator" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "moderator" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="star" size={20} color="#7C3AED" />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    {manageMember.role === "leader" ? "Demote to Moderator" : "Promote to Moderator"}
+                  </Text>
+                </Pressable>
+              )}
+
+              {manageMember.role !== "member" && (
+                <Pressable
+                  style={[s.memberSheetAction, { borderColor: theme.border }]}
+                  onPress={() => {
+                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "member" });
+                    setManageMember(null);
+                  }}
+                >
+                  <Ionicons name="arrow-down" size={20} color={theme.textMuted} />
+                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+                    Demote to Member
+                  </Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                style={[s.memberSheetAction, { borderColor: "#FF3B3020" }]}
+                onPress={() => {
+                  removeMemberMutation.mutate({ targetUserId: manageMember.userId });
+                }}
+              >
+                <Ionicons name="person-remove" size={20} color="#FF3B30" />
+                <Text style={[s.memberSheetActionText, { color: "#FF3B30", fontFamily: "Inter_500Medium" }]}>
+                  Remove from Group
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[s.memberSheetCancel, { backgroundColor: isDark ? "#2A2A36" : "#F3F3F3" }]}
+                onPress={() => setManageMember(null)}
+              >
+                <Text style={[s.memberSheetCancelText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -962,87 +1043,6 @@ function DiscussionCard({
           </View>
         </View>
       ) : null}
-
-      {manageMember && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setManageMember(null)}>
-          <Pressable style={s.modalOverlay} onPress={() => setManageMember(null)}>
-            <View style={[s.memberSheet, { backgroundColor: isDark ? "#1A1A24" : "#fff" }]}>
-              <Text style={[s.memberSheetTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {manageMember.displayName || "Member"}
-              </Text>
-              <Text style={[s.memberSheetRole, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Current role: {manageMember.role}
-              </Text>
-
-              {manageMember.role !== "leader" && (
-                <Pressable
-                  style={[s.memberSheetAction, { borderColor: theme.border }]}
-                  onPress={() => {
-                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "leader" });
-                    setManageMember(null);
-                  }}
-                >
-                  <Ionicons name="shield" size={20} color={theme.accent} />
-                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    Promote to Leader
-                  </Text>
-                </Pressable>
-              )}
-
-              {manageMember.role !== "moderator" && (
-                <Pressable
-                  style={[s.memberSheetAction, { borderColor: theme.border }]}
-                  onPress={() => {
-                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "moderator" });
-                    setManageMember(null);
-                  }}
-                >
-                  <Ionicons name="star" size={20} color="#7C3AED" />
-                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    {manageMember.role === "leader" ? "Demote to Moderator" : "Promote to Moderator"}
-                  </Text>
-                </Pressable>
-              )}
-
-              {manageMember.role !== "member" && (
-                <Pressable
-                  style={[s.memberSheetAction, { borderColor: theme.border }]}
-                  onPress={() => {
-                    promoteMutation.mutate({ targetUserId: manageMember.userId, newRole: "member" });
-                    setManageMember(null);
-                  }}
-                >
-                  <Ionicons name="arrow-down" size={20} color={theme.textMuted} />
-                  <Text style={[s.memberSheetActionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    Demote to Member
-                  </Text>
-                </Pressable>
-              )}
-
-              <Pressable
-                style={[s.memberSheetAction, { borderColor: "#FF3B3020" }]}
-                onPress={() => {
-                  removeMemberMutation.mutate({ targetUserId: manageMember.userId });
-                }}
-              >
-                <Ionicons name="person-remove" size={20} color="#FF3B30" />
-                <Text style={[s.memberSheetActionText, { color: "#FF3B30", fontFamily: "Inter_500Medium" }]}>
-                  Remove from Group
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[s.memberSheetCancel, { backgroundColor: isDark ? "#2A2A36" : "#F3F3F3" }]}
-                onPress={() => setManageMember(null)}
-              >
-                <Text style={[s.memberSheetCancelText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                  Cancel
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
     </View>
   );
 }

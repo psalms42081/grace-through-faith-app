@@ -36248,7 +36248,7 @@ router2.post("/api/prayers", optionalAuth, (req, res, next) => {
 router2.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [existing] = await db.select({ userId: prayerRequests.userId }).from(prayerRequests).where((0, import_drizzle_orm4.eq)(prayerRequests.id, id2));
     if (!existing) return res.status(404).json({ error: "Not found" });
     if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
@@ -36272,7 +36272,7 @@ router2.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
 router2.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [existing] = await db.select({ userId: prayerRequests.userId }).from(prayerRequests).where((0, import_drizzle_orm4.eq)(prayerRequests.id, id2));
     if (!existing) return res.status(404).json({ error: "Not found" });
     if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
@@ -41740,7 +41740,7 @@ router14.get("/api/kids/story/:id/scenes", async (req, res) => {
 });
 router14.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const existing = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.storyId, id2)).orderBy((0, import_drizzle_orm17.asc)(kidsStoryScenes.sceneIndex));
     if (existing.length > 0) {
       return res.json(existing);
@@ -41776,7 +41776,7 @@ router14.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter,
 });
 router14.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const scene = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.id, id2)).limit(1);
     if (!scene.length) {
       return res.status(404).json({ error: "Scene not found" });
@@ -42601,7 +42601,7 @@ router15.get("/api/groups/public", async (req, res) => {
 });
 router15.get("/api/groups/:id", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
     let members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2));
@@ -42650,7 +42650,7 @@ router15.get("/api/groups/:id", async (req, res) => {
 router15.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     await db.delete(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     await db.update(prayerGroups).set({
       memberCount: import_drizzle_orm19.sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`
@@ -42664,7 +42664,7 @@ router15.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
 router15.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ error: "Target user ID is required" });
     if (targetUserId === userId) return res.status(400).json({ error: "Cannot remove yourself. Use leave instead." });
@@ -42687,7 +42687,7 @@ router15.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => 
 router15.delete("/api/groups/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     const [userRow] = await db.select().from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const isAdmin = userRow?.role === "admin";
@@ -42712,7 +42712,7 @@ router15.delete("/api/groups/:id", requireAuth, async (req, res) => {
 });
 router15.get("/api/groups/:id/prayers", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const prayers = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(prayerRequests.createdAt));
     return res.json(prayers);
   } catch (err) {
@@ -42723,7 +42723,7 @@ router15.get("/api/groups/:id/prayers", async (req, res) => {
 router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { title, content, authorName } = req.body;
     if (!title) return res.status(400).json({ error: "Prayer title is required" });
     const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -42767,7 +42767,7 @@ router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
 });
 router15.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
   try {
-    const { prayerId } = req.params;
+    const prayerId = String(req.params.prayerId);
     const { memberName } = req.body;
     const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.id, prayerId));
     if (!prayer) return res.status(404).json({ error: "Prayer not found" });
@@ -42788,7 +42788,7 @@ router15.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
 });
 router15.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (req, res) => {
   try {
-    const { prayerId } = req.params;
+    const prayerId = String(req.params.prayerId);
     await db.update(prayerRequests).set({
       answered: true,
       answeredAt: /* @__PURE__ */ new Date()
@@ -42802,7 +42802,7 @@ router15.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (
 router15.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { trackId } = req.body;
     if (!trackId) return res.status(400).json({ error: "Track ID is required" });
     const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -42821,7 +42821,7 @@ router15.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
 router15.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { targetUserId, newRole } = req.body;
     if (!targetUserId || !newRole) return res.status(400).json({ error: "Target user and role required" });
     if (!["leader", "moderator", "member"].includes(newRole)) {
@@ -42841,7 +42841,7 @@ router15.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
 router15.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to view discussions" });
     const discussions = await db.select().from(groupDiscussions).where((0, import_drizzle_orm19.eq)(groupDiscussions.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(groupDiscussions.createdAt));
@@ -42854,7 +42854,7 @@ router15.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
 router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
     const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -42886,7 +42886,7 @@ router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
 });
 router15.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
   try {
-    const { discussionId } = req.params;
+    const discussionId = String(req.params.discussionId);
     const replies = await db.select().from(groupDiscussionReplies).where((0, import_drizzle_orm19.eq)(groupDiscussionReplies.discussionId, discussionId)).orderBy(groupDiscussionReplies.createdAt);
     return res.json(replies);
   } catch (err) {
@@ -42897,7 +42897,8 @@ router15.get("/api/groups/:id/discussions/:discussionId/replies", async (req, re
 router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2, discussionId } = req.params;
+    const id2 = String(req.params.id);
+    const discussionId = String(req.params.discussionId);
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
     const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -42920,7 +42921,7 @@ router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, as
 });
 router15.get("/api/groups/:id/announcements", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const announcements = await db.select().from(groupAnnouncements).where((0, import_drizzle_orm19.eq)(groupAnnouncements.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(groupAnnouncements.createdAt));
     return res.json(announcements);
   } catch (err) {
@@ -42931,7 +42932,7 @@ router15.get("/api/groups/:id/announcements", async (req, res) => {
 router15.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
     const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -42997,7 +42998,7 @@ router15.get("/api/churches", cachedResponse(300), async (req, res) => {
 });
 router15.get("/api/churches/:id", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [church] = await db.select().from(sdaChurches).where((0, import_drizzle_orm19.eq)(sdaChurches.id, id2));
     if (!church) return res.status(404).json({ error: "Church not found" });
     return res.json(church);
@@ -43009,7 +43010,7 @@ router15.get("/api/churches/:id", async (req, res) => {
 router15.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { planId } = req.body;
     if (!planId) return res.status(400).json({ error: "Plan ID is required" });
     const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -43035,7 +43036,7 @@ router15.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
 router15.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
     if (!group.isPublic) {
@@ -43089,7 +43090,7 @@ router15.get("/api/groups/:id/plan-progress", async (req, res) => {
 router15.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { content, dayTitle, passageLabel } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
     const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
@@ -43163,7 +43164,7 @@ router15.post("/api/streams/create", requireAuth, async (req, res) => {
 });
 router15.get("/api/streams/:id/token", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const displayName = req.query.displayName || "Guest";
     const userId = extractUserId(req);
     const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
@@ -43196,7 +43197,7 @@ router15.get("/api/streams/livekit-client.umd.js", async (_req, res) => {
 });
 router15.get("/api/streams/:id/room", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const displayName = req.query.displayName || "Guest";
     const userId = extractUserId(req);
     const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
@@ -43251,7 +43252,7 @@ router15.get("/api/streams/active", async (_req, res) => {
 });
 router15.get("/api/streams/:id", async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     let groupName = null;
@@ -43268,7 +43269,7 @@ router15.get("/api/streams/:id", async (req, res) => {
 router15.post("/api/streams/:id/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     const [caller] = await db.select().from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
@@ -43405,7 +43406,7 @@ router15.get("/api/leader-requests", requireAdmin, async (req, res) => {
 });
 router15.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
@@ -43426,7 +43427,7 @@ router15.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res)
 });
 router15.post("/api/leader-requests/:id/reject", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
@@ -45747,7 +45748,7 @@ router21.get("/api/resources/in-progress", requireAuth, async (req, res) => {
 });
 router21.get("/api/resources/:slug", optionalAuth, async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = String(req.params.slug);
     const userId = getEffectiveUserId(req);
     const [resource] = await db.select().from(resources).where((0, import_drizzle_orm29.and)((0, import_drizzle_orm29.eq)(resources.slug, slug), (0, import_drizzle_orm29.eq)(resources.status, "published"))).limit(1);
     if (!resource) {
@@ -45782,7 +45783,7 @@ router21.get("/api/resources/:slug", optionalAuth, async (req, res) => {
 router21.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { progressPercent, completed } = req.body;
     if (progressPercent === void 0 && completed === void 0) {
       return res.status(400).json({ error: "progressPercent or completed is required" });
@@ -45815,7 +45816,7 @@ router21.post("/api/resources/:id/bookmark", optionalAuth, async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: "Sign in to save to Library", requiresAuth: true });
     }
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const existing = await db.select().from(resourceBookmarks).where(
       (0, import_drizzle_orm29.and)(
         (0, import_drizzle_orm29.eq)(resourceBookmarks.userId, userId),
@@ -45881,7 +45882,7 @@ router21.post("/api/resources/generate/family-worship", requireAuth, aiGeneratio
 });
 router21.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [resource] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
@@ -45906,7 +45907,7 @@ router21.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
 });
 router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { action, notes } = req.body;
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
       return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
@@ -45961,7 +45962,7 @@ router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
 });
 router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [current] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, id2)).limit(1);
     if (!current) {
       return res.status(404).json({ error: "Resource not found" });
@@ -46258,7 +46259,7 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
 });
 router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [resource] = await db.select({
       id: resources.id,
       title: resources.title,
@@ -46401,7 +46402,7 @@ router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, 
 });
 router22.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [resource] = await db.select({
       id: resources.id,
       title: resources.title,
@@ -46502,7 +46503,7 @@ router22.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, asy
 });
 router22.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, async (req, res) => {
   try {
-    const { quarterCode } = req.params;
+    const quarterCode = String(req.params.quarterCode);
     const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm31.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (quarterly.length === 0) {
       return res.status(404).json({ error: `Quarter ${quarterCode} not found` });
@@ -46626,7 +46627,7 @@ router22.get("/api/admin/pipeline/quarters", requirePipelineAccess, async (_req,
 });
 router22.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { role } = req.body;
     if (!role || !["member", "student", "church_leader_pending", "church_leader", "editor", "admin"].includes(role)) {
       return res.status(400).json({ error: "role must be member, student, church_leader_pending, church_leader, editor, or admin" });
@@ -46652,7 +46653,7 @@ router22.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
 });
 router22.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const notes = await db.select({
       id: resourceReviewNotes.id,
       resourceId: resourceReviewNotes.resourceId,
@@ -46781,7 +46782,7 @@ router23.get("/api/admin/users", requireAdmin, async (req, res) => {
 });
 router23.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [user] = await db.select({
       id: users.id,
       username: users.username,
@@ -46843,7 +46844,7 @@ router23.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
 });
 router23.patch("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { role } = req.body;
     const validRoles = ["member", "student", "church_leader_pending", "church_leader", "editor", "admin"];
     if (!role || !validRoles.includes(role)) {
@@ -46862,7 +46863,7 @@ router23.patch("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
 });
 router23.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     if (id2 === req.authUserId) {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
@@ -47042,7 +47043,7 @@ router24.get("/api/organizations/my-org", requireAuth, async (req, res) => {
 router24.get("/api/organizations/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
     const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership) {
       return res.status(403).json({ error: "You are not a member of this organization" });
@@ -47072,7 +47073,7 @@ router24.get("/api/organizations/:id", requireAuth, async (req, res) => {
 router24.get("/api/organizations/:id/members", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
     const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership) {
       return res.status(403).json({ error: "You are not a member of this organization" });
@@ -47092,8 +47093,8 @@ router24.get("/api/organizations/:id/members", requireAuth, async (req, res) => 
 router24.put("/api/organizations/:id/members/:userId/role", requireAuth, async (req, res) => {
   try {
     const requesterId = req.authUserId;
-    const orgId = req.params.id;
-    const targetUserId = req.params.userId;
+    const orgId = String(req.params.id);
+    const targetUserId = String(req.params.userId);
     const { role } = req.body;
     if (role !== "elder" && role !== "member") {
       return res.status(400).json({ error: "Role must be 'elder' or 'member'" });
@@ -47120,8 +47121,8 @@ router24.put("/api/organizations/:id/members/:userId/role", requireAuth, async (
 router24.delete("/api/organizations/:id/members/:userId", requireAuth, async (req, res) => {
   try {
     const requesterId = req.authUserId;
-    const orgId = req.params.id;
-    const targetUserId = req.params.userId;
+    const orgId = String(req.params.id);
+    const targetUserId = String(req.params.userId);
     const [requesterMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, requesterId))).limit(1);
     if (!requesterMembership || requesterMembership.role !== "pastor" && requesterMembership.role !== "elder") {
       return res.status(403).json({ error: "Only pastors and elders can remove members" });
@@ -47149,7 +47150,7 @@ router24.delete("/api/organizations/:id/members/:userId", requireAuth, async (re
 router24.post("/api/organizations/:id/churches", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const conferenceId = req.params.id;
+    const conferenceId = String(req.params.id);
     const { name } = req.body;
     if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
       return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
@@ -47185,7 +47186,7 @@ router24.get("/api/organizations/:id/churches", requireAuth, async (req, res) =>
   res.setHeader("Pragma", "no-cache");
   try {
     const userId = req.authUserId;
-    const conferenceId = req.params.id;
+    const conferenceId = String(req.params.id);
     const [conference] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, conferenceId)).limit(1);
     if (!conference || conference.type !== "conference") {
       return res.status(400).json({ error: "Not a conference organization" });
@@ -47204,7 +47205,7 @@ router24.get("/api/organizations/:id/churches", requireAuth, async (req, res) =>
 router24.post("/api/organizations/:id/announcement", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const orgId = req.params.id;
+    const orgId = String(req.params.id);
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
     const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId)));
@@ -49769,7 +49770,7 @@ router26.post("/api/video-pipeline/generate", requireAuth, async (req, res) => {
 });
 router26.get("/api/video-pipeline/status/:jobId", requireAuth, async (req, res) => {
   try {
-    const { jobId } = req.params;
+    const jobId = String(req.params.jobId);
     const [job] = await db.select().from(videoPipelineJobs).where((0, import_drizzle_orm37.eq)(videoPipelineJobs.id, jobId)).limit(1);
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
@@ -49914,7 +49915,7 @@ router26.post("/api/video-pipeline/bible-story-produce", requireAuth, async (req
   }
 });
 router26.get("/api/video-pipeline/bible-story-status/:episodeId", requireAuth, async (req, res) => {
-  const { episodeId } = req.params;
+  const episodeId = String(req.params.episodeId);
   const job = activePipelineJobs.get(episodeId);
   if (!job) {
     const [episode] = await db.select().from(biblicalEpisodes).where((0, import_drizzle_orm37.eq)(biblicalEpisodes.id, episodeId));
@@ -51549,7 +51550,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
         await dbRetry(
           () => db.insert(topicVideos).values({
             topicId,
-            scriptureAnchor: topic.scriptureAnchor,
+            scriptureAnchor: topic.scriptureAnchor ?? "",
             finalVideoUrl: assembledVideoUrl,
             assembledVideoUrl,
             thumbnailUrl,
@@ -51852,7 +51853,7 @@ router27.get("/api/video-topics", requireAuth, requirePipelineAccess, async (req
 });
 router27.post("/api/video-topics/:id/generate-script", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
@@ -51877,17 +51878,17 @@ router27.post("/api/video-topics/:id/generate-script", requireAuth, requirePipel
     res.json(updated);
   } catch (err) {
     console.error("Failed to generate script:", err);
-    const { id: id2 } = req.params;
-    const [current] = await db.select({ status: videoTopics.status, avatarVideoUrl: videoTopics.avatarVideoUrl }).from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => []);
+    const catchId = String(req.params.id);
+    const [current] = await db.select({ status: videoTopics.status, avatarVideoUrl: videoTopics.avatarVideoUrl }).from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, catchId)).catch(() => []);
     const restoreStatus = current?.avatarVideoUrl ? "avatar-ready" : current?.status === "generating" ? "script-ready" : current?.status || "failed";
-    await db.update(videoTopics).set({ status: restoreStatus, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => {
+    await db.update(videoTopics).set({ status: restoreStatus, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, catchId)).catch(() => {
     });
     res.status(500).json({ error: "Failed to generate script" });
   }
 });
 router27.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { generatedScript } = req.body;
     if (typeof generatedScript !== "string" || !generatedScript.trim()) {
       return res.status(400).json({ error: "Script text is required." });
@@ -51909,7 +51910,7 @@ router27.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, asyn
 });
 router27.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
@@ -51995,8 +51996,8 @@ router27.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelin
     });
   } catch (err) {
     console.error("[video-topics] Submit to HeyGen failed:", err);
-    const { id: id2 } = req.params;
-    await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => {
+    const catchId = String(req.params.id);
+    await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, catchId)).catch(() => {
     });
     res.status(500).json({ error: "Failed to submit to HeyGen" });
   }
@@ -52084,7 +52085,7 @@ router27.post("/api/webhooks/heygen", async (req, res) => {
 });
 router27.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
@@ -52122,7 +52123,7 @@ router27.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePi
 });
 router27.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
@@ -52161,7 +52162,7 @@ router27.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePi
 });
 router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { action, notes } = req.body;
     if (!action || action !== "approve" && action !== "reject") {
       return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'." });
@@ -52195,7 +52196,7 @@ router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAcces
 });
 router27.get("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const videos = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.topicId, id2)).orderBy(topicVideos.createdAt);
     res.json(videos);
   } catch (err) {
@@ -52205,7 +52206,7 @@ router27.get("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAcc
 });
 router27.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { scriptureAnchor } = req.body;
     if (!scriptureAnchor?.trim()) {
       return res.status(400).json({ error: "Scripture anchor is required" });
@@ -52235,7 +52236,7 @@ router27.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAc
 });
 router27.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { videoId } = req.params;
+    const videoId = String(req.params.videoId);
     const [deleted] = await db.delete(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId)).returning();
     if (!deleted) {
       return res.status(404).json({ error: "Topic video not found" });
@@ -52248,7 +52249,7 @@ router27.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess
 });
 router27.post("/api/topic-videos/:videoId/generate", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { videoId } = req.params;
+    const videoId = String(req.params.videoId);
     const [topicVideo] = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId));
     if (!topicVideo) {
       return res.status(404).json({ error: "Topic video not found" });
@@ -52332,7 +52333,7 @@ router27.post("/api/video-topics/cleanup-avatar-videos", requireAuth, requirePip
 });
 router27.post("/api/video-topics/:id/expand-cross-references", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const maxReferences = parseInt(req.body.maxReferences) || 7;
     const result = await expandTopicCrossReferences(id2, maxReferences);
     res.json(result);
@@ -52919,7 +52920,7 @@ router28.get("/api/series", cachedResponse(300), async (_req, res) => {
 });
 router28.get("/api/series/:id", cachedResponse(300), async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [series] = await db.select().from(biblicalSeries).where((0, import_drizzle_orm42.eq)(biblicalSeries.id, id2));
     if (!series) {
       return res.status(404).json({ error: "Series not found" });
@@ -53022,7 +53023,7 @@ router29.get("/api/plans", cachedResponse(300), async (_req, res) => {
 });
 router29.get("/api/plans/:id", cachedResponse(300), async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm43.eq)(readingPlans.id, id2));
     if (!plan) {
       return res.status(404).json({ error: "Plan not found" });
@@ -53090,7 +53091,8 @@ router29.get("/api/user-plans", requireAuth, async (req, res) => {
 router29.patch("/api/user-plans/:id/day/:day", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const { id: id2, day } = req.params;
+    const id2 = String(req.params.id);
+    const day = String(req.params.day);
     const dayNum = parseInt(day, 10);
     if (isNaN(dayNum) || dayNum < 1) {
       return res.status(400).json({ error: "Invalid day number" });
@@ -55679,7 +55681,7 @@ router32.post("/api/characters", requireAdmin, async (req, res) => {
 });
 router32.put("/api/characters/:id", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const { name, slug, characterType, gender, description, cloudinaryUrl, thumbnailUrl, voiceId, aliases } = req.body;
     if (aliases !== void 0 && (!Array.isArray(aliases) || !aliases.every((a) => typeof a === "string"))) {
       return res.status(400).json({ error: "aliases must be an array of strings" });
@@ -55719,7 +55721,7 @@ router32.post(
   upload.single("image"),
   async (req, res) => {
     try {
-      const { id: id2 } = req.params;
+      const id2 = String(req.params.id);
       const char = await getCharacterById(id2);
       if (!char) {
         return res.status(404).json({ error: "Character not found" });
@@ -55745,7 +55747,7 @@ router32.post(
 );
 router32.patch("/api/characters/:id/toggle-active", requireAdmin, async (req, res) => {
   try {
-    const { id: id2 } = req.params;
+    const id2 = String(req.params.id);
     const char = await toggleCharacterActive(id2);
     if (!char) {
       return res.status(404).json({ error: "Character not found" });

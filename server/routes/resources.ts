@@ -168,7 +168,7 @@ router.get("/api/resources/in-progress", requireAuth, async (req, res) => {
 
 router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = String(req.params.slug);
     const userId = getEffectiveUserId(req);
 
     const [resource] = await db
@@ -220,7 +220,7 @@ router.get("/api/resources/:slug", optionalAuth, async (req, res) => {
 router.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { progressPercent, completed } = req.body;
 
     if (progressPercent === undefined && completed === undefined) {
@@ -262,7 +262,7 @@ router.post("/api/resources/:id/bookmark", optionalAuth, async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: "Sign in to save to Library", requiresAuth: true });
     }
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const existing = await db
       .select()
@@ -349,7 +349,7 @@ router.post("/api/resources/generate/family-worship", requireAuth, aiGenerationL
 
 router.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [resource] = await db
       .select()
@@ -390,7 +390,7 @@ router.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
 
 router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { action, notes } = req.body;
 
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
@@ -472,7 +472,7 @@ router.post("/api/resources/:id/review", requireEditor, async (req, res) => {
 
 router.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [current] = await db
       .select()

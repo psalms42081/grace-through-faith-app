@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 
 interface ShareCardProps {
@@ -94,9 +94,11 @@ export function useShareInsight() {
           }
 
           const uri = await viewShotRef.current.capture();
-          const fileUri = FileSystem.cacheDirectory + "share-card.png";
-          await FileSystem.copyAsync({ from: uri, to: fileUri });
-          await Sharing.shareAsync(fileUri, {
+          const sourceFile = new File(uri);
+          const sharedFile = new File(Paths.cache, "share-card.png");
+          if (sharedFile.exists) sharedFile.delete();
+          sourceFile.copy(sharedFile);
+          await Sharing.shareAsync(sharedFile.uri, {
             mimeType: "image/png",
             dialogTitle: "Share Insight",
           });

@@ -8,7 +8,7 @@ const _openai = new OpenAI({
   timeout: getTimeout("openai"),
 });
 
-const originalCreate = _openai.chat.completions.create.bind(_openai.chat.completions);
+const originalCreate: (...args: any[]) => any = _openai.chat.completions.create.bind(_openai.chat.completions);
 _openai.chat.completions.create = ((...args: any[]) =>
   withAIConcurrency(() => originalCreate(...args))) as any;
 

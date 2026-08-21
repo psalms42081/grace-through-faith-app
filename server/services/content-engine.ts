@@ -55,7 +55,7 @@ function createOpenAIClient(): OpenAI {
     timeout: getTimeout("openai"),
   });
 
-  const originalCreate = client.chat.completions.create.bind(client.chat.completions);
+  const originalCreate: (...args: any[]) => any = client.chat.completions.create.bind(client.chat.completions);
   client.chat.completions.create = ((...args: any[]) =>
     withAIConcurrency(() => originalCreate(...args))) as any;
 

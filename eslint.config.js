@@ -4,6 +4,15 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    ignores: [
+      "artifacts/**",
+      "comparison-deck/**",
+      "dist/**",
+      "server_dist/**",
+      ".expo/**",
+    ],
+    rules: {
+      "react/no-unescaped-entities": "off",
+    },
   }
 ]);

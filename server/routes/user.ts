@@ -445,7 +445,7 @@ router.post("/api/prayers", optionalAuth, (req, res, next) => {
 router.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [existing] = await db
       .select({ userId: prayerRequests.userId })
       .from(prayerRequests)
@@ -478,7 +478,7 @@ router.patch("/api/prayers/:id", optionalAuth, async (req, res) => {
 router.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [existing] = await db
       .select({ userId: prayerRequests.userId })
       .from(prayerRequests)

@@ -12,12 +12,14 @@ const DEVICE_UUID_KEY = "@grace-through-faith/deviceUUID";
 
 interface AuthUser {
   id: string;
+  username: string;
   displayName: string | null;
   email: string | null;
   familyId: string | null;
   isPro: boolean;
   isPatron: boolean;
   role: string;
+  organizationId: string | null;
 }
 
 interface AuthContextType {

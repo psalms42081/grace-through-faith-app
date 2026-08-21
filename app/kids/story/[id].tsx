@@ -265,8 +265,6 @@ const SCENE_GRADIENT_PALETTES = [
 ];
 
 function ConfettiBurst({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-
   const items = useMemo(() => {
     const particles: { id: number; emoji: string; x: number; delay: number; rotation: number }[] = [];
     const emojis = ["star", "sparkles", "heart", "flash"];
@@ -281,6 +279,8 @@ function ConfettiBurst({ visible }: { visible: boolean }) {
     }
     return particles;
   }, []);
+
+  if (!visible) return null;
 
   return (
     <View style={confettiStyles.container} pointerEvents="none">

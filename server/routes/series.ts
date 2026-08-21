@@ -43,7 +43,7 @@ router.get("/api/series", cachedResponse(300), async (_req, res) => {
 
 router.get("/api/series/:id", cachedResponse(300), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [series] = await db
       .select()
       .from(biblicalSeries)

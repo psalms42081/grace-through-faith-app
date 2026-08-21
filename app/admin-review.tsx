@@ -2002,7 +2002,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
     );
   }
 
-  const uniqueTopics = React.useMemo(() => {
+  const uniqueTopics = (() => {
     if (!topics) return [];
     const seen = new Set<string>();
     return topics.filter((t) => {
@@ -2010,7 +2010,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
       seen.add(t.id);
       return true;
     });
-  }, [topics]);
+  })();
 
   return (
     <View style={vtStyles.container}>

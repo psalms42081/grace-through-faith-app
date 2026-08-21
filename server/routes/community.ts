@@ -321,7 +321,7 @@ router.get("/api/groups/public", async (req, res) => {
 
 router.get("/api/groups/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
     if (!group) return res.status(404).json({ error: "Group not found" });
 
@@ -379,7 +379,7 @@ router.get("/api/groups/:id", async (req, res) => {
 router.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     await db.delete(prayerGroupMembers)
       .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
@@ -398,7 +398,7 @@ router.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
 router.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ error: "Target user ID is required" });
     if (targetUserId === userId) return res.status(400).json({ error: "Cannot remove yourself. Use leave instead." });
@@ -429,7 +429,7 @@ router.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => {
 router.delete("/api/groups/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [member] = await db.select().from(prayerGroupMembers)
       .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
     const [userRow] = await db.select().from(users).where(eq(users.id, userId));
@@ -456,7 +456,7 @@ router.delete("/api/groups/:id", requireAuth, async (req, res) => {
 
 router.get("/api/groups/:id/prayers", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const prayers = await db.select().from(prayerRequests)
       .where(eq(prayerRequests.groupId, id))
       .orderBy(desc(prayerRequests.createdAt));
@@ -471,7 +471,7 @@ router.get("/api/groups/:id/prayers", async (req, res) => {
 router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { title, content, authorName } = req.body;
     if (!title) return res.status(400).json({ error: "Prayer title is required" });
 
@@ -521,7 +521,7 @@ router.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
 
 router.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
   try {
-    const { prayerId } = req.params;
+    const prayerId = String(req.params.prayerId);
     const { memberName } = req.body;
 
     const [prayer] = await db.select().from(prayerRequests).where(eq(prayerRequests.id, prayerId));
@@ -547,7 +547,7 @@ router.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
 
 router.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (req, res) => {
   try {
-    const { prayerId } = req.params;
+    const prayerId = String(req.params.prayerId);
     await db.update(prayerRequests).set({
       answered: true,
       answeredAt: new Date(),
@@ -565,7 +565,7 @@ router.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (re
 router.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { trackId } = req.body;
     if (!trackId) return res.status(400).json({ error: "Track ID is required" });
 
@@ -590,7 +590,7 @@ router.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
 router.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { targetUserId, newRole } = req.body;
     if (!targetUserId || !newRole) return res.status(400).json({ error: "Target user and role required" });
     if (!["leader", "moderator", "member"].includes(newRole)) {
@@ -616,7 +616,7 @@ router.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
 router.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [membership] = await db.select().from(prayerGroupMembers)
       .where(and(eq(prayerGroupMembers.groupId, id), eq(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to view discussions" });
@@ -634,7 +634,7 @@ router.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
 router.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
 
@@ -673,7 +673,7 @@ router.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
 
 router.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
   try {
-    const { discussionId } = req.params;
+    const discussionId = String(req.params.discussionId);
     const replies = await db.select().from(groupDiscussionReplies)
       .where(eq(groupDiscussionReplies.discussionId, discussionId))
       .orderBy(groupDiscussionReplies.createdAt);
@@ -687,7 +687,8 @@ router.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res)
 router.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id, discussionId } = req.params;
+    const id = String(req.params.id);
+    const discussionId = String(req.params.discussionId);
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
 
@@ -717,7 +718,7 @@ router.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, asyn
 
 router.get("/api/groups/:id/announcements", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const announcements = await db.select().from(groupAnnouncements)
       .where(eq(groupAnnouncements.groupId, id))
       .orderBy(desc(groupAnnouncements.createdAt));
@@ -731,7 +732,7 @@ router.get("/api/groups/:id/announcements", async (req, res) => {
 router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
 
@@ -820,7 +821,7 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
 
 router.get("/api/churches/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [church] = await db.select().from(sdaChurches).where(eq(sdaChurches.id, id));
     if (!church) return res.status(404).json({ error: "Church not found" });
     return res.json(church);
@@ -835,7 +836,7 @@ router.get("/api/churches/:id", async (req, res) => {
 router.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { planId } = req.body;
     if (!planId) return res.status(400).json({ error: "Plan ID is required" });
 
@@ -870,7 +871,7 @@ router.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
 router.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [group] = await db.select().from(prayerGroups).where(eq(prayerGroups.id, id));
     if (!group) return res.status(404).json({ error: "Group not found" });
 
@@ -940,7 +941,7 @@ router.get("/api/groups/:id/plan-progress", async (req, res) => {
 router.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { content, dayTitle, passageLabel } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
 
@@ -1036,7 +1037,7 @@ router.post("/api/streams/create", requireAuth, async (req, res) => {
 
 router.get("/api/streams/:id/token", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const displayName = (req.query.displayName as string) || "Guest";
     const userId = extractUserId(req);
 
@@ -1074,7 +1075,7 @@ router.get("/api/streams/livekit-client.umd.js", async (_req, res) => {
 
 router.get("/api/streams/:id/room", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const displayName = (req.query.displayName as string) || "Guest";
 
     const userId = extractUserId(req);
@@ -1144,7 +1145,7 @@ router.get("/api/streams/active", async (_req, res) => {
 
 router.get("/api/streams/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Stream not found" });
 
@@ -1165,7 +1166,7 @@ router.get("/api/streams/:id", async (req, res) => {
 router.post("/api/streams/:id/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     const [caller] = await db.select().from(users).where(eq(users.id, userId));
@@ -1341,7 +1342,7 @@ router.get("/api/leader-requests", requireAdmin, async (req, res) => {
 
 router.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [request] = await db.select().from(leaderRequests).where(eq(leaderRequests.id, id));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
@@ -1365,7 +1366,7 @@ router.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res) =
 
 router.post("/api/leader-requests/:id/reject", requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [request] = await db.select().from(leaderRequests).where(eq(leaderRequests.id, id));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
