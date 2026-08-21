@@ -4,6 +4,7 @@ import helmet from "helmet";
 import compression from "compression";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { warnIfDevotionalCatalogIsEmpty } from "./db";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -334,6 +335,7 @@ function setupErrorHandler(app: express.Application) {
 
 (async () => {
   logSecurityPosture();
+  await warnIfDevotionalCatalogIsEmpty();
 
   app.get("/__health", (_req, res) => {
     res.status(200).send("ok");

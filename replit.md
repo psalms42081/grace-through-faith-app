@@ -44,6 +44,27 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 ### Known Issues
 - Port conflicts occasionally occur on workflow restart
 
+### Database schema and devotional catalog recovery
+
+`npm run db:push` reconciles the database schema only. It does **not** execute
+numbered SQL migrations, including
+`migrations/0005_restore_approved_devotional_catalog.sql`, which promotes the
+21 editorially approved devotional series from `legacy_unclassified` to
+`human_curated`.
+
+After a database reset or fresh schema push, seed the devotional plans first,
+then run:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_devotional_human_authorship.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_restore_approved_devotional_catalog.sql
+npm run test:devotional-catalog
+```
+
+The deployment build runs this catalog check before starting its temporary
+server. The server also logs a critical, non-fatal warning at startup when no
+human-curated devotional series exist.
+
 ## User Preferences
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 

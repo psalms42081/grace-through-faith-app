@@ -1983,8 +1983,28 @@ var init_schema = __esm({
 // server/db.ts
 var db_exports = {};
 __export(db_exports, {
-  db: () => db
+  db: () => db,
+  warnIfDevotionalCatalogIsEmpty: () => warnIfDevotionalCatalogIsEmpty
 });
+async function warnIfDevotionalCatalogIsEmpty() {
+  try {
+    const result = await pool.query(
+      `SELECT count(*)::int AS count
+         FROM devotional_plan
+        WHERE provenance = 'human_curated'`
+    );
+    if (result.rows[0]?.count === 0) {
+      console.error(
+        "[CRITICAL][devotional-catalog] No human-curated devotional series are available. The catalog is empty. `db:push` only synchronizes schema; apply migrations/0005_restore_approved_devotional_catalog.sql after devotional plans are seeded."
+      );
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[CRITICAL][devotional-catalog] Could not verify catalog health at startup: ${detail}`
+    );
+  }
+}
 var import_node_postgres, import_pg, pool, db;
 var init_db = __esm({
   "server/db.ts"() {
@@ -55420,6 +55440,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
 }
 
 // server/index.ts
+init_db();
 var fs9 = __toESM(require("fs"));
 var path10 = __toESM(require("path"));
 var app = (0, import_express39.default)();
@@ -55668,6 +55689,7 @@ function setupErrorHandler(app2) {
 }
 (async () => {
   logSecurityPosture();
+  await warnIfDevotionalCatalogIsEmpty();
   app.get("/__health", (_req, res) => {
     res.status(200).send("ok");
   });

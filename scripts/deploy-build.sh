@@ -220,6 +220,9 @@ npx tsx scripts/promote-admins.ts
 echo "=== Post-seed verification ==="
 npx tsx scripts/verify-production.ts
 
+echo "=== Verifying approved devotional catalog ==="
+npm run test:devotional-catalog
+
 echo "=== Data seeding complete ==="
 
 echo "=== Running security regression gate ==="
