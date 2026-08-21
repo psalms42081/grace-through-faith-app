@@ -183,7 +183,7 @@ export default function HomeV2Screen() {
         ? `Day ${todayData.today.dayNumber} · ${todayData.today.title}`
         : "Choose a reading plan",
       done: readToday,
-      onPress: () => router.push("/plans" as any),
+      onPress: () => router.push("/devotions" as any),
     },
     {
       key: "ss",

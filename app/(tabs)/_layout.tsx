@@ -138,13 +138,19 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="plans"
+        name="devotions"
         options={{
-          title: t("tabs.plans"),
+          title: t("tabs.devotions"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <CalendarDays size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="plans"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

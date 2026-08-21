@@ -4,7 +4,7 @@ import { router } from "expo-router";
 // AI plan generation is disabled. This screen redirects to devotionals.
 export default function CreatePlanScreen() {
   useEffect(() => {
-    router.replace("/devotionals");
+    router.replace("/devotions");
   }, []);
   return null;
 }

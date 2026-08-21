@@ -399,7 +399,7 @@ function NodeCard({
 
               {node.linkedDevotionalTheme && (
                 <Pressable
-                  onPress={() => router.push("/devotionals" as any)}
+                  onPress={() => router.push("/devotions" as any)}
                   style={({ pressed }) => [
                     styles.devotionalLink,
                     {
@@ -501,7 +501,7 @@ function NodeCard({
                       onPress={() =>
                         node.linkedTrackId
                           ? router.push(`/study-path/${node.linkedTrackId}` as any)
-                          : router.push("/devotionals" as any)
+                          : router.push("/devotions" as any)
                       }
                       style={({ pressed }) => [
                         styles.nextStepButton,

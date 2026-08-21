@@ -408,7 +408,7 @@ export default function DevotionalDayScreen() {
             <Pressable
               onPress={() => {
                 safeGoBack(router);
-                setTimeout(() => router.push("/devotionals"), 300);
+                setTimeout(() => router.push("/devotions"), 300);
               }}
               style={[styles.browseBtn, { backgroundColor: theme.accent }]}
             >

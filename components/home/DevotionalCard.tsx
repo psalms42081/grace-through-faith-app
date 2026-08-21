@@ -25,7 +25,7 @@ export default function DevotionalCard({ hasActivePlan, progress, total, enrollm
         } else if (hasActivePlan) {
           router.push("/devotional-day");
         } else {
-          router.push("/devotionals");
+          router.push("/devotions");
         }
       }}
       style={({ pressed }) => [

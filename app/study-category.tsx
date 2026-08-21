@@ -211,7 +211,7 @@ export default function StudyCategoryScreen() {
               id="devotional-plans"
               title="Devotional Plans"
               subtitle="Daily reading plans for spiritual growth"
-              onPress={() => router.push("/devotionals" as any)}
+              onPress={() => router.push("/devotions" as any)}
             />
           </>
         );

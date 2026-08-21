@@ -139,7 +139,7 @@ function RootLayoutNav() {
       <Stack.Screen name="historic-voices" options={{ headerShown: true, title: "Historic Voices" }} />
       <Stack.Screen name="verse-map" options={{ headerShown: false }} />
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
-      <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
+      <Stack.Screen name="devotionals" options={{ headerShown: false }} />
       <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
       <Stack.Screen name="devotions-preview" options={{ headerShown: false }} />
       <Stack.Screen name="devotional-day-preview" options={{ headerShown: false }} />
@@ -229,7 +229,10 @@ useEffect(() => {
   useEffect(() => {
     if (fontsLoaded && onboardingChecked && i18nReady) {
       SplashScreen.hideAsync().catch(() => {});
-      const directPreviewPaths = [
+      const directEntryPaths = [
+        "/devotions",
+        "/plans",
+        "/devotionals",
         "/devotions-preview",
         "/devotional-day-preview",
         "/odb-devotional-preview",
@@ -237,7 +240,7 @@ useEffect(() => {
       ];
       if (
         initialPathRef.current.startsWith("/read-legacy/") ||
-        directPreviewPaths.some((previewPath) => initialPathRef.current.startsWith(previewPath))
+        directEntryPaths.some((entryPath) => initialPathRef.current.startsWith(entryPath))
       ) {
         return;
       }

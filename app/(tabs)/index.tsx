@@ -1104,7 +1104,7 @@ interface HomeSeries {
 function ReadingPlansCard({ theme, isDark }: { theme: any; isDark: boolean }) {
   return (
     <Pressable
-      onPress={() => router.push("/(tabs)/plans" as any)}
+      onPress={() => router.push("/(tabs)/devotions" as any)}
       style={({ pressed }) => [
         readingPlanStyles.card,
         { transform: [{ scale: pressed ? 0.98 : 1 }] },
