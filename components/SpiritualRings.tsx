@@ -65,7 +65,7 @@ function AnimatedRing({
       duration: 1200,
       easing: Easing.out(Easing.cubic),
     });
-  }, [progress]);
+  }, [progress, animatedProgress]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - animatedProgress.value),

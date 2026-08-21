@@ -230,7 +230,7 @@ function RewardStep({
     badgeScale.value = withDelay(300, withSpring(1, { damping: 6, stiffness: 150 }));
     starScale.value = withDelay(600, withSpring(1, { damping: 8, stiffness: 200 }));
     haptic("success");
-  }, []);
+  }, [badgeScale, starScale]);
 
   const badgeAnim = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }],

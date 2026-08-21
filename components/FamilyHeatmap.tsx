@@ -148,7 +148,7 @@ function HeatSquare({
       index * 30,
       withTiming(progress / 100, { duration: 800, easing: Easing.out(Easing.cubic) })
     );
-  }, [progress]);
+  }, [progress, index, fillWidth]);
 
   const animatedProps = useAnimatedProps(() => ({
     width: fillWidth.value * (cellSize - 2),

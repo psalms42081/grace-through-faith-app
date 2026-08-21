@@ -121,7 +121,15 @@ export default function OnboardingScreen() {
         setTimeout(() => handleEnter(), 10000);
       }
     }, 3200);
-  }, []);
+  }, [
+    handleEnter,
+    flameOpacity,
+    flameScale,
+    glowOpacity,
+    quoteOpacity,
+    attributionOpacity,
+    buttonOpacity,
+  ]);
 
   useEffect(() => {
     return () => {

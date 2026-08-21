@@ -156,7 +156,7 @@ function SoftHotspot({
     return () => {
       if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
     };
-  }, [collected]);
+  }, [collected, d, glowOpacity, glowScale]);
 
   const glowStyle = useAnimatedStyle(() => ({
     transform: [{ scale: glowScale.value }],
@@ -845,7 +845,7 @@ export default function LivingScene({
     return () => {
       if (instructionTimerRef.current) clearTimeout(instructionTimerRef.current);
     };
-  }, [isActive, showInteractions]);
+  }, [isActive, showInteractions, instruction, kenBurnsProgress, instructionOpacity]);
 
   const patterns = [
     { fromScale: 1.0, toScale: 1.03, fromX: 0, toX: -3, fromY: 0, toY: -2 },

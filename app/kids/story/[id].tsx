@@ -161,25 +161,7 @@ function useAtmosphereAudio(currentMood: SceneMood | null, quietMode: boolean) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!mountedRef.current) return;
-
-    if (quietMode) {
-      if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
-      Object.values(playerRefs.current).forEach((p) => {
-        try { p!.volume = 0; p?.pause(); } catch {}
-      });
-      activeMood.current = null;
-      return;
-    }
-
-    if (!currentMood || !assets) return;
-    if (currentMood === activeMood.current) return;
-
-    crossfadeTo(currentMood);
-  }, [currentMood, quietMode, assets]);
-
-  const ensureLoaded = (mood: SceneMood): AudioPlayer | null => {
+  const ensureLoaded = useCallback((mood: SceneMood): AudioPlayer | null => {
     if (playerRefs.current[mood]) return playerRefs.current[mood]!;
     if (!assets?.[mood]) return null;
     if (loadingMoods.current.has(mood)) return null;
@@ -196,9 +178,9 @@ function useAtmosphereAudio(currentMood: SceneMood | null, quietMode: boolean) {
       loadingMoods.current.delete(mood);
       return null;
     }
-  };
+  }, [assets]);
 
-  const crossfadeTo = (targetMood: SceneMood) => {
+  const crossfadeTo = useCallback((targetMood: SceneMood) => {
     if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
 
     const outMood = activeMood.current;
@@ -240,7 +222,25 @@ function useAtmosphereAudio(currentMood: SceneMood | null, quietMode: boolean) {
         }
       }
     }, interval);
-  };
+  }, [ensureLoaded]);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
+
+    if (quietMode) {
+      if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
+      Object.values(playerRefs.current).forEach((p) => {
+        try { p!.volume = 0; p?.pause(); } catch {}
+      });
+      activeMood.current = null;
+      return;
+    }
+
+    if (!currentMood || !assets) return;
+    if (currentMood === activeMood.current) return;
+
+    crossfadeTo(currentMood);
+  }, [currentMood, quietMode, assets, crossfadeTo]);
 
   const cleanup = useCallback(() => {
     if (crossfadeTimer.current) clearInterval(crossfadeTimer.current);
@@ -323,7 +323,7 @@ function ConfettiParticle({
       particle.delay + 800,
       withTiming(0, { duration: 400 })
     );
-  }, []);
+  }, [particle.delay, particle.rotation, particle.x, opacity, rotate, scale, translateX, translateY]);
 
   const style = useAnimatedStyle(() => ({
     transform: [
@@ -703,7 +703,7 @@ function MoodParticle({
         false
       )
     );
-  }, []);
+  }, [delay, speed, startX, opacity, rotate, translateX, translateY]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
@@ -822,7 +822,7 @@ function TapRippleEffect({
   useEffect(() => {
     ringScale.value = withSpring(1.5, { damping: 8, stiffness: 100 });
     ringOpacity.value = withDelay(400, withTiming(0, { duration: 600 }));
-  }, []);
+  }, [ringOpacity, ringScale]);
 
   const ringStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ringScale.value }],
@@ -860,7 +860,7 @@ function BurstParticle({
   useEffect(() => {
     progress.value = withSpring(1, { damping: 10, stiffness: 120 });
     opacity.value = withDelay(500, withTiming(0, { duration: 500 }));
-  }, []);
+  }, [opacity, progress]);
 
   const animStyle = useAnimatedStyle(() => {
     const dx = Math.cos(angle) * distance * progress.value;
@@ -972,7 +972,7 @@ function SceneIllustrationPlaceholder({ mood, loading }: { mood: SceneMood; load
       -1,
       true
     );
-  }, []);
+  }, [glowOpacity, iconRotate, pulseScale]);
 
   const iconAnimStyle = useAnimatedStyle(() => ({
     transform: [
@@ -1015,33 +1015,62 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const requestIdRef = useRef(0);
+  const completedSceneRef = useRef<string | null>(null);
+  const failedSceneRef = useRef<string | null>(null);
+  const onImageLoadedRef = useRef(onImageLoaded);
+  onImageLoadedRef.current = onImageLoaded;
   const baseUrl = useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
   }, []);
 
   useEffect(() => {
-    if (!isVisible || imageUrl || loading || failed || !sceneId) return;
-    let cancelled = false;
+    if (
+      !isVisible ||
+      !sceneId ||
+      completedSceneRef.current === sceneId ||
+      failedSceneRef.current === sceneId
+    ) return;
+
+    const requestId = ++requestIdRef.current;
+    let settled = false;
+    setImageUrl(null);
+    setImageLoadError(false);
+    setFailed(false);
     setLoading(true);
+
     (async () => {
       try {
         const res = await apiRequest("POST", `/api/kids/scene/${sceneId}/generate-image`);
         const data = await res.json();
-        if (!cancelled && data.imageUrl) {
+        if (requestIdRef.current !== requestId) return;
+
+        if (data.imageUrl) {
           const fullUrl = `${baseUrl}${data.imageUrl}`;
+          completedSceneRef.current = sceneId;
           setImageUrl(fullUrl);
-          onImageLoaded?.(fullUrl);
-        } else if (!cancelled) {
+          onImageLoadedRef.current?.(fullUrl);
+        } else {
+          failedSceneRef.current = sceneId;
           setFailed(true);
         }
       } catch {
-        if (!cancelled) setFailed(true);
+        if (requestIdRef.current === requestId) {
+          failedSceneRef.current = sceneId;
+          setFailed(true);
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        settled = true;
+        if (requestIdRef.current === requestId) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [isVisible, sceneId]);
+
+    return () => {
+      if (!settled && requestIdRef.current === requestId) {
+        requestIdRef.current += 1;
+      }
+    };
+  }, [isVisible, sceneId, baseUrl]);
 
   if (imageUrl && !imageLoadError) {
     const ExpoImage = require("expo-image").Image;
@@ -1101,7 +1130,7 @@ function KenBurnsImage({
     } else {
       progress.value = withTiming(0, { duration: 500 });
     }
-  }, [isActive]);
+  }, [isActive, progress]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(progress.value, [0, 1], [pattern.fromScale, pattern.toScale]);
@@ -1233,12 +1262,12 @@ function VideoStoryPlayer({
   // Release the player on unmount — otherwise Android destroys it during host
   // teardown on a background thread (ExoPlayer wrong-thread crash on reload/nav).
   useEffect(() => {
+    const video = videoRef.current;
     return () => {
-      const v = videoRef.current as Video | null;
-      if (v) {
-        v.stopAsync()
+      if (video) {
+        video.stopAsync()
           .catch(() => {})
-          .then(() => v.unloadAsync())
+          .then(() => video.unloadAsync())
           .catch(() => {});
       }
     };
@@ -1543,7 +1572,7 @@ function PulsingPlayButton({ isSpeaking, onPress }: { isSpeaking: boolean; onPre
     } else {
       pulseScale.value = withTiming(1, { duration: 200 });
     }
-  }, [isSpeaking]);
+  }, [isSpeaking, pulseScale]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -1602,7 +1631,7 @@ function CompletionSparkle({ index, color }: { index: number; color: string }) {
     );
     translateX.value = withDelay(delay, withTiming(Math.cos(angle) * radius, { duration: 400 }));
     translateY.value = withDelay(delay, withTiming(Math.sin(angle) * radius, { duration: 400 }));
-  }, []);
+  }, [index, opacity, scale, translateX, translateY]);
 
   const animStyle = useAnimatedStyle(() => ({
     position: "absolute" as const,
@@ -1629,7 +1658,7 @@ function MoodBadge({ mood }: { mood: SceneMood }) {
   useEffect(() => {
     scale.value = withSpring(1, { damping: 12, stiffness: 150 });
     opacity.value = withTiming(1, { duration: 400 });
-  }, [mood]);
+  }, [mood, opacity, scale]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -1927,19 +1956,7 @@ export default function SceneStoryScreen() {
     Speech.stop();
   }, []);
 
-  useEffect(() => {
-    loadScenes();
-    return () => {
-      stopNarrationAudio();
-      if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
-      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
-      autoPlayRef.current = false;
-      narrationActiveRef.current = false;
-      cleanupAudio();
-    };
-  }, [id]);
-
-  const loadScenes = async () => {
+  const loadScenes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -1979,7 +1996,19 @@ export default function SceneStoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadScenes();
+    return () => {
+      stopNarrationAudio();
+      if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      autoPlayRef.current = false;
+      narrationActiveRef.current = false;
+      cleanupAudio();
+    };
+  }, [id, loadScenes, stopNarrationAudio, cleanupAudio]);
 
   const startNarrationRef = useRef<(sceneIdx: number) => void>(() => {});
   const handleCompleteRef = useRef<() => void>(() => {});
@@ -2169,7 +2198,7 @@ export default function SceneStoryScreen() {
         });
       });
     }
-  }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext, narratorVoice, stopNarrationAudio]);
+  }, [scenes, isLittleLambs, answeredWonders, autoAdvanceToNext, narratorVoice, stopNarrationAudio, narrationFadeAnim]);
 
   startNarrationRef.current = startNarration;
 
@@ -2318,6 +2347,7 @@ export default function SceneStoryScreen() {
       }
     },
   });
+  const { mutate: completeStory } = completeMutation;
 
   const toggleQuietMode = useCallback(() => {
     setQuietMode((prev) => {
@@ -2340,9 +2370,9 @@ export default function SceneStoryScreen() {
       setStoryComplete(true);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 2000);
-      completeMutation.mutate();
+      completeStory();
     }
-  }, [hasCompletionFlow]);
+  }, [hasCompletionFlow, completeStory]);
 
   handleCompleteRef.current = handleComplete;
 
@@ -2644,6 +2674,10 @@ export default function SceneStoryScreen() {
       topPad,
       autoAdvanceToNext,
       handleComplete,
+      baseUrl,
+      isTeen,
+      narrationFadeStyle,
+      quietMode,
     ]
   );
 

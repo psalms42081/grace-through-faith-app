@@ -101,7 +101,7 @@ export default function EllenWhitePortrait({
       cancelAnimation(faceSway);
       cancelAnimation(faceBreath);
     };
-  }, [isSpeaking]);
+  }, [isSpeaking, glowOpacity, glowScale, ringPulse1, ringPulse2, faceSway, faceBreath]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,

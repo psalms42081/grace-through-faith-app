@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -286,9 +286,10 @@ export default function SabbathSchoolDayScreen() {
   }, [audioSound]);
 
   React.useEffect(() => {
-    if (!audioSound) return;
-    audioSound.unloadAsync().catch(() => {});
-    setAudioSound(null);
+    setAudioSound((current) => {
+      if (current) current.unloadAsync().catch(() => {});
+      return null;
+    });
     setIsAudioPlaying(false);
     setIsAudioLoading(false);
   }, [day?.id]);
@@ -333,12 +334,20 @@ export default function SabbathSchoolDayScreen() {
     }
   };
 
+  // Keep the latest day record in a ref so the identity-change effect below can
+  // snapshot the current completed/journal values WITHOUT re-running (and
+  // clobbering in-progress edits) every time the query refetches.
+  const dayRef = useRef(day);
+  dayRef.current = day;
+
   React.useEffect(() => {
-    if (day) {
-      setIsCompleted(day.completed);
+    const current = dayRef.current;
+    if (current) {
+      setIsCompleted(current.completed);
       setShowCompletionState(false);
-      setJournalText(day.journalEntry || "");
+      setJournalText(current.journalEntry || "");
     }
+    // Re-sync local state only when the day identity changes.
   }, [day?.id]);
 
   const completeMutation = useMutation({

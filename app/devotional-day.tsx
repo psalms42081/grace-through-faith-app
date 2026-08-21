@@ -300,7 +300,7 @@ export default function DevotionalDayScreen() {
     if (depthParam === "quick" || depthParam === "standard" || depthParam === "deep") {
       setDepth(depthParam);
     }
-  }, []);
+  }, [depthParam, setDepth]);
   const { triggerMissionInvite } = useProStatus();
   const [journalText, setJournalText] = useState("");
   const [completing, setCompleting] = useState(false);
@@ -408,7 +408,7 @@ export default function DevotionalDayScreen() {
             <Pressable
               onPress={() => {
                 safeGoBack(router);
-                setTimeout(() => router.push("/devotions"), 300);
+                setTimeout(() => router.push("/devotions" as any), 300);
               }}
               style={[styles.browseBtn, { backgroundColor: theme.accent }]}
             >

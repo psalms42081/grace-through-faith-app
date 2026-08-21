@@ -25,13 +25,14 @@ export default function MusicScreen() {
   const [isBuffering, setIsBuffering] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
 
+  const activeStationId = activeStation?.id;
   const player = useAudioPlayer(activeStation?.streamUrl ?? "");
   const status = useAudioPlayerStatus(player);
 
   const isPlaying = status.playing;
 
   useEffect(() => {
-    if (activeStation) {
+    if (activeStationId) {
       setIsBuffering(true);
       setPlayError(null);
       try {
@@ -41,7 +42,7 @@ export default function MusicScreen() {
         setIsBuffering(false);
       }
     }
-  }, [activeStation?.id]);
+  }, [activeStationId, player]);
 
   useEffect(() => {
     if (status.playing) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -37,11 +37,10 @@ interface TTSPlayerBarProps {
 
 // ── Waveform animation ────────────────────────────────────────────────────────
 function WaveformBars({ isPlaying, color }: { isPlaying: boolean; color: string }) {
-  const bars = [
-    useRef(new Animated.Value(0.4)).current,
-    useRef(new Animated.Value(0.7)).current,
-    useRef(new Animated.Value(0.5)).current,
-  ];
+  const bar0 = useRef(new Animated.Value(0.4)).current;
+  const bar1 = useRef(new Animated.Value(0.7)).current;
+  const bar2 = useRef(new Animated.Value(0.5)).current;
+  const bars = useMemo(() => [bar0, bar1, bar2], [bar0, bar1, bar2]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -60,7 +59,7 @@ function WaveformBars({ isPlaying, color }: { isPlaying: boolean; color: string 
     setTimeout(() => anims[1].start(), 120);
     setTimeout(() => anims[2].start(), 240);
     return () => anims.forEach((a) => a.stop());
-  }, [isPlaying]);
+  }, [isPlaying, bars]);
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 2.5, height: 14 }}>
@@ -109,7 +108,7 @@ export default function TTSPlayerBar({
     );
     anim.start();
     return () => anim.stop();
-  }, [audio.isLoadingAudio]);
+  }, [audio.isLoadingAudio, loadingPulse]);
 
   const accentGold = theme.accent;
 

@@ -249,7 +249,7 @@ function MapsContent({
     if (!eraHasJourneys && selectedJourney !== "all") setSelectedJourney("all");
     if (selectedEra === "Exodus" && selectedJourney !== "all" && selectedJourney !== "exodus-route") setSelectedJourney("all");
     if (selectedEra === "Early Church" && selectedJourney === "exodus-route") setSelectedJourney("all");
-  }, [selectedEra, selectedJourney, eraHasJourneys]);
+  }, [selectedEra, selectedJourney, eraHasJourneys, setSelectedEra, setSelectedJourney]);
 
   const journeyActive = eraHasJourneys && selectedJourney !== "all";
 

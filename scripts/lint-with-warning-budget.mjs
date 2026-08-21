@@ -121,15 +121,15 @@ const unknownRetiredFingerprintCount = [
   ...retiredFingerprintCounts.values(),
 ].reduce((total, count) => total + count, 0);
 if (
-  activeFingerprintCount !== budget.total ||
+  activeFingerprintCount !== (budget.fingerprintPoolTotal ?? budget.total) ||
   unknownRetiredFingerprintCount !== 0
 ) {
-  console.error("The ESLint warning baseline count does not match its budget.");
+  console.error("The ESLint warning fingerprint pool is invalid.");
   process.exit(1);
 }
 
 const packedLocations = Buffer.from(budget.locationsBase64, "base64");
-if (packedLocations.length !== budget.total * 8) {
+if (packedLocations.length !== activeFingerprintCount * 8) {
   console.error("The ESLint warning baseline location data is invalid.");
   process.exit(1);
 }
@@ -157,19 +157,12 @@ for (let index = 0; index < activeFingerprints.length; index += 1) {
   allowedOccurrenceCounts.set(key, (allowedOccurrenceCounts.get(key) ?? 0) + 1);
 }
 
-const seenOccurrenceCounts = new Map();
+const seenFingerprintCounts = new Map();
 const newWarnings = [];
 for (const warning of warnings) {
-  const key = occurrenceKey(
-    warning.fingerprint,
-    warning.line,
-    warning.column,
-    warning.endLine,
-    warning.endColumn,
-  );
-  const seen = (seenOccurrenceCounts.get(key) ?? 0) + 1;
-  seenOccurrenceCounts.set(key, seen);
-  const allowed = allowedOccurrenceCounts.get(key) ?? 0;
+  const seen = (seenFingerprintCounts.get(warning.fingerprint) ?? 0) + 1;
+  seenFingerprintCounts.set(warning.fingerprint, seen);
+  const allowed = allowedFingerprintCounts.get(warning.fingerprint) ?? 0;
   if (seen > allowed) newWarnings.push(warning);
 }
 

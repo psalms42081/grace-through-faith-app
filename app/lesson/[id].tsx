@@ -306,7 +306,7 @@ function SabbathActionsSheet({
     } else {
       slideAnim.setValue(0);
     }
-  }, [visible]);
+  }, [visible, slideAnim]);
 
   if (!visible) return null;
 
@@ -725,15 +725,15 @@ export default function LessonScreen() {
   }, []);
 
   const lesson = lessonQuery.data;
-  const allSections = lesson?.sections || [];
   const assessment = lesson?.assessment;
 
   const sections = React.useMemo(() => {
+    const allSections = lesson?.sections || [];
     if (depth === "quick") {
       return allSections.filter((s) => s.sectionType === "anchor" || s.sectionType === "practice");
     }
     return allSections;
-  }, [allSections, depth]);
+  }, [lesson?.sections, depth]);
 
   const allSectionsCompleted = sections.length > 0 && sections.every((s) => completedSections.includes(s.id));
   const showAssessment = depth !== "quick";
@@ -1234,7 +1234,7 @@ export default function LessonScreen() {
         visible={showActionsSheet}
         onClose={() => setShowActionsSheet(false)}
         theme={theme}
-        sections={allSections}
+        sections={lesson.sections || []}
         completedSections={completedSections}
         onMarkComplete={() => completeMutation.mutate()}
         onToggleSection={toggleSection}

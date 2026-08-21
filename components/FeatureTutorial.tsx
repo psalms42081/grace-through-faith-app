@@ -64,7 +64,7 @@ function PulsingRing({ delay = 0, size = 120 }: { delay?: number; size?: number 
         false,
       ),
     );
-  }, []);
+  }, [delay, pulse]);
 
   const style = useAnimatedStyle(() => ({
     position: "absolute" as const,
@@ -94,7 +94,7 @@ function FloatingParticle({ delay = 0, x = 0, y = 0 }: { delay?: number; x?: num
         false,
       ),
     );
-  }, []);
+  }, [delay, float]);
 
   const style = useAnimatedStyle(() => ({
     position: "absolute" as const,

@@ -69,7 +69,7 @@ export default function InlineCoachTip({
     } else {
       floatAnim.setValue(0);
     }
-  }, [shouldShow]);
+  }, [shouldShow, fadeAnim, floatAnim]);
 
   const handleDismiss = () => {
     if (dismissed.current) return;

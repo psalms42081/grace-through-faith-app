@@ -153,7 +153,7 @@ function BottomSheetToolbar({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [slideAnim, overlayAnim]);
 
   const dismissSheet = useCallback(() => {
     Animated.parallel([
@@ -168,7 +168,7 @@ function BottomSheetToolbar({
         useNativeDriver: true,
       }),
     ]).start(() => onDismiss());
-  }, [onDismiss]);
+  }, [onDismiss, slideAnim, overlayAnim]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -880,9 +880,10 @@ export default function VerseReaderScreen() {
   const canGoPrev = chapterNum > 1;
   const canGoNext = chapterNum < totalChapters;
 
-  const verses = data?.verses ?? [];
+  const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
 
   const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef, bookName);
+  const { handleStop: audioHandleStop } = audio;
 
   const readingHistoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -957,17 +958,17 @@ export default function VerseReaderScreen() {
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
-      audio.handleStop();
+      audioHandleStop();
       router.replace(`/read/${bookId}/${chapterNum - 1}?translation=${translation}` as any);
     }
-  }, [bookId, chapterNum, canGoPrev, translation, audio.handleStop]);
+  }, [bookId, chapterNum, canGoPrev, translation, audioHandleStop]);
 
   const goToNext = useCallback(() => {
     if (canGoNext) {
-      audio.handleStop();
+      audioHandleStop();
       router.replace(`/read/${bookId}/${chapterNum + 1}?translation=${translation}` as any);
     }
-  }, [bookId, chapterNum, canGoNext, translation, audio.handleStop]);
+  }, [bookId, chapterNum, canGoNext, translation, audioHandleStop]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 

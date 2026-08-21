@@ -124,7 +124,7 @@ function PulsingFlame({ size, color }: { size: number; color: string }) {
       -1,
       true
     );
-  }, []);
+  }, [pulseScale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -156,11 +156,11 @@ function BouncyActionCard({
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   return (
     <AnimatedPressable
@@ -1086,7 +1086,6 @@ const kidsStyles = StyleSheet.create({
     color: "#FFD700",
   },
 });
-
 
 
 interface HomeSeries {

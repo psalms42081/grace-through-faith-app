@@ -106,7 +106,7 @@ function GlowEffect({ x, y, imageFrame, color, size, delay: d, duration }: {
       withTiming(1, { duration: duration * 0.4, easing: Easing.out(Easing.ease) }),
       withTiming(0.8, { duration: duration * 0.6, easing: Easing.inOut(Easing.ease) })
     ));
-  }, []);
+  }, [d, duration, opacity, scale]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -186,7 +186,7 @@ function SingleParticle({ startX, startY, drift, delay: d, duration, size, color
       ),
       -1, false
     ));
-  }, []);
+  }, [d, duration, progress, opacity]);
 
   const style = useAnimatedStyle(() => {
     const y = startY - progress.value * 0.4;
@@ -228,7 +228,7 @@ function ShimmerLine({ imageFrame, y, width: w, delay: d }: {
       ),
       -1, true
     ));
-  }, []);
+  }, [d, shimmer]);
 
   const style = useAnimatedStyle(() => ({
     opacity: shimmer.value * 0.35,
@@ -299,8 +299,11 @@ function SlingAnimation({ imageFrame, onComplete, slingPos, targetPos }: {
     }, 650);
   };
 
+  const startFlightRef = useRef(startFlight);
+  startFlightRef.current = startFlight;
+
   useEffect(() => {
-    const timer = setTimeout(startFlight, 1500);
+    const timer = setTimeout(() => startFlightRef.current(), 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -406,7 +409,7 @@ function CelebrationParticle({ x, y, size, color, delay: d, imageFrame }: {
       withSpring(1.2, { damping: 5 }),
       withTiming(0.6, { duration: 1000 })
     ));
-  }, []);
+  }, [d, translateY, opacity, scale]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -592,7 +595,10 @@ export default function CinematicScene({
 
   const narrationTop = imageFrame.offsetY + imageFrame.height;
 
-  const choreography = CAMERA_CHOREOGRAPHY[sceneIndex % CAMERA_CHOREOGRAPHY.length];
+  const choreography = useMemo(
+    () => CAMERA_CHOREOGRAPHY[sceneIndex % CAMERA_CHOREOGRAPHY.length],
+    [sceneIndex],
+  );
 
   const wasSpeakingRef = useRef(false);
   useEffect(() => {
@@ -612,7 +618,7 @@ export default function CinematicScene({
     } else {
       cameraProgress.value = withTiming(0, { duration: 500 });
     }
-  }, [isActive]);
+  }, [isActive, choreography, cameraProgress]);
 
   const cameraStyle = useAnimatedStyle(() => {
     const s = interpolate(cameraProgress.value, [0, 1], [choreography.fromScale, choreography.toScale]);

@@ -56,7 +56,7 @@ function SkeletonCard({ width, height }: { width: number | string; height: numbe
     );
     anim.start();
     return () => anim.stop();
-  }, []);
+  }, [pulseAnim]);
 
   return (
     <Animated.View
@@ -712,7 +712,7 @@ export default function LeaderAnalyticsScreen() {
     if (demoAvailable && !demoMode) {
       setDemoMode(true);
     }
-  }, [demoAvailable]);
+  }, [demoAvailable, demoMode]);
 
   const demoParam = demoMode && demoAvailable ? "&demo=true" : "";
 

@@ -112,6 +112,10 @@ export default function WordStudyScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/strong/verse/${resolvedVerseId}?translation=${translation}`] });
     },
   });
+  const {
+    mutate: generateWordStudy,
+    isPending: isGeneratingWordStudy,
+  } = generateMutation;
 
   const generationAttempted = useRef(false);
 
@@ -124,19 +128,26 @@ export default function WordStudyScreen() {
       // (lookedUpVerse is populated). Never trigger on stale route text.
       lookedUpVerse?.text &&
       verseReference &&
-      !generateMutation.isPending &&
+      !isGeneratingWordStudy &&
       !generationAttempted.current
     ) {
       generationAttempted.current = true;
-      generateMutation.mutate();
+      generateWordStudy();
     }
-  }, [wordMappings, resolvedVerseId, lookedUpVerse?.text, verseReference]);
+  }, [
+    wordMappings,
+    resolvedVerseId,
+    lookedUpVerse?.text,
+    verseReference,
+    isGeneratingWordStudy,
+    generateWordStudy,
+  ]);
 
   useEffect(() => {
     generationAttempted.current = false;
   }, [resolvedVerseId]);
 
-  const isLoading = mappingsLoading || (hasRefParams && !lookedUpVerse && !lookupError) || generateMutation.isPending;
+  const isLoading = mappingsLoading || (hasRefParams && !lookedUpVerse && !lookupError) || isGeneratingWordStudy;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 

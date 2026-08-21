@@ -76,7 +76,7 @@ export default function ContextPanel({
       );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  }, [data, expanded]);
+  }, [data, expanded, fabScale, fabGlow]);
 
   const fabAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: fabScale.value }],

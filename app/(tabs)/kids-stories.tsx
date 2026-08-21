@@ -93,7 +93,7 @@ function ProgressBar({
       duration: 800,
       easing: Easing.out(Easing.cubic),
     });
-  }, [fraction]);
+  }, [fraction, progress]);
 
   const barStyle = useAnimatedStyle(() => ({
     width: `${Math.min(progress.value * 100, 100)}%` as any,
@@ -139,11 +139,11 @@ function AnimatedCollectionCard({
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   const allDone = completedCount >= col.storyCount && col.storyCount > 0;
 
@@ -222,11 +222,11 @@ function AnimatedStoryCard({
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, []);
+  }, [scale]);
 
   return (
     <Animated.View entering={FadeInDown.delay(idx * 70).duration(400).springify()}>

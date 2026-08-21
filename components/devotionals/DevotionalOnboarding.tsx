@@ -82,7 +82,7 @@ export default function DevotionalOnboarding({
     slideY.value = 20;
     fadeIn.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
     slideY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.ease) });
-  }, [step]);
+  }, [step, fadeIn, slideY]);
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: fadeIn.value,

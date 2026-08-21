@@ -219,7 +219,7 @@ export default function DiscoverV2Screen() {
     });
   }, []);
 
-  const topics = touchpoints?.topics ?? [];
+  const topics = useMemo(() => touchpoints?.topics ?? [], [touchpoints?.topics]);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
   const topTopics = useMemo(
     () => TOP_TOPIC_IDS.map((id) => topicById.get(id)).filter(Boolean) as typeof topics,

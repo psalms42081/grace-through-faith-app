@@ -55,7 +55,7 @@ export default function BroadcastsScreen() {
       Linking.openURL(activeSource.watchUrl);
     }
     handleCloseWebView();
-  }, [activeSource]);
+  }, [activeSource, handleCloseWebView]);
 
   return (
     <View style={[st.container, { backgroundColor: theme.background }]}>

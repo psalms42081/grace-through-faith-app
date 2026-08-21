@@ -105,11 +105,16 @@ export default function HistoricVoicesScreen() {
 
   const hasCommentary = commentaryData && commentaryData.length > 0;
 
+  // `mutate` is referentially stable across renders (React Query guarantee), so
+  // depending on it (rather than the whole mutation object) keeps this a
+  // trigger-once effect without re-running on every render.
+  const { mutate: generateCommentary, isPending: isGenerating, isError: generateError } = generateMutation;
+
   useEffect(() => {
-    if (bookIdNum && chapterNum && !isLoading && !hasCommentary && !generateMutation.isPending && !generateMutation.isError) {
-      generateMutation.mutate();
+    if (bookIdNum && chapterNum && !isLoading && !hasCommentary && !isGenerating && !generateError) {
+      generateCommentary();
     }
-  }, [bookIdNum, chapterNum, isLoading, hasCommentary, generateMutation.isPending, generateMutation.isError]);
+  }, [bookIdNum, chapterNum, isLoading, hasCommentary, isGenerating, generateError, generateCommentary]);
 
   const commentatorNames = hasCommentary
     ? sortCommentatorNames([...new Set(commentaryData!.map((c) => c.commentator.name))])

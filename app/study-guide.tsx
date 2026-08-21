@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -89,7 +89,7 @@ function AnimatedPhaseDot({
     }
     prevDone.current = isDone;
     prevActive.current = isActive;
-  }, [isDone, isActive]);
+  }, [isDone, isActive, scaleAnim, opacityAnim]);
 
   const bgColor = isDone ? "#2E7D32" : isActive ? accentColor : mutedColor + "40";
 
@@ -142,7 +142,7 @@ export default function StudyGuideScreen() {
   activeStudyContractRef.current = studyContractKey;
   const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
-  const restoreSession = (data: { session: any; aiMessage?: string; resumed?: boolean }) => {
+  const restoreSession = useCallback((data: { session: any; aiMessage?: string; resumed?: boolean }) => {
     setSessionId(data.session.id);
     setMessages(data.session.messages);
     setCurrentPhase(data.session.phase);
@@ -154,7 +154,7 @@ export default function StudyGuideScreen() {
     setShowPersonaPicker(false);
     setIsStarting(false);
     setCheckingResume(false);
-  };
+  }, []);
 
   const startMutation = useMutation({
     mutationFn: async (persona: Persona) => {
@@ -252,7 +252,7 @@ export default function StudyGuideScreen() {
     return () => {
       cancelled = true;
     };
-  }, [studyContractKey]);
+  }, [studyContractKey, params.verseReference, userId, translation, restoreSession]);
 
   const handleRetry = () => {
     setStartError(false);

@@ -37,7 +37,7 @@ function GoldSparkle({ index }: { index: number }) {
       withTiming(1 + Math.random() * 0.5, { duration: 400 }),
       withTiming(0, { duration: 700 })
     ));
-  }, []);
+  }, [index, opacity, translateY, scale]);
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

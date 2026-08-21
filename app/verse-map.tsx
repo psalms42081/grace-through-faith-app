@@ -180,6 +180,17 @@ export default function VerseMapScreen() {
       if (verseMapKey) qc.invalidateQueries({ queryKey: [verseMapKey] });
     },
   });
+  const {
+    mutate: generateMap,
+    isPending: isGeneratingMap,
+  } = generateMutation;
+  const {
+    mutate: generateWords,
+    isPending: isGeneratingWords,
+  } = wordGenMutation;
+  const hasMapResponse = !!mapData;
+  const hasCachedMapData = mapData?.hasCachedData ?? false;
+  const generatedWordCount = mapData?.words.length ?? 0;
 
   // When the active translation (or resolved verse) changes, the query key
   // changes and a fresh (possibly not-yet-cached) map is fetched. Reset
@@ -191,23 +202,43 @@ export default function VerseMapScreen() {
   }, [verseMapKey]);
 
   useEffect(() => {
-    if (mapData && !mapData.hasCachedData && !generateMutation.isPending && canonicalVerseId) {
-      generateMutation.mutate();
+    if (
+      hasMapResponse &&
+      !hasCachedMapData &&
+      !isGeneratingMap &&
+      !generateError &&
+      canonicalVerseId
+    ) {
+      generateMap();
     }
-  }, [mapData?.hasCachedData, verseMapKey]);
+  }, [
+    hasMapResponse,
+    hasCachedMapData,
+    isGeneratingMap,
+    generateError,
+    canonicalVerseId,
+    generateMap,
+  ]);
 
   useEffect(() => {
     if (
-      mapData &&
-      mapData.words.length === 0 &&
-      !wordGenMutation.isPending &&
+      hasMapResponse &&
+      generatedWordCount === 0 &&
+      !isGeneratingWords &&
       !wordGenTriggered &&
       canonicalVerseId
     ) {
       setWordGenTriggered(true);
-      wordGenMutation.mutate();
+      generateWords();
     }
-  }, [mapData?.words?.length, wordGenTriggered, canonicalVerseId]);
+  }, [
+    hasMapResponse,
+    generatedWordCount,
+    isGeneratingWords,
+    wordGenTriggered,
+    canonicalVerseId,
+    generateWords,
+  ]);
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));

@@ -96,7 +96,7 @@ function StarCardSparkle({ index, color }: { index: number; color: string }) {
         false
       )
     );
-  }, []);
+  }, [index, opacity, scale]);
 
   const angle = (index * 72) * (Math.PI / 180);
   const radius = 55;
@@ -119,15 +119,21 @@ function AnimatedStarCount({ target }: { target: number }) {
   const [displayVal, setDisplayVal] = useState(0);
   const animProgress = useSharedValue(0);
   const prevRef = useRef(0);
+  // Track the latest displayed value without making the animation effect depend
+  // on it — otherwise the effect would re-fire on every counting tick and
+  // restart the animation. We only want to snapshot the current value when the
+  // target changes.
+  const displayValRef = useRef(0);
+  displayValRef.current = displayVal;
 
   useEffect(() => {
-    prevRef.current = displayVal;
+    prevRef.current = displayValRef.current;
     animProgress.value = 0;
     animProgress.value = withTiming(1, {
       duration: Math.min(900, Math.max(400, Math.abs(target - prevRef.current) * 50)),
       easing: Easing.out(Easing.cubic),
     });
-  }, [target]);
+  }, [target, animProgress]);
 
   const updateVal = React.useCallback((v: number) => {
     setDisplayVal(Math.round(v));
@@ -173,7 +179,7 @@ function PulsingStarCard({ totalStars, seedPoints, theme }: { totalStars: number
         withSpring(1, { damping: 10, stiffness: 130 })
       )
     );
-  }, [totalStars]);
+  }, [totalStars, countScale, glowOpacity, starScale]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
@@ -224,7 +230,7 @@ function AnimatedFlameIcon() {
       -1,
       false
     );
-  }, []);
+  }, [rotation]);
 
   const wobbleStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -266,7 +272,7 @@ function BadgeStarburst({ earned, color }: { earned: boolean; color: string }) {
         )
       );
     }
-  }, [earned]);
+  }, [earned, burstOpacity, burstScale]);
 
   const burstStyle = useAnimatedStyle(() => ({
     position: "absolute" as const,
@@ -316,7 +322,7 @@ function AnimatedBadgeItem({
         false
       );
     }
-  }, [earned]);
+  }, [earned, glowOpacity, scale]);
 
   const scaleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

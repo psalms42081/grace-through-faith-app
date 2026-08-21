@@ -25,7 +25,7 @@ function SkeletonBlock({ width = "100%", height = 16, borderRadius = 8, style }:
       -1,
       true
     );
-  }, []);
+  }, [pulse]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(pulse.value, [0, 1], [0.3, 0.6]),
@@ -110,7 +110,7 @@ export function ContentLoadingMessage({ message }: { message: string }) {
       -1,
       true
     );
-  }, []);
+  }, [pulse]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(pulse.value, [0, 1], [0.5, 1.0]),

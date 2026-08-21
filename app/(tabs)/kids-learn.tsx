@@ -44,7 +44,7 @@ function QuizResultSparkle({ delay, x, y, color }: { delay: number; x: number; y
       rotate.value = withTiming((Math.random() - 0.5) * 360, { duration: 400 });
     }, delay);
     return () => clearTimeout(timer);
-  }, []);
+  }, [delay, opacity, rotate, scale]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
@@ -233,7 +233,7 @@ function StarBurstItem({ index, color }: { index: number; color: string }) {
       );
     }, delay);
     return () => clearTimeout(timer);
-  }, []);
+  }, [index, rotation, scale]);
 
   const animStyle = useAnimatedStyle(() => {
     const angle = (index * 72) * (Math.PI / 180);

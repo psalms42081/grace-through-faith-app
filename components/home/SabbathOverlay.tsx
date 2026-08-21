@@ -117,7 +117,7 @@ function CandleFlame({ size }: FlameProps) {
       -1,
       true
     );
-  }, []);
+  }, [flicker, sway, glowPulse]);
 
   const flameStyle = useAnimatedStyle(() => ({
     transform: [

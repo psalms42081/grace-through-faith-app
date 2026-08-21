@@ -112,7 +112,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
       setSheetOpen(false);
       router.push(`/kids/story/${ssData.lesson.linkedStory.id}`);
     }
-  }, [ssData]);
+  }, [ssData, router]);
 
   const handleOpenPrayerWall = useCallback(() => {
     setSheetOpen(false);

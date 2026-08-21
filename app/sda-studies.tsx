@@ -31,7 +31,7 @@ function AnimatedChevron({ isExpanded, color }: { isExpanded: boolean; color: st
       duration: 150,
       useNativeDriver: true,
     }).start();
-  }, [isExpanded]);
+  }, [isExpanded, rotation]);
 
   const rotate = rotation.interpolate({
     inputRange: [0, 1],

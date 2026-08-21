@@ -73,7 +73,7 @@ function GlowCard({
       withTiming(1, { duration: 500 })
     );
     onSupport(prayer.id);
-  }, [prayer.id, onSupport]);
+  }, [prayer.id, onSupport, glowOpacity, glowScale]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,

@@ -987,6 +987,7 @@ export default function ResourceDetailScreen() {
       qc.invalidateQueries({ queryKey: [`/api/resources/${slug}`] });
     },
   });
+  const { mutate: updateProgress } = progressMutation;
 
   const sectionKeys = React.useMemo(() => getSectionKeys(resource), [resource]);
   const firstIncompleteKey = sectionKeys.find((k) => !completedSections.has(k));
@@ -1019,7 +1020,7 @@ export default function ResourceDetailScreen() {
         const totalSections = getTotalSections(resource);
         if (totalSections > 0) {
           const pct = Math.round((next.size / totalSections) * 100);
-          progressMutation.mutate({
+          updateProgress({
             progressPercent: pct,
             completed: pct >= 100,
           });
@@ -1029,7 +1030,7 @@ export default function ResourceDetailScreen() {
       });
       setExpandedOverrides((prev) => ({ ...prev, [key]: false }));
     },
-    [resource]
+    [resource, updateProgress]
   );
 
   if (isLoading) {
