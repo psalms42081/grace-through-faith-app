@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
   timestamp,
+  check,
   index,
   uniqueIndex,
   uuid,
@@ -555,29 +556,49 @@ export const illustrationLinks = pgTable("illustration_link", {
 
 // ─── DEVOTIONALS ──────────────────────────────────────────────────────────────
 
-export const devotionalPlans = pgTable("devotional_plan", {
-  id: varchar("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  description: text("description"),
-  totalDays: integer("total_days").notNull(),
-  theme: text("theme"),
-  targetGoals: jsonb("target_goals").$type<string[]>(),
-  difficultyLevel: varchar("difficulty_level", { length: 20 }),
-  estimatedMinutesPerDay: integer("estimated_minutes_per_day"),
-  category: varchar("category", { length: 20 }).default("thematic"),
-  traditionKey: varchar("tradition_key", { length: 30 }).default("core").notNull(),
-  isPublished: boolean("is_published").default(false),
-  isAiGenerated: boolean("is_ai_generated").default(false),
-  generatedForUserId: varchar("generated_for_user_id"),
-  // Catalog eligibility is deliberately explicit. Legacy records stay readable
-  // through an enrollment, but require editorial review before being offered.
-  provenance: varchar("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
-  curatedBy: varchar("curated_by", { length: 120 }),
-  curatedAt: timestamp("curated_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const devotionalPlans = pgTable(
+  "devotional_plan",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    description: text("description"),
+    totalDays: integer("total_days").notNull(),
+    theme: text("theme"),
+    targetGoals: jsonb("target_goals").$type<string[]>(),
+    difficultyLevel: varchar("difficulty_level", { length: 20 }),
+    estimatedMinutesPerDay: integer("estimated_minutes_per_day"),
+    category: varchar("category", { length: 20 }).default("thematic"),
+    traditionKey: varchar("tradition_key", { length: 30 }).default("core").notNull(),
+    isPublished: boolean("is_published").default(false),
+    isAiGenerated: boolean("is_ai_generated").default(false),
+    generatedForUserId: varchar("generated_for_user_id"),
+    // Catalog eligibility is deliberately explicit. Legacy records stay readable
+    // through an enrollment, but require editorial review before being offered.
+    provenance: varchar("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
+    curatedBy: varchar("curated_by", { length: 120 }),
+    curatedAt: timestamp("curated_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    catalogAuthorshipCheck: check(
+      "devotional_plan_catalog_authorship_check",
+      sql`${table.isPublished} IS NOT TRUE
+        OR (
+          ${table.createdAt} < TIMESTAMP '2026-04-01 00:00:00'
+          AND ${table.provenance} = 'legacy_unclassified'
+          AND ${table.isAiGenerated} IS NOT TRUE
+        )
+        OR (
+          ${table.provenance} = 'human_curated'
+          AND ${table.isAiGenerated} IS NOT TRUE
+          AND ${table.curatedBy} IS NOT NULL
+          AND ${table.curatedAt} IS NOT NULL
+        )`,
+    ),
+  }),
+);
 
 export const devotionalDays = pgTable("devotional_day", {
   id: varchar("id")

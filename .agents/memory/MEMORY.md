@@ -15,5 +15,6 @@
 - [Devotional authorship boundary](gtf-devotional-authorship.md) — catalog devotionals need human-curated provenance; hide legacy/AI records without breaking enrolled journeys.
 - [Typecheck scope boundary](gtf-typecheck-scope.md) — root checks include operational scripts and seeds; exclude only standalone artifacts, generated output, and test harnesses.
 - [Numbered migration adoption](gtf-numbered-migration-adoption.md) — serialize migrations with dependent seeds; verify legacy postconditions and execute safe data backfills before baselining.
+- [Publish-safe grandfather checks](gtf-publish-grandfather-checks.md) — avoid NOT VALID in Publish-diffed checks; use a verified fixed-cutoff grandfather branch when legacy rows must survive.
 - [Bible tab entry](gtf-bible-tab-entry.md) — resume the latest chapter for signed-in readers; new and guest readers open today’s verse, with the book browser kept secondary.
 - [Lint warning baselines](lint-warning-baselines.md) — legacy warnings use exact finding fingerprints; lower the allowlist during cleanup and never absorb new findings.
