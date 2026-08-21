@@ -23,7 +23,13 @@ import { Router } from "express";
   try {
     const traditionKey = String(req.query.traditionKey || "all");
     const lang = normalizeLanguageCode(String(req.query.lang || "en"));
-    const conditions = [eq(devotionalPlans.isPublished, true)];
+    // Catalog visibility is not access control for an existing journey. Only
+    // editorially reviewed, human-authored series may be newly discovered.
+    const conditions = [
+      eq(devotionalPlans.isPublished, true),
+      eq(devotionalPlans.provenance, "human_curated"),
+      eq(devotionalPlans.isAiGenerated, false),
+    ];
     if (traditionKey !== "all") {
       conditions.push(eq(devotionalPlans.traditionKey, traditionKey));
     }
@@ -47,10 +53,40 @@ import { Router } from "express";
 
 router.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
   try {
+    const planId = String(req.params.planId);
+    const userId = getEffectiveUserId(req);
+    const [catalogPlan] = await db
+      .select({ id: devotionalPlans.id })
+      .from(devotionalPlans)
+      .where(
+        and(
+          eq(devotionalPlans.id, planId),
+          eq(devotionalPlans.isPublished, true),
+          eq(devotionalPlans.provenance, "human_curated"),
+          eq(devotionalPlans.isAiGenerated, false),
+        ),
+      )
+      .limit(1);
+    const [ownedEnrollment] = catalogPlan
+      ? []
+      : await db
+          .select({ id: userPlanEnrollments.id })
+          .from(userPlanEnrollments)
+          .where(
+            and(
+              eq(userPlanEnrollments.userId, userId),
+              eq(userPlanEnrollments.planId, planId),
+            ),
+          )
+          .limit(1);
+    if (!catalogPlan && !ownedEnrollment) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
     const days = await db
       .select()
       .from(devotionalDays)
-      .where(eq(devotionalDays.planId, String(req.params.planId)))
+      .where(eq(devotionalDays.planId, planId))
       .orderBy(devotionalDays.dayNumber);
     return res.json(days);
   } catch (err) {
@@ -80,6 +116,24 @@ router.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
 
     if (existing.length) {
       return res.json({ enrollment: existing[0], alreadyEnrolled: true });
+    }
+
+    // Existing enrollments were handled above. Any new start must come from
+    // the reviewed catalog so a guessed legacy/AI plan ID cannot bypass it.
+    const [catalogPlan] = await db
+      .select({ id: devotionalPlans.id })
+      .from(devotionalPlans)
+      .where(
+        and(
+          eq(devotionalPlans.id, String(planId)),
+          eq(devotionalPlans.isPublished, true),
+          eq(devotionalPlans.provenance, "human_curated"),
+          eq(devotionalPlans.isAiGenerated, false),
+        ),
+      )
+      .limit(1);
+    if (!catalogPlan) {
+      return res.status(404).json({ error: "Plan not found" });
     }
 
     const enrollment = await db
@@ -285,6 +339,7 @@ router.post("/api/reading-plans/generate-disabled", optionalAuth, async (req, re
         estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
         isPublished: false,
         isAiGenerated: true,
+        provenance: "ai_generated",
         generatedForUserId: userId || null,
       })
       .returning();

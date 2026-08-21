@@ -58,6 +58,7 @@ __export(schema_exports, {
   contextCards: () => contextCards,
   deviceTokens: () => deviceTokens,
   devotionalDays: () => devotionalDays,
+  devotionalPlanProvenanceAudits: () => devotionalPlanProvenanceAudits,
   devotionalPlans: () => devotionalPlans,
   dinnerTableTopics: () => dinnerTableTopics,
   eventVerseMaps: () => eventVerseMaps,
@@ -153,7 +154,7 @@ __export(schema_exports, {
   videoPipelineJobs: () => videoPipelineJobs,
   videoTopics: () => videoTopics
 });
-var import_drizzle_orm, import_pg_core, import_drizzle_zod, users, organizations, organizationMembers, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, heygenVideos, bibleTranslations, bibleBooks, bibleVerses, bibleCache, bibleCacheStats, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback, deviceTokens, leaderRequests, videoPipelineJobs, videoAvatars, videoTopics, topicVideos, biblicalSeries, biblicalEpisodes, readingPlans, planDays, userPlans, sabbathTypes, sabbathScriptures, characters, churchHierarchy, hierarchyMembership, topicEngagement, topicEngagementDaily, topicTrend, pastoralCareAlert, memberPastoralOptin, analyticsCache, userLocation, heatmapTile, activityPatternTile, hierarchyBroadcast, hierarchyBroadcastReceipt, contentTranslations;
+var import_drizzle_orm, import_pg_core, import_drizzle_zod, users, organizations, organizationMembers, userActivityCounters, insertUserSchema, families, prayerGroups, prayerGroupMembers, groupDiscussions, groupDiscussionReplies, groupAnnouncements, heygenVideos, bibleTranslations, bibleBooks, bibleVerses, bibleCache, bibleCacheStats, strongEntries, verseStrongMaps, contextCards, commentators, commentaryEntries, applicationTemplates, locations, locationVerseMaps, timelineEvents, eventVerseMaps, illustrations, illustrationLinks, devotionalPlans, devotionalDays, devotionalPlanProvenanceAudits, userPlanEnrollments, userPlanProgress, userNotes, userHighlights, userBookmarks, kidsCollections, kidsStories, kidsQuizQuestions, kidsProgress, kidsWonderCache, kidsStoryScenes, kidsBadges, kidsUserBadges, kidsStreaks, childProfiles, dinnerTableTopics, kidsPurchases, kidsDailyQuests, prayerRequests, readingHistory, readingStreaks, studyGuideSessions, verseMapCache, chapterContextCache, layerCompletions, studyJournalEntries, chapterPassageSections, chapterSummaries, formationTracks, formationModules, formationLessons, lessonSections, formationAssessments, assessmentItems, progressTracks, progressLessons, CONTENT_LANGUAGES, formationModuleI18n, formationLessonI18n, lessonSectionI18n, assessmentItemI18n, sdaChurches, liveSessions, sabbathReflections, searchCache, gcExplorationCache, sabbathSchoolQuarterlies, sabbathSchoolLessons, sabbathSchoolDays, sabbathSchoolUserProgress, sabbathSchoolDiscussionPrep, lessonSourcePackets, resources, resourceReviewNotes, resourceProgress, resourceBookmarks, insertResourceSchema, insertResourceProgressSchema, insertResourceBookmarkSchema, userFeedback, deviceTokens, leaderRequests, videoPipelineJobs, videoAvatars, videoTopics, topicVideos, biblicalSeries, biblicalEpisodes, readingPlans, planDays, userPlans, sabbathTypes, sabbathScriptures, characters, churchHierarchy, hierarchyMembership, topicEngagement, topicEngagementDaily, topicTrend, pastoralCareAlert, memberPastoralOptin, analyticsCache, userLocation, heatmapTile, activityPatternTile, hierarchyBroadcast, hierarchyBroadcastReceipt, contentTranslations;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -544,6 +545,11 @@ var init_schema = __esm({
       isPublished: (0, import_pg_core.boolean)("is_published").default(false),
       isAiGenerated: (0, import_pg_core.boolean)("is_ai_generated").default(false),
       generatedForUserId: (0, import_pg_core.varchar)("generated_for_user_id"),
+      // Catalog eligibility is deliberately explicit. Legacy records stay readable
+      // through an enrollment, but require editorial review before being offered.
+      provenance: (0, import_pg_core.varchar)("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
+      curatedBy: (0, import_pg_core.varchar)("curated_by", { length: 120 }),
+      curatedAt: (0, import_pg_core.timestamp)("curated_at"),
       createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
     });
     devotionalDays = (0, import_pg_core.pgTable)("devotional_day", {
@@ -571,12 +577,27 @@ var init_schema = __esm({
       thenContext: (0, import_pg_core.text)("then_context"),
       nowApplication: (0, import_pg_core.text)("now_application")
     });
+    devotionalPlanProvenanceAudits = (0, import_pg_core.pgTable)(
+      "devotional_plan_provenance_audit",
+      {
+        id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+        planId: (0, import_pg_core.varchar)("plan_id").notNull().references(() => devotionalPlans.id),
+        previousProvenance: (0, import_pg_core.varchar)("previous_provenance", { length: 30 }),
+        provenance: (0, import_pg_core.varchar)("provenance", { length: 30 }).notNull(),
+        reason: (0, import_pg_core.text)("reason").notNull(),
+        recordedBy: (0, import_pg_core.varchar)("recorded_by", { length: 120 }).notNull().default("system"),
+        recordedAt: (0, import_pg_core.timestamp)("recorded_at").defaultNow().notNull()
+      },
+      (table) => ({
+        planIdx: (0, import_pg_core.index)("devotional_plan_provenance_audit_plan_idx").on(table.planId)
+      })
+    );
     userPlanEnrollments = (0, import_pg_core.pgTable)(
       "user_plan_enrollment",
       {
         id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
         userId: (0, import_pg_core.varchar)("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-        planId: (0, import_pg_core.varchar)("plan_id").notNull().references(() => devotionalPlans.id, { onDelete: "cascade" }),
+        planId: (0, import_pg_core.varchar)("plan_id").notNull().references(() => devotionalPlans.id, { onDelete: "restrict" }),
         enrolledAt: (0, import_pg_core.timestamp)("enrolled_at").defaultNow().notNull(),
         startedAt: (0, import_pg_core.timestamp)("started_at"),
         isActive: (0, import_pg_core.boolean)("is_active").default(true)
@@ -5774,7 +5795,9 @@ async function getEgwDailyDevotion(lang = "en") {
     const chapters = toc.filter((c) => c.level === 1 && c.title && !c.dup);
     const chapter = chapters[dayOfMonth % chapters.length];
     if (!chapter) return null;
-    const chapterParaId = chapter.para_id.includes(".") ? chapter.para_id.split(".").pop() : chapter.para_id;
+    const chapterRef = String(chapter.para_id);
+    const chapterParaId = chapterRef.includes(".") ? chapterRef.split(".").pop() : chapterRef;
+    const sourceRef = chapterRef.includes(".") ? chapterRef : `${book.id}.${chapterRef}`;
     const content = await egwFetch(
       `/content/books/${book.id}/chapter/${chapterParaId}`,
       { lang }
@@ -5787,7 +5810,8 @@ async function getEgwDailyDevotion(lang = "en") {
       content: text2,
       bookTitle: book.title,
       bookId: book.id,
-      date: now.toISOString().split("T")[0]
+      date: now.toISOString().split("T")[0],
+      sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`
     };
   } catch (err) {
     console.error("[egw] Daily devotion fetch failed:", err);
@@ -38172,14 +38196,49 @@ router9.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
     return res.status(500).json({ error: "Failed to generate quick insight" });
   }
 });
-router9.post("/api/devotionals/complete", async (req, res) => {
+router9.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
   try {
     const { enrollmentId, dayId, journalEntry } = req.body;
     if (!enrollmentId || !dayId) {
       return res.status(400).json({ error: "enrollmentId and dayId are required" });
     }
-    const progress = await db.insert(userPlanProgress).values({ enrollmentId, dayId, journalEntry }).onConflictDoNothing().returning();
-    return res.json({ progress: progress[0] ?? null });
+    const userId = getEffectiveUserId(req);
+    const [enrollment] = await db.select({
+      id: userPlanEnrollments.id,
+      planId: userPlanEnrollments.planId
+    }).from(userPlanEnrollments).where(
+      (0, import_drizzle_orm11.and)(
+        (0, import_drizzle_orm11.eq)(userPlanEnrollments.id, String(enrollmentId)),
+        (0, import_drizzle_orm11.eq)(userPlanEnrollments.userId, userId)
+      )
+    ).limit(1);
+    if (!enrollment) {
+      return res.status(404).json({ error: "Enrollment not found" });
+    }
+    const [day] = await db.select({ id: devotionalDays.id }).from(devotionalDays).where(
+      (0, import_drizzle_orm11.and)(
+        (0, import_drizzle_orm11.eq)(devotionalDays.id, String(dayId)),
+        (0, import_drizzle_orm11.eq)(devotionalDays.planId, enrollment.planId)
+      )
+    ).limit(1);
+    if (!day) {
+      return res.status(400).json({ error: "Day does not belong to this devotional plan" });
+    }
+    const progress = await db.insert(userPlanProgress).values({
+      enrollmentId: enrollment.id,
+      dayId: day.id,
+      journalEntry
+    }).onConflictDoNothing().returning();
+    const [allDays, completedDays] = await Promise.all([
+      db.select({ id: devotionalDays.id }).from(devotionalDays).where((0, import_drizzle_orm11.eq)(devotionalDays.planId, enrollment.planId)),
+      db.select({ dayId: userPlanProgress.dayId }).from(userPlanProgress).where((0, import_drizzle_orm11.eq)(userPlanProgress.enrollmentId, enrollment.id))
+    ]);
+    const completedDayIds = new Set(completedDays.map((item) => item.dayId));
+    const planComplete = allDays.length > 0 && allDays.every((item) => completedDayIds.has(item.id));
+    if (planComplete) {
+      await db.update(userPlanEnrollments).set({ isActive: false }).where((0, import_drizzle_orm11.eq)(userPlanEnrollments.id, enrollment.id));
+    }
+    return res.json({ progress: progress[0] ?? null, planComplete });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -38912,7 +38971,11 @@ router12.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => 
   try {
     const traditionKey = String(req.query.traditionKey || "all");
     const lang = normalizeLanguageCode(String(req.query.lang || "en"));
-    const conditions = [(0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true)];
+    const conditions = [
+      (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
+      (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
+      (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+    ];
     if (traditionKey !== "all") {
       conditions.push((0, import_drizzle_orm15.eq)(devotionalPlans.traditionKey, traditionKey));
     }
@@ -38930,7 +38993,26 @@ router12.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => 
 });
 router12.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, res) => {
   try {
-    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, String(req.params.planId))).orderBy(devotionalDays.dayNumber);
+    const planId = String(req.params.planId);
+    const userId = getEffectiveUserId(req);
+    const [catalogPlan] = await db.select({ id: devotionalPlans.id }).from(devotionalPlans).where(
+      (0, import_drizzle_orm15.and)(
+        (0, import_drizzle_orm15.eq)(devotionalPlans.id, planId),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+      )
+    ).limit(1);
+    const [ownedEnrollment] = catalogPlan ? [] : await db.select({ id: userPlanEnrollments.id }).from(userPlanEnrollments).where(
+      (0, import_drizzle_orm15.and)(
+        (0, import_drizzle_orm15.eq)(userPlanEnrollments.userId, userId),
+        (0, import_drizzle_orm15.eq)(userPlanEnrollments.planId, planId)
+      )
+    ).limit(1);
+    if (!catalogPlan && !ownedEnrollment) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, planId)).orderBy(devotionalDays.dayNumber);
     return res.json(days);
   } catch (err) {
     console.error(err);
@@ -38952,6 +39034,17 @@ router12.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
     ).limit(1);
     if (existing.length) {
       return res.json({ enrollment: existing[0], alreadyEnrolled: true });
+    }
+    const [catalogPlan] = await db.select({ id: devotionalPlans.id }).from(devotionalPlans).where(
+      (0, import_drizzle_orm15.and)(
+        (0, import_drizzle_orm15.eq)(devotionalPlans.id, String(planId)),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+      )
+    ).limit(1);
+    if (!catalogPlan) {
+      return res.status(404).json({ error: "Plan not found" });
     }
     const enrollment = await db.insert(userPlanEnrollments).values({ userId, planId }).returning();
     return res.json({ enrollment: enrollment[0], alreadyEnrolled: false });
@@ -39006,7 +39099,6 @@ router12.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     const allDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, activeEnrollment[0].planId)).orderBy(devotionalDays.dayNumber);
     const todayDay = allDays.find((d) => !completedDayIds.has(d.id));
     if (!todayDay) {
-      await db.update(userPlanEnrollments).set({ isActive: false }).where((0, import_drizzle_orm15.eq)(userPlanEnrollments.id, activeEnrollment[0].id));
       return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
     }
     const [plan] = await db.select({ title: devotionalPlans.title }).from(devotionalPlans).where((0, import_drizzle_orm15.eq)(devotionalPlans.id, activeEnrollment[0].planId)).limit(1);
@@ -39099,6 +39191,7 @@ router12.post("/api/reading-plans/generate-disabled", optionalAuth, async (req, 
       estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
       isPublished: false,
       isAiGenerated: true,
+      provenance: "ai_generated",
       generatedForUserId: userId || null
     }).returning();
     const dayValues = plan.days.map((day) => {
@@ -41382,7 +41475,14 @@ router15.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can assign devotional plans" });
     }
-    const [plan] = await db.select().from(devotionalPlans).where((0, import_drizzle_orm18.eq)(devotionalPlans.id, planId));
+    const [plan] = await db.select().from(devotionalPlans).where(
+      (0, import_drizzle_orm18.and)(
+        (0, import_drizzle_orm18.eq)(devotionalPlans.id, planId),
+        (0, import_drizzle_orm18.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm18.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm18.eq)(devotionalPlans.isAiGenerated, false)
+      )
+    );
     if (!plan) return res.status(404).json({ error: "Plan not found" });
     await db.update(prayerGroups).set({ groupPlanId: planId }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
     return res.json({ success: true, plan });
@@ -51372,7 +51472,7 @@ var import_drizzle_orm42 = require("drizzle-orm");
 var router29 = (0, import_express29.Router)();
 router29.get("/api/plans", cachedResponse(300), async (_req, res) => {
   try {
-    const plans = await db.select().from(readingPlans).orderBy((0, import_drizzle_orm42.asc)(readingPlans.category), (0, import_drizzle_orm42.asc)(readingPlans.title));
+    const plans = await db.select().from(readingPlans).where((0, import_drizzle_orm42.ne)(readingPlans.type, "custom")).orderBy((0, import_drizzle_orm42.asc)(readingPlans.category), (0, import_drizzle_orm42.asc)(readingPlans.title));
     res.json(plans);
   } catch (err) {
     console.error("Plans list error:", err);
@@ -55082,8 +55182,8 @@ async function registerRoutes(app2) {
   (async () => {
     try {
       const { videoTopics: videoTopics2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq56, ne, sql: sql31, and: and34, isNotNull, notInArray } = await import("drizzle-orm");
-      const result = await db.update(videoTopics2).set({ pipelineMode: "cinematic", updatedAt: /* @__PURE__ */ new Date() }).where(ne(videoTopics2.pipelineMode, "cinematic"));
+      const { eq: eq56, ne: ne2, sql: sql31, and: and35, isNotNull, notInArray } = await import("drizzle-orm");
+      const result = await db.update(videoTopics2).set({ pipelineMode: "cinematic", updatedAt: /* @__PURE__ */ new Date() }).where(ne2(videoTopics2.pipelineMode, "cinematic"));
       const busyStatuses = ["queued", "scene-directing", "generating-anchor", "generating-scene-videos", "generating-voiceover", "computing-timing", "assembling-video", "generating-edl", "extracting-timestamps", "generating-broll-images", "generating-broll-videos"];
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1e3);
       const staleReset = await db.update(videoTopics2).set({ assemblyStatus: null, updatedAt: /* @__PURE__ */ new Date() }).where(sql31`${videoTopics2.assemblyStatus} IS NOT NULL AND ${videoTopics2.assemblyStatus} != 'complete' AND (${videoTopics2.assemblyStatus} LIKE '%failed%' OR ${videoTopics2.updatedAt} < ${tenMinAgo})`);

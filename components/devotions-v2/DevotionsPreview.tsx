@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -81,11 +80,8 @@ export default function DevotionsPreview() {
   const { userId, isAuthenticated } = useAuth();
   const qc = useQueryClient();
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [customOpen, setCustomOpen] = useState(false);
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [category, setCategory] = useState("All");
-  const [bookId, setBookId] = useState<number | null>(null);
-  const [duration, setDuration] = useState("7");
 
   const plans = useQuery<Plan[]>({ queryKey: ["/api/plans"] });
   const userPlans = useQuery<UserPlan[]>({
@@ -180,17 +176,6 @@ export default function DevotionsPreview() {
       router.push(`/devotional-day-preview?planId=${id}&depth=quick` as any);
     },
     onError: () => Alert.alert("Could not start series", "Please try again in a moment."),
-  });
-
-  const custom = useMutation({
-    mutationFn: async () =>
-      (await apiRequest("POST", "/api/plans/custom", { bookId, durationDays: Number(duration) })).json(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/user-plans"] });
-      qc.invalidateQueries({ queryKey: ["/api/plans"] });
-      setCustomOpen(false);
-    },
-    onError: () => Alert.alert("Could not create plan", "Choose a book and try again."),
   });
 
   const gate = (
@@ -493,26 +478,6 @@ export default function DevotionsPreview() {
         </View>
 
         <SectionHeading
-          title="Build Your Own"
-          subtitle="Choose a book and a pace that fits this season"
-          testID="devotions-preview-build-section"
-        />
-        <Pressable
-          style={s.buildCard}
-          onPress={() => gate(() => setCustomOpen(true), "Sign in to build a custom reading plan.")}
-          testID="devotions-preview-custom-action"
-        >
-          <View style={s.buildIcon}>
-            <Ionicons name="add" size={22} color={D2.violet} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.cardTitle}>Create a custom plan</Text>
-            <Text style={s.cardSub}>One book of the Bible, your pace</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={D2.violet} />
-        </Pressable>
-
-        <SectionHeading
           title="Your Shelf"
           subtitle="Finished journeys worth remembering"
           testID="devotions-preview-shelf-section"
@@ -565,17 +530,6 @@ export default function DevotionsPreview() {
           }
           gate(() => enrollSeries.mutate(seriesId), "Sign in to start a devotional series.");
         }}
-      />
-      <CustomModal
-        visible={customOpen}
-        books={books.data || []}
-        bookId={bookId}
-        setBookId={setBookId}
-        duration={duration}
-        setDuration={setDuration}
-        onClose={() => setCustomOpen(false)}
-        onCreate={() => bookId && custom.mutate()}
-        pending={custom.isPending}
       />
     </View>
   );
@@ -705,82 +659,6 @@ function SeriesModal({
               />
             </ScrollView>
           ) : null}
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function CustomModal({
-  visible,
-  books,
-  bookId,
-  setBookId,
-  duration,
-  setDuration,
-  onClose,
-  onCreate,
-  pending,
-}: {
-  visible: boolean;
-  books: Book[];
-  bookId: number | null;
-  setBookId: (v: number) => void;
-  duration: string;
-  setDuration: (v: string) => void;
-  onClose: () => void;
-  onCreate: () => void;
-  pending: boolean;
-}) {
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={s.modalShade}>
-        <View style={s.sheet} testID="devotions-preview-custom-sheet">
-          <View style={s.sheetHandle} />
-          <Pressable
-            accessibilityLabel="Close custom plan"
-            accessibilityRole="button"
-            onPress={onClose}
-            style={s.close}
-          >
-            <Ionicons name="close" size={22} color={D2.ink} />
-          </Pressable>
-          <Text style={s.sheetEyebrow}>YOUR OWN RHYTHM</Text>
-          <Text style={s.sheetTitle}>Build a custom plan</Text>
-          <Text style={s.sheetBody}>
-            Choose one book of the Bible and a pace you can return to.
-          </Text>
-          <Text style={s.outlineLabel}>BOOK</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {books.slice(0, 12).map((b) => (
-              <Pressable
-                key={b.id}
-                onPress={() => setBookId(b.id)}
-                style={[s.bookPill, bookId === b.id && s.bookPillActive]}
-              >
-                <Text style={[s.bookPillText, bookId === b.id && { color: "#fff" }]}>
-                  {b.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Text style={s.outlineLabel}>DAYS</Text>
-          <TextInput
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="number-pad"
-            style={s.durationInput}
-          />
-          <PrimaryButton
-            label={pending ? "Creating…" : "Create plan"}
-            onPress={onCreate}
-            disabled={pending || !bookId}
-            testID="devotions-preview-custom-create"
-          />
         </View>
       </View>
     </Modal>
@@ -1025,24 +903,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 9,
   },
-  buildCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 15,
-    backgroundColor: "#F0ECFB",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#DDD5F4",
-  },
-  buildIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   shelfCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1140,33 +1000,6 @@ const s = StyleSheet.create({
     fontFamily: F.interBold,
     color: D2.sage,
     fontSize: 14,
-  },
-  bookPill: {
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: D2.border,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  bookPillActive: {
-    backgroundColor: D2.violet,
-    borderColor: D2.violet,
-  },
-  bookPillText: {
-    fontFamily: F.interMed,
-    color: D2.ink,
-    fontSize: 12,
-  },
-  durationInput: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: D2.border,
-    borderRadius: 12,
-    padding: 12,
-    fontFamily: F.inter,
-    color: D2.ink,
-    marginBottom: 18,
   },
 });
 

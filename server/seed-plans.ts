@@ -201,7 +201,9 @@ async function seedPlans() {
         category: plan.category || "thematic",
         difficultyLevel: plan.difficultyLevel,
         estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
-        isPublished: true,
+        // Seed presence alone is not evidence of human authorship review.
+        isPublished: false,
+        provenance: "legacy_unclassified",
       })
       .returning();
 

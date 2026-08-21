@@ -845,7 +845,17 @@ router.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Only leaders and moderators can assign devotional plans" });
     }
 
-    const [plan] = await db.select().from(devotionalPlans).where(eq(devotionalPlans.id, planId));
+    const [plan] = await db
+      .select()
+      .from(devotionalPlans)
+      .where(
+        and(
+          eq(devotionalPlans.id, planId),
+          eq(devotionalPlans.isPublished, true),
+          eq(devotionalPlans.provenance, "human_curated"),
+          eq(devotionalPlans.isAiGenerated, false),
+        ),
+      );
     if (!plan) return res.status(404).json({ error: "Plan not found" });
 
     await db.update(prayerGroups).set({ groupPlanId: planId }).where(eq(prayerGroups.id, id));

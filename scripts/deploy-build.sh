@@ -62,6 +62,12 @@ fi
 echo "=== Applying hologram and Guided Study retirement migration ==="
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_remove_hologram_and_scholarly_persona.sql
 
+echo "=== Applying devotional human-authorship migration ==="
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_devotional_human_authorship.sql
+
+echo "=== Verifying devotional authorship and grandfather protections ==="
+npm run test:devotional-authorship
+
 echo "=== Verifying critical tables ==="
 npx tsx scripts/ensure-tables.ts
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db";
 import { readingPlans, planDays, userPlans, bibleBooks } from "../../shared/schema";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, ne } from "drizzle-orm";
 import { requireAuth, getAuthUserId } from "../middleware/auth";
 import { cachedResponse } from "../middleware/response-cache";
 
@@ -12,6 +12,9 @@ router.get("/api/plans", cachedResponse(300), async (_req, res) => {
     const plans = await db
       .select()
       .from(readingPlans)
+      // Custom plans are private journeys, not browseable catalog options.
+      // Their detail and enrollment lookups intentionally remain unfiltered.
+      .where(ne(readingPlans.type, "custom"))
       .orderBy(asc(readingPlans.category), asc(readingPlans.title));
 
     res.json(plans);

@@ -571,6 +571,11 @@ export const devotionalPlans = pgTable("devotional_plan", {
   isPublished: boolean("is_published").default(false),
   isAiGenerated: boolean("is_ai_generated").default(false),
   generatedForUserId: varchar("generated_for_user_id"),
+  // Catalog eligibility is deliberately explicit. Legacy records stay readable
+  // through an enrollment, but require editorial review before being offered.
+  provenance: varchar("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
+  curatedBy: varchar("curated_by", { length: 120 }),
+  curatedAt: timestamp("curated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -607,6 +612,24 @@ export const devotionalDays = pgTable("devotional_day", {
 export type DevotionalPlan = typeof devotionalPlans.$inferSelect;
 export type DevotionalDay = typeof devotionalDays.$inferSelect;
 
+export const devotionalPlanProvenanceAudits = pgTable(
+  "devotional_plan_provenance_audit",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    planId: varchar("plan_id").notNull().references(() => devotionalPlans.id),
+    previousProvenance: varchar("previous_provenance", { length: 30 }),
+    provenance: varchar("provenance", { length: 30 }).notNull(),
+    reason: text("reason").notNull(),
+    recordedBy: varchar("recorded_by", { length: 120 }).notNull().default("system"),
+    recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    planIdx: index("devotional_plan_provenance_audit_plan_idx").on(table.planId),
+  }),
+);
+
 export const userPlanEnrollments = pgTable(
   "user_plan_enrollment",
   {
@@ -618,7 +641,9 @@ export const userPlanEnrollments = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     planId: varchar("plan_id")
       .notNull()
-      .references(() => devotionalPlans.id, { onDelete: "cascade" }),
+      // Devotional history must outlive catalog curation. A plan cannot be
+      // deleted while any member enrollment still references it.
+      .references(() => devotionalPlans.id, { onDelete: "restrict" }),
     enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
     startedAt: timestamp("started_at"),
     isActive: boolean("is_active").default(true),

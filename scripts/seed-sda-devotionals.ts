@@ -1,6 +1,5 @@
 import { db } from "../server/db";
 import { devotionalPlans, devotionalDays } from "../shared/schema";
-import { eq } from "drizzle-orm";
 
 const BOOK_IDS: Record<string, number> = {
   Genesis: 1, Exodus: 2, Leviticus: 3, Numbers: 4, Deuteronomy: 5,
@@ -25,7 +24,8 @@ async function seed() {
     description: "Trace the Sabbath from creation through the New Testament and beyond. Discover why God set apart the seventh day, how Jesus honoured it, and what it means for believers today. Each day explores Scripture's testimony to this sacred gift of rest, worship, and fellowship with the Creator.",
     totalDays: 7,
     estimatedMinutesPerDay: 14,
-    isPublished: true,
+    isPublished: false,
+    provenance: "legacy_unclassified",
   }).returning();
 
   await db.insert(devotionalDays).values([
@@ -145,7 +145,8 @@ async function seed() {
     description: "Walk through the great prophetic visions of Daniel — from Nebuchadnezzar's image to the beasts of chapter 7, the 2,300-day prophecy, and the time of the end. Discover how God reveals the sweep of history and His ultimate triumph over earthly powers.",
     totalDays: 7,
     estimatedMinutesPerDay: 16,
-    isPublished: true,
+    isPublished: false,
+    provenance: "legacy_unclassified",
   }).returning();
 
   await db.insert(devotionalDays).values([
@@ -265,7 +266,8 @@ async function seed() {
     description: "Explore what Scripture teaches about caring for the body as God's temple. From the original diet in Eden to Daniel's pulse test and Paul's temple metaphor, discover how physical health is inseparable from spiritual faithfulness. Each day examines a biblical health principle with practical application.",
     totalDays: 7,
     estimatedMinutesPerDay: 13,
-    isPublished: true,
+    isPublished: false,
+    provenance: "legacy_unclassified",
   }).returning();
 
   await db.insert(devotionalDays).values([
@@ -385,7 +387,8 @@ async function seed() {
     description: "Journey from the earthly tabernacle to the heavenly sanctuary where Christ ministers as our High Priest. Understand the Day of Atonement, the meaning of the Most Holy Place, and what Christ's intercession means for you today. Each day unfolds another layer of this central biblical teaching.",
     totalDays: 7,
     estimatedMinutesPerDay: 15,
-    isPublished: true,
+    isPublished: false,
+    provenance: "legacy_unclassified",
   }).returning();
 
   await db.insert(devotionalDays).values([
@@ -505,7 +508,8 @@ async function seed() {
     description: "What happens when we die? Does the soul live on? What does the Bible actually teach? This plan examines what Scripture says about death as a sleep, the hope of the resurrection, and the danger of spiritualism — offering comfort, clarity, and solid biblical ground.",
     totalDays: 6,
     estimatedMinutesPerDay: 13,
-    isPublished: true,
+    isPublished: false,
+    provenance: "legacy_unclassified",
   }).returning();
 
   await db.insert(devotionalDays).values([

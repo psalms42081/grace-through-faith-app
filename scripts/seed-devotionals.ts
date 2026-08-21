@@ -581,7 +581,9 @@ async function seed() {
           targetGoals: plan.targetGoals,
           difficultyLevel: plan.difficultyLevel,
           estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
-          isPublished: plan.isPublished,
+          // Publishing requires a separate, explicit human-curation decision.
+          isPublished: false,
+          provenance: "legacy_unclassified",
         })
         .returning();
 
