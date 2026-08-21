@@ -14,3 +14,4 @@
 - [Devotions boundary and rollout](gtf-devotions-boundary.md) — Devotions gathers plans, ODB, EGW, and series in one landing; Sabbath School stays separate; review behind preview routes before live swaps.
 - [Devotional authorship boundary](gtf-devotional-authorship.md) — catalog devotionals need human-curated provenance; hide legacy/AI records without breaking enrolled journeys.
 - [Typecheck scope boundary](gtf-typecheck-scope.md) — root checks include operational scripts and seeds; exclude only standalone artifacts, generated output, and test harnesses.
+- [Numbered migration adoption](gtf-numbered-migration-adoption.md) — serialize migrations with dependent seeds; verify legacy postconditions and execute safe data backfills before baselining.

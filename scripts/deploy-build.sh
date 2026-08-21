@@ -59,13 +59,13 @@ else
   npx tsx scripts/ensure-tables.ts
 fi
 
-echo "=== Applying hologram and Guided Study retirement migration ==="
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_remove_hologram_and_scholarly_persona.sql
-
 echo "=== Verifying critical tables ==="
 npx tsx scripts/ensure-tables.ts
 
 echo "=== Seeding production data ==="
+
+echo "Seeding Bible books (CRITICAL)..."
+npx tsx scripts/seed-books.ts
 
 echo "Seeding Bible verses (CRITICAL)..."
 npx tsx scripts/seed-verses-prod.ts
@@ -73,14 +73,8 @@ npx tsx scripts/seed-verses-prod.ts
 echo "Seeding context cards & commentators..."
 npx tsx scripts/seed-context.ts || true
 
-echo "Seeding devotional plans..."
-npx tsx scripts/seed-devotionals.ts || true
-
-echo "Seeding SDA devotionals..."
-npx tsx scripts/seed-sda-devotionals.ts || true
-
-echo "Seeding more devotionals..."
-npx tsx scripts/seed-more-devotionals.ts || true
+echo "=== Preparing approved devotional catalog (CRITICAL) ==="
+npx tsx scripts/prepare-devotional-catalog.ts
 
 echo "Seeding timeline events..."
 npx tsx scripts/seed-timeline.ts || true
@@ -90,9 +84,6 @@ npx tsx scripts/seed-locations.ts || true
 
 echo "Seeding application templates..."
 npx tsx scripts/seed-application.ts || true
-
-echo "Seeding Strong's concordance..."
-npx tsx scripts/seed-strongs-from-json.ts || true
 
 echo "Seeding startup data (formation, beliefs, resources)..."
 npx tsx scripts/seed-startup-data.ts || true

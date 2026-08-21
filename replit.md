@@ -46,24 +46,35 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 
 ### Database schema and devotional catalog recovery
 
-`npm run db:push` reconciles the database schema only. It does **not** execute
-numbered SQL migrations, including
-`migrations/0005_restore_approved_devotional_catalog.sql`, which promotes the
-21 editorially approved devotional series from `legacy_unclassified` to
-`human_curated`.
+`npm run db:push` reconciles the database schema only. Deployment and post-merge
+setup therefore use `scripts/run-numbered-migrations.ts`, which records each
+numbered SQL migration and its checksum in `app_sql_migration`. The runner holds
+a PostgreSQL advisory lock and applies each pending migration and its ledger row
+in one transaction, so repeat deployments cannot run it twice.
 
-After a database reset or fresh schema push, seed the devotional plans first,
-then run:
+`scripts/prepare-devotional-catalog.ts` holds the same lock across migrations,
+all seeders, and catalog verification, preventing concurrent deployments from
+racing between seeding and migration `0005`. On an empty schema the initial
+snapshot can be applied normally. After the deployment schema push, the initial
+snapshot and migration `0003` are adopted only after required Grace Through
+Faith schema markers and the `0003` retirement postconditions are verified;
+safe migrations `0001` and `0002` still execute so their data backfills are not
+lost, while destructive retirement SQL is not replayed against existing data.
+
+Bible-book and Strong's prerequisites plus all four devotional seeders run after
+migration `0004` and before `0005`, ensuring the 21 editorially approved series
+exist before their provenance is promoted to `human_curated`.
+
+For a manual recovery outside deployment, use the same ordered flow:
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_devotional_human_authorship.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_restore_approved_devotional_catalog.sql
-npm run test:devotional-catalog
+npm run db:push
+npm run db:prepare-devotional-catalog
 ```
 
-The deployment build runs this catalog check before starting its temporary
-server. The server also logs a critical, non-fatal warning at startup when no
-human-curated devotional series exist.
+`npm run test:numbered-migrations` verifies both a fresh isolated schema and a
+repeat deployment without touching existing application data. The deployment
+build also runs the catalog check before starting its temporary server.
 
 ## User Preferences
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
