@@ -13,6 +13,7 @@ const ids = {
   user: `test-devotional-user-${suffix}`,
   humanPlan: `test-devotional-human-${suffix}`,
   aiPlan: `test-devotional-ai-${suffix}`,
+  legacyPlan: `test-devotional-legacy-${suffix}`,
   aiDay: `test-devotional-day-${suffix}`,
   enrollment: `test-devotional-enrollment-${suffix}`,
   progress: `test-devotional-progress-${suffix}`,
@@ -23,6 +24,8 @@ const ids = {
 
 try {
   await client.query("BEGIN");
+
+  // ─── Schema guards ────────────────────────────────────────────────────────
 
   const schemaGuards = await client.query(`
     SELECT
@@ -57,6 +60,8 @@ try {
     "enrollment-plan FK must reject plan deletion",
   );
 
+  // ─── Every existing plan must already be audited ─────────────────────────
+
   const unauditedLegacyPlans = await client.query(`
     SELECT count(*)::int AS count
     FROM devotional_plan plan
@@ -71,6 +76,108 @@ try {
     0,
     "every existing devotional plan must have a provenance audit",
   );
+
+  // ─── Approved catalog: all promoted series visible, none suppressed ───────
+
+  // The 21 editorially approved series must all appear in the catalog query.
+  const approvedTitles = [
+    "Foundations of Faith",
+    "The Life of Christ",
+    "Psalms of Comfort",
+    "Women of the Bible",
+    "Prophets and Prophecy",
+    "Parables of Jesus",
+    "Walking Through the Wilderness",
+    "The Armor of God",
+    "The Sabbath Rest",
+    "Daniel's Prophecies \u2014 End-Time Visions",
+    "God's Health Blueprint",
+    "The Heavenly Sanctuary",
+    "Death, Sleep, and Resurrection",
+    "A Life of Prayer",
+    "Wisdom for Life",
+    "God's Unfailing Love",
+    "Living in Hope",
+    "Strength in Weakness",
+    "Finding Peace",
+    "Grace Upon Grace",
+    "The Sermon on the Mount",
+  ];
+
+  const catalogRows = await client.query(`
+    SELECT title
+    FROM devotional_plan
+    WHERE is_published = true
+      AND provenance = 'human_curated'
+      AND is_ai_generated = false
+  `);
+  const catalogTitles = new Set(catalogRows.rows.map((r) => r.title));
+  for (const title of approvedTitles) {
+    assert.equal(
+      catalogTitles.has(title),
+      true,
+      `approved series must be catalog-eligible: "${title}"`,
+    );
+  }
+
+  // No ai_generated or legacy_unclassified plan may appear in the catalog.
+  const leakedPlans = await client.query(`
+    SELECT title, provenance
+    FROM devotional_plan
+    WHERE is_published = true
+      AND (provenance != 'human_curated' OR is_ai_generated = true)
+  `);
+  assert.equal(
+    leakedPlans.rowCount,
+    0,
+    `catalog must contain only human_curated, non-AI plans — found: ${leakedPlans.rows.map(r=>r.title).join(", ")}`,
+  );
+
+  // Every catalog-eligible plan must have at least one day.
+  const emptyPlans = await client.query(`
+    SELECT p.title
+    FROM devotional_plan p
+    WHERE p.is_published = true
+      AND p.provenance = 'human_curated'
+      AND p.is_ai_generated = false
+      AND NOT EXISTS (SELECT 1 FROM devotional_day d WHERE d.plan_id = p.id)
+  `);
+  assert.equal(
+    emptyPlans.rowCount,
+    0,
+    `every catalog plan must have at least one day — empty: ${emptyPlans.rows.map(r=>r.title).join(", ")}`,
+  );
+
+  // Every catalog-eligible plan must have non-null curator attribution.
+  const unattributedPlans = await client.query(`
+    SELECT title FROM devotional_plan
+    WHERE is_published = true
+      AND provenance = 'human_curated'
+      AND (curated_by IS NULL OR curated_at IS NULL)
+  `);
+  assert.equal(
+    unattributedPlans.rowCount,
+    0,
+    `every published human_curated plan must have curated_by and curated_at set — missing: ${unattributedPlans.rows.map(r=>r.title).join(", ")}`,
+  );
+
+  // Every catalog-eligible plan must have an audit trail.
+  const unaditedCatalogPlans = await client.query(`
+    SELECT p.title
+    FROM devotional_plan p
+    WHERE p.is_published = true
+      AND p.provenance = 'human_curated'
+      AND NOT EXISTS (
+        SELECT 1 FROM devotional_plan_provenance_audit a WHERE a.plan_id = p.id
+      )
+  `);
+  assert.equal(
+    unaditedCatalogPlans.rowCount,
+    0,
+    "every catalog plan must have provenance audit records",
+  );
+
+  // ─── Fixture plans for behavioral tests ──────────────────────────────────
 
   await client.query(
     `INSERT INTO users (id, username, password)
@@ -90,18 +197,28 @@ try {
      VALUES ($1, 'Grandfathered AI devotional', 1, false, true, 'ai_generated')`,
     [ids.aiPlan],
   );
+  await client.query(
+    `INSERT INTO devotional_plan
+      (id, title, total_days, is_published, is_ai_generated, provenance)
+     VALUES ($1, 'Unreviewed legacy plan', 1, false, false, 'legacy_unclassified')`,
+    [ids.legacyPlan],
+  );
+
+  // ─── Trigger: new records must receive audit entries ─────────────────────
 
   const fixtureAudits = await client.query(
     `SELECT plan_id
        FROM devotional_plan_provenance_audit
       WHERE plan_id = ANY($1::varchar[])`,
-    [[ids.humanPlan, ids.aiPlan]],
+    [[ids.humanPlan, ids.aiPlan, ids.legacyPlan]],
   );
   assert.deepEqual(
     new Set(fixtureAudits.rows.map((row) => row.plan_id)),
-    new Set([ids.humanPlan, ids.aiPlan]),
+    new Set([ids.humanPlan, ids.aiPlan, ids.legacyPlan]),
     "new devotional records must receive provenance audits automatically",
   );
+
+  // ─── Constraint: publishing AI-generated plans must be rejected ──────────
 
   await client.query("SAVEPOINT rejects_published_ai");
   let rejectedPublishedAi = false;
@@ -116,6 +233,49 @@ try {
     await client.query("ROLLBACK TO SAVEPOINT rejects_published_ai");
   }
   assert.equal(rejectedPublishedAi, true, "database must reject newly published AI devotionals");
+
+  // ─── Constraint: publishing legacy_unclassified plans must be rejected ───
+
+  await client.query("SAVEPOINT rejects_published_legacy");
+  let rejectedPublishedLegacy = false;
+  try {
+    await client.query(
+      `UPDATE devotional_plan
+          SET is_published = true
+        WHERE id = $1`,
+      [ids.legacyPlan],
+    );
+  } catch (error) {
+    rejectedPublishedLegacy = error.code === "23514";
+    await client.query("ROLLBACK TO SAVEPOINT rejects_published_legacy");
+  }
+  assert.equal(
+    rejectedPublishedLegacy,
+    true,
+    "database must reject publishing a legacy_unclassified plan",
+  );
+
+  // ─── Constraint: publishing without curator fields must be rejected ───────
+
+  await client.query("SAVEPOINT rejects_missing_curator");
+  let rejectedMissingCurator = false;
+  try {
+    await client.query(
+      `INSERT INTO devotional_plan
+        (title, total_days, is_published, is_ai_generated, provenance)
+       VALUES ('Missing curator', 1, true, false, 'human_curated')`,
+    );
+  } catch (error) {
+    rejectedMissingCurator = error.code === "23514";
+    await client.query("ROLLBACK TO SAVEPOINT rejects_missing_curator");
+  }
+  assert.equal(
+    rejectedMissingCurator,
+    true,
+    "database must reject published human_curated plans without curator attribution",
+  );
+
+  // ─── Catalog predicate checks ─────────────────────────────────────────────
 
   await client.query(
     `INSERT INTO devotional_day
@@ -139,6 +299,7 @@ try {
   const catalogIds = new Set(catalog.rows.map((row) => row.id));
   assert.equal(catalogIds.has(ids.humanPlan), true, "reviewed human plan should be catalog eligible");
   assert.equal(catalogIds.has(ids.aiPlan), false, "AI plan must not be catalog eligible");
+  assert.equal(catalogIds.has(ids.legacyPlan), false, "legacy_unclassified plan must not be catalog eligible");
 
   const newAiStart = await client.query(
     `SELECT id
@@ -150,6 +311,8 @@ try {
     [ids.aiPlan],
   );
   assert.equal(newAiStart.rowCount, 0, "hidden AI plan must not be eligible for a new start");
+
+  // ─── Grandfather clause: enrolled hidden plans remain resumable ───────────
 
   const today = await client.query(
     `SELECT d.id
@@ -177,6 +340,8 @@ try {
   );
   assert.equal(completed.rows[0].count, 1, "hidden AI enrollment should remain completable");
 
+  // ─── Delete protection: enrolled plan cannot be deleted ──────────────────
+
   await client.query("SAVEPOINT protects_enrollment_history");
   let rejectedPlanDelete = false;
   try {
@@ -192,6 +357,8 @@ try {
     true,
     "database must reject plan deletion while enrollment history exists",
   );
+
+  // ─── Custom reading plan grandfather clause ───────────────────────────────
 
   await client.query(
     `INSERT INTO reading_plan (id, title, duration_days, type)
@@ -227,6 +394,23 @@ try {
     resumeCustom.rows[0]?.day_id,
     ids.customDay,
     "existing custom enrollment should remain resumable",
+  );
+
+  // ─── Idempotency: re-promoting already-human_curated plans is safe ────────
+
+  // Re-run the promotion UPDATE for one already-approved plan; it should match
+  // 0 rows (WHERE provenance = 'legacy_unclassified' guard prevents re-processing).
+  const idempotentResult = await client.query(
+    `UPDATE devotional_plan
+        SET provenance = 'human_curated', curated_by = 'Test Devotionals',
+            curated_at = now(), is_published = true
+      WHERE title = 'Foundations of Faith'
+        AND provenance = 'legacy_unclassified'`,
+  );
+  assert.equal(
+    idempotentResult.rowCount,
+    0,
+    "re-running promotion on already-approved plans must be idempotent (no rows updated)",
   );
 
   console.log("Devotional authorship and grandfather-clause checks passed.");
