@@ -294,7 +294,7 @@ export function useSabbath(enabled: boolean = true): SabbathState {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (!location) return;

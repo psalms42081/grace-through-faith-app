@@ -263,7 +263,7 @@ export default function TopicScreen() {
       [items[i], items[j]] = [items[j], items[i]];
     }
     return items;
-  }, [id, todaySeed]);
+  }, [todaySeed, topic.verses]);
 
   const openLink = (url: string) => {
     Linking.openURL(url);

@@ -89,10 +89,8 @@ export default function TouchPointsScreen() {
   });
 
   const categories = data?.categories ?? [];
-  const allTopics = data?.topics ?? [];
-
   const filteredTopics = useMemo(() => {
-    let topics = allTopics;
+    let topics = data?.topics ?? [];
     if (activeCategory) {
       topics = topics.filter(t => t.category === activeCategory);
     }
@@ -105,7 +103,7 @@ export default function TouchPointsScreen() {
       );
     }
     return topics;
-  }, [allTopics, activeCategory, search]);
+  }, [activeCategory, data?.topics, search]);
 
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";

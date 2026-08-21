@@ -33,6 +33,7 @@ import { useTranslation as useAppTranslation } from "@/context/TranslationContex
 type Tab = "word" | "context" | "voices" | "application";
 
 const LAYER_ORDER: Tab[] = ["word", "context", "voices", "application"];
+const VALID_TABS: Tab[] = ["word", "context", "voices", "application"];
 const LAYER_LABELS: Record<Tab, string> = {
   word: "Observe",
   context: "Context",
@@ -689,7 +690,7 @@ function FourLayerIntro({
         setChecked(true);
       }
     }).catch(() => setChecked(true));
-  }, []);
+  }, [hasPassage, onContinue]);
 
   if (!checked) return null;
 
@@ -1744,7 +1745,7 @@ function JournalPromptCard({
 
   useEffect(() => {
     if (!focused) setText(journalMap.get(section.key) ?? "");
-  }, [journalMap, section.key]);
+  }, [focused, journalMap, section.key]);
 
   const doAutoSave = useCallback((value: string) => {
     if (value.trim() === savedContent.trim()) return;
@@ -1983,8 +1984,8 @@ export default function StudyScreen() {
     verseText?: string;
     bookName?: string;
     showIntro?: string;
+    _t?: string;
   }>();
-  const validTabs: Tab[] = ["word", "context", "voices", "application"];
   const [activeTab, setActiveTabRaw] = useState<Tab>("word");
   const [showDepthPicker, setShowDepthPicker] = useState(false);
 
@@ -2019,7 +2020,7 @@ export default function StudyScreen() {
   const handleSharedChapterChange = useCallback((ch: number | null) => {
     setSharedChapter(ch);
     setAutoCompletionShown(false);
-    const hasNavIntent = params.tab && validTabs.includes(params.tab as Tab);
+    const hasNavIntent = params.tab && VALID_TABS.includes(params.tab as Tab);
     if (!hasNavIntent) {
       setActiveTabRaw("word");
     }
@@ -2072,7 +2073,7 @@ export default function StudyScreen() {
   }, [completedLayers]);
 
   useEffect(() => {
-    const hasNavIntent = params.tab && validTabs.includes(params.tab as Tab) && activeTab === (params.tab as Tab);
+    const hasNavIntent = params.tab && VALID_TABS.includes(params.tab as Tab) && activeTab === (params.tab as Tab);
     if (hasNavIntent) return;
     if (!isLayerAccessible(activeTab, completedLayers)) {
       const firstAccessible = LAYER_ORDER.find(l => isLayerAccessible(l, completedLayers)) ?? "word";
@@ -2081,7 +2082,7 @@ export default function StudyScreen() {
   }, [completedLayers, activeTab, bookId, chapter, params.tab]);
 
   useEffect(() => {
-    if (params.tab && validTabs.includes(params.tab as Tab)) {
+    if (params.tab && VALID_TABS.includes(params.tab as Tab)) {
       const requested = params.tab as Tab;
       // When navigating directly from the Bible reader, skip the deep dive
       // intro and go straight to the requested tab regardless of layer order.
@@ -2122,7 +2123,7 @@ export default function StudyScreen() {
     if (idx < LAYER_ORDER.length - 1) {
       setActiveTab(LAYER_ORDER[idx + 1]);
     }
-  }, [activeTab]);
+  }, [activeTab, setActiveTab]);
   const deepSessionRef = useRef(deepSession);
   const setDeepSession = useCallback((s: DeepSessionState) => {
     deepSessionRef.current = s;
@@ -2136,7 +2137,7 @@ export default function StudyScreen() {
     if (params.showIntro === "true") {
       setShowLayerIntro(true);
     }
-  }, [params.showIntro, (params as any)._t]);
+  }, [params.showIntro, params._t]);
   const [showStudyComplete, setShowStudyComplete] = useState(false);
 
   const [pausedLayerIndex, setPausedLayerIndex] = useState<number | null>(null);
@@ -2170,7 +2171,7 @@ export default function StudyScreen() {
         }
       } catch {}
     })();
-  }, [bookId, chapter, paramBookId]);
+  }, [bookId, chapter, paramBookId, setActiveTab, setDeepSession]);
 
   const persistSession = useCallback(async (state: DeepSessionState, remove?: boolean) => {
     setDeepSession(state);
@@ -2179,7 +2180,7 @@ export default function StudyScreen() {
     } else {
       await AsyncStorage.setItem(DEEP_SESSION_KEY, JSON.stringify(state));
     }
-  }, []);
+  }, [setDeepSession]);
 
   const startDeepSession = useCallback(() => {
     if (pausedLayerIndex !== null && pausedLayerIndex >= 0) {
@@ -2201,7 +2202,7 @@ export default function StudyScreen() {
       return;
     }
     setShowDeepIntro(true);
-  }, [bookId, chapter, persistSession, pausedLayerIndex]);
+  }, [bookId, chapter, persistSession, pausedLayerIndex, setActiveTab]);
 
   const beginDeepSessionFromIntro = useCallback((focus: StudyFocus, vs: number | null, ve: number | null) => {
     const firstIncomplete = LAYER_ORDER.findIndex((l) => !completedLayers.has(l));
@@ -2222,7 +2223,7 @@ export default function StudyScreen() {
     setPausedLayerIndex(null);
     setShowSummary(false);
     setShowDeepIntro(false);
-  }, [bookId, chapter, completedLayers, persistSession]);
+  }, [bookId, chapter, completedLayers, persistSession, setActiveTab]);
 
   const exitDeepSession = useCallback((fromDone?: boolean) => {
     const current = deepSessionRef.current;
@@ -2237,7 +2238,7 @@ export default function StudyScreen() {
       persistSession({ ...current, active: false });
       setShowSummary(false);
     }
-  }, [persistSession]);
+  }, [persistSession, setActiveTab]);
 
   const advanceDeepSession = useCallback(() => {
     const ds = deepSessionRef.current;
@@ -2258,7 +2259,7 @@ export default function StudyScreen() {
     const next: DeepSessionState = { ...ds, layerIndex: nextIdx, completedLayersDuringSession: visited };
     persistSession(next);
     setActiveTab(LAYER_ORDER[nextIdx]);
-  }, [persistSession, setDeepSession]);
+  }, [persistSession, setActiveTab, setDeepSession]);
 
   const finishDeepSession = useCallback(() => {
     const ds = deepSessionRef.current;
@@ -2391,6 +2392,15 @@ export default function StudyScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const handlePickIntroPassage = useCallback(() => {
+    setShowLayerIntro(false);
+    setSharedBook(null);
+    setSharedChapter(null);
+  }, []);
+  const handleContinueFromLayerIntro = useCallback(() => {
+    setShowLayerIntro(false);
+    setShowDeepIntro(true);
+  }, []);
 
   if (showLayerIntro) {
     if (paramBookId && (!canTrack || !completions)) {
@@ -2413,12 +2423,8 @@ export default function StudyScreen() {
         <FourLayerIntro
           theme={theme}
           hasPassage={canTrack}
-          onPickPassage={() => {
-            setShowLayerIntro(false);
-            setSharedBook(null);
-            setSharedChapter(null);
-          }}
-          onContinue={() => { setShowLayerIntro(false); setShowDeepIntro(true); }}
+          onPickPassage={handlePickIntroPassage}
+          onContinue={handleContinueFromLayerIntro}
         />
       </View>
     );
@@ -2799,7 +2805,7 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
       setWordGenAttempted(targetVerse.id);
       generateWordsMutation.mutate();
     }
-  }, [targetVerse?.id, wordQuery.isLoading, hasWords]);
+  }, [generateWordsMutation, hasWords, targetVerse, wordGenAttempted, wordQuery.isLoading]);
 
   const concordanceQuery = useQuery<StrongEntry[]>({
     queryKey: [`/api/strong/search?q=${encodeURIComponent(concordanceSearch)}${concordanceLang !== "all" ? `&language=${concordanceLang}` : ""}`],
@@ -3520,7 +3526,7 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
       setCtxGenAttempted(ctxKey);
       generateMutation.mutate();
     }
-  }, [selectedBook?.id, selectedChapter, isLoading, hasCards]);
+  }, [ctxGenAttempted, ctxKey, generateMutation, hasCards, isLoading, selectedBook, selectedChapter]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -3939,7 +3945,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
       setComGenAttempted(comKey);
       generateCommentaryMutation.mutate();
     }
-  }, [selectedBook?.id, selectedChapter, isLoading, hasCommentary]);
+  }, [comGenAttempted, comKey, generateCommentaryMutation, hasCommentary, isLoading, selectedBook, selectedChapter]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
@@ -4337,7 +4343,7 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
       setAppGenAttempted(appKey);
       generateAppMutation.mutate();
     }
-  }, [selectedBook?.id, selectedChapter, isLoading, hasData]);
+  }, [appGenAttempted, appKey, generateAppMutation, hasData, isLoading, selectedBook, selectedChapter]);
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];

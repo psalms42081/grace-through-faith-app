@@ -217,7 +217,7 @@ export default function FamilyDashboard() {
       name: newChildName.trim(),
       avatarUrl: `avatar:${selectedAvatar}`,
     });
-  }, [newChildName, selectedAvatar]);
+  }, [addChildMutation, newChildName, selectedAvatar]);
 
   const handleDeleteChild = useCallback((childId: string, childName: string) => {
     Alert.alert(
@@ -232,7 +232,7 @@ export default function FamilyDashboard() {
         },
       ]
     );
-  }, []);
+  }, [deleteChildMutation]);
 
   const handleConversationStarter = useCallback(async (childId: string) => {
     if (activeConversation === childId && conversationData) {
@@ -259,7 +259,7 @@ export default function FamilyDashboard() {
     } finally {
       setLoadingConversation(false);
     }
-  }, [activeConversation, conversationData]);
+  }, [activeConversation, conversationData, userId]);
 
   const getAvatarForChild = (avatarUrl: string | null) => {
     if (avatarUrl?.startsWith("avatar:")) {

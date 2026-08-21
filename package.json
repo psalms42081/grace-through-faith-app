@@ -19,7 +19,8 @@
     "test:devotional-authorship-api": "tsx server/tests/devotional-authorship-api.test.ts",
     "start": "npx expo start",
     "typecheck": "tsc --noEmit",
-    "lint": "npx expo lint",
+    "lint": "node scripts/lint-with-warning-budget.mjs",
+    "lint:report": "npx expo lint",
     "lint:fix": "npx expo lint --fix",
     "check": "npm run typecheck && npm run lint"
   },

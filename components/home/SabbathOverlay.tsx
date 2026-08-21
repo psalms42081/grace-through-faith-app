@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -214,12 +214,12 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
   const welcomeCheckedRef = useRef(false);
   const closingCheckedRef = useRef(false);
 
-  const showOverlay = (overlayMode: OverlayMode) => {
+  const showOverlay = useCallback((overlayMode: OverlayMode) => {
     setMode(overlayMode);
     setVisible(true);
     opacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
     contentY.value = withDelay(200, withTiming(0, { duration: 600, easing: Easing.out(Easing.ease) }));
-  };
+  }, [contentY, opacity]);
 
   useEffect(() => {
     return onSabbathTestTrigger(async (testMode) => {
@@ -228,7 +228,7 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
       await AsyncStorage.setItem(key, dateKey).catch(() => {});
       showOverlay(testMode);
     });
-  }, []);
+  }, [showOverlay]);
 
   useEffect(() => {
     if (!isSabbath || isClosingPhase || welcomeCheckedRef.current) return;
@@ -242,7 +242,7 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
         await AsyncStorage.setItem(WELCOME_KEY, dateKey).catch(() => {});
       }
     })();
-  }, [isSabbath, isClosingPhase]);
+  }, [isSabbath, isClosingPhase, showOverlay]);
 
   useEffect(() => {
     if (!isSabbath || !isClosingPhase || closingCheckedRef.current || visible) return;
@@ -256,7 +256,7 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
         await AsyncStorage.setItem(CLOSING_KEY, dateKey).catch(() => {});
       }
     })();
-  }, [isSabbath, isClosingPhase, visible]);
+  }, [isSabbath, isClosingPhase, showOverlay, visible]);
 
   const handleDismiss = () => {
     opacity.value = withTiming(0, { duration: 400, easing: Easing.in(Easing.ease) });

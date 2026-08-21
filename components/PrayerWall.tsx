@@ -278,14 +278,14 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       content: prayerContent.trim(),
       authorName: authorName.trim() || (isGroupMode ? "Group Member" : "Family Member"),
     });
-  }, [prayerTitle, prayerContent, authorName]);
+  }, [authorName, isGroupMode, postMutation, prayerContent, prayerTitle]);
 
   const handleToggleAnswered = useCallback((id: string, answered: boolean) => {
     if (answered) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     answeredMutation.mutate({ id, answered });
-  }, []);
+  }, [answeredMutation]);
 
   const activePrayers = prayers?.filter((p) => !p.answered) || [];
   const answeredPrayers = prayers?.filter((p) => p.answered) || [];
