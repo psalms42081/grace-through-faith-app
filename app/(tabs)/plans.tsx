@@ -421,6 +421,21 @@ export default function PlansV2Screen() {
         </Pressable>
       </View>
 
+      {/* Devotions review gate — remove after the approved live swap. */}
+      <View style={s.previewGateRow}>
+        <Pressable
+          onPress={() => router.push("/devotions-preview" as any)}
+          style={({ pressed }) => [s.previewPill, { opacity: pressed ? 0.8 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Preview the new Devotions look"
+          testID="devotions-preview-pill"
+        >
+          <Ionicons name="sparkles-outline" size={14} color="#FFFFFF" />
+          <Text style={s.previewPillText}>Preview the new look</Text>
+          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.85)" />
+        </Pressable>
+      </View>
+
       {/* Segments */}
       <View style={s.segmentRow}>
         {SEGMENTS.map((seg) => {
@@ -770,6 +785,19 @@ const s = StyleSheet.create({
   headerMeta: { fontFamily: F.interMed, fontSize: 13, color: P2.inkMuted },
   headerTitle: { fontFamily: F.loraSemi, fontSize: 26, color: P2.ink, marginTop: 1 },
   searchBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: P2.card, alignItems: "center", justifyContent: "center", ...HV2.rowShadow },
+
+  previewGateRow: { paddingHorizontal: 20, paddingBottom: 12 },
+  previewPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: P2.teal,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  previewPillText: { fontFamily: F.interSemi, fontSize: 12.5, color: "#FFFFFF" },
 
   segmentRow: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
   segment: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: P2.card, borderWidth: 1, borderColor: P2.border },
