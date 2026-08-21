@@ -20,6 +20,7 @@ import { BELIEFS, CATEGORIES, CATEGORY_COLORS } from "@/data/beliefs";
 const VIEWED_KEY = "beliefs_viewed";
 
 import { navigateToScripture } from "@/lib/scripture-nav";
+import { useTranslation } from "@/context/TranslationContext";
 
 function AnimatedChevron({ isExpanded, color }: { isExpanded: boolean; color: string }) {
   const rotation = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
@@ -46,6 +47,7 @@ function AnimatedChevron({ isExpanded, color }: { isExpanded: boolean; color: st
 
 export default function SDAStudiesScreen() {
   const { theme } = useTheme();
+  const { translation } = useTranslation();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === "web" ? 34 : 0;
 
@@ -83,8 +85,8 @@ export default function SDAStudiesScreen() {
   }, [markViewed]);
 
   const handleScriptureTap = useCallback((s: { bookId: number; chapter: number; ref: string }) => {
-    navigateToScripture(s);
-  }, []);
+    navigateToScripture(s, translation);
+  }, [translation]);
 
   const filtered = activeCategory === "all"
     ? BELIEFS

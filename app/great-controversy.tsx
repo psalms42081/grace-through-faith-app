@@ -26,6 +26,7 @@ import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { GC_NODES, GCNode } from "@/data/great-controversy";
 import { BELIEFS } from "@/data/beliefs";
 import { navigateToScripture } from "@/lib/scripture-nav";
+import { useTranslation } from "@/context/TranslationContext";
 
 const GC_PROGRESS_KEY = "gc_timeline_progress";
 
@@ -97,12 +98,14 @@ function NodeCard({
   onToggle,
   theme,
   depth,
+  translation,
 }: {
   node: GCNode;
   isExpanded: boolean;
   onToggle: () => void;
   theme: any;
   depth: string;
+  translation: string;
 }) {
   const linkedBeliefData = node.linkedBeliefs
     .map((num) => BELIEFS.find((b) => b.number === num))
@@ -241,7 +244,7 @@ function NodeCard({
                   {node.scriptureRefs.map((s) => (
                     <Pressable
                       key={s.ref}
-                      onPress={() => navigateToScripture(s)}
+                      onPress={() => navigateToScripture(s, translation)}
                       style={({ pressed }) => [
                         styles.scriptureChip,
                         {
@@ -441,7 +444,7 @@ function NodeCard({
                 <View style={styles.nextStepsGrid}>
                   {node.scriptureRefs.length > 0 && (
                     <Pressable
-                      onPress={() => navigateToScripture(node.scriptureRefs[0])}
+                      onPress={() => navigateToScripture(node.scriptureRefs[0], translation)}
                       style={({ pressed }) => [
                         styles.nextStepButton,
                         {
@@ -529,6 +532,7 @@ export default function GreatControversyScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { depth } = useStudyDepth();
+  const { translation } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activePhaseId, setActivePhaseId] = useState<string>(TIMELINE_PHASES[0].id);
   const [viewedNodes, setViewedNodes] = useState<Set<string>>(new Set());
@@ -768,6 +772,7 @@ export default function GreatControversyScreen() {
                 onToggle={() => toggleNode(node.id)}
                 theme={theme}
                 depth={depth}
+                translation={translation}
               />
             </View>
           ))}

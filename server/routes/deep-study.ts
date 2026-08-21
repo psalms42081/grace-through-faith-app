@@ -1,14 +1,32 @@
 import { Router } from "express";
-import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
+import { withSdaLens } from "../services/sda-lens";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
 import {
+  resolveChapter,
+  resolveReference,
+  normalizeTranslationParam,
+  ScriptureError,
+  type ChapterCacheHooks,
+} from "../services/scripture-service";
+import {
+  buildPassageSectionsCacheKey,
+  buildTopicReflectionCacheKey,
+  buildExplainCacheKey,
+  buildCrossRefCacheKey,
+  hydrateCrossReferences,
+  extractRawCrossReferences,
+  joinResolvedVerseText,
+  isCurrentHydrationVersion,
+  HYDRATION_VERSION,
+} from "../services/deep-study-helpers";
+import {
   bibleBooks,
   bibleVerses,
+  bibleCache,
   layerCompletions,
   studyJournalEntries,
-  chapterPassageSections,
   searchCache,
   studyGuideSessions,
   verseStrongMaps,
@@ -18,6 +36,51 @@ import { eq, and, sql, desc, asc, countDistinct } from "drizzle-orm";
 import { extractUserId } from "../middleware/auth";
 
 const router = Router();
+
+// Cache hooks passed to the canonical Scripture resolver so provider chapters
+// (NLT / API.Bible / discovered NKJV) are persisted through the shared
+// bible_cache path, keeping resolved verse text authoritative + translation-safe.
+const chapterCacheHooks: ChapterCacheHooks = {
+  read: async (translation, bookId, chapterNum) => {
+    try {
+      const cached = await db
+        .select()
+        .from(bibleCache)
+        .where(
+          and(
+            eq(bibleCache.translation, translation),
+            eq(bibleCache.bookId, bookId),
+            eq(bibleCache.chapter, chapterNum)
+          )
+        )
+        .limit(1);
+      return cached.length > 0 ? (cached[0].versesJson as any[]) : null;
+    } catch {
+      return null;
+    }
+  },
+  write: async (translation, bookId, bookName, chapterNum, verses, sourceApi) => {
+    try {
+      await db
+        .insert(bibleCache)
+        .values({
+          translation,
+          bookId,
+          bookName,
+          chapter: chapterNum,
+          versesJson: verses,
+          verseCount: verses.length,
+          sourceApi,
+        } as any)
+        .onConflictDoNothing();
+    } catch (err: any) {
+      console.error(
+        `[deep-study bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`,
+        err?.message
+      );
+    }
+  },
+};
 
 router.get("/api/layer-completions", async (req, res) => {
   try {
@@ -281,9 +344,17 @@ router.get("/api/study-journal/revisit", async (req, res) => {
 
 router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
   try {
-    const { topicId } = req.params;
-    const today = new Date().toISOString().split("T")[0];
-    const queryHash = `topic-reflection-${SDA_LENS_VERSION}-${topicId}-${today}`;
+    const topicId = String(req.params.topicId);
+
+    // Translation is required and must be explicit — no implicit default.
+    const rawTranslation = req.query.translation as string | undefined;
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+
+    const today = new Date().toISOString().split("T")[0] as string;
+    const queryHash = buildTopicReflectionCacheKey(translation, topicId, today);
 
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, queryHash))
@@ -308,7 +379,9 @@ router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, re
 2. A discussion question for small groups or personal journaling
 3. A practical application challenge for today
 4. A lesser-known Bible verse related to this topic (different from common ones)
-Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`),
+
+CRITICAL: Provide ONLY the verse reference (e.g. "Zephaniah 3:17"). Do NOT quote or paraphrase the verse text — the exact wording is looked up canonically afterward. Choose a reference that exists as a single verse or a same-chapter range.
+Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string }`),
         },
         {
           role: "user",
@@ -320,7 +393,46 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
 
     const raw = response.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    const data = JSON.parse(cleaned);
+    const parsedData = JSON.parse(cleaned);
+
+    const verseReference =
+      typeof parsedData.verseReference === "string" ? parsedData.verseReference.trim() : "";
+    if (!verseReference) {
+      throw new ScriptureError("INVALID_REFERENCE", "AI did not return a verse reference", 502);
+    }
+
+    // Resolve the reference canonically in the requested translation and attach
+    // the EXACT verse text + provenance. AI-generated wording is never returned.
+    const resolvedVerse = await resolveReference({
+      reference: verseReference,
+      translation,
+      cache: chapterCacheHooks,
+    });
+    const verseText = joinResolvedVerseText(
+      resolvedVerse.verses as Array<{ text?: unknown }>
+    );
+    if (!verseText) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No verse text resolved for ${verseReference}`,
+        404
+      );
+    }
+
+    const data = {
+      reflection: parsedData.reflection,
+      question: parsedData.question,
+      challenge: parsedData.challenge,
+      verseReference,
+      verseText,
+      translation: resolvedVerse.meta.translation,
+      translationName: resolvedVerse.meta.translationName,
+      source: resolvedVerse.meta.source,
+      provider: resolvedVerse.meta.provider,
+      ...(resolvedVerse.meta.providerEditionId
+        ? { providerEditionId: resolvedVerse.meta.providerEditionId }
+        : {}),
+    };
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -332,7 +444,7 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
         .where(eq(searchCache.queryHash, queryHash));
     } else {
       await db.insert(searchCache).values({
-        queryText: `topic-reflection:${topicId}`,
+        queryText: `topic-reflection:${translation}:${topicId}`,
         queryHash,
         results: data,
         expiresAt: tomorrow,
@@ -344,6 +456,9 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
 
     return res.json(data);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("Topic reflection error:", err);
     return res.status(500).json({ error: "Failed to generate reflection" });
   }
@@ -355,32 +470,41 @@ router.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
     const chapter = Number(req.query.chapter);
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
 
-    const cached = await db
-      .select({ sections: chapterPassageSections.sections })
-      .from(chapterPassageSections)
-      .where(and(eq(chapterPassageSections.bookId, bookId), eq(chapterPassageSections.chapter, chapter)));
+    // Translation is required and must be explicit — no implicit default.
+    const rawTranslation = req.query.translation as string | undefined;
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
 
-    if (cached.length > 0) {
-      return res.json(cached[0].sections);
+    // Translation-isolated, SDA-lens-versioned cache in searchCache.
+    // Legacy chapterPassageSections is NOT read/written for generated content.
+    const cacheKey = buildPassageSectionsCacheKey(translation, bookId, chapter);
+    const [cached] = await db
+      .select()
+      .from(searchCache)
+      .where(eq(searchCache.queryHash, cacheKey))
+      .limit(1);
+
+    if (cached && cached.expiresAt > new Date()) {
+      return res.json(cached.results);
     }
 
-    const verses = await db
-      .select({ verse: bibleVerses.verse, text: bibleVerses.text })
-      .from(bibleVerses)
-      .where(and(eq(bibleVerses.bookId, bookId), eq(bibleVerses.chapter, chapter)))
-      .orderBy(bibleVerses.verse);
+    // Resolve the chapter canonically in the requested translation instead of a
+    // translation-unfiltered bibleVerses query.
+    const resolved = await resolveChapter({
+      book: bookId,
+      chapter,
+      translation,
+      cache: chapterCacheHooks,
+    });
 
+    const verses = (resolved.verses as Array<{ verse: number; text: string }>);
     if (verses.length === 0) return res.json([]);
 
-    const [bookInfo] = await db
-      .select({ name: bibleBooks.name })
-      .from(bibleBooks)
-      .where(eq(bibleBooks.id, bookId));
-
-    const bookName = bookInfo?.name ?? `Book ${bookId}`;
+    const bookName = resolved.book.name;
     const totalVerses = verses.length;
-
-    const chapterText = verses.map(v => `${v.verse} ${v.text}`).join(" ");
+    const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
 
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({
@@ -393,7 +517,7 @@ router.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+          content: withSdaLens(`You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
 
 Rules:
 - Sections must be contiguous and non-overlapping
@@ -401,13 +525,13 @@ Rules:
 - Aim for 2-5 sections depending on chapter length
 - Each section should be a coherent narrative or thematic unit
 - Labels should be short descriptions (5-8 words max)
-- For very short chapters (under 10 verses), return 1-2 sections`,
+- For very short chapters (under 10 verses), return 1-2 sections`),
         },
         {
           role: "user",
-          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses, ${translation} translation) into natural study sections.
 
-Chapter text:
+Chapter text (${translation}):
 ${chapterText.substring(0, 4000)}
 
 Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`,
@@ -438,13 +562,27 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
       sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
     }
 
+    // Cache generated sections under the translation-isolated searchCache key.
+    const sectionsExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await db
-      .insert(chapterPassageSections)
-      .values({ bookId, chapter, sections })
-      .onConflictDoNothing();
+      .insert(searchCache)
+      .values({
+        queryText: `passage-sections:${translation}:${bookName} ${chapter}`,
+        queryHash: cacheKey,
+        results: sections,
+        expiresAt: sectionsExpiry,
+      })
+      .onConflictDoUpdate({
+        target: searchCache.queryHash,
+        set: { results: sections, expiresAt: sectionsExpiry },
+      });
 
+    // Preserve response array shape for client compatibility.
     return res.json(sections);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("Passage sections error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -554,12 +692,38 @@ router.get("/api/analytics/growth", async (req, res) => {
 
 router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
   try {
-    const { bookName, chapter, verse, translation } = req.query as Record<string, string>;
+    const { bookName, chapter, verse, translation: rawTranslation } = req.query as Record<string, string>;
     if (!bookName || !chapter || !verse) {
       return res.status(400).json({ error: "bookName, chapter, and verse are required" });
     }
 
-    const cacheKey = `explain-${SDA_LENS_VERSION}-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
+    // Translation is required and must be explicit — no implicit 'or KJV'.
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+
+    // Resolve the target verse canonically BEFORE cache lookup / generation so
+    // the prompt receives the exact authoritative text in the requested edition.
+    const reference = `${bookName} ${chapter}:${verse}`;
+    const resolvedVerse = await resolveReference({
+      reference,
+      translation,
+      cache: chapterCacheHooks,
+    });
+    const verseText = joinResolvedVerseText(
+      resolvedVerse.verses as Array<{ text?: unknown }>
+    );
+    if (!verseText) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No verse text resolved for ${reference}`,
+        404
+      );
+    }
+    const canonicalTranslation = resolvedVerse.meta.translation;
+
+    const cacheKey = buildExplainCacheKey(canonicalTranslation, bookName, chapter, verse);
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, cacheKey))
       .limit(1);
@@ -588,17 +752,31 @@ Keep the explanation warm, clear, and between 150-250 words. Write in second per
         },
         {
           role: "user",
-          content: `Explain ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`,
+          content: `Explain ${reference} (${canonicalTranslation}).
+
+Authoritative ${canonicalTranslation} text of the verse:
+"${verseText}"`,
         },
       ],
       temperature: 0.7,
     });
 
     const explanation = response.choices[0]?.message?.content || "";
-    const result = { explanation };
+    const result = {
+      explanation,
+      reference,
+      verseText,
+      translation: resolvedVerse.meta.translation,
+      translationName: resolvedVerse.meta.translationName,
+      source: resolvedVerse.meta.source,
+      provider: resolvedVerse.meta.provider,
+      ...(resolvedVerse.meta.providerEditionId
+        ? { providerEditionId: resolvedVerse.meta.providerEditionId }
+        : {}),
+    };
 
     await db.insert(searchCache).values({
-      queryText: `${bookName} ${chapter}:${verse} (${translation || "KJV"})`,
+      queryText: `${reference} (${canonicalTranslation})`,
       queryHash: cacheKey,
       results: result,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -609,6 +787,9 @@ Keep the explanation warm, clear, and between 150-250 words. Write in second per
 
     return res.json(result);
   } catch (err: any) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("AI explain error:", err);
     const status = getErrorStatusCode(err);
     return res.status(status || 500).json({ error: "Could not generate explanation" });
@@ -617,17 +798,25 @@ Keep the explanation warm, clear, and between 150-250 words. Write in second per
 
 router.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => {
   try {
-    const { bookName, chapter, verse, translation } = req.query as Record<string, string>;
+    const { bookName, chapter, verse, translation: rawTranslation } = req.query as Record<string, string>;
     if (!bookName || !chapter || !verse) {
       return res.status(400).json({ error: "bookName, chapter, and verse are required" });
     }
 
-    const cacheKey = `crossref-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
+    // Translation is required and must be explicit — no implicit default.
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+
+    const cacheKey = buildCrossRefCacheKey(translation, bookName, chapter, verse);
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, cacheKey))
       .limit(1);
 
-    if (cached && cached.expiresAt > new Date()) {
+    // Only serve cache written under the CURRENT hydrated shape (canonical
+    // resolver text + provenance). Stale/legacy entries are regenerated.
+    if (cached && cached.expiresAt > new Date() && isCurrentHydrationVersion(cached.results)) {
       return res.json(cached.results);
     }
 
@@ -642,15 +831,16 @@ router.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => 
         {
           role: "system",
           content: withSdaLens(`You are a Bible scholar. Given a verse reference, provide 4-6 of the most relevant cross-references.
-For each cross-reference, provide:
-1. The exact reference (e.g., "John 3:16")
-2. The verse text (from the specified translation or KJV)
-3. A brief explanation of how it connects to the original verse
+For each cross-reference, provide ONLY:
+1. The exact reference (e.g., "John 3:16"). Use a single verse or a same-chapter range.
+2. A brief explanation of how it connects to the original verse.
+
+CRITICAL: Do NOT include or quote any verse text. The authoritative wording is looked up canonically afterward in the requested translation. Only supply the reference and the connection.
 
 Return JSON format:
 {
   "crossReferences": [
-    { "ref": "John 3:16", "text": "For God so loved the world...", "connection": "Both passages emphasize God's redemptive plan..." }
+    { "ref": "John 3:16", "connection": "Both passages emphasize God's redemptive plan..." }
   ]
 }
 
@@ -662,17 +852,33 @@ Focus on cross-references that:
         },
         {
           role: "user",
-          content: `Find cross-references for ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`,
+          content: `Find cross-references for ${bookName} ${chapter}:${verse} (${translation}). Return references and connections only — no verse text.`,
         },
       ],
       temperature: 0.5,
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(response.choices[0]?.message?.content || '{"crossReferences":[]}');
+    const parsed = JSON.parse(response.choices[0]?.message?.content || '{"crossReferences":[]}');
+    const rawList = extractRawCrossReferences(parsed);
+
+    // Resolve EXACT text for every reference through the canonical resolver in
+    // the requested translation. Any resolver/provider/parse failure throws and
+    // fails the whole request — no partial or fallback content.
+    const hydrated = await hydrateCrossReferences(
+      rawList,
+      translation,
+      (params) => resolveReference({ ...params, cache: chapterCacheHooks })
+    );
+
+    const result = {
+      crossReferences: hydrated,
+      translation,
+      hydrationVersion: HYDRATION_VERSION,
+    };
 
     await db.insert(searchCache).values({
-      queryText: `Cross-ref: ${bookName} ${chapter}:${verse}`,
+      queryText: `Cross-ref: ${bookName} ${chapter}:${verse} (${translation})`,
       queryHash: cacheKey,
       results: result,
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -683,6 +889,9 @@ Focus on cross-references that:
 
     return res.json(result);
   } catch (err: any) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("AI cross-references error:", err);
     const status = getErrorStatusCode(err);
     return res.status(status || 500).json({ error: "Could not generate cross-references" });

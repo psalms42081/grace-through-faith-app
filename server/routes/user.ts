@@ -496,7 +496,8 @@ router.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
 router.post("/api/reading-history", optionalAuth, validate(readingHistorySchema), async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { bookId, bookName, chapter, translation = "KJV" } = req.body;
+    const { bookId, bookName, chapter } = req.body;
+    const translation = String(req.body.translation).trim().toUpperCase();
 
     const [entry] = await db
       .insert(readingHistory)

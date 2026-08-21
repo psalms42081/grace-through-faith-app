@@ -20,7 +20,6 @@ import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
-import { useQuery } from "@tanstack/react-query";
 
 const GOLD = "#C9933A";
 const SIGNPOST_COLORS: Record<string, string> = {
@@ -41,8 +40,20 @@ const SIGNPOST_COLORS: Record<string, string> = {
   "hope": "#1A5276",
 };
 
+interface SignpostQuestionVerse {
+  ref: string;
+  text: string;
+  translation: string;
+}
+
+interface SignpostQuestion {
+  question: string;
+  verses: SignpostQuestionVerse[];
+  commentary?: string;
+}
+
 interface VotdHeroCardProps {
-  verse: { text: string; reference: string };
+  verse: { text: string; reference: string; translation?: string };
   bgImage?: string;
   bookImage?: ImageSourcePropType | null;
   onPress?: () => void;
@@ -50,15 +61,14 @@ interface VotdHeroCardProps {
   verseId?: string;
   bookId?: number;
   chapterNumber?: number;
+  /** Active translation code (e.g. "KJV", "NIV") to preserve in navigation. */
+  translation?: string;
   signpost?: {
     title: string;
     excerpt: string;
     id?: string;
-    questions?: Array<{
-      question: string;
-      verses: Array<{ ref: string; text: string }>;
-      commentary?: string;
-    }>;
+    translation?: string;
+    questions?: SignpostQuestion[];
   } | null;
   reflection?: {
     thought: string;
@@ -80,6 +90,7 @@ function showAuthGate() {
 export default function VotdHeroCard({
   verse, bgImage, bookImage, onPress,
   userId, verseId, bookId, chapterNumber,
+  translation,
   signpost, reflection,
 }: VotdHeroCardProps) {
   const imageSource = bookImage || (bgImage ? { uri: bgImage } : undefined);
@@ -145,7 +156,8 @@ export default function VotdHeroCard({
     const actions: Record<number, () => void> = {
       0: () => {
         if (bookId && chapterNumber) {
-          router.push(`/read/${bookId}/${chapterNumber}` as any);
+          const txParam = translation ? `?translation=${encodeURIComponent(translation)}` : "";
+          router.push(`/read/${bookId}/${chapterNumber}${txParam}` as any);
         }
       },
       1: async () => {
@@ -214,9 +226,20 @@ export default function VotdHeroCard({
               <>
                 <Text style={[s.label, { fontFamily: "Inter_600SemiBold" }]}>VERSE OF THE DAY</Text>
                 <Text style={[s.reference, { fontFamily: "Lora_600SemiBold" }]}>{verse.reference}</Text>
-                <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-                  {verse.text}
-                </Text>
+                {(verse.translation || translation) && (
+                  <Text style={[s.translationLabel, { fontFamily: "Inter_400Regular" }]}>
+                    {verse.translation ?? translation}
+                  </Text>
+                )}
+                {verse.text ? (
+                  <Text numberOfLines={4} ellipsizeMode="tail" style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+                    {verse.text}
+                  </Text>
+                ) : (
+                  <Text style={[s.verseText, { fontFamily: "Inter_400Regular", opacity: 0.55 }]}>
+                    Loading verse…
+                  </Text>
+                )}
                 <View style={s.engagementRow}>
                   <Pressable onPress={handleLike} style={s.engageItem}>
                     <Ionicons name={saved ? "heart" : "heart-outline"} size={18} color={saved ? GOLD : "rgba(255,255,255,0.8)"} />
@@ -394,7 +417,7 @@ export default function VotdHeroCard({
                   {q.verses?.map((v: any, vi: number) => (
                     <View key={vi} style={s.sheetVerse}>
                       <Text style={[s.sheetVerseRef, { fontFamily: "Lora_600SemiBold" }]}>
-                        {v.ref}
+                        {v.ref} · {v.translation || signpost?.translation || translation}
                       </Text>
                       <Text style={[s.sheetVerseText, { fontFamily: "Lora_400Regular_Italic" }]}>
                         {v.text}
@@ -470,7 +493,13 @@ const s = StyleSheet.create({
   reference: {
     color: "#FFFFFF",
     fontSize: 16,
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  translationLabel: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   verseText: {
     color: "#FFFFFF",

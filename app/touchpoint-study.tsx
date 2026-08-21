@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
+import { useTranslation } from "@/context/TranslationContext";
 
 const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
@@ -25,6 +26,12 @@ interface StudySection {
   scriptureText: string;
   teaching: string;
   reflection: string;
+  // Optional per-section resolution metadata from the backend. When present,
+  // `translation` is the authoritative label for scriptureText and `resolved`
+  // indicates canonical Scripture (vs. no verified text).
+  translation?: string;
+  source?: string;
+  resolved?: boolean;
 }
 
 interface BibleStudy {
@@ -34,23 +41,32 @@ interface BibleStudy {
   conclusion: string;
   prayerPrompt: string;
   groupDiscussion: string[];
+  // Study-level translation the backend generated Scripture against.
+  translation?: string;
 }
 
 export default function TouchPointStudyScreen() {
-  const { topicId, title } = useLocalSearchParams<{ topicId: string; title: string }>();
+  const { topicId, title, translation: translationParam } = useLocalSearchParams<{ topicId: string; title: string; translation?: string }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const { translation: contextTranslation } = useTranslation();
+  // Prefer translation passed via nav params (set at time of generation), fall back to context.
+  const translation = translationParam || contextTranslation;
 
   const { data: study, isLoading, isError } = useQuery<BibleStudy>({
-    queryKey: [`/api/touchpoints/${topicId}/bible-study`],
+    // translation is a distinct key element so switching refetches the study
+    queryKey: ["/api/touchpoints", topicId, "bible-study", { translation }],
     queryFn: async () => {
-      const res = await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`);
+      const res = await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`, { translation });
       return res.json();
     },
     staleTime: Infinity,
   });
+
+  // Prefer the translation the backend actually reports; fall back to requested.
+  const studyTranslation = study?.translation || translation;
 
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
@@ -61,9 +77,14 @@ export default function TouchPointStudyScreen() {
         <Pressable onPress={() => safeGoBack(router, `/touchpoint-topic?topicId=${topicId}`)} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]} numberOfLines={1}>
-          {title || "Bible Study"}
-        </Text>
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold", flex: 0 }]} numberOfLines={1}>
+            {title || "Bible Study"}
+          </Text>
+          <Text style={{ fontSize: 11, color: theme.textSecondary, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+            {studyTranslation}
+          </Text>
+        </View>
         <View style={{ width: 24 }} />
       </View>
 
@@ -96,19 +117,40 @@ export default function TouchPointStudyScreen() {
             {study.introduction}
           </Text>
 
-          {study.sections?.map((section, i) => (
+          {study.sections?.map((section, i) => {
+            const sectionTranslation = section.translation || studyTranslation;
+            // Only display Scripture text the backend verified as canonical.
+            // When `resolved` is explicitly false, or the backend sent no text,
+            // we must NOT show AI-generated scriptureText — show a pointer to
+            // read it in the reader instead.
+            const hasVerifiedText =
+              section.resolved !== false &&
+              typeof section.scriptureText === "string" &&
+              section.scriptureText.trim().length > 0;
+            return (
             <View key={i} style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
               <Text style={[styles.sectionHeading, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                 {section.heading}
               </Text>
 
               <View style={[styles.scriptureBox, { borderLeftColor: TEAL + "80" }]}>
-                <Text style={[styles.scriptureRef, { color: TEAL, fontFamily: "Inter_600SemiBold" }]}>
-                  {section.scripture}
-                </Text>
-                <Text style={[styles.scriptureText, { color: theme.text }]}>
-                  {section.scriptureText}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                  <Text style={[styles.scriptureRef, { color: TEAL, fontFamily: "Inter_600SemiBold" }]}>
+                    {section.scripture}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: TEAL, fontFamily: "Inter_400Regular", opacity: 0.7 }}>
+                    {sectionTranslation}
+                  </Text>
+                </View>
+                {hasVerifiedText ? (
+                  <Text style={[styles.scriptureText, { color: theme.text }]}>
+                    {section.scriptureText}
+                  </Text>
+                ) : (
+                  <Text style={[styles.scriptureText, { color: theme.textSecondary, fontStyle: "italic" }]}>
+                    Scripture text for {section.scripture} could not be verified in {sectionTranslation}. Open your Bible to read it in your selected translation.
+                  </Text>
+                )}
               </View>
 
               <Text style={[styles.teachingText, { color: theme.text }]}>
@@ -122,7 +164,8 @@ export default function TouchPointStudyScreen() {
                 </Text>
               </View>
             </View>
-          ))}
+            );
+          })}
 
           <View style={[styles.conclusionBox, { borderTopColor: borderColor }]}>
             <Text style={[styles.conclusionLabel, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>

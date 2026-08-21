@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Share, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, Share, Alert, ActivityIndicator } from "react-native";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -17,6 +17,9 @@ interface Props {
   userId?: string;
   signpost?: { id: string; title: string; description: string } | null;
   reflection: { thought: string; source: string };
+  translation?: string;
+  verseLoading?: boolean;
+  verseUnavailable?: boolean;
 }
 
 const TABS: { key: HeroTab; label: string }[] = [
@@ -37,7 +40,7 @@ function showAuthGate() {
 }
 
 export default function HeroCard({
-  activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection,
+  activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection, translation, verseLoading, verseUnavailable,
 }: Props) {
   const [saved, setSaved] = useState(false);
 
@@ -70,7 +73,10 @@ export default function HeroCard({
 
   const handleRead = () => {
     if (bookId && chapterNumber) {
-      router.push(`/read/${bookId}/${chapterNumber}` as any);
+      const url = translation
+        ? `/read/${bookId}/${chapterNumber}?translation=${encodeURIComponent(translation)}`
+        : `/read/${bookId}/${chapterNumber}`;
+      router.push(url as any);
     }
   };
 
@@ -96,8 +102,18 @@ export default function HeroCard({
       {activeTab === "verse" && (
         <View style={s.body}>
           <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
-          <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
-          <Text style={s.cite}>{verse.reference} · KJV</Text>
+          {verseLoading ? (
+            <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
+          ) : verseUnavailable ? (
+            <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
+              {translation
+                ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
+                : "This verse is currently unavailable. Open your Bible to read it."}
+            </Text>
+          ) : verse.text ? (
+            <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
+          ) : null}
+          <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
         </View>
       )}
       {activeTab === "signpost" && (

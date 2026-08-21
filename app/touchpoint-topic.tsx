@@ -19,6 +19,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
 import WebView from "react-native-webview";
+import { useTranslation } from "@/context/TranslationContext";
 
 const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
@@ -26,6 +27,13 @@ const TEAL = "#2A8B8B";
 interface Verse {
   ref: string;
   text: string;
+  // Optional metadata the backend may attach once Scripture is resolved
+  // against a specific translation. When present, `translation` is the
+  // authoritative label to display (may differ from the requested one if
+  // the backend fell back). `resolved` false / absent text = no canonical text.
+  translation?: string;
+  source?: string;
+  resolved?: boolean;
 }
 
 interface TouchPointQuestion {
@@ -148,19 +156,29 @@ export default function TouchPointTopicScreen() {
 
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { translation } = useTranslation();
 
   const { data: topic, isLoading, isFetching, error } = useQuery<TouchPointTopic>({
-    queryKey: [`/api/touchpoints/${topicId}`],
+    // translation is a distinct key element so switching translation refetches
+    queryKey: ["/api/touchpoints", topicId, { translation }],
+    queryFn: async () => {
+      const url = `/api/touchpoints/${topicId}?translation=${encodeURIComponent(translation)}`;
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
     enabled: !!topicId,
   });
 
   const studyMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`);
+      const res = await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`, { translation });
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.setQueryData([`/api/touchpoints/${topicId}/bible-study`], data);
+      queryClient.setQueryData(
+        ["/api/touchpoints", topicId, "bible-study", { translation }],
+        data
+      );
     },
   });
 
@@ -176,7 +194,7 @@ export default function TouchPointTopicScreen() {
             studyMutation.mutate(undefined, {
               onSuccess: (data) => {
                 router.push(
-                  `/touchpoint-study?topicId=${topicId}&title=${encodeURIComponent(data.title || topic?.title || "")}` as any
+                  `/touchpoint-study?topicId=${topicId}&title=${encodeURIComponent(data.title || topic?.title || "")}&translation=${encodeURIComponent(translation)}` as any
                 );
               },
             });
@@ -184,7 +202,7 @@ export default function TouchPointTopicScreen() {
         },
       ]
     );
-  }, [topic, topicId, studyMutation]);
+  }, [topic, topicId, studyMutation, translation]);
 
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
@@ -325,16 +343,35 @@ export default function TouchPointTopicScreen() {
 
                 {isExpanded && (
                   <View style={[styles.answerContainer, { borderColor }]}>
-                    {q.verses.map((v, i) => (
-                      <View key={i} style={styles.verseBlock}>
-                        <Text style={[styles.verseRef, { color: TEAL, fontFamily: "Inter_600SemiBold" }]}>
-                          {v.ref}
-                        </Text>
-                        <Text style={[styles.verseText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                          {v.text}
-                        </Text>
-                      </View>
-                    ))}
+                    {q.verses.map((v, i) => {
+                      // The label shown next to the reference is whatever the
+                      // backend resolved the text against. Only fall back to the
+                      // requested translation when the backend didn't say.
+                      const verseTranslation = v.translation || translation;
+                      const hasCanonicalText =
+                        typeof v.text === "string" && v.text.trim().length > 0;
+                      return (
+                        <View key={i} style={styles.verseBlock}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                            <Text style={[styles.verseRef, { color: TEAL, fontFamily: "Inter_600SemiBold" }]}>
+                              {v.ref}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: TEAL, fontFamily: "Inter_400Regular", opacity: 0.7 }}>
+                              {verseTranslation}
+                            </Text>
+                          </View>
+                          {hasCanonicalText ? (
+                            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
+                              {v.text}
+                            </Text>
+                          ) : (
+                            <Text style={[styles.verseText, { color: theme.textMuted, fontFamily: "Inter_400Regular", fontStyle: "italic" }]}>
+                              Scripture text for {v.ref} could not be resolved in {verseTranslation}. Open your Bible to read it in your selected translation.
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
                     <View style={[styles.commentaryBlock, { borderLeftColor: GOLD + "60" }]}>
                       <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                         {q.commentary}

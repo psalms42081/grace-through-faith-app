@@ -17,8 +17,16 @@ const TranslationContext = createContext<TranslationContextType>({
   setTranslation: () => {},
 });
 
+/** Normalize a stored/incoming translation code (trim whitespace, uppercase). */
+function normalizeTranslation(t: string | null | undefined): string | null {
+  if (!t) return null;
+  const n = t.trim().toUpperCase();
+  return n.length > 0 ? n : null;
+}
+
 async function resolveTranslation(): Promise<string> {
-  const manualOverride = await AsyncStorage.getItem(MANUAL_OVERRIDE_KEY);
+  const raw = await AsyncStorage.getItem(MANUAL_OVERRIDE_KEY);
+  const manualOverride = normalizeTranslation(raw);
   if (manualOverride) return manualOverride;
 
   const lang = resolveContentLang(i18n.language || "en");
@@ -31,9 +39,10 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     resolveTranslation().then((t) => {
-      setTranslationState(t);
+      const normalized = normalizeTranslation(t) ?? "KJV";
+      setTranslationState(normalized);
       AsyncStorage.getItem(MANUAL_OVERRIDE_KEY).then((v) => {
-        hasManualOverride.current = !!v;
+        hasManualOverride.current = !!normalizeTranslation(v);
       });
     });
   }, []);
@@ -42,7 +51,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     const handler = () => {
       if (!hasManualOverride.current) {
         const lang = resolveContentLang(i18n.language || "en");
-        const defaultTranslation = getTranslationForLanguage(lang);
+        const defaultTranslation = normalizeTranslation(getTranslationForLanguage(lang)) ?? "KJV";
         setTranslationState(defaultTranslation);
       }
     };
@@ -51,10 +60,12 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const setTranslation = useCallback((t: string) => {
-    setTranslationState(t);
+    const normalized = normalizeTranslation(t) ?? "KJV";
+    setTranslationState(normalized);
     hasManualOverride.current = true;
-    AsyncStorage.setItem(TRANSLATION_KEY, t);
-    AsyncStorage.setItem(MANUAL_OVERRIDE_KEY, t);
+    // Store the same normalized value in both keys so they never diverge.
+    AsyncStorage.setItem(TRANSLATION_KEY, normalized);
+    AsyncStorage.setItem(MANUAL_OVERRIDE_KEY, normalized);
   }, []);
 
   return (

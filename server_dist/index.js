@@ -2379,7 +2379,7 @@ function getDepthMaxTokens(depth, standardTokens) {
   }
 }
 async function generateStrongWordStudy(params) {
-  const { verseText, bookName, chapter, verse } = params;
+  const { verseText, bookName, chapter, verse, translation } = params;
   const testament = NT_BOOKS.includes(bookName) ? "NT" : "OT";
   const lang = testament === "NT" ? "Greek" : "Hebrew";
   const langCode = testament === "NT" ? "gr" : "he";
@@ -2393,23 +2393,23 @@ async function generateStrongWordStudy(params) {
       },
       {
         role: "user",
-        content: `Analyze ${bookName} ${chapter}:${verse} (KJV): "${verseText}"
+        content: `Analyze ${bookName} ${chapter}:${verse}. The English surface text below is from the ${translation} translation: "${verseText}"
 
-Analyze EVERY significant word in this verse (skip only articles like "the", "a", "an" and basic prepositions like "of", "to", "in", "for"). For each word, return Strong's-style data. Return a JSON array:
+Analyze EVERY significant word in this verse (skip only articles like "the", "a", "an" and basic prepositions like "of", "to", "in", "for"). For each word, return Strong's-style data. The English words you cite in "translatedWord" must reflect the ${translation} wording shown above. Return a JSON array:
 [
   {
     "strongId": "${langCode === "he" ? "H" : "G"}XXXX",
     "originalWord": "the ${lang} word",
-    "translatedWord": "the English word in KJV",
+    "translatedWord": "the English word as it appears in the ${translation} text above",
     "lemma": "dictionary form in ${lang} script",
     "transliteration": "romanized form",
     "pronunciation": "how to pronounce it",
     "definition": "concise definition (1-2 sentences)",
-    "kjvUsage": "common KJV translations separated by commas"
+    "kjvUsage": "the KJV translation glosses recorded for this Strong's entry, separated by commas"
   }
 ]
 
-Use real Strong's numbers when you know them. If unsure, use a plausible number with the correct prefix (H for Hebrew, G for Greek).`
+Use real Strong's numbers only when you are confident of them (H for Hebrew, G for Greek). NEVER fabricate or guess a Strong's number: if you do not know the correct Strong's ID for a word, omit the "strongId" field entirely for that word rather than inventing one.`
       }
     ],
     temperature: 0.5,
@@ -2425,8 +2425,8 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
     console.error("Failed to parse word study AI response:", raw.substring(0, 500));
     throw new Error("Failed to parse AI response");
   }
-  return parsed.map((w, i) => ({
-    strongId: w.strongId || `${langCode === "he" ? "H" : "G"}${9e3 + i}`,
+  return parsed.map((w) => ({
+    strongId: typeof w.strongId === "string" && /^[HG]\d+$/i.test(w.strongId.trim()) ? w.strongId.trim().toUpperCase() : null,
     originalWord: w.originalWord || w.lemma || "",
     translatedWord: w.translatedWord || "",
     lemma: w.lemma || w.originalWord || "",
@@ -2563,7 +2563,7 @@ ${jsonShape}`
   };
 }
 async function generateStudyGuideStart(params) {
-  const { verseReference, verseText, persona = "pastoral" } = params;
+  const { verseReference, verseText, translation, persona = "pastoral" } = params;
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
   const systemPrompt = `${p.identity} You guide students through the Inductive Bible Study Method (Observe \u2192 Interpret \u2192 Apply). You never give the answer directly \u2014 you ask focused questions that help the student discover truth in the text.
 
@@ -2599,11 +2599,11 @@ RESPONSE RULES:
 - Never over-praise. "Good" or "Right" is sufficient
 - Never invent facts not in the biblical text
 - You are starting in the OBSERVE phase now`;
-  const userPrompt = `The student wants to study this verse:
+  const userPrompt = `The student wants to study this verse (${translation} translation):
 
 "${verseText}" \u2014 ${verseReference}
 
-Begin the OBSERVE phase. Write a brief intro sentence setting up the study (1 sentence), then on a new paragraph ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text. Your response must be exactly two paragraphs separated by a blank line.`;
+Use the ${translation} wording shown above when you quote or reference the verse. Begin the OBSERVE phase. Write a brief intro sentence setting up the study (1 sentence), then on a new paragraph ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text. Your response must be exactly two paragraphs separated by a blank line.`;
   const client = createOpenAIClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -2616,7 +2616,7 @@ Begin the OBSERVE phase. Write a brief intro sentence setting up the study (1 se
   return completion.choices[0]?.message?.content || "Let's begin by reading the verse carefully. What is the first thing you notice about this text?";
 }
 async function generateStudyGuideResponse(params) {
-  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
+  const { verseText, verseReference, translation, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
   const phaseInstructions = {
     observe: "Continue in the OBSERVE phase. Ask about a DIFFERENT observation category than what the student already covered. Observation categories: speaker, people mentioned, titles, actions, source of authority, repeated words, contrasts, structure. Pick a category the student has NOT yet addressed.",
@@ -2624,7 +2624,7 @@ async function generateStudyGuideResponse(params) {
     apply: targetPhase === "apply" && currentPhase === "interpret" ? "The student has finished interpreting. Transition to the APPLY phase. Briefly note the shift: 'Now let\\'s think about how this connects to your life.' Then ask a question that invites personal reflection, using words like 'you', 'your life', 'your own'." : "Continue in the APPLY phase. The student must share a PERSONAL reflection \u2014 not just restate doctrine. If their answer lacks personal language (I, my, me, we, our, personally), prompt them: 'That\\'s a good insight about the passage. How might this truth affect the way you approach your own calling or responsibilities?'",
     complete: "The student has completed all three phases. Give a brief, warm summary of what they discovered (1-2 key insights). End with a short prayer prompt. Keep it to 3-4 sentences total."
   };
-  const systemPrompt = `${p.identity} You guide students using the Inductive Bible Study Method (Observe \u2192 Interpret \u2192 Apply). The student is studying: "${verseText}" \u2014 ${verseReference}
+  const systemPrompt = `${p.identity} You guide students using the Inductive Bible Study Method (Observe \u2192 Interpret \u2192 Apply). The student is studying (${translation} translation): "${verseText}" \u2014 ${verseReference}. When you quote or reference the verse, use the ${translation} wording shown here.
 
 ${p.style}
 
@@ -2791,7 +2791,7 @@ function parseEvaluationTag(response, userResponse, verseText, currentPhase) {
   return { text: cleanText, quality: resolvedQuality, category };
 }
 async function generateStudySummary(params) {
-  const { verseReference, verseText, userAnswers } = params;
+  const { verseReference, verseText, translation, userAnswers } = params;
   const client = createOpenAIClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -2806,7 +2806,7 @@ Use their actual words and ideas, not generic doctrine. Keep it under 60 words t
       },
       {
         role: "user",
-        content: `Verse: "${verseText}" \u2014 ${verseReference}
+        content: `Verse (${translation} translation): "${verseText}" \u2014 ${verseReference}
 
 Observe answers: ${userAnswers.observe.join(" | ")}
 
@@ -2820,36 +2820,40 @@ Apply answers: ${userAnswers.apply.join(" | ")}`
   return completion.choices[0]?.message?.content || "Study complete. You explored this passage through observation, interpretation, and application.";
 }
 async function generateVerseMap(params) {
-  const { verseText, verseReference } = params;
+  const { verseText, verseReference, translation } = params;
   const client = createOpenAIClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: withSdaLens("You are a Bible scholar providing cross-references and context for specific verses. Return valid JSON only, no markdown. Be scholarly and accurate.")
+        content: withSdaLens(
+          `You are a Bible scholar identifying cross-references and context for specific verses in the ${translation} translation. Return valid JSON only, no markdown. Be scholarly and accurate. You must NEVER quote, paraphrase, embed, or reproduce Scripture text of any verse \u2014 not the source verse and not any cross-reference. Provide only reference identifiers and connection notes.`
+        )
       },
       {
         role: "user",
-        content: `For the verse "${verseText}" (${verseReference}), provide:
+        content: `The source verse is ${verseReference} in the ${translation} translation. Its exact canonical text has already been resolved server-side and is provided here only for your analysis \u2014 do not echo it back:
+
+"""${verseText}"""
+
+Provide:
 1. Cross-references: 8-10 related verses from across the Bible that illuminate this verse's meaning
 2. A brief historical/cultural context snippet (2-3 sentences)
 
-Return JSON:
+Return JSON in EXACTLY this shape:
 {
   "crossReferences": [
-    { "reference": "John 3:16", "text": "For God so loved...", "connection": "Both passages speak of redemptive love.", "bookId": 43, "chapter": 3, "verse": 16 }
+    { "reference": "John 3:16", "connection": "Both passages speak of redemptive love." }
   ],
   "contextSnippet": "Brief historical and cultural context..."
 }
 
-IMPORTANT rules for the "connection" field:
-- Keep each connection under 20 words
-- Describe only historical, linguistic, or literary connections
-- Do NOT make doctrinal claims or speculative theology
-- Stay concise and neutral. Example: "Both verses highlight Paul's calling as an apostle."
-
-Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66`
+STRICT rules:
+- NEVER include any Scripture text, quotation, or paraphrase in ANY field. No "text" field. The "contextSnippet" must not quote or paraphrase any verse.
+- Each "reference" must be a standard, resolvable single-chapter reference (e.g. "John 3:16", "1 Corinthians 15:20-22", "Acts 2:29").
+- Keep each "connection" under 20 words.
+- Describe only historical, linguistic, or literary connections. Do NOT make doctrinal claims or speculative theology. Stay concise and neutral. Example: "Both verses highlight Paul's calling as an apostle."`
       }
     ],
     max_tokens: 1500
@@ -2857,7 +2861,15 @@ Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, N
   try {
     const raw = completion.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    const crossReferences = Array.isArray(parsed.crossReferences) ? parsed.crossReferences.filter((c) => c && typeof c.reference === "string" && c.reference.trim().length > 0).map((c) => ({
+      reference: String(c.reference).trim(),
+      connection: typeof c.connection === "string" ? c.connection.trim() : ""
+    })) : [];
+    return {
+      crossReferences,
+      contextSnippet: typeof parsed.contextSnippet === "string" ? parsed.contextSnippet : ""
+    };
   } catch {
     return { crossReferences: [], contextSnippet: "Context information unavailable." };
   }
@@ -3148,8 +3160,8 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
   try {
     const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
     const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq56 } = await import("drizzle-orm");
-    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, sceneId)).limit(1);
+    const { eq: eq57 } = await import("drizzle-orm");
+    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, sceneId)).limit(1);
     if (scene?.imageUrl) {
       if (scene.imageUrl.startsWith("data:image")) {
         return scene.imageUrl;
@@ -3172,11 +3184,11 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
         const base64 = buffer.toString("base64");
         const contentType = imgResponse.headers.get("content-type") || "image/png";
         const dataUrl = `data:${contentType};base64,${base64}`;
-        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq56(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq57(kidsStoryScenes2.id, sceneId));
         return dataUrl;
       } catch (fetchErr) {
         console.error("Failed to fetch/convert DALL-E image to base64:", fetchErr);
-        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq56(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq57(kidsStoryScenes2.id, sceneId));
         return generatedUrl;
       }
     }
@@ -3304,14 +3316,16 @@ Respond with JSON: {"response": "your thoughtful reply", "followUp": "optional f
     };
   }
 }
-async function generateSemanticSearch(query) {
+async function generateSemanticSearch(query, translation) {
   const openai = createOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, find the most relevant Bible passages. Return 8-12 results ranked by relevance.
+        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, identify the most relevant Bible passages. Return 8-12 results ranked by relevance.
+
+The reader is using the ${translation} translation. Do NOT quote, paraphrase, or reproduce any Scripture wording. Only identify WHICH passage is relevant. The application resolves the exact ${translation} text itself; any verse text you produce would be discarded.
 
 You serve Adventist believers, so when interpreting queries:
 - Prioritize passages that align with SDA doctrinal understanding (e.g., for "what happens when we die," include passages supporting soul sleep like Ecclesiastes 9:5, Psalms 115:17, John 11:11-14)
@@ -3320,7 +3334,7 @@ You serve Adventist believers, so when interpreting queries:
 - Include prophetic passages from Daniel and Revelation when relevant to the query
 - Never select passages in a way that supports Sunday sacredness, eternal hellfire, or the immortal soul doctrine
 
-Return valid JSON only, no markdown:
+Return valid JSON only, no markdown. Do NOT include verse text of any kind:
 [
   {
     "reference": "John 3:16",
@@ -3328,14 +3342,13 @@ Return valid JSON only, no markdown:
     "chapter": 3,
     "verseStart": 16,
     "verseEnd": null,
-    "text": "For God so loved the world...",
     "relevance": "Brief explanation of why this passage is relevant"
   }
 ]
 
 Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66
 
-Use KJV text for verse quotations. Include a mix of well-known and lesser-known passages. Provide the full verse text when possible.`)
+Include a mix of well-known and lesser-known passages. Return references only \u2014 never Scripture text.`)
       },
       {
         role: "user",
@@ -3343,7 +3356,7 @@ Use KJV text for verse quotations. Include a mix of well-known and lesser-known 
       }
     ],
     temperature: 0.5,
-    max_tokens: 3e3
+    max_tokens: 2e3
   });
   const raw = completion.choices[0]?.message?.content ?? "[]";
   const cleaned = cleanJsonResponse(raw);
@@ -3361,7 +3374,6 @@ Use KJV text for verse quotations. Include a mix of well-known and lesser-known 
     chapter: r.chapter || 1,
     verseStart: r.verseStart || 1,
     verseEnd: r.verseEnd || null,
-    text: r.text || "",
     relevance: r.relevance || ""
   }));
 }
@@ -3540,22 +3552,26 @@ Return JSON:
   };
 }
 async function generateVerseExplanation(params) {
-  const { reference, lessonContext } = params;
+  const { reference, verseText, translation, lessonContext } = params;
   const openai = createOpenAIClient();
-  const systemPrompt = `You are a Seventh-day Adventist biblical scholar providing clear, faithful explanations of Scripture passages. Your explanations must:
+  const systemPrompt = `You are a Seventh-day Adventist biblical scholar providing clear, faithful COMMENTARY on Scripture passages (from the ${translation} translation). Your explanations must:
 
 1. Be SHORT (3-5 sentences maximum). Do not write essays.
 2. Be grounded in the biblical text itself \u2014 explain what the passage says and means in context.
 3. Reflect Adventist theological understanding where relevant (sanctuary, Sabbath, state of the dead, Great Controversy, second coming, health message, etc.) but only when the passage naturally touches those themes. Do not force Adventist distinctives into every answer.
 4. Use clear, lay-friendly language. No academic jargon.
 5. Be reverent and measured in tone \u2014 not sensational, not polemical, not devotional fluff.
-6. Reference other Scripture passages briefly when they illuminate the text, but keep cross-references to 1-2 at most.
+6. You MAY name other Scripture references (e.g. "compare Romans 5") but keep them to 1-2 at most.
 7. Never quote or embed Ellen G. White text. You may mention that Adventist thought on a topic can be explored further, but never present EGW as equal to Scripture.
 8. Never speculate beyond what the text says. If a passage is debated, present the Adventist reading calmly without attacking other positions.
-9. Do not use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.`;
-  const userPrompt = lessonContext ? `Explain this passage: ${reference}
+9. Do not use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.
+10. CRITICAL: NEVER quote, paraphrase, or reproduce the Scripture text itself. The reader already sees the verse. Produce COMMENTARY only \u2014 describe meaning and context without echoing the wording of this or any other verse.`;
+  const contextLine = lessonContext ? `
 
-This explanation is being requested within a lesson about: ${lessonContext}` : `Explain this passage: ${reference}`;
+This explanation is being requested within a lesson about: ${lessonContext}` : "";
+  const userPrompt = `Provide commentary on ${reference} (${translation}). The exact canonical text has already been resolved server-side and is provided here only for your analysis \u2014 do not echo or quote it back:
+
+"""${verseText}"""${contextLine}`;
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -3850,15 +3866,15 @@ function computeHash(data) {
   return (0, import_crypto3.createHash)("sha256").update(JSON.stringify(data)).digest("hex");
 }
 async function buildSourcePacket(lessonId) {
-  const lesson = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm22.eq)(sabbathSchoolLessons.id, lessonId)).limit(1);
+  const lesson = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm23.eq)(sabbathSchoolLessons.id, lessonId)).limit(1);
   if (lesson.length === 0) {
     throw new Error(`Lesson not found: ${lessonId}`);
   }
-  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm22.eq)(sabbathSchoolQuarterlies.id, lesson[0].quarterlyId)).limit(1);
+  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm23.eq)(sabbathSchoolQuarterlies.id, lesson[0].quarterlyId)).limit(1);
   if (quarterly.length === 0) {
     throw new Error(`Quarterly not found for lesson: ${lessonId}`);
   }
-  const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm22.eq)(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
+  const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm23.eq)(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
   const [yearStr, qStr] = (quarterly[0].quarterCode || "2025-02").split("-");
   const allContent = days.map((d) => d.contentMarkdown || "").join("\n");
   const sourceJson = {
@@ -3886,7 +3902,7 @@ async function buildSourcePacket(lessonId) {
     doctrinalThemes: detectDoctrinalThemes(allContent)
   };
   const sourceHash = computeHash(sourceJson);
-  const existing = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm22.eq)(lessonSourcePackets.lessonId, lessonId)).limit(1);
+  const existing = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm23.eq)(lessonSourcePackets.lessonId, lessonId)).limit(1);
   if (existing.length > 0) {
     if (existing[0].sourceHash === sourceHash) {
       return { id: existing[0].id, isNew: false, changed: false };
@@ -3896,7 +3912,7 @@ async function buildSourcePacket(lessonId) {
       sourceHash,
       status: "normalized",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm22.eq)(lessonSourcePackets.id, existing[0].id));
+    }).where((0, import_drizzle_orm23.eq)(lessonSourcePackets.id, existing[0].id));
     console.log(`[source-packet] Updated packet for "${lesson[0].title}" (hash changed)`);
     return { id: existing[0].id, isNew: false, changed: true };
   }
@@ -3913,14 +3929,14 @@ async function buildSourcePacket(lessonId) {
   console.log(`[source-packet] Created packet for "${lesson[0].title}" (${inserted.id})`);
   return { id: inserted.id, isNew: true, changed: true };
 }
-var import_crypto3, import_drizzle_orm22, SDA_THEME_KEYWORDS;
+var import_crypto3, import_drizzle_orm23, SDA_THEME_KEYWORDS;
 var init_source_packet_builder = __esm({
   "server/services/source-packet-builder.ts"() {
     "use strict";
     import_crypto3 = require("crypto");
     init_db();
     init_schema();
-    import_drizzle_orm22 = require("drizzle-orm");
+    import_drizzle_orm23 = require("drizzle-orm");
     SDA_THEME_KEYWORDS = {
       sabbath: ["sabbath", "seventh day", "seventh-day", "rest day"],
       sanctuary: ["sanctuary", "most holy", "holy place", "heavenly temple", "investigative"],
@@ -3964,7 +3980,7 @@ async function generateSabbathSchoolCompanion(lessonId, options) {
   let packetId = options?.sourcePacketId;
   let sourcePacket;
   if (packetId) {
-    const existing = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm23.eq)(lessonSourcePackets.id, packetId)).limit(1);
+    const existing = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm24.eq)(lessonSourcePackets.id, packetId)).limit(1);
     if (existing.length === 0) throw new Error(`Source packet ${packetId} not found`);
     sourcePacket = {
       id: existing[0].id,
@@ -3975,7 +3991,7 @@ async function generateSabbathSchoolCompanion(lessonId, options) {
   } else {
     const result = await buildSourcePacket(lessonId);
     packetId = result.id;
-    const packet = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm23.eq)(lessonSourcePackets.id, packetId)).limit(1);
+    const packet = await db.select().from(lessonSourcePackets).where((0, import_drizzle_orm24.eq)(lessonSourcePackets.id, packetId)).limit(1);
     sourcePacket = {
       id: packet[0].id,
       sourceJson: packet[0].sourceJson,
@@ -4309,7 +4325,7 @@ Generate exactly ${clampedDays} days. Use songs from the SDA Hymnal when possibl
   console.log(`[content:ready] Family worship plan created: ${inserted.id} (${slug})`);
   return inserted.id;
 }
-var import_openai2, import_zod3, import_drizzle_orm23, companionSchema, COMPANION_PROMPT_VERSION, SDA_SYSTEM_PROMPT2;
+var import_openai2, import_zod3, import_drizzle_orm24, companionSchema, COMPANION_PROMPT_VERSION, SDA_SYSTEM_PROMPT2;
 var init_content_engine = __esm({
   "server/services/content-engine.ts"() {
     "use strict";
@@ -4320,7 +4336,7 @@ var init_content_engine = __esm({
     init_ai_semaphore();
     init_db();
     init_schema();
-    import_drizzle_orm23 = require("drizzle-orm");
+    import_drizzle_orm24 = require("drizzle-orm");
     init_source_packet_builder();
     companionSchema = import_zod3.z.object({
       overview: import_zod3.z.string().min(50),
@@ -4628,7 +4644,7 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
     );
     return null;
   }
-  const existing = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.quarterCode, activeQuarterCode)).limit(1);
+  const existing = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, activeQuarterCode)).limit(1);
   let quarterlyId;
   if (existing.length > 0) {
     quarterlyId = existing[0].id;
@@ -4642,7 +4658,7 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
       coverUrl: quarterCoverUrl,
       curriculumType,
       lastSyncedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.id, quarterlyId));
+    }).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.id, quarterlyId));
   } else {
     const [inserted] = await db.insert(sabbathSchoolQuarterlies).values({
       quarterCode: activeQuarterCode,
@@ -4668,9 +4684,9 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
     const lessonStartDate = pickString(lessonItem, ["start_date", "startDate"]);
     const lessonEndDate = pickString(lessonItem, ["end_date", "endDate"]);
     const existingLesson = await db.select().from(sabbathSchoolLessons).where(
-      (0, import_drizzle_orm24.and)(
-        (0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId),
-        (0, import_drizzle_orm24.eq)(sabbathSchoolLessons.lessonNumber, lessonNum)
+      (0, import_drizzle_orm25.and)(
+        (0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId),
+        (0, import_drizzle_orm25.eq)(sabbathSchoolLessons.lessonNumber, lessonNum)
       )
     ).limit(1);
     let lessonId;
@@ -4680,7 +4696,7 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
         title: lessonTitle,
         startDate: lessonStartDate,
         endDate: lessonEndDate
-      }).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.id, lessonId));
+      }).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.id, lessonId));
       updatedLessonIds.push(lessonId);
     } else {
       const [insertedLesson] = await db.insert(sabbathSchoolLessons).values({
@@ -4707,9 +4723,9 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
       const dayDate = pickString(dayObj, ["date", "fullDate", "dayDate"]);
       const contentBody = getDayContentMarkdown(dayPayload);
       const existingDay = await db.select().from(sabbathSchoolDays).where(
-        (0, import_drizzle_orm24.and)(
-          (0, import_drizzle_orm24.eq)(sabbathSchoolDays.lessonId, lessonId),
-          (0, import_drizzle_orm24.eq)(sabbathSchoolDays.dayNumber, dayNum)
+        (0, import_drizzle_orm25.and)(
+          (0, import_drizzle_orm25.eq)(sabbathSchoolDays.lessonId, lessonId),
+          (0, import_drizzle_orm25.eq)(sabbathSchoolDays.dayNumber, dayNum)
         )
       ).limit(1);
       if (existingDay.length > 0) {
@@ -4718,7 +4734,7 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
           title: dayTitle,
           date: dayDate,
           contentMarkdown: contentBody
-        }).where((0, import_drizzle_orm24.eq)(sabbathSchoolDays.id, existingDay[0].id));
+        }).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.id, existingDay[0].id));
         if (contentChanged && !updatedLessonIds.includes(lessonId)) {
           updatedLessonIds.push(lessonId);
         }
@@ -4759,20 +4775,20 @@ async function syncQuarterlyAudio(quarterCode, lang = "en") {
     `${BASE_URL}/${lang}/quarterlies/${quarterCode}/audio.json`
   );
   if (!audioPayload) return;
-  const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (!quarterly) return;
-  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
+  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
   if (lessons.length === 0) return;
   const lessonIds = lessons.map((lesson) => lesson.id);
   const lessonByNumber = new Map(
     lessons.map((lesson) => [lesson.lessonNumber, lesson.id])
   );
-  const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm24.inArray)(sabbathSchoolDays.lessonId, lessonIds));
+  const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm25.inArray)(sabbathSchoolDays.lessonId, lessonIds));
   const dayByLessonAndNumber = /* @__PURE__ */ new Map();
   for (const day of days) {
     dayByLessonAndNumber.set(`${day.lessonId}:${day.dayNumber}`, day.id);
   }
-  await db.update(sabbathSchoolDays).set({ audioUrl: null }).where((0, import_drizzle_orm24.inArray)(sabbathSchoolDays.lessonId, lessonIds));
+  await db.update(sabbathSchoolDays).set({ audioUrl: null }).where((0, import_drizzle_orm25.inArray)(sabbathSchoolDays.lessonId, lessonIds));
   const mediaEntries = collectObjectsDeep(audioPayload);
   const updates = /* @__PURE__ */ new Map();
   for (const entry of mediaEntries) {
@@ -4788,7 +4804,7 @@ async function syncQuarterlyAudio(quarterCode, lang = "en") {
     updates.set(dayId, audioUrl);
   }
   for (const [dayId, audioUrl] of updates.entries()) {
-    await db.update(sabbathSchoolDays).set({ audioUrl }).where((0, import_drizzle_orm24.eq)(sabbathSchoolDays.id, dayId));
+    await db.update(sabbathSchoolDays).set({ audioUrl }).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.id, dayId));
   }
 }
 async function syncQuarterlyVideos(quarterCode, lang = "en") {
@@ -4796,14 +4812,14 @@ async function syncQuarterlyVideos(quarterCode, lang = "en") {
     `${BASE_URL}/${lang}/quarterlies/${quarterCode}/video.json`
   );
   if (!videoPayload) return;
-  const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (!quarterly) return;
-  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
+  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
   if (lessons.length === 0) return;
   const lessonByNumber = new Map(
     lessons.map((lesson) => [lesson.lessonNumber, { id: lesson.id }])
   );
-  await db.update(sabbathSchoolLessons).set({ videoByArtist: null }).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
+  await db.update(sabbathSchoolLessons).set({ videoByArtist: null }).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
   const mediaEntries = collectObjectsDeep(videoPayload);
   const lessonGroups = /* @__PURE__ */ new Map();
   for (const entry of mediaEntries) {
@@ -4837,7 +4853,7 @@ async function syncQuarterlyVideos(quarterCode, lang = "en") {
       artist,
       clips
     }));
-    await db.update(sabbathSchoolLessons).set({ videoByArtist: payload }).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.id, lessonId));
+    await db.update(sabbathSchoolLessons).set({ videoByArtist: payload }).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.id, lessonId));
   }
 }
 async function syncCurrentQuarter(lang = "en") {
@@ -4860,7 +4876,7 @@ function getNextQuarterCode(code) {
 async function syncAdjacentQuarters(lang = "en", pastCount = 8) {
   const currentCode = getCurrentQuarterCode();
   const existingQuarters = await db.select({ quarterCode: sabbathSchoolQuarterlies.quarterCode }).from(sabbathSchoolQuarterlies).where(
-    import_drizzle_orm24.sql`EXISTS (SELECT 1 FROM ${sabbathSchoolLessons} WHERE ${sabbathSchoolLessons.quarterlyId} = ${sabbathSchoolQuarterlies.id})`
+    import_drizzle_orm25.sql`EXISTS (SELECT 1 FROM ${sabbathSchoolLessons} WHERE ${sabbathSchoolLessons.quarterlyId} = ${sabbathSchoolQuarterlies.id})`
   );
   const existingCodes = new Set(existingQuarters.map((q) => q.quarterCode));
   const codesToSync = [];
@@ -4898,7 +4914,7 @@ async function buildAndGenerateCompanions(quarterlyId, lessonIds) {
 }
 async function getCurrentLessonNumber(quarterlyId) {
   const today = todayUTCMidnight();
-  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+  const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
   if (lessons.length === 0) return 1;
   for (const lesson of lessons) {
     if (lesson.startDate && lesson.endDate) {
@@ -4928,14 +4944,14 @@ async function getCurrentLessonNumber(quarterlyId) {
   return closest?.lessonNumber || 1;
 }
 async function shouldSync() {
-  const dayMissingAudio = await db.select({ id: sabbathSchoolDays.id }).from(sabbathSchoolDays).where(import_drizzle_orm24.sql`${sabbathSchoolDays.audioUrl} IS NULL`).limit(1);
+  const dayMissingAudio = await db.select({ id: sabbathSchoolDays.id }).from(sabbathSchoolDays).where(import_drizzle_orm25.sql`${sabbathSchoolDays.audioUrl} IS NULL`).limit(1);
   if (dayMissingAudio.length > 0) {
     return true;
   }
   const quarterCode = getCurrentQuarterCode();
-  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (currentQ.length > 0) {
-    const lessonCount = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where((0, import_drizzle_orm24.eq)(sabbathSchoolLessons.quarterlyId, currentQ[0].id)).limit(1);
+    const lessonCount = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, currentQ[0].id)).limit(1);
     if (lessonCount.length === 0) {
       console.warn(
         `[SabbathSchool] Quarterly ${currentQ[0].quarterCode} exists but has zero lessons \u2014 forcing resync.`
@@ -4949,7 +4965,7 @@ async function shouldSync() {
     }
     return true;
   }
-  const anyQ = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm24.desc)(sabbathSchoolQuarterlies.lastSyncedAt)).limit(1);
+  const anyQ = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.lastSyncedAt)).limit(1);
   if (anyQ.length === 0) return true;
   const lastSynced = anyQ[0].lastSyncedAt;
   if (!lastSynced) return true;
@@ -4958,23 +4974,23 @@ async function shouldSync() {
 }
 async function getMostRecentQuarterly() {
   const quarterCode = getCurrentQuarterCode();
-  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm24.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const currentQ = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (currentQ.length > 0) return currentQ[0];
-  const fallback = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm24.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1);
+  const fallback = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1);
   return fallback[0] || null;
 }
 async function triggerCompanionGeneration(quarterlyId, packets) {
   if (packets.length === 0) return;
   const { generateSabbathSchoolCompanion: generateSabbathSchoolCompanion2 } = await Promise.resolve().then(() => (init_content_engine(), content_engine_exports));
   for (const { lessonId, packetId, changed } of packets) {
-    const lessonSourceCondition = import_drizzle_orm24.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
+    const lessonSourceCondition = import_drizzle_orm25.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
     const activeCompanions = await db.select({
       id: resources.id,
       status: resources.status,
       sourcePacketId: resources.sourcePacketId,
       contentJson: resources.contentJson,
       supersedesResourceId: resources.supersedesResourceId
-    }).from(resources).where((0, import_drizzle_orm24.and)(lessonSourceCondition, import_drizzle_orm24.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm24.desc)(resources.createdAt));
+    }).from(resources).where((0, import_drizzle_orm25.and)(lessonSourceCondition, import_drizzle_orm25.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm25.desc)(resources.createdAt));
     const publishedCompanion = activeCompanions.find((r) => r.status === "published");
     const pendingDraft = activeCompanions.find((r) => r.status === "draft" && r.supersedesResourceId);
     const existing = publishedCompanion || activeCompanions[0];
@@ -4982,7 +4998,7 @@ async function triggerCompanionGeneration(quarterlyId, packets) {
       continue;
     }
     if (pendingDraft) {
-      await db.delete(resources).where((0, import_drizzle_orm24.eq)(resources.id, pendingDraft.id));
+      await db.delete(resources).where((0, import_drizzle_orm25.eq)(resources.id, pendingDraft.id));
       console.log(`[content:sync] Removed stale pending draft ${pendingDraft.id} for lesson ${lessonId}`);
     }
     const supersedesTarget = publishedCompanion || activeCompanions.find((r) => r.id !== pendingDraft?.id);
@@ -5000,7 +5016,7 @@ async function triggerCompanionGeneration(quarterlyId, packets) {
         updateData.supersedesResourceId = supersedesId;
       }
       if (Object.keys(updateData).length > 0) {
-        await db.update(resources).set(updateData).where((0, import_drizzle_orm24.eq)(resources.id, resourceId));
+        await db.update(resources).set(updateData).where((0, import_drizzle_orm25.eq)(resources.id, resourceId));
         console.log(`[content:sync] Linked new draft to superseded resource ${supersedesId}`);
       }
       console.log(`[content:sync] Companion created: ${resourceId} (${reason})`);
@@ -5012,7 +5028,7 @@ async function triggerCompanionGeneration(quarterlyId, packets) {
 async function invalidateDiscussionCache(lessonIds) {
   if (lessonIds.length === 0) return;
   try {
-    await db.delete(sabbathSchoolDiscussionPrep).where((0, import_drizzle_orm24.inArray)(sabbathSchoolDiscussionPrep.lessonId, lessonIds));
+    await db.delete(sabbathSchoolDiscussionPrep).where((0, import_drizzle_orm25.inArray)(sabbathSchoolDiscussionPrep.lessonId, lessonIds));
     console.log(`[SabbathSchool] Invalidated discussion prep cache for ${lessonIds.length} lessons`);
   } catch (err) {
     console.error("[SabbathSchool] Failed to invalidate discussion cache:", err);
@@ -5057,13 +5073,13 @@ async function initSabbathSchoolSync() {
     24 * 60 * 60 * 1e3
   );
 }
-var import_drizzle_orm24, BASE_URL;
+var import_drizzle_orm25, BASE_URL;
 var init_sabbath_school_sync = __esm({
   "server/services/sabbath-school-sync.ts"() {
     "use strict";
     init_db();
     init_schema();
-    import_drizzle_orm24 = require("drizzle-orm");
+    import_drizzle_orm25 = require("drizzle-orm");
     init_api_client();
     init_source_packet_builder();
     BASE_URL = "https://sabbath-school.adventech.io/api/v2";
@@ -5080,7 +5096,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
   const { force = false, dryRun = false } = options;
   const startedAt = /* @__PURE__ */ new Date();
   console.log(`[batch] Starting batch generation for quarter ${quarterCode} (force=${force}, dryRun=${dryRun})`);
-  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm29.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+  const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm30.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (quarterly.length === 0) {
     throw new Error(`Quarter ${quarterCode} not found in database`);
   }
@@ -5093,7 +5109,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
     id: sabbathSchoolLessons.id,
     title: sabbathSchoolLessons.title,
     lessonNumber: sabbathSchoolLessons.lessonNumber
-  }).from(sabbathSchoolLessons).where((0, import_drizzle_orm29.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+  }).from(sabbathSchoolLessons).where((0, import_drizzle_orm30.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
   let packetsCreated = 0, packetsUpdated = 0, packetsUnchanged = 0;
   for (const lesson of lessons) {
     try {
@@ -5114,8 +5130,8 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
     const packetInfo = perLessonPackets.get(lesson.id);
     const packetId = packetInfo?.id;
     const contentChanged = packetInfo?.changed ?? false;
-    const lessonSourceCondition = import_drizzle_orm29.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`;
-    const activeCompanions = await db.select({ id: resources.id, status: resources.status, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson, supersedesResourceId: resources.supersedesResourceId }).from(resources).where((0, import_drizzle_orm29.and)(lessonSourceCondition, import_drizzle_orm29.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm29.desc)(resources.createdAt));
+    const lessonSourceCondition = import_drizzle_orm30.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lesson.id}`;
+    const activeCompanions = await db.select({ id: resources.id, status: resources.status, sourcePacketId: resources.sourcePacketId, contentJson: resources.contentJson, supersedesResourceId: resources.supersedesResourceId }).from(resources).where((0, import_drizzle_orm30.and)(lessonSourceCondition, import_drizzle_orm30.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm30.desc)(resources.createdAt));
     const publishedCompanion = activeCompanions.find((r) => r.status === "published");
     const pendingDraft = activeCompanions.find((r) => r.status === "draft" && r.supersedesResourceId);
     const existing = publishedCompanion || activeCompanions[0];
@@ -5147,7 +5163,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
       continue;
     }
     if (pendingDraft) {
-      await db.delete(resources).where((0, import_drizzle_orm29.eq)(resources.id, pendingDraft.id));
+      await db.delete(resources).where((0, import_drizzle_orm30.eq)(resources.id, pendingDraft.id));
       console.log(`[batch] Removed stale pending draft ${pendingDraft.id} for lesson ${lesson.lessonNumber}`);
     }
     const supersedesTarget = publishedCompanion || activeCompanions.find((r) => r.id !== pendingDraft?.id);
@@ -5166,7 +5182,7 @@ async function generateQuarterCompanions(quarterCode, options = {}) {
         updateData.supersedesResourceId = supersedesId;
       }
       if (Object.keys(updateData).length > 0) {
-        await db.update(resources).set(updateData).where((0, import_drizzle_orm29.eq)(resources.id, resourceId));
+        await db.update(resources).set(updateData).where((0, import_drizzle_orm30.eq)(resources.id, resourceId));
         console.log(`[batch] Linked new draft to superseded resource ${supersedesId}, preserved previous content for diff`);
       }
       console.log(`[batch] Companion created: ${resourceId}`);
@@ -5216,9 +5232,9 @@ async function getAvailableQuarters() {
   }).from(sabbathSchoolQuarterlies).orderBy(sabbathSchoolQuarterlies.quarterCode);
   const result = [];
   for (const q of quarters) {
-    const lessons = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where((0, import_drizzle_orm29.eq)(sabbathSchoolLessons.quarterlyId, q.id));
+    const lessons = await db.select({ id: sabbathSchoolLessons.id }).from(sabbathSchoolLessons).where((0, import_drizzle_orm30.eq)(sabbathSchoolLessons.quarterlyId, q.id));
     const companions = await db.select({ id: resources.id }).from(resources).where(
-      import_drizzle_orm29.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${q.id}`
+      import_drizzle_orm30.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${q.id}`
     );
     result.push({
       id: q.id,
@@ -5230,13 +5246,13 @@ async function getAvailableQuarters() {
   }
   return result;
 }
-var import_drizzle_orm29;
+var import_drizzle_orm30;
 var init_batch_generator = __esm({
   "server/services/batch-generator.ts"() {
     "use strict";
     init_db();
     init_schema();
-    import_drizzle_orm29 = require("drizzle-orm");
+    import_drizzle_orm30 = require("drizzle-orm");
     init_source_packet_builder();
     init_content_engine();
   }
@@ -5260,7 +5276,7 @@ function getToday() {
 async function stepDailyRollup() {
   const today = getToday();
   console.log(`[RollupWorker] Step 1: Daily rollup for ${today}`);
-  const result = await db.execute(import_drizzle_orm45.sql`
+  const result = await db.execute(import_drizzle_orm46.sql`
     INSERT INTO topic_engagement_daily (id, hierarchy_node_id, topic, topic_type, date, total_views, total_duration_sec, unique_users, updated_at)
     SELECT
       gen_random_uuid(),
@@ -5298,7 +5314,7 @@ async function stepWeeklyTrend() {
   const currentWeekEndStr = currentWeekEnd.toISOString().slice(0, 10);
   const prevWeekEnd = currentWeekStart;
   console.log(`[RollupWorker] Step 2: Weekly trend \u2014 current week ${currentWeekStart}, prev week ${previousWeekStart}`);
-  const result = await db.execute(import_drizzle_orm45.sql`
+  const result = await db.execute(import_drizzle_orm46.sql`
     WITH current_week AS (
       SELECT hierarchy_node_id, topic, topic_type,
         SUM(total_views)::int AS views
@@ -5374,7 +5390,7 @@ async function stepWeeklyTrend() {
 async function stepPastoralCareAlerts() {
   const currentWeekStart = getISOWeekStart2(/* @__PURE__ */ new Date());
   console.log(`[RollupWorker] Step 3: Pastoral care alerts for week ${currentWeekStart}`);
-  const individualResult = await db.execute(import_drizzle_orm45.sql`
+  const individualResult = await db.execute(import_drizzle_orm46.sql`
     INSERT INTO pastoral_care_alert (id, hierarchy_node_id, alert_type, severity, topic, member_count, week_start_date, created_at)
     SELECT
       gen_random_uuid(),
@@ -5393,7 +5409,7 @@ async function stepPastoralCareAlerts() {
     HAVING COUNT(*) >= 5
     ON CONFLICT (hierarchy_node_id, alert_type, topic, week_start_date) DO NOTHING
   `);
-  const congregationalResult = await db.execute(import_drizzle_orm45.sql`
+  const congregationalResult = await db.execute(import_drizzle_orm46.sql`
     INSERT INTO pastoral_care_alert (id, hierarchy_node_id, alert_type, severity, topic, member_count, week_start_date, created_at)
     SELECT
       gen_random_uuid(),
@@ -5424,7 +5440,7 @@ async function stepCacheRebuild() {
   const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1e3).toISOString();
   const currentWeekStart = getISOWeekStart2(/* @__PURE__ */ new Date());
   console.log(`[RollupWorker] Step 4: Cache rebuild for nodes active since ${fourHoursAgo}`);
-  const activeNodes = await db.execute(import_drizzle_orm45.sql`
+  const activeNodes = await db.execute(import_drizzle_orm46.sql`
     SELECT DISTINCT hierarchy_node_id
     FROM topic_engagement
     WHERE created_at >= ${fourHoursAgo}::timestamp
@@ -5438,7 +5454,7 @@ async function stepCacheRebuild() {
   let upsertCount = 0;
   for (const row of rows) {
     const nodeId = row.hierarchy_node_id;
-    const statsResult = await db.execute(import_drizzle_orm45.sql`
+    const statsResult = await db.execute(import_drizzle_orm46.sql`
       SELECT
         COUNT(DISTINCT user_id)::int AS active_users,
         COUNT(*)::int AS total_engagements,
@@ -5453,7 +5469,7 @@ async function stepCacheRebuild() {
         AND created_at >= ${currentWeekStart}::date
     `);
     const stats = statsResult.rows[0] || {};
-    const topTopicsResult = await db.execute(import_drizzle_orm45.sql`
+    const topTopicsResult = await db.execute(import_drizzle_orm46.sql`
       SELECT
         ted.topic,
         SUM(ted.total_views)::int AS count,
@@ -5486,7 +5502,7 @@ async function stepCacheRebuild() {
       age_segments: {}
     };
     const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1e3).toISOString();
-    await db.execute(import_drizzle_orm45.sql`
+    await db.execute(import_drizzle_orm46.sql`
       INSERT INTO analytics_cache (id, hierarchy_node_id, cache_type, time_range, data, expires_at, updated_at)
       VALUES (gen_random_uuid(), ${nodeId}, 'dashboard', ${currentWeekStart}, ${JSON.stringify(cacheData)}::jsonb, ${expiresAt}::timestamp, now())
       ON CONFLICT (hierarchy_node_id, cache_type, time_range)
@@ -5515,12 +5531,12 @@ async function runAnalyticsRollup() {
     throw err;
   }
 }
-var import_drizzle_orm45;
+var import_drizzle_orm46;
 var init_analyticsRollupWorker = __esm({
   "server/workers/analyticsRollupWorker.ts"() {
     "use strict";
     init_db();
-    import_drizzle_orm45 = require("drizzle-orm");
+    import_drizzle_orm46 = require("drizzle-orm");
   }
 });
 
@@ -5546,7 +5562,7 @@ async function runHeatmapTiles() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     const monthStartStr = monthStart.toISOString();
-    const geoData = await db.execute(import_drizzle_orm46.sql`
+    const geoData = await db.execute(import_drizzle_orm47.sql`
       SELECT
         ul.hierarchy_node_id,
         ul.latitude,
@@ -5600,7 +5616,7 @@ async function runHeatmapTiles() {
     let tileCount = 0;
     for (const tile of aggregated) {
       const score = maxEngagement > 0 ? Math.round(tile.engagementCount / maxEngagement * 100) : 0;
-      await db.execute(import_drizzle_orm46.sql`
+      await db.execute(import_drizzle_orm47.sql`
         INSERT INTO heatmap_tile (id, hierarchy_node_id, latitude, longitude, engagement_count, engagement_score, region_key, region_level, time_range, user_count, updated_at)
         VALUES (gen_random_uuid(), ${tile.hierarchyNodeId}, ${tile.lat}, ${tile.lng}, ${tile.engagementCount}, ${score}, ${tile.regionKey}, 'grid', 'month', ${tile.userCount}, now())
         ON CONFLICT (hierarchy_node_id, region_key, time_range)
@@ -5621,12 +5637,12 @@ async function runHeatmapTiles() {
     throw err;
   }
 }
-var import_drizzle_orm46, PRIVACY_MINIMUM;
+var import_drizzle_orm47, PRIVACY_MINIMUM;
 var init_heatmapTileWorker = __esm({
   "server/workers/heatmapTileWorker.ts"() {
     "use strict";
     init_db();
-    import_drizzle_orm46 = require("drizzle-orm");
+    import_drizzle_orm47 = require("drizzle-orm");
     PRIVACY_MINIMUM = 5;
   }
 });
@@ -5644,7 +5660,7 @@ async function runActivityPattern() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     const monthStartStr = monthStart.toISOString();
-    const eligibleNodes = await db.execute(import_drizzle_orm47.sql`
+    const eligibleNodes = await db.execute(import_drizzle_orm48.sql`
       SELECT hierarchy_node_id, COUNT(*)::int AS total
       FROM topic_engagement
       WHERE created_at >= ${monthStartStr}::timestamp
@@ -5661,7 +5677,7 @@ async function runActivityPattern() {
     let totalTiles = 0;
     for (const node of nodes) {
       const nodeId = node.hierarchy_node_id;
-      const tilesResult = await db.execute(import_drizzle_orm47.sql`
+      const tilesResult = await db.execute(import_drizzle_orm48.sql`
         WITH raw_tiles AS (
           SELECT
             EXTRACT(DOW FROM created_at)::int AS day_of_week,
@@ -5687,7 +5703,7 @@ async function runActivityPattern() {
       `);
       const tiles = tilesResult.rows;
       for (const tile of tiles) {
-        await db.execute(import_drizzle_orm47.sql`
+        await db.execute(import_drizzle_orm48.sql`
           INSERT INTO activity_pattern_tile (id, hierarchy_node_id, day_of_week, time_block, engagement_count, engagement_score, time_range, updated_at)
           VALUES (gen_random_uuid(), ${nodeId}, ${tile.day_of_week}, ${tile.time_block}, ${tile.engagement_count}, ${tile.engagement_score}, 'month', now())
           ON CONFLICT (hierarchy_node_id, day_of_week, time_block, time_range)
@@ -5706,12 +5722,12 @@ async function runActivityPattern() {
     throw err;
   }
 }
-var import_drizzle_orm47, PRIVACY_MINIMUM2;
+var import_drizzle_orm48, PRIVACY_MINIMUM2;
 var init_activityPatternWorker = __esm({
   "server/workers/activityPatternWorker.ts"() {
     "use strict";
     init_db();
-    import_drizzle_orm47 = require("drizzle-orm");
+    import_drizzle_orm48 = require("drizzle-orm");
     PRIVACY_MINIMUM2 = 5;
   }
 });
@@ -5919,7 +5935,7 @@ async function seedEgwExcerpts() {
         continue;
       }
       const excerpt = `"${best.text.substring(0, 500)}${best.text.length > 500 ? "\u2026" : ""}" \u2014 Ellen G. White, ${best.bookTitle} (${best.refcode})`;
-      await db.update(devotionalDays).set({ historicVoiceExcerpt: excerpt }).where((0, import_drizzle_orm48.eq)(devotionalDays.id, day.id));
+      await db.update(devotionalDays).set({ historicVoiceExcerpt: excerpt }).where((0, import_drizzle_orm49.eq)(devotionalDays.id, day.id));
       console.log(`[egw-seed] \u2713 Updated "${day.title}" with quote from ${best.bookTitle}`);
       updated++;
       await sleep(800);
@@ -5932,13 +5948,13 @@ async function seedEgwExcerpts() {
   console.log(`[egw-seed] Complete: ${updated} updated, ${skipped} skipped, ${failed} failed`);
   return { updated, skipped, failed };
 }
-var import_drizzle_orm48, EXCLUDED_BOOK_PATTERNS, PREFERRED_BOOKS;
+var import_drizzle_orm49, EXCLUDED_BOOK_PATTERNS, PREFERRED_BOOKS;
 var init_seed_egw_excerpts = __esm({
   "server/seed-egw-excerpts.ts"() {
     "use strict";
     init_db();
     init_schema();
-    import_drizzle_orm48 = require("drizzle-orm");
+    import_drizzle_orm49 = require("drizzle-orm");
     init_egwService();
     EXCLUDED_BOOK_PATTERNS = [
       /strong'?s/i,
@@ -6083,7 +6099,7 @@ function id(prefix, n) {
   return `${prefix}-${String(n).padStart(3, "0")}`;
 }
 async function seedFormationData(db2) {
-  const [existing] = await db2.select({ c: (0, import_drizzle_orm50.count)() }).from(formationTracks);
+  const [existing] = await db2.select({ c: (0, import_drizzle_orm51.count)() }).from(formationTracks);
   if (existing && existing.c > 0) return;
   console.log("Seeding formation tracks...");
   const trackBeliefs = "track-beliefs";
@@ -6625,11 +6641,11 @@ The climax of Daniel 7 is not the little horn's persecution but the judgment and
   ]);
   console.log("Formation tracks seeded successfully.");
 }
-var import_drizzle_orm50;
+var import_drizzle_orm51;
 var init_seed_formation = __esm({
   "server/seed-formation.ts"() {
     "use strict";
-    import_drizzle_orm50 = require("drizzle-orm");
+    import_drizzle_orm51 = require("drizzle-orm");
     init_schema();
   }
 });
@@ -9891,7 +9907,7 @@ __export(seed_beliefs_wave1_exports, {
   seedBeliefsWave1: () => seedBeliefsWave1
 });
 async function seedBeliefsWave1(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm51.eq)(formationLessons.id, "w1l-1-2")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm52.eq)(formationLessons.id, "w1l-1-2")).limit(1);
   if (check) {
     return;
   }
@@ -9906,7 +9922,7 @@ async function seedBeliefsWave1(db2) {
     "bmod-007"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm51.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm52.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief1Lessons,
@@ -9963,11 +9979,11 @@ async function seedBeliefsWave1(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 1 beliefs content seeded successfully.");
 }
-var import_drizzle_orm51;
+var import_drizzle_orm52;
 var init_seed_beliefs_wave1 = __esm({
   "server/seed-beliefs-wave1.ts"() {
     "use strict";
-    import_drizzle_orm51 = require("drizzle-orm");
+    import_drizzle_orm52 = require("drizzle-orm");
     init_schema();
     init_wave1_beliefs_1_2();
     init_wave1_beliefs_3_4();
@@ -12118,14 +12134,14 @@ __export(seed_beliefs_wave2_exports, {
   seedBeliefsWave2: () => seedBeliefsWave2
 });
 async function seedBeliefsWave2(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm52.eq)(formationLessons.id, "w2l-8-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w2l-8-1")).limit(1);
   if (check) {
     return;
   }
   console.log("Seeding Wave 2 beliefs content (Beliefs 8-11)...");
   const moduleIds = ["bmod-008", "bmod-009", "bmod-010", "bmod-011"];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm52.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm53.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief8Lessons,
@@ -12170,11 +12186,11 @@ async function seedBeliefsWave2(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 2 beliefs content seeded successfully.");
 }
-var import_drizzle_orm52;
+var import_drizzle_orm53;
 var init_seed_beliefs_wave2 = __esm({
   "server/seed-beliefs-wave2.ts"() {
     "use strict";
-    import_drizzle_orm52 = require("drizzle-orm");
+    import_drizzle_orm53 = require("drizzle-orm");
     init_schema();
     init_wave2_belief_8();
     init_wave2_belief_9();
@@ -16016,7 +16032,7 @@ __export(seed_beliefs_wave3_exports, {
   seedBeliefsWave3: () => seedBeliefsWave3
 });
 async function seedBeliefsWave3(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w3l-12-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w3l-12-1")).limit(1);
   if (check) {
     return;
   }
@@ -16031,7 +16047,7 @@ async function seedBeliefsWave3(db2) {
     "bmod-018"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm53.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm54.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief12Lessons,
@@ -16088,11 +16104,11 @@ async function seedBeliefsWave3(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 3 beliefs content seeded successfully.");
 }
-var import_drizzle_orm53;
+var import_drizzle_orm54;
 var init_seed_beliefs_wave3 = __esm({
   "server/seed-beliefs-wave3.ts"() {
     "use strict";
-    import_drizzle_orm53 = require("drizzle-orm");
+    import_drizzle_orm54 = require("drizzle-orm");
     init_schema();
     init_wave3_beliefs_12_13();
     init_wave3_beliefs_14_15();
@@ -21999,7 +22015,7 @@ __export(seed_beliefs_wave4_exports, {
   seedBeliefsWave4: () => seedBeliefsWave4
 });
 async function seedBeliefsWave4(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w4l-19-1")).limit(1);
+  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm55.eq)(formationLessons.id, "w4l-19-1")).limit(1);
   if (check) {
     return;
   }
@@ -22017,7 +22033,7 @@ async function seedBeliefsWave4(db2) {
     "bmod-028"
   ];
   for (const mid of moduleIds) {
-    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm54.eq)(formationModules.id, mid));
+    await db2.update(formationModules).set({ totalLessons: 4 }).where((0, import_drizzle_orm55.eq)(formationModules.id, mid));
   }
   const allLessons = [
     ...belief19Lessons,
@@ -22086,11 +22102,11 @@ async function seedBeliefsWave4(db2) {
   console.log(`  Inserted ${allItems.length} assessment items`);
   console.log("Wave 4 beliefs content seeded successfully.");
 }
-var import_drizzle_orm54;
+var import_drizzle_orm55;
 var init_seed_beliefs_wave4 = __esm({
   "server/seed-beliefs-wave4.ts"() {
     "use strict";
-    import_drizzle_orm54 = require("drizzle-orm");
+    import_drizzle_orm55 = require("drizzle-orm");
     init_schema();
     init_wave4_beliefs_19_20();
     init_wave4_beliefs_21_22();
@@ -22112,7 +22128,7 @@ async function seedGlobalChurches() {
     );
     if (auChurches.length > 0) {
       await db.transaction(async (tx) => {
-        await tx.delete(sdaChurches).where((0, import_drizzle_orm55.eq)(sdaChurches.country, "Australia"));
+        await tx.delete(sdaChurches).where((0, import_drizzle_orm56.eq)(sdaChurches.country, "Australia"));
         for (let i = 0; i < auChurches.length; i += 100) {
           const batch = auChurches.slice(i, i + 100).map((c) => ({
             name: c.name,
@@ -22168,13 +22184,13 @@ async function seedGlobalChurches() {
     console.error("Error seeding churches:", err);
   }
 }
-var import_drizzle_orm55, GLOBAL_CHURCHES;
+var import_drizzle_orm56, GLOBAL_CHURCHES;
 var init_seed_global_churches = __esm({
   "scripts/seed-global-churches.ts"() {
     "use strict";
     init_db();
     init_schema();
-    import_drizzle_orm55 = require("drizzle-orm");
+    import_drizzle_orm56 = require("drizzle-orm");
     GLOBAL_CHURCHES = [
       // ─── NORTH AMERICA ───────────────────────────────────────────────────
       {
@@ -34592,19 +34608,19 @@ async function deduplicateSeries(database) {
   if (duplicateIds.length > 0) {
     console.log(`[seed-series] Removing ${duplicateIds.length} duplicate series: ${duplicateIds.join(", ")}`);
     for (const dupId of duplicateIds) {
-      await database.delete(biblicalEpisodes).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.seriesId, dupId));
-      await database.delete(biblicalSeries).where((0, import_drizzle_orm56.eq)(biblicalSeries.id, dupId));
+      await database.delete(biblicalEpisodes).where((0, import_drizzle_orm57.eq)(biblicalEpisodes.seriesId, dupId));
+      await database.delete(biblicalSeries).where((0, import_drizzle_orm57.eq)(biblicalSeries.id, dupId));
     }
     console.log("[seed-series] Duplicates removed.");
   }
 }
 async function ensureCompletedEpisodes(database) {
   for (const [title, data] of Object.entries(COMPLETED_EPISODES)) {
-    const [ep] = await database.select({ id: biblicalEpisodes.id, videoUrl: biblicalEpisodes.videoUrl, status: biblicalEpisodes.status }).from(biblicalEpisodes).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.title, title)).limit(1);
+    const [ep] = await database.select({ id: biblicalEpisodes.id, videoUrl: biblicalEpisodes.videoUrl, status: biblicalEpisodes.status }).from(biblicalEpisodes).where((0, import_drizzle_orm57.eq)(biblicalEpisodes.title, title)).limit(1);
     if (ep && ep.videoUrl === data.videoUrl && ep.status === "complete") {
       console.log(`[seed-series] "${title}" already has video URL`);
     } else if (ep) {
-      await database.update(biblicalEpisodes).set({ videoUrl: data.videoUrl, duration: data.duration, status: "complete" }).where((0, import_drizzle_orm56.eq)(biblicalEpisodes.id, ep.id));
+      await database.update(biblicalEpisodes).set({ videoUrl: data.videoUrl, duration: data.duration, status: "complete" }).where((0, import_drizzle_orm57.eq)(biblicalEpisodes.id, ep.id));
       console.log(`[seed-series] Updated "${title}" with video URL`);
     }
   }
@@ -34856,12 +34872,12 @@ async function seedBiblicalSeries(database) {
     throw err;
   }
 }
-var import_drizzle_orm56, COMPLETED_EPISODES;
+var import_drizzle_orm57, COMPLETED_EPISODES;
 var init_seed_series = __esm({
   "server/seed-series.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm56 = require("drizzle-orm");
+    import_drizzle_orm57 = require("drizzle-orm");
     COMPLETED_EPISODES = {
       "He Is Risen": {
         videoUrl: "https://res.cloudinary.com/dy77gwpzu/video/upload/v1774827906/grace-through-faith/easter-story/episode6-he-is-risen.mp4",
@@ -34879,7 +34895,7 @@ __export(seed_reading_plans_exports, {
 async function seedReadingPlans(database) {
   try {
     console.log("[seed-plans] Starting reading plans seed check...");
-    const existingReadyMade = await database.select({ id: readingPlans.id }).from(readingPlans).where((0, import_drizzle_orm57.eq)(readingPlans.type, "ready-made")).limit(1);
+    const existingReadyMade = await database.select({ id: readingPlans.id }).from(readingPlans).where((0, import_drizzle_orm58.eq)(readingPlans.type, "ready-made")).limit(1);
     console.log(`[seed-plans] Found ${existingReadyMade.length} existing ready-made plans`);
     if (existingReadyMade.length > 0) {
       console.log("[seed-plans] Ready-made reading plans already seeded, skipping.");
@@ -34915,12 +34931,12 @@ async function seedReadingPlans(database) {
     throw err;
   }
 }
-var import_drizzle_orm57, READING_PLAN_SEEDS;
+var import_drizzle_orm58, READING_PLAN_SEEDS;
 var init_seed_reading_plans = __esm({
   "server/seed-reading-plans.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm57 = require("drizzle-orm");
+    import_drizzle_orm58 = require("drizzle-orm");
     READING_PLAN_SEEDS = [
       {
         title: "7 Days of Psalms for Stronger Faith",
@@ -35057,7 +35073,7 @@ async function fixDevotionalCategories(database) {
     const correctCategory = CATEGORY_MAP[plan.title];
     if (!correctCategory) continue;
     if (plan.category !== correctCategory) {
-      await database.update(devotionalPlans).set({ category: correctCategory }).where((0, import_drizzle_orm58.eq)(devotionalPlans.id, plan.id));
+      await database.update(devotionalPlans).set({ category: correctCategory }).where((0, import_drizzle_orm59.eq)(devotionalPlans.id, plan.id));
       console.log(`[fix-categories] "${plan.title}": ${plan.category} \u2192 ${correctCategory}`);
       updated++;
     }
@@ -35068,12 +35084,12 @@ async function fixDevotionalCategories(database) {
     console.log(`[fix-categories] Updated ${updated} plan categories.`);
   }
 }
-var import_drizzle_orm58, CATEGORY_MAP;
+var import_drizzle_orm59, CATEGORY_MAP;
 var init_fix_devotional_categories = __esm({
   "server/fix-devotional-categories.ts"() {
     "use strict";
     init_schema();
-    import_drizzle_orm58 = require("drizzle-orm");
+    import_drizzle_orm59 = require("drizzle-orm");
     CATEGORY_MAP = {
       "Foundations of Faith": "foundations",
       "The Life of Christ": "foundations",
@@ -35103,7 +35119,7 @@ __export(cache_warmup_exports, {
   runCacheWarmup: () => runCacheWarmup
 });
 async function warmContextCards(bookId, chapter, bookName) {
-  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm61.eq)(contextCards.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm62.eq)(contextCards.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateContextCards({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(contextCards).values({
@@ -35121,7 +35137,7 @@ async function warmContextCards(bookId, chapter, bookName) {
   return true;
 }
 async function warmApplicationTemplates(bookId, chapter, bookName) {
-  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm61.eq)(applicationTemplates.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm62.eq)(applicationTemplates.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateApplicationStudy({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(applicationTemplates).values({
@@ -35136,7 +35152,7 @@ async function warmApplicationTemplates(bookId, chapter, bookName) {
   return true;
 }
 async function warmChapterContext(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm61.eq)(chapterContextCache.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm62.eq)(chapterContextCache.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateChapterContext({ bookId, chapter, bookName });
   await db.insert(chapterContextCache).values({
@@ -35151,9 +35167,9 @@ async function warmChapterContext(bookId, chapter, bookName) {
   return true;
 }
 async function warmPassageSections(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm61.eq)(chapterPassageSections.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm62.eq)(chapterPassageSections.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
-  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm61.and)((0, import_drizzle_orm61.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm61.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm62.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
   if (verses.length === 0) return false;
   const totalVerses = verses.length;
   const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
@@ -35205,7 +35221,7 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
   return true;
 }
 async function ensureSdaLensCacheVersion() {
-  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm61.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
+  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm62.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
   const stored = marker?.results?.version;
   if (stored === SDA_LENS_VERSION) return;
   console.log(`[sda-lens] Cache version changed (${stored || "none"} -> ${SDA_LENS_VERSION}); purging generated content caches...`);
@@ -35262,14 +35278,14 @@ async function runCacheWarmup() {
   }
   console.log(`[cache-warmup] Complete: ${generated} generated, ${skipped} already cached, ${errors} errors`);
 }
-var import_drizzle_orm61, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
+var import_drizzle_orm62, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
 var init_cache_warmup = __esm({
   "server/services/cache-warmup.ts"() {
     "use strict";
     init_db();
     init_schema();
     init_sda_lens();
-    import_drizzle_orm61 = require("drizzle-orm");
+    import_drizzle_orm62 = require("drizzle-orm");
     init_ai_engine();
     POPULAR_CHAPTERS = [
       { bookId: 1, chapter: 1 },
@@ -35371,7 +35387,7 @@ var import_compression = __toESM(require("compression"));
 var import_node_http = require("node:http");
 init_db();
 init_schema();
-var import_drizzle_orm59 = require("drizzle-orm");
+var import_drizzle_orm60 = require("drizzle-orm");
 
 // server/middleware/auth.ts
 var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
@@ -35403,7 +35419,7 @@ function touchUserActivity(userId) {
     lastActivityUpdate.delete(userId);
   });
 }
-function getAuthUserId2(req) {
+function getAuthUserId(req) {
   try {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
@@ -35423,14 +35439,14 @@ function getDeviceId(req) {
   return null;
 }
 function extractUserId(req) {
-  const authId = getAuthUserId2(req);
+  const authId = getAuthUserId(req);
   if (authId) return authId;
   const deviceId = getDeviceId(req);
   if (deviceId) return deviceId;
   return "guest";
 }
 function requireAuth(req, res, next) {
-  const userId = getAuthUserId2(req);
+  const userId = getAuthUserId(req);
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -35439,7 +35455,7 @@ function requireAuth(req, res, next) {
   next();
 }
 function optionalAuth(req, res, next) {
-  const userId = getAuthUserId2(req);
+  const userId = getAuthUserId(req);
   if (userId) {
     req.authUserId = userId;
     touchUserActivity(userId);
@@ -35448,7 +35464,7 @@ function optionalAuth(req, res, next) {
 }
 function getEffectiveUserId(req) {
   if (req.authUserId) return req.authUserId;
-  const authId = getAuthUserId2(req);
+  const authId = getAuthUserId(req);
   if (authId) return authId;
   const deviceId = getDeviceId(req);
   if (deviceId) return deviceId;
@@ -35456,7 +35472,7 @@ function getEffectiveUserId(req) {
 }
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
-    const userId = getAuthUserId2(req);
+    const userId = getAuthUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
@@ -35507,7 +35523,7 @@ function generateCode() {
 }
 
 // server/routes.ts
-var import_drizzle_orm60 = require("drizzle-orm");
+var import_drizzle_orm61 = require("drizzle-orm");
 init_ai_semaphore();
 
 // server/middleware/response-cache.ts
@@ -35631,7 +35647,7 @@ var readingHistorySchema = import_zod2.z.object({
   bookId: import_zod2.z.union([import_zod2.z.number().int().positive(), import_zod2.z.string().min(1)]),
   bookName: import_zod2.z.string().min(1, "bookName is required"),
   chapter: import_zod2.z.union([import_zod2.z.number().int().positive(), import_zod2.z.string().min(1)]),
-  translation: import_zod2.z.string().optional()
+  translation: import_zod2.z.string().trim().min(1, "translation is required")
 });
 var trackActivitySchema = import_zod2.z.object({
   type: import_zod2.z.string().min(1, "Activity type is required"),
@@ -35641,7 +35657,7 @@ var trackActivitySchema = import_zod2.z.object({
 // server/middleware/rate-limit.ts
 var import_express_rate_limit = __toESM(require("express-rate-limit"));
 function safeKeyGenerator(req) {
-  const userId = getAuthUserId2(req);
+  const userId = getAuthUserId(req);
   if (userId) return `user:${userId}`;
   return req.ip || "unknown";
 }
@@ -35873,7 +35889,7 @@ router.post("/api/auth/update-role", requireAuth, async (req, res) => {
 });
 router.get("/api/auth/me", async (req, res) => {
   try {
-    const userId = getAuthUserId2(req);
+    const userId = getAuthUserId(req);
     if (!userId) {
       return res.json({ user: null, isGuest: true });
     }
@@ -36270,7 +36286,8 @@ router2.delete("/api/prayers/:id", optionalAuth, async (req, res) => {
 router2.post("/api/reading-history", optionalAuth, validate(readingHistorySchema), async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const { bookId, bookName, chapter, translation = "KJV" } = req.body;
+    const { bookId, bookName, chapter } = req.body;
+    const translation = String(req.body.translation).trim().toUpperCase();
     const [entry] = await db.insert(readingHistory).values({ userId, bookId: Number(bookId), bookName, chapter: Number(chapter), translation }).returning();
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const existing = await db.select().from(readingStreaks).where((0, import_drizzle_orm4.eq)(readingStreaks.userId, userId));
@@ -36463,9 +36480,14 @@ var user_default = router2;
 var import_express3 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm5 = require("drizzle-orm");
+var import_drizzle_orm6 = require("drizzle-orm");
 init_languageAwareContent();
-var router3 = (0, import_express3.Router)();
+
+// server/services/scripture-service.ts
+var import_node_crypto = require("node:crypto");
+init_db();
+init_schema();
+var import_drizzle_orm5 = require("drizzle-orm");
 var NLT_BOOK_MAP = {
   "Genesis": "Gen",
   "Exodus": "Exod",
@@ -36602,137 +36624,342 @@ var API_BIBLE_BOOK_MAP = {
   "Jude": "JUD",
   "Revelation": "REV"
 };
-var API_BIBLE_TRANSLATIONS = {
-  "NIV": { bibleId: "78a9f6124f344018-01", name: "New International Version" },
-  "AMP": { bibleId: "a81b73293d3080c9-01", name: "Amplified Bible" },
-  "NASB": { bibleId: "b8ee27bcd1cae43a-01", name: "New American Standard Bible 1995" }
+var API_BIBLE_CODE_TO_BOOK = Object.fromEntries(
+  Object.entries(API_BIBLE_BOOK_MAP).map(([name, code]) => [code, name])
+);
+var BOOK_NAME_ALIASES = {
+  "psalm": "Psalms",
+  "psalms": "Psalms",
+  "song of songs": "Song of Solomon",
+  "song of solomon": "Song of Solomon",
+  "canticles": "Song of Solomon",
+  "revelation of john": "Revelation",
+  "the revelation": "Revelation"
 };
-var apiBibleCache = /* @__PURE__ */ new Map();
-async function checkBibleCache(translation, bookId, chapterNum) {
-  try {
-    const cached = await db.select().from(bibleCache).where(
-      (0, import_drizzle_orm5.and)(
-        (0, import_drizzle_orm5.eq)(bibleCache.translation, translation),
-        (0, import_drizzle_orm5.eq)(bibleCache.bookId, bookId),
-        (0, import_drizzle_orm5.eq)(bibleCache.chapter, chapterNum)
-      )
-    ).limit(1);
-    if (cached.length > 0) {
-      await db.insert(bibleCacheStats).values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
-        target: [bibleCacheStats.translation],
-        set: {
-          cacheHits: import_drizzle_orm5.sql`${bibleCacheStats.cacheHits} + 1`,
-          lastHitAt: /* @__PURE__ */ new Date()
-        }
-      }).catch(() => {
-      });
-      return cached[0].versesJson;
-    }
-    await db.insert(bibleCacheStats).values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
-      target: [bibleCacheStats.translation],
-      set: {
-        cacheMisses: import_drizzle_orm5.sql`${bibleCacheStats.cacheMisses} + 1`,
-        lastMissAt: /* @__PURE__ */ new Date()
-      }
-    }).catch(() => {
-    });
-    return null;
-  } catch {
-    return null;
-  }
+function normalizeBookName(raw) {
+  return raw.toLowerCase().trim().replace(/\s+/g, " ");
 }
-async function storeBibleCache(translation, bookId, bookName, chapterNum, verses, sourceApi) {
-  try {
-    await db.insert(bibleCache).values({
-      translation,
-      bookId,
-      bookName,
-      chapter: chapterNum,
-      versesJson: verses,
-      verseCount: verses.length,
-      sourceApi
-    }).onConflictDoNothing();
-  } catch (err) {
-    console.error(`[bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+function resolveCanonicalBookName(providerBook) {
+  if (providerBook.id) {
+    const byCode = API_BIBLE_CODE_TO_BOOK[providerBook.id.toUpperCase().trim()];
+    if (byCode) return byCode;
   }
-}
-function parseApiBibleText(content, bookId, chapterNum, translationAbbr) {
-  const verses = [];
-  const lines = content.split(/\n/);
-  let currentVerse = 0;
-  let currentText = "";
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const parts = trimmed.split(/\[(\d+)\]/);
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i].trim();
-      if (!part) continue;
-      const num = parseInt(part, 10);
-      if (!isNaN(num) && num > 0 && num <= 200 && parts[i - 1] !== void 0) {
-        if (currentVerse > 0 && currentText.trim()) {
-          verses.push({
-            id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-            translationId: translationAbbr,
-            bookId,
-            chapter: chapterNum,
-            verse: currentVerse,
-            text: currentText.trim(),
-            searchVector: null
-          });
-        }
-        currentVerse = num;
-        currentText = "";
-      } else if (currentVerse > 0) {
-        currentText += " " + part;
-      } else if (i === 0 && parts.length > 1) {
-        continue;
+  if (providerBook.name) {
+    const norm = normalizeBookName(providerBook.name);
+    if (BOOK_NAME_ALIASES[norm]) return BOOK_NAME_ALIASES[norm];
+    for (const canonical of Object.keys(API_BIBLE_BOOK_MAP)) {
+      if (normalizeBookName(canonical) === norm) return canonical;
+      if (normalizeBookName(canonical).replace(/\s+/g, "") === norm.replace(/\s+/g, "")) {
+        return canonical;
       }
     }
   }
-  if (currentVerse > 0 && currentText.trim()) {
-    verses.push({
-      id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-      translationId: translationAbbr,
-      bookId,
-      chapter: chapterNum,
-      verse: currentVerse,
-      text: currentText.trim(),
-      searchVector: null
-    });
-  }
-  return verses;
+  return void 0;
 }
-async function fetchApiBibleChapter(bookName, bookId, chapterNum, translationAbbr) {
-  const translationConfig = API_BIBLE_TRANSLATIONS[translationAbbr];
-  if (!translationConfig) throw new Error(`Unknown API.Bible translation: ${translationAbbr}`);
-  const cacheKey = `apibible-${translationAbbr}-${bookId}-${chapterNum}`;
-  const cached = apiBibleCache.get(cacheKey);
-  if (cached && cached.expires > Date.now()) {
-    return cached.data;
+var API_BIBLE_TRANSLATIONS = {
+  "NIV": { bibleId: "78a9f6124f344018-01", name: "New International Version", license: "API.Bible" },
+  "AMP": { bibleId: "a81b73293d3080c9-01", name: "Amplified Bible", license: "API.Bible" },
+  "NASB": { bibleId: "b8ee27bcd1cae43a-01", name: "New American Standard Bible 1995", license: "API.Bible" }
+};
+function normalizeTranslationParam(raw) {
+  if (!raw || String(raw).trim() === "") {
+    return { abbreviation: "KJV", wasDefaulted: true };
   }
-  const apiKey = process.env.API_BIBLE_KEY;
-  if (!apiKey) throw new Error("API_BIBLE_KEY not configured");
-  const apiBibleBookCode = API_BIBLE_BOOK_MAP[bookName];
-  if (!apiBibleBookCode) throw new Error(`No API.Bible book mapping for: ${bookName}`);
-  const chapterId = `${apiBibleBookCode}.${chapterNum}`;
-  const url = `https://rest.api.bible/v1/bibles/${translationConfig.bibleId}/chapters/${chapterId}?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false`;
-  const response = await fetch(url, {
-    headers: { "api-key": apiKey }
+  return { abbreviation: String(raw).trim().toUpperCase(), wasDefaulted: false };
+}
+function buildApiBibleCacheKey(translationAbbr, bibleId, bookId, chapterNum) {
+  return `apibible-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
+}
+function buildNltCacheKey(bookId, chapterNum) {
+  return `nlt-${bookId}-${chapterNum}`;
+}
+var NLT_PERSISTENT_CACHE_KEY = "NLT";
+function buildEditionCacheKey(translationAbbr, bibleId) {
+  const abbr = translationAbbr.toUpperCase().trim().slice(0, 4);
+  const hash = (0, import_node_crypto.createHash)("sha256").update(translationAbbr.toUpperCase().trim() + "|" + bibleId).digest("hex").slice(0, 6);
+  return abbr + hash;
+}
+function buildTranslationResponseMeta(abbreviation, name, source, provider, bibleId) {
+  return {
+    translation: abbreviation,
+    translationName: name,
+    source,
+    provider,
+    ...bibleId ? { providerEditionId: bibleId } : {}
+  };
+}
+var ScriptureError = class extends Error {
+  code;
+  statusCode;
+  constructor(code, message, statusCode) {
+    super(message);
+    this.name = "ScriptureError";
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+};
+function parseReference(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  const m = trimmed.match(
+    /^(\d?\s*[A-Za-z][A-Za-z\s]*?)\s+(\d+)(?::([\d,\s-]+))?$/
+  );
+  if (!m) return null;
+  const book = m[1].trim().replace(/\s+/g, " ");
+  const chapter = parseInt(m[2], 10);
+  if (!Number.isInteger(chapter) || chapter < 1) return null;
+  const selector = m[3]?.trim();
+  if (!selector) {
+    return { book, chapter, verses: [], wholeChapter: true };
+  }
+  const verses = /* @__PURE__ */ new Set();
+  for (const part of selector.split(",")) {
+    const token = part.trim();
+    if (!token) continue;
+    const rangeMatch = token.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+        return null;
+      }
+      for (let v = start; v <= end; v++) verses.add(v);
+      continue;
+    }
+    const single = token.match(/^\d+$/);
+    if (single) {
+      const v = parseInt(token, 10);
+      if (v >= 1) verses.add(v);
+      continue;
+    }
+    return null;
+  }
+  if (verses.size === 0) return null;
+  return {
+    book,
+    chapter,
+    verses: Array.from(verses).sort((a, b) => a - b),
+    wholeChapter: false
+  };
+}
+function filterVersesByReference(chapterVerses, ref) {
+  if (ref.wholeChapter || ref.verses.length === 0) return chapterVerses;
+  const wanted = new Set(ref.verses);
+  return chapterVerses.filter((v) => wanted.has(v.verse));
+}
+var NKJV_NAME_PATTERNS = [
+  /\bnew\s+king\s+james\b/i,
+  /\bnkjv\b/i
+];
+function findNkjvInCatalog(entries) {
+  return entries.find((e) => {
+    const fields = [e.name, e.nameLocal, e.abbreviation, e.abbreviationLocal].filter(Boolean);
+    return fields.some((f) => NKJV_NAME_PATTERNS.some((p) => p.test(f)));
   });
-  if (!response.ok) throw new Error(`API.Bible returned ${response.status}`);
-  const json = await response.json();
-  const content = json.data?.content || "";
-  const verses = parseApiBibleText(content, bookId, chapterNum, translationAbbr);
-  const result = { verses };
-  apiBibleCache.set(cacheKey, { data: result, expires: Date.now() + 36e5 });
-  if (apiBibleCache.size > 1e3) {
-    const oldest = [...apiBibleCache.entries()].sort((a, b) => a[1].expires - b[1].expires);
-    for (let i = 0; i < 200; i++) apiBibleCache.delete(oldest[i][0]);
-  }
-  return result;
 }
-var nltPassageCache = /* @__PURE__ */ new Map();
+var CANONICAL_CHAPTER_COUNTS = {
+  Genesis: 50,
+  Exodus: 40,
+  Leviticus: 27,
+  Numbers: 36,
+  Deuteronomy: 34,
+  Joshua: 24,
+  Judges: 21,
+  Ruth: 4,
+  "1 Samuel": 31,
+  "2 Samuel": 24,
+  "1 Kings": 22,
+  "2 Kings": 25,
+  "1 Chronicles": 29,
+  "2 Chronicles": 36,
+  Ezra: 10,
+  Nehemiah: 13,
+  Esther: 10,
+  Job: 42,
+  Psalms: 150,
+  Proverbs: 31,
+  Ecclesiastes: 12,
+  "Song of Solomon": 8,
+  Isaiah: 66,
+  Jeremiah: 52,
+  Lamentations: 5,
+  Ezekiel: 48,
+  Daniel: 12,
+  Hosea: 14,
+  Joel: 3,
+  Amos: 9,
+  Obadiah: 1,
+  Jonah: 4,
+  Micah: 7,
+  Nahum: 3,
+  Habakkuk: 3,
+  Zephaniah: 3,
+  Haggai: 2,
+  Zechariah: 14,
+  Malachi: 4,
+  Matthew: 28,
+  Mark: 16,
+  Luke: 24,
+  John: 21,
+  Acts: 28,
+  Romans: 16,
+  "1 Corinthians": 16,
+  "2 Corinthians": 13,
+  Galatians: 6,
+  Ephesians: 6,
+  Philippians: 4,
+  Colossians: 4,
+  "1 Thessalonians": 5,
+  "2 Thessalonians": 3,
+  "1 Timothy": 6,
+  "2 Timothy": 4,
+  Titus: 3,
+  Philemon: 1,
+  Hebrews: 13,
+  James: 5,
+  "1 Peter": 5,
+  "2 Peter": 3,
+  "1 John": 5,
+  "2 John": 1,
+  "3 John": 1,
+  Jude: 1,
+  Revelation: 22
+};
+var CANONICAL_BOOK_COUNT = Object.keys(CANONICAL_CHAPTER_COUNTS).length;
+function validateCanonicalCoverage(providerBooks, localBooks) {
+  const missing = [];
+  const wrongChapterCount = [];
+  const providerMap = /* @__PURE__ */ new Map();
+  for (const b of providerBooks) {
+    const canonical = resolveCanonicalBookName({ id: b.id, name: b.name });
+    if (canonical) {
+      providerMap.set(canonical, b);
+    }
+  }
+  let mappedBookCount = 0;
+  for (const local of localBooks) {
+    const provider = providerMap.get(local.name);
+    if (!provider) {
+      missing.push(local.name);
+      continue;
+    }
+    mappedBookCount++;
+    const expectedChapters = local.chapterCount;
+    const uniqueChapters = new Set(
+      provider.chapters.filter((n) => Number.isInteger(n) && n >= 1)
+    );
+    let hasAllExpected = uniqueChapters.size === expectedChapters;
+    if (hasAllExpected) {
+      for (let ch = 1; ch <= expectedChapters; ch++) {
+        if (!uniqueChapters.has(ch)) {
+          hasAllExpected = false;
+          break;
+        }
+      }
+    }
+    if (!hasAllExpected) {
+      wrongChapterCount.push({
+        book: local.name,
+        expected: expectedChapters,
+        got: uniqueChapters.size
+      });
+    }
+  }
+  const ok = missing.length === 0 && wrongChapterCount.length === 0 && mappedBookCount === CANONICAL_BOOK_COUNT;
+  return { ok, mappedBookCount, missing, wrongChapterCount };
+}
+var NKJV_CACHE_TTL_MS = 5 * 60 * 1e3;
+var _nkjvCapabilityCache = /* @__PURE__ */ new Map();
+function buildNkjvCapabilityCacheKey(apiKey) {
+  return (0, import_node_crypto.createHash)("sha256").update(apiKey).digest("hex").slice(0, 24);
+}
+function invalidateNkjvCapabilityCache(apiKey) {
+  _nkjvCapabilityCache.delete(buildNkjvCapabilityCacheKey(apiKey));
+}
+async function discoverNkjvCapability(apiKey, localBooks, options = {}) {
+  const now = Date.now();
+  const cacheKey = buildNkjvCapabilityCacheKey(apiKey);
+  const cached = _nkjvCapabilityCache.get(cacheKey);
+  if (!options.forceRefresh && cached && now - cached.checkedAt < NKJV_CACHE_TTL_MS) {
+    return cached.available ? cached.config : void 0;
+  }
+  try {
+    const catalogRes = await fetch("https://rest.api.bible/v1/bibles?language=eng", {
+      headers: { "api-key": apiKey }
+    });
+    if (!catalogRes.ok) {
+      if (catalogRes.status === 401 || catalogRes.status === 403) {
+        _nkjvCapabilityCache.delete(cacheKey);
+      } else {
+        _nkjvCapabilityCache.set(cacheKey, {
+          available: false,
+          checkedAt: now,
+          reason: `catalog fetch failed: ${catalogRes.status}`
+        });
+      }
+      return void 0;
+    }
+    const catalogJson = await catalogRes.json();
+    const nkjvEntry = findNkjvInCatalog(catalogJson.data ?? []);
+    if (!nkjvEntry) {
+      _nkjvCapabilityCache.set(cacheKey, {
+        available: false,
+        checkedAt: now,
+        reason: "no NKJV entry in account catalog"
+      });
+      return void 0;
+    }
+    const booksRes = await fetch(
+      `https://rest.api.bible/v1/bibles/${nkjvEntry.id}/books?include-chapters=true`,
+      { headers: { "api-key": apiKey } }
+    );
+    if (!booksRes.ok) {
+      if (booksRes.status === 401 || booksRes.status === 403) {
+        _nkjvCapabilityCache.delete(cacheKey);
+      } else {
+        _nkjvCapabilityCache.set(cacheKey, {
+          available: false,
+          checkedAt: now,
+          reason: `books fetch failed: ${booksRes.status}`
+        });
+      }
+      return void 0;
+    }
+    const booksJson = await booksRes.json();
+    const providerBooks = (booksJson.data ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      chapters: b.chapters.map((c) => parseInt(c.number, 10)).filter((n) => !isNaN(n))
+    }));
+    const coverage = validateCanonicalCoverage(providerBooks, localBooks);
+    if (!coverage.ok) {
+      _nkjvCapabilityCache.set(cacheKey, {
+        available: false,
+        checkedAt: now,
+        reason: `coverage check failed: missing=${coverage.missing.length}, wrongChapterCount=${coverage.wrongChapterCount.length}`
+      });
+      return void 0;
+    }
+    const config = {
+      bibleId: nkjvEntry.id,
+      name: nkjvEntry.name,
+      license: "API.Bible"
+    };
+    _nkjvCapabilityCache.set(cacheKey, {
+      available: true,
+      config,
+      checkedAt: now
+    });
+    return config;
+  } catch (err) {
+    _nkjvCapabilityCache.set(cacheKey, {
+      available: false,
+      checkedAt: now,
+      reason: `discovery error: ${err?.message}`
+    });
+    return void 0;
+  }
+}
 function stripNestedSpan(html, className) {
   let result = "";
   let i = 0;
@@ -36787,8 +37014,63 @@ function parseNltHtml(html, bookId, chapterNum) {
   }
   return verses;
 }
+function parseApiBibleText(content, bookId, chapterNum, translationAbbr) {
+  const verses = [];
+  const lines = content.split(/\n/);
+  let currentVerse = 0;
+  let currentText = "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const parts = trimmed.split(/\[(\d+)\]/);
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      if (!part) continue;
+      const num = parseInt(part, 10);
+      if (!isNaN(num) && num > 0 && num <= 200 && parts[i - 1] !== void 0) {
+        if (currentVerse > 0 && currentText.trim()) {
+          verses.push({
+            id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
+            translationId: translationAbbr,
+            bookId,
+            chapter: chapterNum,
+            verse: currentVerse,
+            text: currentText.trim(),
+            searchVector: null
+          });
+        }
+        currentVerse = num;
+        currentText = "";
+      } else if (currentVerse > 0) {
+        currentText += " " + part;
+      } else if (i === 0 && parts.length > 1) {
+        continue;
+      }
+    }
+  }
+  if (currentVerse > 0 && currentText.trim()) {
+    verses.push({
+      id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
+      translationId: translationAbbr,
+      bookId,
+      chapter: chapterNum,
+      verse: currentVerse,
+      text: currentText.trim(),
+      searchVector: null
+    });
+  }
+  return verses;
+}
+var apiBibleCache = /* @__PURE__ */ new Map();
+var nltPassageCache = /* @__PURE__ */ new Map();
+function evictOldest(cache2, maxSize, evictCount) {
+  if (cache2.size > maxSize) {
+    const oldest = Array.from(cache2.entries()).sort((a, b) => a[1].expires - b[1].expires);
+    for (let i = 0; i < evictCount; i++) cache2.delete(oldest[i][0]);
+  }
+}
 async function fetchNltChapter(bookName, bookId, chapterNum) {
-  const cacheKey = `nlt-${bookId}-${chapterNum}`;
+  const cacheKey = buildNltCacheKey(bookId, chapterNum);
   const cached = nltPassageCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     return cached.data;
@@ -36803,82 +37085,443 @@ async function fetchNltChapter(bookName, bookId, chapterNum) {
   const verses = parseNltHtml(html, bookId, chapterNum);
   const result = { verses };
   nltPassageCache.set(cacheKey, { data: result, expires: Date.now() + 36e5 });
-  if (nltPassageCache.size > 500) {
-    const oldest = [...nltPassageCache.entries()].sort((a, b) => a[1].expires - b[1].expires);
-    for (let i = 0; i < 100; i++) nltPassageCache.delete(oldest[i][0]);
-  }
+  evictOldest(nltPassageCache, 500, 100);
   return result;
+}
+async function fetchApiBibleChapter(bookName, bookId, chapterNum, translationAbbr, config) {
+  const cacheKey = buildApiBibleCacheKey(translationAbbr, config.bibleId, bookId, chapterNum);
+  const cached = apiBibleCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+  const apiKey = process.env.API_BIBLE_KEY;
+  if (!apiKey) throw new Error("API_BIBLE_KEY not configured");
+  const apiBibleBookCode = API_BIBLE_BOOK_MAP[bookName];
+  if (!apiBibleBookCode) throw new Error(`No API.Bible book mapping for: ${bookName}`);
+  const chapterId = `${apiBibleBookCode}.${chapterNum}`;
+  const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/chapters/${chapterId}?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false`;
+  const response = await fetch(url, {
+    headers: { "api-key": apiKey }
+  });
+  if (!response.ok) {
+    const status = response.status;
+    if (translationAbbr.toUpperCase() === "NKJV" && (status === 401 || status === 403 || status === 404)) {
+      invalidateNkjvCapabilityCache(apiKey);
+    }
+    if (status === 401 || status === 403) {
+      throw new ScriptureError(
+        "PROVIDER_UNAVAILABLE",
+        `API.Bible authorization error (${status}) for ${translationAbbr}`,
+        503
+      );
+    }
+    throw new ScriptureError(
+      "PROVIDER_ERROR",
+      `API.Bible returned ${status} for ${translationAbbr}`,
+      502
+    );
+  }
+  const json = await response.json();
+  const content = json.data?.content || "";
+  const verses = parseApiBibleText(content, bookId, chapterNum, translationAbbr);
+  const result = { verses };
+  apiBibleCache.set(cacheKey, { data: result, expires: Date.now() + 36e5 });
+  evictOldest(apiBibleCache, 1e3, 200);
+  return result;
+}
+var NLT_SEARCH_CODE_TO_BOOK = {
+  ...Object.fromEntries(
+    Object.entries(NLT_BOOK_MAP).map(([name, code]) => [code.toLowerCase(), name])
+  ),
+  // Search result links use a few shorter aliases than the passages endpoint.
+  ps: "Psalms",
+  pr: "Proverbs",
+  prov: "Proverbs",
+  song: "Song of Solomon",
+  sos: "Song of Solomon"
+};
+function decodeProviderHtml(value) {
+  return value.replace(
+    /&#(\d+);/g,
+    (_match, decimal) => String.fromCodePoint(Number.parseInt(decimal, 10))
+  ).replace(
+    /&#x([0-9a-f]+);/gi,
+    (_match, hex) => String.fromCodePoint(Number.parseInt(hex, 16))
+  ).replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">");
+}
+function providerHtmlToText(fragment) {
+  return decodeProviderHtml(
+    fragment.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, " ")
+  ).replace(/\s+/g, " ").trim();
+}
+function resolveNltSearchBook(providerCode, referenceLabel, localBooks) {
+  const canonicalFromCode = NLT_SEARCH_CODE_TO_BOOK[providerCode.toLowerCase()];
+  const labelBook = referenceLabel.replace(/\s+\d+(?::\d+.*)?$/, "").trim();
+  const candidates = [canonicalFromCode, labelBook, providerCode].filter((candidate) => !!candidate).map(normalizeBookName);
+  return localBooks.find((book) => {
+    const names = [normalizeBookName(book.name), normalizeBookName(book.abbreviation)];
+    return candidates.some((candidate) => names.includes(candidate));
+  });
+}
+function parseNltSearchHtml(html, localBooks, limit) {
+  const results = [];
+  const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rowMatch;
+  while ((rowMatch = rowRegex.exec(html)) !== null && results.length < limit) {
+    const cells = Array.from(
+      rowMatch[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)
+    );
+    if (cells.length < 2) continue;
+    const linkMatch = cells[0][1].match(
+      /<a\b[^>]*href=["'][^"']*nlt\.to\/([^/"'?#]+)\/?[^"']*["'][^>]*>([\s\S]*?)<\/a>/i
+    );
+    if (!linkMatch) continue;
+    const referenceId = decodeURIComponent(linkMatch[1]);
+    const referenceParts = referenceId.split(".");
+    const providerCode = referenceParts[0] ?? "";
+    const chapter = Number.parseInt(referenceParts[1] ?? "", 10);
+    const verse = Number.parseInt(referenceParts[2] ?? "", 10);
+    if (!Number.isInteger(chapter) || !Number.isInteger(verse)) continue;
+    const referenceLabel = providerHtmlToText(linkMatch[2]);
+    const localBook = resolveNltSearchBook(providerCode, referenceLabel, localBooks);
+    const text2 = providerHtmlToText(cells[1][1]);
+    if (!localBook || !text2) continue;
+    results.push({
+      bookId: localBook.id,
+      bookName: localBook.name,
+      bookAbbreviation: localBook.abbreviation,
+      chapter,
+      verse,
+      text: text2
+    });
+  }
+  const countMatch = html.match(
+    /<span\b[^>]*class=["'][^"']*\bcount\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i
+  );
+  const parsedTotal = Number.parseInt(
+    providerHtmlToText(countMatch?.[1] ?? "").replace(/[^\d]/g, ""),
+    10
+  );
+  return {
+    results,
+    total: Number.isFinite(parsedTotal) ? parsedTotal : results.length
+  };
+}
+async function searchNlt(query, limit, localBooks, options = {}) {
+  const apiKey = options.apiKey ?? process.env.NLT_API_KEY;
+  if (!apiKey) {
+    throw new ScriptureError(
+      "TRANSLATION_NOT_FOUND",
+      "NLT translation is not configured",
+      404
+    );
+  }
+  const url = new URL("https://api.nlt.to/api/search");
+  url.searchParams.set("text", query);
+  url.searchParams.set("version", "NLT");
+  url.searchParams.set("key", apiKey);
+  const response = await (options.fetchImpl ?? fetch)(url);
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new ScriptureError(
+        "PROVIDER_UNAVAILABLE",
+        `NLT provider authorization error (${response.status})`,
+        503
+      );
+    }
+    throw new ScriptureError(
+      "PROVIDER_ERROR",
+      `NLT search provider returned ${response.status}`,
+      502
+    );
+  }
+  return parseNltSearchHtml(await response.text(), localBooks, limit);
+}
+function mapApiBibleSearchResult(raw, localBooksByName) {
+  const parts = (raw.id ?? "").split(".");
+  const providerCode = (parts[0] ?? raw.bookId ?? "").toUpperCase().trim();
+  const chapter = parseInt(parts[1] ?? "", 10);
+  const verse = parseInt(parts[2] ?? "", 10);
+  const canonicalName = resolveCanonicalBookName({ id: providerCode });
+  if (!canonicalName) return null;
+  const local = localBooksByName.get(normalizeBookName(canonicalName));
+  if (!local) return null;
+  if (!Number.isInteger(chapter) || !Number.isInteger(verse)) return null;
+  return {
+    bookId: local.id,
+    bookName: local.name,
+    bookAbbreviation: local.abbreviation,
+    chapter,
+    verse,
+    text: raw.text
+  };
+}
+async function searchApiBible(query, translationAbbr, config, limit, localBooks) {
+  const apiKey = process.env.API_BIBLE_KEY;
+  if (!apiKey) throw new Error("API_BIBLE_KEY not configured");
+  const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/search?query=${encodeURIComponent(query)}&limit=${limit}&sort=relevance`;
+  const response = await fetch(url, {
+    headers: { "api-key": apiKey }
+  });
+  if (!response.ok) {
+    const status = response.status;
+    if (status === 401 || status === 403) {
+      throw new ScriptureError(
+        "PROVIDER_UNAVAILABLE",
+        `API.Bible authorization error (${status}) for ${translationAbbr} search`,
+        503
+      );
+    }
+    throw new ScriptureError(
+      "PROVIDER_ERROR",
+      `API.Bible search returned ${status} for ${translationAbbr}`,
+      502
+    );
+  }
+  const json = await response.json();
+  const verses = json.data?.verses ?? [];
+  const localByName = new Map(
+    localBooks.map((b) => [normalizeBookName(b.name), b])
+  );
+  const results = [];
+  for (const v of verses) {
+    const mapped = mapApiBibleSearchResult({ id: v.id, bookId: v.bookId, text: v.text }, localByName);
+    if (mapped) results.push(mapped);
+  }
+  return results;
+}
+async function getRuntimeApiBibleTranslations(localBooks) {
+  const translations = { ...API_BIBLE_TRANSLATIONS };
+  const apiKey = process.env.API_BIBLE_KEY;
+  if (apiKey) {
+    try {
+      const nkjvConfig = await discoverNkjvCapability(apiKey, localBooks);
+      if (nkjvConfig) translations["NKJV"] = nkjvConfig;
+    } catch {
+    }
+  }
+  return translations;
+}
+async function resolveBookRecord(book) {
+  const bookNum = Number(book);
+  let rows;
+  if (!isNaN(bookNum) && String(book).trim() !== "") {
+    rows = await db.select().from(bibleBooks).where((0, import_drizzle_orm5.eq)(bibleBooks.id, bookNum)).limit(1);
+  } else {
+    const canonical = resolveCanonicalBookName({ name: String(book) }) ?? String(book);
+    rows = await db.select().from(bibleBooks).where((0, import_drizzle_orm5.ilike)(bibleBooks.name, canonical)).limit(1);
+    if (!rows.length) {
+      rows = await db.select().from(bibleBooks).where((0, import_drizzle_orm5.ilike)(bibleBooks.name, String(book))).limit(1);
+    }
+  }
+  return rows.length ? rows[0] : null;
+}
+async function resolveChapter(params) {
+  const { abbreviation: translationAbbr, wasDefaulted } = normalizeTranslationParam(params.translation);
+  const chapterNum = Number(params.chapter);
+  if (!Number.isInteger(chapterNum) || chapterNum < 1) {
+    throw new ScriptureError("INVALID_REFERENCE", "chapter must be a positive number", 400);
+  }
+  const bookRecord = await resolveBookRecord(params.book);
+  if (!bookRecord) {
+    throw new ScriptureError("BOOK_NOT_FOUND", `Book not found: ${params.book}`, 404);
+  }
+  const bookId = bookRecord.id;
+  const bookName = bookRecord.name;
+  if (translationAbbr === "NLT") {
+    const meta = {
+      translation: "NLT",
+      translationName: "New Living Translation",
+      source: "nlt_provider",
+      provider: "NLT API"
+    };
+    if (params.cache) {
+      const cachedVerses = await params.cache.read(NLT_PERSISTENT_CACHE_KEY, bookId, chapterNum);
+      if (cachedVerses) {
+        return { book: bookRecord, chapter: chapterNum, verses: cachedVerses, cached: true, meta };
+      }
+    }
+    try {
+      const nltData = await fetchNltChapter(bookName, bookId, chapterNum);
+      if (params.cache && nltData.verses.length > 0) {
+        await params.cache.write(NLT_PERSISTENT_CACHE_KEY, bookId, bookName, chapterNum, nltData.verses, "nlt_api");
+      }
+      return { book: bookRecord, chapter: chapterNum, verses: nltData.verses, cached: false, meta };
+    } catch (err) {
+      if (err instanceof ScriptureError) throw err;
+      throw new ScriptureError("PROVIDER_ERROR", `Could not fetch NLT translation: ${err?.message}`, 502);
+    }
+  }
+  const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+  const apiBibleTranslations = await getRuntimeApiBibleTranslations(allBooks);
+  if (apiBibleTranslations[translationAbbr]) {
+    const config = apiBibleTranslations[translationAbbr];
+    const editionCacheKey = buildEditionCacheKey(translationAbbr, config.bibleId);
+    const meta = {
+      translation: translationAbbr,
+      translationName: config.name,
+      source: "api_bible",
+      provider: "API.Bible",
+      providerEditionId: config.bibleId
+    };
+    if (params.cache) {
+      const cachedVerses = await params.cache.read(editionCacheKey, bookId, chapterNum);
+      if (cachedVerses) {
+        return { book: bookRecord, chapter: chapterNum, verses: cachedVerses, cached: true, meta };
+      }
+    }
+    try {
+      const abData = await fetchApiBibleChapter(bookName, bookId, chapterNum, translationAbbr, config);
+      if (!abData.verses.length) {
+        throw new ScriptureError("PROVIDER_ERROR", `Could not parse ${translationAbbr} content`, 502);
+      }
+      if (params.cache) {
+        await params.cache.write(editionCacheKey, bookId, bookName, chapterNum, abData.verses, "api_bible");
+      }
+      return { book: bookRecord, chapter: chapterNum, verses: abData.verses, cached: false, meta };
+    } catch (err) {
+      if (err instanceof ScriptureError) throw err;
+      throw new ScriptureError("PROVIDER_ERROR", `Could not fetch ${translationAbbr} translation: ${err?.message}`, 502);
+    }
+  }
+  const translationRecord = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, translationAbbr)).limit(1);
+  if (!translationRecord.length) {
+    const msg = wasDefaulted ? "Default translation (KJV) not found in database" : `Translation not found: ${translationAbbr}`;
+    throw new ScriptureError("TRANSLATION_NOT_FOUND", msg, 404);
+  }
+  const verses = await db.select().from(bibleVerses).where(
+    (0, import_drizzle_orm5.and)(
+      (0, import_drizzle_orm5.eq)(bibleVerses.bookId, bookId),
+      (0, import_drizzle_orm5.eq)(bibleVerses.chapter, chapterNum),
+      (0, import_drizzle_orm5.eq)(bibleVerses.translationId, translationRecord[0].id)
+    )
+  ).orderBy(bibleVerses.verse);
+  return {
+    book: bookRecord,
+    chapter: chapterNum,
+    verses,
+    cached: false,
+    meta: {
+      translation: translationRecord[0].abbreviation,
+      translationName: translationRecord[0].name,
+      source: "db",
+      provider: "local"
+    }
+  };
+}
+async function resolveReference(params) {
+  const parsed = parseReference(params.reference);
+  if (!parsed) {
+    throw new ScriptureError("INVALID_REFERENCE", `Could not parse reference: ${params.reference}`, 400);
+  }
+  const resolved = await resolveChapter({
+    book: parsed.book,
+    chapter: parsed.chapter,
+    translation: params.translation,
+    cache: params.cache
+  });
+  const filtered = filterVersesByReference(resolved.verses, parsed);
+  if (!parsed.wholeChapter && filtered.length === 0) {
+    throw new ScriptureError(
+      "VERSE_NOT_FOUND",
+      `No verses found for ${params.reference}`,
+      404
+    );
+  }
+  return { ...resolved, verses: filtered, reference: parsed };
+}
+
+// server/routes/bible.ts
+var router3 = (0, import_express3.Router)();
+async function checkBibleCache(translation, bookId, chapterNum) {
+  try {
+    const cached = await db.select().from(bibleCache).where(
+      (0, import_drizzle_orm6.and)(
+        (0, import_drizzle_orm6.eq)(bibleCache.translation, translation),
+        (0, import_drizzle_orm6.eq)(bibleCache.bookId, bookId),
+        (0, import_drizzle_orm6.eq)(bibleCache.chapter, chapterNum)
+      )
+    ).limit(1);
+    if (cached.length > 0) {
+      await db.insert(bibleCacheStats).values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+        target: [bibleCacheStats.translation],
+        set: {
+          cacheHits: import_drizzle_orm6.sql`${bibleCacheStats.cacheHits} + 1`,
+          lastHitAt: /* @__PURE__ */ new Date()
+        }
+      }).catch(() => {
+      });
+      return cached[0].versesJson;
+    }
+    await db.insert(bibleCacheStats).values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+      target: [bibleCacheStats.translation],
+      set: {
+        cacheMisses: import_drizzle_orm6.sql`${bibleCacheStats.cacheMisses} + 1`,
+        lastMissAt: /* @__PURE__ */ new Date()
+      }
+    }).catch(() => {
+    });
+    return null;
+  } catch {
+    return null;
+  }
+}
+async function storeBibleCache(translation, bookId, bookName, chapterNum, verses, sourceApi) {
+  try {
+    await db.insert(bibleCache).values({
+      translation,
+      bookId,
+      bookName,
+      chapter: chapterNum,
+      versesJson: verses,
+      verseCount: verses.length,
+      sourceApi
+    }).onConflictDoNothing();
+  } catch (err) {
+    console.error(`[bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+  }
+}
+var chapterCacheHooks = {
+  read: checkBibleCache,
+  write: storeBibleCache
+};
+async function getApiBibleTranslations(localBooks) {
+  const translations = { ...API_BIBLE_TRANSLATIONS };
+  const apiKey = process.env.API_BIBLE_KEY;
+  if (apiKey) {
+    try {
+      const nkjvConfig = await discoverNkjvCapability(apiKey, localBooks);
+      if (nkjvConfig) {
+        translations["NKJV"] = nkjvConfig;
+      }
+    } catch {
+    }
+  }
+  return translations;
 }
 router3.get("/api/passage", async (req, res) => {
   try {
-    const { book, chapter, translation = "KJV" } = req.query;
+    const { book, chapter } = req.query;
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
     }
-    const chapterNum = Number(chapter);
-    if (isNaN(chapterNum) || chapterNum < 1) {
-      return res.status(400).json({ error: "chapter must be a positive number" });
-    }
-    let bookRecord;
-    const bookNum = Number(book);
-    if (!isNaN(bookNum)) {
-      bookRecord = await db.select().from(bibleBooks).where((0, import_drizzle_orm5.eq)(bibleBooks.id, bookNum)).limit(1);
-    } else {
-      bookRecord = await db.select().from(bibleBooks).where((0, import_drizzle_orm5.ilike)(bibleBooks.name, String(book))).limit(1);
-    }
-    if (!bookRecord || !bookRecord.length) {
-      return res.status(404).json({ error: "Book not found" });
-    }
-    const bookId = bookRecord[0].id;
-    const bookName = bookRecord[0].name;
-    const translationUpper = String(translation).toUpperCase();
-    if (translationUpper === "NLT") {
-      const cachedVerses = await checkBibleCache("NLT", bookId, chapterNum);
-      if (cachedVerses) {
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: cachedVerses, cached: true });
-      }
-      try {
-        const nltData = await fetchNltChapter(bookName, bookId, chapterNum);
-        if (nltData.verses.length > 0) {
-          storeBibleCache("NLT", bookId, bookName, chapterNum, nltData.verses, "nlt_api");
-        }
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: nltData.verses, cached: false });
-      } catch (err) {
-        console.error("NLT API error:", err?.message);
-        return res.status(502).json({ error: "Could not fetch NLT translation" });
-      }
-    }
-    if (API_BIBLE_TRANSLATIONS[translationUpper]) {
-      const cachedVerses = await checkBibleCache(translationUpper, bookId, chapterNum);
-      if (cachedVerses) {
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: cachedVerses, cached: true });
-      }
-      try {
-        const abData = await fetchApiBibleChapter(bookName, bookId, chapterNum, translationUpper);
-        if (!abData.verses.length) {
-          console.error(`API.Bible (${translationUpper}): 0 verses parsed for ${bookName} ${chapterNum}`);
-          return res.status(502).json({ error: `Could not parse ${translationUpper} content` });
-        }
-        storeBibleCache(translationUpper, bookId, bookName, chapterNum, abData.verses, "api_bible");
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: abData.verses, cached: false });
-      } catch (err) {
-        console.error(`API.Bible (${translationUpper}) error:`, err?.message);
-        return res.status(502).json({ error: `Could not fetch ${translationUpper} translation` });
-      }
-    }
-    const translationRecord = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, String(translation))).limit(1);
-    if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
-    }
-    const verses = await db.select().from(bibleVerses).where(
-      (0, import_drizzle_orm5.and)(
-        (0, import_drizzle_orm5.eq)(bibleVerses.bookId, bookId),
-        (0, import_drizzle_orm5.eq)(bibleVerses.chapter, chapterNum),
-        (0, import_drizzle_orm5.eq)(bibleVerses.translationId, translationRecord[0].id)
-      )
-    ).orderBy(bibleVerses.verse);
-    return res.json({ book: bookRecord[0], chapter: chapterNum, verses });
+    const resolved = await resolveChapter({
+      book: String(book),
+      chapter: Number(chapter),
+      translation: req.query.translation,
+      cache: chapterCacheHooks
+    });
+    return res.json({
+      book: resolved.book,
+      chapter: resolved.chapter,
+      verses: resolved.verses,
+      cached: resolved.cached,
+      ...resolved.meta
+    });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -36892,28 +37535,69 @@ router3.get("/api/books", cachedResponse(300), async (_req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router3.get("/api/translations", cachedResponse(600), async (_req, res) => {
+router3.get("/api/translations", async (_req, res) => {
   try {
-    const translations = await db.select().from(bibleTranslations);
+    const dbTranslations = await db.select().from(bibleTranslations);
+    const result = dbTranslations.map((t) => ({
+      id: t.id,
+      name: t.name,
+      abbreviation: t.abbreviation,
+      language: t.language,
+      source: "db",
+      provider: "local",
+      license: "public_domain",
+      available: true
+    }));
     if (process.env.NLT_API_KEY) {
-      translations.push({
+      result.push({
         id: "NLT",
         name: "New Living Translation",
         abbreviation: "NLT",
-        language: "en"
+        language: "en",
+        source: "nlt_provider",
+        provider: "NLT API",
+        license: "NLT",
+        available: true
       });
     }
     if (process.env.API_BIBLE_KEY) {
       for (const [abbr, config] of Object.entries(API_BIBLE_TRANSLATIONS)) {
-        translations.push({
+        result.push({
           id: abbr,
           name: config.name,
           abbreviation: abbr,
-          language: "en"
+          language: "en",
+          source: "api_bible",
+          provider: "API.Bible",
+          license: config.license,
+          available: true,
+          providerEditionId: config.bibleId
         });
       }
+      try {
+        const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+        const nkjvConfig = await discoverNkjvCapability(
+          process.env.API_BIBLE_KEY,
+          allBooks,
+          { forceRefresh: true }
+        );
+        if (nkjvConfig) {
+          result.push({
+            id: "NKJV",
+            name: nkjvConfig.name,
+            abbreviation: "NKJV",
+            language: "en",
+            source: "api_bible",
+            provider: "API.Bible",
+            license: nkjvConfig.license,
+            available: true,
+            providerEditionId: nkjvConfig.bibleId
+          });
+        }
+      } catch {
+      }
     }
-    return res.json(translations);
+    return res.json(result);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -36923,9 +37607,9 @@ router3.get("/api/translation-for-language", async (req, res) => {
   try {
     const { lang = "en" } = req.query;
     const translationAbbr = getTranslationId(String(lang));
-    const record = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, translationAbbr)).limit(1);
+    const record = await db.select().from(bibleTranslations).where((0, import_drizzle_orm6.eq)(bibleTranslations.abbreviation, translationAbbr)).limit(1);
     if (!record.length) {
-      const fallback = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, "KJV")).limit(1);
+      const fallback = await db.select().from(bibleTranslations).where((0, import_drizzle_orm6.eq)(bibleTranslations.abbreviation, "KJV")).limit(1);
       return res.json(fallback[0] || { abbreviation: "KJV" });
     }
     return res.json(record[0]);
@@ -36936,46 +37620,119 @@ router3.get("/api/translation-for-language", async (req, res) => {
 });
 router3.get("/api/verse", async (req, res) => {
   try {
-    const { book, chapter, verse, translation = "KJV" } = req.query;
+    const { book, chapter, verse } = req.query;
     if (!book || !chapter || !verse) {
       return res.status(400).json({ error: "book, chapter, and verse are required" });
     }
-    const chapterNum = Number(chapter);
-    if (isNaN(chapterNum) || chapterNum < 1) {
-      return res.status(400).json({ error: "chapter must be a positive number" });
+    const verseNum = Number(verse);
+    if (isNaN(verseNum) || verseNum < 1) {
+      return res.status(400).json({ error: "verse must be a positive number" });
     }
-    const translationRecord = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, String(translation))).limit(1);
-    if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
-    }
-    const verseRecord = await db.select().from(bibleVerses).where(
-      (0, import_drizzle_orm5.and)(
-        (0, import_drizzle_orm5.eq)(bibleVerses.bookId, Number(book)),
-        (0, import_drizzle_orm5.eq)(bibleVerses.chapter, chapterNum),
-        (0, import_drizzle_orm5.eq)(bibleVerses.verse, Number(verse)),
-        (0, import_drizzle_orm5.eq)(bibleVerses.translationId, translationRecord[0].id)
-      )
-    ).limit(1);
-    if (!verseRecord.length) {
+    const resolved = await resolveChapter({
+      book: String(book),
+      chapter: Number(chapter),
+      translation: req.query.translation,
+      cache: chapterCacheHooks
+    });
+    const verseRecord = resolved.verses.find(
+      (v) => v.verse === verseNum
+    );
+    if (!verseRecord) {
       return res.status(404).json({ error: "Verse not found" });
     }
-    return res.json(verseRecord[0]);
+    return res.json({ ...verseRecord, ...resolved.meta });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 router3.get("/api/search", async (req, res) => {
   try {
-    const { q, translation = "KJV", limit: limitStr = "50" } = req.query;
+    const { q } = req.query;
+    const { abbreviation: translationAbbr, wasDefaulted } = normalizeTranslationParam(
+      req.query.translation
+    );
+    const limitStr = String(req.query.limit ?? "50");
     if (!q) {
       return res.status(400).json({ error: "q (query) is required" });
     }
     const query = String(q).trim();
     const resultLimit = Math.min(Number(limitStr) || 50, 100);
-    const translationRecord = await db.select().from(bibleTranslations).where((0, import_drizzle_orm5.eq)(bibleTranslations.abbreviation, String(translation))).limit(1);
+    if (translationAbbr === "NLT") {
+      const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+      const localBookRefs = allBooks.map((book) => ({
+        id: book.id,
+        name: book.name,
+        abbreviation: book.abbreviation
+      }));
+      try {
+        const providerResponse = await searchNlt(query, resultLimit, localBookRefs);
+        const meta2 = buildTranslationResponseMeta(
+          "NLT",
+          "New Living Translation",
+          "nlt_provider",
+          "NLT API"
+        );
+        return res.json({
+          results: providerResponse.results,
+          total: providerResponse.total,
+          returned: providerResponse.results.length,
+          ...meta2
+        });
+      } catch (err) {
+        console.error("NLT search provider error:", err?.message);
+        const statusCode = err instanceof ScriptureError ? err.statusCode : err?.statusCode ?? 502;
+        return res.status(statusCode).json({
+          error: err instanceof ScriptureError ? err.message : "Could not search NLT translation",
+          code: err instanceof ScriptureError ? err.code : "PROVIDER_ERROR",
+          translation: "NLT"
+        });
+      }
+    }
+    {
+      const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+      const apiBibleTranslations = await getApiBibleTranslations(allBooks);
+      if (apiBibleTranslations[translationAbbr]) {
+        const config = apiBibleTranslations[translationAbbr];
+        try {
+          const localBookRefs = allBooks.map((b) => ({
+            id: b.id,
+            name: b.name,
+            abbreviation: b.abbreviation
+          }));
+          const providerResults = await searchApiBible(
+            query,
+            translationAbbr,
+            config,
+            resultLimit,
+            localBookRefs
+          );
+          const meta2 = buildTranslationResponseMeta(translationAbbr, config.name, "api_bible", "API.Bible", config.bibleId);
+          return res.json({
+            results: providerResults,
+            total: providerResults.length,
+            returned: providerResults.length,
+            ...meta2
+          });
+        } catch (err) {
+          console.error(`API.Bible search (${translationAbbr}) error:`, err?.message);
+          const statusCode = err instanceof ScriptureError ? err.statusCode : err?.statusCode ?? 502;
+          return res.status(statusCode).json({
+            error: `Could not search ${translationAbbr} translation`,
+            translation: translationAbbr
+          });
+        }
+      }
+    }
+    const translationRecord = await db.select().from(bibleTranslations).where((0, import_drizzle_orm6.eq)(bibleTranslations.abbreviation, translationAbbr)).limit(1);
     if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
+      if (!wasDefaulted) {
+        return res.status(404).json({ error: `Translation not found: ${translationAbbr}` });
+      }
+      return res.status(404).json({ error: "Default translation (KJV) not found in database" });
     }
     const results = await db.select({
       id: bibleVerses.id,
@@ -36985,20 +37742,26 @@ router3.get("/api/search", async (req, res) => {
       text: bibleVerses.text,
       bookName: bibleBooks.name,
       bookAbbreviation: bibleBooks.abbreviation
-    }).from(bibleVerses).innerJoin(bibleBooks, (0, import_drizzle_orm5.eq)(bibleVerses.bookId, bibleBooks.id)).where(
-      (0, import_drizzle_orm5.and)(
-        (0, import_drizzle_orm5.eq)(bibleVerses.translationId, translationRecord[0].id),
-        (0, import_drizzle_orm5.ilike)(bibleVerses.text, `%${query}%`)
+    }).from(bibleVerses).innerJoin(bibleBooks, (0, import_drizzle_orm6.eq)(bibleVerses.bookId, bibleBooks.id)).where(
+      (0, import_drizzle_orm6.and)(
+        (0, import_drizzle_orm6.eq)(bibleVerses.translationId, translationRecord[0].id),
+        (0, import_drizzle_orm6.ilike)(bibleVerses.text, `%${query}%`)
       )
     ).orderBy(bibleBooks.orderIndex, bibleVerses.chapter, bibleVerses.verse).limit(resultLimit);
-    const countResult = await db.select({ count: import_drizzle_orm5.sql`count(*)` }).from(bibleVerses).where(
-      (0, import_drizzle_orm5.and)(
-        (0, import_drizzle_orm5.eq)(bibleVerses.translationId, translationRecord[0].id),
-        (0, import_drizzle_orm5.ilike)(bibleVerses.text, `%${query}%`)
+    const countResult = await db.select({ count: import_drizzle_orm6.sql`count(*)` }).from(bibleVerses).where(
+      (0, import_drizzle_orm6.and)(
+        (0, import_drizzle_orm6.eq)(bibleVerses.translationId, translationRecord[0].id),
+        (0, import_drizzle_orm6.ilike)(bibleVerses.text, `%${query}%`)
       )
     );
     const totalCount = Number(countResult[0]?.count ?? 0);
-    return res.json({ results, total: totalCount, returned: results.length });
+    const meta = buildTranslationResponseMeta(
+      translationRecord[0].abbreviation,
+      translationRecord[0].name,
+      "db",
+      "local"
+    );
+    return res.json({ results, total: totalCount, returned: results.length, ...meta });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -37011,7 +37774,9 @@ router3.get("/api/search/reference", async (req, res) => {
       return res.status(400).json({ error: "q (query) is required" });
     }
     const query = String(q).trim();
-    const refMatch = query.match(/^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
+    const refMatch = query.match(
+      /^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/
+    );
     if (!refMatch) {
       return res.json({ isReference: false });
     }
@@ -37042,10 +37807,10 @@ router3.get("/api/bible-cache/stats", async (_req, res) => {
     const stats = await db.select().from(bibleCacheStats);
     const cacheRows = await db.select({
       translation: bibleCache.translation,
-      cachedChapters: import_drizzle_orm5.sql`count(*)`,
-      totalVerses: import_drizzle_orm5.sql`sum(${bibleCache.verseCount})`,
-      oldestFetch: import_drizzle_orm5.sql`min(${bibleCache.fetchedAt})`,
-      newestFetch: import_drizzle_orm5.sql`max(${bibleCache.fetchedAt})`
+      cachedChapters: import_drizzle_orm6.sql`count(*)`,
+      totalVerses: import_drizzle_orm6.sql`sum(${bibleCache.verseCount})`,
+      oldestFetch: import_drizzle_orm6.sql`min(${bibleCache.fetchedAt})`,
+      newestFetch: import_drizzle_orm6.sql`max(${bibleCache.fetchedAt})`
     }).from(bibleCache).groupBy(bibleCache.translation);
     const totalChapters = 1189;
     const apiTranslations = ["NLT", "NIV", "AMP", "NASB"];
@@ -37086,9 +37851,35 @@ var import_express4 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm6 = require("drizzle-orm");
+var import_drizzle_orm7 = require("drizzle-orm");
+var crypto = __toESM(require("crypto"));
 init_ai_engine();
 var router4 = (0, import_express4.Router)();
+var STRONG_MAP_CACHE_VERSION = "strong-map-canon-v3";
+var STRONG_MAP_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+function normalizeTranslation(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return raw ? raw.toUpperCase() : "";
+}
+function strongMapCacheHash(translation, verseId) {
+  const hashInput = [STRONG_MAP_CACHE_VERSION, translation, verseId].join("::");
+  return crypto.createHash("sha256").update(hashInput).digest("hex");
+}
+async function resolveDbVerseTranslation(verseId) {
+  const [row] = await db.select({ translationId: bibleVerses.translationId }).from(bibleVerses).where((0, import_drizzle_orm7.eq)(bibleVerses.id, verseId)).limit(1);
+  return row ? row.translationId : null;
+}
+function canPersistVerseStrongMaps(requestedTranslation, dbVerseTranslation) {
+  if (!dbVerseTranslation) return false;
+  return normalizeTranslation(dbVerseTranslation) === normalizeTranslation(requestedTranslation);
+}
+function buildVerseReference(bookName, chapter, verse) {
+  const b = typeof bookName === "string" ? bookName.trim() : "";
+  const c = Number(chapter);
+  const v = Number(verse);
+  if (!b || !Number.isFinite(c) || !Number.isFinite(v) || c < 1 || v < 1) return null;
+  return `${b} ${c}:${v}`;
+}
 router4.get("/api/strong/search", async (req, res) => {
   try {
     const { q, language } = req.query;
@@ -37097,12 +37888,12 @@ router4.get("/api/strong/search", async (req, res) => {
     }
     const searchTerm = `%${String(q).trim().toLowerCase()}%`;
     const conditions = [
-      import_drizzle_orm6.sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`
+      import_drizzle_orm7.sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`
     ];
     if (language && (language === "he" || language === "gr")) {
-      conditions.push((0, import_drizzle_orm6.eq)(strongEntries.language, String(language)));
+      conditions.push((0, import_drizzle_orm7.eq)(strongEntries.language, String(language)));
     }
-    const results = await db.select().from(strongEntries).where((0, import_drizzle_orm6.and)(...conditions)).limit(50);
+    const results = await db.select().from(strongEntries).where((0, import_drizzle_orm7.and)(...conditions)).limit(50);
     return res.json(results);
   } catch (err) {
     console.error(err);
@@ -37111,7 +37902,7 @@ router4.get("/api/strong/search", async (req, res) => {
 });
 router4.get("/api/strong/:id", async (req, res) => {
   try {
-    const [entry] = await db.select().from(strongEntries).where((0, import_drizzle_orm6.eq)(strongEntries.id, String(req.params.id))).limit(1);
+    const [entry] = await db.select().from(strongEntries).where((0, import_drizzle_orm7.eq)(strongEntries.id, String(req.params.id))).limit(1);
     if (!entry) return res.status(404).json({ error: "Strong's entry not found" });
     return res.json(entry);
   } catch (err) {
@@ -37121,10 +37912,24 @@ router4.get("/api/strong/:id", async (req, res) => {
 });
 router4.get("/api/strong/verse/:verseId", async (req, res) => {
   try {
+    const verseId = String(req.params.verseId);
+    const translation = normalizeTranslation(req.query.translation);
+    if (!translation) {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const cacheHash = strongMapCacheHash(translation, verseId);
+    const cached = await db.select({ results: searchCache.results }).from(searchCache).where((0, import_drizzle_orm7.and)((0, import_drizzle_orm7.eq)(searchCache.queryHash, cacheHash), import_drizzle_orm7.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
+    if (cached.length > 0) {
+      return res.json(cached[0].results ?? []);
+    }
+    const dbVerseTranslation = await resolveDbVerseTranslation(verseId);
+    if (!canPersistVerseStrongMaps(translation, dbVerseTranslation)) {
+      return res.json([]);
+    }
     const maps = await db.select({
       map: verseStrongMaps,
       entry: strongEntries
-    }).from(verseStrongMaps).leftJoin(strongEntries, (0, import_drizzle_orm6.eq)(verseStrongMaps.strongId, strongEntries.id)).where((0, import_drizzle_orm6.eq)(verseStrongMaps.verseId, String(req.params.verseId))).orderBy(verseStrongMaps.wordPosition);
+    }).from(verseStrongMaps).leftJoin(strongEntries, (0, import_drizzle_orm7.eq)(verseStrongMaps.strongId, strongEntries.id)).where((0, import_drizzle_orm7.eq)(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
     const seen = /* @__PURE__ */ new Set();
     const unique = maps.filter((row) => {
       const key = `${row.map.strongId}-${row.map.wordPosition}`;
@@ -37140,36 +37945,92 @@ router4.get("/api/strong/verse/:verseId", async (req, res) => {
 });
 router4.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseId, bookName, chapter, verse, verseText } = req.body;
-    if (!verseId || !verseText) {
-      return res.status(400).json({ error: "verseId and verseText are required" });
+    const { verseId, bookName: clientBookName, chapter: clientChapter, verse: clientVerse } = req.body;
+    const translation = normalizeTranslation(req.body.translation);
+    if (!translation) {
+      return res.status(400).json({ error: "translation is required" });
     }
-    const existing = await db.select({ map: verseStrongMaps, entry: strongEntries }).from(verseStrongMaps).leftJoin(strongEntries, (0, import_drizzle_orm6.eq)(verseStrongMaps.strongId, strongEntries.id)).where((0, import_drizzle_orm6.eq)(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
-    if (existing.length > 0) {
-      const seen = /* @__PURE__ */ new Set();
-      const deduped = existing.filter((row) => {
-        const key = `${row.map.strongId}-${row.map.wordPosition}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+    const clientVerseReference = typeof req.body.verseReference === "string" ? req.body.verseReference.trim() : void 0;
+    const referenceString = clientVerseReference || buildVerseReference(clientBookName, clientChapter, clientVerse);
+    if (!referenceString) {
+      return res.status(400).json({
+        error: "verseReference (or bookName + chapter + verse) and translation are required"
       });
-      return res.json(deduped);
     }
+    let canonicalVerseText;
+    let canonicalVerseId;
+    let resolvedBookName;
+    let resolvedChapter;
+    let resolvedVerse;
+    try {
+      const canonical = await resolveReference({ reference: referenceString, translation });
+      canonicalVerseText = canonical.verses.map((v) => v.text).join(" ").trim();
+      canonicalVerseId = canonical.verses[0]?.id;
+      resolvedBookName = canonical.book.name;
+      resolvedChapter = canonical.chapter;
+      resolvedVerse = canonical.verses[0]?.verse ?? canonical.reference.verses[0] ?? 1;
+    } catch (err) {
+      if (err instanceof ScriptureError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+    const effectiveVerseId = (() => {
+      if (canonicalVerseId) {
+        if (verseId && verseId !== canonicalVerseId) {
+          return "MISMATCH";
+        }
+        return canonicalVerseId;
+      }
+      if (!verseId) {
+        return "MISSING";
+      }
+      return String(verseId);
+    })();
+    if (effectiveVerseId === "MISMATCH") {
+      return res.status(409).json({
+        error: "Provided verseId does not match the canonical resolved verse for this reference and translation. Re-fetch the verse to obtain the correct id.",
+        code: "VERSE_ID_MISMATCH"
+      });
+    }
+    if (effectiveVerseId === "MISSING") {
+      return res.status(400).json({
+        error: "verseId is required for provider-served (non-DB) verses",
+        code: "VERSE_ID_REQUIRED"
+      });
+    }
+    const cacheHash = strongMapCacheHash(translation, effectiveVerseId);
+    const cached = await db.select({ results: searchCache.results }).from(searchCache).where((0, import_drizzle_orm7.and)((0, import_drizzle_orm7.eq)(searchCache.queryHash, cacheHash), import_drizzle_orm7.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
+    if (cached.length > 0) {
+      return res.json(cached[0].results ?? []);
+    }
+    const dbVerseTranslation = await resolveDbVerseTranslation(effectiveVerseId);
+    const persistMaps = canPersistVerseStrongMaps(translation, dbVerseTranslation);
     let parsed;
     try {
-      parsed = await generateStrongWordStudy({ verseText, bookName, chapter, verse });
-    } catch {
-      return res.status(500).json({ error: "Failed to parse AI response" });
+      parsed = await generateStrongWordStudy({
+        verseText: canonicalVerseText,
+        bookName: resolvedBookName,
+        chapter: resolvedChapter,
+        verse: resolvedVerse,
+        translation
+      });
+    } catch (genErr) {
+      console.error("Word study generation error (AI):", genErr);
+      return res.status(500).json({ error: "Failed to generate word study" });
     }
-    const langCode = bookName && ["Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"].includes(bookName) ? "gr" : "he";
+    const langCode = ["Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"].includes(resolvedBookName) ? "gr" : "he";
     const results = [];
-    const insertedKeys = /* @__PURE__ */ new Set();
+    const seenKeys = /* @__PURE__ */ new Set();
+    let position = 0;
     for (let i = 0; i < parsed.length; i++) {
       const w = parsed[i];
-      const sid = w.strongId || `${langCode === "he" ? "H" : "G"}${9e3 + i}`;
-      const mapKey = `${verseId}-${sid}-${i + 1}`;
-      if (insertedKeys.has(mapKey)) continue;
-      insertedKeys.add(mapKey);
+      const sid = typeof w.strongId === "string" && /^[HG]\d+$/i.test(w.strongId.trim()) ? w.strongId.trim().toUpperCase() : null;
+      if (!sid) continue;
+      position += 1;
+      const dedupeKey = `${sid}-${position}`;
+      if (seenKeys.has(dedupeKey)) continue;
+      seenKeys.add(dedupeKey);
       await db.insert(strongEntries).values({
         id: sid,
         language: langCode,
@@ -37179,16 +38040,36 @@ router4.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
         definition: w.definition || "",
         kjvUsage: w.kjvUsage || null
       }).onConflictDoNothing();
-      const [mapEntry] = await db.insert(verseStrongMaps).values({
-        verseId,
-        strongId: sid,
-        wordPosition: i + 1,
-        originalWord: w.originalWord || w.lemma || "",
-        translatedWord: w.translatedWord || null
-      }).returning();
-      const entry = (await db.select().from(strongEntries).where((0, import_drizzle_orm6.eq)(strongEntries.id, sid)).limit(1))[0];
+      const entry = (await db.select().from(strongEntries).where((0, import_drizzle_orm7.eq)(strongEntries.id, sid)).limit(1))[0];
+      let mapEntry;
+      if (persistMaps) {
+        const [inserted] = await db.insert(verseStrongMaps).values({
+          verseId: effectiveVerseId,
+          strongId: sid,
+          wordPosition: position,
+          originalWord: w.originalWord || w.lemma || "",
+          translatedWord: w.translatedWord || null
+        }).returning();
+        mapEntry = inserted;
+      } else {
+        mapEntry = {
+          verseId: effectiveVerseId,
+          strongId: sid,
+          wordPosition: position,
+          originalWord: w.originalWord || w.lemma || "",
+          translatedWord: w.translatedWord || null
+        };
+      }
       results.push({ map: mapEntry, entry });
     }
+    const expiresAt = new Date(Date.now() + STRONG_MAP_CACHE_TTL_MS);
+    await db.insert(searchCache).values({
+      queryText: `strong-map:${translation}:${effectiveVerseId}`,
+      queryHash: cacheHash,
+      userId: null,
+      results,
+      expiresAt
+    }).onConflictDoNothing();
     return res.json(results);
   } catch (err) {
     console.error("Word study generation error:", err);
@@ -37203,7 +38084,7 @@ init_sda_lens();
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm7 = require("drizzle-orm");
+var import_drizzle_orm8 = require("drizzle-orm");
 var router5 = (0, import_express5.Router)();
 var BOOK_ID_TO_API = {
   1: "GEN",
@@ -37412,10 +38293,10 @@ router5.get("/api/commentary", async (req, res) => {
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
     }
-    const entries = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, (0, import_drizzle_orm7.eq)(commentaryEntries.commentatorId, commentators.id)).where(
-      (0, import_drizzle_orm7.and)(
-        (0, import_drizzle_orm7.eq)(commentaryEntries.bookId, Number(book)),
-        (0, import_drizzle_orm7.eq)(commentaryEntries.chapter, Number(chapter))
+    const entries = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, (0, import_drizzle_orm8.eq)(commentaryEntries.commentatorId, commentators.id)).where(
+      (0, import_drizzle_orm8.and)(
+        (0, import_drizzle_orm8.eq)(commentaryEntries.bookId, Number(book)),
+        (0, import_drizzle_orm8.eq)(commentaryEntries.chapter, Number(chapter))
       )
     );
     const seen = /* @__PURE__ */ new Set();
@@ -37437,10 +38318,10 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     if (!bookId || !chapter) {
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
-    const existing = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, (0, import_drizzle_orm7.eq)(commentaryEntries.commentatorId, commentators.id)).where(
-      (0, import_drizzle_orm7.and)(
-        (0, import_drizzle_orm7.eq)(commentaryEntries.bookId, Number(bookId)),
-        (0, import_drizzle_orm7.eq)(commentaryEntries.chapter, Number(chapter))
+    const existing = await db.select({ entry: commentaryEntries, commentator: commentators }).from(commentaryEntries).leftJoin(commentators, (0, import_drizzle_orm8.eq)(commentaryEntries.commentatorId, commentators.id)).where(
+      (0, import_drizzle_orm8.and)(
+        (0, import_drizzle_orm8.eq)(commentaryEntries.bookId, Number(bookId)),
+        (0, import_drizzle_orm8.eq)(commentaryEntries.chapter, Number(chapter))
       )
     );
     const existingIds = new Set(existing.map((e) => e.entry?.commentatorId || e.commentatorId));
@@ -37457,7 +38338,7 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     if (!bookCode) {
       return res.status(400).json({ error: "Invalid book ID" });
     }
-    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm7.eq)(bibleBooks.id, Number(bookId)));
+    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm8.eq)(bibleBooks.id, Number(bookId)));
     if (bookRows.length === 0) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -37476,14 +38357,14 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
     const results = [];
     for (const src of COMMENTARY_SOURCES) {
       const existingSrc = await db.select().from(commentaryEntries).where(
-        (0, import_drizzle_orm7.and)(
-          (0, import_drizzle_orm7.eq)(commentaryEntries.commentatorId, src.dbId),
-          (0, import_drizzle_orm7.eq)(commentaryEntries.bookId, Number(bookId)),
-          (0, import_drizzle_orm7.eq)(commentaryEntries.chapter, Number(chapter))
+        (0, import_drizzle_orm8.and)(
+          (0, import_drizzle_orm8.eq)(commentaryEntries.commentatorId, src.dbId),
+          (0, import_drizzle_orm8.eq)(commentaryEntries.bookId, Number(bookId)),
+          (0, import_drizzle_orm8.eq)(commentaryEntries.chapter, Number(chapter))
         )
       ).limit(1);
       if (existingSrc.length > 0) {
-        const cRow2 = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, src.dbId)).limit(1);
+        const cRow2 = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, src.dbId)).limit(1);
         results.push({ entry: existingSrc[0], commentator: cRow2[0] || null });
         continue;
       }
@@ -37498,7 +38379,7 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         content: trimmed,
         title: `${bookName} ${chapter} \u2014 ${src.name}`
       }).returning();
-      const cRow = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, src.dbId)).limit(1);
+      const cRow = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, src.dbId)).limit(1);
       results.push({ entry: inserted, commentator: cRow[0] || null });
     }
     if (!commentatorMap[EGW_COMMENTATOR.dbId]) {
@@ -37509,13 +38390,13 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         tradition: EGW_COMMENTATOR.tradition
       }).onConflictDoNothing();
     }
-    const existingEgw = await db.select().from(commentaryEntries).where((0, import_drizzle_orm7.and)(
-      (0, import_drizzle_orm7.eq)(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
-      (0, import_drizzle_orm7.eq)(commentaryEntries.bookId, Number(bookId)),
-      (0, import_drizzle_orm7.eq)(commentaryEntries.chapter, Number(chapter))
+    const existingEgw = await db.select().from(commentaryEntries).where((0, import_drizzle_orm8.and)(
+      (0, import_drizzle_orm8.eq)(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
+      (0, import_drizzle_orm8.eq)(commentaryEntries.bookId, Number(bookId)),
+      (0, import_drizzle_orm8.eq)(commentaryEntries.chapter, Number(chapter))
     )).limit(1);
     if (existingEgw.length > 0) {
-      const egwRow = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+      const egwRow = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
       results.unshift({ entry: existingEgw[0], commentator: egwRow[0] || null });
     } else {
       const egwContent = await generateEgwInsight(bookName, Number(chapter));
@@ -37527,7 +38408,7 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
           content: egwContent,
           title: `${bookName} ${chapter} \u2014 ${EGW_COMMENTATOR.name}`
         }).returning();
-        const egwRow = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
+        const egwRow = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
         results.unshift({ entry: egwInserted, commentator: egwRow[0] || null });
       }
     }
@@ -37541,13 +38422,13 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
         }).onConflictDoNothing();
         commentatorMap[pioneer.dbId] = pioneer.dbId;
       }
-      const existingPioneer = await db.select().from(commentaryEntries).where((0, import_drizzle_orm7.and)(
-        (0, import_drizzle_orm7.eq)(commentaryEntries.commentatorId, pioneer.dbId),
-        (0, import_drizzle_orm7.eq)(commentaryEntries.bookId, Number(bookId)),
-        (0, import_drizzle_orm7.eq)(commentaryEntries.chapter, Number(chapter))
+      const existingPioneer = await db.select().from(commentaryEntries).where((0, import_drizzle_orm8.and)(
+        (0, import_drizzle_orm8.eq)(commentaryEntries.commentatorId, pioneer.dbId),
+        (0, import_drizzle_orm8.eq)(commentaryEntries.bookId, Number(bookId)),
+        (0, import_drizzle_orm8.eq)(commentaryEntries.chapter, Number(chapter))
       )).limit(1);
       if (existingPioneer.length > 0) {
-        const pRow = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, pioneer.dbId)).limit(1);
+        const pRow = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, pioneer.dbId)).limit(1);
         results.push({ entry: existingPioneer[0], commentator: pRow[0] || null });
       } else {
         const content = await generatePioneerInsight(pioneer, bookName, Number(chapter));
@@ -37559,7 +38440,7 @@ router5.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =
             content,
             title: `${bookName} ${chapter} \u2014 ${pioneer.name}`
           }).returning();
-          const pRow = await db.select().from(commentators).where((0, import_drizzle_orm7.eq)(commentators.id, pioneer.dbId)).limit(1);
+          const pRow = await db.select().from(commentators).where((0, import_drizzle_orm8.eq)(commentators.id, pioneer.dbId)).limit(1);
           results.push({ entry: inserted, commentator: pRow[0] || null });
         }
       }
@@ -37577,7 +38458,7 @@ var import_express6 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm8 = require("drizzle-orm");
+var import_drizzle_orm9 = require("drizzle-orm");
 init_ai_engine();
 var router6 = (0, import_express6.Router)();
 router6.get("/api/context", async (req, res) => {
@@ -37587,10 +38468,10 @@ router6.get("/api/context", async (req, res) => {
       return res.status(400).json({ error: "book is required" });
     }
     const cards = await db.select().from(contextCards).where(
-      chapter ? (0, import_drizzle_orm8.and)(
-        (0, import_drizzle_orm8.eq)(contextCards.bookId, Number(book)),
-        (0, import_drizzle_orm8.eq)(contextCards.chapter, Number(chapter))
-      ) : (0, import_drizzle_orm8.eq)(contextCards.bookId, Number(book))
+      chapter ? (0, import_drizzle_orm9.and)(
+        (0, import_drizzle_orm9.eq)(contextCards.bookId, Number(book)),
+        (0, import_drizzle_orm9.eq)(contextCards.chapter, Number(chapter))
+      ) : (0, import_drizzle_orm9.eq)(contextCards.bookId, Number(book))
     );
     const seen = /* @__PURE__ */ new Set();
     const deduped = cards.filter((c) => {
@@ -37612,15 +38493,15 @@ router6.post("/api/context/generate", aiGenerationLimiter, async (req, res) => {
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
     const existing = await db.select().from(contextCards).where(
-      (0, import_drizzle_orm8.and)(
-        (0, import_drizzle_orm8.eq)(contextCards.bookId, Number(bookId)),
-        (0, import_drizzle_orm8.eq)(contextCards.chapter, Number(chapter))
+      (0, import_drizzle_orm9.and)(
+        (0, import_drizzle_orm9.eq)(contextCards.bookId, Number(bookId)),
+        (0, import_drizzle_orm9.eq)(contextCards.chapter, Number(chapter))
       )
     );
     if (existing.length > 0) {
       return res.json(existing);
     }
-    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm8.eq)(bibleBooks.id, Number(bookId)));
+    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm9.eq)(bibleBooks.id, Number(bookId)));
     if (bookRows.length === 0) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -37654,9 +38535,9 @@ router6.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req,
   try {
     const bookId = parseInt(String(req.params.bookId));
     const chapter = parseInt(String(req.params.chapter));
-    const [cached] = await db.select().from(chapterContextCache).where((0, import_drizzle_orm8.and)(
-      (0, import_drizzle_orm8.eq)(chapterContextCache.bookId, bookId),
-      (0, import_drizzle_orm8.eq)(chapterContextCache.chapter, chapter)
+    const [cached] = await db.select().from(chapterContextCache).where((0, import_drizzle_orm9.and)(
+      (0, import_drizzle_orm9.eq)(chapterContextCache.bookId, bookId),
+      (0, import_drizzle_orm9.eq)(chapterContextCache.chapter, chapter)
     )).limit(1);
     if (cached) {
       return res.json({
@@ -37667,7 +38548,7 @@ router6.get("/api/chapter-context/:bookId/:chapter", checkProStatus, async (req,
         geographicalNotes: cached.geographicalNotes
       });
     }
-    const [book] = await db.select().from(bibleBooks).where((0, import_drizzle_orm8.eq)(bibleBooks.id, bookId)).limit(1);
+    const [book] = await db.select().from(bibleBooks).where((0, import_drizzle_orm9.eq)(bibleBooks.id, bookId)).limit(1);
     const bookName = book?.name || "Unknown";
     const result = await generateChapterContext({ bookId, chapter, bookName });
     await db.insert(chapterContextCache).values({
@@ -37693,9 +38574,9 @@ router6.get("/api/chapter-summary", async (req, res) => {
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
     const [summary] = await db.select().from(chapterSummaries).where(
-      (0, import_drizzle_orm8.and)(
-        (0, import_drizzle_orm8.eq)(chapterSummaries.bookId, bookId),
-        (0, import_drizzle_orm8.eq)(chapterSummaries.chapter, chapter)
+      (0, import_drizzle_orm9.and)(
+        (0, import_drizzle_orm9.eq)(chapterSummaries.bookId, bookId),
+        (0, import_drizzle_orm9.eq)(chapterSummaries.chapter, chapter)
       )
     ).limit(1);
     if (!summary) {
@@ -37726,10 +38607,10 @@ router6.get("/api/application", async (req, res) => {
       return res.status(400).json({ error: "book is required" });
     }
     const templates = await db.select().from(applicationTemplates).where(
-      chapter ? (0, import_drizzle_orm8.and)(
-        (0, import_drizzle_orm8.eq)(applicationTemplates.bookId, Number(book)),
-        (0, import_drizzle_orm8.eq)(applicationTemplates.chapter, Number(chapter))
-      ) : (0, import_drizzle_orm8.eq)(applicationTemplates.bookId, Number(book))
+      chapter ? (0, import_drizzle_orm9.and)(
+        (0, import_drizzle_orm9.eq)(applicationTemplates.bookId, Number(book)),
+        (0, import_drizzle_orm9.eq)(applicationTemplates.chapter, Number(chapter))
+      ) : (0, import_drizzle_orm9.eq)(applicationTemplates.bookId, Number(book))
     );
     return res.json(templates);
   } catch (err) {
@@ -37744,15 +38625,15 @@ router6.post("/api/application/generate", aiGenerationLimiter, async (req, res) 
       return res.status(400).json({ error: "bookId and chapter are required" });
     }
     const existing = await db.select().from(applicationTemplates).where(
-      (0, import_drizzle_orm8.and)(
-        (0, import_drizzle_orm8.eq)(applicationTemplates.bookId, Number(bookId)),
-        (0, import_drizzle_orm8.eq)(applicationTemplates.chapter, Number(chapter))
+      (0, import_drizzle_orm9.and)(
+        (0, import_drizzle_orm9.eq)(applicationTemplates.bookId, Number(bookId)),
+        (0, import_drizzle_orm9.eq)(applicationTemplates.chapter, Number(chapter))
       )
     );
     if (existing.length > 0) {
       return res.json(existing);
     }
-    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm8.eq)(bibleBooks.id, Number(bookId)));
+    const bookRows = await db.select().from(bibleBooks).where((0, import_drizzle_orm9.eq)(bibleBooks.id, Number(bookId)));
     if (bookRows.length === 0) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -37786,7 +38667,7 @@ var import_express7 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm9 = require("drizzle-orm");
+var import_drizzle_orm10 = require("drizzle-orm");
 var router7 = (0, import_express7.Router)();
 router7.get("/api/location", async (req, res) => {
   try {
@@ -37799,7 +38680,7 @@ router7.get("/api/location", async (req, res) => {
 });
 router7.get("/api/location/:id", async (req, res) => {
   try {
-    const location = await db.select().from(locations).where((0, import_drizzle_orm9.eq)(locations.id, String(req.params.id))).limit(1);
+    const location = await db.select().from(locations).where((0, import_drizzle_orm10.eq)(locations.id, String(req.params.id))).limit(1);
     if (!location.length) {
       return res.status(404).json({ error: "Location not found" });
     }
@@ -37835,7 +38716,7 @@ router7.get("/api/location/:id/verses", async (req, res) => {
       verse: bibleVerses.verse,
       text: bibleVerses.text,
       bookName: bibleBooks.name
-    }).from(locationVerseMaps).innerJoin(bibleVerses, (0, import_drizzle_orm9.eq)(locationVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, (0, import_drizzle_orm9.eq)(bibleVerses.bookId, bibleBooks.id)).where((0, import_drizzle_orm9.eq)(locationVerseMaps.locationId, String(req.params.id)));
+    }).from(locationVerseMaps).innerJoin(bibleVerses, (0, import_drizzle_orm10.eq)(locationVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, (0, import_drizzle_orm10.eq)(bibleVerses.bookId, bibleBooks.id)).where((0, import_drizzle_orm10.eq)(locationVerseMaps.locationId, String(req.params.id)));
     return res.json(rows);
   } catch (err) {
     console.error(err);
@@ -37851,7 +38732,7 @@ router7.get("/api/timeline/:id/verses", async (req, res) => {
       verse: bibleVerses.verse,
       text: bibleVerses.text,
       bookName: bibleBooks.name
-    }).from(eventVerseMaps).innerJoin(bibleVerses, (0, import_drizzle_orm9.eq)(eventVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, (0, import_drizzle_orm9.eq)(bibleVerses.bookId, bibleBooks.id)).where((0, import_drizzle_orm9.eq)(eventVerseMaps.eventId, String(req.params.id)));
+    }).from(eventVerseMaps).innerJoin(bibleVerses, (0, import_drizzle_orm10.eq)(eventVerseMaps.verseId, bibleVerses.id)).innerJoin(bibleBooks, (0, import_drizzle_orm10.eq)(bibleVerses.bookId, bibleBooks.id)).where((0, import_drizzle_orm10.eq)(eventVerseMaps.eventId, String(req.params.id)));
     return res.json(rows);
   } catch (err) {
     console.error(err);
@@ -37865,23 +38746,54 @@ var import_express8 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm10 = require("drizzle-orm");
+var import_drizzle_orm11 = require("drizzle-orm");
 init_ai_engine();
 var router8 = (0, import_express8.Router)();
+var LEGACY_TRANSLATION = "KJV";
+var SCRIPTURE_CONTRACT_VERSION = "canonical-v1";
+function normalizeTranslation2(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return raw ? raw.toUpperCase() : "";
+}
+function sessionTranslation(session) {
+  try {
+    const prog = JSON.parse(session.progression || "{}");
+    const t = normalizeTranslation2(prog?.meta?.translation);
+    return t || LEGACY_TRANSLATION;
+  } catch {
+    return LEGACY_TRANSLATION;
+  }
+}
+function sessionUsesCanonicalScripture(session) {
+  try {
+    const prog = JSON.parse(session.progression || "{}");
+    return prog?.meta?.scriptureContractVersion === SCRIPTURE_CONTRACT_VERSION;
+  } catch {
+    return false;
+  }
+}
+function scriptureErrorStatus(err) {
+  if (err instanceof ScriptureError) return err.statusCode;
+  return getErrorStatusCode(err);
+}
 router8.get("/api/study-guide/active", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const verseReference = String(req.query.verseReference || "");
+    const translation = normalizeTranslation2(req.query.translation) || LEGACY_TRANSLATION;
     if (!verseReference) {
       return res.status(400).json({ error: "verseReference is required" });
     }
-    const [activeSession] = await db.select().from(studyGuideSessions).where(
-      (0, import_drizzle_orm10.and)(
-        (0, import_drizzle_orm10.eq)(studyGuideSessions.userId, userId),
-        (0, import_drizzle_orm10.eq)(studyGuideSessions.verseReference, verseReference),
-        import_drizzle_orm10.sql`${studyGuideSessions.completedAt} IS NULL`
+    const candidates = await db.select().from(studyGuideSessions).where(
+      (0, import_drizzle_orm11.and)(
+        (0, import_drizzle_orm11.eq)(studyGuideSessions.userId, userId),
+        (0, import_drizzle_orm11.eq)(studyGuideSessions.verseReference, verseReference),
+        import_drizzle_orm11.sql`${studyGuideSessions.completedAt} IS NULL`
       )
-    ).orderBy((0, import_drizzle_orm10.desc)(studyGuideSessions.createdAt)).limit(1);
+    ).orderBy((0, import_drizzle_orm11.desc)(studyGuideSessions.createdAt));
+    const activeSession = candidates.find(
+      (s) => sessionUsesCanonicalScripture(s) && sessionTranslation(s) === translation
+    );
     if (!activeSession) {
       return res.json({ found: false });
     }
@@ -37890,6 +38802,7 @@ router8.get("/api/study-guide/active", async (req, res) => {
       found: true,
       session: {
         ...activeSession,
+        translation: sessionTranslation(activeSession),
         messages: JSON.parse(activeSession.messages),
         progression: parsedProgression,
         summary: activeSession.summary || null
@@ -37902,36 +38815,72 @@ router8.get("/api/study-guide/active", async (req, res) => {
 });
 router8.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseReference, verseText, bookName, chapter, verse, forceNew = false, persona = "pastoral" } = req.body;
+    const { verseReference, forceNew = false, persona = "pastoral" } = req.body;
     const userId = extractUserId(req);
-    if (!verseReference || !verseText) {
-      return res.status(400).json({ error: "verseReference and verseText are required" });
+    const translation = normalizeTranslation2(req.body.translation);
+    if (!verseReference) {
+      return res.status(400).json({ error: "verseReference and translation are required" });
+    }
+    if (!translation) {
+      return res.status(400).json({ error: "verseReference and translation are required" });
+    }
+    let resolvedVerseText;
+    let resolvedBookName;
+    let resolvedChapter;
+    let resolvedVerse;
+    let resolvedMeta;
+    try {
+      const canonical = await resolveReference({ reference: verseReference, translation });
+      resolvedVerseText = canonical.verses.map((v) => v.text).join(" ").trim();
+      resolvedBookName = canonical.book.name;
+      resolvedChapter = canonical.chapter;
+      resolvedMeta = canonical.meta;
+      resolvedVerse = canonical.verses[0]?.verse ?? canonical.reference.verses[0] ?? 1;
+    } catch (err) {
+      if (err instanceof ScriptureError) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      throw err;
     }
     const validPersonas = ["pastoral", "ellen-white"];
     const resolvedPersona = validPersonas.includes(persona) ? persona : "pastoral";
     if (!forceNew) {
-      const [existingActive] = await db.select().from(studyGuideSessions).where(
-        (0, import_drizzle_orm10.and)(
-          (0, import_drizzle_orm10.eq)(studyGuideSessions.userId, userId),
-          (0, import_drizzle_orm10.eq)(studyGuideSessions.verseReference, verseReference),
-          import_drizzle_orm10.sql`${studyGuideSessions.completedAt} IS NULL`
+      const candidates = await db.select().from(studyGuideSessions).where(
+        (0, import_drizzle_orm11.and)(
+          (0, import_drizzle_orm11.eq)(studyGuideSessions.userId, userId),
+          (0, import_drizzle_orm11.eq)(studyGuideSessions.verseReference, verseReference),
+          import_drizzle_orm11.sql`${studyGuideSessions.completedAt} IS NULL`
         )
-      ).orderBy((0, import_drizzle_orm10.desc)(studyGuideSessions.createdAt)).limit(1);
+      ).orderBy((0, import_drizzle_orm11.desc)(studyGuideSessions.createdAt));
+      const existingActive = candidates.find(
+        (s) => sessionUsesCanonicalScripture(s) && sessionTranslation(s) === translation
+      );
       if (existingActive) {
         const messages2 = JSON.parse(existingActive.messages);
         const prog = JSON.parse(existingActive.progression || "{}");
         return res.json({
-          session: { ...existingActive, messages: messages2, progression: prog },
+          session: { ...existingActive, translation, messages: messages2, progression: prog },
           aiMessage: messages2[messages2.length - 1]?.content || "",
+          translation,
           resumed: true
         });
       }
     }
-    const aiMessage = await generateStudyGuideStart({ verseReference, verseText, persona: resolvedPersona });
+    const aiMessage = await generateStudyGuideStart({
+      verseReference,
+      verseText: resolvedVerseText,
+      translation,
+      persona: resolvedPersona
+    });
     const messages = [
       { role: "assistant", content: aiMessage, phase: "observe", timestamp: (/* @__PURE__ */ new Date()).toISOString() }
     ];
     const initialProgression = {
+      meta: {
+        translation,
+        scriptureContractVersion: SCRIPTURE_CONTRACT_VERSION,
+        providerEditionId: resolvedMeta.providerEditionId
+      },
       observe: { completed: false, responses: [], meaningfulCount: 0, completedAt: null, categories: [] },
       interpret: { completed: false, responses: [], meaningfulCount: 0, completedAt: null, categories: [] },
       apply: { completed: false, responses: [], meaningfulCount: 0, completedAt: null, categories: [] }
@@ -37939,22 +38888,23 @@ router8.post("/api/study-guide/start", aiGenerationLimiter, async (req, res) => 
     const [session] = await db.insert(studyGuideSessions).values({
       userId,
       verseReference,
-      verseText,
-      bookName: bookName || "",
-      chapter: chapter || 0,
-      verse: verse || 0,
+      verseText: resolvedVerseText,
+      bookName: resolvedBookName,
+      chapter: resolvedChapter,
+      verse: resolvedVerse,
       phase: "observe",
       persona: resolvedPersona,
       messages: JSON.stringify(messages),
       progression: JSON.stringify(initialProgression)
     }).returning();
     return res.json({
-      session: { ...session, messages, progression: initialProgression },
-      aiMessage
+      session: { ...session, translation, messages, progression: initialProgression },
+      aiMessage,
+      ...resolvedMeta
     });
   } catch (err) {
     console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+    return res.status(scriptureErrorStatus(err)).json({ error: "Internal server error" });
   }
 });
 var STAGE_THRESHOLDS = { observe: 2, interpret: 2, apply: 1 };
@@ -37966,7 +38916,7 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
     if (!sessionId || !userResponse) {
       return res.status(400).json({ error: "sessionId and userResponse are required" });
     }
-    const [session] = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm10.eq)(studyGuideSessions.id, sessionId)).limit(1);
+    const [session] = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm11.eq)(studyGuideSessions.id, sessionId)).limit(1);
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
@@ -37979,12 +38929,16 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
         isComplete: true,
         messages: msgs,
         progression: prog,
+        translation: sessionTranslation(session),
         summary: session.summary
       });
     }
     const existingMessages = JSON.parse(session.messages);
     const currentPhase = session.phase;
     const progression = JSON.parse(session.progression || "{}");
+    const translation = sessionTranslation(session);
+    if (!progression.meta) progression.meta = { translation };
+    else if (!normalizeTranslation2(progression.meta.translation)) progression.meta.translation = translation;
     const defaultStage = { completed: false, responses: [], meaningfulCount: 0, completedAt: null, categories: [] };
     if (!progression.observe) progression.observe = { ...defaultStage };
     if (!progression.interpret) progression.interpret = { ...defaultStage };
@@ -38004,6 +38958,7 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
     const rawAiMessage = await generateStudyGuideResponse({
       verseText: session.verseText,
       verseReference: session.verseReference,
+      translation,
       chatMessages,
       targetPhase: currentPhase,
       currentPhase,
@@ -38044,6 +38999,7 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
       const transitionAi = await generateStudyGuideResponse({
         verseText: session.verseText,
         verseReference: session.verseReference,
+        translation,
         chatMessages: [...chatMessages, { role: "assistant", content: aiText }],
         targetPhase: nextPhase,
         currentPhase,
@@ -38061,6 +39017,7 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
       summary = await generateStudySummary({
         verseReference: session.verseReference,
         verseText: session.verseText,
+        translation,
         userAnswers
       });
       finalAiText = aiText + (summary ? "\n\n" + summary : "");
@@ -38072,13 +39029,14 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
       phase: resolvedPhase,
       progression: JSON.stringify(progression),
       ...resolvedPhase === "complete" ? { completedAt: /* @__PURE__ */ new Date(), summary } : {}
-    }).where((0, import_drizzle_orm10.eq)(studyGuideSessions.id, sessionId));
+    }).where((0, import_drizzle_orm11.eq)(studyGuideSessions.id, sessionId));
     return res.json({
       aiMessage: finalAiText,
       phase: resolvedPhase,
       isComplete: resolvedPhase === "complete",
       messages: existingMessages,
       progression,
+      translation,
       summary
     });
   } catch (err) {
@@ -38089,8 +39047,9 @@ router8.post("/api/study-guide/respond", aiGenerationLimiter, async (req, res) =
 router8.get("/api/study-guide/sessions", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const sessions = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm10.eq)(studyGuideSessions.userId, userId)).orderBy((0, import_drizzle_orm10.desc)(studyGuideSessions.createdAt)).limit(20);
-    return res.json(sessions);
+    const sessions = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm11.eq)(studyGuideSessions.userId, userId)).orderBy((0, import_drizzle_orm11.desc)(studyGuideSessions.createdAt)).limit(20);
+    const withTranslation = sessions.map((s) => ({ ...s, translation: sessionTranslation(s) }));
+    return res.json(withTranslation);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -38100,10 +39059,10 @@ router8.post("/api/study-guide/complete/:id", async (req, res) => {
   try {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Authentication required" });
-    const [session] = await db.select({ userId: studyGuideSessions.userId }).from(studyGuideSessions).where((0, import_drizzle_orm10.eq)(studyGuideSessions.id, String(req.params.id))).limit(1);
+    const [session] = await db.select({ userId: studyGuideSessions.userId }).from(studyGuideSessions).where((0, import_drizzle_orm11.eq)(studyGuideSessions.id, String(req.params.id))).limit(1);
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.userId !== userId) return res.status(403).json({ error: "Not your session" });
-    await db.update(studyGuideSessions).set({ completedAt: /* @__PURE__ */ new Date(), phase: "complete" }).where((0, import_drizzle_orm10.eq)(studyGuideSessions.id, String(req.params.id)));
+    await db.update(studyGuideSessions).set({ completedAt: /* @__PURE__ */ new Date(), phase: "complete" }).where((0, import_drizzle_orm11.eq)(studyGuideSessions.id, String(req.params.id)));
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -38112,9 +39071,9 @@ router8.post("/api/study-guide/complete/:id", async (req, res) => {
 });
 router8.get("/api/study-guide/session/:id", async (req, res) => {
   try {
-    const [session] = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm10.eq)(studyGuideSessions.id, String(req.params.id))).limit(1);
+    const [session] = await db.select().from(studyGuideSessions).where((0, import_drizzle_orm11.eq)(studyGuideSessions.id, String(req.params.id))).limit(1);
     if (!session) return res.status(404).json({ error: "Session not found" });
-    return res.json({ ...session, messages: JSON.parse(session.messages) });
+    return res.json({ ...session, translation: sessionTranslation(session), messages: JSON.parse(session.messages) });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -38123,84 +39082,528 @@ router8.get("/api/study-guide/session/:id", async (req, res) => {
 var study_guide_default = router8;
 
 // server/routes/verse-tools.ts
-var import_express9 = require("express");
+var import_express10 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm11 = require("drizzle-orm");
+var import_drizzle_orm13 = require("drizzle-orm");
 init_ai_engine();
+
+// server/routes/search.ts
+var import_express9 = require("express");
+init_db();
+init_schema();
+var import_drizzle_orm12 = require("drizzle-orm");
+var crypto2 = __toESM(require("crypto"));
+init_ai_engine();
+init_sda_lens();
 var router9 = (0, import_express9.Router)();
-router9.get("/api/verse-map/:verseId", async (req, res) => {
+var SEMANTIC_SEARCH_CONTENT_VERSION = "canon-v1";
+async function checkBibleCache2(translation, bookId, chapterNum) {
+  try {
+    const cached = await db.select().from(bibleCache).where(
+      (0, import_drizzle_orm12.and)(
+        (0, import_drizzle_orm12.eq)(bibleCache.translation, translation),
+        (0, import_drizzle_orm12.eq)(bibleCache.bookId, bookId),
+        (0, import_drizzle_orm12.eq)(bibleCache.chapter, chapterNum)
+      )
+    ).limit(1);
+    if (cached.length > 0) {
+      await db.insert(bibleCacheStats).values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+        target: [bibleCacheStats.translation],
+        set: {
+          cacheHits: import_drizzle_orm12.sql`${bibleCacheStats.cacheHits} + 1`,
+          lastHitAt: /* @__PURE__ */ new Date()
+        }
+      }).catch(() => {
+      });
+      return cached[0].versesJson;
+    }
+    await db.insert(bibleCacheStats).values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+      target: [bibleCacheStats.translation],
+      set: {
+        cacheMisses: import_drizzle_orm12.sql`${bibleCacheStats.cacheMisses} + 1`,
+        lastMissAt: /* @__PURE__ */ new Date()
+      }
+    }).catch(() => {
+    });
+    return null;
+  } catch {
+    return null;
+  }
+}
+async function storeBibleCache2(translation, bookId, bookName, chapterNum, verses, sourceApi) {
+  try {
+    await db.insert(bibleCache).values({
+      translation,
+      bookId,
+      bookName,
+      chapter: chapterNum,
+      versesJson: verses,
+      verseCount: verses.length,
+      sourceApi
+    }).onConflictDoNothing();
+  } catch (err) {
+    console.error(`[search-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+  }
+}
+var chapterCacheHooks2 = {
+  read: checkBibleCache2,
+  write: storeBibleCache2
+};
+function joinVerseText(verses) {
+  return verses.slice().sort((a, b) => a.verse - b.verse).map((v) => typeof v.text === "string" ? v.text.trim() : "").filter((t) => t.length > 0).join(" ").trim();
+}
+function buildSemanticSearchCacheHash(translation, normalizedQuery) {
+  const hashInput = [
+    SEMANTIC_SEARCH_CONTENT_VERSION,
+    SDA_LENS_VERSION,
+    translation,
+    normalizedQuery
+  ].join("::");
+  return crypto2.createHash("sha256").update(hashInput).digest("hex");
+}
+async function resolveCandidatesToVerses(candidates, translation, resolve2, cache2) {
+  const resolvedVerses = [];
+  const seenRefs = /* @__PURE__ */ new Set();
+  for (const candidate of candidates) {
+    const ref = (candidate.reference || "").trim();
+    if (!ref || seenRefs.has(ref)) continue;
+    seenRefs.add(ref);
+    const resolved = await resolve2({ reference: ref, translation, cache: cache2 });
+    const text2 = joinVerseText(resolved.verses);
+    if (!text2) {
+      throw new ScriptureError("VERSE_NOT_FOUND", `No canonical text found for ${ref}`, 404);
+    }
+    const parsedVerses = (resolved.reference.verses || []).slice().sort((a, b) => a - b);
+    const verseStart = parsedVerses.length > 0 ? parsedVerses[0] : candidate.verseStart;
+    const verseEnd = parsedVerses.length > 1 ? parsedVerses[parsedVerses.length - 1] : candidate.verseEnd;
+    resolvedVerses.push({
+      reference: ref,
+      bookId: resolved.book.id,
+      chapter: resolved.chapter,
+      verseStart,
+      verseEnd,
+      text: text2,
+      relevance: candidate.relevance || "",
+      translation: resolved.meta.translation,
+      translationName: resolved.meta.translationName,
+      source: resolved.meta.source,
+      provider: resolved.meta.provider,
+      ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
+    });
+  }
+  return resolvedVerses;
+}
+router9.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    const { query, translation: rawTranslation } = req.body;
+    if (!query || typeof query !== "string" || query.trim().length < 3) {
+      return res.status(400).json({ error: "A search query of at least 3 characters is required" });
+    }
+    if (!rawTranslation || typeof rawTranslation !== "string" || rawTranslation.trim() === "") {
+      return res.status(400).json({ error: "A translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const trimmedQuery = query.trim().toLowerCase();
+    const queryHash = buildSemanticSearchCacheHash(translation, trimmedQuery);
+    const cached = await db.select().from(searchCache).where((0, import_drizzle_orm12.and)((0, import_drizzle_orm12.eq)(searchCache.queryHash, queryHash), import_drizzle_orm12.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
+    let verses;
+    if (cached.length > 0) {
+      verses = cached[0].results;
+    } else {
+      const candidates = await generateSemanticSearch(trimmedQuery, translation);
+      verses = await resolveCandidatesToVerses(
+        candidates,
+        translation,
+        resolveReference,
+        chapterCacheHooks2
+      );
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3);
+      await db.insert(searchCache).values({
+        queryText: trimmedQuery,
+        queryHash,
+        userId: userId !== "guest" ? userId : null,
+        results: verses,
+        expiresAt
+      }).onConflictDoNothing();
+    }
+    let notes = [];
+    let highlights = [];
+    let bookmarks = [];
+    const searchUserId = userId;
+    if (searchUserId !== "guest") {
+      const searchTerm = `%${trimmedQuery}%`;
+      notes = await db.select({
+        id: userNotes.id,
+        content: userNotes.content,
+        verseId: userNotes.verseId,
+        createdAt: userNotes.createdAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        verseTranslation: bibleTranslations.abbreviation,
+        verseTranslationName: bibleTranslations.name,
+        bookName: bibleBooks.name
+      }).from(userNotes).leftJoin(bibleVerses, (0, import_drizzle_orm12.eq)(userNotes.verseId, bibleVerses.id)).leftJoin(bibleTranslations, (0, import_drizzle_orm12.eq)(bibleVerses.translationId, bibleTranslations.id)).leftJoin(bibleBooks, (0, import_drizzle_orm12.eq)(bibleVerses.bookId, bibleBooks.id)).where(
+        (0, import_drizzle_orm12.and)(
+          (0, import_drizzle_orm12.eq)(userNotes.userId, searchUserId),
+          import_drizzle_orm12.sql`LOWER(${userNotes.content}) LIKE ${searchTerm}`
+        )
+      ).orderBy((0, import_drizzle_orm12.desc)(userNotes.updatedAt)).limit(10);
+      highlights = await db.select({
+        id: userHighlights.id,
+        color: userHighlights.color,
+        verseId: userHighlights.verseId,
+        createdAt: userHighlights.createdAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        verseTranslation: bibleTranslations.abbreviation,
+        verseTranslationName: bibleTranslations.name,
+        bookName: bibleBooks.name
+      }).from(userHighlights).leftJoin(bibleVerses, (0, import_drizzle_orm12.eq)(userHighlights.verseId, bibleVerses.id)).leftJoin(bibleTranslations, (0, import_drizzle_orm12.eq)(bibleVerses.translationId, bibleTranslations.id)).leftJoin(bibleBooks, (0, import_drizzle_orm12.eq)(bibleVerses.bookId, bibleBooks.id)).where(
+        (0, import_drizzle_orm12.and)(
+          (0, import_drizzle_orm12.eq)(userHighlights.userId, searchUserId),
+          import_drizzle_orm12.sql`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
+        )
+      ).orderBy((0, import_drizzle_orm12.desc)(userHighlights.createdAt)).limit(10);
+      bookmarks = await db.select({
+        id: userBookmarks.id,
+        label: userBookmarks.label,
+        verseId: userBookmarks.verseId,
+        createdAt: userBookmarks.createdAt,
+        bookId: bibleVerses.bookId,
+        chapter: bibleVerses.chapter,
+        verse: bibleVerses.verse,
+        verseText: bibleVerses.text,
+        verseTranslation: bibleTranslations.abbreviation,
+        verseTranslationName: bibleTranslations.name,
+        bookName: bibleBooks.name
+      }).from(userBookmarks).leftJoin(bibleVerses, (0, import_drizzle_orm12.eq)(userBookmarks.verseId, bibleVerses.id)).leftJoin(bibleTranslations, (0, import_drizzle_orm12.eq)(bibleVerses.translationId, bibleTranslations.id)).leftJoin(bibleBooks, (0, import_drizzle_orm12.eq)(bibleVerses.bookId, bibleBooks.id)).where(
+        (0, import_drizzle_orm12.and)(
+          (0, import_drizzle_orm12.eq)(userBookmarks.userId, searchUserId),
+          (0, import_drizzle_orm12.or)(
+            import_drizzle_orm12.sql`LOWER(${userBookmarks.label}) LIKE ${searchTerm}`,
+            import_drizzle_orm12.sql`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
+          )
+        )
+      ).orderBy((0, import_drizzle_orm12.desc)(userBookmarks.createdAt)).limit(10);
+    }
+    return res.json({
+      translation,
+      verses,
+      notes,
+      highlights,
+      bookmarks,
+      cached: cached.length > 0
+    });
+  } catch (err) {
+    if (err instanceof ScriptureError) {
+      console.error("Semantic search scripture error:", err.code, err.message);
+      return res.status(err.statusCode).json({ error: err.message, code: err.code });
+    }
+    console.error("Semantic search error:", err);
+    return res.status(500).json({ error: "Failed to perform semantic search" });
+  }
+});
+router9.get("/api/search/recent", async (req, res) => {
+  try {
+    const userId = extractUserId(req);
+    if (userId === "guest") {
+      return res.json([]);
+    }
+    const recent = await db.select({
+      queryText: searchCache.queryText,
+      createdAt: searchCache.createdAt
+    }).from(searchCache).where((0, import_drizzle_orm12.eq)(searchCache.userId, userId)).orderBy((0, import_drizzle_orm12.desc)(searchCache.createdAt)).limit(10);
+    return res.json(recent);
+  } catch (err) {
+    console.error("Recent searches error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+var search_default = router9;
+
+// server/routes/verse-map-helpers.ts
+var crypto3 = __toESM(require("crypto"));
+init_sda_lens();
+var VERSE_MAP_CONTENT_VERSION = "verse-map-canon-v2";
+function buildVerseMapCacheHash(translation, verseId) {
+  const hashInput = [
+    VERSE_MAP_CONTENT_VERSION,
+    SDA_LENS_VERSION,
+    translation,
+    verseId
+  ].join("::");
+  return crypto3.createHash("sha256").update(hashInput).digest("hex");
+}
+async function resolveVerseMapSource(params) {
+  const reference = (params.reference || "").trim();
+  const clientVerseId = (params.clientVerseId || "").trim();
+  const resolved = await params.resolve({
+    reference,
+    translation: params.translation,
+    cache: params.cache
+  });
+  const text2 = joinVerseText(resolved.verses);
+  if (!text2) {
+    throw new ScriptureError("VERSE_NOT_FOUND", `No canonical text found for ${reference}`, 404);
+  }
+  const canonicalVerses = resolved.verses;
+  const canonicalVerseId = canonicalVerses.length > 0 && typeof canonicalVerses[0]?.id === "string" ? canonicalVerses[0].id : "";
+  if (!canonicalVerseId) {
+    throw new ScriptureError(
+      "VERSE_NOT_FOUND",
+      `No canonical verse id resolved for ${reference}`,
+      404
+    );
+  }
+  if (clientVerseId !== canonicalVerseId) {
+    throw new ScriptureError(
+      "INVALID_REFERENCE",
+      `verseId ${clientVerseId || "(empty)"} does not match canonical verse id ${canonicalVerseId}`,
+      400
+    );
+  }
+  return {
+    verseId: canonicalVerseId,
+    text: text2,
+    translation: resolved.meta.translation,
+    translationName: resolved.meta.translationName
+  };
+}
+async function hydrateCrossReferences(candidates, translation, resolve2, cache2) {
+  const hydrated = [];
+  const seenRefs = /* @__PURE__ */ new Set();
+  for (const candidate of candidates) {
+    const ref = (candidate?.reference || "").trim();
+    if (!ref || seenRefs.has(ref)) continue;
+    seenRefs.add(ref);
+    const resolved = await resolve2({ reference: ref, translation, cache: cache2 });
+    const text2 = joinVerseText(resolved.verses);
+    if (!text2) {
+      throw new ScriptureError("VERSE_NOT_FOUND", `No canonical text found for ${ref}`, 404);
+    }
+    const parsedVerses = (resolved.reference.verses || []).slice().sort((a, b) => a - b);
+    const verseStart = parsedVerses.length > 0 ? parsedVerses[0] : resolved.chapter;
+    const verseEnd = parsedVerses.length > 1 ? parsedVerses[parsedVerses.length - 1] : null;
+    hydrated.push({
+      reference: ref,
+      connection: typeof candidate.connection === "string" ? candidate.connection : "",
+      text: text2,
+      bookId: resolved.book.id,
+      chapter: resolved.chapter,
+      verseStart,
+      verseEnd,
+      translation: resolved.meta.translation,
+      translationName: resolved.meta.translationName,
+      source: resolved.meta.source,
+      provider: resolved.meta.provider,
+      ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
+    });
+  }
+  return hydrated;
+}
+
+// server/routes/verse-tools.ts
+var router10 = (0, import_express10.Router)();
+var chapterCacheHooks3 = {
+  read: async (translation, bookId, chapterNum) => {
+    try {
+      const cached = await db.select().from(bibleCache).where(
+        (0, import_drizzle_orm13.and)(
+          (0, import_drizzle_orm13.eq)(bibleCache.translation, translation),
+          (0, import_drizzle_orm13.eq)(bibleCache.bookId, bookId),
+          (0, import_drizzle_orm13.eq)(bibleCache.chapter, chapterNum)
+        )
+      ).limit(1);
+      return cached.length > 0 ? cached[0].versesJson : null;
+    } catch {
+      return null;
+    }
+  },
+  write: async (translation, bookId, bookName, chapterNum, verses, sourceApi) => {
+    try {
+      await db.insert(bibleCache).values({
+        translation,
+        bookId,
+        bookName,
+        chapter: chapterNum,
+        versesJson: verses,
+        verseCount: verses.length,
+        sourceApi
+      }).onConflictDoNothing();
+    } catch (err) {
+      console.error(`[verse-map-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+    }
+  }
+};
+router10.get("/api/verse-map/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);
-    const rawWords = await db.select({
-      map: verseStrongMaps,
-      entry: strongEntries
-    }).from(verseStrongMaps).leftJoin(strongEntries, (0, import_drizzle_orm11.eq)(verseStrongMaps.strongId, strongEntries.id)).where((0, import_drizzle_orm11.eq)(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
-    const seen = /* @__PURE__ */ new Set();
-    const words = rawWords.filter((row) => {
-      const key = `${row.map.strongId}-${row.map.wordPosition}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    const rawTranslation = req.query.translation;
+    if (!rawTranslation || typeof rawTranslation !== "string" || rawTranslation.trim() === "") {
+      return res.status(400).json({ error: "A translation query parameter is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const [ownerRow] = await db.select({ abbreviation: bibleTranslations.abbreviation }).from(bibleVerses).leftJoin(bibleTranslations, (0, import_drizzle_orm13.eq)(bibleVerses.translationId, bibleTranslations.id)).where((0, import_drizzle_orm13.eq)(bibleVerses.id, verseId)).limit(1);
+    const verseMatchesTranslation = !!ownerRow && typeof ownerRow.abbreviation === "string" && ownerRow.abbreviation.toUpperCase() === translation;
+    let words = [];
+    if (verseMatchesTranslation) {
+      const rawWords = await db.select({
+        map: verseStrongMaps,
+        entry: strongEntries
+      }).from(verseStrongMaps).leftJoin(strongEntries, (0, import_drizzle_orm13.eq)(verseStrongMaps.strongId, strongEntries.id)).where((0, import_drizzle_orm13.eq)(verseStrongMaps.verseId, verseId)).orderBy(verseStrongMaps.wordPosition);
+      const seen = /* @__PURE__ */ new Set();
+      words = rawWords.filter((row) => {
+        const key = `${row.map.strongId}-${row.map.wordPosition}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    const queryHash = buildVerseMapCacheHash(translation, verseId);
+    const cachedRows = await db.select().from(searchCache).where((0, import_drizzle_orm13.and)((0, import_drizzle_orm13.eq)(searchCache.queryHash, queryHash), import_drizzle_orm13.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
+    const cachedPayload = cachedRows.length > 0 ? cachedRows[0].results : null;
+    return res.json({
+      words,
+      crossReferences: cachedPayload?.crossReferences ?? [],
+      contextSnippet: cachedPayload?.contextSnippet ?? null,
+      translation,
+      translationName: cachedPayload?.translationName ?? null,
+      hasCachedData: !!cachedPayload
     });
-    const [cached] = await db.select().from(verseMapCache).where((0, import_drizzle_orm11.eq)(verseMapCache.verseId, String(verseId))).limit(1);
-    const crossReferences = cached ? JSON.parse(cached.crossReferences) : [];
-    const contextSnippet = cached?.contextSnippet || null;
-    return res.json({ words, crossReferences, contextSnippet, hasCachedData: !!cached });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      console.error("Verse map GET scripture error:", err.code, err.message);
+      return res.status(err.statusCode).json({ error: err.message, code: err.code });
+    }
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => {
+router10.post("/api/verse-map/generate", aiGenerationLimiter, async (req, res) => {
   try {
-    const { verseId, verseText, verseReference, bookName, chapter, verse } = req.body;
-    if (!verseId || !verseText || !verseReference) {
-      return res.status(400).json({ error: "verseId, verseText, and verseReference are required" });
+    const { verseId, verseReference, reference } = req.body;
+    const rawReference = typeof verseReference === "string" && verseReference.trim() ? verseReference : reference;
+    if (!verseId || typeof verseId !== "string" || verseId.trim() === "") {
+      return res.status(400).json({ error: "verseId is required" });
     }
-    const [existing] = await db.select().from(verseMapCache).where((0, import_drizzle_orm11.eq)(verseMapCache.verseId, String(verseId))).limit(1);
-    if (existing) {
-      return res.json({ crossReferences: JSON.parse(existing.crossReferences), contextSnippet: existing.contextSnippet });
+    if (!rawReference || typeof rawReference !== "string" || rawReference.trim().length < 3) {
+      return res.status(400).json({ error: "A valid verseReference is required" });
     }
-    const result = await generateVerseMap({ verseText, verseReference });
-    await db.insert(verseMapCache).values({
-      verseId,
-      crossReferences: JSON.stringify(result.crossReferences),
-      contextSnippet: result.contextSnippet
-    }).onConflictDoUpdate({
-      target: verseMapCache.verseId,
-      set: {
-        crossReferences: JSON.stringify(result.crossReferences),
-        contextSnippet: result.contextSnippet
-      }
+    const rawTranslation = req.body.translation;
+    if (!rawTranslation || typeof rawTranslation !== "string" || rawTranslation.trim() === "") {
+      return res.status(400).json({ error: "A translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const source = await resolveVerseMapSource({
+      reference: rawReference.trim(),
+      clientVerseId: verseId,
+      translation,
+      resolve: resolveReference,
+      cache: chapterCacheHooks3
     });
-    return res.json(result);
+    const queryHash = buildVerseMapCacheHash(translation, verseId);
+    const existingRows = await db.select().from(searchCache).where((0, import_drizzle_orm13.and)((0, import_drizzle_orm13.eq)(searchCache.queryHash, queryHash), import_drizzle_orm13.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
+    if (existingRows.length > 0) {
+      const payload2 = existingRows[0].results;
+      return res.json({
+        ...payload2,
+        translation: source.translation,
+        translationName: source.translationName,
+        hasCachedData: true,
+        cached: true
+      });
+    }
+    const aiResult = await generateVerseMap({
+      verseText: source.text,
+      verseReference: rawReference.trim(),
+      translation
+    });
+    const crossReferences = await hydrateCrossReferences(
+      aiResult.crossReferences,
+      translation,
+      resolveReference,
+      chapterCacheHooks3
+    );
+    const payload = {
+      crossReferences,
+      contextSnippet: aiResult.contextSnippet || null,
+      translation: source.translation,
+      translationName: source.translationName
+    };
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3);
+    await db.insert(searchCache).values({
+      queryText: `verse-map:${translation}:${verseId}`,
+      queryHash,
+      userId: null,
+      results: payload,
+      expiresAt
+    }).onConflictDoNothing();
+    return res.json({ ...payload, hasCachedData: true, cached: false });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      console.error("Verse map generate scripture error:", err.code, err.message);
+      return res.status(err.statusCode).json({ error: err.message, code: err.code });
+    }
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/verses/explain", async (req, res) => {
+router10.post("/api/verses/explain", async (req, res) => {
   try {
     const { reference, lessonContext } = req.body;
     if (!reference || typeof reference !== "string" || reference.trim().length < 3) {
       return res.status(400).json({ error: "A valid Scripture reference is required" });
     }
+    const rawTranslation = req.body.translation;
+    if (!rawTranslation || typeof rawTranslation !== "string" || rawTranslation.trim() === "") {
+      return res.status(400).json({ error: "A translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const resolved = await resolveReference({
+      reference: reference.trim(),
+      translation,
+      cache: chapterCacheHooks3
+    });
+    const verseText = joinVerseText(resolved.verses);
+    if (!verseText) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No canonical text found for ${reference.trim()}`,
+        404
+      );
+    }
     const { generateVerseExplanation: generateVerseExplanation2 } = await Promise.resolve().then(() => (init_ai_engine(), ai_engine_exports));
     const explanation = await generateVerseExplanation2({
       reference: reference.trim(),
+      verseText,
+      translation: resolved.meta.translation,
       lessonContext: lessonContext?.trim()
     });
-    return res.json({ explanation });
-  } catch (err) {
-    console.error("Verse explanation error:", err);
     return res.json({
-      explanation: "Unable to generate an explanation at this time. Please try again later."
+      explanation,
+      translation: resolved.meta.translation,
+      translationName: resolved.meta.translationName,
+      source: resolved.meta.source,
+      provider: resolved.meta.provider,
+      ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
     });
+  } catch (err) {
+    if (err instanceof ScriptureError) {
+      console.error("Verse explanation scripture error:", err.code, err.message);
+      return res.status(err.statusCode).json({ error: err.message, code: err.code });
+    }
+    console.error("Verse explanation error:", err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-router9.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
+router10.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
   try {
     const { passage, theme } = req.body;
     if (!passage || typeof passage !== "string" || passage.trim().length < 3) {
@@ -38216,7 +39619,7 @@ router9.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
     return res.status(500).json({ error: "Failed to generate quick insight" });
   }
 });
-router9.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
+router10.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
   try {
     const { enrollmentId, dayId, journalEntry } = req.body;
     if (!enrollmentId || !dayId) {
@@ -38227,18 +39630,18 @@ router9.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
       id: userPlanEnrollments.id,
       planId: userPlanEnrollments.planId
     }).from(userPlanEnrollments).where(
-      (0, import_drizzle_orm11.and)(
-        (0, import_drizzle_orm11.eq)(userPlanEnrollments.id, String(enrollmentId)),
-        (0, import_drizzle_orm11.eq)(userPlanEnrollments.userId, userId)
+      (0, import_drizzle_orm13.and)(
+        (0, import_drizzle_orm13.eq)(userPlanEnrollments.id, String(enrollmentId)),
+        (0, import_drizzle_orm13.eq)(userPlanEnrollments.userId, userId)
       )
     ).limit(1);
     if (!enrollment) {
       return res.status(404).json({ error: "Enrollment not found" });
     }
     const [day] = await db.select({ id: devotionalDays.id }).from(devotionalDays).where(
-      (0, import_drizzle_orm11.and)(
-        (0, import_drizzle_orm11.eq)(devotionalDays.id, String(dayId)),
-        (0, import_drizzle_orm11.eq)(devotionalDays.planId, enrollment.planId)
+      (0, import_drizzle_orm13.and)(
+        (0, import_drizzle_orm13.eq)(devotionalDays.id, String(dayId)),
+        (0, import_drizzle_orm13.eq)(devotionalDays.planId, enrollment.planId)
       )
     ).limit(1);
     if (!day) {
@@ -38250,13 +39653,13 @@ router9.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
       journalEntry
     }).onConflictDoNothing().returning();
     const [allDays, completedDays] = await Promise.all([
-      db.select({ id: devotionalDays.id }).from(devotionalDays).where((0, import_drizzle_orm11.eq)(devotionalDays.planId, enrollment.planId)),
-      db.select({ dayId: userPlanProgress.dayId }).from(userPlanProgress).where((0, import_drizzle_orm11.eq)(userPlanProgress.enrollmentId, enrollment.id))
+      db.select({ id: devotionalDays.id }).from(devotionalDays).where((0, import_drizzle_orm13.eq)(devotionalDays.planId, enrollment.planId)),
+      db.select({ dayId: userPlanProgress.dayId }).from(userPlanProgress).where((0, import_drizzle_orm13.eq)(userPlanProgress.enrollmentId, enrollment.id))
     ]);
     const completedDayIds = new Set(completedDays.map((item) => item.dayId));
     const planComplete = allDays.length > 0 && allDays.every((item) => completedDayIds.has(item.id));
     if (planComplete) {
-      await db.update(userPlanEnrollments).set({ isActive: false }).where((0, import_drizzle_orm11.eq)(userPlanEnrollments.id, enrollment.id));
+      await db.update(userPlanEnrollments).set({ isActive: false }).where((0, import_drizzle_orm13.eq)(userPlanEnrollments.id, enrollment.id));
     }
     return res.json({ progress: progress[0] ?? null, planComplete });
   } catch (err) {
@@ -38264,28 +39667,147 @@ router9.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
   }
 });
-var verse_tools_default = router9;
+var verse_tools_default = router10;
 
 // server/routes/deep-study.ts
-var import_express10 = require("express");
+var import_express11 = require("express");
 init_sda_lens();
 init_db();
 init_ai_semaphore();
+
+// server/services/deep-study-helpers.ts
+init_sda_lens();
+function buildPassageSectionsCacheKey(translation, bookId, chapter) {
+  const { abbreviation } = normalizeTranslationParam(translation);
+  return `passage-sections-${SDA_LENS_VERSION}-${abbreviation}-${bookId}-${chapter}`;
+}
+function buildTopicReflectionCacheKey(translation, topicId, day) {
+  const { abbreviation } = normalizeTranslationParam(translation);
+  return `topic-reflection-${SDA_LENS_VERSION}-${abbreviation}-${topicId}-${day}`;
+}
+function buildExplainCacheKey(translation, bookName, chapter, verse) {
+  const { abbreviation } = normalizeTranslationParam(translation);
+  return `explain-${SDA_LENS_VERSION}-${abbreviation}-${bookName}-${chapter}-${verse}`;
+}
+function buildCrossRefCacheKey(translation, bookName, chapter, verse) {
+  const { abbreviation } = normalizeTranslationParam(translation);
+  return `crossref-${SDA_LENS_VERSION}-${abbreviation}-${bookName}-${chapter}-${verse}`;
+}
+var HYDRATION_VERSION = `${SDA_LENS_VERSION}-hydrated-v1`;
+function isCurrentHydrationVersion(cached) {
+  return !!cached && typeof cached === "object" && cached.hydrationVersion === HYDRATION_VERSION;
+}
+function joinResolvedVerseText(verses) {
+  return verses.map((v) => typeof v.text === "string" ? v.text.trim() : "").filter(Boolean).join(" ").trim();
+}
+function coerceRefString(raw) {
+  const candidate = raw.ref ?? raw.reference;
+  if (typeof candidate !== "string") return null;
+  const trimmed = candidate.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+async function hydrateCrossReferences2(rawList, translation, resolveReferenceFn) {
+  const out = [];
+  for (const raw of rawList) {
+    const refString = coerceRefString(raw);
+    if (!refString) {
+      throw new ScriptureError(
+        "INVALID_REFERENCE",
+        "Cross-reference is missing a valid reference string",
+        400
+      );
+    }
+    const parsed = parseReference(refString);
+    if (!parsed) {
+      throw new ScriptureError(
+        "INVALID_REFERENCE",
+        `Could not parse cross-reference: ${refString}`,
+        400
+      );
+    }
+    const resolved = await resolveReferenceFn({
+      reference: refString,
+      translation
+    });
+    const text2 = joinResolvedVerseText(resolved.verses);
+    if (!text2) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No verse text resolved for cross-reference: ${refString}`,
+        404
+      );
+    }
+    out.push({
+      ref: refString,
+      text: text2,
+      connection: typeof raw.connection === "string" ? raw.connection.trim() : "",
+      translation: resolved.meta.translation,
+      translationName: resolved.meta.translationName,
+      source: resolved.meta.source,
+      provider: resolved.meta.provider,
+      ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
+    });
+  }
+  return out;
+}
+function extractRawCrossReferences(parsed) {
+  if (parsed && typeof parsed === "object" && Array.isArray(parsed.crossReferences)) {
+    return parsed.crossReferences;
+  }
+  if (Array.isArray(parsed)) return parsed;
+  return [];
+}
+
+// server/routes/deep-study.ts
 init_schema();
-var import_drizzle_orm12 = require("drizzle-orm");
-var router10 = (0, import_express10.Router)();
-router10.get("/api/layer-completions", async (req, res) => {
+var import_drizzle_orm14 = require("drizzle-orm");
+var router11 = (0, import_express11.Router)();
+var chapterCacheHooks4 = {
+  read: async (translation, bookId, chapterNum) => {
+    try {
+      const cached = await db.select().from(bibleCache).where(
+        (0, import_drizzle_orm14.and)(
+          (0, import_drizzle_orm14.eq)(bibleCache.translation, translation),
+          (0, import_drizzle_orm14.eq)(bibleCache.bookId, bookId),
+          (0, import_drizzle_orm14.eq)(bibleCache.chapter, chapterNum)
+        )
+      ).limit(1);
+      return cached.length > 0 ? cached[0].versesJson : null;
+    } catch {
+      return null;
+    }
+  },
+  write: async (translation, bookId, bookName, chapterNum, verses, sourceApi) => {
+    try {
+      await db.insert(bibleCache).values({
+        translation,
+        bookId,
+        bookName,
+        chapter: chapterNum,
+        versesJson: verses,
+        verseCount: verses.length,
+        sourceApi
+      }).onConflictDoNothing();
+    } catch (err) {
+      console.error(
+        `[deep-study bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`,
+        err?.message
+      );
+    }
+  }
+};
+router11.get("/api/layer-completions", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const bookId = req.query.bookId ? Number(req.query.bookId) : void 0;
     const chapter = req.query.chapter ? Number(req.query.chapter) : void 0;
     const verseStart = req.query.verseStart ? Number(req.query.verseStart) : 0;
     const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
-    let conditions = [(0, import_drizzle_orm12.eq)(layerCompletions.userId, userId)];
-    if (bookId !== void 0) conditions.push((0, import_drizzle_orm12.eq)(layerCompletions.bookId, bookId));
-    if (chapter !== void 0) conditions.push((0, import_drizzle_orm12.eq)(layerCompletions.chapter, chapter));
-    conditions.push((0, import_drizzle_orm12.eq)(layerCompletions.verseStart, verseStart));
-    conditions.push((0, import_drizzle_orm12.eq)(layerCompletions.verseEnd, verseEnd));
+    let conditions = [(0, import_drizzle_orm14.eq)(layerCompletions.userId, userId)];
+    if (bookId !== void 0) conditions.push((0, import_drizzle_orm14.eq)(layerCompletions.bookId, bookId));
+    if (chapter !== void 0) conditions.push((0, import_drizzle_orm14.eq)(layerCompletions.chapter, chapter));
+    conditions.push((0, import_drizzle_orm14.eq)(layerCompletions.verseStart, verseStart));
+    conditions.push((0, import_drizzle_orm14.eq)(layerCompletions.verseEnd, verseEnd));
     const rows = await db.select({
       bookId: layerCompletions.bookId,
       chapter: layerCompletions.chapter,
@@ -38293,14 +39815,14 @@ router10.get("/api/layer-completions", async (req, res) => {
       verseStart: layerCompletions.verseStart,
       verseEnd: layerCompletions.verseEnd,
       completedAt: layerCompletions.completedAt
-    }).from(layerCompletions).where((0, import_drizzle_orm12.and)(...conditions));
+    }).from(layerCompletions).where((0, import_drizzle_orm14.and)(...conditions));
     return res.json(rows);
   } catch (err) {
     console.error("Layer completions fetch error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/layer-completions", async (req, res) => {
+router11.post("/api/layer-completions", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { bookId, chapter, layer, verseStart, verseEnd } = req.body;
@@ -38325,15 +39847,15 @@ router10.post("/api/layer-completions", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/layer-completions/book-summary", async (req, res) => {
+router11.get("/api/layer-completions/book-summary", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
     if (!bookId) return res.status(400).json({ error: "bookId required" });
-    const [bookInfo] = await db.select({ chapterCount: bibleBooks.chapterCount }).from(bibleBooks).where((0, import_drizzle_orm12.eq)(bibleBooks.id, bookId));
+    const [bookInfo] = await db.select({ chapterCount: bibleBooks.chapterCount }).from(bibleBooks).where((0, import_drizzle_orm14.eq)(bibleBooks.id, bookId));
     if (!bookInfo) return res.json({ word: 0, context: 0, voices: 0, application: 0 });
     const totalChapters = bookInfo.chapterCount;
-    const completions = await db.select({ layer: layerCompletions.layer, chapters: (0, import_drizzle_orm12.countDistinct)(layerCompletions.chapter) }).from(layerCompletions).where((0, import_drizzle_orm12.and)((0, import_drizzle_orm12.eq)(layerCompletions.userId, userId), (0, import_drizzle_orm12.eq)(layerCompletions.bookId, bookId))).groupBy(layerCompletions.layer);
+    const completions = await db.select({ layer: layerCompletions.layer, chapters: (0, import_drizzle_orm14.countDistinct)(layerCompletions.chapter) }).from(layerCompletions).where((0, import_drizzle_orm14.and)((0, import_drizzle_orm14.eq)(layerCompletions.userId, userId), (0, import_drizzle_orm14.eq)(layerCompletions.bookId, bookId))).groupBy(layerCompletions.layer);
     const summary = { word: 0, context: 0, voices: 0, application: 0 };
     for (const row of completions) {
       const pct = Math.round(Number(row.chapters) / totalChapters * 100);
@@ -38345,7 +39867,7 @@ router10.get("/api/layer-completions/book-summary", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/study-journal", async (req, res) => {
+router11.get("/api/study-journal", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const bookId = Number(req.query.bookId);
@@ -38355,27 +39877,27 @@ router10.get("/api/study-journal", async (req, res) => {
     const verseEnd = req.query.verseEnd ? Number(req.query.verseEnd) : 0;
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
     let conditions = [
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.userId, userId),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.bookId, bookId),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.chapter, chapter)
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.userId, userId),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.bookId, bookId),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.chapter, chapter)
     ];
-    if (layer) conditions.push((0, import_drizzle_orm12.eq)(studyJournalEntries.layer, layer));
-    conditions.push((0, import_drizzle_orm12.eq)(studyJournalEntries.verseStart, verseStart));
-    conditions.push((0, import_drizzle_orm12.eq)(studyJournalEntries.verseEnd, verseEnd));
+    if (layer) conditions.push((0, import_drizzle_orm14.eq)(studyJournalEntries.layer, layer));
+    conditions.push((0, import_drizzle_orm14.eq)(studyJournalEntries.verseStart, verseStart));
+    conditions.push((0, import_drizzle_orm14.eq)(studyJournalEntries.verseEnd, verseEnd));
     const rows = await db.select({
       id: studyJournalEntries.id,
       sectionKey: studyJournalEntries.sectionKey,
       layer: studyJournalEntries.layer,
       content: studyJournalEntries.content,
       updatedAt: studyJournalEntries.updatedAt
-    }).from(studyJournalEntries).where((0, import_drizzle_orm12.and)(...conditions));
+    }).from(studyJournalEntries).where((0, import_drizzle_orm14.and)(...conditions));
     return res.json(rows);
   } catch (err) {
     console.error("Study journal fetch error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.post("/api/study-journal", async (req, res) => {
+router11.post("/api/study-journal", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { bookId, chapter, layer, sectionKey, content, verseStart, verseEnd } = req.body;
@@ -38385,21 +39907,21 @@ router10.post("/api/study-journal", async (req, res) => {
     const vs = verseStart != null ? Number(verseStart) : 0;
     const ve = verseEnd != null ? Number(verseEnd) : 0;
     const matchConditions = [
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.userId, userId),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.bookId, Number(bookId)),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.chapter, Number(chapter)),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.layer, String(layer)),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.sectionKey, String(sectionKey)),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.verseStart, vs),
-      (0, import_drizzle_orm12.eq)(studyJournalEntries.verseEnd, ve)
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.userId, userId),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.bookId, Number(bookId)),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.chapter, Number(chapter)),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.layer, String(layer)),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.sectionKey, String(sectionKey)),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.verseStart, vs),
+      (0, import_drizzle_orm14.eq)(studyJournalEntries.verseEnd, ve)
     ];
     if (!content || content.trim().length === 0) {
-      await db.delete(studyJournalEntries).where((0, import_drizzle_orm12.and)(...matchConditions));
+      await db.delete(studyJournalEntries).where((0, import_drizzle_orm14.and)(...matchConditions));
       return res.json({ success: true, deleted: true });
     }
-    const existing = await db.select({ id: studyJournalEntries.id }).from(studyJournalEntries).where((0, import_drizzle_orm12.and)(...matchConditions));
+    const existing = await db.select({ id: studyJournalEntries.id }).from(studyJournalEntries).where((0, import_drizzle_orm14.and)(...matchConditions));
     if (existing.length > 0) {
-      await db.update(studyJournalEntries).set({ content: String(content).trim(), updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm12.eq)(studyJournalEntries.id, existing[0].id));
+      await db.update(studyJournalEntries).set({ content: String(content).trim(), updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm14.eq)(studyJournalEntries.id, existing[0].id));
     } else {
       await db.insert(studyJournalEntries).values({
         userId,
@@ -38418,7 +39940,7 @@ router10.post("/api/study-journal", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/study-journal/revisit", async (req, res) => {
+router11.get("/api/study-journal/revisit", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const limit = Math.min(Number(req.query.limit) || 10, 20);
@@ -38429,11 +39951,11 @@ router10.get("/api/study-journal/revisit", async (req, res) => {
       sectionKey: studyJournalEntries.sectionKey,
       content: studyJournalEntries.content,
       updatedAt: studyJournalEntries.updatedAt
-    }).from(studyJournalEntries).where((0, import_drizzle_orm12.eq)(studyJournalEntries.userId, userId)).orderBy((0, import_drizzle_orm12.desc)(studyJournalEntries.updatedAt)).limit(limit * 2);
+    }).from(studyJournalEntries).where((0, import_drizzle_orm14.eq)(studyJournalEntries.userId, userId)).orderBy((0, import_drizzle_orm14.desc)(studyJournalEntries.updatedAt)).limit(limit * 2);
     const bookIds = [...new Set(entries.map((e) => e.bookId))];
     const bookNames = /* @__PURE__ */ new Map();
     if (bookIds.length > 0) {
-      const books = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks).where(import_drizzle_orm12.sql`${bibleBooks.id} IN ${bookIds}`);
+      const books = await db.select({ id: bibleBooks.id, name: bibleBooks.name }).from(bibleBooks).where(import_drizzle_orm14.sql`${bibleBooks.id} IN ${bookIds}`);
       books.forEach((b) => bookNames.set(b.id, b.name));
     }
     const seen = /* @__PURE__ */ new Set();
@@ -38459,12 +39981,17 @@ router10.get("/api/study-journal/revisit", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
+router11.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, res) => {
   try {
-    const { topicId } = req.params;
+    const topicId = String(req.params.topicId);
+    const rawTranslation = req.query.translation;
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const queryHash = `topic-reflection-${SDA_LENS_VERSION}-${topicId}-${today}`;
-    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm12.eq)(searchCache.queryHash, queryHash)).limit(1);
+    const queryHash = buildTopicReflectionCacheKey(translation, topicId, today);
+    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm14.eq)(searchCache.queryHash, queryHash)).limit(1);
     if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
       return res.json(cached.results);
     }
@@ -38482,7 +40009,9 @@ router10.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, 
 2. A discussion question for small groups or personal journaling
 3. A practical application challenge for today
 4. A lesser-known Bible verse related to this topic (different from common ones)
-Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string, "verseText": string }`)
+
+CRITICAL: Provide ONLY the verse reference (e.g. "Zephaniah 3:17"). Do NOT quote or paraphrase the verse text \u2014 the exact wording is looked up canonically afterward. Choose a reference that exists as a single verse or a same-chapter range.
+Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string }`)
         },
         {
           role: "user",
@@ -38493,15 +40022,46 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
     });
     const raw = response.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    const data = JSON.parse(cleaned);
+    const parsedData = JSON.parse(cleaned);
+    const verseReference = typeof parsedData.verseReference === "string" ? parsedData.verseReference.trim() : "";
+    if (!verseReference) {
+      throw new ScriptureError("INVALID_REFERENCE", "AI did not return a verse reference", 502);
+    }
+    const resolvedVerse = await resolveReference({
+      reference: verseReference,
+      translation,
+      cache: chapterCacheHooks4
+    });
+    const verseText = joinResolvedVerseText(
+      resolvedVerse.verses
+    );
+    if (!verseText) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No verse text resolved for ${verseReference}`,
+        404
+      );
+    }
+    const data = {
+      reflection: parsedData.reflection,
+      question: parsedData.question,
+      challenge: parsedData.challenge,
+      verseReference,
+      verseText,
+      translation: resolvedVerse.meta.translation,
+      translationName: resolvedVerse.meta.translationName,
+      source: resolvedVerse.meta.source,
+      provider: resolvedVerse.meta.provider,
+      ...resolvedVerse.meta.providerEditionId ? { providerEditionId: resolvedVerse.meta.providerEditionId } : {}
+    };
     const tomorrow = /* @__PURE__ */ new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
     if (cached) {
-      await db.update(searchCache).set({ results: data, expiresAt: tomorrow }).where((0, import_drizzle_orm12.eq)(searchCache.queryHash, queryHash));
+      await db.update(searchCache).set({ results: data, expiresAt: tomorrow }).where((0, import_drizzle_orm14.eq)(searchCache.queryHash, queryHash));
     } else {
       await db.insert(searchCache).values({
-        queryText: `topic-reflection:${topicId}`,
+        queryText: `topic-reflection:${translation}:${topicId}`,
         queryHash,
         results: data,
         expiresAt: tomorrow
@@ -38512,23 +40072,37 @@ Return JSON: { "reflection": string, "question": string, "challenge": string, "v
     }
     return res.json(data);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("Topic reflection error:", err);
     return res.status(500).json({ error: "Failed to generate reflection" });
   }
 });
-router10.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
+router11.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
   try {
     const bookId = Number(req.query.bookId);
     const chapter = Number(req.query.chapter);
     if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter required" });
-    const cached = await db.select({ sections: chapterPassageSections.sections }).from(chapterPassageSections).where((0, import_drizzle_orm12.and)((0, import_drizzle_orm12.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm12.eq)(chapterPassageSections.chapter, chapter)));
-    if (cached.length > 0) {
-      return res.json(cached[0].sections);
+    const rawTranslation = req.query.translation;
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
     }
-    const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm12.and)((0, import_drizzle_orm12.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm12.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const cacheKey = buildPassageSectionsCacheKey(translation, bookId, chapter);
+    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm14.eq)(searchCache.queryHash, cacheKey)).limit(1);
+    if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
+      return res.json(cached.results);
+    }
+    const resolved = await resolveChapter({
+      book: bookId,
+      chapter,
+      translation,
+      cache: chapterCacheHooks4
+    });
+    const verses = resolved.verses;
     if (verses.length === 0) return res.json([]);
-    const [bookInfo] = await db.select({ name: bibleBooks.name }).from(bibleBooks).where((0, import_drizzle_orm12.eq)(bibleBooks.id, bookId));
-    const bookName = bookInfo?.name ?? `Book ${bookId}`;
+    const bookName = resolved.book.name;
     const totalVerses = verses.length;
     const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
     const OpenAI9 = (await import("openai")).default;
@@ -38542,7 +40116,7 @@ router10.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
+          content: withSdaLens(`You divide Bible chapters into natural reading sections for inductive study. Return JSON only.
 
 Rules:
 - Sections must be contiguous and non-overlapping
@@ -38550,13 +40124,13 @@ Rules:
 - Aim for 2-5 sections depending on chapter length
 - Each section should be a coherent narrative or thematic unit
 - Labels should be short descriptions (5-8 words max)
-- For very short chapters (under 10 verses), return 1-2 sections`
+- For very short chapters (under 10 verses), return 1-2 sections`)
         },
         {
           role: "user",
-          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses) into natural study sections.
+          content: `Divide ${bookName} chapter ${chapter} (${totalVerses} verses, ${translation} translation) into natural study sections.
 
-Chapter text:
+Chapter text (${translation}):
 ${chapterText.substring(0, 4e3)}
 
 Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short description"}]`
@@ -38583,20 +40157,32 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
     } catch {
       sections = [{ verseStart: 1, verseEnd: totalVerses, label: "Full chapter" }];
     }
-    await db.insert(chapterPassageSections).values({ bookId, chapter, sections }).onConflictDoNothing();
+    const sectionsExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3);
+    await db.insert(searchCache).values({
+      queryText: `passage-sections:${translation}:${bookName} ${chapter}`,
+      queryHash: cacheKey,
+      results: sections,
+      expiresAt: sectionsExpiry
+    }).onConflictDoUpdate({
+      target: searchCache.queryHash,
+      set: { results: sections, expiresAt: sectionsExpiry }
+    });
     return res.json(sections);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("Passage sections error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/analytics/growth", async (req, res) => {
+router11.get("/api/analytics/growth", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const sessions = await db.select({
       createdAt: studyGuideSessions.createdAt,
       completedAt: studyGuideSessions.completedAt
-    }).from(studyGuideSessions).where((0, import_drizzle_orm12.eq)(studyGuideSessions.userId, userId));
+    }).from(studyGuideSessions).where((0, import_drizzle_orm14.eq)(studyGuideSessions.userId, userId));
     let deepStudyMinutes = 0;
     for (const s of sessions) {
       if (s.completedAt && s.createdAt) {
@@ -38610,16 +40196,16 @@ router10.get("/api/analytics/growth", async (req, res) => {
     const userChapters = await db.select({
       bookId: readingHistory.bookId,
       chapter: readingHistory.chapter
-    }).from(readingHistory).where((0, import_drizzle_orm12.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId, readingHistory.chapter);
+    }).from(readingHistory).where((0, import_drizzle_orm14.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId, readingHistory.chapter);
     let wordsLearned = 0;
     if (userChapters.length > 0) {
       const conditions = userChapters.map(
-        (ch) => import_drizzle_orm12.sql`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
+        (ch) => import_drizzle_orm14.sql`(${bibleVerses.bookId} = ${ch.bookId} AND ${bibleVerses.chapter} = ${ch.chapter})`
       );
-      const [wordsResult] = await db.select({ total: (0, import_drizzle_orm12.countDistinct)(verseStrongMaps.strongId) }).from(verseStrongMaps).innerJoin(bibleVerses, (0, import_drizzle_orm12.eq)(verseStrongMaps.verseId, bibleVerses.id)).where(import_drizzle_orm12.sql`(${import_drizzle_orm12.sql.join(conditions, import_drizzle_orm12.sql` OR `)})`);
+      const [wordsResult] = await db.select({ total: (0, import_drizzle_orm14.countDistinct)(verseStrongMaps.strongId) }).from(verseStrongMaps).innerJoin(bibleVerses, (0, import_drizzle_orm14.eq)(verseStrongMaps.verseId, bibleVerses.id)).where(import_drizzle_orm14.sql`(${import_drizzle_orm14.sql.join(conditions, import_drizzle_orm14.sql` OR `)})`);
       wordsLearned = wordsResult?.total ?? 0;
     }
-    const booksRead = await db.select({ bookId: readingHistory.bookId }).from(readingHistory).where((0, import_drizzle_orm12.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
+    const booksRead = await db.select({ bookId: readingHistory.bookId }).from(readingHistory).where((0, import_drizzle_orm14.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
     const exploredBookIds = booksRead.map((r) => r.bookId);
     const allBooks = await db.select({
       id: bibleBooks.id,
@@ -38628,11 +40214,11 @@ router10.get("/api/analytics/growth", async (req, res) => {
       testament: bibleBooks.testament,
       chapterCount: bibleBooks.chapterCount,
       orderIndex: bibleBooks.orderIndex
-    }).from(bibleBooks).orderBy((0, import_drizzle_orm12.asc)(bibleBooks.orderIndex));
+    }).from(bibleBooks).orderBy((0, import_drizzle_orm14.asc)(bibleBooks.orderIndex));
     const chaptersPerBook = await db.select({
       bookId: readingHistory.bookId,
-      chaptersRead: (0, import_drizzle_orm12.countDistinct)(readingHistory.chapter)
-    }).from(readingHistory).where((0, import_drizzle_orm12.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
+      chaptersRead: (0, import_drizzle_orm14.countDistinct)(readingHistory.chapter)
+    }).from(readingHistory).where((0, import_drizzle_orm14.eq)(readingHistory.userId, userId)).groupBy(readingHistory.bookId);
     const chaptersMap = new Map(
       chaptersPerBook.map((r) => [r.bookId, Number(r.chaptersRead)])
     );
@@ -38658,14 +40244,35 @@ router10.get("/api/analytics/growth", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-router10.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
+router11.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
   try {
-    const { bookName, chapter, verse, translation } = req.query;
+    const { bookName, chapter, verse, translation: rawTranslation } = req.query;
     if (!bookName || !chapter || !verse) {
       return res.status(400).json({ error: "bookName, chapter, and verse are required" });
     }
-    const cacheKey = `explain-${SDA_LENS_VERSION}-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
-    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm12.eq)(searchCache.queryHash, cacheKey)).limit(1);
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const reference = `${bookName} ${chapter}:${verse}`;
+    const resolvedVerse = await resolveReference({
+      reference,
+      translation,
+      cache: chapterCacheHooks4
+    });
+    const verseText = joinResolvedVerseText(
+      resolvedVerse.verses
+    );
+    if (!verseText) {
+      throw new ScriptureError(
+        "VERSE_NOT_FOUND",
+        `No verse text resolved for ${reference}`,
+        404
+      );
+    }
+    const canonicalTranslation = resolvedVerse.meta.translation;
+    const cacheKey = buildExplainCacheKey(canonicalTranslation, bookName, chapter, verse);
+    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm14.eq)(searchCache.queryHash, cacheKey)).limit(1);
     if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
       return res.json(cached.results);
     }
@@ -38688,15 +40295,27 @@ Keep the explanation warm, clear, and between 150-250 words. Write in second per
         },
         {
           role: "user",
-          content: `Explain ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`
+          content: `Explain ${reference} (${canonicalTranslation}).
+
+Authoritative ${canonicalTranslation} text of the verse:
+"${verseText}"`
         }
       ],
       temperature: 0.7
     });
     const explanation = response.choices[0]?.message?.content || "";
-    const result = { explanation };
+    const result = {
+      explanation,
+      reference,
+      verseText,
+      translation: resolvedVerse.meta.translation,
+      translationName: resolvedVerse.meta.translationName,
+      source: resolvedVerse.meta.source,
+      provider: resolvedVerse.meta.provider,
+      ...resolvedVerse.meta.providerEditionId ? { providerEditionId: resolvedVerse.meta.providerEditionId } : {}
+    };
     await db.insert(searchCache).values({
-      queryText: `${bookName} ${chapter}:${verse} (${translation || "KJV"})`,
+      queryText: `${reference} (${canonicalTranslation})`,
       queryHash: cacheKey,
       results: result,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3)
@@ -38706,20 +40325,27 @@ Keep the explanation warm, clear, and between 150-250 words. Write in second per
     });
     return res.json(result);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("AI explain error:", err);
     const status = getErrorStatusCode(err);
     return res.status(status || 500).json({ error: "Could not generate explanation" });
   }
 });
-router10.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => {
+router11.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => {
   try {
-    const { bookName, chapter, verse, translation } = req.query;
+    const { bookName, chapter, verse, translation: rawTranslation } = req.query;
     if (!bookName || !chapter || !verse) {
       return res.status(400).json({ error: "bookName, chapter, and verse are required" });
     }
-    const cacheKey = `crossref-${bookName}-${chapter}-${verse}-${translation || "KJV"}`;
-    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm12.eq)(searchCache.queryHash, cacheKey)).limit(1);
-    if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
+    if (!rawTranslation || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(rawTranslation);
+    const cacheKey = buildCrossRefCacheKey(translation, bookName, chapter, verse);
+    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm14.eq)(searchCache.queryHash, cacheKey)).limit(1);
+    if (cached && cached.expiresAt > /* @__PURE__ */ new Date() && isCurrentHydrationVersion(cached.results)) {
       return res.json(cached.results);
     }
     const client = new (await import("openai")).default({
@@ -38732,15 +40358,16 @@ router10.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) =
         {
           role: "system",
           content: withSdaLens(`You are a Bible scholar. Given a verse reference, provide 4-6 of the most relevant cross-references.
-For each cross-reference, provide:
-1. The exact reference (e.g., "John 3:16")
-2. The verse text (from the specified translation or KJV)
-3. A brief explanation of how it connects to the original verse
+For each cross-reference, provide ONLY:
+1. The exact reference (e.g., "John 3:16"). Use a single verse or a same-chapter range.
+2. A brief explanation of how it connects to the original verse.
+
+CRITICAL: Do NOT include or quote any verse text. The authoritative wording is looked up canonically afterward in the requested translation. Only supply the reference and the connection.
 
 Return JSON format:
 {
   "crossReferences": [
-    { "ref": "John 3:16", "text": "For God so loved the world...", "connection": "Both passages emphasize God's redemptive plan..." }
+    { "ref": "John 3:16", "connection": "Both passages emphasize God's redemptive plan..." }
   ]
 }
 
@@ -38752,15 +40379,26 @@ Focus on cross-references that:
         },
         {
           role: "user",
-          content: `Find cross-references for ${bookName} ${chapter}:${verse} (${translation || "KJV"}).`
+          content: `Find cross-references for ${bookName} ${chapter}:${verse} (${translation}). Return references and connections only \u2014 no verse text.`
         }
       ],
       temperature: 0.5,
       response_format: { type: "json_object" }
     });
-    const result = JSON.parse(response.choices[0]?.message?.content || '{"crossReferences":[]}');
+    const parsed = JSON.parse(response.choices[0]?.message?.content || '{"crossReferences":[]}');
+    const rawList = extractRawCrossReferences(parsed);
+    const hydrated = await hydrateCrossReferences2(
+      rawList,
+      translation,
+      (params) => resolveReference({ ...params, cache: chapterCacheHooks4 })
+    );
+    const result = {
+      crossReferences: hydrated,
+      translation,
+      hydrationVersion: HYDRATION_VERSION
+    };
     await db.insert(searchCache).values({
-      queryText: `Cross-ref: ${bookName} ${chapter}:${verse}`,
+      queryText: `Cross-ref: ${bookName} ${chapter}:${verse} (${translation})`,
       queryHash: cacheKey,
       results: result,
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1e3)
@@ -38770,145 +40408,28 @@ Focus on cross-references that:
     });
     return res.json(result);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error("AI cross-references error:", err);
     const status = getErrorStatusCode(err);
     return res.status(status || 500).json({ error: "Could not generate cross-references" });
   }
 });
-var deep_study_default = router10;
-
-// server/routes/search.ts
-var import_express11 = require("express");
-init_db();
-init_schema();
-var import_drizzle_orm13 = require("drizzle-orm");
-var crypto = __toESM(require("crypto"));
-init_ai_engine();
-var router11 = (0, import_express11.Router)();
-router11.post("/api/search/semantic", aiGenerationLimiter, async (req, res) => {
-  try {
-    const userId = extractUserId(req);
-    const { query } = req.body;
-    if (!query || typeof query !== "string" || query.trim().length < 3) {
-      return res.status(400).json({ error: "A search query of at least 3 characters is required" });
-    }
-    const trimmedQuery = query.trim().toLowerCase();
-    const queryHash = crypto.createHash("sha256").update(trimmedQuery).digest("hex");
-    const cached = await db.select().from(searchCache).where((0, import_drizzle_orm13.and)((0, import_drizzle_orm13.eq)(searchCache.queryHash, queryHash), import_drizzle_orm13.sql`${searchCache.expiresAt} > NOW()`)).limit(1);
-    let verses;
-    if (cached.length > 0) {
-      verses = cached[0].results;
-    } else {
-      verses = await generateSemanticSearch(trimmedQuery);
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3);
-      await db.insert(searchCache).values({
-        queryText: trimmedQuery,
-        queryHash,
-        userId: userId !== "guest" ? userId : null,
-        results: verses,
-        expiresAt
-      }).onConflictDoNothing();
-    }
-    let notes = [];
-    let highlights = [];
-    let bookmarks = [];
-    const searchUserId = userId;
-    if (searchUserId !== "guest") {
-      const searchTerm = `%${trimmedQuery}%`;
-      notes = await db.select({
-        id: userNotes.id,
-        content: userNotes.content,
-        verseId: userNotes.verseId,
-        createdAt: userNotes.createdAt,
-        bookId: bibleVerses.bookId,
-        chapter: bibleVerses.chapter,
-        verse: bibleVerses.verse,
-        verseText: bibleVerses.text,
-        bookName: bibleBooks.name
-      }).from(userNotes).leftJoin(bibleVerses, (0, import_drizzle_orm13.eq)(userNotes.verseId, bibleVerses.id)).leftJoin(bibleBooks, (0, import_drizzle_orm13.eq)(bibleVerses.bookId, bibleBooks.id)).where(
-        (0, import_drizzle_orm13.and)(
-          (0, import_drizzle_orm13.eq)(userNotes.userId, searchUserId),
-          import_drizzle_orm13.sql`LOWER(${userNotes.content}) LIKE ${searchTerm}`
-        )
-      ).orderBy((0, import_drizzle_orm13.desc)(userNotes.updatedAt)).limit(10);
-      highlights = await db.select({
-        id: userHighlights.id,
-        color: userHighlights.color,
-        verseId: userHighlights.verseId,
-        createdAt: userHighlights.createdAt,
-        bookId: bibleVerses.bookId,
-        chapter: bibleVerses.chapter,
-        verse: bibleVerses.verse,
-        verseText: bibleVerses.text,
-        bookName: bibleBooks.name
-      }).from(userHighlights).leftJoin(bibleVerses, (0, import_drizzle_orm13.eq)(userHighlights.verseId, bibleVerses.id)).leftJoin(bibleBooks, (0, import_drizzle_orm13.eq)(bibleVerses.bookId, bibleBooks.id)).where(
-        (0, import_drizzle_orm13.and)(
-          (0, import_drizzle_orm13.eq)(userHighlights.userId, searchUserId),
-          import_drizzle_orm13.sql`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
-        )
-      ).orderBy((0, import_drizzle_orm13.desc)(userHighlights.createdAt)).limit(10);
-      bookmarks = await db.select({
-        id: userBookmarks.id,
-        label: userBookmarks.label,
-        verseId: userBookmarks.verseId,
-        createdAt: userBookmarks.createdAt,
-        bookId: bibleVerses.bookId,
-        chapter: bibleVerses.chapter,
-        verse: bibleVerses.verse,
-        verseText: bibleVerses.text,
-        bookName: bibleBooks.name
-      }).from(userBookmarks).leftJoin(bibleVerses, (0, import_drizzle_orm13.eq)(userBookmarks.verseId, bibleVerses.id)).leftJoin(bibleBooks, (0, import_drizzle_orm13.eq)(bibleVerses.bookId, bibleBooks.id)).where(
-        (0, import_drizzle_orm13.and)(
-          (0, import_drizzle_orm13.eq)(userBookmarks.userId, searchUserId),
-          (0, import_drizzle_orm13.or)(
-            import_drizzle_orm13.sql`LOWER(${userBookmarks.label}) LIKE ${searchTerm}`,
-            import_drizzle_orm13.sql`LOWER(${bibleVerses.text}) LIKE ${searchTerm}`
-          )
-        )
-      ).orderBy((0, import_drizzle_orm13.desc)(userBookmarks.createdAt)).limit(10);
-    }
-    return res.json({
-      verses,
-      notes,
-      highlights,
-      bookmarks,
-      cached: cached.length > 0
-    });
-  } catch (err) {
-    console.error("Semantic search error:", err);
-    return res.status(500).json({ error: "Failed to perform semantic search" });
-  }
-});
-router11.get("/api/search/recent", async (req, res) => {
-  try {
-    const userId = extractUserId(req);
-    if (userId === "guest") {
-      return res.json([]);
-    }
-    const recent = await db.select({
-      queryText: searchCache.queryText,
-      createdAt: searchCache.createdAt
-    }).from(searchCache).where((0, import_drizzle_orm13.eq)(searchCache.userId, userId)).orderBy((0, import_drizzle_orm13.desc)(searchCache.createdAt)).limit(10);
-    return res.json(recent);
-  } catch (err) {
-    console.error("Recent searches error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-var search_default = router11;
+var deep_study_default = router11;
 
 // server/routes/devotionals.ts
 var import_express12 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm15 = require("drizzle-orm");
+var import_drizzle_orm16 = require("drizzle-orm");
 
 // server/services/translationService.ts
 var import_crypto = __toESM(require("crypto"));
 init_db();
 init_schema();
-var import_drizzle_orm14 = require("drizzle-orm");
+var import_drizzle_orm15 = require("drizzle-orm");
 var GOOGLE_TRANSLATE_URL = "https://translation.googleapis.com/language/translate/v2";
 var LANG_MAP = {
   fil: "tl",
@@ -38938,7 +40459,7 @@ async function translateBatch(texts, targetLang) {
     const text2 = texts[i];
     if (!text2?.trim()) continue;
     const contentKey = makeContentKey(text2);
-    const [cached] = await db.select({ translatedText: contentTranslations.translatedText }).from(contentTranslations).where((0, import_drizzle_orm14.and)((0, import_drizzle_orm14.eq)(contentTranslations.contentKey, contentKey), (0, import_drizzle_orm14.eq)(contentTranslations.langCode, targetLang))).limit(1);
+    const [cached] = await db.select({ translatedText: contentTranslations.translatedText }).from(contentTranslations).where((0, import_drizzle_orm15.and)((0, import_drizzle_orm15.eq)(contentTranslations.contentKey, contentKey), (0, import_drizzle_orm15.eq)(contentTranslations.langCode, targetLang))).limit(1);
     if (cached) {
       results[i] = cached.translatedText;
     } else {
@@ -38992,14 +40513,14 @@ router12.get("/api/devotionals/plans", cachedResponse(120), async (req, res) => 
     const traditionKey = String(req.query.traditionKey || "all");
     const lang = normalizeLanguageCode(String(req.query.lang || "en"));
     const conditions = [
-      (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
-      (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
-      (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+      (0, import_drizzle_orm16.eq)(devotionalPlans.isPublished, true),
+      (0, import_drizzle_orm16.eq)(devotionalPlans.provenance, "human_curated"),
+      (0, import_drizzle_orm16.eq)(devotionalPlans.isAiGenerated, false)
     ];
     if (traditionKey !== "all") {
-      conditions.push((0, import_drizzle_orm15.eq)(devotionalPlans.traditionKey, traditionKey));
+      conditions.push((0, import_drizzle_orm16.eq)(devotionalPlans.traditionKey, traditionKey));
     }
-    let plans = await db.select().from(devotionalPlans).where((0, import_drizzle_orm15.and)(...conditions));
+    let plans = await db.select().from(devotionalPlans).where((0, import_drizzle_orm16.and)(...conditions));
     if (lang !== "en") {
       plans = await Promise.all(
         plans.map((p) => translateObject(p, lang, ["title", "description"]))
@@ -39016,23 +40537,23 @@ router12.get("/api/devotionals/plans/:planId/days", optionalAuth, async (req, re
     const planId = String(req.params.planId);
     const userId = getEffectiveUserId(req);
     const [catalogPlan] = await db.select({ id: devotionalPlans.id }).from(devotionalPlans).where(
-      (0, import_drizzle_orm15.and)(
-        (0, import_drizzle_orm15.eq)(devotionalPlans.id, planId),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+      (0, import_drizzle_orm16.and)(
+        (0, import_drizzle_orm16.eq)(devotionalPlans.id, planId),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.isAiGenerated, false)
       )
     ).limit(1);
     const [ownedEnrollment] = catalogPlan ? [] : await db.select({ id: userPlanEnrollments.id }).from(userPlanEnrollments).where(
-      (0, import_drizzle_orm15.and)(
-        (0, import_drizzle_orm15.eq)(userPlanEnrollments.userId, userId),
-        (0, import_drizzle_orm15.eq)(userPlanEnrollments.planId, planId)
+      (0, import_drizzle_orm16.and)(
+        (0, import_drizzle_orm16.eq)(userPlanEnrollments.userId, userId),
+        (0, import_drizzle_orm16.eq)(userPlanEnrollments.planId, planId)
       )
     ).limit(1);
     if (!catalogPlan && !ownedEnrollment) {
       return res.status(404).json({ error: "Plan not found" });
     }
-    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, planId)).orderBy(devotionalDays.dayNumber);
+    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm16.eq)(devotionalDays.planId, planId)).orderBy(devotionalDays.dayNumber);
     return res.json(days);
   } catch (err) {
     console.error(err);
@@ -39047,20 +40568,20 @@ router12.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "planId is required" });
     }
     const existing = await db.select().from(userPlanEnrollments).where(
-      (0, import_drizzle_orm15.and)(
-        (0, import_drizzle_orm15.eq)(userPlanEnrollments.userId, userId),
-        (0, import_drizzle_orm15.eq)(userPlanEnrollments.planId, planId)
+      (0, import_drizzle_orm16.and)(
+        (0, import_drizzle_orm16.eq)(userPlanEnrollments.userId, userId),
+        (0, import_drizzle_orm16.eq)(userPlanEnrollments.planId, planId)
       )
     ).limit(1);
     if (existing.length) {
       return res.json({ enrollment: existing[0], alreadyEnrolled: true });
     }
     const [catalogPlan] = await db.select({ id: devotionalPlans.id }).from(devotionalPlans).where(
-      (0, import_drizzle_orm15.and)(
-        (0, import_drizzle_orm15.eq)(devotionalPlans.id, String(planId)),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.isPublished, true),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.provenance, "human_curated"),
-        (0, import_drizzle_orm15.eq)(devotionalPlans.isAiGenerated, false)
+      (0, import_drizzle_orm16.and)(
+        (0, import_drizzle_orm16.eq)(devotionalPlans.id, String(planId)),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm16.eq)(devotionalPlans.isAiGenerated, false)
       )
     ).limit(1);
     if (!catalogPlan) {
@@ -39076,14 +40597,14 @@ router12.post("/api/devotionals/enroll", optionalAuth, async (req, res) => {
 router12.get("/api/devotionals/user-progress", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const enrollments = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm15.eq)(userPlanEnrollments.userId, userId));
+    const enrollments = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm16.eq)(userPlanEnrollments.userId, userId));
     if (!enrollments.length) {
       return res.json([]);
     }
     const results = await Promise.all(
       enrollments.map(async (enrollment) => {
-        const allDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, enrollment.planId)).orderBy(devotionalDays.dayNumber);
-        const completedDays = await db.select().from(userPlanProgress).where((0, import_drizzle_orm15.eq)(userPlanProgress.enrollmentId, enrollment.id));
+        const allDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm16.eq)(devotionalDays.planId, enrollment.planId)).orderBy(devotionalDays.dayNumber);
+        const completedDays = await db.select().from(userPlanProgress).where((0, import_drizzle_orm16.eq)(userPlanProgress.enrollmentId, enrollment.id));
         return {
           planId: enrollment.planId,
           isActive: enrollment.isActive,
@@ -39104,24 +40625,24 @@ router12.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     const { planId, depth } = req.query;
     const lang = normalizeLanguageCode(String(req.query.lang || "en"));
     const conditions = [
-      (0, import_drizzle_orm15.eq)(userPlanEnrollments.userId, userId),
-      (0, import_drizzle_orm15.eq)(userPlanEnrollments.isActive, true)
+      (0, import_drizzle_orm16.eq)(userPlanEnrollments.userId, userId),
+      (0, import_drizzle_orm16.eq)(userPlanEnrollments.isActive, true)
     ];
     if (planId) {
-      conditions.push((0, import_drizzle_orm15.eq)(userPlanEnrollments.planId, String(planId)));
+      conditions.push((0, import_drizzle_orm16.eq)(userPlanEnrollments.planId, String(planId)));
     }
-    const activeEnrollment = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm15.and)(...conditions)).orderBy((0, import_drizzle_orm15.desc)(userPlanEnrollments.enrolledAt)).limit(1);
+    const activeEnrollment = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm16.and)(...conditions)).orderBy((0, import_drizzle_orm16.desc)(userPlanEnrollments.enrolledAt)).limit(1);
     if (!activeEnrollment.length) {
       return res.json({ today: null, message: "No active plan enrollment" });
     }
-    const completedDays = await db.select().from(userPlanProgress).where((0, import_drizzle_orm15.eq)(userPlanProgress.enrollmentId, activeEnrollment[0].id));
+    const completedDays = await db.select().from(userPlanProgress).where((0, import_drizzle_orm16.eq)(userPlanProgress.enrollmentId, activeEnrollment[0].id));
     const completedDayIds = new Set(completedDays.map((p) => p.dayId));
-    const allDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, activeEnrollment[0].planId)).orderBy(devotionalDays.dayNumber);
+    const allDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm16.eq)(devotionalDays.planId, activeEnrollment[0].planId)).orderBy(devotionalDays.dayNumber);
     const todayDay = allDays.find((d) => !completedDayIds.has(d.id));
     if (!todayDay) {
       return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
     }
-    const [plan] = await db.select({ title: devotionalPlans.title }).from(devotionalPlans).where((0, import_drizzle_orm15.eq)(devotionalPlans.id, activeEnrollment[0].planId)).limit(1);
+    const [plan] = await db.select({ title: devotionalPlans.title }).from(devotionalPlans).where((0, import_drizzle_orm16.eq)(devotionalPlans.id, activeEnrollment[0].planId)).limit(1);
     let translatedDay = todayDay;
     let translatedPlanTitle = plan?.title ?? null;
     if (lang !== "en") {
@@ -39235,7 +40756,7 @@ router12.post("/api/reading-plans/generate-disabled", optionalAuth, async (req, 
     if (dayValues.length > 0) {
       await db.insert(devotionalDays).values(dayValues);
     }
-    const savedDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm15.eq)(devotionalDays.planId, savedPlan.id)).orderBy(devotionalDays.dayNumber);
+    const savedDays = await db.select().from(devotionalDays).where((0, import_drizzle_orm16.eq)(devotionalDays.planId, savedPlan.id)).orderBy(devotionalDays.dayNumber);
     return res.json({ plan: savedPlan, days: savedDays });
   } catch (err) {
     console.error("Generate reading plan error:", err);
@@ -39479,7 +41000,7 @@ function getMp3DurationMs(buf) {
   if (!sampleRate || !frames) return 0;
   return Math.round(totalSamples / sampleRate * 1e3);
 }
-function evictOldest() {
+function evictOldest2() {
   let oldest = null;
   let oldestTime = Infinity;
   for (const [key, val] of ttsCache) {
@@ -39528,7 +41049,7 @@ router13.post("/api/tts", ttsLimiter, async (req, res) => {
       if (audioBuffer.length <= MAX_CACHE_BYTES) {
         while (ttsCache.size >= MAX_CACHE_ENTRIES || cacheTotalBytes + audioBuffer.length > MAX_CACHE_BYTES) {
           if (ttsCache.size === 0) break;
-          evictOldest();
+          evictOldest2();
         }
         ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now(), durationMs });
         cacheTotalBytes += audioBuffer.length;
@@ -39565,7 +41086,7 @@ router13.post("/api/tts/prepare", ttsLimiter, async (req, res) => {
       if (audioBuffer.length <= MAX_CACHE_BYTES) {
         while (ttsCache.size >= MAX_CACHE_ENTRIES || cacheTotalBytes + audioBuffer.length > MAX_CACHE_BYTES) {
           if (ttsCache.size === 0) break;
-          evictOldest();
+          evictOldest2();
         }
         ttsCache.set(cacheKey, { buffer: audioBuffer, createdAt: Date.now(), durationMs });
         cacheTotalBytes += audioBuffer.length;
@@ -39601,7 +41122,7 @@ var import_express14 = require("express");
 init_db();
 init_ai_semaphore();
 init_schema();
-var import_drizzle_orm16 = require("drizzle-orm");
+var import_drizzle_orm17 = require("drizzle-orm");
 
 // constants/kids-shop.ts
 var SHOP_ITEMS = [
@@ -39763,11 +41284,11 @@ async function autoCompleteQuest(userId, childId, questType) {
   try {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const conditions = [
-      (0, import_drizzle_orm16.eq)(kidsDailyQuests.userId, userId),
-      (0, import_drizzle_orm16.eq)(kidsDailyQuests.questDate, today)
+      (0, import_drizzle_orm17.eq)(kidsDailyQuests.userId, userId),
+      (0, import_drizzle_orm17.eq)(kidsDailyQuests.questDate, today)
     ];
-    if (childId) conditions.push((0, import_drizzle_orm16.eq)(kidsDailyQuests.childProfileId, childId));
-    const existing = await db.select().from(kidsDailyQuests).where((0, import_drizzle_orm16.and)(...conditions));
+    if (childId) conditions.push((0, import_drizzle_orm17.eq)(kidsDailyQuests.childProfileId, childId));
+    const existing = await db.select().from(kidsDailyQuests).where((0, import_drizzle_orm17.and)(...conditions));
     let quest;
     if (existing.length === 0) {
       const [created] = await db.insert(kidsDailyQuests).values({
@@ -39783,9 +41304,9 @@ async function autoCompleteQuest(userId, childId, questType) {
     if (questType === "read_story") updateField.readStory = true;
     else if (questType === "practice_verse") updateField.practiceVerse = true;
     else if (questType === "take_quiz") updateField.takeQuiz = true;
-    const [updated] = await db.update(kidsDailyQuests).set(updateField).where((0, import_drizzle_orm16.eq)(kidsDailyQuests.id, quest.id)).returning();
+    const [updated] = await db.update(kidsDailyQuests).set(updateField).where((0, import_drizzle_orm17.eq)(kidsDailyQuests.id, quest.id)).returning();
     if (updated.readStory && updated.practiceVerse && updated.takeQuiz && !updated.bonusClaimed) {
-      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where((0, import_drizzle_orm16.eq)(kidsDailyQuests.id, quest.id));
+      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where((0, import_drizzle_orm17.eq)(kidsDailyQuests.id, quest.id));
     }
   } catch (err) {
     console.error("Auto-complete quest error:", err);
@@ -39794,11 +41315,11 @@ async function autoCompleteQuest(userId, childId, questType) {
 router14.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
   try {
     const { ageGroup } = req.query;
-    const conditions = [(0, import_drizzle_orm16.eq)(kidsCollections.published, true)];
+    const conditions = [(0, import_drizzle_orm17.eq)(kidsCollections.published, true)];
     if (ageGroup) {
-      conditions.push((0, import_drizzle_orm16.eq)(kidsCollections.ageGroup, String(ageGroup)));
+      conditions.push((0, import_drizzle_orm17.eq)(kidsCollections.ageGroup, String(ageGroup)));
     }
-    const allCollections = await db.select().from(kidsCollections).where((0, import_drizzle_orm16.and)(...conditions)).orderBy(kidsCollections.orderIndex);
+    const allCollections = await db.select().from(kidsCollections).where((0, import_drizzle_orm17.and)(...conditions)).orderBy(kidsCollections.orderIndex);
     const seen = /* @__PURE__ */ new Map();
     for (const col of allCollections) {
       const key = `${col.title}::${col.ageGroup}`;
@@ -39809,10 +41330,10 @@ router14.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
     const collections = Array.from(seen.values());
     const collectionsWithCounts = await Promise.all(
       collections.map(async (col) => {
-        const [countResult] = await db.select({ count: import_drizzle_orm16.sql`count(*)::int` }).from(kidsStories).where(
-          (0, import_drizzle_orm16.and)(
-            (0, import_drizzle_orm16.eq)(kidsStories.collectionId, col.id),
-            (0, import_drizzle_orm16.eq)(kidsStories.published, true)
+        const [countResult] = await db.select({ count: import_drizzle_orm17.sql`count(*)::int` }).from(kidsStories).where(
+          (0, import_drizzle_orm17.and)(
+            (0, import_drizzle_orm17.eq)(kidsStories.collectionId, col.id),
+            (0, import_drizzle_orm17.eq)(kidsStories.published, true)
           )
         );
         return { ...col, storyCount: countResult?.count ?? col.storyCount ?? 0 };
@@ -39827,11 +41348,11 @@ router14.get("/api/kids/collections", cachedResponse(120), async (req, res) => {
 router14.get("/api/kids/collections/all/stories", async (req, res) => {
   try {
     const { ageGroup } = req.query;
-    const conditions = [(0, import_drizzle_orm16.eq)(kidsStories.published, true)];
+    const conditions = [(0, import_drizzle_orm17.eq)(kidsStories.published, true)];
     if (ageGroup) {
-      conditions.push((0, import_drizzle_orm16.eq)(kidsStories.ageGroup, String(ageGroup)));
+      conditions.push((0, import_drizzle_orm17.eq)(kidsStories.ageGroup, String(ageGroup)));
     }
-    const stories = await db.select().from(kidsStories).where((0, import_drizzle_orm16.and)(...conditions)).orderBy(kidsStories.orderInCollection);
+    const stories = await db.select().from(kidsStories).where((0, import_drizzle_orm17.and)(...conditions)).orderBy(kidsStories.orderInCollection);
     return res.json(stories);
   } catch (err) {
     console.error(err);
@@ -39841,9 +41362,9 @@ router14.get("/api/kids/collections/all/stories", async (req, res) => {
 router14.get("/api/kids/collections/:id/stories", async (req, res) => {
   try {
     const stories = await db.select().from(kidsStories).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsStories.collectionId, req.params.id),
-        (0, import_drizzle_orm16.eq)(kidsStories.published, true)
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsStories.collectionId, req.params.id),
+        (0, import_drizzle_orm17.eq)(kidsStories.published, true)
       )
     ).orderBy(kidsStories.orderInCollection);
     return res.json(stories);
@@ -39854,7 +41375,7 @@ router14.get("/api/kids/collections/:id/stories", async (req, res) => {
 });
 router14.get("/api/kids/stories/:id", async (req, res) => {
   try {
-    const story = await db.select().from(kidsStories).where((0, import_drizzle_orm16.eq)(kidsStories.id, req.params.id)).limit(1);
+    const story = await db.select().from(kidsStories).where((0, import_drizzle_orm17.eq)(kidsStories.id, req.params.id)).limit(1);
     if (!story.length) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -39866,7 +41387,7 @@ router14.get("/api/kids/stories/:id", async (req, res) => {
 });
 router14.get("/api/kids/stories/:id/quiz", async (req, res) => {
   try {
-    const questions = await db.select().from(kidsQuizQuestions).where((0, import_drizzle_orm16.eq)(kidsQuizQuestions.storyId, req.params.id));
+    const questions = await db.select().from(kidsQuizQuestions).where((0, import_drizzle_orm17.eq)(kidsQuizQuestions.storyId, req.params.id));
     return res.json(questions);
   } catch (err) {
     console.error(err);
@@ -39876,17 +41397,17 @@ router14.get("/api/kids/stories/:id/quiz", async (req, res) => {
 async function checkAndAwardBadges(userId) {
   try {
     const allBadges = await db.select().from(kidsBadges);
-    const earned = await db.select({ badgeId: kidsUserBadges.badgeId }).from(kidsUserBadges).where((0, import_drizzle_orm16.eq)(kidsUserBadges.userId, userId));
+    const earned = await db.select({ badgeId: kidsUserBadges.badgeId }).from(kidsUserBadges).where((0, import_drizzle_orm17.eq)(kidsUserBadges.userId, userId));
     const earnedSet = new Set(earned.map((e) => e.badgeId));
-    const completedStories = await db.select({ count: import_drizzle_orm16.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm16.eq)(kidsProgress.completed, true)));
+    const completedStories = await db.select({ count: import_drizzle_orm17.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm17.eq)(kidsProgress.completed, true)));
     const storyCount = completedStories[0]?.count ?? 0;
-    const quizzes = await db.select({ count: import_drizzle_orm16.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId), import_drizzle_orm16.sql`${kidsProgress.quizScore} = 100`));
+    const quizzes = await db.select({ count: import_drizzle_orm17.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId), import_drizzle_orm17.sql`${kidsProgress.quizScore} = 100`));
     const perfectQuizCount = quizzes[0]?.count ?? 0;
-    const verses = await db.select({ count: import_drizzle_orm16.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm16.eq)(kidsProgress.memoryVerseMemorized, true)));
+    const verses = await db.select({ count: import_drizzle_orm17.sql`count(*)::int` }).from(kidsProgress).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm17.eq)(kidsProgress.memoryVerseMemorized, true)));
     const verseCount = verses[0]?.count ?? 0;
-    const streakData = await db.select().from(kidsStreaks).where((0, import_drizzle_orm16.eq)(kidsStreaks.userId, userId)).limit(1);
+    const streakData = await db.select().from(kidsStreaks).where((0, import_drizzle_orm17.eq)(kidsStreaks.userId, userId)).limit(1);
     const longestStreak = streakData[0]?.longestStreak ?? 0;
-    const collectionProgress = await db.execute(import_drizzle_orm16.sql`
+    const collectionProgress = await db.execute(import_drizzle_orm17.sql`
       SELECT ks.collection_id, COUNT(*)::int as completed_count,
         (SELECT COUNT(*)::int FROM kids_story WHERE collection_id = ks.collection_id AND published = true) as total_count
       FROM kids_progress kp
@@ -39935,9 +41456,9 @@ router14.post("/api/kids/progress/complete", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsProgress.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsProgress.storyId, storyId)
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsProgress.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     const alreadyCompleted = existing.length > 0 && existing[0].completed === true;
@@ -39955,9 +41476,9 @@ router14.post("/api/kids/progress/complete", requireAuth, async (req, res) => {
 });
 async function triggerParentBridge(storyId, quizScore, childProfileId) {
   if (!childProfileId) return;
-  const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm16.eq)(childProfiles.id, childProfileId)).limit(1);
+  const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm17.eq)(childProfiles.id, childProfileId)).limit(1);
   if (!child) return;
-  const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm16.eq)(kidsStories.id, storyId)).limit(1);
+  const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm17.eq)(kidsStories.id, storyId)).limit(1);
   if (!story) return;
   const topicData = await generateDinnerTableTopic({
     childName: child.name,
@@ -39991,9 +41512,9 @@ router14.post("/api/kids/progress/quiz", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId and score are required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsProgress.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsProgress.storyId, storyId)
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsProgress.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     let result;
@@ -40004,7 +41525,7 @@ router14.post("/api/kids/progress/quiz", requireAuth, async (req, res) => {
     result = upserted;
     let verifiedChildProfileId;
     if (childProfileId) {
-      const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(childProfiles.id, childProfileId), (0, import_drizzle_orm16.eq)(childProfiles.parentId, userId))).limit(1);
+      const [owned] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(childProfiles.id, childProfileId), (0, import_drizzle_orm17.eq)(childProfiles.parentId, userId))).limit(1);
       if (owned) verifiedChildProfileId = childProfileId;
     }
     triggerParentBridge(storyId, score, verifiedChildProfileId).catch(
@@ -40025,9 +41546,9 @@ router14.post("/api/kids/progress/memorize", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "storyId is required" });
     }
     const existing = await db.select().from(kidsProgress).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsProgress.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsProgress.storyId, storyId)
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsProgress.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsProgress.storyId, storyId)
       )
     ).limit(1);
     const [upserted] = await db.insert(kidsProgress).values({ userId, storyId, memoryVerseMemorized: true }).onConflictDoUpdate({
@@ -40044,7 +41565,7 @@ router14.post("/api/kids/progress/memorize", requireAuth, async (req, res) => {
 router14.get("/api/kids/progress", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const progressRows = await db.select().from(kidsProgress).where((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId));
+    const progressRows = await db.select().from(kidsProgress).where((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId));
     return res.json(progressRows);
   } catch (err) {
     console.error(err);
@@ -40066,7 +41587,7 @@ router14.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
     const userBadges = await db.select({
       userBadge: kidsUserBadges,
       badge: kidsBadges
-    }).from(kidsUserBadges).innerJoin(kidsBadges, (0, import_drizzle_orm16.eq)(kidsUserBadges.badgeId, kidsBadges.id)).where((0, import_drizzle_orm16.eq)(kidsUserBadges.userId, userId));
+    }).from(kidsUserBadges).innerJoin(kidsBadges, (0, import_drizzle_orm17.eq)(kidsUserBadges.badgeId, kidsBadges.id)).where((0, import_drizzle_orm17.eq)(kidsUserBadges.userId, userId));
     const flattened = userBadges.map((ub) => ({
       ...ub.badge,
       earnedAt: ub.userBadge.earnedAt
@@ -40080,7 +41601,7 @@ router14.get("/api/kids/badges/earned", optionalAuth, async (req, res) => {
 router14.get("/api/kids/streak", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
-    const streak = await db.select().from(kidsStreaks).where((0, import_drizzle_orm16.eq)(kidsStreaks.userId, userId)).limit(1);
+    const streak = await db.select().from(kidsStreaks).where((0, import_drizzle_orm17.eq)(kidsStreaks.userId, userId)).limit(1);
     if (!streak.length) {
       return res.json({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
     }
@@ -40094,7 +41615,7 @@ router14.post("/api/kids/streak/update", requireAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const existing = await db.select().from(kidsStreaks).where((0, import_drizzle_orm16.eq)(kidsStreaks.userId, userId)).limit(1);
+    const existing = await db.select().from(kidsStreaks).where((0, import_drizzle_orm17.eq)(kidsStreaks.userId, userId)).limit(1);
     if (existing.length) {
       const streak = existing[0];
       if (streak.lastActivityDate === today) {
@@ -40108,7 +41629,7 @@ router14.post("/api/kids/streak/update", requireAuth, async (req, res) => {
         currentStreak: newCurrent,
         longestStreak: newLongest,
         lastActivityDate: today
-      }).where((0, import_drizzle_orm16.eq)(kidsStreaks.id, streak.id)).returning();
+      }).where((0, import_drizzle_orm17.eq)(kidsStreaks.id, streak.id)).returning();
       return res.json(updated[0]);
     }
     const newStreak = await db.insert(kidsStreaks).values({ userId, currentStreak: 1, longestStreak: 1, lastActivityDate: today }).returning();
@@ -40125,9 +41646,9 @@ router14.get("/api/kids/daily", async (req, res) => {
       return res.status(400).json({ error: "ageGroup is required" });
     }
     const stories = await db.select().from(kidsStories).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsStories.ageGroup, String(ageGroup)),
-        (0, import_drizzle_orm16.eq)(kidsStories.published, true)
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsStories.ageGroup, String(ageGroup)),
+        (0, import_drizzle_orm17.eq)(kidsStories.published, true)
       )
     ).orderBy(kidsStories.orderInCollection);
     if (!stories.length) {
@@ -40147,11 +41668,11 @@ router14.get("/api/kids/stories/:id/wonder", async (req, res) => {
   try {
     const { id: storyId } = req.params;
     const ageGroup = String(req.query.ageGroup || "little_lambs");
-    const cached = await db.select().from(kidsWonderCache).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsWonderCache.storyId, storyId), (0, import_drizzle_orm16.eq)(kidsWonderCache.ageGroup, ageGroup))).limit(1);
+    const cached = await db.select().from(kidsWonderCache).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsWonderCache.storyId, storyId), (0, import_drizzle_orm17.eq)(kidsWonderCache.ageGroup, ageGroup))).limit(1);
     if (cached.length) {
       return res.json({ moments: cached[0].moments });
     }
-    const [story] = await db.select({ title: kidsStories.title, storyText: kidsStories.storyText }).from(kidsStories).where((0, import_drizzle_orm16.eq)(kidsStories.id, storyId));
+    const [story] = await db.select({ title: kidsStories.title, storyText: kidsStories.storyText }).from(kidsStories).where((0, import_drizzle_orm17.eq)(kidsStories.id, storyId));
     if (!story) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -40170,7 +41691,7 @@ router14.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
     if (!storyId || momentIndex === void 0) {
       return res.status(400).json({ error: "storyId and momentIndex are required" });
     }
-    const existing = await db.select().from(kidsProgress).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm16.eq)(kidsProgress.storyId, storyId))).limit(1);
+    const existing = await db.select().from(kidsProgress).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId), (0, import_drizzle_orm17.eq)(kidsProgress.storyId, storyId))).limit(1);
     let currentAnswers = [];
     let isNewAnswer = false;
     if (existing.length) {
@@ -40178,7 +41699,7 @@ router14.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
       if (!currentAnswers.includes(momentIndex)) {
         isNewAnswer = true;
         currentAnswers.push(momentIndex);
-        await db.update(kidsProgress).set({ wonderAnswers: currentAnswers }).where((0, import_drizzle_orm16.eq)(kidsProgress.id, existing[0].id));
+        await db.update(kidsProgress).set({ wonderAnswers: currentAnswers }).where((0, import_drizzle_orm17.eq)(kidsProgress.id, existing[0].id));
       }
     } else {
       isNewAnswer = true;
@@ -40193,12 +41714,12 @@ router14.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
       });
     }
     if (isNewAnswer && childProfileId) {
-      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(childProfiles.id, childProfileId), (0, import_drizzle_orm16.eq)(childProfiles.parentId, userId))).limit(1);
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(childProfiles.id, childProfileId), (0, import_drizzle_orm17.eq)(childProfiles.parentId, userId))).limit(1);
       if (ownedProfile) {
         await db.update(childProfiles).set({
-          totalPoints: import_drizzle_orm16.sql`${childProfiles.totalPoints} + 10`,
-          currentLevel: import_drizzle_orm16.sql`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`
-        }).where((0, import_drizzle_orm16.eq)(childProfiles.id, childProfileId));
+          totalPoints: import_drizzle_orm17.sql`${childProfiles.totalPoints} + 10`,
+          currentLevel: import_drizzle_orm17.sql`GREATEST(1, (${childProfiles.totalPoints} + 10) / 100 + 1)`
+        }).where((0, import_drizzle_orm17.eq)(childProfiles.id, childProfileId));
       }
     }
     return res.json({ success: true, pointsAwarded: isNewAnswer ? 10 : 0, wonderAnswers: currentAnswers });
@@ -40210,7 +41731,7 @@ router14.post("/api/kids/wonder/answer", optionalAuth, async (req, res) => {
 router14.get("/api/kids/story/:id/scenes", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const scenes = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm16.eq)(kidsStoryScenes.storyId, id2)).orderBy((0, import_drizzle_orm16.asc)(kidsStoryScenes.sceneIndex));
+    const scenes = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.storyId, id2)).orderBy((0, import_drizzle_orm17.asc)(kidsStoryScenes.sceneIndex));
     return res.json(scenes);
   } catch (err) {
     console.error("Get scenes error:", err);
@@ -40220,11 +41741,11 @@ router14.get("/api/kids/story/:id/scenes", async (req, res) => {
 router14.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const existing = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm16.eq)(kidsStoryScenes.storyId, id2)).orderBy((0, import_drizzle_orm16.asc)(kidsStoryScenes.sceneIndex));
+    const existing = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.storyId, id2)).orderBy((0, import_drizzle_orm17.asc)(kidsStoryScenes.sceneIndex));
     if (existing.length > 0) {
       return res.json(existing);
     }
-    const story = await db.select().from(kidsStories).where((0, import_drizzle_orm16.eq)(kidsStories.id, id2)).limit(1);
+    const story = await db.select().from(kidsStories).where((0, import_drizzle_orm17.eq)(kidsStories.id, id2)).limit(1);
     if (!story.length) {
       return res.status(404).json({ error: "Story not found" });
     }
@@ -40256,7 +41777,7 @@ router14.post("/api/kids/story/:id/generate", optionalAuth, aiGenerationLimiter,
 router14.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimiter, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const scene = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm16.eq)(kidsStoryScenes.id, id2)).limit(1);
+    const scene = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.id, id2)).limit(1);
     if (!scene.length) {
       return res.status(404).json({ error: "Scene not found" });
     }
@@ -40281,7 +41802,7 @@ router14.post("/api/kids/scene/:id/attach-video", async (req, res) => {
     const { id: id2 } = req.params;
     const { videoUrl, timecodes } = req.body;
     if (!videoUrl) return res.status(400).json({ error: "videoUrl is required" });
-    const scene = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm16.eq)(kidsStoryScenes.id, id2)).limit(1);
+    const scene = await db.select().from(kidsStoryScenes).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.id, id2)).limit(1);
     if (!scene.length) return res.status(404).json({ error: "Scene not found" });
     let videoTimecodes = timecodes || null;
     if (!videoTimecodes && scene[0].narration) {
@@ -40302,7 +41823,7 @@ router14.post("/api/kids/scene/:id/attach-video", async (req, res) => {
       });
       videoTimecodes = { segments };
     }
-    await db.update(kidsStoryScenes).set({ videoUrl, videoTimecodes }).where((0, import_drizzle_orm16.eq)(kidsStoryScenes.id, id2));
+    await db.update(kidsStoryScenes).set({ videoUrl, videoTimecodes }).where((0, import_drizzle_orm17.eq)(kidsStoryScenes.id, id2));
     return res.json({ success: true, videoUrl, videoTimecodes });
   } catch (err) {
     console.error("Attach video error:", err);
@@ -40335,13 +41856,13 @@ router14.post("/api/kids/story/award-points", requireAuth, async (req, res) => {
     const { storyId, childProfileId: providedProfileId, points = 25 } = req.body;
     let profileId = providedProfileId;
     if (profileId) {
-      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(childProfiles.id, profileId), (0, import_drizzle_orm16.eq)(childProfiles.parentId, userId))).limit(1);
+      const [ownedProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(childProfiles.id, profileId), (0, import_drizzle_orm17.eq)(childProfiles.parentId, userId))).limit(1);
       if (!ownedProfile) {
         profileId = null;
       }
     }
     if (!profileId && userId !== "guest") {
-      const [directProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm16.eq)(childProfiles.id, userId)).limit(1);
+      const [directProfile] = await db.select({ id: childProfiles.id }).from(childProfiles).where((0, import_drizzle_orm17.eq)(childProfiles.id, userId)).limit(1);
       if (directProfile) {
         profileId = directProfile.id;
       }
@@ -40349,13 +41870,13 @@ router14.post("/api/kids/story/award-points", requireAuth, async (req, res) => {
     if (!profileId) {
       return res.json({ success: true, totalPoints: 0, currentLevel: 1, leveledUp: false });
     }
-    const before = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where((0, import_drizzle_orm16.eq)(childProfiles.id, profileId)).limit(1);
+    const before = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where((0, import_drizzle_orm17.eq)(childProfiles.id, profileId)).limit(1);
     const oldLevel = before[0]?.currentLevel ?? 1;
     await db.update(childProfiles).set({
-      totalPoints: import_drizzle_orm16.sql`${childProfiles.totalPoints} + ${points}`,
-      currentLevel: import_drizzle_orm16.sql`GREATEST(1, (${childProfiles.totalPoints} + ${points}) / 100 + 1)`
-    }).where((0, import_drizzle_orm16.eq)(childProfiles.id, profileId));
-    const after = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where((0, import_drizzle_orm16.eq)(childProfiles.id, profileId)).limit(1);
+      totalPoints: import_drizzle_orm17.sql`${childProfiles.totalPoints} + ${points}`,
+      currentLevel: import_drizzle_orm17.sql`GREATEST(1, (${childProfiles.totalPoints} + ${points}) / 100 + 1)`
+    }).where((0, import_drizzle_orm17.eq)(childProfiles.id, profileId));
+    const after = await db.select({ totalPoints: childProfiles.totalPoints, currentLevel: childProfiles.currentLevel }).from(childProfiles).where((0, import_drizzle_orm17.eq)(childProfiles.id, profileId)).limit(1);
     const newLevel = after[0]?.currentLevel ?? 1;
     const totalPoints = after[0]?.totalPoints ?? 0;
     return res.json({
@@ -40376,7 +41897,7 @@ router14.get("/api/kids/profile/stats", optionalAuth, async (req, res) => {
       totalPoints: childProfiles.totalPoints,
       currentLevel: childProfiles.currentLevel,
       name: childProfiles.name
-    }).from(childProfiles).where((0, import_drizzle_orm16.eq)(childProfiles.id, userId)).limit(1);
+    }).from(childProfiles).where((0, import_drizzle_orm17.eq)(childProfiles.id, userId)).limit(1);
     if (profile) {
       return res.json({
         totalPoints: profile.totalPoints ?? 0,
@@ -40515,9 +42036,9 @@ router14.get("/api/kids/sabbath-school/current", async (req, res) => {
     let linkedStory = null;
     if (lesson.linkedStorySearch) {
       const stories = await db.select({ id: kidsStories.id, title: kidsStories.title }).from(kidsStories).where(
-        (0, import_drizzle_orm16.and)(
-          (0, import_drizzle_orm16.eq)(kidsStories.published, true),
-          import_drizzle_orm16.sql`${kidsStories.title} ILIKE ${"%" + lesson.linkedStorySearch + "%"}`
+        (0, import_drizzle_orm17.and)(
+          (0, import_drizzle_orm17.eq)(kidsStories.published, true),
+          import_drizzle_orm17.sql`${kidsStories.title} ILIKE ${"%" + lesson.linkedStorySearch + "%"}`
         )
       ).limit(1);
       if (stories.length > 0) {
@@ -40535,7 +42056,7 @@ router14.get("/api/kids/shop/purchases", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);
     const childId = req.query.childId;
-    const where = childId ? (0, import_drizzle_orm16.and)((0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId), (0, import_drizzle_orm16.eq)(kidsPurchases.childProfileId, childId)) : (0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId);
+    const where = childId ? (0, import_drizzle_orm17.and)((0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId), (0, import_drizzle_orm17.eq)(kidsPurchases.childProfileId, childId)) : (0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId);
     const purchases = await db.select().from(kidsPurchases).where(where);
     res.json(purchases);
   } catch (err) {
@@ -40555,16 +42076,16 @@ router14.post("/api/kids/shop/purchase", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Item not found in catalog" });
     }
     const existing = await db.select().from(kidsPurchases).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsPurchases.itemId, itemId),
-        ...childId ? [(0, import_drizzle_orm16.eq)(kidsPurchases.childProfileId, childId)] : []
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsPurchases.itemId, itemId),
+        ...childId ? [(0, import_drizzle_orm17.eq)(kidsPurchases.childProfileId, childId)] : []
       )
     );
     if (existing.length > 0) {
       return res.status(400).json({ error: "Already purchased" });
     }
-    const progress = await db.select().from(kidsProgress).where((0, import_drizzle_orm16.eq)(kidsProgress.userId, userId));
+    const progress = await db.select().from(kidsProgress).where((0, import_drizzle_orm17.eq)(kidsProgress.userId, userId));
     let totalStars = 0;
     for (const p of progress) {
       if (p.completed) totalStars += 1;
@@ -40575,7 +42096,7 @@ router14.post("/api/kids/shop/purchase", requireAuth, async (req, res) => {
       }
       if (p.memoryVerseMemorized) totalStars += 2;
     }
-    const allPurchases = await db.select().from(kidsPurchases).where((0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId));
+    const allPurchases = await db.select().from(kidsPurchases).where((0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId));
     const spent = allPurchases.reduce((sum, p) => sum + p.starCost, 0);
     const available = totalStars - spent;
     if (available < catalogItem.starCost) {
@@ -40600,18 +42121,18 @@ router14.post("/api/kids/shop/equip", requireAuth, async (req, res) => {
     const userId = getEffectiveUserId(req);
     const { childId, itemId, category } = req.body;
     await db.update(kidsPurchases).set({ equipped: false }).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsPurchases.category, category),
-        ...childId ? [(0, import_drizzle_orm16.eq)(kidsPurchases.childProfileId, childId)] : []
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsPurchases.category, category),
+        ...childId ? [(0, import_drizzle_orm17.eq)(kidsPurchases.childProfileId, childId)] : []
       )
     );
     if (itemId) {
       await db.update(kidsPurchases).set({ equipped: true }).where(
-        (0, import_drizzle_orm16.and)(
-          (0, import_drizzle_orm16.eq)(kidsPurchases.userId, userId),
-          (0, import_drizzle_orm16.eq)(kidsPurchases.itemId, itemId),
-          ...childId ? [(0, import_drizzle_orm16.eq)(kidsPurchases.childProfileId, childId)] : []
+        (0, import_drizzle_orm17.and)(
+          (0, import_drizzle_orm17.eq)(kidsPurchases.userId, userId),
+          (0, import_drizzle_orm17.eq)(kidsPurchases.itemId, itemId),
+          ...childId ? [(0, import_drizzle_orm17.eq)(kidsPurchases.childProfileId, childId)] : []
         )
       );
     }
@@ -40630,10 +42151,10 @@ router14.get("/api/kids/quests/today", optionalAuth, async (req, res) => {
     const childId = req.query.childId;
     const today = getTodayDateStr();
     const existing = await db.select().from(kidsDailyQuests).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsDailyQuests.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsDailyQuests.questDate, today),
-        ...childId ? [(0, import_drizzle_orm16.eq)(kidsDailyQuests.childProfileId, childId)] : []
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsDailyQuests.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsDailyQuests.questDate, today),
+        ...childId ? [(0, import_drizzle_orm17.eq)(kidsDailyQuests.childProfileId, childId)] : []
       )
     );
     if (existing.length > 0) {
@@ -40656,10 +42177,10 @@ router14.post("/api/kids/quests/complete", requireAuth, async (req, res) => {
     const { childId, questType } = req.body;
     const today = getTodayDateStr();
     const existing = await db.select().from(kidsDailyQuests).where(
-      (0, import_drizzle_orm16.and)(
-        (0, import_drizzle_orm16.eq)(kidsDailyQuests.userId, userId),
-        (0, import_drizzle_orm16.eq)(kidsDailyQuests.questDate, today),
-        ...childId ? [(0, import_drizzle_orm16.eq)(kidsDailyQuests.childProfileId, childId)] : []
+      (0, import_drizzle_orm17.and)(
+        (0, import_drizzle_orm17.eq)(kidsDailyQuests.userId, userId),
+        (0, import_drizzle_orm17.eq)(kidsDailyQuests.questDate, today),
+        ...childId ? [(0, import_drizzle_orm17.eq)(kidsDailyQuests.childProfileId, childId)] : []
       )
     );
     let quest;
@@ -40678,11 +42199,11 @@ router14.post("/api/kids/quests/complete", requireAuth, async (req, res) => {
     else if (questType === "practice_verse") updateField.practiceVerse = true;
     else if (questType === "take_quiz") updateField.takeQuiz = true;
     else return res.status(400).json({ error: "Invalid quest type" });
-    const [updated] = await db.update(kidsDailyQuests).set(updateField).where((0, import_drizzle_orm16.eq)(kidsDailyQuests.id, quest.id)).returning();
+    const [updated] = await db.update(kidsDailyQuests).set(updateField).where((0, import_drizzle_orm17.eq)(kidsDailyQuests.id, quest.id)).returning();
     const allDone = updated.readStory && updated.practiceVerse && updated.takeQuiz;
     let bonusAwarded = false;
     if (allDone && !updated.bonusClaimed) {
-      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where((0, import_drizzle_orm16.eq)(kidsDailyQuests.id, quest.id));
+      await db.update(kidsDailyQuests).set({ bonusClaimed: true }).where((0, import_drizzle_orm17.eq)(kidsDailyQuests.id, quest.id));
       bonusAwarded = true;
     }
     res.json({ ...updated, bonusClaimed: allDone, bonusAwarded });
@@ -40697,12 +42218,12 @@ var kids_default = router14;
 var import_express15 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm18 = require("drizzle-orm");
+var import_drizzle_orm19 = require("drizzle-orm");
 
 // server/services/push-notifications.ts
 init_db();
 init_schema();
-var import_drizzle_orm17 = require("drizzle-orm");
+var import_drizzle_orm18 = require("drizzle-orm");
 async function sendPushNotifications(tokens, title, body, data) {
   if (!tokens.length) return;
   const messages = tokens.map((token) => ({
@@ -40735,11 +42256,11 @@ async function sendPushNotifications(tokens, title, body, data) {
 }
 async function getGroupMemberTokens(groupId, excludeUserId) {
   const { prayerGroupMembers: prayerGroupMembers2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  let memberQuery = db.select({ userId: prayerGroupMembers2.userId }).from(prayerGroupMembers2).where((0, import_drizzle_orm17.eq)(prayerGroupMembers2.groupId, groupId));
+  let memberQuery = db.select({ userId: prayerGroupMembers2.userId }).from(prayerGroupMembers2).where((0, import_drizzle_orm18.eq)(prayerGroupMembers2.groupId, groupId));
   const members = await memberQuery;
   const userIds = members.map((m) => m.userId).filter((id2) => id2 !== excludeUserId);
   if (!userIds.length) return [];
-  const tokens = await db.select({ pushToken: deviceTokens.pushToken }).from(deviceTokens).where((0, import_drizzle_orm17.inArray)(deviceTokens.userId, userIds));
+  const tokens = await db.select({ pushToken: deviceTokens.pushToken }).from(deviceTokens).where((0, import_drizzle_orm18.inArray)(deviceTokens.userId, userIds));
   return tokens.map((t) => t.pushToken);
 }
 async function notifyGroupMembers(groupId, excludeUserId, title, body, data) {
@@ -40754,7 +42275,7 @@ async function notifyGroupMembers(groupId, excludeUserId, title, body, data) {
 }
 async function notifyUser(userId, title, body, data) {
   try {
-    const tokens = await db.select({ pushToken: deviceTokens.pushToken }).from(deviceTokens).where((0, import_drizzle_orm17.eq)(deviceTokens.userId, userId));
+    const tokens = await db.select({ pushToken: deviceTokens.pushToken }).from(deviceTokens).where((0, import_drizzle_orm18.eq)(deviceTokens.userId, userId));
     const tokenList = tokens.map((t) => t.pushToken);
     if (tokenList.length > 0) {
       await sendPushNotifications(tokenList, title, body, data);
@@ -40852,27 +42373,27 @@ function buildChurchTextSearchWhere(searchRaw) {
   if (words.length === 0) return void 0;
   const columnDisjunctions = words.map((word) => {
     const pattern = `%${escapeIlikePattern(word)}%`;
-    return (0, import_drizzle_orm18.or)(
-      (0, import_drizzle_orm18.ilike)(sdaChurches.city, pattern),
-      (0, import_drizzle_orm18.ilike)(sdaChurches.state, pattern),
-      (0, import_drizzle_orm18.ilike)(sdaChurches.country, pattern),
-      (0, import_drizzle_orm18.ilike)(sdaChurches.name, pattern),
-      (0, import_drizzle_orm18.ilike)(sdaChurches.address, pattern)
+    return (0, import_drizzle_orm19.or)(
+      (0, import_drizzle_orm19.ilike)(sdaChurches.city, pattern),
+      (0, import_drizzle_orm19.ilike)(sdaChurches.state, pattern),
+      (0, import_drizzle_orm19.ilike)(sdaChurches.country, pattern),
+      (0, import_drizzle_orm19.ilike)(sdaChurches.name, pattern),
+      (0, import_drizzle_orm19.ilike)(sdaChurches.address, pattern)
     );
   });
-  return columnDisjunctions.length === 1 ? columnDisjunctions[0] : (0, import_drizzle_orm18.and)(...columnDisjunctions);
+  return columnDisjunctions.length === 1 ? columnDisjunctions[0] : (0, import_drizzle_orm19.and)(...columnDisjunctions);
 }
 router15.post("/api/notifications/register-token", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { pushToken, platform } = req.body;
     if (!pushToken) return res.status(400).json({ error: "Push token is required" });
-    const existing = await db.select().from(deviceTokens).where((0, import_drizzle_orm18.eq)(deviceTokens.pushToken, pushToken));
+    const existing = await db.select().from(deviceTokens).where((0, import_drizzle_orm19.eq)(deviceTokens.pushToken, pushToken));
     if (existing.length > 0) {
       if (existing[0].userId === userId) {
-        await db.update(deviceTokens).set({ platform: platform || null, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm18.eq)(deviceTokens.pushToken, pushToken));
+        await db.update(deviceTokens).set({ platform: platform || null, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm19.eq)(deviceTokens.pushToken, pushToken));
       } else {
-        await db.delete(deviceTokens).where((0, import_drizzle_orm18.eq)(deviceTokens.pushToken, pushToken));
+        await db.delete(deviceTokens).where((0, import_drizzle_orm19.eq)(deviceTokens.pushToken, pushToken));
         await db.insert(deviceTokens).values({
           userId,
           pushToken,
@@ -40887,9 +42408,9 @@ router15.post("/api/notifications/register-token", requireAuth, async (req, res)
       });
     }
     await db.delete(deviceTokens).where(
-      (0, import_drizzle_orm18.and)(
-        (0, import_drizzle_orm18.eq)(deviceTokens.userId, userId),
-        import_drizzle_orm18.sql`${deviceTokens.pushToken} != ${pushToken}`
+      (0, import_drizzle_orm19.and)(
+        (0, import_drizzle_orm19.eq)(deviceTokens.userId, userId),
+        import_drizzle_orm19.sql`${deviceTokens.pushToken} != ${pushToken}`
       )
     );
     return res.json({ success: true });
@@ -40903,14 +42424,14 @@ router15.post("/api/family/create", requireAuth, async (req, res) => {
     const userId = req.authUserId;
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "Family name is required" });
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     if (existingUser?.familyId) {
       return res.status(400).json({ error: "You are already in a family group" });
     }
     let inviteCode = generateCode();
     let attempts = 0;
     while (attempts < 5) {
-      const existing = await db.select().from(families).where((0, import_drizzle_orm18.eq)(families.inviteCode, inviteCode));
+      const existing = await db.select().from(families).where((0, import_drizzle_orm19.eq)(families.inviteCode, inviteCode));
       if (existing.length === 0) break;
       inviteCode = generateCode();
       attempts++;
@@ -40920,7 +42441,7 @@ router15.post("/api/family/create", requireAuth, async (req, res) => {
       inviteCode,
       createdBy: userId
     }).returning();
-    await db.update(users).set({ familyId: family.id }).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    await db.update(users).set({ familyId: family.id }).where((0, import_drizzle_orm19.eq)(users.id, userId));
     return res.json({ family });
   } catch (err) {
     console.error("Family create error:", err);
@@ -40932,15 +42453,15 @@ router15.post("/api/family/join", requireAuth, async (req, res) => {
     const userId = req.authUserId;
     const { inviteCode } = req.body;
     if (!inviteCode) return res.status(400).json({ error: "Invite code is required" });
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     if (existingUser?.familyId) {
       return res.status(400).json({ error: "You are already in a family group" });
     }
-    const [family] = await db.select().from(families).where((0, import_drizzle_orm18.eq)(families.inviteCode, inviteCode.toUpperCase()));
+    const [family] = await db.select().from(families).where((0, import_drizzle_orm19.eq)(families.inviteCode, inviteCode.toUpperCase()));
     if (!family) {
       return res.status(404).json({ error: "Invalid invite code" });
     }
-    await db.update(users).set({ familyId: family.id }).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    await db.update(users).set({ familyId: family.id }).where((0, import_drizzle_orm19.eq)(users.id, userId));
     return res.json({ family });
   } catch (err) {
     console.error("Family join error:", err);
@@ -40950,17 +42471,17 @@ router15.post("/api/family/join", requireAuth, async (req, res) => {
 router15.get("/api/family/info", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     if (!user?.familyId) {
       return res.json({ family: null });
     }
-    const [family] = await db.select().from(families).where((0, import_drizzle_orm18.eq)(families.id, user.familyId));
+    const [family] = await db.select().from(families).where((0, import_drizzle_orm19.eq)(families.id, user.familyId));
     if (!family) return res.json({ family: null });
     const members = await db.select({
       id: users.id,
       displayName: users.displayName,
       username: users.username
-    }).from(users).where((0, import_drizzle_orm18.eq)(users.familyId, family.id));
+    }).from(users).where((0, import_drizzle_orm19.eq)(users.familyId, family.id));
     return res.json({ family, members });
   } catch (err) {
     console.error("Family info error:", err);
@@ -40970,13 +42491,13 @@ router15.get("/api/family/info", async (req, res) => {
 router15.get("/api/family/members", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ familyId: users.familyId }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     if (!user?.familyId) return res.json({ members: [] });
     const members = await db.select({
       id: users.id,
       displayName: users.displayName,
       username: users.username
-    }).from(users).where((0, import_drizzle_orm18.eq)(users.familyId, user.familyId));
+    }).from(users).where((0, import_drizzle_orm19.eq)(users.familyId, user.familyId));
     return res.json({ members });
   } catch (err) {
     console.error("Family members error:", err);
@@ -40991,12 +42512,12 @@ router15.post("/api/groups/create", requireAuth, async (req, res) => {
     let joinCode = generateCode();
     let attempts = 0;
     while (attempts < 5) {
-      const existing = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.joinCode, joinCode));
+      const existing = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.joinCode, joinCode));
       if (existing.length === 0) break;
       joinCode = generateCode();
       attempts++;
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const [group] = await db.insert(prayerGroups).values({
       name,
       description: description || null,
@@ -41023,21 +42544,21 @@ router15.post("/api/groups/join", requireAuth, async (req, res) => {
     const userId = req.authUserId;
     const { joinCode } = req.body;
     if (!joinCode) return res.status(400).json({ error: "Join code is required" });
-    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.joinCode, joinCode.toUpperCase()));
+    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.joinCode, joinCode.toUpperCase()));
     if (!group) return res.status(404).json({ error: "Invalid join code" });
-    const existingMember = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, group.id), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const existingMember = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, group.id), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (existingMember.length > 0) {
       return res.status(400).json({ error: "You are already a member of this group" });
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     await db.insert(prayerGroupMembers).values({
       groupId: group.id,
       userId,
       displayName: user?.displayName || user?.username || "Member"
     });
     await db.update(prayerGroups).set({
-      memberCount: import_drizzle_orm18.sql`${prayerGroups.memberCount} + 1`
-    }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, group.id));
+      memberCount: import_drizzle_orm19.sql`${prayerGroups.memberCount} + 1`
+    }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, group.id));
     return res.json({ group: { ...group, memberCount: group.memberCount + 1 } });
   } catch (err) {
     console.error("Group join error:", err);
@@ -41047,12 +42568,12 @@ router15.post("/api/groups/join", requireAuth, async (req, res) => {
 router15.get("/api/groups", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const memberships = await db.select({ groupId: prayerGroupMembers.groupId }).from(prayerGroupMembers).where((0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId));
+    const memberships = await db.select({ groupId: prayerGroupMembers.groupId }).from(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId));
     if (memberships.length === 0) return res.json({ groups: [] });
     const groupIds = memberships.map((m) => m.groupId);
     const groups = [];
     for (const gid of groupIds) {
-      const [g] = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, gid));
+      const [g] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, gid));
       if (g) groups.push(g);
     }
     return res.json({ groups });
@@ -41064,7 +42585,7 @@ router15.get("/api/groups", async (req, res) => {
 router15.get("/api/groups/public", async (req, res) => {
   try {
     const { type, search } = req.query;
-    let groups = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.isPublic, true));
+    let groups = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.isPublic, true));
     if (type && type !== "all") {
       groups = groups.filter((g) => g.groupType === type);
     }
@@ -41081,20 +42602,20 @@ router15.get("/api/groups/public", async (req, res) => {
 router15.get("/api/groups/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
-    let members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2));
+    let members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2));
     if (group.createdBy && !members.some((m) => m.userId === group.createdBy)) {
       try {
-        const [creator] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, group.createdBy));
+        const [creator] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, group.createdBy));
         await db.insert(prayerGroupMembers).values({
           groupId: group.id,
           userId: group.createdBy,
           displayName: creator?.displayName || creator?.username || "Leader",
           role: "leader"
         });
-        members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2));
-        await db.update(prayerGroups).set({ memberCount: members.length }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+        members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2));
+        await db.update(prayerGroups).set({ memberCount: members.length }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
       } catch (repairErr) {
         if (!repairErr?.message?.includes("duplicate")) {
           console.error("Group membership repair error:", repairErr);
@@ -41103,12 +42624,12 @@ router15.get("/api/groups/:id", async (req, res) => {
     }
     let trackProgress = null;
     if (group.assignedTrackId) {
-      const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm18.eq)(formationTracks.id, group.assignedTrackId));
+      const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm19.eq)(formationTracks.id, group.assignedTrackId));
       if (track) {
         const memberIds = members.map((m) => m.userId);
         const progress = [];
         for (const mid of memberIds) {
-          const [pt] = await db.select().from(progressTracks).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(progressTracks.userId, mid), (0, import_drizzle_orm18.eq)(progressTracks.trackId, group.assignedTrackId)));
+          const [pt] = await db.select().from(progressTracks).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(progressTracks.userId, mid), (0, import_drizzle_orm19.eq)(progressTracks.trackId, group.assignedTrackId)));
           if (pt) progress.push(pt);
         }
         const avgPercent = progress.length > 0 ? Math.round(progress.reduce((s, p) => s + (p.percentComplete || 0), 0) / members.length) : 0;
@@ -41130,10 +42651,10 @@ router15.post("/api/groups/:id/leave", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    await db.delete(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    await db.delete(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     await db.update(prayerGroups).set({
-      memberCount: import_drizzle_orm18.sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`
-    }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+      memberCount: import_drizzle_orm19.sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`
+    }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     return res.json({ success: true });
   } catch (err) {
     console.error("Group leave error:", err);
@@ -41147,15 +42668,15 @@ router15.post("/api/groups/:id/remove-member", requireAuth, async (req, res) => 
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ error: "Target user ID is required" });
     if (targetUserId === userId) return res.status(400).json({ error: "Cannot remove yourself. Use leave instead." });
-    const [requester] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [requester] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!requester || requester.role !== "leader") {
       return res.status(403).json({ error: "Only leaders can remove members" });
     }
-    const deleted = await db.delete(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, targetUserId))).returning({ id: prayerGroupMembers.id });
+    const deleted = await db.delete(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, targetUserId))).returning({ id: prayerGroupMembers.id });
     if (deleted.length > 0) {
       await db.update(prayerGroups).set({
-        memberCount: import_drizzle_orm18.sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`
-      }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+        memberCount: import_drizzle_orm19.sql`GREATEST(${prayerGroups.memberCount} - 1, 0)`
+      }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     }
     return res.json({ success: true });
   } catch (err) {
@@ -41167,22 +42688,22 @@ router15.delete("/api/groups/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
-    const [userRow] = await db.select().from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
+    const [userRow] = await db.select().from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const isAdmin = userRow?.role === "admin";
     const isLeader = member?.role === "leader";
     if (!isAdmin && !isLeader) {
       return res.status(403).json({ error: "Only group leaders or admins can delete groups" });
     }
     await db.delete(groupDiscussionReplies).where(
-      import_drizzle_orm18.sql`${groupDiscussionReplies.discussionId} IN (SELECT id FROM group_discussion WHERE group_id = ${id2})`
+      import_drizzle_orm19.sql`${groupDiscussionReplies.discussionId} IN (SELECT id FROM group_discussion WHERE group_id = ${id2})`
     );
-    await db.delete(groupDiscussions).where((0, import_drizzle_orm18.eq)(groupDiscussions.groupId, id2));
-    await db.delete(groupAnnouncements).where((0, import_drizzle_orm18.eq)(groupAnnouncements.groupId, id2));
-    await db.delete(prayerRequests).where((0, import_drizzle_orm18.eq)(prayerRequests.groupId, id2));
-    await db.delete(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.groupId, id2));
-    await db.delete(prayerGroupMembers).where((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2));
-    await db.delete(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    await db.delete(groupDiscussions).where((0, import_drizzle_orm19.eq)(groupDiscussions.groupId, id2));
+    await db.delete(groupAnnouncements).where((0, import_drizzle_orm19.eq)(groupAnnouncements.groupId, id2));
+    await db.delete(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.groupId, id2));
+    await db.delete(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.groupId, id2));
+    await db.delete(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2));
+    await db.delete(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete group error:", err);
@@ -41192,7 +42713,7 @@ router15.delete("/api/groups/:id", requireAuth, async (req, res) => {
 router15.get("/api/groups/:id/prayers", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const prayers = await db.select().from(prayerRequests).where((0, import_drizzle_orm18.eq)(prayerRequests.groupId, id2)).orderBy((0, import_drizzle_orm18.desc)(prayerRequests.createdAt));
+    const prayers = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(prayerRequests.createdAt));
     return res.json(prayers);
   } catch (err) {
     console.error("Group prayers error:", err);
@@ -41205,7 +42726,7 @@ router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
     const { id: id2 } = req.params;
     const { title, content, authorName } = req.body;
     if (!title) return res.status(400).json({ error: "Prayer title is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to submit prayer requests" });
     let scripturalVerse = null;
     let scripturalNote = null;
@@ -41228,7 +42749,7 @@ router15.post("/api/groups/:id/prayers", requireAuth, async (req, res) => {
       scripturalVerse,
       scripturalNote
     }).returning();
-    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     const groupName = group?.name || "your group";
     notifyGroupMembers(
       id2,
@@ -41248,7 +42769,7 @@ router15.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
   try {
     const { prayerId } = req.params;
     const { memberName } = req.body;
-    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm18.eq)(prayerRequests.id, prayerId));
+    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.id, prayerId));
     if (!prayer) return res.status(404).json({ error: "Prayer not found" });
     const currentSupported = Array.isArray(prayer.supportedBy) ? prayer.supportedBy : [];
     const name = memberName || "Someone";
@@ -41256,9 +42777,9 @@ router15.post("/api/groups/:id/prayers/:prayerId/support", async (req, res) => {
       currentSupported.push(name);
     }
     await db.update(prayerRequests).set({
-      supportCount: import_drizzle_orm18.sql`${prayerRequests.supportCount} + 1`,
+      supportCount: import_drizzle_orm19.sql`${prayerRequests.supportCount} + 1`,
       supportedBy: currentSupported
-    }).where((0, import_drizzle_orm18.eq)(prayerRequests.id, prayerId));
+    }).where((0, import_drizzle_orm19.eq)(prayerRequests.id, prayerId));
     return res.json({ success: true, supportCount: (prayer.supportCount || 0) + 1 });
   } catch (err) {
     console.error("Group prayer support error:", err);
@@ -41271,7 +42792,7 @@ router15.post("/api/groups/:id/prayers/:prayerId/answered", requireAuth, async (
     await db.update(prayerRequests).set({
       answered: true,
       answeredAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm18.eq)(prayerRequests.id, prayerId));
+    }).where((0, import_drizzle_orm19.eq)(prayerRequests.id, prayerId));
     return res.json({ success: true });
   } catch (err) {
     console.error("Group prayer answered error:", err);
@@ -41284,13 +42805,13 @@ router15.post("/api/groups/:id/assign-track", requireAuth, async (req, res) => {
     const { id: id2 } = req.params;
     const { trackId } = req.body;
     if (!trackId) return res.status(400).json({ error: "Track ID is required" });
-    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can assign study plans" });
     }
-    const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm18.eq)(formationTracks.id, trackId));
+    const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm19.eq)(formationTracks.id, trackId));
     if (!track) return res.status(404).json({ error: "Track not found" });
-    await db.update(prayerGroups).set({ assignedTrackId: trackId }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    await db.update(prayerGroups).set({ assignedTrackId: trackId }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     return res.json({ success: true, track });
   } catch (err) {
     console.error("Assign track error:", err);
@@ -41306,11 +42827,11 @@ router15.post("/api/groups/:id/promote", requireAuth, async (req, res) => {
     if (!["leader", "moderator", "member"].includes(newRole)) {
       return res.status(400).json({ error: "Invalid role" });
     }
-    const [requester] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [requester] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!requester || requester.role !== "leader") {
       return res.status(403).json({ error: "Only leaders can change member roles" });
     }
-    await db.update(prayerGroupMembers).set({ role: newRole }).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, targetUserId)));
+    await db.update(prayerGroupMembers).set({ role: newRole }).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, targetUserId)));
     return res.json({ success: true });
   } catch (err) {
     console.error("Promote member error:", err);
@@ -41321,9 +42842,9 @@ router15.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to view discussions" });
-    const discussions = await db.select().from(groupDiscussions).where((0, import_drizzle_orm18.eq)(groupDiscussions.groupId, id2)).orderBy((0, import_drizzle_orm18.desc)(groupDiscussions.createdAt));
+    const discussions = await db.select().from(groupDiscussions).where((0, import_drizzle_orm19.eq)(groupDiscussions.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(groupDiscussions.createdAt));
     return res.json(discussions);
   } catch (err) {
     console.error("Group discussions error:", err);
@@ -41336,9 +42857,9 @@ router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
     const { id: id2 } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to post discussions" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const authorName = user?.displayName || user?.username || "Member";
     const [discussion] = await db.insert(groupDiscussions).values({
       groupId: id2,
@@ -41346,7 +42867,7 @@ router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
       authorName,
       content: content.trim()
     }).returning();
-    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     const groupName = group?.name || "your group";
     const preview = content.trim().length > 100 ? content.trim().slice(0, 97) + "..." : content.trim();
     notifyGroupMembers(
@@ -41366,7 +42887,7 @@ router15.post("/api/groups/:id/discussion", requireAuth, async (req, res) => {
 router15.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res) => {
   try {
     const { discussionId } = req.params;
-    const replies = await db.select().from(groupDiscussionReplies).where((0, import_drizzle_orm18.eq)(groupDiscussionReplies.discussionId, discussionId)).orderBy(groupDiscussionReplies.createdAt);
+    const replies = await db.select().from(groupDiscussionReplies).where((0, import_drizzle_orm19.eq)(groupDiscussionReplies.discussionId, discussionId)).orderBy(groupDiscussionReplies.createdAt);
     return res.json(replies);
   } catch (err) {
     console.error("Discussion replies error:", err);
@@ -41379,9 +42900,9 @@ router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, as
     const { id: id2, discussionId } = req.params;
     const { content } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Reply content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to reply" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const [reply] = await db.insert(groupDiscussionReplies).values({
       discussionId,
       userId,
@@ -41389,8 +42910,8 @@ router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, as
       content: content.trim()
     }).returning();
     await db.update(groupDiscussions).set({
-      replyCount: import_drizzle_orm18.sql`${groupDiscussions.replyCount} + 1`
-    }).where((0, import_drizzle_orm18.eq)(groupDiscussions.id, discussionId));
+      replyCount: import_drizzle_orm19.sql`${groupDiscussions.replyCount} + 1`
+    }).where((0, import_drizzle_orm19.eq)(groupDiscussions.id, discussionId));
     return res.json(reply);
   } catch (err) {
     console.error("Discussion reply error:", err);
@@ -41400,7 +42921,7 @@ router15.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, as
 router15.get("/api/groups/:id/announcements", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const announcements = await db.select().from(groupAnnouncements).where((0, import_drizzle_orm18.eq)(groupAnnouncements.groupId, id2)).orderBy((0, import_drizzle_orm18.desc)(groupAnnouncements.createdAt));
+    const announcements = await db.select().from(groupAnnouncements).where((0, import_drizzle_orm19.eq)(groupAnnouncements.groupId, id2)).orderBy((0, import_drizzle_orm19.desc)(groupAnnouncements.createdAt));
     return res.json(announcements);
   } catch (err) {
     console.error("Group announcements error:", err);
@@ -41413,11 +42934,11 @@ router15.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
     const { id: id2 } = req.params;
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
-    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can post announcements" });
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const [announcement] = await db.insert(groupAnnouncements).values({
       groupId: id2,
       userId,
@@ -41477,7 +42998,7 @@ router15.get("/api/churches", cachedResponse(300), async (req, res) => {
 router15.get("/api/churches/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [church] = await db.select().from(sdaChurches).where((0, import_drizzle_orm18.eq)(sdaChurches.id, id2));
+    const [church] = await db.select().from(sdaChurches).where((0, import_drizzle_orm19.eq)(sdaChurches.id, id2));
     if (!church) return res.status(404).json({ error: "Church not found" });
     return res.json(church);
   } catch (err) {
@@ -41491,20 +43012,20 @@ router15.post("/api/groups/:id/assign-plan", requireAuth, async (req, res) => {
     const { id: id2 } = req.params;
     const { planId } = req.body;
     if (!planId) return res.status(400).json({ error: "Plan ID is required" });
-    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [member] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!member || member.role !== "leader" && member.role !== "moderator") {
       return res.status(403).json({ error: "Only leaders and moderators can assign devotional plans" });
     }
     const [plan] = await db.select().from(devotionalPlans).where(
-      (0, import_drizzle_orm18.and)(
-        (0, import_drizzle_orm18.eq)(devotionalPlans.id, planId),
-        (0, import_drizzle_orm18.eq)(devotionalPlans.isPublished, true),
-        (0, import_drizzle_orm18.eq)(devotionalPlans.provenance, "human_curated"),
-        (0, import_drizzle_orm18.eq)(devotionalPlans.isAiGenerated, false)
+      (0, import_drizzle_orm19.and)(
+        (0, import_drizzle_orm19.eq)(devotionalPlans.id, planId),
+        (0, import_drizzle_orm19.eq)(devotionalPlans.isPublished, true),
+        (0, import_drizzle_orm19.eq)(devotionalPlans.provenance, "human_curated"),
+        (0, import_drizzle_orm19.eq)(devotionalPlans.isAiGenerated, false)
       )
     );
     if (!plan) return res.status(404).json({ error: "Plan not found" });
-    await db.update(prayerGroups).set({ groupPlanId: planId }).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    await db.update(prayerGroups).set({ groupPlanId: planId }).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     return res.json({ success: true, plan });
   } catch (err) {
     console.error("Assign plan error:", err);
@@ -41515,24 +43036,24 @@ router15.get("/api/groups/:id/plan-progress", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { id: id2 } = req.params;
-    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, id2));
+    const [group] = await db.select().from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, id2));
     if (!group) return res.status(404).json({ error: "Group not found" });
     if (!group.isPublic) {
-      const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+      const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
       if (!membership) return res.status(403).json({ error: "You must be a member to view group progress" });
     }
     if (!group.groupPlanId) return res.json({ plan: null, members: [] });
-    const [plan] = await db.select().from(devotionalPlans).where((0, import_drizzle_orm18.eq)(devotionalPlans.id, group.groupPlanId));
+    const [plan] = await db.select().from(devotionalPlans).where((0, import_drizzle_orm19.eq)(devotionalPlans.id, group.groupPlanId));
     if (!plan) return res.json({ plan: null, members: [] });
-    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm18.eq)(devotionalDays.planId, plan.id));
+    const days = await db.select().from(devotionalDays).where((0, import_drizzle_orm19.eq)(devotionalDays.planId, plan.id));
     const totalDays = days.length || plan.totalDays;
-    const members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2));
+    const members = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2));
     const memberProgress = [];
     for (const member of members) {
-      const [enrollment] = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(userPlanEnrollments.userId, member.userId), (0, import_drizzle_orm18.eq)(userPlanEnrollments.planId, plan.id)));
+      const [enrollment] = await db.select().from(userPlanEnrollments).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(userPlanEnrollments.userId, member.userId), (0, import_drizzle_orm19.eq)(userPlanEnrollments.planId, plan.id)));
       let completedDays = 0;
       if (enrollment) {
-        const progress = await db.select().from(userPlanProgress).where((0, import_drizzle_orm18.eq)(userPlanProgress.enrollmentId, enrollment.id));
+        const progress = await db.select().from(userPlanProgress).where((0, import_drizzle_orm19.eq)(userPlanProgress.enrollmentId, enrollment.id));
         completedDays = progress.length;
       }
       memberProgress.push({
@@ -41571,9 +43092,9 @@ router15.post("/api/groups/:id/share-reflection", requireAuth, async (req, res) 
     const { id: id2 } = req.params;
     const { content, dayTitle, passageLabel } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
-    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+    const [membership] = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, id2), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
     if (!membership) return res.status(403).json({ error: "You must be a member to share reflections" });
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const prefix = dayTitle ? `[${dayTitle}${passageLabel ? ` - ${passageLabel}` : ""}] ` : "";
     const fullContent = prefix + content.trim();
     const [discussion] = await db.insert(groupDiscussions).values({
@@ -41600,7 +43121,7 @@ router15.post("/api/streams/create", requireAuth, async (req, res) => {
     const { title, groupId, churchId } = req.body;
     if (!title) return res.status(400).json({ error: "Title is required" });
     if (groupId) {
-      const membership = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, groupId), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+      const membership = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, groupId), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
       if (membership.length === 0) {
         return res.status(403).json({ error: "You are not a member of this group" });
       }
@@ -41609,7 +43130,7 @@ router15.post("/api/streams/create", requireAuth, async (req, res) => {
         return res.status(403).json({ error: "Only leaders and moderators can start live sessions" });
       }
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const roomName = generateRoomName();
     await createLiveKitRoom(roomName);
     const hostName = user?.displayName || user?.username || "Host";
@@ -41623,7 +43144,7 @@ router15.post("/api/streams/create", requireAuth, async (req, res) => {
       status: "live"
     }).returning();
     if (groupId) {
-      const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, groupId));
+      const [group] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, groupId));
       const groupName = group?.name || "your group";
       notifyGroupMembers(
         groupId,
@@ -41645,7 +43166,7 @@ router15.get("/api/streams/:id/token", async (req, res) => {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
     const userId = extractUserId(req);
-    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
     const isHost = !!userId && userId === session.hostUserId;
@@ -41678,13 +43199,13 @@ router15.get("/api/streams/:id/room", async (req, res) => {
     const { id: id2 } = req.params;
     const displayName = req.query.displayName || "Guest";
     const userId = extractUserId(req);
-    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).send("Session not found");
     if (session.status === "ended") return res.status(410).send("Session has ended");
     const isHost = !!userId && userId === session.hostUserId;
     let canShare = isHost;
     if (!canShare && userId && session.groupId) {
-      const [mem] = await db.select({ role: prayerGroupMembers.role }).from(prayerGroupMembers).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(prayerGroupMembers.groupId, session.groupId), (0, import_drizzle_orm18.eq)(prayerGroupMembers.userId, userId)));
+      const [mem] = await db.select({ role: prayerGroupMembers.role }).from(prayerGroupMembers).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerGroupMembers.groupId, session.groupId), (0, import_drizzle_orm19.eq)(prayerGroupMembers.userId, userId)));
       if (mem && (mem.role === "leader" || mem.role === "moderator")) canShare = true;
     }
     const token = await generateToken(session.roomUrl, displayName, isHost);
@@ -41711,13 +43232,13 @@ router15.get("/api/streams/active", async (_req, res) => {
     await db.update(liveSessions).set({
       status: "ended",
       endedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(liveSessions.status, "live"), import_drizzle_orm18.sql`${liveSessions.startedAt} < ${sixHoursAgo}`));
-    const sessions = await db.select().from(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.status, "live")).orderBy((0, import_drizzle_orm18.desc)(liveSessions.startedAt));
+    }).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(liveSessions.status, "live"), import_drizzle_orm19.sql`${liveSessions.startedAt} < ${sixHoursAgo}`));
+    const sessions = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.status, "live")).orderBy((0, import_drizzle_orm19.desc)(liveSessions.startedAt));
     const enriched = [];
     for (const session of sessions) {
       let groupName = null;
       if (session.groupId) {
-        const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, session.groupId));
+        const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, session.groupId));
         groupName = g?.name || null;
       }
       enriched.push({ ...session, groupName });
@@ -41731,11 +43252,11 @@ router15.get("/api/streams/active", async (_req, res) => {
 router15.get("/api/streams/:id", async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
     let groupName = null;
     if (session.groupId) {
-      const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm18.eq)(prayerGroups.id, session.groupId));
+      const [g] = await db.select({ name: prayerGroups.name }).from(prayerGroups).where((0, import_drizzle_orm19.eq)(prayerGroups.id, session.groupId));
       groupName = g?.name || null;
     }
     return res.json({ ...session, groupName });
@@ -41748,9 +43269,9 @@ router15.post("/api/streams/:id/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { id: id2 } = req.params;
-    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm18.eq)(liveSessions.id, id2));
+    const [session] = await db.select().from(liveSessions).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2));
     if (!session) return res.status(404).json({ error: "Stream not found" });
-    const [caller] = await db.select().from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [caller] = await db.select().from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     const isAdmin = caller?.role === "admin";
     if (session.hostUserId !== userId && !isAdmin) {
       return res.status(403).json({ error: "Only the host can end this session" });
@@ -41761,7 +43282,7 @@ router15.post("/api/streams/:id/end", requireAuth, async (req, res) => {
     const [updated] = await db.update(liveSessions).set({
       status: "ended",
       endedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm18.eq)(liveSessions.id, id2)).returning();
+    }).where((0, import_drizzle_orm19.eq)(liveSessions.id, id2)).returning();
     deleteLiveKitRoom(session.roomUrl).catch(() => {
     });
     return res.json(updated);
@@ -41776,9 +43297,9 @@ router15.get("/api/sabbath/reflections", async (req, res) => {
     const date = String(req.query.date || "");
     if (!date) return res.status(400).json({ error: "date is required" });
     const rows = await db.select().from(sabbathReflections).where(
-      (0, import_drizzle_orm18.and)(
-        (0, import_drizzle_orm18.eq)(sabbathReflections.userId, userId),
-        (0, import_drizzle_orm18.eq)(sabbathReflections.date, date)
+      (0, import_drizzle_orm19.and)(
+        (0, import_drizzle_orm19.eq)(sabbathReflections.userId, userId),
+        (0, import_drizzle_orm19.eq)(sabbathReflections.date, date)
       )
     );
     return res.json(rows);
@@ -41795,14 +43316,14 @@ router15.post("/api/sabbath/reflections", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "date, prompt, and response are required" });
     }
     const existing = await db.select().from(sabbathReflections).where(
-      (0, import_drizzle_orm18.and)(
-        (0, import_drizzle_orm18.eq)(sabbathReflections.userId, userId),
-        (0, import_drizzle_orm18.eq)(sabbathReflections.date, date),
-        (0, import_drizzle_orm18.eq)(sabbathReflections.prompt, prompt)
+      (0, import_drizzle_orm19.and)(
+        (0, import_drizzle_orm19.eq)(sabbathReflections.userId, userId),
+        (0, import_drizzle_orm19.eq)(sabbathReflections.date, date),
+        (0, import_drizzle_orm19.eq)(sabbathReflections.prompt, prompt)
       )
     );
     if (existing.length > 0) {
-      const [updated] = await db.update(sabbathReflections).set({ response }).where((0, import_drizzle_orm18.eq)(sabbathReflections.id, existing[0].id)).returning();
+      const [updated] = await db.update(sabbathReflections).set({ response }).where((0, import_drizzle_orm19.eq)(sabbathReflections.id, existing[0].id)).returning();
       return res.json(updated);
     }
     const [inserted] = await db.insert(sabbathReflections).values({ userId, date, prompt, response }).returning();
@@ -41823,11 +43344,11 @@ router15.post("/api/leader-requests", requireAuth, async (req, res) => {
     if (!validRoles.includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
-    const existing = await db.select().from(leaderRequests).where((0, import_drizzle_orm18.and)((0, import_drizzle_orm18.eq)(leaderRequests.userId, userId), (0, import_drizzle_orm18.eq)(leaderRequests.status, "pending")));
+    const existing = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(leaderRequests.userId, userId), (0, import_drizzle_orm19.eq)(leaderRequests.status, "pending")));
     if (existing.length > 0) {
       return res.status(400).json({ error: "You already have a pending leader access request" });
     }
-    const [userRow] = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm18.eq)(users.id, userId));
+    const [userRow] = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm19.eq)(users.id, userId));
     if (userRow?.role === "church_leader" || userRow?.role === "admin") {
       return res.status(400).json({ error: "You already have leader access" });
     }
@@ -41848,7 +43369,7 @@ router15.post("/api/leader-requests", requireAuth, async (req, res) => {
 router15.get("/api/leader-requests/my-status", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const requests = await db.select().from(leaderRequests).where((0, import_drizzle_orm18.eq)(leaderRequests.userId, userId)).orderBy((0, import_drizzle_orm18.desc)(leaderRequests.createdAt));
+    const requests = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.eq)(leaderRequests.userId, userId)).orderBy((0, import_drizzle_orm19.desc)(leaderRequests.createdAt));
     const latest = requests[0] || null;
     return res.json({ request: latest });
   } catch (err) {
@@ -41871,7 +43392,7 @@ router15.get("/api/leader-requests", requireAdmin, async (req, res) => {
       createdAt: leaderRequests.createdAt,
       username: users.username,
       displayName: users.displayName
-    }).from(leaderRequests).leftJoin(users, (0, import_drizzle_orm18.eq)(leaderRequests.userId, users.id)).orderBy((0, import_drizzle_orm18.desc)(leaderRequests.createdAt));
+    }).from(leaderRequests).leftJoin(users, (0, import_drizzle_orm19.eq)(leaderRequests.userId, users.id)).orderBy((0, import_drizzle_orm19.desc)(leaderRequests.createdAt));
     let results = await query;
     if (status && status !== "all") {
       results = results.filter((r) => r.status === status);
@@ -41885,11 +43406,11 @@ router15.get("/api/leader-requests", requireAdmin, async (req, res) => {
 router15.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm18.eq)(leaderRequests.id, id2));
+    const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
-    await db.update(leaderRequests).set({ status: "approved" }).where((0, import_drizzle_orm18.eq)(leaderRequests.id, id2));
-    await db.update(users).set({ role: "church_leader" }).where((0, import_drizzle_orm18.eq)(users.id, request.userId));
+    await db.update(leaderRequests).set({ status: "approved" }).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
+    await db.update(users).set({ role: "church_leader" }).where((0, import_drizzle_orm19.eq)(users.id, request.userId));
     notifyUser(
       request.userId,
       "Leader Access Approved!",
@@ -41906,10 +43427,10 @@ router15.post("/api/leader-requests/:id/approve", requireAdmin, async (req, res)
 router15.post("/api/leader-requests/:id/reject", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm18.eq)(leaderRequests.id, id2));
+    const [request] = await db.select().from(leaderRequests).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
     if (!request) return res.status(404).json({ error: "Request not found" });
     if (request.status !== "pending") return res.status(400).json({ error: "Request is not pending" });
-    await db.update(leaderRequests).set({ status: "rejected" }).where((0, import_drizzle_orm18.eq)(leaderRequests.id, id2));
+    await db.update(leaderRequests).set({ status: "rejected" }).where((0, import_drizzle_orm19.eq)(leaderRequests.id, id2));
     notifyUser(
       request.userId,
       "Leader Access Update",
@@ -41931,12 +43452,12 @@ init_db();
 init_ai_semaphore();
 init_schema();
 init_schema();
-var import_drizzle_orm19 = require("drizzle-orm");
+var import_drizzle_orm20 = require("drizzle-orm");
 init_ai_engine();
 var router16 = (0, import_express16.Router)();
 async function ensureDeviceUserExists(deviceId) {
   if (!deviceId.startsWith("device-")) return;
-  const [existing] = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm19.eq)(users.id, deviceId)).limit(1);
+  const [existing] = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm20.eq)(users.id, deviceId)).limit(1);
   if (existing) return;
   await db.insert(users).values({
     id: deviceId,
@@ -41952,7 +43473,7 @@ router16.get("/api/family/children", optionalAuth, async (req, res) => {
     if (parentId === "guest") {
       return res.status(401).json({ error: "A device ID or login is required" });
     }
-    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm19.eq)(childProfiles.parentId, parentId)).orderBy((0, import_drizzle_orm19.asc)(childProfiles.createdAt));
+    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm20.eq)(childProfiles.parentId, parentId)).orderBy((0, import_drizzle_orm20.asc)(childProfiles.createdAt));
     return res.json(children);
   } catch (err) {
     console.error("Family children error:", err);
@@ -41987,7 +43508,7 @@ router16.patch("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const { name, ageGroup } = req.body;
-    const [existing] = await db.select().from(childProfiles).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(childProfiles.id, String(req.params.id)), (0, import_drizzle_orm19.eq)(childProfiles.parentId, userId)));
+    const [existing] = await db.select().from(childProfiles).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(childProfiles.id, String(req.params.id)), (0, import_drizzle_orm20.eq)(childProfiles.parentId, userId)));
     if (!existing) {
       return res.status(404).json({ error: "Child profile not found" });
     }
@@ -41998,7 +43519,7 @@ router16.patch("/api/family/children/:id", requireAuth, async (req, res) => {
     if (Object.keys(updates).length === 0) {
       return res.json(existing);
     }
-    const [updated] = await db.update(childProfiles).set(updates).where((0, import_drizzle_orm19.eq)(childProfiles.id, String(req.params.id))).returning();
+    const [updated] = await db.update(childProfiles).set(updates).where((0, import_drizzle_orm20.eq)(childProfiles.id, String(req.params.id))).returning();
     return res.json(updated);
   } catch (err) {
     console.error("Update child error:", err);
@@ -42008,11 +43529,11 @@ router16.patch("/api/family/children/:id", requireAuth, async (req, res) => {
 router16.delete("/api/family/children/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
-    const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(childProfiles.id, String(req.params.id)), (0, import_drizzle_orm19.eq)(childProfiles.parentId, userId)));
+    const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(childProfiles.id, String(req.params.id)), (0, import_drizzle_orm20.eq)(childProfiles.parentId, userId)));
     if (!child) {
       return res.status(404).json({ error: "Child profile not found" });
     }
-    await db.delete(childProfiles).where((0, import_drizzle_orm19.eq)(childProfiles.id, String(req.params.id)));
+    await db.delete(childProfiles).where((0, import_drizzle_orm20.eq)(childProfiles.id, String(req.params.id)));
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete child error:", err);
@@ -42022,7 +43543,7 @@ router16.delete("/api/family/children/:id", requireAuth, async (req, res) => {
 router16.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
-    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm19.eq)(childProfiles.parentId, parentId));
+    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm20.eq)(childProfiles.parentId, parentId));
     const childStats = await Promise.all(
       children.map(async (child) => {
         const progress = await db.select({
@@ -42030,17 +43551,17 @@ router16.get("/api/family/stats", requireAuth, checkProStatus, async (req, res) 
           completed: kidsProgress.completed,
           quizScore: kidsProgress.quizScore,
           completedAt: kidsProgress.completedAt
-        }).from(kidsProgress).where((0, import_drizzle_orm19.eq)(kidsProgress.userId, child.id));
+        }).from(kidsProgress).where((0, import_drizzle_orm20.eq)(kidsProgress.userId, child.id));
         const completedStories = progress.filter((p) => p.completed);
         const badges = await db.select({
           badgeId: kidsUserBadges.badgeId,
           earnedAt: kidsUserBadges.earnedAt,
           name: kidsBadges.name,
           icon: kidsBadges.icon
-        }).from(kidsUserBadges).innerJoin(kidsBadges, (0, import_drizzle_orm19.eq)(kidsUserBadges.badgeId, kidsBadges.id)).where((0, import_drizzle_orm19.eq)(kidsUserBadges.userId, child.id));
+        }).from(kidsUserBadges).innerJoin(kidsBadges, (0, import_drizzle_orm20.eq)(kidsUserBadges.badgeId, kidsBadges.id)).where((0, import_drizzle_orm20.eq)(kidsUserBadges.userId, child.id));
         const storyDetails = await Promise.all(
           completedStories.slice(-5).map(async (p) => {
-            const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm19.eq)(kidsStories.id, p.storyId));
+            const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm20.eq)(kidsStories.id, p.storyId));
             return story || { title: "Unknown Story", scriptureRef: null };
           })
         );
@@ -42089,14 +43610,14 @@ router16.get("/api/family/conversation-starter/:childId", requireAuth, checkProS
   try {
     const childId = String(req.params.childId);
     const userId = req.authUserId;
-    const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(childProfiles.id, childId), (0, import_drizzle_orm19.eq)(childProfiles.parentId, userId)));
+    const [child] = await db.select().from(childProfiles).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(childProfiles.id, childId), (0, import_drizzle_orm20.eq)(childProfiles.parentId, userId)));
     if (!child) {
       return res.status(404).json({ error: "Child profile not found" });
     }
-    const completedProgress = await db.select({ storyId: kidsProgress.storyId }).from(kidsProgress).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(kidsProgress.userId, childId), (0, import_drizzle_orm19.eq)(kidsProgress.completed, true)));
+    const completedProgress = await db.select({ storyId: kidsProgress.storyId }).from(kidsProgress).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(kidsProgress.userId, childId), (0, import_drizzle_orm20.eq)(kidsProgress.completed, true)));
     const storyDetails = await Promise.all(
       completedProgress.slice(-5).map(async (p) => {
-        const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm19.eq)(kidsStories.id, p.storyId));
+        const [story] = await db.select({ title: kidsStories.title, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where((0, import_drizzle_orm20.eq)(kidsStories.id, p.storyId));
         return story || { title: "Unknown Story", scriptureRef: null };
       })
     );
@@ -42110,13 +43631,13 @@ router16.get("/api/family/conversation-starter/:childId", requireAuth, checkProS
 router16.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
-    const allBooks = await db.select().from(bibleBooks).orderBy((0, import_drizzle_orm19.asc)(bibleBooks.id));
-    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm19.eq)(childProfiles.parentId, parentId));
+    const allBooks = await db.select().from(bibleBooks).orderBy((0, import_drizzle_orm20.asc)(bibleBooks.id));
+    const children = await db.select().from(childProfiles).where((0, import_drizzle_orm20.eq)(childProfiles.parentId, parentId));
     const parentReading = await db.select({
       bookId: readingHistory.bookId,
       bookName: readingHistory.bookName,
       chapter: readingHistory.chapter
-    }).from(readingHistory).where((0, import_drizzle_orm19.eq)(readingHistory.userId, parentId));
+    }).from(readingHistory).where((0, import_drizzle_orm20.eq)(readingHistory.userId, parentId));
     const parentChaptersPerBook = {};
     for (const r of parentReading) {
       if (!parentChaptersPerBook[r.bookId]) parentChaptersPerBook[r.bookId] = /* @__PURE__ */ new Set();
@@ -42127,11 +43648,11 @@ router16.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res
       const progress = await db.select({
         storyId: kidsProgress.storyId,
         completed: kidsProgress.completed
-      }).from(kidsProgress).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(kidsProgress.userId, child.id), (0, import_drizzle_orm19.eq)(kidsProgress.completed, true)));
+      }).from(kidsProgress).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(kidsProgress.userId, child.id), (0, import_drizzle_orm20.eq)(kidsProgress.completed, true)));
       const storyIds = progress.map((p) => p.storyId);
       const bookHits = {};
       if (storyIds.length > 0) {
-        const stories = await db.select({ id: kidsStories.id, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(import_drizzle_orm19.sql`${kidsStories.id} IN ${storyIds}`);
+        const stories = await db.select({ id: kidsStories.id, scriptureRef: kidsStories.scriptureRef }).from(kidsStories).where(import_drizzle_orm20.sql`${kidsStories.id} IN ${storyIds}`);
         for (const story of stories) {
           if (story.scriptureRef) {
             const matchedBook = allBooks.find(
@@ -42190,7 +43711,7 @@ router16.get("/api/family/heatmap", requireAuth, checkProStatus, async (req, res
 router16.get("/api/family/prayers", requireAuth, checkProStatus, async (req, res) => {
   try {
     const familyId = req.authUserId;
-    const prayers = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.familyId, familyId)).orderBy((0, import_drizzle_orm19.desc)(prayerRequests.createdAt));
+    const prayers = await db.select().from(prayerRequests).where((0, import_drizzle_orm20.eq)(prayerRequests.familyId, familyId)).orderBy((0, import_drizzle_orm20.desc)(prayerRequests.createdAt));
     return res.json(prayers);
   } catch (err) {
     console.error("Family prayers fetch error:", err);
@@ -42241,7 +43762,7 @@ router16.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, as
   try {
     const id2 = String(req.params.id);
     const memberName = String(req.body.memberName || req.authUserId);
-    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.eq)(prayerRequests.id, id2));
+    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm20.eq)(prayerRequests.id, id2));
     if (!prayer) {
       return res.status(404).json({ error: "Prayer not found" });
     }
@@ -42251,10 +43772,10 @@ router16.post("/api/family/prayers/:id/support", requireAuth, checkProStatus, as
     }
     const newSupported = [...currentSupported, memberName];
     const [updated] = await db.update(prayerRequests).set({
-      supportCount: import_drizzle_orm19.sql`${prayerRequests.supportCount} + 1`,
+      supportCount: import_drizzle_orm20.sql`${prayerRequests.supportCount} + 1`,
       supportedBy: newSupported,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm19.eq)(prayerRequests.id, id2)).returning();
+    }).where((0, import_drizzle_orm20.eq)(prayerRequests.id, id2)).returning();
     return res.json({ success: true, supportCount: updated.supportCount });
   } catch (err) {
     console.error("Prayer support error:", err);
@@ -42266,7 +43787,7 @@ router16.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, a
     const id2 = String(req.params.id);
     const userId = req.authUserId;
     const answered = req.body.answered !== false;
-    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(prayerRequests.id, id2), (0, import_drizzle_orm19.eq)(prayerRequests.familyId, userId)));
+    const [prayer] = await db.select().from(prayerRequests).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(prayerRequests.id, id2), (0, import_drizzle_orm20.eq)(prayerRequests.familyId, userId)));
     if (!prayer) {
       return res.status(404).json({ error: "Prayer not found" });
     }
@@ -42274,7 +43795,7 @@ router16.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, a
       answered,
       answeredAt: answered ? /* @__PURE__ */ new Date() : null,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm19.eq)(prayerRequests.id, id2)).returning();
+    }).where((0, import_drizzle_orm20.eq)(prayerRequests.id, id2)).returning();
     return res.json(updated);
   } catch (err) {
     console.error("Prayer answered error:", err);
@@ -42284,7 +43805,7 @@ router16.post("/api/family/prayers/:id/answered", requireAuth, checkProStatus, a
 router16.get("/api/family/dinner-topics", requireAuth, checkProStatus, async (req, res) => {
   try {
     const parentId = req.authUserId;
-    const topics = await db.select().from(dinnerTableTopics).where((0, import_drizzle_orm19.eq)(dinnerTableTopics.parentId, parentId)).orderBy((0, import_drizzle_orm19.desc)(dinnerTableTopics.createdAt)).limit(20);
+    const topics = await db.select().from(dinnerTableTopics).where((0, import_drizzle_orm20.eq)(dinnerTableTopics.parentId, parentId)).orderBy((0, import_drizzle_orm20.desc)(dinnerTableTopics.createdAt)).limit(20);
     return res.json(topics);
   } catch (err) {
     console.error("Dinner topics fetch error:", err);
@@ -42295,20 +43816,20 @@ router16.post("/api/family/dinner-topics/:id/discussed", requireAuth, checkProSt
   try {
     const id2 = String(req.params.id);
     const userId = req.authUserId;
-    const [topic] = await db.select().from(dinnerTableTopics).where((0, import_drizzle_orm19.and)((0, import_drizzle_orm19.eq)(dinnerTableTopics.id, id2), (0, import_drizzle_orm19.eq)(dinnerTableTopics.parentId, userId))).limit(1);
+    const [topic] = await db.select().from(dinnerTableTopics).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(dinnerTableTopics.id, id2), (0, import_drizzle_orm20.eq)(dinnerTableTopics.parentId, userId))).limit(1);
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     if (topic.discussed) {
       return res.json({ success: true, message: "Already discussed", bonusPoints: 0 });
     }
-    await db.update(dinnerTableTopics).set({ discussed: true, discussedAt: /* @__PURE__ */ new Date(), bonusPointsAwarded: true }).where((0, import_drizzle_orm19.eq)(dinnerTableTopics.id, id2));
+    await db.update(dinnerTableTopics).set({ discussed: true, discussedAt: /* @__PURE__ */ new Date(), bonusPointsAwarded: true }).where((0, import_drizzle_orm20.eq)(dinnerTableTopics.id, id2));
     let bonusPoints = 25;
     if (topic.childProfileId) {
       await db.update(childProfiles).set({
-        totalPoints: import_drizzle_orm19.sql`${childProfiles.totalPoints} + ${bonusPoints}`,
-        currentLevel: import_drizzle_orm19.sql`GREATEST(1, (${childProfiles.totalPoints} + ${bonusPoints}) / 100 + 1)`
-      }).where((0, import_drizzle_orm19.eq)(childProfiles.id, topic.childProfileId));
+        totalPoints: import_drizzle_orm20.sql`${childProfiles.totalPoints} + ${bonusPoints}`,
+        currentLevel: import_drizzle_orm20.sql`GREATEST(1, (${childProfiles.totalPoints} + ${bonusPoints}) / 100 + 1)`
+      }).where((0, import_drizzle_orm20.eq)(childProfiles.id, topic.childProfileId));
     }
     console.log(`
 \u2705 DINNER TOPIC DISCUSSED: "${topic.storyTitle}" for ${topic.childName}`);
@@ -42326,7 +43847,7 @@ var family_dashboard_default = router16;
 var import_express17 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm20 = require("drizzle-orm");
+var import_drizzle_orm21 = require("drizzle-orm");
 
 // server/middleware/content-lang.ts
 init_schema();
@@ -42343,10 +43864,10 @@ var router17 = (0, import_express17.Router)();
 router17.get("/api/tracks", cachedResponse(120), async (req, res) => {
   try {
     const lang = resolveContentLang(req);
-    const tracks = await db.select().from(formationTracks).where((0, import_drizzle_orm20.eq)(formationTracks.isPublished, true)).orderBy((0, import_drizzle_orm20.asc)(formationTracks.sortOrder));
+    const tracks = await db.select().from(formationTracks).where((0, import_drizzle_orm21.eq)(formationTracks.isPublished, true)).orderBy((0, import_drizzle_orm21.asc)(formationTracks.sortOrder));
     const tracksWithCounts = await Promise.all(
       tracks.map(async (track) => {
-        const modules = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.trackId, track.id));
+        const modules = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.trackId, track.id));
         const modulesWithLessons = modules.filter((m) => (m.totalLessons ?? 0) > 0);
         const totalLessons = modules.reduce((sum, m) => sum + (m.totalLessons ?? 0), 0);
         return { ...track, modulesCount: modules.length, lessonsCount: totalLessons };
@@ -42361,10 +43882,10 @@ router17.get("/api/tracks", cachedResponse(120), async (req, res) => {
 router17.get("/api/tracks/progress", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const progress = await db.select().from(progressTracks).where((0, import_drizzle_orm20.eq)(progressTracks.userId, userId));
+    const progress = await db.select().from(progressTracks).where((0, import_drizzle_orm21.eq)(progressTracks.userId, userId));
     const enriched = await Promise.all(
       progress.map(async (p) => {
-        const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm20.eq)(formationTracks.id, p.trackId));
+        const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm21.eq)(formationTracks.id, p.trackId));
         return { ...p, track };
       })
     );
@@ -42379,38 +43900,38 @@ router17.get("/api/tracks/:id", async (req, res) => {
     const id2 = String(req.params.id);
     const userId = extractUserId(req);
     const lang = resolveContentLang(req);
-    const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm20.eq)(formationTracks.id, id2));
+    const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm21.eq)(formationTracks.id, id2));
     if (!track) {
       return res.status(404).json({ error: "Track not found" });
     }
-    const modules = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.trackId, id2)).orderBy((0, import_drizzle_orm20.asc)(formationModules.moduleOrder));
+    const modules = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.trackId, id2)).orderBy((0, import_drizzle_orm21.asc)(formationModules.moduleOrder));
     const allLessonIds = [];
     const modulesWithLessons = await Promise.all(
       modules.map(async (mod) => {
         let localizedMod = { ...mod };
         if (lang) {
-          const [modI18n] = await db.select().from(formationModuleI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(formationModuleI18n.moduleId, mod.id), (0, import_drizzle_orm20.eq)(formationModuleI18n.language, lang)));
+          const [modI18n] = await db.select().from(formationModuleI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(formationModuleI18n.moduleId, mod.id), (0, import_drizzle_orm21.eq)(formationModuleI18n.language, lang)));
           if (modI18n) {
             localizedMod = { ...mod, title: modI18n.title, description: modI18n.description ?? mod.description };
           }
         }
-        const lessons = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.moduleId, mod.id)).orderBy((0, import_drizzle_orm20.asc)(formationLessons.lessonOrder));
+        const lessons = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.moduleId, mod.id)).orderBy((0, import_drizzle_orm21.asc)(formationLessons.lessonOrder));
         const lessonsWithSections = await Promise.all(
           lessons.map(async (lesson) => {
             allLessonIds.push(lesson.id);
             let localizedLesson = { ...lesson };
             if (lang) {
-              const [lessonI18n] = await db.select().from(formationLessonI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(formationLessonI18n.lessonId, lesson.id), (0, import_drizzle_orm20.eq)(formationLessonI18n.language, lang)));
+              const [lessonI18n] = await db.select().from(formationLessonI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(formationLessonI18n.lessonId, lesson.id), (0, import_drizzle_orm21.eq)(formationLessonI18n.language, lang)));
               if (lessonI18n) {
                 localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
               }
             }
-            const sections = await db.select().from(lessonSections).where((0, import_drizzle_orm20.eq)(lessonSections.lessonId, lesson.id)).orderBy((0, import_drizzle_orm20.asc)(lessonSections.sortOrder));
+            const sections = await db.select().from(lessonSections).where((0, import_drizzle_orm21.eq)(lessonSections.lessonId, lesson.id)).orderBy((0, import_drizzle_orm21.asc)(lessonSections.sortOrder));
             let localizedSections = sections;
             if (lang) {
               localizedSections = await Promise.all(
                 sections.map(async (sec) => {
-                  const [secI18n] = await db.select().from(lessonSectionI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(lessonSectionI18n.sectionId, sec.id), (0, import_drizzle_orm20.eq)(lessonSectionI18n.language, lang)));
+                  const [secI18n] = await db.select().from(lessonSectionI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(lessonSectionI18n.sectionId, sec.id), (0, import_drizzle_orm21.eq)(lessonSectionI18n.language, lang)));
                   if (secI18n) {
                     return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
                   }
@@ -42426,7 +43947,7 @@ router17.get("/api/tracks/:id", async (req, res) => {
     );
     const completedLessonIds = [];
     if (allLessonIds.length > 0) {
-      const userLessonProgress = await db.select().from(progressLessons).where((0, import_drizzle_orm20.eq)(progressLessons.userId, userId));
+      const userLessonProgress = await db.select().from(progressLessons).where((0, import_drizzle_orm21.eq)(progressLessons.userId, userId));
       for (const p of userLessonProgress) {
         if (p.completedAt && allLessonIds.includes(p.lessonId)) {
           completedLessonIds.push(p.lessonId);
@@ -42443,23 +43964,23 @@ router17.get("/api/lessons/:id", async (req, res) => {
   try {
     const id2 = String(req.params.id);
     const lang = resolveContentLang(req);
-    const [lesson] = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.id, id2));
+    const [lesson] = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.id, id2));
     if (!lesson) {
       return res.status(404).json({ error: "Lesson not found" });
     }
     let localizedLesson = { ...lesson };
     if (lang) {
-      const [lessonI18n] = await db.select().from(formationLessonI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(formationLessonI18n.lessonId, id2), (0, import_drizzle_orm20.eq)(formationLessonI18n.language, lang)));
+      const [lessonI18n] = await db.select().from(formationLessonI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(formationLessonI18n.lessonId, id2), (0, import_drizzle_orm21.eq)(formationLessonI18n.language, lang)));
       if (lessonI18n) {
         localizedLesson = { ...lesson, title: lessonI18n.title, description: lessonI18n.summary ?? lesson.description };
       }
     }
-    const sections = await db.select().from(lessonSections).where((0, import_drizzle_orm20.eq)(lessonSections.lessonId, id2)).orderBy((0, import_drizzle_orm20.asc)(lessonSections.sortOrder));
+    const sections = await db.select().from(lessonSections).where((0, import_drizzle_orm21.eq)(lessonSections.lessonId, id2)).orderBy((0, import_drizzle_orm21.asc)(lessonSections.sortOrder));
     let localizedSections = sections;
     if (lang) {
       localizedSections = await Promise.all(
         sections.map(async (sec) => {
-          const [secI18n] = await db.select().from(lessonSectionI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(lessonSectionI18n.sectionId, sec.id), (0, import_drizzle_orm20.eq)(lessonSectionI18n.language, lang)));
+          const [secI18n] = await db.select().from(lessonSectionI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(lessonSectionI18n.sectionId, sec.id), (0, import_drizzle_orm21.eq)(lessonSectionI18n.language, lang)));
           if (secI18n) {
             return { ...sec, title: secI18n.heading ?? sec.title, content: secI18n.content };
           }
@@ -42467,15 +43988,15 @@ router17.get("/api/lessons/:id", async (req, res) => {
         })
       );
     }
-    const assessments = await db.select().from(formationAssessments).where((0, import_drizzle_orm20.eq)(formationAssessments.lessonId, id2));
+    const assessments = await db.select().from(formationAssessments).where((0, import_drizzle_orm21.eq)(formationAssessments.lessonId, id2));
     let assessment = null;
     if (assessments.length > 0) {
-      const items = await db.select().from(assessmentItems).where((0, import_drizzle_orm20.eq)(assessmentItems.assessmentId, assessments[0].id));
+      const items = await db.select().from(assessmentItems).where((0, import_drizzle_orm21.eq)(assessmentItems.assessmentId, assessments[0].id));
       let localizedItems = items;
       if (lang) {
         localizedItems = await Promise.all(
           items.map(async (item) => {
-            const [itemI18n] = await db.select().from(assessmentItemI18n).where((0, import_drizzle_orm20.and)((0, import_drizzle_orm20.eq)(assessmentItemI18n.itemId, item.id), (0, import_drizzle_orm20.eq)(assessmentItemI18n.language, lang)));
+            const [itemI18n] = await db.select().from(assessmentItemI18n).where((0, import_drizzle_orm21.and)((0, import_drizzle_orm21.eq)(assessmentItemI18n.itemId, item.id), (0, import_drizzle_orm21.eq)(assessmentItemI18n.language, lang)));
             if (itemI18n) {
               return { ...item, question: itemI18n.question, options: itemI18n.options, explanation: itemI18n.explanation ?? item.explanation };
             }
@@ -42487,9 +44008,9 @@ router17.get("/api/lessons/:id", async (req, res) => {
     }
     const userId = extractUserId(req);
     const [progressRow] = await db.select().from(progressLessons).where(
-      (0, import_drizzle_orm20.and)(
-        (0, import_drizzle_orm20.eq)(progressLessons.userId, userId),
-        (0, import_drizzle_orm20.eq)(progressLessons.lessonId, id2)
+      (0, import_drizzle_orm21.and)(
+        (0, import_drizzle_orm21.eq)(progressLessons.userId, userId),
+        (0, import_drizzle_orm21.eq)(progressLessons.lessonId, id2)
       )
     );
     return res.json({ lesson: localizedLesson, sections: localizedSections, assessment, progress: progressRow || null });
@@ -42506,19 +44027,19 @@ router17.post("/api/tracks/enroll", async (req, res) => {
       return res.status(400).json({ error: "trackId required" });
     }
     const existing = await db.select().from(progressTracks).where(
-      (0, import_drizzle_orm20.and)(
-        (0, import_drizzle_orm20.eq)(progressTracks.userId, userId),
-        (0, import_drizzle_orm20.eq)(progressTracks.trackId, trackId)
+      (0, import_drizzle_orm21.and)(
+        (0, import_drizzle_orm21.eq)(progressTracks.userId, userId),
+        (0, import_drizzle_orm21.eq)(progressTracks.trackId, trackId)
       )
     );
     if (existing.length > 0) {
       return res.json(existing[0]);
     }
-    const firstModule = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.trackId, trackId)).orderBy((0, import_drizzle_orm20.asc)(formationModules.moduleOrder)).limit(1);
+    const firstModule = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.trackId, trackId)).orderBy((0, import_drizzle_orm21.asc)(formationModules.moduleOrder)).limit(1);
     let currentModuleId = firstModule[0]?.id || null;
     let currentLessonId = null;
     if (currentModuleId) {
-      const firstLesson = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.moduleId, currentModuleId)).orderBy((0, import_drizzle_orm20.asc)(formationLessons.lessonOrder)).limit(1);
+      const firstLesson = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.moduleId, currentModuleId)).orderBy((0, import_drizzle_orm21.asc)(formationLessons.lessonOrder)).limit(1);
       currentLessonId = firstLesson[0]?.id || null;
     }
     const [row] = await db.insert(progressTracks).values({
@@ -42540,9 +44061,9 @@ router17.post("/api/lessons/:id/complete", async (req, res) => {
     const userId = extractUserId(req);
     const { sectionsCompleted, assessmentScore, assessmentPassed } = req.body;
     const existingProgress = await db.select().from(progressLessons).where(
-      (0, import_drizzle_orm20.and)(
-        (0, import_drizzle_orm20.eq)(progressLessons.userId, userId),
-        (0, import_drizzle_orm20.eq)(progressLessons.lessonId, lessonId)
+      (0, import_drizzle_orm21.and)(
+        (0, import_drizzle_orm21.eq)(progressLessons.userId, userId),
+        (0, import_drizzle_orm21.eq)(progressLessons.lessonId, lessonId)
       )
     );
     let lessonProgress;
@@ -42552,7 +44073,7 @@ router17.post("/api/lessons/:id/complete", async (req, res) => {
         sectionsCompleted: sectionsCompleted || existingProgress[0].sectionsCompleted,
         assessmentScore: assessmentScore ?? existingProgress[0].assessmentScore,
         assessmentPassed: assessmentPassed ?? existingProgress[0].assessmentPassed
-      }).where((0, import_drizzle_orm20.eq)(progressLessons.id, existingProgress[0].id)).returning();
+      }).where((0, import_drizzle_orm21.eq)(progressLessons.id, existingProgress[0].id)).returning();
     } else {
       [lessonProgress] = await db.insert(progressLessons).values({
         userId,
@@ -42563,18 +44084,18 @@ router17.post("/api/lessons/:id/complete", async (req, res) => {
         assessmentPassed: assessmentPassed ?? null
       }).returning();
     }
-    const [lesson] = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.id, lessonId));
+    const [lesson] = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.id, lessonId));
     let moduleCompleted = null;
     let trackCompleted = null;
     if (lesson) {
-      const [mod] = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.id, lesson.moduleId));
+      const [mod] = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.id, lesson.moduleId));
       if (mod) {
-        const moduleLessons = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.moduleId, mod.id));
+        const moduleLessons = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.moduleId, mod.id));
         const moduleLessonIds = new Set(moduleLessons.map((l) => l.id));
         const moduleLessonProgress = await db.select().from(progressLessons).where(
-          (0, import_drizzle_orm20.and)(
-            (0, import_drizzle_orm20.eq)(progressLessons.userId, userId),
-            import_drizzle_orm20.sql`${progressLessons.completedAt} IS NOT NULL`
+          (0, import_drizzle_orm21.and)(
+            (0, import_drizzle_orm21.eq)(progressLessons.userId, userId),
+            import_drizzle_orm21.sql`${progressLessons.completedAt} IS NOT NULL`
           )
         );
         const completedModuleLessons = moduleLessonProgress.filter(
@@ -42591,19 +44112,19 @@ router17.post("/api/lessons/:id/complete", async (req, res) => {
             avgAssessmentScore: avgScore
           };
         }
-        const allModules = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.trackId, mod.trackId));
+        const allModules = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.trackId, mod.trackId));
         const allModuleIds = allModules.map((m) => m.id);
         const allLessons = [];
         for (const mId of allModuleIds) {
-          const lessons = await db.select().from(formationLessons).where((0, import_drizzle_orm20.eq)(formationLessons.moduleId, mId));
+          const lessons = await db.select().from(formationLessons).where((0, import_drizzle_orm21.eq)(formationLessons.moduleId, mId));
           allLessons.push(...lessons);
         }
         const totalLessons = allLessons.length;
         if (totalLessons > 0) {
           const completedLessons = await db.select().from(progressLessons).where(
-            (0, import_drizzle_orm20.and)(
-              (0, import_drizzle_orm20.eq)(progressLessons.userId, userId),
-              import_drizzle_orm20.sql`${progressLessons.completedAt} IS NOT NULL`
+            (0, import_drizzle_orm21.and)(
+              (0, import_drizzle_orm21.eq)(progressLessons.userId, userId),
+              import_drizzle_orm21.sql`${progressLessons.completedAt} IS NOT NULL`
             )
           );
           const completedLessonIds = new Set(completedLessons.map((cl) => cl.lessonId));
@@ -42615,13 +44136,13 @@ router17.post("/api/lessons/:id/complete", async (req, res) => {
             percentComplete: percent,
             completedAt: allDone ? /* @__PURE__ */ new Date() : null
           }).where(
-            (0, import_drizzle_orm20.and)(
-              (0, import_drizzle_orm20.eq)(progressTracks.userId, userId),
-              (0, import_drizzle_orm20.eq)(progressTracks.trackId, mod.trackId)
+            (0, import_drizzle_orm21.and)(
+              (0, import_drizzle_orm21.eq)(progressTracks.userId, userId),
+              (0, import_drizzle_orm21.eq)(progressTracks.trackId, mod.trackId)
             )
           );
           if (allDone) {
-            const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm20.eq)(formationTracks.id, mod.trackId));
+            const [track] = await db.select().from(formationTracks).where((0, import_drizzle_orm21.eq)(formationTracks.id, mod.trackId));
             if (track) {
               trackCompleted = {
                 trackId: track.id,
@@ -42648,14 +44169,14 @@ router17.post("/api/modules/:id/confidence", async (req, res) => {
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "rating (1-5) required" });
     }
-    const [mod] = await db.select().from(formationModules).where((0, import_drizzle_orm20.eq)(formationModules.id, moduleId));
+    const [mod] = await db.select().from(formationModules).where((0, import_drizzle_orm21.eq)(formationModules.id, moduleId));
     if (!mod) {
       return res.status(404).json({ error: "Module not found" });
     }
     const [trackProgress] = await db.select().from(progressTracks).where(
-      (0, import_drizzle_orm20.and)(
-        (0, import_drizzle_orm20.eq)(progressTracks.userId, userId),
-        (0, import_drizzle_orm20.eq)(progressTracks.trackId, mod.trackId)
+      (0, import_drizzle_orm21.and)(
+        (0, import_drizzle_orm21.eq)(progressTracks.userId, userId),
+        (0, import_drizzle_orm21.eq)(progressTracks.trackId, mod.trackId)
       )
     );
     if (!trackProgress) {
@@ -42663,7 +44184,7 @@ router17.post("/api/modules/:id/confidence", async (req, res) => {
     }
     const existing = trackProgress.moduleConfidence || {};
     const updated = { ...existing, [moduleId]: rating };
-    await db.update(progressTracks).set({ moduleConfidence: updated }).where((0, import_drizzle_orm20.eq)(progressTracks.id, trackProgress.id));
+    await db.update(progressTracks).set({ moduleConfidence: updated }).where((0, import_drizzle_orm21.eq)(progressTracks.id, trackProgress.id));
     return res.json({ moduleId, rating, stored: true });
   } catch (err) {
     console.error("Module confidence error:", err);
@@ -42678,11 +44199,11 @@ router17.post("/api/assessments/:id/submit", async (req, res) => {
     if (!answers) {
       return res.status(400).json({ error: "answers required" });
     }
-    const [assessment] = await db.select().from(formationAssessments).where((0, import_drizzle_orm20.eq)(formationAssessments.id, assessmentId));
+    const [assessment] = await db.select().from(formationAssessments).where((0, import_drizzle_orm21.eq)(formationAssessments.id, assessmentId));
     if (!assessment) {
       return res.status(404).json({ error: "Assessment not found" });
     }
-    const items = await db.select().from(assessmentItems).where((0, import_drizzle_orm20.eq)(assessmentItems.assessmentId, assessmentId));
+    const items = await db.select().from(assessmentItems).where((0, import_drizzle_orm21.eq)(assessmentItems.assessmentId, assessmentId));
     let correct = 0;
     const results = items.map((item, i) => {
       const userAnswer = answers[i] ?? -1;
@@ -42699,13 +44220,13 @@ router17.post("/api/assessments/:id/submit", async (req, res) => {
     const score = items.length > 0 ? Math.round(correct / items.length * 100) : 0;
     const passed = score >= (assessment.passingScore ?? 70);
     const existingProgress = await db.select().from(progressLessons).where(
-      (0, import_drizzle_orm20.and)(
-        (0, import_drizzle_orm20.eq)(progressLessons.userId, userId),
-        (0, import_drizzle_orm20.eq)(progressLessons.lessonId, assessment.lessonId)
+      (0, import_drizzle_orm21.and)(
+        (0, import_drizzle_orm21.eq)(progressLessons.userId, userId),
+        (0, import_drizzle_orm21.eq)(progressLessons.lessonId, assessment.lessonId)
       )
     );
     if (existingProgress.length > 0) {
-      await db.update(progressLessons).set({ assessmentScore: score, assessmentPassed: passed }).where((0, import_drizzle_orm20.eq)(progressLessons.id, existingProgress[0].id));
+      await db.update(progressLessons).set({ assessmentScore: score, assessmentPassed: passed }).where((0, import_drizzle_orm21.eq)(progressLessons.id, existingProgress[0].id));
     } else {
       await db.insert(progressLessons).values({
         userId,
@@ -42726,7 +44247,7 @@ var formation_default = router17;
 var import_express18 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm21 = require("drizzle-orm");
+var import_drizzle_orm22 = require("drizzle-orm");
 init_ai_engine();
 
 // data/great-controversy.ts
@@ -43135,7 +44656,7 @@ router18.post("/api/great-controversy/explore", aiGenerationLimiter, async (req,
     if (!node) {
       return res.status(404).json({ error: "Node not found" });
     }
-    const existing = await db.select().from(gcExplorationCache).where((0, import_drizzle_orm21.eq)(gcExplorationCache.nodeId, nodeId)).limit(1);
+    const existing = await db.select().from(gcExplorationCache).where((0, import_drizzle_orm22.eq)(gcExplorationCache.nodeId, nodeId)).limit(1);
     if (existing.length > 0) {
       return res.json({
         nodeId: existing[0].nodeId,
@@ -43177,7 +44698,7 @@ var great_controversy_default = router18;
 var import_express19 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm25 = require("drizzle-orm");
+var import_drizzle_orm26 = require("drizzle-orm");
 init_ai_engine();
 init_sabbath_school_sync();
 var router19 = (0, import_express19.Router)();
@@ -43188,10 +44709,10 @@ async function findCompanionForLesson(lessonId) {
     title: resources.title,
     description: resources.description
   }).from(resources).where(
-    (0, import_drizzle_orm25.and)(
-      (0, import_drizzle_orm25.eq)(resources.resourceType, "sabbath-school-companion"),
-      (0, import_drizzle_orm25.eq)(resources.status, "published"),
-      import_drizzle_orm25.sql`${resources.sourceRef}->>'lessonId' = ${lessonId}`
+    (0, import_drizzle_orm26.and)(
+      (0, import_drizzle_orm26.eq)(resources.resourceType, "sabbath-school-companion"),
+      (0, import_drizzle_orm26.eq)(resources.status, "published"),
+      import_drizzle_orm26.sql`${resources.sourceRef}->>'lessonId' = ${lessonId}`
     )
   ).limit(1);
   return companion || null;
@@ -43203,10 +44724,10 @@ async function findCompanionsForQuarterly(quarterlyId) {
     title: resources.title,
     sourceRef: resources.sourceRef
   }).from(resources).where(
-    (0, import_drizzle_orm25.and)(
-      (0, import_drizzle_orm25.eq)(resources.resourceType, "sabbath-school-companion"),
-      (0, import_drizzle_orm25.eq)(resources.status, "published"),
-      import_drizzle_orm25.sql`${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
+    (0, import_drizzle_orm26.and)(
+      (0, import_drizzle_orm26.eq)(resources.resourceType, "sabbath-school-companion"),
+      (0, import_drizzle_orm26.eq)(resources.status, "published"),
+      import_drizzle_orm26.sql`${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
     )
   );
   const map = {};
@@ -43224,20 +44745,20 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
     const curriculumParam = String(req.query.curriculum || "adult").toLowerCase();
     const curriculum = curriculumParam === "inverse" ? "inverse" : "adult";
     let q = (await db.select().from(sabbathSchoolQuarterlies).where(
-      (0, import_drizzle_orm25.and)(
-        (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.language, "en"),
-        (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
+      (0, import_drizzle_orm26.and)(
+        (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.language, "en"),
+        (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
       )
-    ).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1))[0] || null;
+    ).orderBy((0, import_drizzle_orm26.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1))[0] || null;
     if (!q) {
       try {
         await syncCurrentQuarter("en");
         q = (await db.select().from(sabbathSchoolQuarterlies).where(
-          (0, import_drizzle_orm25.and)(
-            (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.language, "en"),
-            (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
+          (0, import_drizzle_orm26.and)(
+            (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.language, "en"),
+            (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
           )
-        ).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1))[0] || null;
+        ).orderBy((0, import_drizzle_orm26.desc)(sabbathSchoolQuarterlies.quarterCode)).limit(1))[0] || null;
       } catch (err) {
         console.error("[SabbathSchool] On-demand quarterly sync failed:", err instanceof Error ? err.message : err);
       }
@@ -43245,28 +44766,28 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
     if (!q) {
       return res.json({ quarterly: null, currentLesson: null, message: "No quarterly available" });
     }
-    let lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+    let lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
     if (lessons.length === 0) {
       try {
         await syncCurrentQuarter("en");
-        lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+        lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
       } catch (err) {
         console.error("[SabbathSchool] On-demand lesson repair sync failed:", err instanceof Error ? err.message : err);
       }
     }
     if (lessons.length === 0) {
       const allQuarters = await db.select().from(sabbathSchoolQuarterlies).where(
-        (0, import_drizzle_orm25.and)(
-          (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.language, "en"),
-          (0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
+        (0, import_drizzle_orm26.and)(
+          (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.language, "en"),
+          (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.curriculumType, curriculum)
         )
-      ).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.quarterCode));
+      ).orderBy((0, import_drizzle_orm26.desc)(sabbathSchoolQuarterlies.quarterCode));
       for (const candidate of allQuarters) {
         if (candidate.id === q.id) continue;
-        const candidateLessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, candidate.id)).limit(1);
+        const candidateLessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, candidate.id)).limit(1);
         if (candidateLessons.length > 0) {
           q = candidate;
-          lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+          lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, q.id)).orderBy(sabbathSchoolLessons.lessonNumber);
           break;
         }
       }
@@ -43276,11 +44797,11 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
     if (!currentLesson) {
       return res.json({ quarterly: q, currentLesson: null, lessons });
     }
-    const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.lessonId, currentLesson.id)).orderBy(sabbathSchoolDays.dayNumber);
+    const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm26.eq)(sabbathSchoolDays.lessonId, currentLesson.id)).orderBy(sabbathSchoolDays.dayNumber);
     const dayIds = days.map((d) => d.id);
     let progress = [];
     if (dayIds.length > 0) {
-      const allProgress = await db.select().from(sabbathSchoolUserProgress).where((0, import_drizzle_orm25.eq)(sabbathSchoolUserProgress.userId, userId));
+      const allProgress = await db.select().from(sabbathSchoolUserProgress).where((0, import_drizzle_orm26.eq)(sabbathSchoolUserProgress.userId, userId));
       progress = allProgress.filter((p) => dayIds.includes(p.dayId));
     }
     const daysWithProgress = days.map((day) => ({
@@ -43316,7 +44837,7 @@ router19.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
     const quarterCode = req.query.quarterCode;
     let quarterly = null;
     if (quarterCode) {
-      const [q] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+      const [q] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
       quarterly = q || null;
     }
     if (!quarterly) {
@@ -43326,19 +44847,19 @@ router19.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
       return res.status(404).json({ error: "Quarterly not found" });
     }
     const lesson = await db.select().from(sabbathSchoolLessons).where(
-      (0, import_drizzle_orm25.and)(
-        (0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id),
-        (0, import_drizzle_orm25.eq)(sabbathSchoolLessons.lessonNumber, lessonNumber)
+      (0, import_drizzle_orm26.and)(
+        (0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id),
+        (0, import_drizzle_orm26.eq)(sabbathSchoolLessons.lessonNumber, lessonNumber)
       )
     ).limit(1);
     if (lesson.length === 0) {
       return res.status(404).json({ error: "Lesson not found" });
     }
-    const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.lessonId, lesson[0].id)).orderBy(sabbathSchoolDays.dayNumber);
+    const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm26.eq)(sabbathSchoolDays.lessonId, lesson[0].id)).orderBy(sabbathSchoolDays.dayNumber);
     const dayIds = days.map((d) => d.id);
     let progress = [];
     if (dayIds.length > 0) {
-      const allProgress = await db.select().from(sabbathSchoolUserProgress).where((0, import_drizzle_orm25.eq)(sabbathSchoolUserProgress.userId, userId));
+      const allProgress = await db.select().from(sabbathSchoolUserProgress).where((0, import_drizzle_orm26.eq)(sabbathSchoolUserProgress.userId, userId));
       progress = allProgress.filter((p) => dayIds.includes(p.dayId));
     }
     const daysWithProgress = days.map((day) => ({
@@ -43360,7 +44881,7 @@ router19.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
 });
 router19.get("/api/sabbath-school/quarters", async (req, res) => {
   try {
-    const quarters = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm25.desc)(sabbathSchoolQuarterlies.quarterCode));
+    const quarters = await db.select().from(sabbathSchoolQuarterlies).orderBy((0, import_drizzle_orm26.desc)(sabbathSchoolQuarterlies.quarterCode));
     return res.json({ quarters });
   } catch (err) {
     console.error("Sabbath School quarters error:", err);
@@ -43371,11 +44892,11 @@ router19.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { quarterCode } = req.params;
-    const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (!quarterly) {
       return res.status(404).json({ error: "Quarter not found" });
     }
-    const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id)).orderBy(sabbathSchoolLessons.lessonNumber);
+    const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id)).orderBy(sabbathSchoolLessons.lessonNumber);
     const companionMap = await findCompanionsForQuarterly(quarterly.id);
     const lessonsWithCompanions = lessons.map((l) => ({
       ...l,
@@ -43395,9 +44916,9 @@ router19.post("/api/sabbath-school/complete", async (req, res) => {
       return res.status(400).json({ error: "dayId is required" });
     }
     const existing = await db.select().from(sabbathSchoolUserProgress).where(
-      (0, import_drizzle_orm25.and)(
-        (0, import_drizzle_orm25.eq)(sabbathSchoolUserProgress.userId, userId),
-        (0, import_drizzle_orm25.eq)(sabbathSchoolUserProgress.dayId, dayId)
+      (0, import_drizzle_orm26.and)(
+        (0, import_drizzle_orm26.eq)(sabbathSchoolUserProgress.userId, userId),
+        (0, import_drizzle_orm26.eq)(sabbathSchoolUserProgress.dayId, dayId)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -43405,7 +44926,7 @@ router19.post("/api/sabbath-school/complete", async (req, res) => {
         completed: true,
         journalEntry: journalEntry || existing[0].journalEntry,
         completedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm25.eq)(sabbathSchoolUserProgress.id, existing[0].id));
+      }).where((0, import_drizzle_orm26.eq)(sabbathSchoolUserProgress.id, existing[0].id));
     } else {
       await db.insert(sabbathSchoolUserProgress).values({
         userId,
@@ -43431,9 +44952,9 @@ router19.post(
         return res.status(400).json({ error: "lessonId is required" });
       }
       const cached = await db.select().from(sabbathSchoolDiscussionPrep).where(
-        (0, import_drizzle_orm25.and)(
-          (0, import_drizzle_orm25.eq)(sabbathSchoolDiscussionPrep.lessonId, lessonId),
-          (0, import_drizzle_orm25.eq)(sabbathSchoolDiscussionPrep.depth, depth)
+        (0, import_drizzle_orm26.and)(
+          (0, import_drizzle_orm26.eq)(sabbathSchoolDiscussionPrep.lessonId, lessonId),
+          (0, import_drizzle_orm26.eq)(sabbathSchoolDiscussionPrep.depth, depth)
         )
       ).limit(1);
       if (cached.length > 0) {
@@ -43444,11 +44965,11 @@ router19.post(
           cached: true
         });
       }
-      const lesson = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.id, lessonId)).limit(1);
+      const lesson = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm26.eq)(sabbathSchoolLessons.id, lessonId)).limit(1);
       if (lesson.length === 0) {
         return res.status(404).json({ error: "Lesson not found" });
       }
-      const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
+      const days = await db.select().from(sabbathSchoolDays).where((0, import_drizzle_orm26.eq)(sabbathSchoolDays.lessonId, lessonId)).orderBy(sabbathSchoolDays.dayNumber);
       const daysContent = days.map((d) => `## Day ${d.dayNumber}: ${d.title || ""}
 ${d.contentMarkdown || ""}`).join("\n\n");
       const result = await generateDiscussionPrep({
@@ -43463,7 +44984,7 @@ ${d.contentMarkdown || ""}`).join("\n\n");
         reflectionPrompts: result.reflectionPrompts,
         depth
       }).onConflictDoNothing();
-      const [inserted] = await db.select({ id: sabbathSchoolDiscussionPrep.id }).from(sabbathSchoolDiscussionPrep).where((0, import_drizzle_orm25.eq)(sabbathSchoolDiscussionPrep.lessonId, lessonId)).limit(1);
+      const [inserted] = await db.select({ id: sabbathSchoolDiscussionPrep.id }).from(sabbathSchoolDiscussionPrep).where((0, import_drizzle_orm26.eq)(sabbathSchoolDiscussionPrep.lessonId, lessonId)).limit(1);
       return res.json({
         ...result,
         cached: false
@@ -43482,7 +45003,7 @@ var import_express20 = require("express");
 // server/services/hierarchyScope.ts
 init_db();
 init_schema();
-var import_drizzle_orm26 = require("drizzle-orm");
+var import_drizzle_orm27 = require("drizzle-orm");
 var ROLE_RANK = {
   member: 0,
   elder: 1,
@@ -43499,20 +45020,20 @@ async function getHierarchyScope(userId) {
   const memberships = await db.select({
     nodeId: hierarchyMembership.hierarchyNodeId,
     role: hierarchyMembership.role
-  }).from(hierarchyMembership).where((0, import_drizzle_orm26.eq)(hierarchyMembership.userId, userId));
+  }).from(hierarchyMembership).where((0, import_drizzle_orm27.eq)(hierarchyMembership.userId, userId));
   if (memberships.length === 0) return null;
   const nodeIds = memberships.map((m) => m.nodeId);
   const nodes = await db.select({
     id: churchHierarchy.id,
     path: churchHierarchy.path,
     tier: churchHierarchy.tier
-  }).from(churchHierarchy).where((0, import_drizzle_orm26.inArray)(churchHierarchy.id, nodeIds));
+  }).from(churchHierarchy).where((0, import_drizzle_orm27.inArray)(churchHierarchy.id, nodeIds));
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   const scopes = [];
   for (const membership of memberships) {
     const node = nodeMap.get(membership.nodeId);
     if (!node) continue;
-    const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm26.sql`${churchHierarchy.path} LIKE ${node.path + "%"}`);
+    const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm27.sql`${churchHierarchy.path} LIKE ${node.path + "%"}`);
     scopes.push({
       nodeId: membership.nodeId,
       tier: node.tier,
@@ -43552,7 +45073,7 @@ function requireHierarchyAccess(minRole) {
     gc_admin: 6
   };
   return async (req, res, next) => {
-    const userId = getAuthUserId2(req);
+    const userId = getAuthUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
@@ -43581,10 +45102,10 @@ function requireHierarchyAccess(minRole) {
 // server/routes/analytics.ts
 init_db();
 init_schema();
-var import_drizzle_orm27 = require("drizzle-orm");
+var import_drizzle_orm28 = require("drizzle-orm");
 function sqlArray(ids) {
-  if (ids.length === 0) return import_drizzle_orm27.sql`ARRAY[]::text[]`;
-  return import_drizzle_orm27.sql`ARRAY[${import_drizzle_orm27.sql.join(ids.map((id2) => import_drizzle_orm27.sql`${id2}`), import_drizzle_orm27.sql`, `)}]`;
+  if (ids.length === 0) return import_drizzle_orm28.sql`ARRAY[]::text[]`;
+  return import_drizzle_orm28.sql`ARRAY[${import_drizzle_orm28.sql.join(ids.map((id2) => import_drizzle_orm28.sql`${id2}`), import_drizzle_orm28.sql`, `)}]`;
 }
 var router20 = (0, import_express20.Router)();
 var VALID_TOPIC_TYPES = [
@@ -43640,10 +45161,10 @@ router20.post(
       let primaryNodeId = null;
       for (const s of scope.scopes) {
         const [membership] = await db.select({ nodeId: hierarchyMembership.hierarchyNodeId }).from(hierarchyMembership).where(
-          (0, import_drizzle_orm27.and)(
-            (0, import_drizzle_orm27.eq)(hierarchyMembership.userId, user_id),
-            (0, import_drizzle_orm27.eq)(hierarchyMembership.hierarchyNodeId, s.nodeId),
-            (0, import_drizzle_orm27.eq)(hierarchyMembership.isPrimary, true)
+          (0, import_drizzle_orm28.and)(
+            (0, import_drizzle_orm28.eq)(hierarchyMembership.userId, user_id),
+            (0, import_drizzle_orm28.eq)(hierarchyMembership.hierarchyNodeId, s.nodeId),
+            (0, import_drizzle_orm28.eq)(hierarchyMembership.isPrimary, true)
           )
         ).limit(1);
         if (membership) {
@@ -43687,9 +45208,9 @@ var TIER_NAMES = {
   7: "local_church"
 };
 async function getDemoScope() {
-  const demoGc = await db.select({ id: churchHierarchy.id, path: churchHierarchy.path, tier: churchHierarchy.tier }).from(churchHierarchy).where((0, import_drizzle_orm27.eq)(churchHierarchy.id, "demo-gc")).limit(1);
+  const demoGc = await db.select({ id: churchHierarchy.id, path: churchHierarchy.path, tier: churchHierarchy.tier }).from(churchHierarchy).where((0, import_drizzle_orm28.eq)(churchHierarchy.id, "demo-gc")).limit(1);
   if (demoGc.length === 0) return null;
-  const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm27.sql`${churchHierarchy.path} LIKE ${demoGc[0].path + "%"}`);
+  const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm28.sql`${churchHierarchy.path} LIKE ${demoGc[0].path + "%"}`);
   return {
     scopes: [{
       nodeId: "demo-gc",
@@ -43722,16 +45243,16 @@ async function buildPastorDashboard(scope, timeRange, rangeStart) {
   const primaryScope = scope.scopes[0];
   const nodeId = primaryScope.nodeId;
   const cached = await db.select().from(analyticsCache).where(
-    (0, import_drizzle_orm27.and)(
-      (0, import_drizzle_orm27.eq)(analyticsCache.hierarchyNodeId, nodeId),
-      (0, import_drizzle_orm27.eq)(analyticsCache.cacheType, "dashboard")
+    (0, import_drizzle_orm28.and)(
+      (0, import_drizzle_orm28.eq)(analyticsCache.hierarchyNodeId, nodeId),
+      (0, import_drizzle_orm28.eq)(analyticsCache.cacheType, "dashboard")
     )
   ).limit(1);
   const cacheData = cached[0]?.data ?? {};
-  const alertCount = await db.select({ count: import_drizzle_orm27.sql`count(*)::int` }).from(pastoralCareAlert).where(
-    (0, import_drizzle_orm27.and)(
-      (0, import_drizzle_orm27.eq)(pastoralCareAlert.hierarchyNodeId, nodeId),
-      (0, import_drizzle_orm27.eq)(pastoralCareAlert.isReviewed, false)
+  const alertCount = await db.select({ count: import_drizzle_orm28.sql`count(*)::int` }).from(pastoralCareAlert).where(
+    (0, import_drizzle_orm28.and)(
+      (0, import_drizzle_orm28.eq)(pastoralCareAlert.hierarchyNodeId, nodeId),
+      (0, import_drizzle_orm28.eq)(pastoralCareAlert.isReviewed, false)
     )
   );
   const topTopics = await db.select({
@@ -43740,13 +45261,13 @@ async function buildPastorDashboard(scope, timeRange, rangeStart) {
     trend_direction: topicTrend.trendDirection,
     trend_percent: topicTrend.trendPercent,
     topic_type: topicTrend.topicType
-  }).from(topicTrend).where((0, import_drizzle_orm27.eq)(topicTrend.hierarchyNodeId, nodeId)).orderBy((0, import_drizzle_orm27.desc)(topicTrend.currentWeekViews)).limit(5);
+  }).from(topicTrend).where((0, import_drizzle_orm28.eq)(topicTrend.hierarchyNodeId, nodeId)).orderBy((0, import_drizzle_orm28.desc)(topicTrend.currentWeekViews)).limit(5);
   const activityGrid = await db.select({
     day_of_week: activityPatternTile.dayOfWeek,
     time_block: activityPatternTile.timeBlock,
     engagement_score: activityPatternTile.engagementScore,
     engagement_count: activityPatternTile.engagementCount
-  }).from(activityPatternTile).where((0, import_drizzle_orm27.eq)(activityPatternTile.hierarchyNodeId, nodeId));
+  }).from(activityPatternTile).where((0, import_drizzle_orm28.eq)(activityPatternTile.hierarchyNodeId, nodeId));
   return {
     cache_status: cached[0] ? "fresh" : "building",
     time_range: timeRange,
@@ -43783,15 +45304,15 @@ async function buildConferenceDashboard(scope, timeRange) {
     name: churchHierarchy.name,
     tier: churchHierarchy.tier
   }).from(churchHierarchy).where(
-    (0, import_drizzle_orm27.and)(
-      (0, import_drizzle_orm27.inArray)(churchHierarchy.id, descendantIds.length > 0 ? descendantIds : [nodeId]),
-      (0, import_drizzle_orm27.eq)(churchHierarchy.tier, 7)
+    (0, import_drizzle_orm28.and)(
+      (0, import_drizzle_orm28.inArray)(churchHierarchy.id, descendantIds.length > 0 ? descendantIds : [nodeId]),
+      (0, import_drizzle_orm28.eq)(churchHierarchy.tier, 7)
     )
   );
   const churchIds = childChurches.map((c) => c.id);
   let churchRanking = [];
   if (churchIds.length > 0) {
-    const churchStats = await db.execute(import_drizzle_orm27.sql`
+    const churchStats = await db.execute(import_drizzle_orm28.sql`
       SELECT
         ch.id,
         ch.name AS church_name,
@@ -43812,7 +45333,7 @@ async function buildConferenceDashboard(scope, timeRange) {
   }
   let aggregateEngagement = 0;
   if (descendantIds.length > 0) {
-    const agg = await db.execute(import_drizzle_orm27.sql`
+    const agg = await db.execute(import_drizzle_orm28.sql`
       SELECT COALESCE(SUM((data->>'total_engagements')::int), 0)::int AS total
       FROM analytics_cache
       WHERE hierarchy_node_id = ANY(${sqlArray(descendantIds)})
@@ -43820,7 +45341,7 @@ async function buildConferenceDashboard(scope, timeRange) {
     `);
     aggregateEngagement = agg.rows[0]?.total ?? 0;
   }
-  const alertSummary = await db.execute(import_drizzle_orm27.sql`
+  const alertSummary = await db.execute(import_drizzle_orm28.sql`
     SELECT
       severity,
       count(*)::int AS count
@@ -43833,7 +45354,7 @@ async function buildConferenceDashboard(scope, timeRange) {
   for (const row of alertSummary.rows) {
     alertMap[row.severity] = row.count;
   }
-  const confNodeRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm27.eq)(churchHierarchy.id, nodeId)).limit(1);
+  const confNodeRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm28.eq)(churchHierarchy.id, nodeId)).limit(1);
   return {
     cache_status: "fresh",
     time_range: timeRange,
@@ -43868,15 +45389,15 @@ async function buildUpperTierDashboard(scope, timeRange) {
     id: churchHierarchy.id,
     name: churchHierarchy.name
   }).from(churchHierarchy).where(
-    (0, import_drizzle_orm27.and)(
-      (0, import_drizzle_orm27.inArray)(churchHierarchy.id, descendantIds.length > 0 ? descendantIds : [nodeId]),
-      (0, import_drizzle_orm27.eq)(churchHierarchy.tier, childTier)
+    (0, import_drizzle_orm28.and)(
+      (0, import_drizzle_orm28.inArray)(churchHierarchy.id, descendantIds.length > 0 ? descendantIds : [nodeId]),
+      (0, import_drizzle_orm28.eq)(churchHierarchy.tier, childTier)
     )
   );
   let ranking = [];
   if (childNodes.length > 0) {
     const childIds = childNodes.map((c) => c.id);
-    const childStats = await db.execute(import_drizzle_orm27.sql`
+    const childStats = await db.execute(import_drizzle_orm28.sql`
       SELECT
         ch.id,
         ch.name,
@@ -43897,7 +45418,7 @@ async function buildUpperTierDashboard(scope, timeRange) {
       trend_direction: "stable"
     }));
   }
-  const nodeRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm27.eq)(churchHierarchy.id, nodeId)).limit(1);
+  const nodeRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm28.eq)(churchHierarchy.id, nodeId)).limit(1);
   const result = {
     cache_status: "fresh",
     time_range: timeRange,
@@ -43912,7 +45433,7 @@ async function buildUpperTierDashboard(scope, timeRange) {
       lat: heatmapTile.latitude,
       lng: heatmapTile.longitude,
       engagement_score: heatmapTile.engagementScore
-    }).from(heatmapTile).where((0, import_drizzle_orm27.inArray)(heatmapTile.hierarchyNodeId, heatmapNodeIds));
+    }).from(heatmapTile).where((0, import_drizzle_orm28.inArray)(heatmapTile.hierarchyNodeId, heatmapNodeIds));
     result.geographic_heatmap = heatmapData.map((h) => ({
       lat: h.lat,
       lng: h.lng,
@@ -43940,7 +45461,7 @@ async function buildUpperTierDashboard(scope, timeRange) {
       trend_direction: topicTrend.trendDirection,
       trend_percent: topicTrend.trendPercent,
       topic_type: topicTrend.topicType
-    }).from(topicTrend).orderBy((0, import_drizzle_orm27.desc)(topicTrend.currentWeekViews)).limit(20);
+    }).from(topicTrend).orderBy((0, import_drizzle_orm28.desc)(topicTrend.currentWeekViews)).limit(20);
     result.global_topic_trends = globalTrends.map((t) => ({
       topic: t.topic,
       views: t.views,
@@ -43955,7 +45476,7 @@ async function buildUpperTierDashboard(scope, timeRange) {
       lat: heatmapTile.latitude,
       lng: heatmapTile.longitude,
       engagement_score: heatmapTile.engagementScore
-    }).from(heatmapTile).where((0, import_drizzle_orm27.inArray)(heatmapTile.hierarchyNodeId, divHeatmapNodeIds));
+    }).from(heatmapTile).where((0, import_drizzle_orm28.inArray)(heatmapTile.hierarchyNodeId, divHeatmapNodeIds));
     result.geographic_heatmap = heatmapData.map((h) => ({
       lat: h.lat,
       lng: h.lng,
@@ -43972,7 +45493,7 @@ router20.get(
       let scope = req.hierarchyScope;
       const timeRange = VALID_TIME_RANGES.includes(req.query.time_range) ? req.query.time_range : "this_week";
       if (req.query.demo === "true") {
-        const userRow = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm27.eq)(users.id, req.authUserId)).limit(1);
+        const userRow = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm28.eq)(users.id, req.authUserId)).limit(1);
         if (userRow.length > 0 && userRow[0].role === "admin") {
           const demoScope = await getDemoScope();
           if (demoScope) {
@@ -44010,7 +45531,7 @@ router20.get(
       const timeRange = VALID_TIME_RANGES.includes(req.query.time_range) ? req.query.time_range : "this_week";
       const isDemoRequest = req.query.demo === "true";
       if (isDemoRequest) {
-        const userRow = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm27.eq)(users.id, req.authUserId)).limit(1);
+        const userRow = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm28.eq)(users.id, req.authUserId)).limit(1);
         if (!userRow.length || userRow[0].role !== "admin") {
           return res.status(403).json({ error: "Admin access required for demo drill-down" });
         }
@@ -44029,12 +45550,12 @@ router20.get(
         tier: churchHierarchy.tier,
         path: churchHierarchy.path,
         parentId: churchHierarchy.parentId
-      }).from(churchHierarchy).where((0, import_drizzle_orm27.eq)(churchHierarchy.id, nodeId)).limit(1);
+      }).from(churchHierarchy).where((0, import_drizzle_orm28.eq)(churchHierarchy.id, nodeId)).limit(1);
       if (!nodeRow.length) {
         return res.status(404).json({ error: "Node not found" });
       }
       const node = nodeRow[0];
-      const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm27.sql`${churchHierarchy.path} LIKE ${node.path + "%"} AND ${churchHierarchy.id} != ${node.id}`);
+      const descendants = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where(import_drizzle_orm28.sql`${churchHierarchy.path} LIKE ${node.path + "%"} AND ${churchHierarchy.id} != ${node.id}`);
       const descendantIds = descendants.map((d) => d.id);
       const scope = {
         scopes: [{
@@ -44048,7 +45569,7 @@ router20.get(
       };
       let parentName = null;
       if (node.parentId) {
-        const parentRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm27.eq)(churchHierarchy.id, node.parentId)).limit(1);
+        const parentRow = await db.select({ name: churchHierarchy.name }).from(churchHierarchy).where((0, import_drizzle_orm28.eq)(churchHierarchy.id, node.parentId)).limit(1);
         parentName = parentRow[0]?.name ?? null;
       }
       if (node.tier >= 6) {
@@ -44103,7 +45624,7 @@ var analytics_default = router20;
 var import_express21 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm28 = require("drizzle-orm");
+var import_drizzle_orm29 = require("drizzle-orm");
 var router21 = (0, import_express21.Router)();
 router21.get("/api/resources", cachedResponse(120), async (req, res) => {
   try {
@@ -44119,29 +45640,29 @@ router21.get("/api/resources", cachedResponse(120), async (req, res) => {
     const pageNum = Math.max(1, Number(page) || 1);
     const limitNum = Math.min(Math.max(1, Number(limitStr) || 20), 50);
     const offset = (pageNum - 1) * limitNum;
-    const conditions = [(0, import_drizzle_orm28.eq)(resources.status, "published")];
+    const conditions = [(0, import_drizzle_orm29.eq)(resources.status, "published")];
     if (category && category !== "all") {
-      conditions.push((0, import_drizzle_orm28.eq)(resources.category, String(category)));
+      conditions.push((0, import_drizzle_orm29.eq)(resources.category, String(category)));
     }
     if (type) {
-      conditions.push((0, import_drizzle_orm28.eq)(resources.resourceType, String(type)));
+      conditions.push((0, import_drizzle_orm29.eq)(resources.resourceType, String(type)));
     }
     if (tier) {
-      conditions.push((0, import_drizzle_orm28.eq)(resources.tier, String(tier)));
+      conditions.push((0, import_drizzle_orm29.eq)(resources.tier, String(tier)));
     }
     if (ageGroup) {
-      conditions.push((0, import_drizzle_orm28.eq)(resources.ageGroup, String(ageGroup)));
+      conditions.push((0, import_drizzle_orm29.eq)(resources.ageGroup, String(ageGroup)));
     }
     if (search) {
       const searchTerm = `%${String(search).trim()}%`;
       conditions.push(
-        (0, import_drizzle_orm28.or)(
-          (0, import_drizzle_orm28.ilike)(resources.title, searchTerm),
-          (0, import_drizzle_orm28.ilike)(resources.description, searchTerm)
+        (0, import_drizzle_orm29.or)(
+          (0, import_drizzle_orm29.ilike)(resources.title, searchTerm),
+          (0, import_drizzle_orm29.ilike)(resources.description, searchTerm)
         )
       );
     }
-    const whereClause = (0, import_drizzle_orm28.and)(...conditions);
+    const whereClause = (0, import_drizzle_orm29.and)(...conditions);
     const items = await db.select({
       id: resources.id,
       slug: resources.slug,
@@ -44156,8 +45677,8 @@ router21.get("/api/resources", cachedResponse(120), async (req, res) => {
       tags: resources.tags,
       publishedAt: resources.publishedAt,
       createdAt: resources.createdAt
-    }).from(resources).where(whereClause).orderBy((0, import_drizzle_orm28.desc)(resources.publishedAt)).limit(limitNum).offset(offset);
-    const countResult = await db.select({ count: import_drizzle_orm28.sql`count(*)` }).from(resources).where(whereClause);
+    }).from(resources).where(whereClause).orderBy((0, import_drizzle_orm29.desc)(resources.publishedAt)).limit(limitNum).offset(offset);
+    const countResult = await db.select({ count: import_drizzle_orm29.sql`count(*)` }).from(resources).where(whereClause);
     const total = Number(countResult[0]?.count ?? 0);
     return res.json({
       items,
@@ -44186,7 +45707,7 @@ router21.get("/api/resources/bookmarks", requireAuth, async (req, res) => {
       estimatedMinutes: resources.estimatedMinutes,
       tags: resources.tags,
       bookmarkedAt: resourceBookmarks.createdAt
-    }).from(resourceBookmarks).innerJoin(resources, (0, import_drizzle_orm28.eq)(resourceBookmarks.resourceId, resources.id)).where((0, import_drizzle_orm28.eq)(resourceBookmarks.userId, userId)).orderBy((0, import_drizzle_orm28.desc)(resourceBookmarks.createdAt));
+    }).from(resourceBookmarks).innerJoin(resources, (0, import_drizzle_orm29.eq)(resourceBookmarks.resourceId, resources.id)).where((0, import_drizzle_orm29.eq)(resourceBookmarks.userId, userId)).orderBy((0, import_drizzle_orm29.desc)(resourceBookmarks.createdAt));
     return res.json(bookmarks);
   } catch (err) {
     console.error("List bookmarks error:", err);
@@ -44211,13 +45732,13 @@ router21.get("/api/resources/in-progress", requireAuth, async (req, res) => {
       progressPercent: resourceProgress.progressPercent,
       completed: resourceProgress.completed,
       lastAccessedAt: resourceProgress.lastAccessedAt
-    }).from(resourceProgress).innerJoin(resources, (0, import_drizzle_orm28.eq)(resourceProgress.resourceId, resources.id)).where(
-      (0, import_drizzle_orm28.and)(
-        (0, import_drizzle_orm28.eq)(resourceProgress.userId, userId),
-        (0, import_drizzle_orm28.eq)(resourceProgress.started, true),
-        (0, import_drizzle_orm28.eq)(resourceProgress.completed, false)
+    }).from(resourceProgress).innerJoin(resources, (0, import_drizzle_orm29.eq)(resourceProgress.resourceId, resources.id)).where(
+      (0, import_drizzle_orm29.and)(
+        (0, import_drizzle_orm29.eq)(resourceProgress.userId, userId),
+        (0, import_drizzle_orm29.eq)(resourceProgress.started, true),
+        (0, import_drizzle_orm29.eq)(resourceProgress.completed, false)
       )
-    ).orderBy((0, import_drizzle_orm28.desc)(resourceProgress.lastAccessedAt));
+    ).orderBy((0, import_drizzle_orm29.desc)(resourceProgress.lastAccessedAt));
     return res.json(inProgress);
   } catch (err) {
     console.error("List in-progress error:", err);
@@ -44228,7 +45749,7 @@ router21.get("/api/resources/:slug", optionalAuth, async (req, res) => {
   try {
     const { slug } = req.params;
     const userId = getEffectiveUserId(req);
-    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm28.and)((0, import_drizzle_orm28.eq)(resources.slug, slug), (0, import_drizzle_orm28.eq)(resources.status, "published"))).limit(1);
+    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm29.and)((0, import_drizzle_orm29.eq)(resources.slug, slug), (0, import_drizzle_orm29.eq)(resources.status, "published"))).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -44244,7 +45765,7 @@ router21.get("/api/resources/:slug", optionalAuth, async (req, res) => {
         target: [resourceProgress.userId, resourceProgress.resourceId],
         set: { lastAccessedAt: /* @__PURE__ */ new Date() }
       });
-      const bookmark = await db.select({ id: resourceBookmarks.id }).from(resourceBookmarks).where((0, import_drizzle_orm28.and)((0, import_drizzle_orm28.eq)(resourceBookmarks.userId, userId), (0, import_drizzle_orm28.eq)(resourceBookmarks.resourceId, resource.id))).limit(1);
+      const bookmark = await db.select({ id: resourceBookmarks.id }).from(resourceBookmarks).where((0, import_drizzle_orm29.and)((0, import_drizzle_orm29.eq)(resourceBookmarks.userId, userId), (0, import_drizzle_orm29.eq)(resourceBookmarks.resourceId, resource.id))).limit(1);
       isBookmarked = bookmark.length > 0;
     }
     return res.json({
@@ -44290,19 +45811,19 @@ router21.post("/api/resources/:id/progress", requireAuth, async (req, res) => {
 });
 router21.post("/api/resources/:id/bookmark", optionalAuth, async (req, res) => {
   try {
-    const userId = getAuthUserId2(req);
+    const userId = getAuthUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Sign in to save to Library", requiresAuth: true });
     }
     const { id: id2 } = req.params;
     const existing = await db.select().from(resourceBookmarks).where(
-      (0, import_drizzle_orm28.and)(
-        (0, import_drizzle_orm28.eq)(resourceBookmarks.userId, userId),
-        (0, import_drizzle_orm28.eq)(resourceBookmarks.resourceId, id2)
+      (0, import_drizzle_orm29.and)(
+        (0, import_drizzle_orm29.eq)(resourceBookmarks.userId, userId),
+        (0, import_drizzle_orm29.eq)(resourceBookmarks.resourceId, id2)
       )
     ).limit(1);
     if (existing.length > 0) {
-      await db.delete(resourceBookmarks).where((0, import_drizzle_orm28.eq)(resourceBookmarks.id, existing[0].id));
+      await db.delete(resourceBookmarks).where((0, import_drizzle_orm29.eq)(resourceBookmarks.id, existing[0].id));
       return res.json({ bookmarked: false });
     }
     await db.insert(resourceBookmarks).values({
@@ -44361,7 +45882,7 @@ router21.post("/api/resources/generate/family-worship", requireAuth, aiGeneratio
 router21.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm28.eq)(resources.id, id2)).limit(1);
+    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -44372,9 +45893,9 @@ router21.post("/api/resources/:id/publish", requireAdmin, async (req, res) => {
       reviewedAt: /* @__PURE__ */ new Date(),
       reviewedBy: req.authUserId,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm28.eq)(resources.id, id2)).returning();
+    }).where((0, import_drizzle_orm29.eq)(resources.id, id2)).returning();
     if (resource.supersedesResourceId) {
-      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm28.eq)(resources.id, resource.supersedesResourceId));
+      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm29.eq)(resources.id, resource.supersedesResourceId));
       console.log(`[publish] Archived superseded resource ${resource.supersedesResourceId}`);
     }
     return res.json(updated);
@@ -44390,7 +45911,7 @@ router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
     if (!action || !["approved", "rejected", "needs_revision"].includes(action)) {
       return res.status(400).json({ error: "action must be approved, rejected, or needs_revision" });
     }
-    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm28.eq)(resources.id, id2)).limit(1);
+    const [resource] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -44408,7 +45929,7 @@ router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       updateData.status = "draft";
       updateData.publishedAt = null;
     }
-    const [updated] = await db.update(resources).set(updateData).where((0, import_drizzle_orm28.eq)(resources.id, id2)).returning();
+    const [updated] = await db.update(resources).set(updateData).where((0, import_drizzle_orm29.eq)(resources.id, id2)).returning();
     await db.insert(resourceReviewNotes).values({
       resourceId: id2,
       action,
@@ -44419,8 +45940,8 @@ router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
       isSystem: false
     });
     if (action === "approved" && resource.supersedesResourceId) {
-      const [predecessorRow] = await db.select({ reviewStatus: resources.reviewStatus }).from(resources).where((0, import_drizzle_orm28.eq)(resources.id, resource.supersedesResourceId)).limit(1);
-      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm28.eq)(resources.id, resource.supersedesResourceId));
+      const [predecessorRow] = await db.select({ reviewStatus: resources.reviewStatus }).from(resources).where((0, import_drizzle_orm29.eq)(resources.id, resource.supersedesResourceId)).limit(1);
+      await db.update(resources).set({ status: "archived", reviewStatus: "archived", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm29.eq)(resources.id, resource.supersedesResourceId));
       await db.insert(resourceReviewNotes).values({
         resourceId: resource.supersedesResourceId,
         action: "archived",
@@ -44441,7 +45962,7 @@ router21.post("/api/resources/:id/review", requireEditor, async (req, res) => {
 router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [current] = await db.select().from(resources).where((0, import_drizzle_orm28.eq)(resources.id, id2)).limit(1);
+    const [current] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, id2)).limit(1);
     if (!current) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -44451,7 +45972,7 @@ router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
     if (!current.supersedesResourceId) {
       return res.status(400).json({ error: "No predecessor version to roll back to" });
     }
-    const [predecessor] = await db.select().from(resources).where((0, import_drizzle_orm28.eq)(resources.id, current.supersedesResourceId)).limit(1);
+    const [predecessor] = await db.select().from(resources).where((0, import_drizzle_orm29.eq)(resources.id, current.supersedesResourceId)).limit(1);
     if (!predecessor) {
       return res.status(404).json({ error: "Predecessor resource not found" });
     }
@@ -44468,7 +45989,7 @@ router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         reviewedAt: now,
         reviewedBy: req.authUserId,
         updatedAt: now
-      }).where((0, import_drizzle_orm28.eq)(resources.id, current.id));
+      }).where((0, import_drizzle_orm29.eq)(resources.id, current.id));
       await tx.insert(resourceReviewNotes).values({
         resourceId: current.id,
         action: "rollback_archived",
@@ -44486,7 +46007,7 @@ router21.post("/api/resources/:id/rollback", requireAdmin, async (req, res) => {
         reviewedAt: now,
         reviewedBy: req.authUserId,
         updatedAt: now
-      }).where((0, import_drizzle_orm28.eq)(resources.id, predecessor.id)).returning();
+      }).where((0, import_drizzle_orm29.eq)(resources.id, predecessor.id)).returning();
       await tx.insert(resourceReviewNotes).values({
         resourceId: predecessor.id,
         action: "rollback_restored",
@@ -44522,7 +46043,7 @@ var resources_default = router21;
 var import_express22 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm30 = require("drizzle-orm");
+var import_drizzle_orm31 = require("drizzle-orm");
 var router22 = (0, import_express22.Router)();
 router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, res) => {
   try {
@@ -44537,27 +46058,27 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
     const sortOrderParam = req.query.sortOrder === "asc" ? "asc" : "desc";
     const packetStatusCounts = await db.select({
       status: lessonSourcePackets.status,
-      count: import_drizzle_orm30.sql`count(*)::int`
+      count: import_drizzle_orm31.sql`count(*)::int`
     }).from(lessonSourcePackets).groupBy(lessonSourcePackets.status);
-    const activeCompanionCondition = (0, import_drizzle_orm30.and)(
-      (0, import_drizzle_orm30.eq)(resources.resourceType, "sabbath-school-companion"),
-      import_drizzle_orm30.sql`${resources.status} != 'archived'`
+    const activeCompanionCondition = (0, import_drizzle_orm31.and)(
+      (0, import_drizzle_orm31.eq)(resources.resourceType, "sabbath-school-companion"),
+      import_drizzle_orm31.sql`${resources.status} != 'archived'`
     );
     const genStatusCounts = await db.select({
       generationStatus: resources.generationStatus,
-      count: import_drizzle_orm30.sql`count(*)::int`
+      count: import_drizzle_orm31.sql`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.generationStatus);
     const reviewStatusCounts = await db.select({
       reviewStatus: resources.reviewStatus,
-      count: import_drizzle_orm30.sql`count(*)::int`
+      count: import_drizzle_orm31.sql`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.reviewStatus);
     const promptVersionDist = await db.select({
       promptVersion: resources.promptVersion,
-      count: import_drizzle_orm30.sql`count(*)::int`
+      count: import_drizzle_orm31.sql`count(*)::int`
     }).from(resources).where(activeCompanionCondition).groupBy(resources.promptVersion);
-    const totalLessons = await db.select({ count: import_drizzle_orm30.sql`count(*)::int` }).from(sabbathSchoolLessons);
-    const lessonsWithCompanions = await db.select({ count: import_drizzle_orm30.sql`count(distinct ${resources.sourceRef}->>'lessonId')::int` }).from(resources).where(
-      import_drizzle_orm30.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.status} != 'archived'`
+    const totalLessons = await db.select({ count: import_drizzle_orm31.sql`count(*)::int` }).from(sabbathSchoolLessons);
+    const lessonsWithCompanions = await db.select({ count: import_drizzle_orm31.sql`count(distinct ${resources.sourceRef}->>'lessonId')::int` }).from(resources).where(
+      import_drizzle_orm31.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.status} != 'archived'`
     );
     const failedGenerations = await db.select({
       id: resources.id,
@@ -44565,36 +46086,36 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
       sourcePacketId: resources.sourcePacketId,
       updatedAt: resources.updatedAt
     }).from(resources).where(
-      (0, import_drizzle_orm30.and)(
-        (0, import_drizzle_orm30.eq)(resources.resourceType, "sabbath-school-companion"),
-        (0, import_drizzle_orm30.eq)(resources.generationStatus, "failed"),
-        import_drizzle_orm30.sql`${resources.status} != 'archived'`
+      (0, import_drizzle_orm31.and)(
+        (0, import_drizzle_orm31.eq)(resources.resourceType, "sabbath-school-companion"),
+        (0, import_drizzle_orm31.eq)(resources.generationStatus, "failed"),
+        import_drizzle_orm31.sql`${resources.status} != 'archived'`
       )
-    ).orderBy((0, import_drizzle_orm30.desc)(resources.updatedAt)).limit(20);
+    ).orderBy((0, import_drizzle_orm31.desc)(resources.updatedAt)).limit(20);
     const [presetCounts] = await db.select({
-      pendingReview: import_drizzle_orm30.sql`count(*) FILTER (WHERE ${resources.reviewStatus} = 'pending')::int`,
-      needsAttention: import_drizzle_orm30.sql`count(*) FILTER (WHERE ${resources.reviewStatus} = 'needs_revision')::int`,
-      regenerated: import_drizzle_orm30.sql`count(*) FILTER (WHERE ${resources.supersedesResourceId} IS NOT NULL AND ${resources.reviewStatus} = 'pending')::int`,
-      hasNotes: import_drizzle_orm30.sql`count(*) FILTER (WHERE ${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != '')::int`
-    }).from(resources).where((0, import_drizzle_orm30.and)(
-      (0, import_drizzle_orm30.eq)(resources.resourceType, "sabbath-school-companion"),
-      import_drizzle_orm30.sql`${resources.status} != 'archived'`
+      pendingReview: import_drizzle_orm31.sql`count(*) FILTER (WHERE ${resources.reviewStatus} = 'pending')::int`,
+      needsAttention: import_drizzle_orm31.sql`count(*) FILTER (WHERE ${resources.reviewStatus} = 'needs_revision')::int`,
+      regenerated: import_drizzle_orm31.sql`count(*) FILTER (WHERE ${resources.supersedesResourceId} IS NOT NULL AND ${resources.reviewStatus} = 'pending')::int`,
+      hasNotes: import_drizzle_orm31.sql`count(*) FILTER (WHERE ${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != '')::int`
+    }).from(resources).where((0, import_drizzle_orm31.and)(
+      (0, import_drizzle_orm31.eq)(resources.resourceType, "sabbath-school-companion"),
+      import_drizzle_orm31.sql`${resources.status} != 'archived'`
     ));
     let sourceChangedCount = 0;
     const allCompanions = await db.select({
       sourcePacketId: resources.sourcePacketId,
       sourceRef: resources.sourceRef
-    }).from(resources).where((0, import_drizzle_orm30.and)(
-      (0, import_drizzle_orm30.eq)(resources.resourceType, "sabbath-school-companion"),
-      import_drizzle_orm30.sql`${resources.status} != 'archived'`,
-      import_drizzle_orm30.sql`${resources.sourcePacketId} IS NOT NULL`
+    }).from(resources).where((0, import_drizzle_orm31.and)(
+      (0, import_drizzle_orm31.eq)(resources.resourceType, "sabbath-school-companion"),
+      import_drizzle_orm31.sql`${resources.status} != 'archived'`,
+      import_drizzle_orm31.sql`${resources.sourcePacketId} IS NOT NULL`
     ));
     if (allCompanions.length > 0) {
       const packetIds2 = [...new Set(allCompanions.map((c) => c.sourcePacketId).filter(Boolean))];
       const lessonIds2 = [...new Set(allCompanions.map((c) => c.sourceRef?.lessonId).filter(Boolean))];
       if (packetIds2.length > 0 && lessonIds2.length > 0) {
-        const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm30.sql`${lessonSourcePackets.id} IN (${import_drizzle_orm30.sql.join(packetIds2.map((p) => import_drizzle_orm30.sql`${p}`), import_drizzle_orm30.sql`, `)})`);
-        const latestPackets = await db.select({ lessonId: lessonSourcePackets.lessonId, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm30.sql`${lessonSourcePackets.lessonId} IN (${import_drizzle_orm30.sql.join(lessonIds2.map((l) => import_drizzle_orm30.sql`${l}`), import_drizzle_orm30.sql`, `)})`).orderBy((0, import_drizzle_orm30.desc)(lessonSourcePackets.updatedAt));
+        const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm31.sql`${lessonSourcePackets.id} IN (${import_drizzle_orm31.sql.join(packetIds2.map((p) => import_drizzle_orm31.sql`${p}`), import_drizzle_orm31.sql`, `)})`);
+        const latestPackets = await db.select({ lessonId: lessonSourcePackets.lessonId, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm31.sql`${lessonSourcePackets.lessonId} IN (${import_drizzle_orm31.sql.join(lessonIds2.map((l) => import_drizzle_orm31.sql`${l}`), import_drizzle_orm31.sql`, `)})`).orderBy((0, import_drizzle_orm31.desc)(lessonSourcePackets.updatedAt));
         const usedHashMap = Object.fromEntries(usedPackets.map((p) => [p.id, p.sourceHash]));
         const latestHashMap = {};
         for (const p of latestPackets) {
@@ -44609,34 +46130,34 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
       }
     }
     const listConditions = [
-      (0, import_drizzle_orm30.eq)(resources.resourceType, "sabbath-school-companion"),
-      import_drizzle_orm30.sql`${resources.status} != 'archived'`
+      (0, import_drizzle_orm31.eq)(resources.resourceType, "sabbath-school-companion"),
+      import_drizzle_orm31.sql`${resources.status} != 'archived'`
     ];
     if (filterReviewStatus && filterReviewStatus !== "all") {
-      listConditions.push((0, import_drizzle_orm30.eq)(resources.reviewStatus, filterReviewStatus));
+      listConditions.push((0, import_drizzle_orm31.eq)(resources.reviewStatus, filterReviewStatus));
     } else if (!filterReviewStatus) {
-      listConditions.push((0, import_drizzle_orm30.eq)(resources.reviewStatus, "pending"));
+      listConditions.push((0, import_drizzle_orm31.eq)(resources.reviewStatus, "pending"));
     }
     if (filterGenStatus) {
-      listConditions.push((0, import_drizzle_orm30.eq)(resources.generationStatus, filterGenStatus));
+      listConditions.push((0, import_drizzle_orm31.eq)(resources.generationStatus, filterGenStatus));
     }
     if (filterPromptVersion) {
-      listConditions.push((0, import_drizzle_orm30.eq)(resources.promptVersion, filterPromptVersion));
+      listConditions.push((0, import_drizzle_orm31.eq)(resources.promptVersion, filterPromptVersion));
     }
     if (filterQuarterCode) {
-      const qtr = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm30.eq)(sabbathSchoolQuarterlies.quarterCode, filterQuarterCode)).limit(1);
+      const qtr = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm31.eq)(sabbathSchoolQuarterlies.quarterCode, filterQuarterCode)).limit(1);
       if (qtr.length > 0) {
-        listConditions.push(import_drizzle_orm30.sql`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
+        listConditions.push(import_drizzle_orm31.sql`${resources.sourceRef}->>'quarterlyId' = ${qtr[0].id}`);
       }
     }
     if (filterHasNotes) {
-      listConditions.push(import_drizzle_orm30.sql`${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != ''`);
+      listConditions.push(import_drizzle_orm31.sql`${resources.reviewNotes} IS NOT NULL AND ${resources.reviewNotes} != ''`);
     }
     if (filterIsRegenerated) {
-      listConditions.push(import_drizzle_orm30.sql`(${resources.supersedesResourceId} IS NOT NULL)`);
+      listConditions.push(import_drizzle_orm31.sql`(${resources.supersedesResourceId} IS NOT NULL)`);
     }
     const sortColumn = sortByParam === "title" ? resources.title : sortByParam === "updatedAt" ? resources.updatedAt : resources.createdAt;
-    const sortFn = sortOrderParam === "asc" ? import_drizzle_orm30.asc : import_drizzle_orm30.desc;
+    const sortFn = sortOrderParam === "asc" ? import_drizzle_orm31.asc : import_drizzle_orm31.desc;
     const filteredList = await db.select({
       id: resources.id,
       title: resources.title,
@@ -44652,8 +46173,8 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
       createdAt: resources.createdAt,
       updatedAt: resources.updatedAt,
       supersedesResourceId: resources.supersedesResourceId,
-      hasPreviousVersion: import_drizzle_orm30.sql`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version")
-    }).from(resources).where((0, import_drizzle_orm30.and)(...listConditions)).orderBy(sortFn(sortColumn)).limit(50);
+      hasPreviousVersion: import_drizzle_orm31.sql`(${resources.previousContentJson} IS NOT NULL OR ${resources.supersedesResourceId} IS NOT NULL)`.as("has_previous_version")
+    }).from(resources).where((0, import_drizzle_orm31.and)(...listConditions)).orderBy(sortFn(sortColumn)).limit(50);
     const lessonIds = filteredList.map((r) => r.sourceRef?.lessonId).filter(Boolean);
     const latestPacketByLesson = /* @__PURE__ */ new Map();
     const resourcePacketHashes = /* @__PURE__ */ new Map();
@@ -44661,14 +46182,14 @@ router22.get("/api/admin/pipeline/overview", requirePipelineAccess, async (req, 
       const latestPackets = await db.select({
         lessonId: lessonSourcePackets.lessonId,
         sourceHash: lessonSourcePackets.sourceHash
-      }).from(lessonSourcePackets).where(import_drizzle_orm30.sql`${lessonSourcePackets.lessonId} IN (${import_drizzle_orm30.sql.join(lessonIds.map((id2) => import_drizzle_orm30.sql`${id2}`), import_drizzle_orm30.sql`, `)})`);
+      }).from(lessonSourcePackets).where(import_drizzle_orm31.sql`${lessonSourcePackets.lessonId} IN (${import_drizzle_orm31.sql.join(lessonIds.map((id2) => import_drizzle_orm31.sql`${id2}`), import_drizzle_orm31.sql`, `)})`);
       for (const p of latestPackets) {
         latestPacketByLesson.set(p.lessonId, p.sourceHash);
       }
     }
     const packetIds = filteredList.map((r) => r.sourcePacketId).filter(Boolean);
     if (packetIds.length > 0) {
-      const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm30.sql`${lessonSourcePackets.id} IN (${import_drizzle_orm30.sql.join(packetIds.map((id2) => import_drizzle_orm30.sql`${id2}`), import_drizzle_orm30.sql`, `)})`);
+      const usedPackets = await db.select({ id: lessonSourcePackets.id, sourceHash: lessonSourcePackets.sourceHash }).from(lessonSourcePackets).where(import_drizzle_orm31.sql`${lessonSourcePackets.id} IN (${import_drizzle_orm31.sql.join(packetIds.map((id2) => import_drizzle_orm31.sql`${id2}`), import_drizzle_orm31.sql`, `)})`);
       for (const p of usedPackets) {
         resourcePacketHashes.set(p.id, p.sourceHash);
       }
@@ -44762,7 +46283,7 @@ router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, 
       publishedAt: resources.publishedAt,
       previousContentJson: resources.previousContentJson,
       supersedesResourceId: resources.supersedesResourceId
-    }).from(resources).where((0, import_drizzle_orm30.eq)(resources.id, id2)).limit(1);
+    }).from(resources).where((0, import_drizzle_orm31.eq)(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
@@ -44776,12 +46297,12 @@ router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, 
         sourceHash: lessonSourcePackets.sourceHash,
         sourceVersion: lessonSourcePackets.sourceVersion,
         updatedAt: lessonSourcePackets.updatedAt
-      }).from(lessonSourcePackets).where((0, import_drizzle_orm30.eq)(lessonSourcePackets.id, resource.sourcePacketId)).limit(1);
+      }).from(lessonSourcePackets).where((0, import_drizzle_orm31.eq)(lessonSourcePackets.id, resource.sourcePacketId)).limit(1);
       sourcePacket = packet || null;
     }
     let reviewer = null;
     if (resource.reviewedBy) {
-      const [user] = await db.select({ id: users.id, displayName: users.displayName, email: users.email }).from(users).where((0, import_drizzle_orm30.eq)(users.id, resource.reviewedBy)).limit(1);
+      const [user] = await db.select({ id: users.id, displayName: users.displayName, email: users.email }).from(users).where((0, import_drizzle_orm31.eq)(users.id, resource.reviewedBy)).limit(1);
       reviewer = user || null;
     }
     const contentJson = resource.contentJson;
@@ -44834,7 +46355,7 @@ router22.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, 
         promptVersion: resources.promptVersion,
         status: resources.status,
         createdAt: resources.createdAt
-      }).from(resources).where((0, import_drizzle_orm30.eq)(resources.id, resource.supersedesResourceId)).limit(1);
+      }).from(resources).where((0, import_drizzle_orm31.eq)(resources.id, resource.supersedesResourceId)).limit(1);
       if (pred) {
         predecessorData = pred;
       }
@@ -44891,13 +46412,13 @@ router22.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, asy
       generationStatus: resources.generationStatus,
       reviewStatus: resources.reviewStatus,
       createdAt: resources.createdAt
-    }).from(resources).where((0, import_drizzle_orm30.eq)(resources.id, id2)).limit(1);
+    }).from(resources).where((0, import_drizzle_orm31.eq)(resources.id, id2)).limit(1);
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
     }
     let previousContent = resource.previousContentJson;
     if (!previousContent && resource.supersedesResourceId) {
-      const [superseded] = await db.select({ contentJson: resources.contentJson }).from(resources).where((0, import_drizzle_orm30.eq)(resources.id, resource.supersedesResourceId)).limit(1);
+      const [superseded] = await db.select({ contentJson: resources.contentJson }).from(resources).where((0, import_drizzle_orm31.eq)(resources.id, resource.supersedesResourceId)).limit(1);
       if (superseded) {
         previousContent = superseded.contentJson;
       }
@@ -44982,7 +46503,7 @@ router22.get("/api/admin/pipeline/resource/:id/diff", requirePipelineAccess, asy
 router22.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, async (req, res) => {
   try {
     const { quarterCode } = req.params;
-    const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm30.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    const quarterly = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm31.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (quarterly.length === 0) {
       return res.status(404).json({ error: `Quarter ${quarterCode} not found` });
     }
@@ -44991,14 +46512,14 @@ router22.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, 
       id: sabbathSchoolLessons.id,
       title: sabbathSchoolLessons.title,
       lessonNumber: sabbathSchoolLessons.lessonNumber
-    }).from(sabbathSchoolLessons).where((0, import_drizzle_orm30.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
+    }).from(sabbathSchoolLessons).where((0, import_drizzle_orm31.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
     const packets = await db.select({
       id: lessonSourcePackets.id,
       lessonId: lessonSourcePackets.lessonId,
       status: lessonSourcePackets.status,
       sourceHash: lessonSourcePackets.sourceHash,
       updatedAt: lessonSourcePackets.updatedAt
-    }).from(lessonSourcePackets).where((0, import_drizzle_orm30.eq)(lessonSourcePackets.quarterlyId, quarterlyId));
+    }).from(lessonSourcePackets).where((0, import_drizzle_orm31.eq)(lessonSourcePackets.quarterlyId, quarterlyId));
     const companions = await db.select({
       id: resources.id,
       title: resources.title,
@@ -45012,7 +46533,7 @@ router22.get("/api/admin/pipeline/quarter/:quarterCode", requirePipelineAccess, 
       createdAt: resources.createdAt,
       publishedAt: resources.publishedAt
     }).from(resources).where(
-      import_drizzle_orm30.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
+      import_drizzle_orm31.sql`${resources.resourceType} = 'sabbath-school-companion' AND ${resources.sourceRef}->>'quarterlyId' = ${quarterlyId}`
     );
     const packetMap = new Map(packets.map((p) => [p.lessonId, p]));
     const companionMap = /* @__PURE__ */ new Map();
@@ -45074,7 +46595,7 @@ router22.post("/api/admin/pipeline/generate-quarter", requireAdmin, async (req, 
     if (!quarterCode || typeof quarterCode !== "string") {
       return res.status(400).json({ error: "quarterCode is required" });
     }
-    const quarterly = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm30.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
+    const quarterly = await db.select({ id: sabbathSchoolQuarterlies.id }).from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm31.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
     if (quarterly.length === 0) {
       return res.status(404).json({ error: `Quarter ${quarterCode} not found in database` });
     }
@@ -45110,14 +46631,14 @@ router22.post("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
     if (!role || !["member", "student", "church_leader_pending", "church_leader", "editor", "admin"].includes(role)) {
       return res.status(400).json({ error: "role must be member, student, church_leader_pending, church_leader, editor, or admin" });
     }
-    const [target] = await db.select({ id: users.id, displayName: users.displayName }).from(users).where((0, import_drizzle_orm30.eq)(users.id, id2)).limit(1);
+    const [target] = await db.select({ id: users.id, displayName: users.displayName }).from(users).where((0, import_drizzle_orm31.eq)(users.id, id2)).limit(1);
     if (!target) {
       return res.status(404).json({ error: "User not found" });
     }
     if (id2 === req.authUserId && role !== "admin") {
       return res.status(400).json({ error: "Cannot demote yourself" });
     }
-    const [updated] = await db.update(users).set({ role }).where((0, import_drizzle_orm30.eq)(users.id, id2)).returning({
+    const [updated] = await db.update(users).set({ role }).where((0, import_drizzle_orm31.eq)(users.id, id2)).returning({
       id: users.id,
       displayName: users.displayName,
       email: users.email,
@@ -45142,12 +46663,12 @@ router22.get("/api/admin/pipeline/resource/:id/review-history", requirePipelineA
       createdBy: resourceReviewNotes.createdBy,
       isSystem: resourceReviewNotes.isSystem,
       createdAt: resourceReviewNotes.createdAt
-    }).from(resourceReviewNotes).where((0, import_drizzle_orm30.eq)(resourceReviewNotes.resourceId, id2)).orderBy((0, import_drizzle_orm30.desc)(resourceReviewNotes.createdAt));
+    }).from(resourceReviewNotes).where((0, import_drizzle_orm31.eq)(resourceReviewNotes.resourceId, id2)).orderBy((0, import_drizzle_orm31.desc)(resourceReviewNotes.createdAt));
     const userIds = [...new Set(notes.map((n) => n.createdBy))];
     const userMap = {};
     if (userIds.length > 0) {
       for (const uid of userIds) {
-        const [u] = await db.select({ displayName: users.displayName, email: users.email, role: users.role }).from(users).where((0, import_drizzle_orm30.eq)(users.id, uid)).limit(1);
+        const [u] = await db.select({ displayName: users.displayName, email: users.email, role: users.role }).from(users).where((0, import_drizzle_orm31.eq)(users.id, uid)).limit(1);
         if (u) userMap[uid] = u;
       }
     }
@@ -45170,19 +46691,19 @@ router22.post("/api/admin/pipeline/regenerate-companion", requireAdmin, async (r
     const { generateQuarterCompanions: generateQuarterCompanions2 } = await Promise.resolve().then(() => (init_batch_generator(), batch_generator_exports));
     const { generateSabbathSchoolCompanion: generateSabbathSchoolCompanion2 } = await Promise.resolve().then(() => (init_content_engine(), content_engine_exports));
     if (lessonId) {
-      const lessonSourceCondition = import_drizzle_orm30.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
-      const existing = await db.select({ id: resources.id, status: resources.status, contentJson: resources.contentJson }).from(resources).where((0, import_drizzle_orm30.and)(lessonSourceCondition, import_drizzle_orm30.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm30.desc)(resources.createdAt));
+      const lessonSourceCondition = import_drizzle_orm31.sql`${resources.sourceRef}->>'type' = 'sabbath-school' AND ${resources.sourceRef}->>'lessonId' = ${lessonId}`;
+      const existing = await db.select({ id: resources.id, status: resources.status, contentJson: resources.contentJson }).from(resources).where((0, import_drizzle_orm31.and)(lessonSourceCondition, import_drizzle_orm31.sql`${resources.status} != 'archived'`)).orderBy((0, import_drizzle_orm31.desc)(resources.createdAt));
       const published = existing.find((r) => r.status === "published");
       const staleDraft = existing.find((r) => r.status === "draft" && r.id !== published?.id);
       if (staleDraft) {
-        await db.delete(resources).where((0, import_drizzle_orm30.eq)(resources.id, staleDraft.id));
+        await db.delete(resources).where((0, import_drizzle_orm31.eq)(resources.id, staleDraft.id));
       }
       const resourceId = await generateSabbathSchoolCompanion2(lessonId, {});
       if (published) {
         await db.update(resources).set({
           supersedesResourceId: published.id,
           previousContentJson: published.contentJson
-        }).where((0, import_drizzle_orm30.eq)(resources.id, resourceId));
+        }).where((0, import_drizzle_orm31.eq)(resources.id, resourceId));
       }
       return res.json({ success: true, resourceId, mode: "single", supersedes: published?.id || null });
     }
@@ -45199,7 +46720,7 @@ var admin_pipeline_default = router22;
 var import_express23 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm31 = require("drizzle-orm");
+var import_drizzle_orm32 = require("drizzle-orm");
 var router23 = (0, import_express23.Router)();
 router23.get("/api/admin/users", requireAdmin, async (req, res) => {
   try {
@@ -45211,18 +46732,18 @@ router23.get("/api/admin/users", requireAdmin, async (req, res) => {
     const conditions = [];
     if (search) {
       conditions.push(
-        (0, import_drizzle_orm31.or)(
-          (0, import_drizzle_orm31.ilike)(users.displayName, `%${search}%`),
-          (0, import_drizzle_orm31.ilike)(users.email, `%${search}%`),
-          (0, import_drizzle_orm31.ilike)(users.username, `%${search}%`)
+        (0, import_drizzle_orm32.or)(
+          (0, import_drizzle_orm32.ilike)(users.displayName, `%${search}%`),
+          (0, import_drizzle_orm32.ilike)(users.email, `%${search}%`),
+          (0, import_drizzle_orm32.ilike)(users.username, `%${search}%`)
         )
       );
     }
     if (roleFilter) {
-      conditions.push((0, import_drizzle_orm31.eq)(users.role, roleFilter));
+      conditions.push((0, import_drizzle_orm32.eq)(users.role, roleFilter));
     }
-    const whereClause = conditions.length > 0 ? (0, import_drizzle_orm31.and)(...conditions) : void 0;
-    const [countResult] = await db.select({ count: import_drizzle_orm31.sql`count(*)::int` }).from(users).where(whereClause);
+    const whereClause = conditions.length > 0 ? (0, import_drizzle_orm32.and)(...conditions) : void 0;
+    const [countResult] = await db.select({ count: import_drizzle_orm32.sql`count(*)::int` }).from(users).where(whereClause);
     const totalCount = countResult?.count || 0;
     const userList = await db.select({
       id: users.id,
@@ -45234,10 +46755,10 @@ router23.get("/api/admin/users", requireAdmin, async (req, res) => {
       isPro: users.isPro,
       isPatron: users.isPatron,
       organizationId: users.organizationId
-    }).from(users).where(whereClause).orderBy((0, import_drizzle_orm31.desc)(users.createdAt)).limit(limit).offset(offset);
+    }).from(users).where(whereClause).orderBy((0, import_drizzle_orm32.desc)(users.createdAt)).limit(limit).offset(offset);
     const usersWithActivity = await Promise.all(
       userList.map(async (u) => {
-        const [lastActivity] = await db.select({ lastUsedAt: userActivityCounters.lastUsedAt }).from(userActivityCounters).where((0, import_drizzle_orm31.eq)(userActivityCounters.userId, u.id)).orderBy((0, import_drizzle_orm31.desc)(userActivityCounters.lastUsedAt)).limit(1);
+        const [lastActivity] = await db.select({ lastUsedAt: userActivityCounters.lastUsedAt }).from(userActivityCounters).where((0, import_drizzle_orm32.eq)(userActivityCounters.userId, u.id)).orderBy((0, import_drizzle_orm32.desc)(userActivityCounters.lastUsedAt)).limit(1);
         return {
           ...u,
           lastActive: lastActivity?.lastUsedAt || null
@@ -45272,7 +46793,7 @@ router23.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
       isPatron: users.isPatron,
       organizationId: users.organizationId,
       profileType: users.profileType
-    }).from(users).where((0, import_drizzle_orm31.eq)(users.id, id2));
+    }).from(users).where((0, import_drizzle_orm32.eq)(users.id, id2));
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -45282,14 +46803,14 @@ router23.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
       joinedAt: prayerGroupMembers.joinedAt,
       groupName: prayerGroups.name,
       groupType: prayerGroups.groupType
-    }).from(prayerGroupMembers).leftJoin(prayerGroups, (0, import_drizzle_orm31.eq)(prayerGroupMembers.groupId, prayerGroups.id)).where((0, import_drizzle_orm31.eq)(prayerGroupMembers.userId, id2));
+    }).from(prayerGroupMembers).leftJoin(prayerGroups, (0, import_drizzle_orm32.eq)(prayerGroupMembers.groupId, prayerGroups.id)).where((0, import_drizzle_orm32.eq)(prayerGroupMembers.userId, id2));
     let organization = null;
     if (user.organizationId) {
       const [org] = await db.select({
         id: organizations.id,
         name: organizations.name,
         type: organizations.type
-      }).from(organizations).where((0, import_drizzle_orm31.eq)(organizations.id, user.organizationId));
+      }).from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, user.organizationId));
       organization = org || null;
     }
     const recentActivity = await db.select({
@@ -45297,14 +46818,14 @@ router23.get("/api/admin/users/:id", requireAdmin, async (req, res) => {
       bookName: readingHistory.bookName,
       chapter: readingHistory.chapter,
       readAt: readingHistory.readAt
-    }).from(readingHistory).where((0, import_drizzle_orm31.eq)(readingHistory.userId, id2)).orderBy((0, import_drizzle_orm31.desc)(readingHistory.readAt)).limit(10);
+    }).from(readingHistory).where((0, import_drizzle_orm32.eq)(readingHistory.userId, id2)).orderBy((0, import_drizzle_orm32.desc)(readingHistory.readAt)).limit(10);
     const recentPosts = await db.select({
       id: groupDiscussions.id,
       groupId: groupDiscussions.groupId,
       content: groupDiscussions.content,
       createdAt: groupDiscussions.createdAt
-    }).from(groupDiscussions).where((0, import_drizzle_orm31.eq)(groupDiscussions.userId, id2)).orderBy((0, import_drizzle_orm31.desc)(groupDiscussions.createdAt)).limit(10);
-    const [activityStats] = await db.select({ lastUsedAt: userActivityCounters.lastUsedAt }).from(userActivityCounters).where((0, import_drizzle_orm31.eq)(userActivityCounters.userId, id2)).orderBy((0, import_drizzle_orm31.desc)(userActivityCounters.lastUsedAt)).limit(1);
+    }).from(groupDiscussions).where((0, import_drizzle_orm32.eq)(groupDiscussions.userId, id2)).orderBy((0, import_drizzle_orm32.desc)(groupDiscussions.createdAt)).limit(10);
+    const [activityStats] = await db.select({ lastUsedAt: userActivityCounters.lastUsedAt }).from(userActivityCounters).where((0, import_drizzle_orm32.eq)(userActivityCounters.userId, id2)).orderBy((0, import_drizzle_orm32.desc)(userActivityCounters.lastUsedAt)).limit(1);
     return res.json({
       user: {
         ...user,
@@ -45328,11 +46849,11 @@ router23.patch("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` });
     }
-    const [existing] = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm31.eq)(users.id, id2));
+    const [existing] = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm32.eq)(users.id, id2));
     if (!existing) {
       return res.status(404).json({ error: "User not found" });
     }
-    await db.update(users).set({ role }).where((0, import_drizzle_orm31.eq)(users.id, id2));
+    await db.update(users).set({ role }).where((0, import_drizzle_orm32.eq)(users.id, id2));
     return res.json({ success: true, role });
   } catch (err) {
     console.error("Admin update role error:", err);
@@ -45345,7 +46866,7 @@ router23.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
     if (id2 === req.authUserId) {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
-    const [existing] = await db.select({ id: users.id, role: users.role }).from(users).where((0, import_drizzle_orm31.eq)(users.id, id2));
+    const [existing] = await db.select({ id: users.id, role: users.role }).from(users).where((0, import_drizzle_orm32.eq)(users.id, id2));
     if (!existing) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -45375,16 +46896,16 @@ router23.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
       { table: organizationMembers, col: organizationMembers.userId }
     ];
     try {
-      await db.delete(childProfiles).where((0, import_drizzle_orm31.eq)(childProfiles.parentId, id2));
+      await db.delete(childProfiles).where((0, import_drizzle_orm32.eq)(childProfiles.parentId, id2));
     } catch {
     }
     for (const { table, col } of relatedTables) {
       try {
-        await db.delete(table).where((0, import_drizzle_orm31.eq)(col, id2));
+        await db.delete(table).where((0, import_drizzle_orm32.eq)(col, id2));
       } catch {
       }
     }
-    await db.delete(users).where((0, import_drizzle_orm31.eq)(users.id, id2));
+    await db.delete(users).where((0, import_drizzle_orm32.eq)(users.id, id2));
     return res.json({ success: true });
   } catch (err) {
     console.error("Admin delete user error:", err);
@@ -45397,7 +46918,7 @@ var admin_users_default = router23;
 var import_express24 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm32 = require("drizzle-orm");
+var import_drizzle_orm33 = require("drizzle-orm");
 var router24 = (0, import_express24.Router)();
 function generateJoinCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -45410,7 +46931,7 @@ function generateJoinCode() {
 async function uniqueJoinCode() {
   for (let i = 0; i < 10; i++) {
     const code = generateJoinCode();
-    const existing = await db.select({ id: organizations.id }).from(organizations).where((0, import_drizzle_orm32.eq)(organizations.joinCode, code)).limit(1);
+    const existing = await db.select({ id: organizations.id }).from(organizations).where((0, import_drizzle_orm33.eq)(organizations.joinCode, code)).limit(1);
     if (existing.length === 0) return code;
   }
   throw new Error("Failed to generate unique join code");
@@ -45425,7 +46946,7 @@ router24.post("/api/organizations", requireAuth, async (req, res) => {
     if (type !== "church" && type !== "conference") {
       return res.status(400).json({ error: "Type must be 'church' or 'conference'" });
     }
-    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where((0, import_drizzle_orm32.eq)(organizationMembers.userId, userId)).limit(1);
+    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where((0, import_drizzle_orm33.eq)(organizationMembers.userId, userId)).limit(1);
     if (existingMember) {
       return res.status(400).json({ error: "You already belong to an organization. Leave your current one first." });
     }
@@ -45443,11 +46964,11 @@ router24.post("/api/organizations", requireAuth, async (req, res) => {
       role: "pastor"
     });
     const updateFields = { organizationId: org.id, organizationType: type };
-    const [currentUser] = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm32.eq)(users.id, userId)).limit(1);
+    const [currentUser] = await db.select({ role: users.role }).from(users).where((0, import_drizzle_orm33.eq)(users.id, userId)).limit(1);
     if (currentUser?.role === "church_leader_pending") {
       updateFields.role = "church_leader";
     }
-    await db.update(users).set(updateFields).where((0, import_drizzle_orm32.eq)(users.id, userId));
+    await db.update(users).set(updateFields).where((0, import_drizzle_orm33.eq)(users.id, userId));
     return res.json(org);
   } catch (err) {
     console.error("Create org error:", err);
@@ -45462,11 +46983,11 @@ router24.post("/api/organizations/join", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Join code is required" });
     }
     const code = joinCode.trim().toUpperCase().replace(/-/g, "");
-    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.joinCode, code)).limit(1);
+    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.joinCode, code)).limit(1);
     if (!org) {
       return res.status(404).json({ error: "Invalid join code. Please check and try again." });
     }
-    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where((0, import_drizzle_orm32.eq)(organizationMembers.userId, userId)).limit(1);
+    const [existingMember] = await db.select({ id: organizationMembers.id }).from(organizationMembers).where((0, import_drizzle_orm33.eq)(organizationMembers.userId, userId)).limit(1);
     if (existingMember) {
       return res.status(400).json({ error: "You already belong to an organization. Leave your current one first." });
     }
@@ -45479,10 +47000,10 @@ router24.post("/api/organizations/join", requireAuth, async (req, res) => {
       role: "member"
     });
     await db.update(organizations).set({
-      memberCount: import_drizzle_orm32.sql`${organizations.memberCount} + 1`,
+      memberCount: import_drizzle_orm33.sql`${organizations.memberCount} + 1`,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm32.eq)(organizations.id, org.id));
-    await db.update(users).set({ organizationId: org.id, organizationType: org.type }).where((0, import_drizzle_orm32.eq)(users.id, userId));
+    }).where((0, import_drizzle_orm33.eq)(organizations.id, org.id));
+    await db.update(users).set({ organizationId: org.id, organizationType: org.type }).where((0, import_drizzle_orm33.eq)(users.id, userId));
     return res.json({ message: "Successfully joined", organization: { id: org.id, name: org.name, type: org.type } });
   } catch (err) {
     if (err?.code === "23505") {
@@ -45500,11 +47021,11 @@ router24.get("/api/organizations/my-org", requireAuth, async (req, res) => {
     const [membership] = await db.select({
       role: organizationMembers.role,
       orgId: organizationMembers.organizationId
-    }).from(organizationMembers).where((0, import_drizzle_orm32.eq)(organizationMembers.userId, userId)).limit(1);
+    }).from(organizationMembers).where((0, import_drizzle_orm33.eq)(organizationMembers.userId, userId)).limit(1);
     if (!membership) {
       return res.json({ organization: null, role: null });
     }
-    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, membership.orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, membership.orgId)).limit(1);
     if (!org) {
       return res.json({ organization: null, role: null });
     }
@@ -45522,11 +47043,11 @@ router24.get("/api/organizations/:id", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId;
     const orgId = req.params.id;
-    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, userId))).limit(1);
+    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership) {
       return res.status(403).json({ error: "You are not a member of this organization" });
     }
-    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, orgId)).limit(1);
     if (!org) {
       return res.status(404).json({ error: "Organization not found" });
     }
@@ -45535,7 +47056,7 @@ router24.get("/api/organizations/:id", requireAuth, async (req, res) => {
       role: organizationMembers.role,
       joinedAt: organizationMembers.joinedAt,
       displayName: users.displayName
-    }).from(organizationMembers).leftJoin(users, (0, import_drizzle_orm32.eq)(organizationMembers.userId, users.id)).where((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId));
+    }).from(organizationMembers).leftJoin(users, (0, import_drizzle_orm33.eq)(organizationMembers.userId, users.id)).where((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId));
     const showJoinCode = membership.role === "pastor" || membership.role === "elder";
     return res.json({
       ...org,
@@ -45552,7 +47073,7 @@ router24.get("/api/organizations/:id/members", requireAuth, async (req, res) => 
   try {
     const userId = req.authUserId;
     const orgId = req.params.id;
-    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, userId))).limit(1);
+    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership) {
       return res.status(403).json({ error: "You are not a member of this organization" });
     }
@@ -45561,7 +47082,7 @@ router24.get("/api/organizations/:id/members", requireAuth, async (req, res) => 
       role: organizationMembers.role,
       joinedAt: organizationMembers.joinedAt,
       displayName: users.displayName
-    }).from(organizationMembers).leftJoin(users, (0, import_drizzle_orm32.eq)(organizationMembers.userId, users.id)).where((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId));
+    }).from(organizationMembers).leftJoin(users, (0, import_drizzle_orm33.eq)(organizationMembers.userId, users.id)).where((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId));
     return res.json(members);
   } catch (err) {
     console.error("List members error:", err);
@@ -45577,19 +47098,19 @@ router24.put("/api/organizations/:id/members/:userId/role", requireAuth, async (
     if (role !== "elder" && role !== "member") {
       return res.status(400).json({ error: "Role must be 'elder' or 'member'" });
     }
-    const [requesterMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, requesterId))).limit(1);
+    const [requesterMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, requesterId))).limit(1);
     if (!requesterMembership || requesterMembership.role !== "pastor") {
       return res.status(403).json({ error: "Only pastors can change member roles" });
     }
-    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, orgId)).limit(1);
     if (org && org.ownerId === targetUserId) {
       return res.status(400).json({ error: "Cannot change the pastor's role" });
     }
-    const [targetMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, targetUserId))).limit(1);
+    const [targetMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, targetUserId))).limit(1);
     if (!targetMembership) {
       return res.status(404).json({ error: "Member not found in this organization" });
     }
-    await db.update(organizationMembers).set({ role }).where((0, import_drizzle_orm32.eq)(organizationMembers.id, targetMembership.id));
+    await db.update(organizationMembers).set({ role }).where((0, import_drizzle_orm33.eq)(organizationMembers.id, targetMembership.id));
     return res.json({ message: "Role updated", userId: targetUserId, newRole: role });
   } catch (err) {
     console.error("Update role error:", err);
@@ -45601,24 +47122,24 @@ router24.delete("/api/organizations/:id/members/:userId", requireAuth, async (re
     const requesterId = req.authUserId;
     const orgId = req.params.id;
     const targetUserId = req.params.userId;
-    const [requesterMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, requesterId))).limit(1);
+    const [requesterMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, requesterId))).limit(1);
     if (!requesterMembership || requesterMembership.role !== "pastor" && requesterMembership.role !== "elder") {
       return res.status(403).json({ error: "Only pastors and elders can remove members" });
     }
-    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, orgId)).limit(1);
     if (org && org.ownerId === targetUserId) {
       return res.status(400).json({ error: "Cannot remove the pastor (owner) from the organization" });
     }
-    const [targetMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, targetUserId))).limit(1);
+    const [targetMembership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, targetUserId))).limit(1);
     if (!targetMembership) {
       return res.status(404).json({ error: "Member not found in this organization" });
     }
-    await db.delete(organizationMembers).where((0, import_drizzle_orm32.eq)(organizationMembers.id, targetMembership.id));
+    await db.delete(organizationMembers).where((0, import_drizzle_orm33.eq)(organizationMembers.id, targetMembership.id));
     await db.update(organizations).set({
-      memberCount: import_drizzle_orm32.sql`GREATEST(${organizations.memberCount} - 1, 0)`,
+      memberCount: import_drizzle_orm33.sql`GREATEST(${organizations.memberCount} - 1, 0)`,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm32.eq)(organizations.id, orgId));
-    await db.update(users).set({ organizationId: null, organizationType: null }).where((0, import_drizzle_orm32.eq)(users.id, targetUserId));
+    }).where((0, import_drizzle_orm33.eq)(organizations.id, orgId));
+    await db.update(users).set({ organizationId: null, organizationType: null }).where((0, import_drizzle_orm33.eq)(users.id, targetUserId));
     return res.json({ message: "Member removed", userId: targetUserId });
   } catch (err) {
     console.error("Remove member error:", err);
@@ -45633,14 +47154,14 @@ router24.post("/api/organizations/:id/churches", requireAuth, async (req, res) =
     if (!name || typeof name !== "string" || name.trim().length === 0 || name.trim().length > 100) {
       return res.status(400).json({ error: "Organization name must be between 1 and 100 characters" });
     }
-    const [conference] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, conferenceId)).limit(1);
+    const [conference] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, conferenceId)).limit(1);
     if (!conference) {
       return res.status(404).json({ error: "Conference not found" });
     }
     if (conference.type !== "conference") {
       return res.status(400).json({ error: "Can only add churches under a conference" });
     }
-    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, conferenceId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, userId))).limit(1);
+    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, conferenceId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership || membership.role !== "pastor") {
       return res.status(403).json({ error: "Only the conference pastor can add churches" });
     }
@@ -45665,15 +47186,15 @@ router24.get("/api/organizations/:id/churches", requireAuth, async (req, res) =>
   try {
     const userId = req.authUserId;
     const conferenceId = req.params.id;
-    const [conference] = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.id, conferenceId)).limit(1);
+    const [conference] = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.id, conferenceId)).limit(1);
     if (!conference || conference.type !== "conference") {
       return res.status(400).json({ error: "Not a conference organization" });
     }
-    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, conferenceId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, userId))).limit(1);
+    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, conferenceId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId))).limit(1);
     if (!membership) {
       return res.status(403).json({ error: "You are not a member of this conference" });
     }
-    const churches = await db.select().from(organizations).where((0, import_drizzle_orm32.eq)(organizations.parentId, conferenceId));
+    const churches = await db.select().from(organizations).where((0, import_drizzle_orm33.eq)(organizations.parentId, conferenceId));
     return res.json(churches);
   } catch (err) {
     console.error("List churches error:", err);
@@ -45686,11 +47207,11 @@ router24.post("/api/organizations/:id/announcement", requireAuth, async (req, re
     const orgId = req.params.id;
     const { title, content } = req.body;
     if (!title?.trim() || !content?.trim()) return res.status(400).json({ error: "Title and content required" });
-    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm32.and)((0, import_drizzle_orm32.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm32.eq)(organizationMembers.userId, userId)));
+    const [membership] = await db.select().from(organizationMembers).where((0, import_drizzle_orm33.and)((0, import_drizzle_orm33.eq)(organizationMembers.organizationId, orgId), (0, import_drizzle_orm33.eq)(organizationMembers.userId, userId)));
     if (!membership || membership.role !== "pastor" && membership.role !== "elder") {
       return res.status(403).json({ error: "Only pastors and elders can broadcast to the organization" });
     }
-    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm32.eq)(users.id, userId));
+    const [user] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where((0, import_drizzle_orm33.eq)(users.id, userId));
     const [announcement] = await db.insert(groupAnnouncements).values({
       groupId: `org:${orgId}`,
       userId,
@@ -45710,7 +47231,7 @@ var organizations_default = router24;
 var import_express25 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm33 = require("drizzle-orm");
+var import_drizzle_orm34 = require("drizzle-orm");
 var router25 = (0, import_express25.Router)();
 router25.get("/api/heygen/avatars", requireAuth, async (_req, res) => {
   try {
@@ -45825,17 +47346,17 @@ router25.post("/api/heygen/webhook", async (req, res) => {
         const statusData = await statusResponse.json();
         const videoUrl = statusData.data?.video_url;
         if (videoUrl) {
-          await db.update(heygenVideos).set({ status: "completed", videoUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm33.eq)(heygenVideos.videoId, videoId));
+          await db.update(heygenVideos).set({ status: "completed", videoUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm34.eq)(heygenVideos.videoId, videoId));
           console.log(`[heygen] Video completed: ${videoId} \u2192 ${videoUrl}`);
         }
       } else {
         console.error("[heygen] Failed to fetch video status:", statusResponse.status);
       }
     } else if (status === "failed" || event_type === "avatar_video.fail") {
-      await db.update(heygenVideos).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm33.eq)(heygenVideos.videoId, videoId));
+      await db.update(heygenVideos).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm34.eq)(heygenVideos.videoId, videoId));
       console.log(`[heygen] Video failed: ${videoId}`);
     } else {
-      await db.update(heygenVideos).set({ status: status || "processing", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm33.eq)(heygenVideos.videoId, videoId));
+      await db.update(heygenVideos).set({ status: status || "processing", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm34.eq)(heygenVideos.videoId, videoId));
     }
     return res.status(200).json({ received: true });
   } catch (err) {
@@ -45849,7 +47370,7 @@ var heygen_default = router25;
 var import_express26 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm36 = require("drizzle-orm");
+var import_drizzle_orm37 = require("drizzle-orm");
 
 // server/services/promptGeneratorService.ts
 var import_openai3 = __toESM(require("openai"));
@@ -46627,7 +48148,7 @@ Break this Bible passage into a production-ready video script following the stan
 // server/services/biblicalEpisodePipeline.ts
 init_db();
 init_schema();
-var import_drizzle_orm34 = require("drizzle-orm");
+var import_drizzle_orm35 = require("drizzle-orm");
 
 // server/services/lumaService.ts
 var import_lumaai = __toESM(require("lumaai"));
@@ -47827,7 +49348,7 @@ async function runBiblicalEpisodePipeline(config) {
       videoUrl: assembledVideoUrl,
       duration: Math.round(audioDuration),
       status: "complete"
-    }).where((0, import_drizzle_orm34.eq)(biblicalEpisodes.id, episodeId));
+    }).where((0, import_drizzle_orm35.eq)(biblicalEpisodes.id, episodeId));
     console.log(
       `[biblical-episode-pipeline] ========== PIPELINE COMPLETE for "${episodeTitle}" ==========`
     );
@@ -47844,7 +49365,7 @@ async function runBiblicalEpisodePipeline(config) {
       errorMsg
     );
     try {
-      await db.update(biblicalEpisodes).set({ status: "failed" }).where((0, import_drizzle_orm34.eq)(biblicalEpisodes.id, episodeId));
+      await db.update(biblicalEpisodes).set({ status: "failed" }).where((0, import_drizzle_orm35.eq)(biblicalEpisodes.id, episodeId));
     } catch (dbErr) {
       console.error(
         `[biblical-episode-pipeline] Could not update failure status:`,
@@ -47858,7 +49379,7 @@ async function runBiblicalEpisodePipeline(config) {
 // server/services/characterService.ts
 init_db();
 init_schema();
-var import_drizzle_orm35 = require("drizzle-orm");
+var import_drizzle_orm36 = require("drizzle-orm");
 var import_cloudinary3 = require("cloudinary");
 function ensureCloudinaryConfigured3() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -47876,13 +49397,13 @@ function ensureCloudinaryConfigured3() {
   });
 }
 async function getActiveCharacters() {
-  return db.select().from(characters).where((0, import_drizzle_orm35.eq)(characters.isActive, true));
+  return db.select().from(characters).where((0, import_drizzle_orm36.eq)(characters.isActive, true));
 }
 async function getAllCharacters() {
   return db.select().from(characters);
 }
 async function getCharacterById(id2) {
-  const [row] = await db.select().from(characters).where((0, import_drizzle_orm35.eq)(characters.id, id2));
+  const [row] = await db.select().from(characters).where((0, import_drizzle_orm36.eq)(characters.id, id2));
   return row;
 }
 async function createCharacter(data) {
@@ -47900,13 +49421,13 @@ async function createCharacter(data) {
   return row;
 }
 async function updateCharacter(id2, data) {
-  const [row] = await db.update(characters).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm35.eq)(characters.id, id2)).returning();
+  const [row] = await db.update(characters).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm36.eq)(characters.id, id2)).returning();
   return row;
 }
 async function toggleCharacterActive(id2) {
   const existing = await getCharacterById(id2);
   if (!existing) return void 0;
-  const [row] = await db.update(characters).set({ isActive: !existing.isActive, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm35.eq)(characters.id, id2)).returning();
+  const [row] = await db.update(characters).set({ isActive: !existing.isActive, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm36.eq)(characters.id, id2)).returning();
   return row;
 }
 async function uploadCharacterImage(localFilePath, slug) {
@@ -48249,7 +49770,7 @@ router26.post("/api/video-pipeline/generate", requireAuth, async (req, res) => {
 router26.get("/api/video-pipeline/status/:jobId", requireAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const [job] = await db.select().from(videoPipelineJobs).where((0, import_drizzle_orm36.eq)(videoPipelineJobs.id, jobId)).limit(1);
+    const [job] = await db.select().from(videoPipelineJobs).where((0, import_drizzle_orm37.eq)(videoPipelineJobs.id, jobId)).limit(1);
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
     }
@@ -48260,7 +49781,7 @@ router26.get("/api/video-pipeline/status/:jobId", requireAuth, async (req, res) 
   }
 });
 async function updateJobStatus(jobId, updates) {
-  await db.update(videoPipelineJobs).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm36.eq)(videoPipelineJobs.id, jobId));
+  await db.update(videoPipelineJobs).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm37.eq)(videoPipelineJobs.id, jobId));
 }
 async function runPipeline(jobId, script, topic) {
   try {
@@ -48396,7 +49917,7 @@ router26.get("/api/video-pipeline/bible-story-status/:episodeId", requireAuth, a
   const { episodeId } = req.params;
   const job = activePipelineJobs.get(episodeId);
   if (!job) {
-    const [episode] = await db.select().from(biblicalEpisodes).where((0, import_drizzle_orm36.eq)(biblicalEpisodes.id, episodeId));
+    const [episode] = await db.select().from(biblicalEpisodes).where((0, import_drizzle_orm37.eq)(biblicalEpisodes.id, episodeId));
     if (episode) {
       return res.json({
         episodeId,
@@ -48440,7 +49961,7 @@ var videoPipeline_default = router26;
 var import_express27 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm40 = require("drizzle-orm");
+var import_drizzle_orm41 = require("drizzle-orm");
 
 // server/services/cloudinaryService.ts
 var import_cloudinary4 = require("cloudinary");
@@ -48479,7 +50000,7 @@ async function uploadVideoFromUrl(videoUrl, publicId) {
 // server/services/cinematicPipelineService.ts
 init_db();
 init_schema();
-var import_drizzle_orm37 = require("drizzle-orm");
+var import_drizzle_orm38 = require("drizzle-orm");
 
 // server/services/editDecisionListService.ts
 var import_openai5 = __toESM(require("openai"));
@@ -48996,7 +50517,7 @@ async function assembleVideo(avatarVideoUrl, editDecisionList, whisperTimestamps
 var CLOUDINARY_CLOUD_NAME3 = "dy77gwpzu";
 var MUSIC_BASE_URL2 = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME3}/video/upload/grace-through-faith/music`;
 async function updateAssemblyStatus(topicId, status) {
-  await db.update(videoTopics).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm37.eq)(videoTopics.id, topicId));
+  await db.update(videoTopics).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
   console.log(`[cinematic-pipeline] Status \u2192 ${status} (topic=${topicId})`);
 }
 async function markFailed(topicId, stage, error) {
@@ -49006,12 +50527,12 @@ async function markFailed(topicId, stage, error) {
     assemblyStatus: failureStatus,
     reviewStatus: "failed",
     updatedAt: /* @__PURE__ */ new Date()
-  }).where((0, import_drizzle_orm37.eq)(videoTopics.id, topicId));
+  }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
   console.error(`[cinematic-pipeline] FAILED at ${stage} (topic=${topicId}):`, errorMsg);
 }
 async function runCinematicPipeline(topicId) {
   console.log(`[cinematic-pipeline] Starting pipeline for topic=${topicId}`);
-  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm37.eq)(videoTopics.id, topicId));
+  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
   if (!topic) {
     throw new Error(`Topic not found: ${topicId}`);
   }
@@ -49027,7 +50548,7 @@ async function runCinematicPipeline(topicId) {
   const musicTrackUrl = `${MUSIC_BASE_URL2}/${topic.musicTrack}`;
   let avatarGender = "female";
   if (topic.avatarId) {
-    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm37.eq)(videoAvatars.id, topic.avatarId));
+    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm38.eq)(videoAvatars.id, topic.avatarId));
     if (avatar?.gender) {
       avatarGender = avatar.gender;
     }
@@ -49089,14 +50610,14 @@ async function runCinematicPipeline(topicId) {
       reviewStatus: "pending",
       assemblyStatus: "complete",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm37.eq)(videoTopics.id, topicId));
+    }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
     console.log(`[cinematic-pipeline] Pipeline COMPLETE for "${topic.title}" (topic=${topicId})`);
     console.log(`[cinematic-pipeline]   Assembled video: ${assembledVideoUrl}`);
     console.log(`[cinematic-pipeline]   Thumbnail: ${thumbnailUrl}`);
     console.log(`[cinematic-pipeline]   Review status: pending`);
     return assembledVideoUrl;
   } catch (error) {
-    const stage = (await db.select({ assemblyStatus: videoTopics.assemblyStatus }).from(videoTopics).where((0, import_drizzle_orm37.eq)(videoTopics.id, topicId)))[0]?.assemblyStatus || "unknown";
+    const stage = (await db.select({ assemblyStatus: videoTopics.assemblyStatus }).from(videoTopics).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId)))[0]?.assemblyStatus || "unknown";
     const currentStage = stage.startsWith("failed") ? "unknown" : stage;
     await markFailed(topicId, currentStage, error);
     throw error;
@@ -49106,7 +50627,7 @@ async function runCinematicPipeline(topicId) {
 // server/services/cinematicNarrativePipeline.ts
 init_db();
 init_schema();
-var import_drizzle_orm38 = require("drizzle-orm");
+var import_drizzle_orm39 = require("drizzle-orm");
 
 // server/services/sceneDirectorService.ts
 var import_openai7 = __toESM(require("openai"));
@@ -49667,11 +51188,11 @@ async function dbRetry(fn, retries = 3) {
 async function updateStatus(topicId, status, crossRefVideoId) {
   if (crossRefVideoId) {
     await dbRetry(
-      () => db.update(topicVideos).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm38.eq)(topicVideos.id, crossRefVideoId))
+      () => db.update(topicVideos).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm39.eq)(topicVideos.id, crossRefVideoId))
     );
   } else {
     await dbRetry(
-      () => db.update(videoTopics).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId))
+      () => db.update(videoTopics).set({ assemblyStatus: status, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId))
     );
   }
   console.log(`[narrative-pipeline] Status \u2192 ${status} (${crossRefVideoId ? `crossRef=${crossRefVideoId}` : `topic=${topicId}`})`);
@@ -49686,7 +51207,7 @@ async function markFailed2(topicId, stage, error, crossRefVideoId) {
           assemblyStatus: failureStatus,
           reviewStatus: "failed",
           updatedAt: /* @__PURE__ */ new Date()
-        }).where((0, import_drizzle_orm38.eq)(topicVideos.id, crossRefVideoId))
+        }).where((0, import_drizzle_orm39.eq)(topicVideos.id, crossRefVideoId))
       );
     } else {
       await dbRetry(
@@ -49694,7 +51215,7 @@ async function markFailed2(topicId, stage, error, crossRefVideoId) {
           assemblyStatus: failureStatus,
           reviewStatus: "failed",
           updatedAt: /* @__PURE__ */ new Date()
-        }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId))
+        }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId))
       );
     }
   } catch (dbErr) {
@@ -49710,14 +51231,14 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
   console.log(
     `[narrative-pipeline] ========== Starting cinematic narrative pipeline for topic=${topicId}${isCrossRef ? ` (cross-ref video=${topicVideoId})` : ""} ==========`
   );
-  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
+  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId));
   if (!topic) {
     throw new Error(`Topic not found: ${topicId}`);
   }
   let scriptText;
   let scriptureAnchor;
   if (isCrossRef) {
-    const [crossRefVideo] = await db.select().from(topicVideos).where((0, import_drizzle_orm38.eq)(topicVideos.id, topicVideoId));
+    const [crossRefVideo] = await db.select().from(topicVideos).where((0, import_drizzle_orm39.eq)(topicVideos.id, topicVideoId));
     if (!crossRefVideo) {
       throw new Error(`Cross-ref topicVideo not found: ${topicVideoId}`);
     }
@@ -49757,7 +51278,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
   let elevenlabsVoiceId = pickVoice();
   let avatarGender = "female";
   if (!isCrossRef && topic.avatarId) {
-    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm38.eq)(videoAvatars.id, topic.avatarId));
+    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm39.eq)(videoAvatars.id, topic.avatarId));
     if (avatar) {
       avatarGender = avatar.gender || "female";
       if (avatar.elevenlabsVoiceId) {
@@ -49784,7 +51305,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
     let hasCustomCharacter = false;
     let customCharacterDescription = "";
     if (topic.avatarId) {
-      const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm38.eq)(videoAvatars.id, topic.avatarId));
+      const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm39.eq)(videoAvatars.id, topic.avatarId));
       if (avatar?.characterDescription) {
         hasCustomCharacter = true;
         customCharacterDescription = avatar.characterDescription;
@@ -49798,7 +51319,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
   }
   let avoidLocations = [];
   if (isCrossRef) {
-    const siblingVideos = await db.select({ cinematicScenes: topicVideos.cinematicScenes }).from(topicVideos).where((0, import_drizzle_orm38.eq)(topicVideos.topicId, topicId));
+    const siblingVideos = await db.select({ cinematicScenes: topicVideos.cinematicScenes }).from(topicVideos).where((0, import_drizzle_orm39.eq)(topicVideos.topicId, topicId));
     for (const sib of siblingVideos) {
       if (sib.cinematicScenes && Array.isArray(sib.cinematicScenes)) {
         for (const scene of sib.cinematicScenes) {
@@ -49843,12 +51364,12 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
       await db.update(topicVideos).set({
         cinematicScenes: scenes,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm38.eq)(topicVideos.id, topicVideoId));
+      }).where((0, import_drizzle_orm39.eq)(topicVideos.id, topicVideoId));
     } else {
       await db.update(videoTopics).set({
         cinematicScenes: scenes,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
+      }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId));
     }
     await updateStatus(topicId, "generating-anchor", statusTarget);
     console.log(
@@ -49883,7 +51404,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
       await db.update(videoTopics).set({
         characterAnchorUrl: primaryAnchorUrl,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
+      }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId));
     }
     await updateStatus(topicId, "generating-scene-videos", statusTarget);
     console.log(
@@ -49927,9 +51448,9 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
       `[narrative-pipeline] Voiceover generated: ${voiceoverUrl.substring(0, 80)}...`
     );
     if (isCrossRef) {
-      await db.update(topicVideos).set({ voiceoverUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm38.eq)(topicVideos.id, topicVideoId));
+      await db.update(topicVideos).set({ voiceoverUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm39.eq)(topicVideos.id, topicVideoId));
     } else {
-      await db.update(videoTopics).set({ voiceoverUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId));
+      await db.update(videoTopics).set({ voiceoverUrl, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId));
     }
     await updateStatus(topicId, "computing-timing", statusTarget);
     console.log(
@@ -49987,7 +51508,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
           assemblyStatus: "complete",
           reviewStatus: "pending",
           updatedAt: /* @__PURE__ */ new Date()
-        }).where((0, import_drizzle_orm38.eq)(topicVideos.id, topicVideoId))
+        }).where((0, import_drizzle_orm39.eq)(topicVideos.id, topicVideoId))
       );
       console.log(`[narrative-pipeline] Cross-ref video saved to topicVideos (parent topic NOT mutated)`);
     } else {
@@ -50000,14 +51521,14 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
           assemblyStatus: "complete",
           status: "assembled",
           updatedAt: /* @__PURE__ */ new Date()
-        }).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId))
+        }).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId))
       );
     }
     if (!isCrossRef && topic.scriptureAnchor) {
       const existing = await db.select({ id: topicVideos.id }).from(topicVideos).where(
-        (0, import_drizzle_orm38.and)(
-          (0, import_drizzle_orm38.eq)(topicVideos.topicId, topicId),
-          (0, import_drizzle_orm38.eq)(topicVideos.scriptureAnchor, topic.scriptureAnchor)
+        (0, import_drizzle_orm39.and)(
+          (0, import_drizzle_orm39.eq)(topicVideos.topicId, topicId),
+          (0, import_drizzle_orm39.eq)(topicVideos.scriptureAnchor, topic.scriptureAnchor)
         )
       );
       if (existing.length > 0) {
@@ -50022,7 +51543,7 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
             assemblyStatus: "complete",
             reviewStatus: "pending",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where((0, import_drizzle_orm38.eq)(topicVideos.id, existing[0].id))
+          }).where((0, import_drizzle_orm39.eq)(topicVideos.id, existing[0].id))
         );
       } else {
         await dbRetry(
@@ -50054,9 +51575,9 @@ async function runCinematicNarrativePipeline(topicId, topicVideoId) {
   } catch (error) {
     let currentStatus = null;
     if (isCrossRef) {
-      currentStatus = (await db.select({ assemblyStatus: topicVideos.assemblyStatus }).from(topicVideos).where((0, import_drizzle_orm38.eq)(topicVideos.id, topicVideoId)))[0]?.assemblyStatus;
+      currentStatus = (await db.select({ assemblyStatus: topicVideos.assemblyStatus }).from(topicVideos).where((0, import_drizzle_orm39.eq)(topicVideos.id, topicVideoId)))[0]?.assemblyStatus;
     } else {
-      currentStatus = (await db.select({ assemblyStatus: videoTopics.assemblyStatus }).from(videoTopics).where((0, import_drizzle_orm38.eq)(videoTopics.id, topicId)))[0]?.assemblyStatus;
+      currentStatus = (await db.select({ assemblyStatus: videoTopics.assemblyStatus }).from(videoTopics).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId)))[0]?.assemblyStatus;
     }
     const stage = currentStatus && !currentStatus.startsWith("failed") ? currentStatus : "unknown";
     await markFailed2(topicId, stage, error, isCrossRef ? topicVideoId : void 0);
@@ -50069,7 +51590,7 @@ var import_openai8 = __toESM(require("openai"));
 init_sda_lens();
 init_db();
 init_schema();
-var import_drizzle_orm39 = require("drizzle-orm");
+var import_drizzle_orm40 = require("drizzle-orm");
 function createOpenAIClient7() {
   return new import_openai8.default({
     apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -50077,7 +51598,7 @@ function createOpenAIClient7() {
   });
 }
 async function expandTopicCrossReferences(topicId, maxReferences = 7) {
-  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm39.eq)(videoTopics.id, topicId));
+  const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
   if (!topic) throw new Error(`Topic not found: ${topicId}`);
   const anchorScripture = topic.scriptureAnchor || "";
   const client = createOpenAIClient7();
@@ -50125,9 +51646,9 @@ No markdown, no explanation.`);
     if (!ref.scripture?.trim()) continue;
     const scripture = ref.scripture.trim();
     const existing = await db.select({ id: topicVideos.id }).from(topicVideos).where(
-      (0, import_drizzle_orm39.and)(
-        (0, import_drizzle_orm39.eq)(topicVideos.topicId, topicId),
-        (0, import_drizzle_orm39.eq)(topicVideos.scriptureAnchor, scripture)
+      (0, import_drizzle_orm40.and)(
+        (0, import_drizzle_orm40.eq)(topicVideos.topicId, topicId),
+        (0, import_drizzle_orm40.eq)(topicVideos.scriptureAnchor, scripture)
       )
     );
     if (existing.length > 0) {
@@ -50177,10 +51698,10 @@ async function expandAllTopicsCrossReferences(maxReferences = 7) {
 var router27 = (0, import_express27.Router)();
 async function resolveAvatar(avatarId) {
   if (avatarId) {
-    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm40.eq)(videoAvatars.id, avatarId));
+    const [avatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm41.eq)(videoAvatars.id, avatarId));
     if (avatar) return avatar;
   }
-  const [defaultAvatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm40.eq)(videoAvatars.isDefault, true));
+  const [defaultAvatar] = await db.select().from(videoAvatars).where((0, import_drizzle_orm41.eq)(videoAvatars.isDefault, true));
   return defaultAvatar || null;
 }
 async function checkAndUpdateHeyGenVideo(topicId, heygenVideoId, apiKey) {
@@ -50205,13 +51726,13 @@ async function checkAndUpdateHeyGenVideo(topicId, heygenVideoId, apiKey) {
       } catch (uploadErr) {
         console.error(`[video-topics] Failed to upload to Cloudinary, using HeyGen URL: topic=${topicId}`, uploadErr);
       }
-      await db.update(videoTopics).set({ avatarVideoUrl: permanentUrl, status: "avatar-ready", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+      await db.update(videoTopics).set({ avatarVideoUrl: permanentUrl, status: "avatar-ready", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
       console.log(`[video-topics] Video completed: topic=${topicId} url=${permanentUrl.substring(0, 80)}...`);
       return true;
     }
     if (status === "failed") {
       const errDetail = data.data?.error?.detail || data.data?.error?.message || "Unknown HeyGen error";
-      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
       console.error(`[video-topics] Video failed: topic=${topicId} error=${errDetail}`);
       return true;
     }
@@ -50228,7 +51749,7 @@ async function recoverStuckHeyGenJobs() {
       console.log("[video-topics] No HEYGEN_API_KEY \u2014 skipping recovery check");
       return;
     }
-    const stuckTopics = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.status, "generating"));
+    const stuckTopics = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.status, "generating"));
     if (stuckTopics.length === 0) {
       console.log("[video-topics] No stuck generating topics found");
       return;
@@ -50238,7 +51759,7 @@ async function recoverStuckHeyGenJobs() {
       const heygenVideoId = topic.avatarVideoUrl;
       if (!heygenVideoId || heygenVideoId.startsWith("http")) {
         console.log(`[video-topics] Recovery: topic=${topic.id} has no HeyGen video ID \u2014 marking as failed`);
-        await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topic.id));
+        await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topic.id));
         continue;
       }
       console.log(`[video-topics] Recovery: checking HeyGen status for topic=${topic.id} videoId=${heygenVideoId}`);
@@ -50268,7 +51789,7 @@ router27.get("/api/evangelism-videos", async (_req, res) => {
       language: videoTopics.language,
       createdAt: videoTopics.createdAt
     }).from(videoTopics).orderBy(videoTopics.priority);
-    const completedTopicVideos = await db.select().from(topicVideos).where((0, import_drizzle_orm40.eq)(topicVideos.assemblyStatus, "complete"));
+    const completedTopicVideos = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.assemblyStatus, "complete"));
     const topicVideoMap = /* @__PURE__ */ new Map();
     for (const tv of completedTopicVideos) {
       if (!topicVideoMap.has(tv.topicId)) {
@@ -50332,14 +51853,14 @@ router27.get("/api/video-topics", requireAuth, requirePipelineAccess, async (req
 router27.post("/api/video-topics/:id/generate-script", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     if (topic.status === "generating") {
       return res.status(400).json({ error: "Video is currently being processed. Please wait for it to finish." });
     }
-    await db.update(videoTopics).set({ status: "generating", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    await db.update(videoTopics).set({ status: "generating", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     const script = await generateVideoScript(
       topic.title,
       topic.scriptureAnchor || "",
@@ -50351,15 +51872,15 @@ router27.post("/api/video-topics/:id/generate-script", requireAuth, requirePipel
       generatedScript: script,
       status: newStatus,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).returning();
+    }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).returning();
     console.log(`[video-topics] Script generated for topic="${topic.title}" (${script.length} chars)`);
     res.json(updated);
   } catch (err) {
     console.error("Failed to generate script:", err);
     const { id: id2 } = req.params;
-    const [current] = await db.select({ status: videoTopics.status, avatarVideoUrl: videoTopics.avatarVideoUrl }).from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).catch(() => []);
+    const [current] = await db.select({ status: videoTopics.status, avatarVideoUrl: videoTopics.avatarVideoUrl }).from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => []);
     const restoreStatus = current?.avatarVideoUrl ? "avatar-ready" : current?.status === "generating" ? "script-ready" : current?.status || "failed";
-    await db.update(videoTopics).set({ status: restoreStatus, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).catch(() => {
+    await db.update(videoTopics).set({ status: restoreStatus, updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => {
     });
     res.status(500).json({ error: "Failed to generate script" });
   }
@@ -50371,14 +51892,14 @@ router27.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, asyn
     if (typeof generatedScript !== "string" || !generatedScript.trim()) {
       return res.status(400).json({ error: "Script text is required." });
     }
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     const [updated] = await db.update(videoTopics).set({
       generatedScript: generatedScript.trim(),
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).returning();
+    }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).returning();
     console.log(`[video-topics] Script updated for "${updated.title}" by admin`);
     res.json(updated);
   } catch (err) {
@@ -50389,7 +51910,7 @@ router27.patch("/api/video-topics/:id", requireAuth, requirePipelineAccess, asyn
 router27.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
@@ -50453,20 +51974,20 @@ router27.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelin
     if (!heygenResponse.ok) {
       const errText = await heygenResponse.text();
       console.error("[video-topics] HeyGen generate error:", heygenResponse.status, errText);
-      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
       return res.status(heygenResponse.status).json({ error: "Failed to generate avatar video with HeyGen" });
     }
     const heygenData = await heygenResponse.json();
     const videoId = heygenData.data?.video_id;
     if (!videoId) {
-      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
       return res.status(500).json({ error: "No video ID returned from HeyGen" });
     }
     const [updated] = await db.update(videoTopics).set({
       avatarVideoUrl: videoId,
       status: "generating",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).returning();
+    }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).returning();
     console.log(`[video-topics] HeyGen video submitted: topicId=${id2} videoId=${videoId} avatar=${avatar.name}`);
     res.json(updated);
     pollHeyGenStatus(id2, videoId, apiKey).catch((err) => {
@@ -50475,7 +51996,7 @@ router27.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelin
   } catch (err) {
     console.error("[video-topics] Submit to HeyGen failed:", err);
     const { id: id2 } = req.params;
-    await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).catch(() => {
+    await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).catch(() => {
     });
     res.status(500).json({ error: "Failed to submit to HeyGen" });
   }
@@ -50485,7 +52006,7 @@ async function pollHeyGenStatus(topicId, videoId, apiKey) {
   const INTERVAL_MS = 3e4;
   for (let i = 0; i < MAX_POLLS; i++) {
     await new Promise((r) => setTimeout(r, INTERVAL_MS));
-    const [current] = await db.select({ status: videoTopics.status }).from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+    const [current] = await db.select({ status: videoTopics.status }).from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
     if (!current || current.status === "avatar-ready" || current.status === "failed") {
       console.log(`[video-topics] Poll stopping: topic=${topicId} already resolved (status=${current?.status})`);
       return;
@@ -50495,7 +52016,7 @@ async function pollHeyGenStatus(topicId, videoId, apiKey) {
     if (resolved) return;
   }
   console.error(`[video-topics] Poll timeout (${MAX_POLLS * INTERVAL_MS / 6e4} min): topic=${topicId} videoId=${videoId}`);
-  await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+  await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
 }
 router27.post("/api/webhooks/heygen", async (req, res) => {
   const webhookSecret = process.env.HEYGEN_WEBHOOK_SECRET;
@@ -50522,7 +52043,7 @@ router27.post("/api/webhooks/heygen", async (req, res) => {
       topicId = callbackId.replace("video-topic-", "");
     }
     if (!topicId && videoId) {
-      const topics = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.avatarVideoUrl, videoId));
+      const topics = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.avatarVideoUrl, videoId));
       if (topics.length > 0) {
         topicId = topics[0].id;
       }
@@ -50541,7 +52062,7 @@ router27.post("/api/webhooks/heygen", async (req, res) => {
         } catch (uploadErr) {
           console.error(`[video-topics] Webhook: failed to upload to Cloudinary, using HeyGen URL: topic=${topicId}`, uploadErr);
         }
-        await db.update(videoTopics).set({ avatarVideoUrl: permanentUrl, status: "avatar-ready", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+        await db.update(videoTopics).set({ avatarVideoUrl: permanentUrl, status: "avatar-ready", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
         console.log(`[video-topics] Webhook: video completed for topic=${topicId} url=${permanentUrl.substring(0, 80)}...`);
       } else if (videoId) {
         const apiKey = process.env.HEYGEN_API_KEY;
@@ -50550,7 +52071,7 @@ router27.post("/api/webhooks/heygen", async (req, res) => {
         }
       }
     } else if (eventType === "avatar_video.fail" || status === "failed") {
-      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicId));
+      await db.update(videoTopics).set({ status: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicId));
       console.log(`[video-topics] Webhook: video failed for topic=${topicId}`);
     } else {
       console.log(`[video-topics] Webhook: unhandled event_type=${eventType} status=${status} for topic=${topicId}`);
@@ -50564,7 +52085,7 @@ router27.post("/api/webhooks/heygen", async (req, res) => {
 router27.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
@@ -50582,7 +52103,7 @@ router27.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePi
     }
     const resolved = await checkAndUpdateHeyGenVideo(id2, videoId, apiKey);
     if (resolved) {
-      const [updated] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+      const [updated] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
       return res.json({
         status: updated?.status || "unknown",
         avatarVideoUrl: updated?.avatarVideoUrl,
@@ -50602,7 +52123,7 @@ router27.get("/api/video-topics/:id/check-heygen-status", requireAuth, requirePi
 router27.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
@@ -50620,7 +52141,7 @@ router27.post("/api/video-topics/:id/generate-cinematic", requireAuth, requirePi
     if (!isCinematicMode && !topic.avatarVideoUrl?.startsWith("http")) {
       return res.status(400).json({ error: "No completed avatar video. Submit to HeyGen first." });
     }
-    await db.update(videoTopics).set({ assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    await db.update(videoTopics).set({ assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (isCinematicMode) {
       console.log(`[video-topics] Starting CINEMATIC NARRATIVE pipeline for "${topic.title}" (${id2})`);
       runCinematicNarrativePipeline(id2).catch((err) => {
@@ -50645,7 +52166,7 @@ router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAcces
     if (!action || action !== "approve" && action !== "reject") {
       return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'." });
     }
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
@@ -50655,7 +52176,7 @@ router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAcces
         publishedAt: /* @__PURE__ */ new Date(),
         reviewNotes: notes || null,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).returning();
+      }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).returning();
       console.log(`[video-topics] Topic "${topic.title}" APPROVED and published`);
       res.json(updated);
     } else {
@@ -50663,7 +52184,7 @@ router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAcces
         reviewStatus: "rejected",
         reviewNotes: notes || null,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2)).returning();
+      }).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2)).returning();
       console.log(`[video-topics] Topic "${topic.title}" REJECTED${notes ? `: ${notes}` : ""}`);
       res.json(updated);
     }
@@ -50675,7 +52196,7 @@ router27.patch("/api/video-topics/:id/review", requireAuth, requirePipelineAcces
 router27.get("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const videos = await db.select().from(topicVideos).where((0, import_drizzle_orm40.eq)(topicVideos.topicId, id2)).orderBy(topicVideos.createdAt);
+    const videos = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.topicId, id2)).orderBy(topicVideos.createdAt);
     res.json(videos);
   } catch (err) {
     console.error("[video-topics] Get scriptures error:", err);
@@ -50689,14 +52210,14 @@ router27.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAc
     if (!scriptureAnchor?.trim()) {
       return res.status(400).json({ error: "Scripture anchor is required" });
     }
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, id2));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, id2));
     if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     const existing = await db.select({ id: topicVideos.id }).from(topicVideos).where(
-      (0, import_drizzle_orm40.and)(
-        (0, import_drizzle_orm40.eq)(topicVideos.topicId, id2),
-        (0, import_drizzle_orm40.eq)(topicVideos.scriptureAnchor, scriptureAnchor.trim())
+      (0, import_drizzle_orm41.and)(
+        (0, import_drizzle_orm41.eq)(topicVideos.topicId, id2),
+        (0, import_drizzle_orm41.eq)(topicVideos.scriptureAnchor, scriptureAnchor.trim())
       )
     );
     if (existing.length > 0) {
@@ -50715,7 +52236,7 @@ router27.post("/api/video-topics/:id/scriptures", requireAuth, requirePipelineAc
 router27.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { videoId } = req.params;
-    const [deleted] = await db.delete(topicVideos).where((0, import_drizzle_orm40.eq)(topicVideos.id, videoId)).returning();
+    const [deleted] = await db.delete(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId)).returning();
     if (!deleted) {
       return res.status(404).json({ error: "Topic video not found" });
     }
@@ -50728,11 +52249,11 @@ router27.delete("/api/topic-videos/:videoId", requireAuth, requirePipelineAccess
 router27.post("/api/topic-videos/:videoId/generate", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
     const { videoId } = req.params;
-    const [topicVideo] = await db.select().from(topicVideos).where((0, import_drizzle_orm40.eq)(topicVideos.id, videoId));
+    const [topicVideo] = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId));
     if (!topicVideo) {
       return res.status(404).json({ error: "Topic video not found" });
     }
-    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm40.eq)(videoTopics.id, topicVideo.topicId));
+    const [topic] = await db.select().from(videoTopics).where((0, import_drizzle_orm41.eq)(videoTopics.id, topicVideo.topicId));
     if (!topic) {
       return res.status(404).json({ error: "Parent topic not found" });
     }
@@ -50752,14 +52273,14 @@ router27.post("/api/topic-videos/:videoId/generate", requireAuth, requirePipelin
         category: topic.category || void 0,
         avatarGender: avatarInfo?.gender || "female"
       });
-      await db.update(topicVideos).set({ generatedScript: script, assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(topicVideos.id, videoId));
+      await db.update(topicVideos).set({ generatedScript: script, assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId));
     } else {
-      await db.update(topicVideos).set({ assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(topicVideos.id, videoId));
+      await db.update(topicVideos).set({ assemblyStatus: "queued", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId));
     }
     console.log(`[video-topics] Starting cinematic pipeline for "${topic.title}" - ${topicVideo.scriptureAnchor} (topicVideo=${videoId})`);
     runCinematicNarrativePipeline(topic.id, videoId).catch((err) => {
       console.error(`[video-topics] Pipeline failed for topicVideo=${videoId}:`, err);
-      db.update(topicVideos).set({ assemblyStatus: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm40.eq)(topicVideos.id, videoId)).catch(() => {
+      db.update(topicVideos).set({ assemblyStatus: "failed", updatedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm41.eq)(topicVideos.id, videoId)).catch(() => {
       });
     });
     res.json({ message: "Pipeline started", topicVideoId: videoId, status: "queued" });
@@ -50776,7 +52297,7 @@ router27.get("/api/evangelism-videos/library", async (_req, res) => {
       description: videoTopics.description,
       category: videoTopics.category
     }).from(videoTopics).orderBy(videoTopics.priority);
-    const allVideos = await db.select().from(topicVideos).where((0, import_drizzle_orm40.eq)(topicVideos.assemblyStatus, "complete"));
+    const allVideos = await db.select().from(topicVideos).where((0, import_drizzle_orm41.eq)(topicVideos.assemblyStatus, "complete"));
     const topicMap = /* @__PURE__ */ new Map();
     for (const t of allTopics) {
       topicMap.set(t.id, { ...t, videos: [] });
@@ -50802,7 +52323,7 @@ router27.get("/api/evangelism-videos/library", async (_req, res) => {
 });
 router27.post("/api/video-topics/cleanup-avatar-videos", requireAuth, requirePipelineAccess, async (req, res) => {
   try {
-    const result = await db.update(videoTopics).set({ avatarVideoUrl: null }).where(import_drizzle_orm40.sql`${videoTopics.avatarVideoUrl} IS NOT NULL AND ${videoTopics.avatarVideoUrl} != ''`).returning({ id: videoTopics.id, title: videoTopics.title });
+    const result = await db.update(videoTopics).set({ avatarVideoUrl: null }).where(import_drizzle_orm41.sql`${videoTopics.avatarVideoUrl} IS NOT NULL AND ${videoTopics.avatarVideoUrl} != ''`).returning({ id: videoTopics.id, title: videoTopics.title });
     res.json({ cleaned: result.length, topics: result });
   } catch (err) {
     console.error("[video-topics] Cleanup error:", err);
@@ -50844,7 +52365,7 @@ router27.delete("/api/video-avatars/cleanup-unused", requireAuth, requirePipelin
       return res.json({ message: "No unused avatars to remove", deleted: 0 });
     }
     for (const avatar of unusedAvatars) {
-      await db.delete(videoAvatars).where((0, import_drizzle_orm40.eq)(videoAvatars.id, avatar.id));
+      await db.delete(videoAvatars).where((0, import_drizzle_orm41.eq)(videoAvatars.id, avatar.id));
     }
     console.log(`[cleanup] Deleted ${unusedAvatars.length} unused avatars: ${unusedAvatars.map((a) => a.name).join(", ")}`);
     res.json({ message: `Deleted ${unusedAvatars.length} unused avatars`, deleted: unusedAvatars.length, names: unusedAvatars.map((a) => a.name) });
@@ -50859,7 +52380,7 @@ var videoTopics_default = router27;
 var import_express28 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm41 = require("drizzle-orm");
+var import_drizzle_orm42 = require("drizzle-orm");
 
 // server/generate-easter-ep6.ts
 var EPISODE_ID = "f60d1718-8b6a-4104-907d-f8b359f9e62a";
@@ -51378,8 +52899,8 @@ async function generateDaniel2() {
 var router28 = (0, import_express28.Router)();
 router28.get("/api/series", cachedResponse(300), async (_req, res) => {
   try {
-    const allSeries = await db.select().from(biblicalSeries).orderBy((0, import_drizzle_orm41.desc)(biblicalSeries.isFeatured), (0, import_drizzle_orm41.asc)(biblicalSeries.sortOrder));
-    const allEpisodes = await db.select().from(biblicalEpisodes).orderBy((0, import_drizzle_orm41.asc)(biblicalEpisodes.seriesId), (0, import_drizzle_orm41.asc)(biblicalEpisodes.orderIndex));
+    const allSeries = await db.select().from(biblicalSeries).orderBy((0, import_drizzle_orm42.desc)(biblicalSeries.isFeatured), (0, import_drizzle_orm42.asc)(biblicalSeries.sortOrder));
+    const allEpisodes = await db.select().from(biblicalEpisodes).orderBy((0, import_drizzle_orm42.asc)(biblicalEpisodes.seriesId), (0, import_drizzle_orm42.asc)(biblicalEpisodes.orderIndex));
     const episodesBySeriesId = /* @__PURE__ */ new Map();
     for (const ep of allEpisodes) {
       const list = episodesBySeriesId.get(ep.seriesId) || [];
@@ -51399,11 +52920,11 @@ router28.get("/api/series", cachedResponse(300), async (_req, res) => {
 router28.get("/api/series/:id", cachedResponse(300), async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [series] = await db.select().from(biblicalSeries).where((0, import_drizzle_orm41.eq)(biblicalSeries.id, id2));
+    const [series] = await db.select().from(biblicalSeries).where((0, import_drizzle_orm42.eq)(biblicalSeries.id, id2));
     if (!series) {
       return res.status(404).json({ error: "Series not found" });
     }
-    const episodes = await db.select().from(biblicalEpisodes).where((0, import_drizzle_orm41.eq)(biblicalEpisodes.seriesId, id2)).orderBy((0, import_drizzle_orm41.asc)(biblicalEpisodes.orderIndex));
+    const episodes = await db.select().from(biblicalEpisodes).where((0, import_drizzle_orm42.eq)(biblicalEpisodes.seriesId, id2)).orderBy((0, import_drizzle_orm42.asc)(biblicalEpisodes.orderIndex));
     res.json({ ...series, episodes });
   } catch (err) {
     console.error("Series detail error:", err);
@@ -51488,11 +53009,11 @@ var series_default = router28;
 var import_express29 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm42 = require("drizzle-orm");
+var import_drizzle_orm43 = require("drizzle-orm");
 var router29 = (0, import_express29.Router)();
 router29.get("/api/plans", cachedResponse(300), async (_req, res) => {
   try {
-    const plans = await db.select().from(readingPlans).where((0, import_drizzle_orm42.ne)(readingPlans.type, "custom")).orderBy((0, import_drizzle_orm42.asc)(readingPlans.category), (0, import_drizzle_orm42.asc)(readingPlans.title));
+    const plans = await db.select().from(readingPlans).where((0, import_drizzle_orm43.ne)(readingPlans.type, "custom")).orderBy((0, import_drizzle_orm43.asc)(readingPlans.category), (0, import_drizzle_orm43.asc)(readingPlans.title));
     res.json(plans);
   } catch (err) {
     console.error("Plans list error:", err);
@@ -51502,11 +53023,11 @@ router29.get("/api/plans", cachedResponse(300), async (_req, res) => {
 router29.get("/api/plans/:id", cachedResponse(300), async (req, res) => {
   try {
     const { id: id2 } = req.params;
-    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm42.eq)(readingPlans.id, id2));
+    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm43.eq)(readingPlans.id, id2));
     if (!plan) {
       return res.status(404).json({ error: "Plan not found" });
     }
-    const days = await db.select().from(planDays).where((0, import_drizzle_orm42.eq)(planDays.planId, id2)).orderBy((0, import_drizzle_orm42.asc)(planDays.dayNumber));
+    const days = await db.select().from(planDays).where((0, import_drizzle_orm43.eq)(planDays.planId, id2)).orderBy((0, import_drizzle_orm43.asc)(planDays.dayNumber));
     res.json({ ...plan, days });
   } catch (err) {
     console.error("Plan detail error:", err);
@@ -51520,11 +53041,11 @@ router29.post("/api/user-plans", requireAuth, async (req, res) => {
     if (!planId) {
       return res.status(400).json({ error: "planId is required" });
     }
-    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm42.eq)(readingPlans.id, planId));
+    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm43.eq)(readingPlans.id, planId));
     if (!plan) {
       return res.status(404).json({ error: "Plan not found" });
     }
-    const existing = await db.select().from(userPlans).where((0, import_drizzle_orm42.and)((0, import_drizzle_orm42.eq)(userPlans.userId, userId), (0, import_drizzle_orm42.eq)(userPlans.planId, planId)));
+    const existing = await db.select().from(userPlans).where((0, import_drizzle_orm43.and)((0, import_drizzle_orm43.eq)(userPlans.userId, userId), (0, import_drizzle_orm43.eq)(userPlans.planId, planId)));
     if (existing.length > 0 && !existing[0].completedAt) {
       return res.status(409).json({ error: "Already enrolled in this plan" });
     }
@@ -51559,7 +53080,7 @@ router29.get("/api/user-plans", requireAuth, async (req, res) => {
       planDurationDays: readingPlans.durationDays,
       planType: readingPlans.type,
       planStatus: readingPlans.status
-    }).from(userPlans).innerJoin(readingPlans, (0, import_drizzle_orm42.eq)(userPlans.planId, readingPlans.id)).where((0, import_drizzle_orm42.eq)(userPlans.userId, userId)).orderBy((0, import_drizzle_orm42.asc)(userPlans.createdAt));
+    }).from(userPlans).innerJoin(readingPlans, (0, import_drizzle_orm43.eq)(userPlans.planId, readingPlans.id)).where((0, import_drizzle_orm43.eq)(userPlans.userId, userId)).orderBy((0, import_drizzle_orm43.asc)(userPlans.createdAt));
     res.json(enrolled);
   } catch (err) {
     console.error("User plans list error:", err);
@@ -51574,21 +53095,21 @@ router29.patch("/api/user-plans/:id/day/:day", requireAuth, async (req, res) => 
     if (isNaN(dayNum) || dayNum < 1) {
       return res.status(400).json({ error: "Invalid day number" });
     }
-    const [enrollment] = await db.select().from(userPlans).where((0, import_drizzle_orm42.and)((0, import_drizzle_orm42.eq)(userPlans.id, id2), (0, import_drizzle_orm42.eq)(userPlans.userId, userId)));
+    const [enrollment] = await db.select().from(userPlans).where((0, import_drizzle_orm43.and)((0, import_drizzle_orm43.eq)(userPlans.id, id2), (0, import_drizzle_orm43.eq)(userPlans.userId, userId)));
     if (!enrollment) {
       return res.status(404).json({ error: "Enrollment not found" });
     }
-    const [planDay] = await db.select().from(planDays).where((0, import_drizzle_orm42.and)((0, import_drizzle_orm42.eq)(planDays.planId, enrollment.planId), (0, import_drizzle_orm42.eq)(planDays.dayNumber, dayNum)));
+    const [planDay] = await db.select().from(planDays).where((0, import_drizzle_orm43.and)((0, import_drizzle_orm43.eq)(planDays.planId, enrollment.planId), (0, import_drizzle_orm43.eq)(planDays.dayNumber, dayNum)));
     if (planDay) {
-      await db.update(planDays).set({ completedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm42.eq)(planDays.id, planDay.id));
+      await db.update(planDays).set({ completedAt: /* @__PURE__ */ new Date() }).where((0, import_drizzle_orm43.eq)(planDays.id, planDay.id));
     }
-    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm42.eq)(readingPlans.id, enrollment.planId));
+    const [plan] = await db.select().from(readingPlans).where((0, import_drizzle_orm43.eq)(readingPlans.id, enrollment.planId));
     const nextDay = dayNum + 1;
     const isComplete = nextDay > (plan?.durationDays ?? dayNum);
     const [updated] = await db.update(userPlans).set({
       currentDay: isComplete ? dayNum : nextDay,
       completedAt: isComplete ? /* @__PURE__ */ new Date() : null
-    }).where((0, import_drizzle_orm42.eq)(userPlans.id, id2)).returning();
+    }).where((0, import_drizzle_orm43.eq)(userPlans.id, id2)).returning();
     res.json(updated);
   } catch (err) {
     console.error("Mark day complete error:", err);
@@ -51602,7 +53123,7 @@ router29.post("/api/plans/custom", requireAuth, async (req, res) => {
     if (!bookId || !durationDays || durationDays < 1) {
       return res.status(400).json({ error: "bookId and durationDays are required" });
     }
-    const [book] = await db.select().from(bibleBooks).where((0, import_drizzle_orm42.eq)(bibleBooks.id, bookId));
+    const [book] = await db.select().from(bibleBooks).where((0, import_drizzle_orm43.eq)(bibleBooks.id, bookId));
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
@@ -51642,7 +53163,7 @@ router29.post("/api/plans/custom", requireAuth, async (req, res) => {
       startDate: /* @__PURE__ */ new Date(),
       currentDay: 1
     }).returning();
-    const allDays = await db.select().from(planDays).where((0, import_drizzle_orm42.eq)(planDays.planId, plan.id)).orderBy((0, import_drizzle_orm42.asc)(planDays.dayNumber));
+    const allDays = await db.select().from(planDays).where((0, import_drizzle_orm43.eq)(planDays.planId, plan.id)).orderBy((0, import_drizzle_orm43.asc)(planDays.dayNumber));
     res.status(201).json({ ...plan, days: allDays, enrollment });
   } catch (err) {
     console.error("Custom plan error:", err);
@@ -51678,8 +53199,8 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-1",
         question: "Is it my fault that I have been abandoned? Is there something wrong with me?",
         verses: [
-          { ref: "Psalm 27:10", text: "Even if my father and mother abandon me, the LORD will hold me close." },
-          { ref: "Isaiah 49:15-16", text: "Can a mother forget her nursing child? Can she feel no love for the child she has borne? But even if that were possible, I would not forget you! See, I have written your name on the palms of my hands." }
+          { ref: "Psalm 27:10" },
+          { ref: "Isaiah 49:15-16" }
         ],
         commentary: "Abandonment is never a reflection of your worth in God's eyes. While human relationships can fail, God's love for you is unconditional and permanent. He has engraved you on the palms of His hands \u2014 you are always on His mind and in His care. Your value comes from being created in God's image, not from the actions of others."
       },
@@ -51687,9 +53208,9 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-2",
         question: "How can I heal from my abandonment?",
         verses: [
-          { ref: "Psalm 34:18", text: "The LORD is close to the brokenhearted; he rescues those whose spirits are crushed." },
-          { ref: "Psalm 147:3", text: "He heals the brokenhearted and bandages their wounds." },
-          { ref: "2 Corinthians 1:3-4", text: "God is our merciful Father and the source of all comfort. He comforts us in all our troubles so that we can comfort others." }
+          { ref: "Psalm 34:18" },
+          { ref: "Psalm 147:3" },
+          { ref: "2 Corinthians 1:3-4" }
         ],
         commentary: "Healing begins when we bring our pain to God rather than hiding it. He specializes in mending broken hearts. The process takes time, but God promises to be near you in your darkest moments. As you experience His comfort, you gain the ability to help others who face similar pain \u2014 your wound becomes your ministry."
       },
@@ -51697,9 +53218,9 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-3",
         question: "Is there a difference between rejection, betrayal, and abandonment?",
         verses: [
-          { ref: "Matthew 12:23-24", text: "The crowd was amazed and asked, 'Could it be that Jesus is the Son of David, the Messiah?' But when the Pharisees heard about the miracle, they said, 'No wonder he can cast out demons. He gets his power from Satan, the prince of demons.'" },
-          { ref: "Mark 14:10-11", text: "Then Judas Iscariot, one of the twelve disciples, went to the leading priests to arrange to betray Jesus to them. They were delighted when they heard why he had come, and they promised to give him money." },
-          { ref: "Mark 14:43-50", text: "Immediately, even as Jesus said this, Judas, one of the twelve disciples, arrived with a crowd of men armed with swords and clubs. . . . Then all his disciples deserted him and ran away." }
+          { ref: "Matthew 12:23-24" },
+          { ref: "Mark 14:10-11" },
+          { ref: "Mark 14:43-50" }
         ],
         commentary: "Jesus experienced all three forms of relational pain. The Pharisees rejected Him \u2014 refusing to accept who He was. Judas betrayed Him \u2014 deliberately turning against someone who had trusted him. The disciples abandoned Him \u2014 fleeing when things got difficult. Jesus understands every form of relational hurt you experience because He endured them all. In His resurrection, He showed that no rejection, betrayal, or abandonment has the final word."
       },
@@ -51707,9 +53228,9 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-4",
         question: "Where is God during my difficult times?",
         verses: [
-          { ref: "Deuteronomy 31:8", text: "Do not be afraid or discouraged, for the LORD will personally go ahead of you. He will be with you; he will neither fail you nor abandon you." },
-          { ref: "Psalm 23:4", text: "Even when I walk through the darkest valley, I will not be afraid, for you are close beside me." },
-          { ref: "Romans 8:38-39", text: "Nothing can ever separate us from God's love. Neither death nor life, neither angels nor demons, neither our fears for today nor our worries about tomorrow \u2014 not even the powers of hell can separate us from God's love." }
+          { ref: "Deuteronomy 31:8" },
+          { ref: "Psalm 23:4" },
+          { ref: "Romans 8:38-39" }
         ],
         commentary: "God is not distant during your suffering \u2014 He is closer than ever. The darkest valleys are where His presence becomes most real. Nothing in all creation has the power to separate you from His love. When you cannot feel Him, remember that feelings are not facts. His promise stands: He will never leave you or forsake you."
       },
@@ -51717,8 +53238,8 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-5",
         question: "Other people have abandoned me \u2014 why hasn't God?",
         verses: [
-          { ref: "Lamentations 3:22-23", text: "The faithful love of the LORD never ends! His mercies never cease. Great is his faithfulness; his mercies begin afresh each morning." },
-          { ref: "Hebrews 13:5", text: "God has said, 'I will never fail you. I will never abandon you.'" }
+          { ref: "Lamentations 3:22-23" },
+          { ref: "Hebrews 13:5" }
         ],
         commentary: "Human love is conditional and limited. God's love is unconditional and inexhaustible. People abandon because of their own brokenness, selfishness, or weakness. God cannot abandon you because faithfulness is central to His very nature. Every morning His mercies are renewed \u2014 not because you earned them, but because He is who He is."
       },
@@ -51726,8 +53247,8 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-6",
         question: "In what circumstances might God abandon me?",
         verses: [
-          { ref: "Romans 8:1", text: "There is no condemnation for those who belong to Christ Jesus." },
-          { ref: "John 6:37", text: "Those the Father has given me will come to me, and I will never reject them." }
+          { ref: "Romans 8:1" },
+          { ref: "John 6:37" }
         ],
         commentary: "The simple and beautiful answer is: none. God will never abandon you. There is no sin so great, no failure so deep, no wandering so far that it can exhaust God's grace. While we may walk away from Him, He never walks away from us. Like the father in the prodigal son story, He watches for our return with open arms."
       },
@@ -51735,9 +53256,9 @@ var TOUCHPOINTS_DATA = [
         id: "abandonment-7",
         question: "Promises from God",
         verses: [
-          { ref: "Isaiah 41:10", text: "Don't be afraid, for I am with you. Don't be discouraged, for I am your God. I will strengthen you and help you. I will hold you up with my victorious right hand." },
-          { ref: "Matthew 28:20", text: "And be sure of this: I am with you always, even to the end of the age." },
-          { ref: "Joshua 1:9", text: "Be strong and courageous! Do not be afraid or discouraged. For the LORD your God is with you wherever you go." }
+          { ref: "Isaiah 41:10" },
+          { ref: "Matthew 28:20" },
+          { ref: "Joshua 1:9" }
         ],
         commentary: "These are not empty words \u2014 they are covenant promises from the God who created the universe. When Jesus said 'I am with you always,' He meant it without exception. When you feel abandoned by the world, stand on these promises. Speak them out loud. Write them on your heart. Let them be the foundation when everything else feels uncertain."
       }
@@ -51753,9 +53274,9 @@ var TOUCHPOINTS_DATA = [
         id: "addiction-1",
         question: "Can God really free me from my addiction?",
         verses: [
-          { ref: "John 8:36", text: "So if the Son sets you free, you are truly free." },
-          { ref: "2 Corinthians 5:17", text: "Anyone who belongs to Christ has become a new person. The old life is gone; a new life has begun!" },
-          { ref: "Philippians 4:13", text: "I can do everything through Christ, who gives me strength." }
+          { ref: "John 8:36" },
+          { ref: "2 Corinthians 5:17" },
+          { ref: "Philippians 4:13" }
         ],
         commentary: "Absolutely. God's power is greater than any addiction. Freedom may come as a sudden breakthrough or as a gradual journey, but God's promise is clear: He can make you new. This doesn't mean temptation disappears, but His strength becomes available to you moment by moment."
       },
@@ -51763,9 +53284,9 @@ var TOUCHPOINTS_DATA = [
         id: "addiction-2",
         question: "Why do I keep falling back into the same patterns?",
         verses: [
-          { ref: "Romans 7:19", text: "I want to do what is good, but I don't. I don't want to do what is wrong, but I do it anyway." },
-          { ref: "Galatians 5:17", text: "The sinful nature wants to do evil, which is just the opposite of what the Spirit wants." },
-          { ref: "1 John 1:9", text: "If we confess our sins to him, he is faithful and just to forgive us our sins and to cleanse us from all wickedness." }
+          { ref: "Romans 7:19" },
+          { ref: "Galatians 5:17" },
+          { ref: "1 John 1:9" }
         ],
         commentary: "Paul himself described this very struggle. Relapse doesn't mean failure \u2014 it means you're in a battle. Each time you fall, God's grace meets you right there. Don't let shame keep you from returning to Him. Confession and community break the cycle of secrecy that feeds addiction."
       },
@@ -51773,9 +53294,9 @@ var TOUCHPOINTS_DATA = [
         id: "addiction-3",
         question: "How can I find the strength to overcome?",
         verses: [
-          { ref: "2 Corinthians 12:9", text: "My grace is all you need. My power works best in weakness." },
-          { ref: "James 5:16", text: "Confess your sins to each other and pray for each other so that you may be healed." },
-          { ref: "Psalm 119:11", text: "I have hidden your word in my heart, that I might not sin against you." }
+          { ref: "2 Corinthians 12:9" },
+          { ref: "James 5:16" },
+          { ref: "Psalm 119:11" }
         ],
         commentary: "Three keys: First, admit your weakness \u2014 God's power shows up when you stop pretending you can do it alone. Second, bring others into your struggle through trusted fellowship. Third, fill your mind with Scripture so that when temptation comes, truth is ready. Recovery is a daily choice empowered by God's daily grace."
       },
@@ -51783,8 +53304,8 @@ var TOUCHPOINTS_DATA = [
         id: "addiction-4",
         question: "Does God still love me even though I struggle?",
         verses: [
-          { ref: "Romans 5:8", text: "God showed his great love for us by sending Christ to die for us while we were still sinners." },
-          { ref: "Romans 8:1", text: "There is no condemnation for those who belong to Christ Jesus." }
+          { ref: "Romans 5:8" },
+          { ref: "Romans 8:1" }
         ],
         commentary: "God loved you at your very worst. His love is not based on your performance \u2014 it's based on His character. Your struggle does not diminish His affection for you. He is not standing over you with disappointment; He is beside you with compassion, ready to help you take the next step forward."
       }
@@ -51800,8 +53321,8 @@ var TOUCHPOINTS_DATA = [
         id: "anger-1",
         question: "Is it a sin to be angry?",
         verses: [
-          { ref: "Ephesians 4:26-27", text: "'Don't sin by letting anger control you.' Don't let the sun go down while you are still angry, for anger gives a foothold to the devil." },
-          { ref: "James 1:19-20", text: "Understand this, my dear brothers and sisters: You must all be quick to listen, slow to speak, and slow to get angry. Human anger does not produce the righteousness God desires." }
+          { ref: "Ephesians 4:26-27" },
+          { ref: "James 1:19-20" }
         ],
         commentary: "Feeling anger is not sinful \u2014 it's a natural human emotion that even God experiences. The sin comes when anger controls us rather than us controlling it. Paul's instruction is practical: deal with anger quickly, don't let it fester overnight, and don't let it become a tool the enemy uses against you."
       },
@@ -51809,9 +53330,9 @@ var TOUCHPOINTS_DATA = [
         id: "anger-2",
         question: "How can I control my temper?",
         verses: [
-          { ref: "Proverbs 15:1", text: "A gentle answer deflects anger, but harsh words make tempers flare." },
-          { ref: "Proverbs 29:11", text: "Fools vent their anger, but the wise quietly hold it back." },
-          { ref: "Galatians 5:22-23", text: "The Holy Spirit produces this kind of fruit in our lives: love, joy, peace, patience, kindness, goodness, faithfulness, gentleness, and self-control." }
+          { ref: "Proverbs 15:1" },
+          { ref: "Proverbs 29:11" },
+          { ref: "Galatians 5:22-23" }
         ],
         commentary: "Self-control is a fruit of the Spirit, not just a skill to develop. Ask God daily for His Spirit to produce patience in you. When anger rises, pause before responding. A soft word has remarkable power to defuse conflict. The wisest people aren't those who never feel anger \u2014 they're the ones who choose how to respond to it."
       },
@@ -51819,8 +53340,8 @@ var TOUCHPOINTS_DATA = [
         id: "anger-3",
         question: "What should I do when I am angry at God?",
         verses: [
-          { ref: "Psalm 13:1-2", text: "O LORD, how long will you forget me? Forever? How long will you look the other way? How long must I struggle with anguish in my soul, with sorrow in my heart every day?" },
-          { ref: "Psalm 62:8", text: "Pour out your heart to him, for God is our refuge." }
+          { ref: "Psalm 13:1-2" },
+          { ref: "Psalm 62:8" }
         ],
         commentary: "Being honest with God about your anger is not disrespectful \u2014 it's an act of faith. The psalmists poured out raw emotions before God regularly. He can handle your anger. What He doesn't want is for you to shut Him out. Bring your frustration to Him honestly, and trust that He is big enough to receive it and loving enough to respond."
       }
@@ -51836,9 +53357,9 @@ var TOUCHPOINTS_DATA = [
         id: "anxiety-1",
         question: "What does God say about my anxiety?",
         verses: [
-          { ref: "Philippians 4:6-7", text: "Don't worry about anything; instead, pray about everything. Tell God what you need, and thank him for all he has done. Then you will experience God's peace, which exceeds anything we can understand." },
-          { ref: "Matthew 6:25-27", text: "That is why I tell you not to worry about everyday life \u2014 whether you have enough food and drink, or enough clothes to wear. Isn't life more than food, and your body more than clothing? Look at the birds. They don't plant or harvest or store food in barns, for your heavenly Father feeds them. And aren't you far more valuable to him than they are?" },
-          { ref: "1 Peter 5:7", text: "Give all your worries and cares to God, for he cares about you." }
+          { ref: "Philippians 4:6-7" },
+          { ref: "Matthew 6:25-27" },
+          { ref: "1 Peter 5:7" }
         ],
         commentary: "God doesn't scold you for feeling anxious \u2014 He invites you to bring your anxiety to Him. The antidote to worry is prayer combined with thanksgiving. When you turn your worries into prayers, something supernatural happens: a peace that defies logic settles over your heart. You are far more valuable to God than the birds He faithfully feeds every day."
       },
@@ -51846,9 +53367,9 @@ var TOUCHPOINTS_DATA = [
         id: "anxiety-2",
         question: "How can I find peace when everything feels uncertain?",
         verses: [
-          { ref: "Isaiah 26:3", text: "You will keep in perfect peace all who trust in you, all whose thoughts are fixed on you." },
-          { ref: "Psalm 46:1-2", text: "God is our refuge and strength, always ready to help in times of trouble. So we will not fear, even if earthquakes come and the mountains crumble into the sea." },
-          { ref: "John 14:27", text: "I am leaving you with a gift \u2014 peace of mind and heart. And the peace I give is a gift the world cannot give. So don't be troubled or afraid." }
+          { ref: "Isaiah 26:3" },
+          { ref: "Psalm 46:1-2" },
+          { ref: "John 14:27" }
         ],
         commentary: "Peace doesn't come from controlling your circumstances \u2014 it comes from trusting the One who controls all things. Fix your mind on God's character: His faithfulness, His sovereignty, His love for you. The peace Jesus gives is different from the world's peace. It doesn't depend on things going well; it holds steady even when everything shakes."
       },
@@ -51856,8 +53377,8 @@ var TOUCHPOINTS_DATA = [
         id: "anxiety-3",
         question: "Is it wrong to seek professional help for anxiety?",
         verses: [
-          { ref: "Proverbs 11:14", text: "Without wise leadership, a nation falls; there is safety in having many advisers." },
-          { ref: "Proverbs 12:15", text: "Fools think their own way is right, but the wise listen to others." }
+          { ref: "Proverbs 11:14" },
+          { ref: "Proverbs 12:15" }
         ],
         commentary: "Seeking help is not a lack of faith \u2014 it's an act of wisdom. God works through counselors, therapists, and doctors just as He works through prayer and Scripture. Mental health challenges deserve professional attention alongside spiritual care. There is no shame in getting help; it takes courage and humility to reach out."
       }
@@ -51873,9 +53394,9 @@ var TOUCHPOINTS_DATA = [
         id: "forgiveness-1",
         question: "Why should I forgive someone who hurt me deeply?",
         verses: [
-          { ref: "Ephesians 4:32", text: "Be kind to each other, tenderhearted, forgiving one another, just as God through Christ has forgiven you." },
-          { ref: "Matthew 6:14-15", text: "If you forgive those who sin against you, your heavenly Father will forgive you. But if you refuse to forgive others, your Father will not forgive your sins." },
-          { ref: "Colossians 3:13", text: "Make allowance for each other's faults, and forgive anyone who offends you. Remember, the Lord forgave you, so you must forgive others." }
+          { ref: "Ephesians 4:32" },
+          { ref: "Matthew 6:14-15" },
+          { ref: "Colossians 3:13" }
         ],
         commentary: "We forgive because we have been forgiven. When we consider the magnitude of what God has forgiven us, forgiving others becomes not just duty but gratitude. Unforgiveness is like drinking poison and expecting the other person to get sick \u2014 it hurts you more than anyone. Forgiveness sets you free."
       },
@@ -51883,8 +53404,8 @@ var TOUCHPOINTS_DATA = [
         id: "forgiveness-2",
         question: "How can I forgive when I still feel the pain?",
         verses: [
-          { ref: "Mark 11:25", text: "When you are praying, first forgive anyone you are holding a grudge against, so that your Father in heaven will forgive your sins, too." },
-          { ref: "Luke 23:34", text: "Jesus said, 'Father, forgive them, for they don't know what they are doing.'" }
+          { ref: "Mark 11:25" },
+          { ref: "Luke 23:34" }
         ],
         commentary: "Forgiveness is a decision, not a feeling. You may need to choose forgiveness daily \u2014 even hourly \u2014 until your emotions catch up with your choice. Jesus forgave from the cross while in excruciating pain. He didn't wait until He felt like it. Start by telling God you're willing to forgive, and ask Him to help you follow through."
       },
@@ -51892,8 +53413,8 @@ var TOUCHPOINTS_DATA = [
         id: "forgiveness-3",
         question: "Does forgiving mean I have to trust the person again?",
         verses: [
-          { ref: "Proverbs 4:23", text: "Guard your heart above all else, for it determines the course of your life." },
-          { ref: "Matthew 10:16", text: "Look, I am sending you out as sheep among wolves. So be as shrewd as snakes and harmless as doves." }
+          { ref: "Proverbs 4:23" },
+          { ref: "Matthew 10:16" }
         ],
         commentary: "Forgiveness and trust are not the same thing. Forgiveness is given freely; trust must be earned over time. You can forgive someone completely and still set healthy boundaries. Wisdom and forgiveness are not enemies \u2014 they work together. Forgive generously, but protect yourself wisely."
       }
@@ -51909,8 +53430,8 @@ var TOUCHPOINTS_DATA = [
         id: "grief-1",
         question: "How can I cope with the death of a loved one?",
         verses: [
-          { ref: "1 Thessalonians 4:13-14", text: "We want you to know what will happen to the believers who have died so you will not grieve like people who have no hope. For since we believe that Jesus died and was raised to life again, we also believe that when Jesus returns, God will bring back with him the believers who have died." },
-          { ref: "Revelation 21:4", text: "He will wipe every tear from their eyes, and there will be no more death or sorrow or crying or pain. All these things are gone forever." }
+          { ref: "1 Thessalonians 4:13-14" },
+          { ref: "Revelation 21:4" }
         ],
         commentary: "Christians grieve, but not without hope. The promise of resurrection means that death is not goodbye forever \u2014 it is 'see you later.' Let yourself grieve fully; don't rush the process. But lift your eyes to the hope that one day every tear will be wiped away and you will be reunited with those who trusted in Christ."
       },
@@ -51918,8 +53439,8 @@ var TOUCHPOINTS_DATA = [
         id: "grief-2",
         question: "Is it okay to question God in my grief?",
         verses: [
-          { ref: "Psalm 88:1-2", text: "O LORD, God of my salvation, I cry out to you by day. I come to you at night. Now hear my prayer; listen to my cry." },
-          { ref: "Job 3:11", text: "Why wasn't I born dead? Why didn't I die as I came from the womb?" }
+          { ref: "Psalm 88:1-2" },
+          { ref: "Job 3:11" }
         ],
         commentary: "Job asked some of the most honest questions in all of Scripture \u2014 and God honored his honesty. The Psalms are filled with raw cries of 'why?' and 'how long?' Questioning God is not the same as rejecting God. Bring your questions to Him. He is not offended by your honesty; He is honored by your trust."
       }
@@ -51935,8 +53456,8 @@ var TOUCHPOINTS_DATA = [
         id: "loneliness-1",
         question: "Does God see me in my loneliness?",
         verses: [
-          { ref: "Psalm 139:1-4", text: "O LORD, you have examined my heart and know everything about me. You know when I sit down or stand up. You know my thoughts even when I'm far away. You see me when I travel and when I rest at home. You know everything I do." },
-          { ref: "Genesis 16:13", text: "She gave this name to the LORD who spoke to her: 'You are the God who sees me.'" }
+          { ref: "Psalm 139:1-4" },
+          { ref: "Genesis 16:13" }
         ],
         commentary: "Hagar, alone in the desert and pregnant, discovered that God saw her in her loneliest moment. She called Him 'El Roi' \u2014 the God who sees. He sees you too. Every silent tear, every sleepless night, every moment you feel invisible \u2014 God is watching over you with tender care. You are fully known and deeply loved."
       },
@@ -51944,8 +53465,8 @@ var TOUCHPOINTS_DATA = [
         id: "loneliness-2",
         question: "How can I find genuine community?",
         verses: [
-          { ref: "Hebrews 10:24-25", text: "Let us think of ways to motivate one another to acts of love and good works. And let us not neglect our meeting together, as some people do, but encourage one another." },
-          { ref: "Ecclesiastes 4:9-10", text: "Two people are better off than one, for they can help each other succeed. If one person falls, the other can reach out and help." }
+          { ref: "Hebrews 10:24-25" },
+          { ref: "Ecclesiastes 4:9-10" }
         ],
         commentary: "Deep relationships don't happen by accident \u2014 they require intentional effort and vulnerability. Start by showing up consistently at church, a small group, or a service opportunity. Be the kind of friend you wish you had. Authentic community is built through shared experiences, honest conversations, and consistent presence over time."
       }
@@ -51961,9 +53482,9 @@ var TOUCHPOINTS_DATA = [
         id: "purpose-1",
         question: "Does God have a specific plan for my life?",
         verses: [
-          { ref: "Jeremiah 29:11", text: "'For I know the plans I have for you,' says the LORD. 'They are plans for good and not for disaster, to give you a future and a hope.'" },
-          { ref: "Ephesians 2:10", text: "We are God's masterpiece. He has created us anew in Christ Jesus, so we can do the good things he planned for us long ago." },
-          { ref: "Psalm 139:16", text: "Every day of my life was recorded in your book. Every moment was laid out before a single day had passed." }
+          { ref: "Jeremiah 29:11" },
+          { ref: "Ephesians 2:10" },
+          { ref: "Psalm 139:16" }
         ],
         commentary: "God is not indifferent to the details of your life. He has specific good works prepared for you to walk in. You are His masterpiece \u2014 a one-of-a-kind creation with a one-of-a-kind calling. The adventure of faith is discovering what He has already prepared for you and stepping into it with courage."
       },
@@ -51971,9 +53492,9 @@ var TOUCHPOINTS_DATA = [
         id: "purpose-2",
         question: "How do I discover my calling?",
         verses: [
-          { ref: "Proverbs 3:5-6", text: "Trust in the LORD with all your heart; do not depend on your own understanding. Seek his will in all you do, and he will show you which path to take." },
-          { ref: "Romans 12:6-8", text: "In his grace, God has given us different gifts for doing certain things well." },
-          { ref: "Micah 6:8", text: "The LORD has told you what is good, and this is what he requires of you: to do what is right, to love mercy, and to walk humbly with your God." }
+          { ref: "Proverbs 3:5-6" },
+          { ref: "Romans 12:6-8" },
+          { ref: "Micah 6:8" }
         ],
         commentary: "Your calling is found at the intersection of your gifts, your passions, the world's needs, and God's direction. Start with faithfulness in what's right in front of you. Pay attention to what energizes you and where you see God's fruit in your efforts. Calling unfolds as you walk \u2014 you don't need to see the whole path to take the next step."
       }
@@ -51989,9 +53510,9 @@ var TOUCHPOINTS_DATA = [
         id: "fear-1",
         question: "How can I overcome my fears?",
         verses: [
-          { ref: "2 Timothy 1:7", text: "God has not given us a spirit of fear and timidity, but of power, love, and self-discipline." },
-          { ref: "Isaiah 41:10", text: "Don't be afraid, for I am with you. Don't be discouraged, for I am your God. I will strengthen you and help you." },
-          { ref: "Psalm 56:3", text: "When I am afraid, I will put my trust in you." }
+          { ref: "2 Timothy 1:7" },
+          { ref: "Isaiah 41:10" },
+          { ref: "Psalm 56:3" }
         ],
         commentary: "Courage is not the absence of fear \u2014 it's choosing to trust God in the midst of it. The psalmist didn't say 'I'm never afraid.' He said 'When I am afraid, I will trust.' Start there. Acknowledge your fear honestly, then choose trust. God promises His power, His presence, and His help \u2014 that's more than enough."
       },
@@ -51999,8 +53520,8 @@ var TOUCHPOINTS_DATA = [
         id: "fear-2",
         question: "What about the fear of death?",
         verses: [
-          { ref: "Psalm 23:4", text: "Even when I walk through the darkest valley, I will not be afraid, for you are close beside me." },
-          { ref: "1 Corinthians 15:55-57", text: "'O death, where is your victory? O death, where is your sting?' For sin is the sting that results in death. . . . But thank God! He gives us victory over sin and death through our Lord Jesus Christ." }
+          { ref: "Psalm 23:4" },
+          { ref: "1 Corinthians 15:55-57" }
         ],
         commentary: "For the believer, death has lost its sting. Jesus conquered death through His resurrection, and He promises that same victory to all who trust in Him. Death is not the end \u2014 it's a doorway to eternal life with God. This hope doesn't eliminate the natural sadness of death, but it removes its ultimate terror."
       }
@@ -52016,8 +53537,8 @@ var TOUCHPOINTS_DATA = [
         id: "marriage-1",
         question: "What is God's design for marriage?",
         verses: [
-          { ref: "Genesis 2:24", text: "This explains why a man leaves his father and mother and is joined to his wife, and the two are united into one." },
-          { ref: "Ephesians 5:25-28", text: "Husbands, love your wives, just as Christ loved the church. He gave up his life for her. . . . husbands ought to love their wives as they love their own bodies." }
+          { ref: "Genesis 2:24" },
+          { ref: "Ephesians 5:25-28" }
         ],
         commentary: "Marriage is a covenant of self-giving love that mirrors Christ's relationship with the church. It's designed to be a place of deep intimacy, mutual support, and shared mission. God's design is not about power or control but about sacrificial love that puts the other person's needs alongside your own."
       },
@@ -52025,9 +53546,9 @@ var TOUCHPOINTS_DATA = [
         id: "marriage-2",
         question: "How do we handle conflict in marriage?",
         verses: [
-          { ref: "Ephesians 4:26-27", text: "Don't sin by letting anger control you. Don't let the sun go down while you are still angry, for anger gives a foothold to the devil." },
-          { ref: "Proverbs 15:1", text: "A gentle answer deflects anger, but harsh words make tempers flare." },
-          { ref: "1 Peter 4:8", text: "Most important of all, continue to show deep love for each other, for love covers a multitude of sins." }
+          { ref: "Ephesians 4:26-27" },
+          { ref: "Proverbs 15:1" },
+          { ref: "1 Peter 4:8" }
         ],
         commentary: "Conflict is inevitable in marriage; contempt is optional. Address issues quickly and gently. Listen more than you speak. Choose soft words over sharp ones. And remember that you're on the same team \u2014 the goal is resolution, not victory. Love has the power to cover mistakes and create space for growth."
       }
@@ -52043,9 +53564,9 @@ var TOUCHPOINTS_DATA = [
         id: "patience-1",
         question: "How can I wait on God's timing?",
         verses: [
-          { ref: "Psalm 27:14", text: "Wait patiently for the LORD. Be brave and courageous. Yes, wait patiently for the LORD." },
-          { ref: "Isaiah 40:31", text: "Those who trust in the LORD will find new strength. They will soar high on wings like eagles. They will run and not grow weary. They will walk and not faint." },
-          { ref: "Habakkuk 2:3", text: "This vision is for a future time. It describes the end, and it will be fulfilled. If it seems slow in coming, wait patiently, for it will surely take place." }
+          { ref: "Psalm 27:14" },
+          { ref: "Isaiah 40:31" },
+          { ref: "Habakkuk 2:3" }
         ],
         commentary: "Waiting on God is not wasted time \u2014 it's formation time. While you wait, God is preparing both the blessing and you for each other. The eagle doesn't flap frantically; it waits for the right wind current and then soars effortlessly. Trust that God's timing is perfect, even when your patience is tested."
       }
@@ -52061,9 +53582,9 @@ var TOUCHPOINTS_DATA = [
         id: "temptation-1",
         question: "How can I resist temptation?",
         verses: [
-          { ref: "1 Corinthians 10:13", text: "The temptations in your life are no different from what others experience. And God is faithful. He will not allow the temptation to be more than you can stand. When you are tempted, he will show you a way out so that you can endure." },
-          { ref: "James 4:7", text: "Resist the devil, and he will flee from you." },
-          { ref: "Matthew 4:4", text: "Jesus answered, 'It is written: Man shall not live on bread alone, but on every word that comes from the mouth of God.'" }
+          { ref: "1 Corinthians 10:13" },
+          { ref: "James 4:7" },
+          { ref: "Matthew 4:4" }
         ],
         commentary: "Jesus resisted temptation with Scripture. When the devil attacked, Jesus responded with 'It is written.' Fill your mind with God's Word so that truth is ready when temptation strikes. God always provides an exit \u2014 your job is to look for it and take it, even when the temptation feels overwhelming."
       }
@@ -52079,9 +53600,9 @@ var TOUCHPOINTS_DATA = [
         id: "suffering-1",
         question: "Why does God allow suffering?",
         verses: [
-          { ref: "Romans 8:28", text: "We know that God causes everything to work together for the good of those who love God and are called according to his purpose for them." },
-          { ref: "James 1:2-4", text: "Dear brothers and sisters, when troubles of any kind come your way, consider it an opportunity for great joy. For you know that when your faith is tested, your endurance has a chance to grow." },
-          { ref: "2 Corinthians 4:17", text: "For our present troubles are small and won't last very long. Yet they produce for us a glory that vastly outweighs them and will last forever!" }
+          { ref: "Romans 8:28" },
+          { ref: "James 1:2-4" },
+          { ref: "2 Corinthians 4:17" }
         ],
         commentary: "God doesn't waste pain. Every trial is an opportunity for faith to grow deeper and stronger. This doesn't mean suffering is good \u2014 it means God can bring good from it. The perspective of eternity helps: our present troubles, though real and painful, are producing an eternal weight of glory that far exceeds the cost."
       },
@@ -52089,8 +53610,8 @@ var TOUCHPOINTS_DATA = [
         id: "suffering-2",
         question: "How can I endure my current trial?",
         verses: [
-          { ref: "Hebrews 12:1-2", text: "Let us run with endurance the race God has set before us. We do this by keeping our eyes on Jesus, the champion who initiates and perfects our faith." },
-          { ref: "Psalm 34:17-19", text: "The LORD hears his people when they call to him for help. He rescues them from all their troubles. The LORD is close to the brokenhearted." }
+          { ref: "Hebrews 12:1-2" },
+          { ref: "Psalm 34:17-19" }
         ],
         commentary: "Fix your eyes on Jesus \u2014 He endured the cross for the joy set before Him. He understands suffering from the inside. Call out to Him; He promises to hear. Surround yourself with believers who will pray with you and carry your burden alongside you. You don't have to endure alone."
       }
@@ -52106,9 +53627,9 @@ var TOUCHPOINTS_DATA = [
         id: "gratitude-1",
         question: "Why is gratitude so important to God?",
         verses: [
-          { ref: "1 Thessalonians 5:18", text: "Be thankful in all circumstances, for this is God's will for you who belong to Christ Jesus." },
-          { ref: "Psalm 100:4", text: "Enter his gates with thanksgiving; go into his courts with praise. Give thanks to him and praise his name." },
-          { ref: "Colossians 3:15-17", text: "And let the peace that comes from Christ rule in your hearts. . . . And always be thankful." }
+          { ref: "1 Thessalonians 5:18" },
+          { ref: "Psalm 100:4" },
+          { ref: "Colossians 3:15-17" }
         ],
         commentary: "Gratitude is the antidote to entitlement, anxiety, and discontent. When Paul said to be thankful 'in all circumstances,' he wasn't asking us to be thankful for suffering, but to find reasons for gratitude even amid difficulty. Thanksgiving is the gateway to God's presence and the foundation of a joy-filled life."
       }
@@ -52124,8 +53645,8 @@ var TOUCHPOINTS_DATA = [
         id: "prayer-1",
         question: "How should I pray?",
         verses: [
-          { ref: "Matthew 6:9-13", text: "'Our Father in heaven, hallowed be your name, your kingdom come, your will be done, on earth as it is in heaven. Give us today our daily bread. And forgive us our debts, as we also have forgiven our debtors. And lead us not into temptation, but deliver us from the evil one.'" },
-          { ref: "Romans 8:26", text: "The Holy Spirit helps us in our weakness. For example, we don't know what God wants us to pray for. But the Holy Spirit prays for us with groanings that cannot be expressed in words." }
+          { ref: "Matthew 6:9-13" },
+          { ref: "Romans 8:26" }
         ],
         commentary: "Jesus gave us a model prayer that covers worship, submission, provision, forgiveness, and protection. But prayer is not about perfection \u2014 even when you don't know what to say, the Holy Spirit intercedes for you. Simply start talking to God like you would a trusted friend. He's listening."
       },
@@ -52133,8 +53654,8 @@ var TOUCHPOINTS_DATA = [
         id: "prayer-2",
         question: "Does God always answer prayer?",
         verses: [
-          { ref: "1 John 5:14-15", text: "We are confident that he hears us whenever we ask for anything that pleases him. And since we know he hears us when we make our requests, we also know that he will give us what we ask for." },
-          { ref: "2 Corinthians 12:8-9", text: "Three different times I begged the Lord to take it away. Each time he said, 'My grace is all you need.'" }
+          { ref: "1 John 5:14-15" },
+          { ref: "2 Corinthians 12:8-9" }
         ],
         commentary: "God always answers prayer, but not always with the answer we want. Sometimes He says yes, sometimes no, and sometimes wait. Paul prayed three times for relief, and God's answer was 'My grace is sufficient.' Trust that God's answers are always rooted in His love and wisdom, even when they surprise or disappoint you."
       }
@@ -52150,9 +53671,9 @@ var TOUCHPOINTS_DATA = [
         id: "identity-1",
         question: "Who am I in Christ?",
         verses: [
-          { ref: "2 Corinthians 5:17", text: "Anyone who belongs to Christ has become a new person. The old life is gone; a new life has begun!" },
-          { ref: "1 Peter 2:9", text: "You are a chosen people. You are royal priests, a holy nation, God's very own possession." },
-          { ref: "Ephesians 1:4-5", text: "Even before he made the world, God loved us and chose us in Christ to be holy and without fault in his eyes. God decided in advance to adopt us into his own family by bringing us to himself through Jesus Christ." }
+          { ref: "2 Corinthians 5:17" },
+          { ref: "1 Peter 2:9" },
+          { ref: "Ephesians 1:4-5" }
         ],
         commentary: "You are not defined by your past, your mistakes, or the world's labels. In Christ, you are a new creation. You are chosen \u2014 picked intentionally. You are royal \u2014 dignified and valued. You are adopted \u2014 belonging to God's own family. Let these truths sink deep into your heart and reshape how you see yourself."
       }
@@ -52168,9 +53689,9 @@ var TOUCHPOINTS_DATA = [
         id: "contentment-1",
         question: "How can I be content with what I have?",
         verses: [
-          { ref: "Philippians 4:11-13", text: "I have learned how to be content with whatever I have. I know how to live on almost nothing or with everything. I have learned the secret of living in every situation. . . . I can do everything through Christ, who gives me strength." },
-          { ref: "Hebrews 13:5", text: "Don't love money; be satisfied with what you have. For God has said, 'I will never fail you. I will never abandon you.'" },
-          { ref: "1 Timothy 6:6-8", text: "True godliness with contentment is itself great wealth. After all, we brought nothing with us when we came into the world, and we can't take anything with us when we leave it." }
+          { ref: "Philippians 4:11-13" },
+          { ref: "Hebrews 13:5" },
+          { ref: "1 Timothy 6:6-8" }
         ],
         commentary: "Contentment is learned, not inherited. Paul said 'I have learned' \u2014 it was a process. The secret? Christ's strength. When your deepest satisfaction comes from your relationship with God, external circumstances lose their power over your peace. This doesn't happen overnight, but it grows as you practice gratitude and trust daily."
       }
@@ -52186,9 +53707,9 @@ var TOUCHPOINTS_DATA = [
         id: "integrity-1",
         question: "Why does integrity matter to God?",
         verses: [
-          { ref: "Proverbs 10:9", text: "People with integrity walk safely, but those who follow crooked paths will be exposed." },
-          { ref: "Proverbs 11:3", text: "Honesty guides good people; dishonesty destroys treacherous people." },
-          { ref: "Luke 16:10", text: "If you are faithful in little things, you will be faithful in large ones. But if you are dishonest in little things, you won't be honest with greater responsibilities." }
+          { ref: "Proverbs 10:9" },
+          { ref: "Proverbs 11:3" },
+          { ref: "Luke 16:10" }
         ],
         commentary: "Integrity matters because it shapes your character and your influence. Small choices of honesty compound into a life of trustworthiness. God rewards faithfulness in the small things with greater opportunities. Your reputation is built one honest decision at a time."
       }
@@ -52204,9 +53725,9 @@ var TOUCHPOINTS_DATA = [
         id: "doubt-1",
         question: "Is it okay to have doubts about God?",
         verses: [
-          { ref: "Mark 9:24", text: "The father instantly cried out, 'I do believe, but help me overcome my unbelief!'" },
-          { ref: "Jude 1:22", text: "You must show mercy to those whose faith is wavering." },
-          { ref: "Psalm 13:1-2", text: "O LORD, how long will you forget me? Forever? How long will you look the other way?" }
+          { ref: "Mark 9:24" },
+          { ref: "Jude 1:22" },
+          { ref: "Psalm 13:1-2" }
         ],
         commentary: "The father in Mark 9 gave us one of the most honest prayers in Scripture: 'I believe; help my unbelief.' That's a prayer God always answers. Doubt doesn't disqualify you from faith \u2014 it's often the sign that your faith is growing, pushing past easy answers into deeper trust. Bring your doubts to God. He can handle them."
       }
@@ -52222,9 +53743,9 @@ var TOUCHPOINTS_DATA = [
         id: "generosity-1",
         question: "Why should I give generously?",
         verses: [
-          { ref: "2 Corinthians 9:6-7", text: "Remember this \u2014 a farmer who plants only a few seeds will get a small crop. But the one who plants generously will get a generous crop. You must each decide in your heart how much to give. And don't give reluctantly or in response to pressure. For God loves a cheerful giver." },
-          { ref: "Luke 6:38", text: "Give, and you will receive. Your gift will return to you in full \u2014 pressed down, shaken together to make room for more, running over, and poured into your lap." },
-          { ref: "Proverbs 11:25", text: "The generous will prosper; those who refresh others will themselves be refreshed." }
+          { ref: "2 Corinthians 9:6-7" },
+          { ref: "Luke 6:38" },
+          { ref: "Proverbs 11:25" }
         ],
         commentary: "Generosity breaks the grip of materialism and aligns our hearts with God's heart. When you give cheerfully, something shifts in your soul \u2014 you move from scarcity thinking to abundance thinking. God promises that generosity creates a cycle of blessing: as you refresh others, you yourself are refreshed."
       }
@@ -52246,9 +53767,9 @@ var TOUCHPOINTS_DATA = [
         id: "depression-1",
         question: "Does God understand my depression?",
         verses: [
-          { ref: "Psalm 42:11", text: "Why am I discouraged? Why is my heart so sad? I will put my hope in God! I will praise him again \u2014 my Savior and my God!" },
-          { ref: "1 Kings 19:4-5", text: "He sat down under a solitary broom tree and prayed that he might die. 'I have had enough, LORD,' he said. Then he lay down and slept. But as he was sleeping, an angel touched him and told him, 'Get up and eat!'" },
-          { ref: "Isaiah 53:3", text: "He was despised and rejected \u2014 a man of sorrows, acquainted with deepest grief." }
+          { ref: "Psalm 42:11" },
+          { ref: "1 Kings 19:4-5" },
+          { ref: "Isaiah 53:3" }
         ],
         commentary: "Jesus was described as 'a man of sorrows, acquainted with deepest grief.' He understands depression from the inside. When Elijah was so depressed he wanted to die, God didn't lecture him \u2014 He let him sleep, fed him, and gently guided him forward. God responds to your depression with compassion, not criticism."
       }
@@ -52264,9 +53785,9 @@ var TOUCHPOINTS_DATA = [
         id: "trust-1",
         question: "How can I trust God when life doesn't make sense?",
         verses: [
-          { ref: "Proverbs 3:5-6", text: "Trust in the LORD with all your heart; do not depend on your own understanding. Seek his will in all you do, and he will show you which path to take." },
-          { ref: "Isaiah 55:8-9", text: "'My thoughts are nothing like your thoughts,' says the LORD. 'And my ways are far beyond anything you could imagine.'" },
-          { ref: "Romans 11:33", text: "Oh, how great are God's riches and wisdom and knowledge! How impossible it is for us to understand his decisions and his ways!" }
+          { ref: "Proverbs 3:5-6" },
+          { ref: "Isaiah 55:8-9" },
+          { ref: "Romans 11:33" }
         ],
         commentary: "Trust is hardest when we can't see the reason behind our circumstances. But God sees the full picture when we only see a fragment. His ways are higher than ours \u2014 not because He's distant, but because His wisdom encompasses everything. Trust is choosing to believe in His goodness even when His methods are mysterious."
       }
@@ -52282,9 +53803,9 @@ var TOUCHPOINTS_DATA = [
         id: "humility-1",
         question: "What does true humility look like?",
         verses: [
-          { ref: "Philippians 2:3-5", text: "Don't be selfish; don't try to impress others. Be humble, thinking of others as better than yourselves. Don't look out only for your own interests, but take an interest in others, too. You must have the same attitude that Christ Jesus had." },
-          { ref: "James 4:6", text: "God opposes the proud but gives grace to the humble." },
-          { ref: "Micah 6:8", text: "The LORD has told you what is good: to do what is right, to love mercy, and to walk humbly with your God." }
+          { ref: "Philippians 2:3-5" },
+          { ref: "James 4:6" },
+          { ref: "Micah 6:8" }
         ],
         commentary: "Jesus modelled humility by emptying Himself and taking the form of a servant. Humility is not weakness \u2014 it takes incredible strength to put others first. God opposes the proud because pride blocks His grace. But to the humble, He gives grace abundantly. Walk humbly with God, and you'll find His favor flowing into every area of your life."
       }
@@ -52300,9 +53821,9 @@ var TOUCHPOINTS_DATA = [
         id: "parenting-1",
         question: "How should I raise my children?",
         verses: [
-          { ref: "Proverbs 22:6", text: "Direct your children onto the right path, and when they are older, they will not leave it." },
-          { ref: "Deuteronomy 6:6-7", text: "You must commit yourselves wholeheartedly to these commands that I am giving you today. Repeat them again and again to your children. Talk about them when you are at home and when you are on the road, when you are going to bed and when you are getting up." },
-          { ref: "Ephesians 6:4", text: "Fathers, do not provoke your children to anger by the way you treat them. Rather, bring them up with the discipline and instruction that comes from the Lord." }
+          { ref: "Proverbs 22:6" },
+          { ref: "Deuteronomy 6:6-7" },
+          { ref: "Ephesians 6:4" }
         ],
         commentary: "Faith is best taught in everyday moments \u2014 at meals, during drives, at bedtime. Children learn more from what they see you do than from what they hear you say. Be consistent, be patient, and be present. Don't just teach about God \u2014 let your children see you depending on God in real time."
       }
@@ -52318,9 +53839,9 @@ var TOUCHPOINTS_DATA = [
         id: "hope-1",
         question: "Where can I find hope when everything seems hopeless?",
         verses: [
-          { ref: "Romans 15:13", text: "I pray that God, the source of hope, will fill you completely with joy and peace because you trust in him. Then you will overflow with confident hope through the power of the Holy Spirit." },
-          { ref: "Jeremiah 29:11", text: "'For I know the plans I have for you,' says the LORD. 'They are plans for good and not for disaster, to give you a future and a hope.'" },
-          { ref: "Hebrews 6:19", text: "This hope is a strong and trustworthy anchor for our souls." }
+          { ref: "Romans 15:13" },
+          { ref: "Jeremiah 29:11" },
+          { ref: "Hebrews 6:19" }
         ],
         commentary: "Hope is described as an anchor for the soul \u2014 something that holds you steady when storms rage. God is the source of all genuine hope. When you feel hopeless, turn to His promises and remind yourself of His track record of faithfulness. Hope is not dependent on your circumstances; it's dependent on your God."
       }
@@ -52336,9 +53857,9 @@ var TOUCHPOINTS_DATA = [
         id: "sabbath-1",
         question: "Why is Sabbath rest important?",
         verses: [
-          { ref: "Exodus 20:8-10", text: "Remember to observe the Sabbath day by keeping it holy. You have six days each week for your ordinary work, but the seventh day is a Sabbath day of rest dedicated to the LORD your God." },
-          { ref: "Mark 2:27", text: "Then Jesus said to them, 'The Sabbath was made to meet the needs of people, and not people to meet the requirements of the Sabbath.'" },
-          { ref: "Hebrews 4:9-10", text: "So there is a special rest still waiting for the people of God. For all who have entered into God's rest have rested from their labors, just as God did after creating the world." }
+          { ref: "Exodus 20:8-10" },
+          { ref: "Mark 2:27" },
+          { ref: "Hebrews 4:9-10" }
         ],
         commentary: "The Sabbath declares that your worth is not tied to your productivity. God rested not because He was tired, but to model a rhythm of trust. When you rest on the Sabbath, you're saying, 'God, I trust you enough to stop working and let you provide.' The Sabbath is made for you \u2014 a gift of renewal, worship, and connection."
       }
@@ -52354,9 +53875,9 @@ var TOUCHPOINTS_DATA = [
         id: "justice-1",
         question: "What does God require of me regarding justice?",
         verses: [
-          { ref: "Micah 6:8", text: "The LORD has told you what is good, and this is what he requires of you: to do what is right, to love mercy, and to walk humbly with your God." },
-          { ref: "Isaiah 1:17", text: "Learn to do good. Seek justice. Help the oppressed. Defend the cause of orphans. Fight for the rights of widows." },
-          { ref: "Proverbs 31:8-9", text: "Speak up for those who cannot speak for themselves; ensure justice for those being crushed. Yes, speak up for the poor and helpless, and see that they get justice." }
+          { ref: "Micah 6:8" },
+          { ref: "Isaiah 1:17" },
+          { ref: "Proverbs 31:8-9" }
         ],
         commentary: "God's call to justice is not optional \u2014 it's central to what it means to follow Him. Justice and mercy walk together. We are called to use our voices, resources, and influence to defend those who cannot defend themselves. Every act of compassion reflects the heart of God to a watching world."
       }
@@ -52372,9 +53893,9 @@ var TOUCHPOINTS_DATA = [
         id: "work-1",
         question: "How should I approach my work?",
         verses: [
-          { ref: "Colossians 3:23-24", text: "Work willingly at whatever you do, as though you were working for the Lord rather than for people. Remember that the Lord will give you an inheritance as your reward, and that the Master you are serving is Christ." },
-          { ref: "Proverbs 16:3", text: "Commit your actions to the LORD, and your plans will succeed." },
-          { ref: "Ecclesiastes 9:10", text: "Whatever you do, do well." }
+          { ref: "Colossians 3:23-24" },
+          { ref: "Proverbs 16:3" },
+          { ref: "Ecclesiastes 9:10" }
         ],
         commentary: "When you work as if serving Christ, even mundane tasks take on eternal significance. Your attitude, integrity, and excellence at work are a testimony to everyone around you. Commit your work to God, do it with all your heart, and trust Him with the results."
       }
@@ -52390,8 +53911,8 @@ var TOUCHPOINTS_DATA = [
         id: "sanctuary-1",
         question: "What is the sanctuary and why does it matter?",
         verses: [
-          { ref: "Exodus 25:8", text: "Have the people of Israel build me a holy sanctuary so I can live among them." },
-          { ref: "Hebrews 8:1-2", text: "Here is the main point: We have a High Priest who sat down in the place of honor beside the throne of the majestic God in heaven. There he ministers in the heavenly Tabernacle, the true place of worship that was built by the Lord and not by human hands." }
+          { ref: "Exodus 25:8" },
+          { ref: "Hebrews 8:1-2" }
         ],
         commentary: "God's deepest desire has always been to dwell with His people. The earthly sanctuary was a shadow of the heavenly reality where Christ now ministers. It matters because it reveals the full scope of salvation \u2014 not just forgiveness at the cross, but ongoing intercession and ultimate vindication of God's character."
       },
@@ -52399,9 +53920,9 @@ var TOUCHPOINTS_DATA = [
         id: "sanctuary-2",
         question: "How does the sanctuary reveal Jesus?",
         verses: [
-          { ref: "John 1:29", text: "Look! The Lamb of God who takes away the sin of the world!" },
-          { ref: "Hebrews 9:11-12", text: "So Christ has now become the High Priest over all the good things that have come. He has entered that greater, more perfect Tabernacle in heaven. With his own blood \u2014 not the blood of goats and calves \u2014 he entered the Most Holy Place once for all time and secured our redemption forever." },
-          { ref: "John 14:6", text: "I am the way, the truth, and the life. No one can come to the Father except through me." }
+          { ref: "John 1:29" },
+          { ref: "Hebrews 9:11-12" },
+          { ref: "John 14:6" }
         ],
         commentary: "Every element of the sanctuary points to Christ. He is the sacrificial Lamb at the altar of burnt offering, the Bread of Life on the table of showbread, the Light of the World on the lampstand, and our Intercessor at the altar of incense. The veil torn at His death opened the way into God's presence for all who believe."
       },
@@ -52409,9 +53930,9 @@ var TOUCHPOINTS_DATA = [
         id: "sanctuary-3",
         question: "What is Christ doing in the heavenly sanctuary now?",
         verses: [
-          { ref: "Hebrews 7:25", text: "Therefore he is able, once and forever, to save those who come to God through him. He lives forever to intercede with God on their behalf." },
-          { ref: "1 John 2:1", text: "My dear children, I am writing this to you so that you will not sin. But if anyone does sin, we have an advocate who pleads our case before the Father. He is Jesus Christ, the one who is truly righteous." },
-          { ref: "Hebrews 4:15-16", text: "This High Priest of ours understands our weaknesses, for he faced all of the same testings we do, yet he did not sin. So let us come boldly to the throne of our gracious God." }
+          { ref: "Hebrews 7:25" },
+          { ref: "1 John 2:1" },
+          { ref: "Hebrews 4:15-16" }
         ],
         commentary: "Right now, Jesus is not distant or disengaged. He is actively interceding for you in heaven's sanctuary. He applies the merits of His sacrifice to your daily struggles, weaknesses, and failures. Because He was tempted in every way yet without sin, He understands your battles and invites you to come boldly \u2014 not timidly \u2014 to the throne of grace."
       },
@@ -52419,9 +53940,9 @@ var TOUCHPOINTS_DATA = [
         id: "sanctuary-4",
         question: "What does the Day of Atonement teach us?",
         verses: [
-          { ref: "Leviticus 16:30", text: "On that day offerings of purification will be made for you, and you will be cleansed in the LORD's presence from all your sins." },
-          { ref: "Daniel 8:14", text: "He said to me, 'It will take 2,300 evenings and mornings; then the holy place will be properly restored.'" },
-          { ref: "Revelation 14:7", text: "Fear God and give glory to Him, for the hour of His judgment has come. Worship Him who made the heavens and the earth and sea and springs of water." }
+          { ref: "Leviticus 16:30" },
+          { ref: "Daniel 8:14" },
+          { ref: "Revelation 14:7" }
         ],
         commentary: "The Day of Atonement was the most solemn day of the Israelite year \u2014 a day of cleansing, judgment, and restoration. Adventists understand that since 1844, Christ has been engaged in a final work of atonement in the Most Holy Place of the heavenly sanctuary. This is not about condemnation but about vindicating God's people and demonstrating the fairness of His character before the universe."
       },
@@ -52429,8 +53950,8 @@ var TOUCHPOINTS_DATA = [
         id: "sanctuary-5",
         question: "How does the sanctuary give me assurance today?",
         verses: [
-          { ref: "Hebrews 10:19-22", text: "And so, dear brothers and sisters, we can boldly enter heaven's Most Holy Place because of the blood of Jesus. By his death, Jesus opened a new and life-giving way through the curtain into the Most Holy Place. And since we have a great High Priest who rules over God's house, let us go right into the presence of God with sincere hearts fully trusting him." },
-          { ref: "Romans 8:34", text: "Who then will condemn us? No one \u2014 for Christ Jesus died for us and was raised to life for us, and he is sitting in the place of honor at God's right hand, pleading for us." }
+          { ref: "Hebrews 10:19-22" },
+          { ref: "Romans 8:34" }
         ],
         commentary: "The sanctuary is not an abstract doctrine \u2014 it is personal assurance. You have an Advocate in heaven's court. When guilt whispers that you are not enough, Jesus holds up nail-scarred hands and says, 'This one is Mine.' The sanctuary tells you that salvation is secure not because of your performance but because of His finished and ongoing work."
       }
@@ -52446,9 +53967,9 @@ var TOUCHPOINTS_DATA = [
         id: "second-coming-1",
         question: "How do we know Jesus is really coming back?",
         verses: [
-          { ref: "John 14:1-3", text: "Don't let your hearts be troubled. Trust in God, and trust also in me. There is more than enough room in my Father's home. If this were not so, would I have told you that I am going to prepare a place for you? When everything is ready, I will come and get you, so that you will always be with me where I am." },
-          { ref: "Acts 1:10-11", text: "As they strained to see him rising into heaven, two white-robed men suddenly stood among them. 'Men of Galilee,' they said, 'why are you standing here staring into heaven? Jesus has been taken from you into heaven, but someday he will return from heaven in the same way you saw him go!'" },
-          { ref: "Revelation 22:20", text: "He who is the faithful witness to all these things says, 'Yes, I am coming soon!' Amen! Come, Lord Jesus!" }
+          { ref: "John 14:1-3" },
+          { ref: "Acts 1:10-11" },
+          { ref: "Revelation 22:20" }
         ],
         commentary: "Jesus Himself promised to return. Angels confirmed it. The apostles taught it. Revelation closes with it. The second coming is the most frequently mentioned doctrine in the New Testament. It is not wishful thinking \u2014 it is a covenant promise from the One who has never broken a promise."
       },
@@ -52456,9 +53977,9 @@ var TOUCHPOINTS_DATA = [
         id: "second-coming-2",
         question: "What will the second coming look like?",
         verses: [
-          { ref: "Matthew 24:27", text: "For as the lightning flashes in the east and shines to the west, so it will be when the Son of Man comes." },
-          { ref: "Revelation 1:7", text: "Look! He comes with the clouds of heaven. And everyone will see him \u2014 even those who pierced him. And all the nations of the world will mourn for him. Yes! Amen!" },
-          { ref: "1 Thessalonians 4:16-17", text: "For the Lord himself will come down from heaven with a commanding shout, with the voice of the archangel, and with the trumpet call of God. First, the believers who have died will rise from their graves. Then, together with them, we who are still alive and remain on the earth will be caught up in the clouds to meet the Lord in the air." }
+          { ref: "Matthew 24:27" },
+          { ref: "Revelation 1:7" },
+          { ref: "1 Thessalonians 4:16-17" }
         ],
         commentary: "The second coming will be unmistakable. It will be visible like lightning across the sky, audible with shouts and trumpets, and universal \u2014 every eye will see Him. There will be no secret about it. Christ will come in blazing glory, surrounded by angels, and the entire earth will witness it. This truth protects us from deceptions that claim He has already come secretly."
       },
@@ -52466,9 +53987,9 @@ var TOUCHPOINTS_DATA = [
         id: "second-coming-3",
         question: "What are the signs that Jesus is coming soon?",
         verses: [
-          { ref: "Matthew 24:6-8", text: "You will hear of wars and threats of wars, but don't panic. Yes, these things must take place, but the end won't follow immediately. Nation will go to war against nation, and kingdom against kingdom. There will be famines and earthquakes in many parts of the world. But all this is only the first of the birth pains." },
-          { ref: "2 Timothy 3:1-5", text: "In the last days there will be very difficult times. For people will love only themselves and their money. They will be boastful and proud, scoffing at God, disobedient to their parents, and ungrateful. They will consider nothing sacred." },
-          { ref: "Matthew 24:14", text: "And the Good News about the Kingdom will be preached throughout the whole world, so that all nations will hear it; and then the end will come." }
+          { ref: "Matthew 24:6-8" },
+          { ref: "2 Timothy 3:1-5" },
+          { ref: "Matthew 24:14" }
         ],
         commentary: "Jesus gave us signs not to set dates but to keep us watchful and hopeful. The moral decay, natural disasters, wars, and global proclamation of the gospel we see today all point to His soon return. These signs are not meant to frighten us \u2014 they are meant to assure us that God is still in control and that He is keeping His promise."
       },
@@ -52476,8 +53997,8 @@ var TOUCHPOINTS_DATA = [
         id: "second-coming-4",
         question: "How should I live in light of Christ's return?",
         verses: [
-          { ref: "Titus 2:12-13", text: "And we are instructed to turn from godless living and sinful pleasures. We should live in this evil world with wisdom, righteousness, and devotion to God, while we look forward with hope to that wonderful day when the glory of our great God and Savior, Jesus Christ, will be revealed." },
-          { ref: "2 Peter 3:11-12", text: "Since everything around us is going to be destroyed like this, what holy and godly lives you should live, looking forward to the day of God and hurrying it along." }
+          { ref: "Titus 2:12-13" },
+          { ref: "2 Peter 3:11-12" }
         ],
         commentary: "The hope of Christ's return is not an excuse to sit idle \u2014 it is the greatest motivation for holy living. When you truly believe Jesus is coming, it changes how you treat people, how you spend your time, and what you prioritise. We are to live with wisdom and devotion, not in fear but in joyful anticipation."
       },
@@ -52485,8 +54006,8 @@ var TOUCHPOINTS_DATA = [
         id: "second-coming-5",
         question: "What happens to believers when Jesus returns?",
         verses: [
-          { ref: "1 Corinthians 15:51-53", text: "But let me reveal to you a wonderful secret. We will not all die, but we will all be transformed! It will happen in a moment, in the blink of an eye, when the last trumpet is blown. For when the trumpet sounds, those who have died will be raised to live forever. And we who are living will also be transformed." },
-          { ref: "Philippians 3:20-21", text: "But we are citizens of heaven, where the Lord Jesus Christ lives. And we are eagerly waiting for him to return as our Savior. He will take our weak mortal bodies and change them into glorious bodies like his own." }
+          { ref: "1 Corinthians 15:51-53" },
+          { ref: "Philippians 3:20-21" }
         ],
         commentary: "At Christ's return, death is defeated forever. The dead in Christ rise first, then those who are alive are instantly transformed. Our broken, suffering bodies will be exchanged for glorious, immortal ones. Tears, pain, disease, and death will be no more. This is not fantasy \u2014 it is the promise of the God who raised Jesus from the dead."
       }
@@ -52502,8 +54023,8 @@ var TOUCHPOINTS_DATA = [
         id: "three-angels-1",
         question: "What is the first angel's message?",
         verses: [
-          { ref: "Revelation 14:6-7", text: "And I saw another angel flying through the sky, carrying the eternal Good News to proclaim to the people who belong to this world \u2014 to every nation, tribe, language, and people. 'Fear God,' he shouted. 'Give glory to him. For the time has come when he will sit as judge. Worship him who made the heavens, the earth, the sea, and all the springs of water.'" },
-          { ref: "Ecclesiastes 12:13", text: "Here now is my final conclusion: Fear God and obey his commands, for this is everyone's duty." }
+          { ref: "Revelation 14:6-7" },
+          { ref: "Ecclesiastes 12:13" }
         ],
         commentary: "The first angel proclaims the everlasting gospel and calls every human to worship God as Creator. In an age of evolution and secularism, this is a radical declaration: there IS a Creator, and He deserves our reverence. The language echoes the fourth commandment \u2014 Sabbath keeping is an act of acknowledging God as the One who made all things. The hour of judgment has arrived, and the invitation is urgent but gracious."
       },
@@ -52511,8 +54032,8 @@ var TOUCHPOINTS_DATA = [
         id: "three-angels-2",
         question: "What is the second angel's message?",
         verses: [
-          { ref: "Revelation 14:8", text: "Then another angel followed him through the sky, shouting, 'Babylon is fallen \u2014 that great city is fallen \u2014 because she made all the nations of the world drink the wine of her passionate immorality.'" },
-          { ref: "Revelation 18:4", text: "Then I heard another voice calling from heaven, 'Come away from her, my people. Do not take part in her sins, or you will be punished with her.'" }
+          { ref: "Revelation 14:8" },
+          { ref: "Revelation 18:4" }
         ],
         commentary: "Babylon represents religious confusion and false teachings that have led people away from biblical truth. The second angel declares that these systems of error are collapsing. God lovingly calls His people out of confusion and back to His Word. This is not an attack on sincere believers in other traditions \u2014 it is a call to examine every teaching by Scripture alone."
       },
@@ -52520,8 +54041,8 @@ var TOUCHPOINTS_DATA = [
         id: "three-angels-3",
         question: "What is the third angel's message?",
         verses: [
-          { ref: "Revelation 14:9-10", text: "Then a third angel followed them, shouting, 'Anyone who worships the beast and his statue or who accepts his mark on the forehead or on the hand must drink the wine of God's anger.'" },
-          { ref: "Revelation 14:12", text: "This calls for patient endurance on the part of the people of God who keep his commands and remain faithful to Jesus." }
+          { ref: "Revelation 14:9-10" },
+          { ref: "Revelation 14:12" }
         ],
         commentary: "The third angel warns against compromising with false worship systems. The mark of the beast is not a barcode or a microchip \u2014 it represents a choice to follow human authority over God's authority. Those who remain faithful are characterised by two things: they keep God's commandments and they hold to the faith of Jesus. Obedience and trust in Christ go hand in hand."
       },
@@ -52529,9 +54050,9 @@ var TOUCHPOINTS_DATA = [
         id: "three-angels-4",
         question: "Why are these messages relevant today?",
         verses: [
-          { ref: "Matthew 24:24", text: "For false messiahs and false prophets will rise up and perform great signs and wonders so as to deceive, if possible, even God's chosen ones." },
-          { ref: "2 Thessalonians 2:9-10", text: "This man will come to do the work of Satan with counterfeit power and signs and miracles. He will use every kind of evil deception to fool those on their way to destruction." },
-          { ref: "Revelation 12:17", text: "And the dragon was angry at the woman and declared war against the rest of her children \u2014 all who keep God's commandments and maintain their testimony for Jesus." }
+          { ref: "Matthew 24:24" },
+          { ref: "2 Thessalonians 2:9-10" },
+          { ref: "Revelation 12:17" }
         ],
         commentary: "These messages become more urgent as history moves toward its climax. In a world of growing spiritual deception, competing truth claims, and pressure to compromise, the three angels' messages provide clarity. They remind us that the great controversy between Christ and Satan is real, the stakes are eternal, and God has given us everything we need to stand firm."
       },
@@ -52539,8 +54060,8 @@ var TOUCHPOINTS_DATA = [
         id: "three-angels-5",
         question: "How do I share these messages with love?",
         verses: [
-          { ref: "1 Peter 3:15", text: "Instead, you must worship Christ as Lord of your life. And if someone asks about your hope as a believer, always be ready to explain it. But do this in a gentle and respectful way." },
-          { ref: "Colossians 4:5-6", text: "Live wisely among those who are not believers, and make the most of every opportunity. Let your conversation be gracious and attractive so that you will have the right response for everyone." }
+          { ref: "1 Peter 3:15" },
+          { ref: "Colossians 4:5-6" }
         ],
         commentary: "The three angels' messages are not a club to beat people with \u2014 they are heaven's final love letter. We share them with gentleness, respect, and a Christ-centred spirit. People need to see in our lives the beauty of the truths we proclaim. Let your conversation be gracious, your character be winsome, and your message be Jesus-centred above all."
       }
@@ -52556,9 +54077,9 @@ var TOUCHPOINTS_DATA = [
         id: "health-1",
         question: "Why does God care about my physical health?",
         verses: [
-          { ref: "1 Corinthians 6:19-20", text: "Don't you realize that your body is the temple of the Holy Spirit, who lives in you and was given to you by God? You do not belong to yourself, for God bought you with a high price. So you must honor God with your body." },
-          { ref: "3 John 1:2", text: "Dear friend, I hope all is well with you and that you are as healthy in body as you are strong in spirit." },
-          { ref: "1 Corinthians 10:31", text: "So whether you eat or drink, or whatever you do, do it all for the glory of God." }
+          { ref: "1 Corinthians 6:19-20" },
+          { ref: "3 John 1:2" },
+          { ref: "1 Corinthians 10:31" }
         ],
         commentary: "God created you as an integrated whole \u2014 body, mind, and spirit are inseparably connected. What affects one affects all. Your body is not a prison for the soul but a temple for God's Spirit. Caring for your health is an act of worship and a response to the incredible price God paid to redeem you. He wants you to thrive, not merely survive."
       },
@@ -52566,9 +54087,9 @@ var TOUCHPOINTS_DATA = [
         id: "health-2",
         question: "What does the Bible teach about diet?",
         verses: [
-          { ref: "Genesis 1:29", text: "Then God said, 'Look! I have given you every seed-bearing plant throughout the earth and all the fruit trees for your food.'" },
-          { ref: "Daniel 1:12-15", text: "Please test us for ten days on a diet of vegetables and water. At the end of the ten days, Daniel and his three friends looked healthier and better nourished than the young men who had been eating the food assigned by the king." },
-          { ref: "Leviticus 11:1-3", text: "Then the LORD said to Moses and Aaron, 'Give the following instructions to the people of Israel. Of all the land animals, these are the ones you may use for food.'" }
+          { ref: "Genesis 1:29" },
+          { ref: "Daniel 1:12-15" },
+          { ref: "Leviticus 11:1-3" }
         ],
         commentary: "God's original diet in Eden was plant-based \u2014 fruits, grains, nuts, and vegetables. After the flood, clean meats were permitted, but the ideal remains. Daniel's experience shows that God's dietary principles produce observable health benefits. Many Adventists choose vegetarianism not as law but as wisdom \u2014 honouring the original design while enjoying the abundance God provides."
       },
@@ -52576,9 +54097,9 @@ var TOUCHPOINTS_DATA = [
         id: "health-3",
         question: "How does rest and Sabbath relate to health?",
         verses: [
-          { ref: "Exodus 20:8-10", text: "Remember to observe the Sabbath day by keeping it holy. You have six days each week for your ordinary work, but the seventh day is a Sabbath day of rest dedicated to the LORD your God." },
-          { ref: "Mark 6:31", text: "Then Jesus said, 'Let's go off by ourselves to a quiet place and rest awhile.' He said this because there were so many people coming and going that Jesus and his apostles didn't even have time to eat." },
-          { ref: "Psalm 127:2", text: "It is useless for you to work so hard from early morning until late at night, anxiously working for food to eat; for God gives rest to his loved ones." }
+          { ref: "Exodus 20:8-10" },
+          { ref: "Mark 6:31" },
+          { ref: "Psalm 127:2" }
         ],
         commentary: "Rest is not laziness \u2014 it is a divine prescription. God Himself rested on the seventh day, not because He was tired but to model the rhythm of work and rest that humans need. The weekly Sabbath is God's gift of time \u2014 a sanctuary in time where we cease striving, connect with God, and allow our bodies and minds to be restored. Modern science confirms what Scripture has always taught: we are designed for rhythmic rest."
       },
@@ -52586,9 +54107,9 @@ var TOUCHPOINTS_DATA = [
         id: "health-4",
         question: "What about temperance and self-control?",
         verses: [
-          { ref: "1 Corinthians 9:25", text: "All athletes are disciplined in their training. They do it to win a prize that will fade away, but we do it for an eternal prize." },
-          { ref: "Proverbs 25:28", text: "A person without self-control is like a city with broken-down walls." },
-          { ref: "Galatians 5:22-23", text: "But the Holy Spirit produces this kind of fruit in our lives: love, joy, peace, patience, kindness, goodness, faithfulness, gentleness, and self-control." }
+          { ref: "1 Corinthians 9:25" },
+          { ref: "Proverbs 25:28" },
+          { ref: "Galatians 5:22-23" }
         ],
         commentary: "Temperance means moderation in good things and total abstinence from harmful things. It is not about deprivation but about freedom \u2014 the freedom that comes from not being controlled by appetite, addiction, or excess. Self-control is a fruit of the Holy Spirit, which means it is a gift from God, not just willpower. Ask Him for it and He will provide."
       },
@@ -52596,9 +54117,9 @@ var TOUCHPOINTS_DATA = [
         id: "health-5",
         question: "How does mental and emotional health connect to faith?",
         verses: [
-          { ref: "Philippians 4:6-7", text: "Don't worry about anything; instead, pray about everything. Tell God what you need, and thank him for all he has done. Then you will experience God's peace, which exceeds anything we can understand. His peace will guard your hearts and minds as you live in Christ Jesus." },
-          { ref: "Proverbs 17:22", text: "A cheerful heart is good medicine, but a broken spirit saps a person's strength." },
-          { ref: "Isaiah 26:3", text: "You will keep in perfect peace all who trust in you, all whose thoughts are fixed on you!" }
+          { ref: "Philippians 4:6-7" },
+          { ref: "Proverbs 17:22" },
+          { ref: "Isaiah 26:3" }
         ],
         commentary: "Mental health is not separate from spiritual health. Anxiety, depression, and emotional pain are real struggles that deserve compassion, not judgment. God offers genuine peace \u2014 not the absence of problems but a deep trust in His goodness. Prayer, community, gratitude, and professional help when needed are all part of God's provision for emotional wholeness. A cheerful heart truly is good medicine."
       }
@@ -52614,9 +54135,9 @@ var TOUCHPOINTS_DATA = [
         id: "state-dead-1",
         question: "What happens when a person dies?",
         verses: [
-          { ref: "Ecclesiastes 9:5", text: "The living at least know they will die, but the dead know nothing. They have no further reward, and are even forgotten." },
-          { ref: "Psalm 146:4", text: "When they breathe their last, they return to the earth, and all their plans die with them." },
-          { ref: "John 11:11-14", text: "Then he said, 'Our friend Lazarus has fallen asleep, but now I will go and wake him up.' The disciples said, 'Lord, if he is sleeping, he will soon get better!' They thought Jesus meant Lazarus was simply sleeping, but Jesus meant Lazarus had died. So he told them plainly, 'Lazarus is dead.'" }
+          { ref: "Ecclesiastes 9:5" },
+          { ref: "Psalm 146:4" },
+          { ref: "John 11:11-14" }
         ],
         commentary: "The Bible consistently describes death as a sleep \u2014 an unconscious state where there is no thought, no awareness, and no activity. Jesus Himself used this language when speaking of Lazarus. The dead are not watching us from above or suffering below. They are at rest, awaiting the great awakening at Christ's return. This is not a harsh truth \u2014 it is a merciful one."
       },
@@ -52624,9 +54145,9 @@ var TOUCHPOINTS_DATA = [
         id: "state-dead-2",
         question: "Do the dead go immediately to heaven or hell?",
         verses: [
-          { ref: "John 5:28-29", text: "Don't be so surprised! Indeed, the time is coming when all the dead in their graves will hear the voice of God's Son, and they will rise again. Those who have done good will rise to experience eternal life, and those who have continued in evil will rise to experience judgment." },
-          { ref: "Acts 2:29, 34", text: "Dear brothers, think about this! You can be sure that the patriarch David wasn't referring to himself, for he died and was buried, and his tomb is still here among us. For David did not ascend into heaven." },
-          { ref: "1 Thessalonians 4:16", text: "For the Lord himself will come down from heaven with a commanding shout, with the voice of the archangel, and with the trumpet call of God. First, the believers who have died will rise from their graves." }
+          { ref: "John 5:28-29" },
+          { ref: "Acts 2:29, 34" },
+          { ref: "1 Thessalonians 4:16" }
         ],
         commentary: "If the righteous went to heaven at death, there would be no need for a resurrection or a second coming. The Bible teaches that even King David \u2014 a man after God's own heart \u2014 has not yet ascended to heaven. The dead await the resurrection when Christ returns. This is not a loss but a promise: the next conscious moment for a person who dies in Christ is seeing His face in glory."
       },
@@ -52634,9 +54155,9 @@ var TOUCHPOINTS_DATA = [
         id: "state-dead-3",
         question: "Why does this teaching matter practically?",
         verses: [
-          { ref: "Deuteronomy 18:10-12", text: "For example, never sacrifice your son or daughter as a burnt offering. And do not let your people practice fortune-telling, or use sorcery, or interpret omens, or engage in witchcraft, or cast spells, or function as mediums or psychics, or call forth the spirits of the dead." },
-          { ref: "2 Corinthians 11:14", text: "But I am not surprised! Even Satan disguises himself as an angel of light." },
-          { ref: "Isaiah 8:19-20", text: "Someone may say to you, 'Let's ask the mediums and those who consult the spirits of the dead.' But shouldn't people ask God for guidance? Should the living seek guidance from the dead? Look to God's instructions and teachings!" }
+          { ref: "Deuteronomy 18:10-12" },
+          { ref: "2 Corinthians 11:14" },
+          { ref: "Isaiah 8:19-20" }
         ],
         commentary: "Understanding the state of the dead is one of the greatest protections against spiritual deception. If the dead are unconscious, then any spirit claiming to be a departed loved one is a counterfeit \u2014 a demonic impersonation. This truth shields us from spiritualism, necromancy, and the great final deception. It also frees us from the cruel doctrine of an ever-burning hell, revealing a God of justice and mercy."
       },
@@ -52644,8 +54165,8 @@ var TOUCHPOINTS_DATA = [
         id: "state-dead-4",
         question: "What is the resurrection hope?",
         verses: [
-          { ref: "1 Corinthians 15:20-22", text: "But in fact, Christ has been raised from the dead. He is the first of a great harvest of all who have died. So you see, just as death came into the world through a man, now the resurrection from the dead has begun through another man. Just as everyone dies because we all belong to Adam, everyone who belongs to Christ will be given new life." },
-          { ref: "Job 19:25-26", text: "But as for me, I know that my Redeemer lives, and he will stand upon the earth at last. And after my body has decayed, yet in my body I will see God!" }
+          { ref: "1 Corinthians 15:20-22" },
+          { ref: "Job 19:25-26" }
         ],
         commentary: "The resurrection is the Bible's true hope for the dead \u2014 not an ethereal existence as disembodied spirits but a bodily resurrection in glory. Christ's own resurrection guarantees ours. Job, in his deepest suffering, clung to this hope: 'I know that my Redeemer lives!' The resurrection morning will be the greatest reunion in the history of the universe."
       },
@@ -52653,8 +54174,8 @@ var TOUCHPOINTS_DATA = [
         id: "state-dead-5",
         question: "How should this truth comfort me in grief?",
         verses: [
-          { ref: "1 Thessalonians 4:13-14", text: "And now, dear brothers and sisters, we want you to know what will happen to the believers who have died so you will not grieve like people who have no hope. For since we believe that Jesus died and was raised to life again, we also believe that when Jesus returns, God will bring back with him the believers who have died." },
-          { ref: "Revelation 21:4", text: "He will wipe every tear from their eyes, and there will be no more death or sorrow or crying or pain. All these things are gone forever." }
+          { ref: "1 Thessalonians 4:13-14" },
+          { ref: "Revelation 21:4" }
         ],
         commentary: "This teaching does not minimise grief \u2014 losing someone you love is deeply painful. But it transforms grief with hope. Your loved ones who died in Christ are not suffering. They are at rest. And the separation is temporary. One day soon, at the sound of the trumpet, graves will open, tears will be wiped away, and the reunion will be eternal. We grieve, but not without hope."
       }
@@ -52670,9 +54191,9 @@ var TOUCHPOINTS_DATA = [
         id: "great-controversy-1",
         question: "How did the great controversy begin?",
         verses: [
-          { ref: "Isaiah 14:12-14", text: "How you are fallen from heaven, O shining star, son of the morning! You have been thrown down to the earth. For you said to yourself, 'I will ascend to heaven and set my throne above God's stars. I will preside on the mountain of the gods. I will climb to the highest heavens and be like the Most High.'" },
-          { ref: "Ezekiel 28:15, 17", text: "You were blameless in all you did from the day you were created until the day evil was found in you. Your heart was filled with pride because of all your beauty. Your wisdom was corrupted by your love of splendour." },
-          { ref: "Revelation 12:7-9", text: "Then there was war in heaven. Michael and his angels fought against the dragon and his angels. And the dragon lost the battle, and he and his angels were forced out of heaven. This great dragon \u2014 the ancient serpent called the devil, or Satan, the one deceiving the whole world \u2014 was thrown down to the earth with all his angels." }
+          { ref: "Isaiah 14:12-14" },
+          { ref: "Ezekiel 28:15, 17" },
+          { ref: "Revelation 12:7-9" }
         ],
         commentary: "The great controversy began not with humanity but with a perfect angel in a perfect heaven. Lucifer's sin was pride \u2014 the desire to be equal with God, to receive worship, and to challenge God's government of love. When war broke out in heaven, Satan and his followers were cast to earth. This cosmic conflict explains why a good God allows evil: He is demonstrating before the universe that love, not force, is the foundation of His kingdom."
       },
@@ -52680,9 +54201,9 @@ var TOUCHPOINTS_DATA = [
         id: "great-controversy-2",
         question: "Why does God allow suffering if He is all-powerful?",
         verses: [
-          { ref: "Genesis 3:1-4", text: `The serpent was the shrewdest of all the wild animals the LORD God had made. One day he asked the woman, 'Did God really say you must not eat the fruit from any of the trees in the garden?' 'Of course we may eat fruit from the trees in the garden,' the woman replied. 'It's only the fruit from the tree in the middle of the garden that we are not allowed to eat. God said, "You must not eat it or even touch it; if you do, you will die." You won\\'t die!' the serpent replied to the woman.` },
-          { ref: "Romans 5:12", text: "When Adam sinned, sin entered the world. Adam's sin brought death, so death spread to everyone, for everyone sinned." },
-          { ref: "1 John 3:8", text: "But the Son of God came to destroy the works of the devil." }
+          { ref: "Genesis 3:1-4" },
+          { ref: "Romans 5:12" },
+          { ref: "1 John 3:8" }
         ],
         commentary: "God allows suffering not because He is indifferent but because He respects the freedom He gave His creatures. To destroy evil by force would only prove Satan's accusation that God is a tyrant. Instead, God chose to defeat evil through self-sacrificing love demonstrated at the cross. The suffering we see is the result of sin, not God's will \u2014 and Jesus came specifically to destroy the works of the devil."
       },
@@ -52690,9 +54211,9 @@ var TOUCHPOINTS_DATA = [
         id: "great-controversy-3",
         question: "How did Jesus win the great controversy?",
         verses: [
-          { ref: "Colossians 2:15", text: "In this way, he disarmed the spiritual rulers and authorities. He shamed them publicly by his victory over them on the cross." },
-          { ref: "Hebrews 2:14", text: "Because God's children are human beings \u2014 made of flesh and blood \u2014 the Son also became flesh and blood. For only as a human being could he die, and only by dying could he break the power of the devil, who had the power of death." },
-          { ref: "John 12:31-32", text: "The time for judging this world has come, when Satan, the ruler of this world, will be cast out. And when I am lifted up from the earth, I will draw everyone to myself." }
+          { ref: "Colossians 2:15" },
+          { ref: "Hebrews 2:14" },
+          { ref: "John 12:31-32" }
         ],
         commentary: "The cross is the decisive battle of the great controversy. There, Jesus publicly defeated Satan \u2014 not by force but by dying in our place. Satan's accusations about God's character were forever answered at Calvary: God is not selfish, He is self-sacrificing. God is not unjust, He bore justice Himself. The cross disarmed Satan and drew the whole universe to worship a God who would die for His enemies."
       },
@@ -52700,9 +54221,9 @@ var TOUCHPOINTS_DATA = [
         id: "great-controversy-4",
         question: "How will the great controversy end?",
         verses: [
-          { ref: "Revelation 21:1-4", text: "Then I saw a new heaven and a new earth, for the old heaven and the old earth had disappeared. And I saw the holy city, the new Jerusalem, coming down from God out of heaven. I heard a loud shout from the throne, saying, 'Look, God's home is now among his people! He will live with them, and they will be his people. God himself will be with them. He will wipe every tear from their eyes, and there will be no more death or sorrow or crying or pain.'" },
-          { ref: "Revelation 20:10, 14", text: "Then the devil, who had deceived them, was thrown into the lake of fire. Then death and the grave were also thrown into the lake of fire. This lake of fire is the second death." },
-          { ref: "Nahum 1:9", text: "Whatever they plot against the LORD, he will bring to an end; trouble will not come a second time." }
+          { ref: "Revelation 21:1-4" },
+          { ref: "Revelation 20:10, 14" },
+          { ref: "Nahum 1:9" }
         ],
         commentary: "The great controversy ends with the complete eradication of sin, suffering, and death. God does not torture sinners forever \u2014 sin and sinners are consumed in the lake of fire and simply cease to exist. Then God creates a new heaven and new earth where He dwells with His people forever. And Nahum's promise guarantees: sin will never rise again. The universe will be safe and joyful for all eternity."
       },
@@ -52710,9 +54231,9 @@ var TOUCHPOINTS_DATA = [
         id: "great-controversy-5",
         question: "What does this mean for my daily life?",
         verses: [
-          { ref: "Ephesians 6:12", text: "For we are not fighting against flesh-and-blood enemies, but against evil rulers and authorities of the unseen world, against mighty powers in this dark world, and against evil spirits in the heavenly places." },
-          { ref: "Romans 8:37-39", text: "No, despite all these things, overwhelming victory is ours through Christ, who loved us. And I am convinced that nothing can ever separate us from God's love." },
-          { ref: "James 4:7", text: "So humble yourselves before God. Resist the devil, and he will flee from you." }
+          { ref: "Ephesians 6:12" },
+          { ref: "Romans 8:37-39" },
+          { ref: "James 4:7" }
         ],
         commentary: "Understanding the great controversy transforms your daily experience. Your struggles are not random \u2014 they are part of a cosmic conflict. But you are not fighting alone. Through Christ, overwhelming victory is already yours. Every choice you make for good, every temptation you resist, every act of love you perform is a declaration to the universe that God's way works. Resist the devil, and he will flee from you."
       }
@@ -52728,9 +54249,9 @@ var TOUCHPOINTS_DATA = [
         id: "stewardship-1",
         question: "What does it mean to be a steward?",
         verses: [
-          { ref: "1 Peter 4:10", text: "God has given each of you a gift from his great variety of spiritual gifts. Use them well to serve one another." },
-          { ref: "Matthew 25:21", text: "The master was full of praise. 'Well done, my good and faithful servant. You have been faithful in handling this small amount, so now I will give you many more responsibilities. Let's celebrate together!'" },
-          { ref: "1 Corinthians 4:2", text: "Now, a person who is put in charge as a manager must be faithful." }
+          { ref: "1 Peter 4:10" },
+          { ref: "Matthew 25:21" },
+          { ref: "1 Corinthians 4:2" }
         ],
         commentary: "A steward is someone entrusted with managing what belongs to another. In the biblical vision, God is the owner of everything and we are His managers. This is not a burden but a privilege \u2014 God trusts us with His resources and celebrates our faithfulness. The parable of the talents reminds us that faithfulness in small things opens the door to greater responsibility and deeper joy."
       },
@@ -52738,8 +54259,8 @@ var TOUCHPOINTS_DATA = [
         id: "stewardship-2",
         question: "How can I be a better steward of my time and resources?",
         verses: [
-          { ref: "Ephesians 5:15-16", text: "So be careful how you live. Don't live like fools, but like those who are wise. Make the most of every opportunity in these evil days." },
-          { ref: "Proverbs 3:9-10", text: "Honor the LORD with your wealth and with the best part of everything you produce. Then he will fill your barns with grain, and your vats will overflow with good wine." }
+          { ref: "Ephesians 5:15-16" },
+          { ref: "Proverbs 3:9-10" }
         ],
         commentary: "Better stewardship starts with intentionality. Honour God first with the best of what you have, not what is left over. Be deliberate about how you spend your hours, your energy, and your money. Ask God each morning how He would have you invest the day. When we prioritise His purposes, He promises provision beyond what we imagined."
       },
@@ -52747,8 +54268,8 @@ var TOUCHPOINTS_DATA = [
         id: "stewardship-3",
         question: "Does God care about how I manage my finances?",
         verses: [
-          { ref: "Luke 16:10-11", text: "If you are faithful in little things, you will be faithful in large ones. But if you are dishonest in little things, you won't be honest with greater responsibilities. And if you are untrustworthy about worldly wealth, who will trust you with the true riches of heaven?" },
-          { ref: "Malachi 3:10", text: "Bring all the tithes into the storehouse so there will be enough food in my Temple. If you do, says the LORD of Heaven's Armies, I will open the windows of heaven for you. I will pour out a blessing so great you won't have enough room to take it in!" }
+          { ref: "Luke 16:10-11" },
+          { ref: "Malachi 3:10" }
         ],
         commentary: "God cares deeply about our finances \u2014 not because He needs our money, but because how we handle money reveals the state of our hearts. Financial faithfulness is a spiritual discipline. When we tithe and give generously, we declare that God is our provider and that we trust His economy over the world's."
       }
@@ -52769,9 +54290,9 @@ var TOUCHPOINTS_DATA = [
         id: "serving-others-1",
         question: "Why does God call us to serve others?",
         verses: [
-          { ref: "Mark 10:45", text: "For even the Son of Man came not to be served but to serve others and to give his life as a ransom for many." },
-          { ref: "Galatians 5:13", text: "For you have been called to live in freedom, my brothers and sisters. But don't use your freedom to satisfy your sinful nature. Instead, use your freedom to serve one another in love." },
-          { ref: "Matthew 25:40", text: "And the King will say, 'I tell you the truth, when you did it to one of the least of these my brothers and sisters, you were doing it to me!'" }
+          { ref: "Mark 10:45" },
+          { ref: "Galatians 5:13" },
+          { ref: "Matthew 25:40" }
         ],
         commentary: "Service is the language of love in God's kingdom. Jesus modelled it perfectly \u2014 the King of the universe took the posture of a servant. When we serve others, especially those who cannot return the favour, we encounter Christ himself. God calls us to serve not to earn His love, but because His love overflows through us into the lives of others."
       },
@@ -52779,8 +54300,8 @@ var TOUCHPOINTS_DATA = [
         id: "serving-others-2",
         question: "How can I find meaningful ways to serve in my community?",
         verses: [
-          { ref: "1 Peter 4:10", text: "God has given each of you a gift from his great variety of spiritual gifts. Use them well to serve one another." },
-          { ref: "James 2:15-17", text: "Suppose you see a brother or sister who has no food or clothing, and you say, 'Good-bye and have a good day; stay warm and eat well' \u2014 but then you don't give that person any food or clothing. What good does that do? So you see, faith by itself isn't enough. Unless it produces good deeds, it is dead and useless." }
+          { ref: "1 Peter 4:10" },
+          { ref: "James 2:15-17" }
         ],
         commentary: "God has wired you with unique gifts for a reason. Look around your community \u2014 where is there need? Start where you are, with what you have. Feed someone who is hungry, visit someone who is lonely, mentor someone who is lost. Faith without works is dead, but when your faith becomes action, it brings life to everyone it touches."
       },
@@ -52788,8 +54309,8 @@ var TOUCHPOINTS_DATA = [
         id: "serving-others-3",
         question: "What does servant leadership look like?",
         verses: [
-          { ref: "John 13:14-15", text: "And since I, your Lord and Teacher, have washed your feet, you ought to wash each other's feet. I have given you an example to follow. Do as I have done to you." },
-          { ref: "Philippians 2:3-4", text: "Don't be selfish; don't try to impress others. Be humble, thinking of others as better than yourselves. Don't look out only for your own interests, but take an interest in others, too." }
+          { ref: "John 13:14-15" },
+          { ref: "Philippians 2:3-4" }
         ],
         commentary: "Jesus redefined leadership the night before He died by kneeling with a towel and a basin. Servant leadership puts others first, lifts people up rather than lording over them, and leads by example rather than by title. The greatest leaders in God's kingdom are those willing to do the work no one else wants to do."
       }
@@ -52810,9 +54331,9 @@ var TOUCHPOINTS_DATA = [
         id: "fasting-1",
         question: "What is the purpose of fasting?",
         verses: [
-          { ref: "Isaiah 58:6", text: "No, this is the kind of fasting I want: Free those who are wrongly imprisoned; lighten the burden of those who work for you. Let the oppressed go free, and remove the chains that bind people." },
-          { ref: "Matthew 6:16-18", text: "And when you fast, don't make it obvious, as the hypocrites do, for they try to look miserable and disheveled so people will admire them for their fasting. I tell you the truth, that is the only reward they will ever get. But when you fast, comb your hair and wash your face. Then no one will notice that you are fasting, except your Father, who knows what you do in private. And your Father, who sees everything, will reward you." },
-          { ref: "Joel 2:12", text: "That is why the LORD says, 'Turn to me now, while there is time. Give me your hearts. Come with fasting, weeping, and mourning.'" }
+          { ref: "Isaiah 58:6" },
+          { ref: "Matthew 6:16-18" },
+          { ref: "Joel 2:12" }
         ],
         commentary: "God-honoured fasting is not a performance \u2014 it is a posture of the heart. Isaiah 58 reveals that true fasting is inseparable from justice and compassion. Jesus assumed His followers would fast ('when you fast,' not 'if'), but He warned against using it for show. Fasting creates holy hunger \u2014 a longing for God that nothing else can satisfy."
       },
@@ -52820,8 +54341,8 @@ var TOUCHPOINTS_DATA = [
         id: "fasting-2",
         question: "How should I begin fasting?",
         verses: [
-          { ref: "Matthew 4:1-2", text: "Then Jesus was led by the Spirit into the wilderness to be tempted there by the devil. For forty days and forty nights he fasted and became very hungry." },
-          { ref: "Acts 13:2-3", text: "One day as these men were worshiping the Lord and fasting, the Holy Spirit said, 'Appoint Barnabas and Saul for the special work to which I have called them.' So after more fasting and prayer, the men laid their hands on them and sent them on their way." }
+          { ref: "Matthew 4:1-2" },
+          { ref: "Acts 13:2-3" }
         ],
         commentary: "Start simply. You do not need to fast for forty days like Jesus. Begin with a single meal, a full day, or even fasting from media or entertainment. Pair your fast with prayer and Scripture reading \u2014 fill the space you create with time in God's presence. The early church fasted before major decisions, and you can follow their example when seeking guidance for important choices in your own life."
       },
@@ -52829,8 +54350,8 @@ var TOUCHPOINTS_DATA = [
         id: "fasting-3",
         question: "Does fasting still matter today?",
         verses: [
-          { ref: "Matthew 9:14-15", text: "One day the disciples of John the Baptist came to Jesus and asked him, 'Why don't your disciples fast like we do and the Pharisees do?' Jesus replied, 'Do wedding guests mourn while celebrating with the groom? Of course not. But someday the groom will be taken away from them, and then they will fast.'" },
-          { ref: "Daniel 10:2-3", text: "When this vision came to me, I, Daniel, had been in mourning for three whole weeks. All that time I had eaten no rich food. No meat or wine crossed my lips, and I used no fragrant lotions until those three weeks had passed." }
+          { ref: "Matthew 9:14-15" },
+          { ref: "Daniel 10:2-3" }
         ],
         commentary: "Jesus said there would come a time when His followers would fast \u2014 and that time is now. We live between His first and second coming, longing for His return. Fasting is a way of expressing that longing and sharpening our spiritual senses. Daniel's example shows that even a partial fast \u2014 setting aside certain foods for a season \u2014 can open windows of revelation and spiritual clarity."
       }
@@ -52852,9 +54373,9 @@ var TOUCHPOINTS_DATA = [
         id: "baptism-1",
         question: "Why is baptism important?",
         verses: [
-          { ref: "Romans 6:3-4", text: "Or have you forgotten that when we were joined with Christ Jesus in baptism, we joined him in his death? For we died and were buried with Christ by baptism. And just as Christ was raised from the dead by the glorious power of the Father, now we also may live new lives." },
-          { ref: "Matthew 28:19-20", text: "Therefore, go and make disciples of all the nations, baptizing them in the name of the Father and the Son and the Holy Spirit. Teach these new disciples to obey all the commands I have given you." },
-          { ref: "Acts 2:38", text: "Peter replied, 'Each of you must repent of your sins and turn to God, and be baptized in the name of Jesus Christ for the forgiveness of your sins. Then you will receive the gift of the Holy Spirit.'" }
+          { ref: "Romans 6:3-4" },
+          { ref: "Matthew 28:19-20" },
+          { ref: "Acts 2:38" }
         ],
         commentary: "Baptism is the outward expression of an inward transformation. When you go under the water, you are symbolically buried with Christ; when you rise, you emerge into new life. Jesus himself was baptised, and He commanded His followers to do the same. It is an act of obedience, a testimony to the world, and a beautiful beginning to your public walk with God."
       },
@@ -52862,8 +54383,8 @@ var TOUCHPOINTS_DATA = [
         id: "baptism-2",
         question: "What does baptism by immersion represent?",
         verses: [
-          { ref: "Colossians 2:12", text: "For you were buried with Christ when you were baptized. And with him you were raised to new life because you trusted the mighty power of God, who raised Christ from the dead." },
-          { ref: "Mark 1:9-10", text: "One day Jesus came from Nazareth in Galilee, and John baptized him in the Jordan River. As Jesus came up out of the water, he saw the heavens splitting apart and the Holy Spirit descending on him like a dove." }
+          { ref: "Colossians 2:12" },
+          { ref: "Mark 1:9-10" }
         ],
         commentary: "Baptism by immersion tells the gospel story with your body \u2014 burial and resurrection. When Jesus was baptised in the Jordan, He went down into the water and came up out of it. This is the pattern of New Testament baptism. Going fully under the water represents the complete death of the old life; rising up represents the complete newness of the life Christ gives."
       },
@@ -52871,8 +54392,8 @@ var TOUCHPOINTS_DATA = [
         id: "baptism-3",
         question: "When should I be baptised?",
         verses: [
-          { ref: "Acts 8:36-37", text: "As they rode along, they came to some water, and the eunuch said, 'Look! There's some water! Why can't I be baptized?'" },
-          { ref: "Acts 22:16", text: "What are you waiting for? Get up and be baptized. Have your sins washed away by calling on the name of the Lord." }
+          { ref: "Acts 8:36-37" },
+          { ref: "Acts 22:16" }
         ],
         commentary: "The New Testament pattern is clear: once you have accepted Jesus as your Saviour and understand the commitment you are making, there is no reason to delay. The Ethiopian eunuch asked to be baptised the moment he understood the gospel. Ananias urged Paul not to wait. If God is calling you to take this step, today is a good day to say yes."
       }
@@ -52894,9 +54415,9 @@ var TOUCHPOINTS_DATA = [
         id: "discipleship-1",
         question: "What does it mean to be a disciple of Jesus?",
         verses: [
-          { ref: "Luke 9:23", text: "Then he said to the crowd, 'If any of you wants to be my follower, you must give up your own way, take up your cross daily, and follow me.'" },
-          { ref: "John 8:31-32", text: "Jesus said to the people who believed in him, 'You are truly my disciples if you remain faithful to my teachings. And you will know the truth, and the truth will set you free.'" },
-          { ref: "Matthew 4:19", text: "Jesus called out to them, 'Come, follow me, and I will show you how to fish for people!'" }
+          { ref: "Luke 9:23" },
+          { ref: "John 8:31-32" },
+          { ref: "Matthew 4:19" }
         ],
         commentary: "A disciple is not simply someone who agrees with Jesus \u2014 it is someone who follows Him. Jesus calls us to deny ourselves, take up our cross, and walk in His footsteps daily. This is not a one-time decision but a daily surrender. The reward is freedom, purpose, and the privilege of being shaped by the greatest Teacher who ever lived."
       },
@@ -52904,9 +54425,9 @@ var TOUCHPOINTS_DATA = [
         id: "discipleship-2",
         question: "How do I grow as a disciple?",
         verses: [
-          { ref: "2 Timothy 2:15", text: "Work hard so you can present yourself to God and receive his approval. Be a good worker, one who does not need to be ashamed and who correctly explains the word of truth." },
-          { ref: "Hebrews 5:14", text: "Solid food is for those who are mature, who through training have the skill to recognize the difference between right and wrong." },
-          { ref: "Psalm 119:105", text: "Your word is a lamp to guide my feet and a light for my path." }
+          { ref: "2 Timothy 2:15" },
+          { ref: "Hebrews 5:14" },
+          { ref: "Psalm 119:105" }
         ],
         commentary: "Growth in discipleship comes through consistent spiritual habits: studying Scripture, prayer, worship, fellowship, and service. Like physical fitness, spiritual maturity does not happen overnight. It requires training, discipline, and patience. But as you invest time in God's Word and in community with other believers, you will find your ability to discern God's voice and follow His leading grows stronger every day."
       },
@@ -52914,8 +54435,8 @@ var TOUCHPOINTS_DATA = [
         id: "discipleship-3",
         question: "How do I make disciples of others?",
         verses: [
-          { ref: "Matthew 28:19-20", text: "Therefore, go and make disciples of all the nations, baptizing them in the name of the Father and the Son and the Holy Spirit. Teach these new disciples to obey all the commands I have given you." },
-          { ref: "2 Timothy 2:2", text: "You have heard me teach things that have been confirmed by many reliable witnesses. Now teach these truths to other trustworthy people who will be able to pass them on to others." }
+          { ref: "Matthew 28:19-20" },
+          { ref: "2 Timothy 2:2" }
         ],
         commentary: "Discipleship is meant to multiply. The model Jesus gave is simple: invest deeply in a few people, teach them what you know, and send them to do the same. You do not need a seminary degree to make disciples \u2014 you need a willing heart and a life that reflects Christ. Share what God has done for you, walk alongside someone newer in the faith, and trust the Holy Spirit to do the rest."
       }
@@ -52937,9 +54458,9 @@ var TOUCHPOINTS_DATA = [
         id: "gods-love-1",
         question: "How much does God love me?",
         verses: [
-          { ref: "John 3:16", text: "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life." },
-          { ref: "Romans 5:8", text: "But God showed his great love for us by sending Christ to die for us while we were still sinners." },
-          { ref: "1 John 3:1", text: "See how very much our Father loves us, for he calls us his children, and that is what we are!" }
+          { ref: "John 3:16" },
+          { ref: "Romans 5:8" },
+          { ref: "1 John 3:1" }
         ],
         commentary: "God's love is not based on your performance \u2014 He loved you while you were still far from Him. The cross is the ultimate measurement of His love: He gave everything so you could have everything. You are not merely tolerated by God; you are cherished, chosen, and called His child. Let that truth sink deep into your heart today."
       },
@@ -52947,8 +54468,8 @@ var TOUCHPOINTS_DATA = [
         id: "gods-love-2",
         question: "Can anything separate me from God's love?",
         verses: [
-          { ref: "Romans 8:38-39", text: "And I am convinced that nothing can ever separate us from God's love. Neither death nor life, neither angels nor demons, neither our fears for today nor our worries about tomorrow \u2014 not even the powers of hell can separate us from God's love that is revealed in Christ Jesus our Lord." },
-          { ref: "Psalm 139:7-10", text: "I can never escape from your Spirit! I can never get away from your presence! If I go up to heaven, you are there; if I go down to the grave, you are there. If I ride the wings of the morning, if I dwell by the farthest oceans, even there your hand will guide me, and your strength will support me." }
+          { ref: "Romans 8:38-39" },
+          { ref: "Psalm 139:7-10" }
         ],
         commentary: "Paul's declaration in Romans 8 is one of the most powerful promises in all of Scripture. No failure, no fear, no force in all creation can pry you from God's loving grip. His love is not fragile \u2014 it is unbreakable. Even when you cannot feel it, His love surrounds you. There is nowhere you can go where His presence will not find you."
       },
@@ -52956,8 +54477,8 @@ var TOUCHPOINTS_DATA = [
         id: "gods-love-3",
         question: "How do I experience God's love in daily life?",
         verses: [
-          { ref: "Jeremiah 31:3", text: "Long ago the LORD said to Israel: 'I have loved you, my people, with an everlasting love. With unfailing love I have drawn you to myself.'" },
-          { ref: "Zephaniah 3:17", text: "For the LORD your God is living among you. He is a mighty savior. He will take delight in you with gladness. With his love, he will calm all your fears. He will rejoice over you with joyful songs." }
+          { ref: "Jeremiah 31:3" },
+          { ref: "Zephaniah 3:17" }
         ],
         commentary: "God's love is not only cosmic \u2014 it is personal and present. He draws you with unfailing love. He calms your fears. He sings over you with joy. You experience His love in the beauty of creation, in the kindness of His people, in the whisper of His Spirit during prayer, and in the promises of His Word. Open your eyes today and look for the fingerprints of His love all around you."
       }
@@ -52979,9 +54500,9 @@ var TOUCHPOINTS_DATA = [
         id: "gods-grace-1",
         question: "What is grace and why do I need it?",
         verses: [
-          { ref: "Ephesians 2:8-9", text: "God saved you by his grace when you believed. And you can't take credit for this; it is a gift from God. Salvation is not a reward for the good things we have done, so none of us can boast about it." },
-          { ref: "Titus 3:5", text: "He saved us, not because of the righteous things we had done, but because of his mercy. He washed away our sins, giving us a new birth and new life through the Holy Spirit." },
-          { ref: "Romans 3:23-24", text: "For everyone has sinned; we all fall short of God's glorious standard. Yet God, in his grace, freely makes us right in his sight. He did this through Christ Jesus when he freed us from the penalty for our sins." }
+          { ref: "Ephesians 2:8-9" },
+          { ref: "Titus 3:5" },
+          { ref: "Romans 3:23-24" }
         ],
         commentary: "Grace is not something you earn \u2014 it is something you receive with open hands. Every person has sinned and fallen short, which means every person needs grace. The beautiful news is that God offers it freely, generously, and without conditions. Grace does not make light of sin; it takes sin so seriously that God paid the price himself so you would not have to."
       },
@@ -52989,9 +54510,9 @@ var TOUCHPOINTS_DATA = [
         id: "gods-grace-2",
         question: "Is there a limit to God's grace?",
         verses: [
-          { ref: "Romans 5:20", text: "God's law was given so that all people could see how sinful they were. But as people sinned more and more, God's wonderful grace became more abundant." },
-          { ref: "Lamentations 3:22-23", text: "The faithful love of the LORD never ends! His mercies never cease. Great is his faithfulness; his mercies begin afresh each morning." },
-          { ref: "2 Corinthians 12:9", text: "Each time he said, 'My grace is all you need. My power works best in weakness.' So now I am glad to boast about my weaknesses, so that the power of Christ can work through me." }
+          { ref: "Romans 5:20" },
+          { ref: "Lamentations 3:22-23" },
+          { ref: "2 Corinthians 12:9" }
         ],
         commentary: "Where sin increases, grace increases even more. There is no sin so deep, no failure so great, no wandering so far that God's grace cannot reach you. His mercies are new every morning \u2014 fresh, unused, and waiting for you. When Paul pleaded for relief from his weakness, God did not remove it; He gave him grace sufficient for every moment. That same grace is yours today."
       },
@@ -52999,8 +54520,8 @@ var TOUCHPOINTS_DATA = [
         id: "gods-grace-3",
         question: "How does grace change the way I live?",
         verses: [
-          { ref: "Titus 2:11-12", text: "For the grace of God has been revealed, bringing salvation to all people. And we are instructed to turn from godless living and sinful pleasures. We should live in this evil world with wisdom, righteousness, and devotion to God." },
-          { ref: "2 Corinthians 5:17", text: "This means that anyone who belongs to Christ has become a new person. The old life is gone; a new life has begun!" }
+          { ref: "Titus 2:11-12" },
+          { ref: "2 Corinthians 5:17" }
         ],
         commentary: "Grace does not give us license to sin \u2014 it gives us the power to live differently. When you truly encounter God's grace, it transforms you from the inside out. You become a new creation. The things you once chased lose their grip, and a new desire to live for God takes root. Grace is not just a pardon \u2014 it is a power that reshapes your entire life."
       }
@@ -53022,9 +54543,9 @@ var TOUCHPOINTS_DATA = [
         id: "trinity-1",
         question: "What does the Bible teach about the Trinity?",
         verses: [
-          { ref: "Matthew 28:19", text: "Therefore, go and make disciples of all the nations, baptizing them in the name of the Father and the Son and the Holy Spirit." },
-          { ref: "2 Corinthians 13:14", text: "May the grace of the Lord Jesus Christ, the love of God, and the fellowship of the Holy Spirit be with you all." },
-          { ref: "Genesis 1:26", text: "Then God said, 'Let us make human beings in our image, to be like us.'" }
+          { ref: "Matthew 28:19" },
+          { ref: "2 Corinthians 13:14" },
+          { ref: "Genesis 1:26" }
         ],
         commentary: "From the very first chapter of Genesis, God speaks in the plural: 'Let us make human beings in our image.' Throughout Scripture, Father, Son, and Holy Spirit are each identified as God, yet there is only one God. The baptismal formula Jesus gave His disciples names all three Persons equally. This is not a contradiction \u2014 it is a revelation of God's nature that goes beyond what our finite minds can fully grasp."
       },
@@ -53032,9 +54553,9 @@ var TOUCHPOINTS_DATA = [
         id: "trinity-2",
         question: "Why does the Trinity matter for my faith?",
         verses: [
-          { ref: "John 14:16-17", text: "And I will ask the Father, and he will give you another Advocate, who will never leave you. He is the Holy Spirit, who leads into all truth." },
-          { ref: "Ephesians 2:18", text: "Now all of us can come to the Father through the same Holy Spirit because of what Christ has done for us." },
-          { ref: "1 John 4:8", text: "But anyone who does not love does not know God, for God is love." }
+          { ref: "John 14:16-17" },
+          { ref: "Ephesians 2:18" },
+          { ref: "1 John 4:8" }
         ],
         commentary: "The Trinity matters because it means God has always been relational \u2014 Father, Son, and Spirit have loved one another from eternity. Love is not something God decided to do; it is who He is. Because God is a Trinity, you were created for relationship. Through Christ, in the power of the Spirit, you have access to the Father. All three Persons of the Godhead are actively involved in your salvation and your daily walk."
       },
@@ -53042,9 +54563,9 @@ var TOUCHPOINTS_DATA = [
         id: "trinity-3",
         question: "How do the Father, Son, and Holy Spirit work together?",
         verses: [
-          { ref: "John 15:26", text: "But I will send you the Advocate \u2014 the Spirit of truth. He will come to you from the Father and will testify all about me." },
-          { ref: "Romans 8:11", text: "The Spirit of God, who raised Jesus from the dead, lives in you. And just as God raised Christ Jesus from the dead, he will give life to your mortal bodies by this same Spirit living within you." },
-          { ref: "John 5:19", text: "So Jesus explained, 'I tell you the truth, the Son can do nothing by himself. He does only what he sees the Father doing. Whatever the Father does, the Son also does.'" }
+          { ref: "John 15:26" },
+          { ref: "Romans 8:11" },
+          { ref: "John 5:19" }
         ],
         commentary: "The Father plans, the Son accomplishes, and the Spirit applies. The Father sent the Son; the Son revealed the Father; the Spirit makes the work of Christ real in our hearts. This is not a hierarchy of importance but a harmony of purpose. The same Spirit who raised Jesus from the dead lives in you \u2014 empowering, guiding, and transforming you into the image of Christ."
       }
@@ -53066,9 +54587,9 @@ var TOUCHPOINTS_DATA = [
         id: "prophecy-1",
         question: "Does the gift of prophecy continue in the last days?",
         verses: [
-          { ref: "Joel 2:28", text: "Then, after doing all those things, I will pour out my Spirit upon all people. Your sons and daughters will prophesy. Your old men will dream dreams, and your young men will see visions." },
-          { ref: "Acts 2:17-18", text: "'In the last days,' God says, 'I will pour out my Spirit upon all people. Your sons and daughters will prophesy. Your young men will see visions, and your old men will dream dreams. In those days I will pour out my Spirit even on my servants \u2014 men and women alike \u2014 and they will prophesy.'" },
-          { ref: "1 Corinthians 12:28", text: "Here are some of the parts God has appointed for the church: first are apostles, second are prophets, third are teachers, then those who do miracles, those who have the gift of healing, those who can help others, those who have the gift of leadership, those who speak in unknown languages." }
+          { ref: "Joel 2:28" },
+          { ref: "Acts 2:17-18" },
+          { ref: "1 Corinthians 12:28" }
         ],
         commentary: "God promised the prophetic gift not only for ancient Israel but for the last days of earth's history. Peter explicitly applied Joel's prophecy to the outpouring of the Holy Spirit. The New Testament lists prophecy among the ongoing spiritual gifts given for the health and mission of the church. Expecting prophecy to cease before the end of time contradicts both the promise of Joel and the pattern of how God has always guided His people \u2014 through those He raises up to speak for Him."
       },
@@ -53076,9 +54597,9 @@ var TOUCHPOINTS_DATA = [
         id: "prophecy-2",
         question: "What is the 'testimony of Jesus' and how does it identify God's remnant?",
         verses: [
-          { ref: "Revelation 12:17", text: "And the dragon was angry at the woman and declared war against the rest of her children \u2014 all who keep God's commandments and maintain their testimony for Jesus." },
-          { ref: "Revelation 19:10", text: "Then he said to me, 'Do not worship me! I am a servant of God, just like you and your brothers and sisters who testify about their faith in Jesus. Worship only God. For the essence of prophecy is to give a clear witness for Jesus.'" },
-          { ref: "Revelation 22:8-9", text: "I, John, am the one who heard and saw all these things. And when I heard and saw them, I fell down to worship at the feet of the angel who showed them to me. But he said, 'No, don't worship me. I am a servant of God, just like you and your brothers the prophets, as well as all who obey what is written in this book. Worship only God!'" }
+          { ref: "Revelation 12:17" },
+          { ref: "Revelation 19:10" },
+          { ref: "Revelation 22:8-9" }
         ],
         commentary: "Revelation 19:10 is the interpretive key: 'the testimony of Jesus is the spirit of prophecy.' The remnant church is identified not only by commandment-keeping but by possessing the prophetic gift \u2014 the spirit of prophecy active in its midst. This is not a minor detail but a defining characteristic. God in His mercy marks His last-day people by the same gift that guided ancient Israel: the living voice of prophecy, directing attention away from itself and always pointing to Jesus."
       },
@@ -53086,9 +54607,9 @@ var TOUCHPOINTS_DATA = [
         id: "prophecy-3",
         question: "How do we test whether a prophet is genuine?",
         verses: [
-          { ref: "1 Thessalonians 5:20-21", text: "Do not scoff at prophecies, but test everything that is said. Hold on to what is good." },
-          { ref: "Isaiah 8:20", text: "Look to God's instructions and teachings! People who contradict his word are completely in the dark." },
-          { ref: "Matthew 7:15-16", text: "Beware of false prophets who come disguised as harmless sheep but are really vicious wolves. You can identify them by their fruit, that is, by the way they act." }
+          { ref: "1 Thessalonians 5:20-21" },
+          { ref: "Isaiah 8:20" },
+          { ref: "Matthew 7:15-16" }
         ],
         commentary: "God never asks us to accept prophets uncritically \u2014 He commands us to test them. Scripture gives us four clear tests: Does the prophet's message align with Scripture? Do their predictions come true? Does their life bear the fruit of the Spirit? And do they point people to God and His Word? Ellen White's ministry passes each of these tests. She consistently directed people to the Bible as the supreme authority and lived a life of dedicated service. We should neither dismiss prophecy with scepticism nor accept it without discernment."
       },
@@ -53096,9 +54617,9 @@ var TOUCHPOINTS_DATA = [
         id: "prophecy-4",
         question: "How does the Spirit of Prophecy practically guide God's people today?",
         verses: [
-          { ref: "Proverbs 29:18", text: "When people do not accept divine guidance, they run wild. But whoever obeys the law is joyful." },
-          { ref: "Amos 3:7", text: "Indeed, the Sovereign LORD never does anything until he reveals his plans to his servants the prophets." },
-          { ref: "Ephesians 4:11-13", text: "Now these are the gifts Christ gave to the church: the apostles, the prophets, the evangelists, and the pastors and teachers. Their responsibility is to equip God's people to do his work and build up the church, the body of Christ. This will continue until we all come to such unity in our faith and knowledge of God's Son that we will be mature in the Lord, measuring up to the full and complete standard of Christ." }
+          { ref: "Proverbs 29:18" },
+          { ref: "Amos 3:7" },
+          { ref: "Ephesians 4:11-13" }
         ],
         commentary: "God gives prophets not to replace Scripture but to apply its timeless truths to the specific challenges of each generation. The Spirit of Prophecy writings offer practical guidance on health, family, education, church order, and spiritual formation that has shaped and strengthened the Adventist movement for over 150 years. The purpose, as Paul makes clear in Ephesians, is to equip believers for ministry and bring the church to maturity in Christ. Where the Bible charts the course, the gift of prophecy helps navigate the journey."
       }
@@ -53114,9 +54635,9 @@ var TOUCHPOINTS_DATA = [
         id: "remnant-1",
         question: "What is the remnant and how is it identified in Scripture?",
         verses: [
-          { ref: "Revelation 12:17", text: "And the dragon was angry at the woman and declared war against the rest of her children \u2014 all who keep God's commandments and maintain their testimony for Jesus." },
-          { ref: "Revelation 14:12", text: "This calls for patient endurance on the part of the people of God who keep his commands and remain faithful to Jesus." },
-          { ref: "Romans 11:5", text: "It is the same today, for a few of the people of Israel have remained faithful because of God's grace \u2014 his undeserved kindness in choosing them." }
+          { ref: "Revelation 12:17" },
+          { ref: "Revelation 14:12" },
+          { ref: "Romans 11:5" }
         ],
         commentary: "The biblical concept of a remnant runs from Noah's family through the seven thousand who had not bowed to Baal, to the exiles who returned from Babylon, to the apostolic community who received the Spirit. In every age, God has a people who remain faithful against the current. Revelation provides the clearest end-time portrait: the remnant keeps God's commandments and holds the testimony of Jesus. These are not vague generalities \u2014 they are specific, verifiable marks that help God's people understand their identity and calling."
       },
@@ -53124,9 +54645,9 @@ var TOUCHPOINTS_DATA = [
         id: "remnant-2",
         question: "What does it mean to 'keep the commandments of God'?",
         verses: [
-          { ref: "John 14:15", text: "If you love me, obey my commandments." },
-          { ref: "Revelation 14:12", text: "This calls for patient endurance on the part of the people of God who keep his commands and remain faithful to Jesus." },
-          { ref: "1 John 5:3", text: "Loving God means keeping his commandments, and his commandments are not burdensome." }
+          { ref: "John 14:15" },
+          { ref: "Revelation 14:12" },
+          { ref: "1 John 5:3" }
         ],
         commentary: "Commandment-keeping is not legalism \u2014 it is love in action. Jesus redefined the law not as a burden to bear but as a glad response to grace already received. The remnant keeps all of God's commandments, including the fourth \u2014 the Sabbath \u2014 which the first angel's message specifically points to when it calls the world to worship the Creator. Obedience is the evidence of genuine faith, not the cause of salvation. The remnant does not keep the commandments to be saved; they keep them because they are saved and deeply love the God who saved them."
       },
@@ -53134,9 +54655,9 @@ var TOUCHPOINTS_DATA = [
         id: "remnant-3",
         question: "What is the mission of the remnant in earth's final hours?",
         verses: [
-          { ref: "Revelation 14:6-7", text: "And I saw another angel flying through the sky, carrying the eternal Good News to proclaim to the people who belong to this world \u2014 to every nation, tribe, language, and people. 'Fear God,' he shouted. 'Give glory to him. For the time has come when he will sit as judge. Worship him who made the heavens, the earth, the sea, and all the springs of water.'" },
-          { ref: "Matthew 24:14", text: "And the Good News about the Kingdom will be preached throughout the whole world, so that all nations will hear it; and then the end will come." },
-          { ref: "Isaiah 58:1", text: "Shout with the voice of a trumpet blast. Shout aloud! Don't be polite. Tell my people Israel of their sins!" }
+          { ref: "Revelation 14:6-7" },
+          { ref: "Matthew 24:14" },
+          { ref: "Isaiah 58:1" }
         ],
         commentary: "The remnant church is not a retreat community \u2014 it is a mission force. The three angels' messages of Revelation 14 constitute the most urgent proclamation entrusted to any generation: worship the Creator, come out of confusion, and stand faithful in the crisis ahead. This message must reach every nation, tribe, language, and people before Christ returns. Every member of the remnant is a messenger. The mission is not optional or reserved for ordained ministers; it is the calling of every person who understands the times and loves their neighbours enough to warn them."
       },
@@ -53144,9 +54665,9 @@ var TOUCHPOINTS_DATA = [
         id: "remnant-4",
         question: "How can I live faithfully as part of God's remnant today?",
         verses: [
-          { ref: "Ephesians 4:11-13", text: "Now these are the gifts Christ gave to the church: the apostles, the prophets, the evangelists, and the pastors and teachers. Their responsibility is to equip God's people to do his work and build up the church, the body of Christ. This will continue until we all come to such unity in our faith and knowledge of God's Son that we will be mature in the Lord." },
-          { ref: "2 Timothy 3:16-17", text: "All Scripture is inspired by God and is useful to teach us what is true and to make us realize what is wrong in our lives. It corrects us when we are wrong and teaches us to do what is right. God uses it to prepare and equip his people to do every good work." },
-          { ref: "Jude 1:3", text: "Dear friends, I had been eagerly planning to write to you about the salvation we all share. But now I find that I must write about something else, urging you to defend the faith that God has entrusted once for all time to his holy people." }
+          { ref: "Ephesians 4:11-13" },
+          { ref: "2 Timothy 3:16-17" },
+          { ref: "Jude 1:3" }
         ],
         commentary: "Living as the remnant is not about institutional belonging \u2014 it is about personal faithfulness, theological clarity, and missional courage. Study Scripture deeply so you are not deceived. Remain rooted in a community of believers who hold the full counsel of God's Word. Share your faith graciously and consistently. Contend earnestly for the faith \u2014 not with arrogance, but with love and conviction. In a world racing toward compromise, the remnant is called to be a people who stand \u2014 not because they are better, but because they are grounded in the Word and empowered by the Spirit."
       }
@@ -53706,10 +55227,178 @@ var BIBLE_PROJECT_VIDEOS = {
 // server/routes/touchpoints.ts
 init_db();
 init_schema();
-var import_drizzle_orm43 = require("drizzle-orm");
+var import_drizzle_orm44 = require("drizzle-orm");
 init_ai_semaphore();
+
+// server/services/touchpoint-scripture.ts
+var TOUCHPOINT_STUDY_CONTENT_VERSION = "canon-v1";
+function joinVerseText2(verses) {
+  return verses.slice().sort((a, b) => a.verse - b.verse).map((v) => typeof v.text === "string" ? v.text.trim() : "").filter((t) => t.length > 0).join(" ").trim();
+}
+async function hydrateReference(ref, translation, cache2, resolveReference2 = resolveReference) {
+  const resolved = await resolveReference2({ reference: ref, translation, cache: cache2 });
+  const text2 = joinVerseText2(resolved.verses);
+  if (!text2) {
+    throw new ScriptureError(
+      "VERSE_NOT_FOUND",
+      `No canonical text found for ${ref}`,
+      404
+    );
+  }
+  return {
+    ref,
+    text: text2,
+    translation: resolved.meta.translation,
+    translationName: resolved.meta.translationName,
+    source: resolved.meta.source,
+    provider: resolved.meta.provider,
+    ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
+  };
+}
+async function hydrateReferences(refs, translation, cache2, resolveReference2 = resolveReference) {
+  const seen = /* @__PURE__ */ new Set();
+  const ordered = [];
+  for (const r of refs) {
+    const key = r.trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    ordered.push(key);
+  }
+  const out = [];
+  for (const ref of ordered) {
+    out.push(await hydrateReference(ref, translation, cache2, resolveReference2));
+  }
+  return out;
+}
+function deriveTranslationMeta(hydrated) {
+  if (hydrated.length === 0) return null;
+  const first = hydrated[0];
+  return {
+    translation: first.translation,
+    translationName: first.translationName,
+    source: first.source,
+    provider: first.provider,
+    ...first.providerEditionId ? { providerEditionId: first.providerEditionId } : {}
+  };
+}
+async function hydrateQuestions(questions, translation, cache2, resolveReference2 = resolveReference) {
+  const allRefs = questions.flatMap((q) => q.verses.map((v) => v.ref));
+  const hydrated = await hydrateReferences(allRefs, translation, cache2, resolveReference2);
+  const byRef = /* @__PURE__ */ new Map();
+  for (const h of hydrated) byRef.set(h.ref, h);
+  const translationMeta = deriveTranslationMeta(hydrated);
+  if (!translationMeta) {
+    throw new ScriptureError(
+      "VERSE_NOT_FOUND",
+      "No verses to hydrate for topic",
+      404
+    );
+  }
+  const hydratedQuestions = questions.map((q) => ({
+    ...q.id ? { id: q.id } : {},
+    question: q.question,
+    commentary: q.commentary,
+    verses: q.verses.map((v) => {
+      const h = byRef.get(v.ref.trim());
+      if (!h) {
+        throw new ScriptureError(
+          "VERSE_NOT_FOUND",
+          `Missing hydrated verse for ${v.ref}`,
+          500
+        );
+      }
+      return h;
+    })
+  }));
+  return { questions: hydratedQuestions, byRef, translationMeta };
+}
+function resolveGeneratedSelection(selectedRef, byRef) {
+  const key = (selectedRef ?? "").trim();
+  const hit = byRef.get(key);
+  if (hit) return hit;
+  const normalized = key.replace(/\s+/g, " ");
+  for (const [ref, verse] of byRef) {
+    if (ref.replace(/\s+/g, " ") === normalized) return verse;
+  }
+  throw new ScriptureError(
+    "INVALID_REFERENCE",
+    `AI selected a reference not in the supplied canonical set: ${selectedRef}`,
+    502
+  );
+}
+function buildSuppliedScriptureBlock(hydrated) {
+  return hydrated.map((h) => `${h.ref}: ${h.text}`).join("\n");
+}
+function suppliedReferenceStrings(hydrated) {
+  return hydrated.map((h) => h.ref);
+}
+
+// server/routes/touchpoints.ts
 var router30 = (0, import_express30.Router)();
-router30.get("/api/signposts/daily", (req, res) => {
+async function checkBibleCache3(translation, bookId, chapterNum) {
+  try {
+    const cached = await db.select().from(bibleCache).where(
+      (0, import_drizzle_orm44.and)(
+        (0, import_drizzle_orm44.eq)(bibleCache.translation, translation),
+        (0, import_drizzle_orm44.eq)(bibleCache.bookId, bookId),
+        (0, import_drizzle_orm44.eq)(bibleCache.chapter, chapterNum)
+      )
+    ).limit(1);
+    if (cached.length > 0) {
+      await db.insert(bibleCacheStats).values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+        target: [bibleCacheStats.translation],
+        set: {
+          cacheHits: import_drizzle_orm44.sql`${bibleCacheStats.cacheHits} + 1`,
+          lastHitAt: /* @__PURE__ */ new Date()
+        }
+      }).catch(() => {
+      });
+      return cached[0].versesJson;
+    }
+    await db.insert(bibleCacheStats).values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({
+      target: [bibleCacheStats.translation],
+      set: {
+        cacheMisses: import_drizzle_orm44.sql`${bibleCacheStats.cacheMisses} + 1`,
+        lastMissAt: /* @__PURE__ */ new Date()
+      }
+    }).catch(() => {
+    });
+    return null;
+  } catch {
+    return null;
+  }
+}
+async function storeBibleCache3(translation, bookId, bookName, chapterNum, verses, sourceApi) {
+  try {
+    await db.insert(bibleCache).values({
+      translation,
+      bookId,
+      bookName,
+      chapter: chapterNum,
+      versesJson: verses,
+      verseCount: verses.length,
+      sourceApi
+    }).onConflictDoNothing();
+  } catch (err) {
+    console.error(`[touchpoint-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+  }
+}
+var chapterCacheHooks5 = {
+  read: checkBibleCache3,
+  write: storeBibleCache3
+};
+function sendScriptureFailure(res, err, contextLabel) {
+  if (err instanceof ScriptureError) {
+    return res.status(err.statusCode).json({
+      error: err.message,
+      code: err.code,
+      details: { context: contextLabel }
+    });
+  }
+  console.error(`[${contextLabel}]`, err);
+  return res.status(500).json({ error: "Internal server error" });
+}
+router30.get("/api/signposts/daily", async (req, res) => {
   try {
     const dayOfYear = Math.floor(
       (Date.now() - new Date((/* @__PURE__ */ new Date()).getFullYear(), 0, 0).getTime()) / 864e5
@@ -53718,19 +55407,24 @@ router30.get("/api/signposts/daily", (req, res) => {
     if (!topic) {
       return res.status(404).json({ error: "No signpost available" });
     }
+    const hydrated = await hydrateQuestions(
+      topic.questions,
+      req.query.translation,
+      chapterCacheHooks5
+    );
     return res.json({
       id: topic.id,
       title: topic.title,
       description: topic.overview,
-      questions: topic.questions.map((q) => ({
+      ...hydrated.translationMeta,
+      questions: hydrated.questions.map((q) => ({
         question: q.question,
         verses: q.verses,
         commentary: q.commentary
       }))
     });
   } catch (err) {
-    console.error("[signposts/daily]", err);
-    return res.status(500).json({ error: "Failed to fetch daily signpost" });
+    return sendScriptureFailure(res, err, "signposts/daily");
   }
 });
 router30.get("/api/touchpoints", (req, res) => {
@@ -53744,24 +55438,57 @@ router30.get("/api/touchpoints", (req, res) => {
   }));
   res.json({ categories: TOUCHPOINT_CATEGORIES, topics: summary });
 });
-router30.get("/api/touchpoints/:topicId", (req, res) => {
-  const topic = TOUCHPOINTS_DATA.find((t) => t.id === req.params.topicId);
-  if (!topic) return res.status(404).json({ error: "Topic not found" });
-  const videos = BIBLE_PROJECT_VIDEOS[topic.id] || [];
-  res.json({ ...topic, bibleProjectVideos: videos });
+router30.get("/api/touchpoints/:topicId", async (req, res) => {
+  try {
+    const topic = TOUCHPOINTS_DATA.find((t) => t.id === req.params.topicId);
+    if (!topic) return res.status(404).json({ error: "Topic not found" });
+    const hydrated = await hydrateQuestions(
+      topic.questions,
+      req.query.translation,
+      chapterCacheHooks5
+    );
+    const videos = BIBLE_PROJECT_VIDEOS[topic.id] || [];
+    return res.json({
+      id: topic.id,
+      title: topic.title,
+      category: topic.category,
+      overview: topic.overview,
+      ...hydrated.translationMeta,
+      questions: hydrated.questions.map((q) => ({
+        ...q.id ? { id: q.id } : {},
+        question: q.question,
+        verses: q.verses,
+        commentary: q.commentary
+      })),
+      bibleProjectVideos: videos
+    });
+  } catch (err) {
+    return sendScriptureFailure(res, err, `touchpoints/${req.params.topicId}`);
+  }
 });
 router30.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async (req, res) => {
   try {
     const topic = TOUCHPOINTS_DATA.find((t) => t.id === req.params.topicId);
     if (!topic) return res.status(404).json({ error: "Topic not found" });
-    const cacheKey = `touchpoint-study-${SDA_LENS_VERSION}-${topic.id}`;
-    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm43.eq)(searchCache.queryHash, cacheKey)).limit(1);
+    const rawTranslation = req.body?.translation;
+    if (rawTranslation === void 0 || rawTranslation === null || String(rawTranslation).trim() === "") {
+      return res.status(400).json({ error: "translation is required" });
+    }
+    const { abbreviation: translation } = normalizeTranslationParam(String(rawTranslation));
+    let hydrated;
+    try {
+      hydrated = await hydrateQuestions(topic.questions, translation, chapterCacheHooks5);
+    } catch (err) {
+      return sendScriptureFailure(res, err, `bible-study/${topic.id}/resolve`);
+    }
+    const suppliedVerses = Array.from(hydrated.byRef.values());
+    const suppliedRefs = suppliedReferenceStrings(suppliedVerses);
+    const cacheKey = `touchpoint-study-${TOUCHPOINT_STUDY_CONTENT_VERSION}-${SDA_LENS_VERSION}-${translation}-${topic.id}`;
+    const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm44.eq)(searchCache.queryHash, cacheKey)).limit(1);
     if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
       return res.json(cached.results);
     }
-    const allVerses = topic.questions.flatMap(
-      (q) => q.verses.map((v) => `${v.ref}: "${v.text}"`)
-    ).join("\n");
+    const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
     const client = new (await import("openai")).default({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
@@ -53777,6 +55504,14 @@ router30.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, asyn
 3. Encourages fellowship and church community
 4. Provides practical application
 
+CRITICAL SCRIPTURE RULE:
+- You MUST NOT write, quote, paraphrase, or invent any Bible verse text.
+- Each section's "scripture" field MUST be EXACTLY one of the supplied reference strings, copied verbatim.
+- Do NOT output verse text anywhere. The verse wording is attached by the system from a canonical source.
+
+The ONLY valid scripture references you may select from are (each line is "Reference: text" for your UNDERSTANDING only \u2014 never reproduce the text):
+${suppliedBlock}
+
 Format as JSON:
 {
   "title": "Bible Study: ${topic.title}",
@@ -53784,8 +55519,7 @@ Format as JSON:
   "sections": [
     {
       "heading": "Section title",
-      "scripture": "Key verse reference",
-      "scriptureText": "The verse text",
+      "scripture": "One reference string copied EXACTLY from the supplied list",
       "teaching": "2-3 paragraphs of teaching",
       "reflection": "A reflection question"
     }
@@ -53795,20 +55529,42 @@ Format as JSON:
   "groupDiscussion": ["3-4 discussion questions for small groups"]
 }
 
-Use 3-5 sections. Keep it warm, personal, and Christ-centered.`)
+Use 3-5 sections. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`)
         },
         {
           role: "user",
-          content: `Create a Bible study on "${topic.title}". Here are key scriptures to consider:
-${allVerses}`
+          content: `Create a Bible study on "${topic.title}". Select section scriptures ONLY from the supplied reference list. Do not write any verse text yourself.`
         }
       ],
       temperature: 0.7,
       response_format: { type: "json_object" }
     });
     const studyContent = JSON.parse(response.choices[0]?.message?.content || "{}");
+    if (Array.isArray(studyContent.sections)) {
+      studyContent.sections = studyContent.sections.map((section) => {
+        const canonical = resolveGeneratedSelection(String(section?.scripture ?? ""), hydrated.byRef);
+        return {
+          ...section,
+          scripture: canonical.ref,
+          scriptureText: canonical.text,
+          translation: canonical.translation,
+          translationName: canonical.translationName,
+          source: canonical.source,
+          provider: canonical.provider,
+          ...canonical.providerEditionId ? { providerEditionId: canonical.providerEditionId } : {}
+        };
+      });
+    }
+    studyContent.translation = hydrated.translationMeta.translation;
+    studyContent.translationName = hydrated.translationMeta.translationName;
+    studyContent.source = hydrated.translationMeta.source;
+    studyContent.provider = hydrated.translationMeta.provider;
+    if (hydrated.translationMeta.providerEditionId) {
+      studyContent.providerEditionId = hydrated.translationMeta.providerEditionId;
+    }
+    studyContent.contentVersion = TOUCHPOINT_STUDY_CONTENT_VERSION;
     await db.insert(searchCache).values({
-      queryText: `Bible Study: ${topic.title}`,
+      queryText: `Bible Study: ${topic.title} (${translation})`,
       queryHash: cacheKey,
       results: studyContent,
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1e3)
@@ -53818,6 +55574,9 @@ ${allVerses}`
     });
     return res.json(studyContent);
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return sendScriptureFailure(res, err, `bible-study/${req.params.topicId}`);
+    }
     console.error("Signpost Bible study error:", err);
     const status = getErrorStatusCode(err);
     return res.status(status || 500).json({ error: "Could not generate Bible study" });
@@ -53829,12 +55588,12 @@ var touchpoints_default = router30;
 var import_express31 = require("express");
 init_db();
 init_schema();
-var import_drizzle_orm44 = require("drizzle-orm");
+var import_drizzle_orm45 = require("drizzle-orm");
 var router31 = (0, import_express31.Router)();
 router31.get("/api/sabbath-types", async (_req, res) => {
   try {
-    const types = await db.select().from(sabbathTypes).orderBy((0, import_drizzle_orm44.asc)(sabbathTypes.orderIndex));
-    const scriptures = await db.select().from(sabbathScriptures).orderBy((0, import_drizzle_orm44.asc)(sabbathScriptures.orderIndex));
+    const types = await db.select().from(sabbathTypes).orderBy((0, import_drizzle_orm45.asc)(sabbathTypes.orderIndex));
+    const scriptures = await db.select().from(sabbathScriptures).orderBy((0, import_drizzle_orm45.asc)(sabbathScriptures.orderIndex));
     const scripturesByType = /* @__PURE__ */ new Map();
     for (const s of scriptures) {
       const list = scripturesByType.get(s.sabbathTypeId) || [];
@@ -54293,7 +56052,7 @@ var import_express36 = require("express");
 // server/seeds/seed-demo.ts
 init_db();
 init_schema();
-var import_drizzle_orm49 = require("drizzle-orm");
+var import_drizzle_orm50 = require("drizzle-orm");
 var DEMO_PREFIX = "demo-";
 var DEMO_EMAIL_DOMAIN = "@demo.gracethroughfaith.app";
 function demoId(suffix) {
@@ -54552,7 +56311,7 @@ var PASTORAL_ALERT_CONFIGS = [
 async function seedDemoData() {
   const counts = {};
   try {
-    const existing = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm49.like)(churchHierarchy.id, "demo-%")).limit(1);
+    const existing = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm50.like)(churchHierarchy.id, "demo-%")).limit(1);
     if (existing.length > 0) {
       return { success: false, message: "Demo data already exists. Clear it first.", counts: {} };
     }
@@ -54860,35 +56619,35 @@ async function clearDemoData() {
   const counts = {};
   try {
     console.log("[DemoSeed] Clearing demo data...");
-    const demoUserRows = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm49.like)(users.email, `%${DEMO_EMAIL_DOMAIN}`));
+    const demoUserRows = await db.select({ id: users.id }).from(users).where((0, import_drizzle_orm50.like)(users.email, `%${DEMO_EMAIL_DOMAIN}`));
     const demoUserIds = demoUserRows.map((r) => r.id);
     counts.demo_users_found = demoUserIds.length;
     if (demoUserIds.length > 0) {
       const idList = demoUserIds.map((id2) => `'${id2}'`).join(",");
-      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_engagement WHERE user_id IN (${idList})`));
-      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM reading_streak WHERE user_id IN (${idList})`));
-      await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM hierarchy_membership WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM topic_engagement WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM reading_streak WHERE user_id IN (${idList})`));
+      await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM hierarchy_membership WHERE user_id IN (${idList})`));
       const BATCH = 50;
       for (let i = 0; i < demoUserIds.length; i += BATCH) {
         const batch = demoUserIds.slice(i, i + BATCH);
         const batchList = batch.map((id2) => `'${id2}'`).join(",");
-        await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM users WHERE id IN (${batchList})`));
+        await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM users WHERE id IN (${batchList})`));
       }
       counts.users_deleted = demoUserIds.length;
     }
-    const delTed = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_engagement_daily WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delTed = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM topic_engagement_daily WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.topic_engagement_daily_deleted = delTed.rowCount ?? 0;
-    const delTt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM topic_trend WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delTt = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM topic_trend WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.topic_trends_deleted = delTt.rowCount ?? 0;
-    const delPca = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM pastoral_care_alert WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delPca = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM pastoral_care_alert WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.pastoral_alerts_deleted = delPca.rowCount ?? 0;
-    const delApt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM activity_pattern_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delApt = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM activity_pattern_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.activity_patterns_deleted = delApt.rowCount ?? 0;
-    const delHt = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM heatmap_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delHt = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM heatmap_tile WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.heatmap_tiles_deleted = delHt.rowCount ?? 0;
-    const delAc = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM analytics_cache WHERE hierarchy_node_id LIKE 'demo-%'`));
+    const delAc = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM analytics_cache WHERE hierarchy_node_id LIKE 'demo-%'`));
     counts.analytics_cache_deleted = delAc.rowCount ?? 0;
-    const delCh = await db.execute(import_drizzle_orm49.sql.raw(`DELETE FROM church_hierarchy WHERE id LIKE 'demo-%'`));
+    const delCh = await db.execute(import_drizzle_orm50.sql.raw(`DELETE FROM church_hierarchy WHERE id LIKE 'demo-%'`));
     counts.hierarchy_nodes_deleted = delCh.rowCount ?? 0;
     console.log("[DemoSeed] Demo data cleared successfully!");
     return {
@@ -54902,7 +56661,7 @@ async function clearDemoData() {
   }
 }
 async function isDemoDataLoaded() {
-  const result = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm49.like)(churchHierarchy.id, "demo-%")).limit(1);
+  const result = await db.select({ id: churchHierarchy.id }).from(churchHierarchy).where((0, import_drizzle_orm50.like)(churchHierarchy.id, "demo-%")).limit(1);
   return result.length > 0;
 }
 
@@ -55202,11 +56961,11 @@ async function registerRoutes(app2) {
   (async () => {
     try {
       const { videoTopics: videoTopics2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq56, ne: ne2, sql: sql31, and: and35, isNotNull, notInArray } = await import("drizzle-orm");
+      const { eq: eq57, ne: ne2, sql: sql33, and: and37, isNotNull, notInArray } = await import("drizzle-orm");
       const result = await db.update(videoTopics2).set({ pipelineMode: "cinematic", updatedAt: /* @__PURE__ */ new Date() }).where(ne2(videoTopics2.pipelineMode, "cinematic"));
       const busyStatuses = ["queued", "scene-directing", "generating-anchor", "generating-scene-videos", "generating-voiceover", "computing-timing", "assembling-video", "generating-edl", "extracting-timestamps", "generating-broll-images", "generating-broll-videos"];
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1e3);
-      const staleReset = await db.update(videoTopics2).set({ assemblyStatus: null, updatedAt: /* @__PURE__ */ new Date() }).where(sql31`${videoTopics2.assemblyStatus} IS NOT NULL AND ${videoTopics2.assemblyStatus} != 'complete' AND (${videoTopics2.assemblyStatus} LIKE '%failed%' OR ${videoTopics2.updatedAt} < ${tenMinAgo})`);
+      const staleReset = await db.update(videoTopics2).set({ assemblyStatus: null, updatedAt: /* @__PURE__ */ new Date() }).where(sql33`${videoTopics2.assemblyStatus} IS NOT NULL AND ${videoTopics2.assemblyStatus} != 'complete' AND (${videoTopics2.assemblyStatus} LIKE '%failed%' OR ${videoTopics2.updatedAt} < ${tenMinAgo})`);
       console.log("[startup] All video topics migrated to cinematic pipeline mode; stale/failed statuses reset");
     } catch (err) {
       console.error("[startup] Pipeline mode migration error:", err);
@@ -55266,13 +57025,13 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
     let dbStatus = "ok";
     let resourceStats = { published: 0, draft: 0 };
     try {
-      await db.execute(import_drizzle_orm60.sql`SELECT 1`);
+      await db.execute(import_drizzle_orm61.sql`SELECT 1`);
     } catch {
       dbStatus = "unreachable";
     }
     if (dbStatus === "ok") {
       try {
-        const counts = await db.execute(import_drizzle_orm60.sql`
+        const counts = await db.execute(import_drizzle_orm61.sql`
           SELECT status, COUNT(*)::int as count FROM resources GROUP BY status
         `);
         for (const row of counts.rows) {
@@ -55310,7 +57069,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
       let safeEmail = email?.trim()?.substring(0, 255) || null;
       let displayName = "Anonymous";
       if (userId) {
-        const [userRow] = await db.select({ displayName: users.displayName, username: users.username, email: users.email }).from(users).where((0, import_drizzle_orm59.eq)(users.id, userId));
+        const [userRow] = await db.select({ displayName: users.displayName, username: users.username, email: users.email }).from(users).where((0, import_drizzle_orm60.eq)(users.id, userId));
         if (userRow) {
           displayName = userRow.displayName || userRow.username || (userRow.email ? userRow.email.split("@")[0] : null) || "Anonymous";
           if (!safeEmail && userRow.email) {
@@ -55391,12 +57150,12 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
   app2.get("/api/growth-map", optionalAuth, async (req, res) => {
     try {
       const userId = getEffectiveUserId(req);
-      const prayerRows = await db.select().from(prayerRequests).where((0, import_drizzle_orm59.eq)(prayerRequests.userId, userId));
-      const readingRows = await db.select().from(readingHistory).where((0, import_drizzle_orm59.eq)(readingHistory.userId, userId));
-      const groupMemberRows = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm59.eq)(prayerGroupMembers.userId, userId));
-      const discussionRows = await db.select().from(groupDiscussions).where((0, import_drizzle_orm59.eq)(groupDiscussions.userId, userId));
-      const layerRows = await db.select().from(layerCompletions).where((0, import_drizzle_orm59.eq)(layerCompletions.userId, userId));
-      const progressTrackRows = await db.select().from(progressTracks).where((0, import_drizzle_orm59.eq)(progressTracks.userId, userId));
+      const prayerRows = await db.select().from(prayerRequests).where((0, import_drizzle_orm60.eq)(prayerRequests.userId, userId));
+      const readingRows = await db.select().from(readingHistory).where((0, import_drizzle_orm60.eq)(readingHistory.userId, userId));
+      const groupMemberRows = await db.select().from(prayerGroupMembers).where((0, import_drizzle_orm60.eq)(prayerGroupMembers.userId, userId));
+      const discussionRows = await db.select().from(groupDiscussions).where((0, import_drizzle_orm60.eq)(groupDiscussions.userId, userId));
+      const layerRows = await db.select().from(layerCompletions).where((0, import_drizzle_orm60.eq)(layerCompletions.userId, userId));
+      const progressTrackRows = await db.select().from(progressTracks).where((0, import_drizzle_orm60.eq)(progressTracks.userId, userId));
       const uniqueChapters = new Set(
         readingRows.map((r) => `${r.bookId}-${r.chapter}`)
       );
@@ -55775,21 +57534,21 @@ function setupErrorHandler(app2) {
       try {
         const { db: startupDb } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq56 } = await import("drizzle-orm");
-        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
+        const { eq: eq57 } = await import("drizzle-orm");
+        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
         if (scene.length && scene[0].imageUrl === "/assets/kids-scenes/creation-animals-scene-2.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq56(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq57(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
           console.log("[startup] Updated creation-animals-scene-2 image URL with cache buster");
         }
-        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq56(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
+        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
         if (relScene3.length && relScene3[0].imageUrl === "/assets/kids-scenes/teen-relationships-scene-3.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq56(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq57(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
           console.log("[startup] Updated teen-relationships-scene-3 image URL with cache buster");
         }
         const { like: like3 } = await import("drizzle-orm");
         const whoseScenes = await startupDb.select({ id: kidsStoryScenes2.id, narration: kidsStoryScenes2.narration }).from(kidsStoryScenes2).where(like3(kidsStoryScenes2.narration, "%knowing exactly whose you are%"));
         for (const s of whoseScenes) {
-          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq56(kidsStoryScenes2.id, s.id));
+          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq57(kidsStoryScenes2.id, s.id));
           console.log("[startup] Fixed 'whose' -> 'who' in scene", s.id);
         }
       } catch (err) {

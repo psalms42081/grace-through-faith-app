@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
-import { router, useLocalSearchParams, Stack } from "expo-router";
+import { useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +18,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { getSpeakerColor, getSpeakerInitials } from "@/constants/speakers";
 import { TOPICS } from "@/data/topics";
+import { useTranslation } from "@/context/TranslationContext";
+import { getApiUrl } from "@/lib/query-client";
+import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 
 const MEDIA_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   sermon: "mic",
@@ -39,18 +42,210 @@ interface DailyReflection {
   challenge: string;
   verseReference: string;
   verseText: string;
+  // Optional translation metadata returned by the backend for the reflection verse.
+  translation?: string;
+  translationName?: string;
+  provider?: string;
+}
+
+interface PassageVerse {
+  id?: string;
+  verse: number;
+  text: string;
+}
+
+interface PassageResponse {
+  book: { id: number; name: string; chapterCount: number };
+  chapter: number;
+  verses: PassageVerse[];
+  translation?: string;
+  translationName?: string;
+  provider?: string;
+}
+
+/**
+ * Parse the verse selector portion of a reference (e.g. "3:16", "13:4-7",
+ * "3:16,18") into a predicate that selects verse numbers, plus a starting
+ * verse used for reader navigation. Returns null when no explicit verse
+ * selector is present (whole chapter).
+ */
+function parseVerseSelector(reference: string): {
+  matches: (verse: number) => boolean;
+  firstVerse?: number;
+} | null {
+  const colonIdx = reference.lastIndexOf(":");
+  if (colonIdx === -1) return null;
+  const selectorPart = reference.slice(colonIdx + 1).trim();
+  if (!selectorPart) return null;
+
+  const wanted = new Set<number>();
+  let firstVerse: number | undefined;
+
+  for (const chunk of selectorPart.split(",")) {
+    const piece = chunk.trim();
+    if (!piece) continue;
+    const rangeMatch = piece.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        const lo = Math.min(start, end);
+        const hi = Math.max(start, end);
+        for (let v = lo; v <= hi; v++) wanted.add(v);
+        if (firstVerse === undefined) firstVerse = lo;
+      }
+      continue;
+    }
+    const single = parseInt(piece, 10);
+    if (Number.isFinite(single)) {
+      wanted.add(single);
+      if (firstVerse === undefined) firstVerse = single;
+    }
+  }
+
+  if (wanted.size === 0) return null;
+  return { matches: (verse: number) => wanted.has(verse), firstVerse };
+}
+
+async function fetchPassage(
+  book: number,
+  chapter: number,
+  translation: string
+): Promise<PassageResponse> {
+  const baseUrl = getApiUrl();
+  const url = new URL("/api/passage", baseUrl);
+  url.searchParams.set("book", String(book));
+  url.searchParams.set("chapter", String(chapter));
+  url.searchParams.set("translation", translation);
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`Passage request failed (${res.status})`);
+  }
+  return (await res.json()) as PassageResponse;
+}
+
+function TranslationMeta({
+  data,
+  color,
+}: {
+  data: PassageResponse | DailyReflection | undefined;
+  color: string;
+}) {
+  if (!data) return null;
+  const label = data.translationName || data.translation;
+  if (!label) return null;
+  return (
+    <Text style={[styles.translationMeta, { color, fontFamily: "Inter_400Regular" }]}>
+      {label}
+      {data.provider ? ` · ${data.provider}` : ""}
+    </Text>
+  );
+}
+
+function TopicVerseCard({
+  verse,
+  index,
+  translation,
+  isDark,
+  theme,
+  accentColor,
+}: {
+  verse: { reference: string; bookId: number; chapter: number };
+  index: number;
+  translation: string;
+  isDark: boolean;
+  theme: ReturnType<typeof useTheme>["theme"];
+  accentColor: string;
+}) {
+  // translation is a separate React Query key dimension so switching
+  // translations refetches; duplicate (book/chapter/translation) keys dedupe.
+  const { data, isLoading, isError, refetch } = useQuery<PassageResponse>({
+    queryKey: ["/api/passage", verse.bookId, verse.chapter, translation],
+    queryFn: () => fetchPassage(verse.bookId, verse.chapter, translation),
+  });
+
+  const selector = useMemo(() => parseVerseSelector(verse.reference), [verse.reference]);
+
+  const selectedVerses = useMemo(() => {
+    if (!data?.verses) return [];
+    if (!selector) return data.verses;
+    return data.verses.filter((v) => selector.matches(v.verse));
+  }, [data, selector]);
+
+  const combinedText = selectedVerses.map((v) => v.text).join(" ").trim();
+
+  return (
+    <Pressable
+      onPress={() =>
+        navigateToScriptureByParts(
+          verse.bookId,
+          verse.chapter,
+          selector?.firstVerse,
+          translation
+        )
+      }
+      style={({ pressed }) => [
+        styles.verseCard,
+        { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
+      ]}
+      testID={`verse-card-${index}`}
+    >
+      <View style={styles.verseCardHeader}>
+        <View style={[styles.verseRefBadge, { backgroundColor: accentColor + "18" }]}>
+          <Text style={[styles.verseRef, { color: accentColor, fontFamily: "Inter_700Bold" }]}>
+            {verse.reference}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.verseStatusRow}>
+          <ActivityIndicator size="small" color={theme.accent} />
+          <Text style={[styles.verseStatusText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Loading verse...
+          </Text>
+        </View>
+      ) : isError ? (
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); refetch(); }}
+          style={styles.verseStatusRow}
+          testID={`verse-card-${index}-retry`}
+        >
+          <Ionicons name="alert-circle-outline" size={16} color={theme.textMuted} />
+          <Text style={[styles.verseStatusText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Couldn't load this verse. Tap to retry.
+          </Text>
+        </Pressable>
+      ) : combinedText ? (
+        <>
+          <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={5}>
+            {combinedText}
+          </Text>
+          <TranslationMeta data={data} color={theme.textMuted} />
+        </>
+      ) : (
+        <Text style={[styles.verseStatusText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Verse text unavailable in this translation.
+        </Text>
+      )}
+    </Pressable>
+  );
 }
 
 export default function TopicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme, isDark } = useTheme();
+  const { translation } = useTranslation();
   const insets = useSafeAreaInsets();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const topic = TOPICS[id ?? ""] ?? TOPICS.love;
 
   const { data: dailyReflection, isLoading: reflectionLoading } = useQuery<DailyReflection>({
-    queryKey: [`/api/topic-reflection/${id}`],
+    // translation is baked into the URL/query key so the reflection (and its
+    // verse metadata) refetches when the active translation changes.
+    queryKey: [`/api/topic-reflection/${id}?translation=${encodeURIComponent(translation)}`],
     enabled: !!id,
   });
 
@@ -141,6 +336,7 @@ export default function TopicScreen() {
                   <Text style={[styles.dailyVerseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
                     {dailyReflection.verseText}
                   </Text>
+                  <TranslationMeta data={dailyReflection} color={theme.textMuted} />
                 </View>
               ) : null}
 
@@ -176,25 +372,15 @@ export default function TopicScreen() {
             Scripture
           </Text>
           {shuffledVerses.map((v, i) => (
-            <Pressable
-              key={i}
-              onPress={() => router.push(`/read/${v.bookId}/${v.chapter}`)}
-              style={({ pressed }) => [
-                styles.verseCard,
-                { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.8 : 1 },
-              ]}
-              testID={`verse-card-${i}`}
-            >
-              <View style={styles.verseCardHeader}>
-                <View style={[styles.verseRefBadge, { backgroundColor: topic.gradient[0] + "18" }]}>
-                  <Text style={[styles.verseRef, { color: topic.gradient[0], fontFamily: "Inter_700Bold" }]}>{v.reference}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
-              </View>
-              <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={4}>
-                {v.text}
-              </Text>
-            </Pressable>
+            <TopicVerseCard
+              key={`${v.reference}-${i}`}
+              verse={v}
+              index={i}
+              translation={translation}
+              isDark={isDark}
+              theme={theme}
+              accentColor={topic.gradient[0]}
+            />
           ))}
         </View>
 
@@ -272,6 +458,13 @@ const styles = StyleSheet.create({
   },
   verseRef: { fontSize: 13 },
   verseText: { fontSize: 16, lineHeight: 26 },
+  translationMeta: { fontSize: 11, marginTop: 8, letterSpacing: 0.3 },
+  verseStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  verseStatusText: { fontSize: 13, flex: 1 },
   mediaSection: {
     paddingHorizontal: 22,
     paddingTop: 28,

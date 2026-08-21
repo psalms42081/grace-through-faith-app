@@ -13,12 +13,14 @@ import {
   Alert,
   StatusBar,
 } from "react-native";
+import type { ImageSourcePropType } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
+import { useTranslation as useBibleTranslation } from "@/context/TranslationContext";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,7 +33,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors, { getSabbathTheme } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
-import { getApiUrl } from "@/lib/query-client";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useSabbath } from "@/lib/sabbath";
@@ -58,14 +60,14 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const DAILY_VERSES = [
-  { text: "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.", reference: "John 3:16" },
-  { text: "The Lord is my shepherd; I shall not want.", reference: "Psalm 23:1" },
-  { text: "Trust in the Lord with all thine heart; and lean not unto thine own understanding.", reference: "Proverbs 3:5" },
-  { text: "I can do all things through Christ which strengtheneth me.", reference: "Philippians 4:13" },
-  { text: "Be strong and of a good courage; be not afraid, neither be thou dismayed: for the Lord thy God is with thee whithersoever thou goest.", reference: "Joshua 1:9" },
-  { text: "But they that wait upon the Lord shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.", reference: "Isaiah 40:31" },
-  { text: "And we know that all things work together for good to them that love God, to them who are the called according to his purpose.", reference: "Romans 8:28" },
+const DAILY_VERSE_REFERENCES = [
+  "John 3:16",
+  "Psalm 23:1",
+  "Proverbs 3:5",
+  "Philippians 4:13",
+  "Joshua 1:9",
+  "Isaiah 40:31",
+  "Romans 8:28",
 ];
 
 function getGreeting(): string {
@@ -79,7 +81,10 @@ function getTodaysVerse() {
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
   );
-  return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
+  return {
+    reference:
+      DAILY_VERSE_REFERENCES[dayOfYear % DAILY_VERSE_REFERENCES.length],
+  };
 }
 
 interface TodayResponse {
@@ -90,14 +95,14 @@ interface TodayResponse {
   planComplete?: boolean;
 }
 
-const KIDS_VERSES = [
-  { text: "God is love.", reference: "1 John 4:8" },
-  { text: "Be kind to one another.", reference: "Ephesians 4:32" },
-  { text: "The Lord is my shepherd; I shall not want.", reference: "Psalm 23:1" },
-  { text: "I can do all things through Christ which strengtheneth me.", reference: "Philippians 4:13" },
-  { text: "This is the day which the Lord hath made; we will rejoice and be glad in it.", reference: "Psalm 118:24" },
-  { text: "The Lord is my light and my salvation; whom shall I fear?", reference: "Psalm 27:1" },
-  { text: "Be strong and of a good courage.", reference: "Joshua 1:9" },
+const KIDS_VERSE_REFERENCES = [
+  "1 John 4:8",
+  "Ephesians 4:32",
+  "Psalm 23:1",
+  "Philippians 4:13",
+  "Psalm 118:24",
+  "Psalm 27:1",
+  "Joshua 1:9",
 ];
 
 function useImageBaseUrl() {
@@ -177,6 +182,7 @@ function KidsHomeScreen() {
   const { ageGroup, exitKidsMode, pin, activeChildName, activeChildProfileId, lastActiveChildId, switchChild, verifyPin } = useKidsMode();
   const { userId } = useAuth();
   const baseUrl = useImageBaseUrl();
+  const { translation: bibleTranslation } = useBibleTranslation();
   const [showExitModal, setShowExitModal] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [showSwitchPicker, setShowSwitchPicker] = useState(false);
@@ -193,9 +199,10 @@ function KidsHomeScreen() {
     return "Good evening";
   }, []);
 
-  const verse = useMemo(() => {
+  // Reference-only: used to derive a fallback reference when no lesson ref is available.
+  const dailyVerseRef = useMemo(() => {
     const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-    return KIDS_VERSES[dayOfYear % KIDS_VERSES.length];
+    return KIDS_VERSE_REFERENCES[dayOfYear % KIDS_VERSE_REFERENCES.length];
   }, []);
 
   const { data: dailyStory } = useQuery<{ id: string; title: string; scriptureRef: string | null; estimatedMinutes: number; imageUrl: string | null; memoryVerse: string | null; memoryVerseRef: string | null; prayerPrompt: string | null }>({
@@ -216,6 +223,67 @@ function KidsHomeScreen() {
     queryKey: [`/api/kids/sabbath-school/current?ageGroup=${ageGroup}`],
     staleTime: 0,
   });
+
+  const { data: kidsBooks } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/books"],
+  });
+
+  // Resolve the memory verse reference: lesson ref takes priority, fallback to daily ref.
+  const memVerseRef = kidsSS?.lesson?.memoryVerseRef || dailyVerseRef;
+
+  // Parse memVerseRef into book name, chapter, and verse selector.
+  const memVerseParsed = useMemo(() => {
+    const ref = memVerseRef;
+    const colonIdx = ref.lastIndexOf(":");
+    if (colonIdx === -1) return null;
+    const bookChapter = ref.slice(0, colonIdx).trim();
+    const chapterMatch = bookChapter.match(/^(.*?)\s+(\d+)$/);
+    if (!chapterMatch) return null;
+    const bookName = chapterMatch[1].trim();
+    const chapter = parseInt(chapterMatch[2], 10);
+    const selectorPart = ref.slice(colonIdx + 1).trim();
+    // Support single verse or range (e.g. "16" or "4-7")
+    const rangeMatch = selectorPart.match(/^(\d+)\s*-\s*(\d+)$/);
+    const firstVerse = rangeMatch ? parseInt(rangeMatch[1], 10) : parseInt(selectorPart, 10);
+    const lastVerse = rangeMatch ? parseInt(rangeMatch[2], 10) : firstVerse;
+    const book = kidsBooks?.find((b) => b.name.toLowerCase() === bookName.toLowerCase());
+    return { bookName, bookId: book?.id, chapter, firstVerse, lastVerse };
+  }, [memVerseRef, kidsBooks]);
+
+  // Fetch the passage for the memory verse in the active translation.
+  const memVersePassageKey = memVerseParsed?.bookId
+    ? `/api/passage?book=${memVerseParsed.bookId}&chapter=${memVerseParsed.chapter}&translation=${encodeURIComponent(bibleTranslation)}`
+    : null;
+
+  const { data: memVersePassage, isLoading: memVersePassageLoading } = useQuery<{
+    book: { id: number; name: string };
+    chapter: number;
+    verses: Array<{ verse: number; text: string }>;
+    translation: string;
+  }>({
+    queryKey: ["/api/passage", memVerseParsed?.bookId, memVerseParsed?.chapter, bibleTranslation],
+    queryFn: async () => {
+      const res = await apiRequest("GET", memVersePassageKey!);
+      if (!res.ok) throw new Error(`Passage fetch failed (${res.status})`);
+      return res.json();
+    },
+    enabled: !!memVersePassageKey,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
+  // Show loading state while books or the passage are still being fetched.
+  const memVerseLoading = !kidsBooks || memVersePassageLoading || (!!memVerseParsed?.bookId && !memVersePassage);
+
+  // Extract the memory verse text from the passage.
+  const resolvedMemVerse = useMemo(() => {
+    if (!memVersePassage?.verses || !memVerseParsed) return null;
+    const { firstVerse, lastVerse } = memVerseParsed;
+    const selected = memVersePassage.verses.filter(
+      (v) => v.verse >= firstVerse && v.verse <= lastVerse
+    );
+    if (!selected.length) return null;
+    return selected.map((v) => v.text).join(" ").trim();
+  }, [memVersePassage, memVerseParsed]);
 
   const { data: badges } = useQuery<{ id: string }[]>({
     queryKey: [`/api/kids/badges/earned?_uid=${progressUserId}`],
@@ -441,14 +509,9 @@ function KidsHomeScreen() {
               <Text style={[kidsStyles.heroTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
                 {dailyStory.title}
               </Text>
-              {dailyStory.memoryVerse && (
-                <Text style={[kidsStyles.heroThemeLine, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
-                  {dailyStory.memoryVerse}
-                </Text>
-              )}
-              {dailyStory.scriptureRef && !dailyStory.memoryVerse && (
+              {(dailyStory.memoryVerseRef || dailyStory.scriptureRef) && (
                 <Text style={[kidsStyles.heroRef, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {dailyStory.scriptureRef}
+                  {dailyStory.memoryVerseRef || dailyStory.scriptureRef}
                 </Text>
               )}
               <View style={[kidsStyles.heroCta, { backgroundColor: theme.accent }]}>
@@ -509,11 +572,24 @@ function KidsHomeScreen() {
         <View style={[kidsStyles.verseCard, { backgroundColor: theme.accent }]}>
           <Ionicons name="bookmark" size={20} color="rgba(255,255,255,0.7)" />
           <Text style={[kidsStyles.verseLabel, { fontFamily: "Inter_600SemiBold" }]}>Memory Verse</Text>
-          <Text style={[kidsStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
-            "{kidsSS?.lesson?.memoryVerse || verse.text}"
-          </Text>
+          {memVerseLoading ? (
+            <Text style={[kidsStyles.verseText, { fontFamily: "Inter_400Regular", opacity: 0.7 }]}>
+              Loading…
+            </Text>
+          ) : resolvedMemVerse ? (
+            <Text style={[kidsStyles.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
+              "{resolvedMemVerse}"
+            </Text>
+          ) : (
+            <Text style={[kidsStyles.verseText, { fontFamily: "Inter_400Regular", opacity: 0.7 }]}>
+              Verse unavailable
+            </Text>
+          )}
           <Text style={[kidsStyles.verseRef, { fontFamily: "Inter_600SemiBold" }]}>
-            {kidsSS?.lesson?.memoryVerseRef || verse.reference}
+            {memVerseRef}
+          </Text>
+          <Text style={[kidsStyles.verseRef, { fontFamily: "Inter_400Regular", opacity: 0.7, fontSize: 11 }]}>
+            {memVersePassage?.translation || bibleTranslation}
           </Text>
         </View>
       </AnimatedSection>
@@ -1314,6 +1390,7 @@ function AdultHomeScreen() {
   const { userId, user } = useAuth();
   const sabbath = useSabbath();
   const { t } = useTranslation();
+  const { translation: bibleTranslation } = useBibleTranslation();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -1343,6 +1420,7 @@ function AdultHomeScreen() {
     if (hour < 17) return t("home.goodAfternoon");
     return t("home.goodEvening");
   }, [t]);
+  // Reference-only: never render verse.text — always resolve via API.
   const verse = useMemo(() => getTodaysVerse(), []);
   const bgImage = useMemo(() => {
     const dayOfYear = Math.floor(
@@ -1350,10 +1428,10 @@ function AdultHomeScreen() {
     );
     return VERSE_BACKGROUNDS[dayOfYear % VERSE_BACKGROUNDS.length];
   }, []);
-  const verseBookImage = useMemo(() => {
+  const verseBookImage = useMemo<ImageSourcePropType | null>(() => {
     const ref = verse.reference;
     const bookName = ref.replace(/\s+\d+.*$/, "");
-    return getBookImage(bookName);
+    return getBookImage(bookName) as ImageSourcePropType | null;
   }, [verse.reference]);
 
   const { data: homeBooks } = useQuery<{ id: number; name: string }[]>({
@@ -1363,13 +1441,53 @@ function AdultHomeScreen() {
   const votdParsed = useMemo(() => {
     const ref = verse.reference;
     const bookName = ref.replace(/\s+\d+.*$/, "");
-    const match = ref.match(/(\d+):\d+$/);
-    const chapter = match ? parseInt(match[1], 10) : undefined;
+    const chapterMatch = ref.match(/(\d+):\d+$/);
+    const chapter = chapterMatch ? parseInt(chapterMatch[1], 10) : undefined;
+    const verseMatch = ref.match(/:(\d+)$/);
+    const verseNum = verseMatch ? parseInt(verseMatch[1], 10) : undefined;
     const book = homeBooks?.find(
       (b) => b.name.toLowerCase() === bookName.toLowerCase()
     );
-    return { bookId: book?.id, chapterNumber: chapter };
+    return { bookId: book?.id, chapterNumber: chapter, verseNumber: verseNum };
   }, [verse.reference, homeBooks]);
+
+  // Fetch VOTD text in the active translation via /api/passage.
+  const { data: votdPassage } = useQuery<{
+    book: { id: number; name: string };
+    chapter: number;
+    verses: Array<{ verse: number; text: string }>;
+    translation: string;
+  }>({
+    queryKey: ["/api/passage", votdParsed.bookId, votdParsed.chapterNumber, bibleTranslation],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/passage?book=${votdParsed.bookId}&chapter=${votdParsed.chapterNumber}&translation=${encodeURIComponent(bibleTranslation)}`
+      );
+      if (!res.ok) throw new Error(`VOTD passage fetch failed (${res.status})`);
+      return res.json();
+    },
+    enabled: !!votdParsed.bookId && !!votdParsed.chapterNumber,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
+  // Extract the specific verse text from the passage response.
+  const votdResolvedText = useMemo(() => {
+    if (!votdPassage?.verses || !votdParsed.verseNumber) return null;
+    const v = votdPassage.verses.find((v) => v.verse === votdParsed.verseNumber);
+    return v?.text ?? null;
+  }, [votdPassage, votdParsed.verseNumber]);
+
+  // Compose the verse object for VotdHeroCard — text comes only from the API.
+  const resolvedVotd = useMemo(
+    () => ({
+      reference: verse.reference,
+      text: votdResolvedText ?? "",
+      translation: votdPassage?.translation || bibleTranslation,
+    }),
+    [verse.reference, votdResolvedText, votdPassage?.translation, bibleTranslation]
+  );
+
   const { data: egwDevotion } = useQuery<{
     title: string;
     content: string;
@@ -1385,14 +1503,26 @@ function AdultHomeScreen() {
     id: string;
     title: string;
     description: string;
-  questions?: Array<{
-    question: string;
-    verses: Array<{ ref: string; text: string }>;
-    commentary?: string;
-  }>;
+    translation: string;
+    questions?: Array<{
+      question: string;
+      verses: Array<{ ref: string; text: string; translation: string }>;
+      commentary?: string;
+    }>;
   }>({
-    queryKey: ["/api/signposts/daily"],
+    queryKey: ["/api/signposts/daily", bibleTranslation],
     staleTime: 1000 * 60 * 60 * 24,
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/signposts/daily?translation=${encodeURIComponent(bibleTranslation)}`,
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Signpost fetch failed (${res.status})`);
+      }
+      return res.json();
+    },
   });
 
   const todayReflection = useMemo(() => {
@@ -1569,16 +1699,18 @@ function AdultHomeScreen() {
 
       <View style={{ marginHorizontal: -20 }}>
         <VotdHeroCard
-          verse={verse}
+          verse={resolvedVotd}
           bgImage={bgImage}
           bookImage={verseBookImage}
           userId={userId}
           bookId={votdParsed.bookId}
           chapterNumber={votdParsed.chapterNumber}
+          translation={bibleTranslation}
           signpost={dailySignpost ? {
             id: dailySignpost.id,
             title: dailySignpost.title,
             excerpt: dailySignpost.description,
+            translation: dailySignpost.translation,
             questions: dailySignpost.questions,
           } : null}
           reflection={egwDevotion ? {

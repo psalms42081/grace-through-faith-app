@@ -17,12 +17,13 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -114,9 +115,10 @@ export default function StudyGuideScreen() {
   const { userId } = useAuth();
   const { triggerMissionInvite } = useProStatus();
   const insets = useSafeAreaInsets();
+  const { translation } = useTranslation();
   const params = useLocalSearchParams<{
     verseReference: string;
-    verseText: string;
+    verseText?: string;
     bookName: string;
     chapter: string;
     verse: string;
@@ -135,7 +137,9 @@ export default function StudyGuideScreen() {
   const [checkingResume, setCheckingResume] = useState(true);
   const [progression, setProgression] = useState<Progression | null>(null);
   const [studySummary, setStudySummary] = useState<string | null>(null);
-  const initRef = useRef(false);
+  const studyContractKey = `${params.verseReference || ""}::${userId}::${translation}`;
+  const activeStudyContractRef = useRef(studyContractKey);
+  activeStudyContractRef.current = studyContractKey;
   const { triggerShare, ShareCardRenderer, isSharing } = useShareInsight();
 
   const restoreSession = (data: { session: any; aiMessage?: string; resumed?: boolean }) => {
@@ -154,18 +158,25 @@ export default function StudyGuideScreen() {
 
   const startMutation = useMutation({
     mutationFn: async (persona: Persona) => {
+      // Send verseReference + translation only. Server resolves canonical text
+      // via resolveReference; client verseText is ignored server-side.
       const res = await apiRequest("POST", "/api/study-guide/start", {
         verseReference: params.verseReference,
-        verseText: params.verseText,
-        bookName: params.bookName,
-        chapter: parseInt(params.chapter || "1"),
-        verse: parseInt(params.verse || "1"),
         persona,
         forceNew: true,
+        translation,
       });
-      return res.json();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Study guide start failed (${res.status})`);
+      }
+      return {
+        data: await res.json(),
+        contractKey: studyContractKey,
+      };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ data, contractKey }) => {
+      if (contractKey !== activeStudyContractRef.current) return;
       restoreSession(data);
     },
     onError: () => {
@@ -180,9 +191,13 @@ export default function StudyGuideScreen() {
         sessionId,
         userResponse,
       });
-      return res.json();
+      return {
+        data: await res.json(),
+        contractKey: studyContractKey,
+      };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ data, contractKey }) => {
+      if (contractKey !== activeStudyContractRef.current) return;
       setMessages(data.messages);
       setCurrentPhase(data.phase);
       setIsComplete(data.isComplete);
@@ -196,25 +211,48 @@ export default function StudyGuideScreen() {
   });
 
   useEffect(() => {
-    if (initRef.current || !params.verseReference || !params.verseText) return;
-    initRef.current = true;
+    // Gate on verseReference only — server resolves the text; client verseText
+    // is no longer used as authority for session resume or AI input.
+    if (!params.verseReference) return;
+    const contractKey = studyContractKey;
+    let cancelled = false;
+
+    // A mounted translation/reference change must never keep rendering or
+    // responding through the previous translation's generated study session.
+    setSessionId(null);
+    setMessages([]);
+    setCurrentPhase("observe");
+    setIsComplete(false);
+    setIsStarting(false);
+    setStartError(false);
+    setIsResumed(false);
+    setProgression(null);
+    setStudySummary(null);
+    setShowPersonaPicker(false);
+    setCheckingResume(true);
 
     (async () => {
       try {
         const res = await apiRequest(
           "GET",
-          `/api/study-guide/active?verseReference=${encodeURIComponent(params.verseReference)}&userId=${userId}`
+          `/api/study-guide/active?verseReference=${encodeURIComponent(params.verseReference)}&userId=${userId}&translation=${encodeURIComponent(translation)}`
         );
         const data = await res.json();
+        if (cancelled || contractKey !== activeStudyContractRef.current) return;
         if (data.found && data.session) {
           restoreSession({ session: data.session, resumed: true });
           return;
         }
       } catch {}
+      if (cancelled || contractKey !== activeStudyContractRef.current) return;
       setCheckingResume(false);
       setShowPersonaPicker(true);
     })();
-  }, [params.verseReference, params.verseText, userId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studyContractKey]);
 
   const handleRetry = () => {
     setStartError(false);
@@ -264,7 +302,71 @@ export default function StudyGuideScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const hasVerseParams = !!(params.verseReference && params.verseText);
+  // Only verseReference is required — server resolves text server-side.
+  const hasVerseParams = !!params.verseReference;
+  const canonicalRef = useMemo(() => {
+    const fromParams = {
+      bookName: params.bookName?.trim(),
+      chapter: Number(params.chapter),
+      verse: Number(params.verse),
+    };
+    if (
+      fromParams.bookName &&
+      Number.isInteger(fromParams.chapter) &&
+      fromParams.chapter > 0 &&
+      Number.isInteger(fromParams.verse) &&
+      fromParams.verse > 0
+    ) {
+      return fromParams;
+    }
+
+    const match = String(params.verseReference || "").match(
+      /^(.*?)\s+(\d+):(\d+)(?:-\d+)?$/,
+    );
+    if (!match) return null;
+    return {
+      bookName: match[1].trim(),
+      chapter: Number(match[2]),
+      verse: Number(match[3]),
+    };
+  }, [
+    params.bookName,
+    params.chapter,
+    params.verse,
+    params.verseReference,
+  ]);
+
+  const {
+    data: canonicalVerse,
+    isLoading: canonicalVerseLoading,
+    isError: canonicalVerseError,
+  } = useQuery<{
+    id: string;
+    text: string;
+    translation: string;
+    translationName?: string;
+  }>({
+    queryKey: [
+      "/api/verse",
+      canonicalRef?.bookName,
+      canonicalRef?.chapter,
+      canonicalRef?.verse,
+      translation,
+    ],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/verse?book=${encodeURIComponent(canonicalRef!.bookName!)}&chapter=${canonicalRef!.chapter}&verse=${canonicalRef!.verse}&translation=${encodeURIComponent(translation)}`,
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Verse fetch failed (${res.status})`);
+      }
+      return res.json();
+    },
+    enabled: hasVerseParams && !!canonicalRef,
+    retry: false,
+  });
 
   const { data: recentSessions, isLoading: sessionsLoading } = useQuery<any[]>({
     queryKey: [`/api/study-guide/sessions?userId=${userId}`],
@@ -284,22 +386,15 @@ export default function StudyGuideScreen() {
     if (!pickerBook || launchingPassage) return;
     setLaunchingPassage(true);
     try {
-      const url = new URL("/api/passage", getApiUrl());
-      url.searchParams.set("book", String(pickerBook.id));
-      url.searchParams.set("chapter", String(chapterNum));
-      const res = await fetch(url.toString());
-      const data = await res.json();
-      const firstVerse = data.verses?.[0];
-      const verseText = firstVerse?.text || data.verses?.map((v: any) => v.text).join(" ").slice(0, 200) || "";
       const verseReference = `${pickerBook.name} ${chapterNum}:1`;
       router.replace({
         pathname: "/study-guide" as any,
         params: {
           verseReference,
-          verseText: verseText.slice(0, 300),
           bookName: pickerBook.name,
           chapter: String(chapterNum),
           verse: "1",
+          translation,
         },
       });
     } catch {
@@ -449,7 +544,7 @@ export default function StudyGuideScreen() {
                       style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#E8604C" }]}
                       onPress={() => router.replace({
                         pathname: "/study-guide" as any,
-                        params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                        params: { verseReference: s.verseReference, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
                       })}
                     >
                       <View style={styles.hubSessionTop}>
@@ -484,7 +579,7 @@ export default function StudyGuideScreen() {
                       style={[styles.hubSessionCard, { backgroundColor: theme.backgroundCard, borderLeftColor: "#2E7D32" }]}
                       onPress={() => router.replace({
                         pathname: "/study-guide" as any,
-                        params: { verseReference: s.verseReference, verseText: s.verseText, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
+                        params: { verseReference: s.verseReference, bookName: s.bookName, chapter: String(s.chapter), verse: String(s.verse) },
                       })}
                     >
                       <View style={styles.hubSessionTop}>
@@ -630,10 +725,17 @@ export default function StudyGuideScreen() {
 
       <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard }]}>
         <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={3}>
-          "{params.verseText}"
+          {canonicalVerseLoading
+            ? "Loading Scripture…"
+            : canonicalVerseError || !canonicalVerse?.text
+              ? `Scripture is unavailable in ${translation}.`
+              : `"${canonicalVerse.text}"`}
         </Text>
         <Text style={[styles.verseRef, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
           {params.verseReference}
+          {canonicalVerse?.translation
+            ? ` · ${canonicalVerse.translation}`
+            : ` · ${translation}`}
         </Text>
       </View>
 
@@ -796,7 +898,7 @@ export default function StudyGuideScreen() {
                       const lastAi = [...messages].reverse().find((m) => m.role === "assistant");
                       triggerShare({
                         verseReference: params.verseReference || "",
-                        verseText: params.verseText || "",
+                        verseText: canonicalVerse?.text || "",
                         insightLabel: "Socratic Study Insight",
                         insightText: lastAi
                           ? lastAi.content.length > 180

@@ -6,9 +6,11 @@ interface VerseOfTheDayProps {
   verse: { text: string; reference: string };
   bgImage: string;
   bookImage?: ImageSourcePropType | null;
+  /** The translation label to display (e.g. "KJV", "ASV"). If omitted, no label is shown. */
+  translation?: string;
 }
 
-export default function VerseOfTheDay({ verse, bgImage, bookImage }: VerseOfTheDayProps) {
+export default function VerseOfTheDay({ verse, bgImage, bookImage, translation }: VerseOfTheDayProps) {
   const imageSource = bookImage || { uri: bgImage };
   return (
     <View style={styles.verseCardWrap}>
@@ -38,7 +40,9 @@ export default function VerseOfTheDay({ verse, bgImage, bookImage }: VerseOfTheD
               <Text style={[styles.verseRef, { fontFamily: "Lora_600SemiBold" }]}>
                 {verse.reference}
               </Text>
-              <Text style={[styles.verseTrans, { fontFamily: "Inter_400Regular" }]}>KJV</Text>
+              {translation ? (
+                <Text style={[styles.verseTrans, { fontFamily: "Inter_400Regular" }]}>{translation}</Text>
+              ) : null}
             </View>
           </View>
         </LinearGradient>

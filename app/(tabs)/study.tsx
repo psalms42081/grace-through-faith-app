@@ -28,6 +28,7 @@ import StudyDepthSelector from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTutorial } from "@/contexts/TutorialContext";
+import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 
 type Tab = "word" | "context" | "voices" | "application";
 
@@ -862,6 +863,7 @@ function DeepStudyIntro({
   onBegin,
   onCancel,
   theme,
+  translation,
 }: {
   reference: string;
   bookId: number | null;
@@ -869,10 +871,11 @@ function DeepStudyIntro({
   onBegin: (focus: StudyFocus, verseStart: number | null, verseEnd: number | null) => void;
   onCancel: () => void;
   theme: typeof Colors.light;
+  translation: string;
 }) {
   const canFetch = bookId !== null && chapter !== null;
   const { data: passageSections, isLoading: sectionsLoading } = useQuery<PassageSection[]>({
-    queryKey: [`/api/passage-sections?bookId=${bookId}&chapter=${chapter}`],
+    queryKey: [`/api/passage-sections?bookId=${bookId}&chapter=${chapter}&translation=${translation}`],
     enabled: canFetch,
   });
 
@@ -1970,6 +1973,7 @@ export default function StudyScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const queryClient = useQueryClient();
+  const { translation } = useAppTranslation();
   const params = useLocalSearchParams<{
     tab?: string;
     bookId?: string;
@@ -2430,6 +2434,7 @@ export default function StudyScreen() {
           onBegin={beginDeepSessionFromIntro}
           onCancel={() => setShowDeepIntro(false)}
           theme={theme}
+          translation={translation}
         />
       </View>
     );
@@ -2739,11 +2744,12 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
   const [concordanceSearch, setConcordanceSearch] = useState("");
   const [concordanceLang, setConcordanceLang] = useState<"all" | "he" | "gr">("all");
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const { translation } = useAppTranslation();
 
   const books = allBooks;
 
   const passageQuery = useQuery<{ book: any; chapter: number; verses: { id: string; verse: number; text: string }[] }>({
-    queryKey: [`/api/passage?book=${selectedBook?.id}&chapter=${selectedChapter}&translation=KJV`],
+    queryKey: [`/api/passage?book=${selectedBook?.id}&chapter=${selectedChapter}&translation=${translation}`],
     enabled: !!selectedBook && !!selectedChapter,
   });
 
@@ -2752,24 +2758,35 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
   const qc = useQueryClient();
 
   const wordQuery = useQuery<{ map: any; entry: StrongEntry | null }[]>({
-    queryKey: [`/api/strong/verse/${targetVerse?.id}`],
+    queryKey: [`/api/strong/verse/${targetVerse?.id}?translation=${translation}`],
     enabled: !!targetVerse?.id,
   });
 
-  const generateWordsMutation = useMutation({
+  const generateWordsMutation = useMutation<{ map: any; entry: StrongEntry | null }[]>({
     mutationFn: async () => {
+      // Send verseReference so the server can resolve canonical text
+      // server-side. verseText from client is intentionally not sent as
+      // authority — the server ignores it and uses resolveReference instead.
+      const verseReference = selectedBook && selectedChapter && selectedVerse
+        ? `${selectedBook.name} ${selectedChapter}:${selectedVerse}`
+        : undefined;
       const res = await apiRequest("POST", "/api/strong/generate", {
         verseId: targetVerse!.id,
+        verseReference,
         bookName: selectedBook!.name,
         chapter: selectedChapter,
         verse: selectedVerse,
-        verseText: targetVerse!.text,
+        translation,
       });
-      return res.json();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Word study generation failed (${res.status})`);
+      }
+      return (await res.json()) as { map: any; entry: StrongEntry | null }[];
     },
     onSuccess: () => {
       qc.invalidateQueries({
-        queryKey: [`/api/strong/verse/${targetVerse?.id}`],
+        queryKey: [`/api/strong/verse/${targetVerse?.id}?translation=${translation}`],
       });
     },
   });

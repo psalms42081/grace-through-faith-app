@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface StrongEntry {
   id: string;
@@ -54,39 +55,61 @@ export default function WordStudyScreen() {
   const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const [selectedWord, setSelectedWord] = useState<WordMapping | null>(null);
+  const { translation } = useTranslation();
 
   const resolvedVerse = params.verse || "1";
-  const needsVerseLookup = !params.verseId && !!params.book && !!params.chapter;
-  const { data: lookedUpVerse } = useQuery<{ id: string; text: string }>({
-    queryKey: [`/api/verse?book=${params.book}&chapter=${params.chapter}&verse=${resolvedVerse}`],
-    enabled: needsVerseLookup,
+  // Always perform the active-translation canonical lookup when book+chapter+verse
+  // are present — even if a route verseId/text was supplied — so the resolved
+  // id/text come from the authoritative server endpoint for the current translation.
+  const hasRefParams = !!params.book && !!params.chapter;
+  const { data: lookedUpVerse, error: lookupError } = useQuery<{ id: string; text: string }>({
+    queryKey: [`/api/verse?book=${params.book}&chapter=${params.chapter}&verse=${resolvedVerse}&translation=${translation}`],
+    enabled: hasRefParams,
   });
 
-  const resolvedVerseId = params.verseId || lookedUpVerse?.id || null;
+  // Prefer canonical lookup result; only fall back to route data when no
+  // resolvable reference exists (e.g. the route only supplies verseId).
+  const resolvedVerseId = lookedUpVerse?.id || params.verseId || null;
 
   const { data: allBooks } = useQuery<{ id: number; name: string }[]>({
     queryKey: ["/api/books"],
     enabled: !!params.book && !params.bookName,
   });
   const displayBookName = params.bookName || allBooks?.find(b => b.id === Number(params.book))?.name || "";
-  const displayVerseText = params.verseText || lookedUpVerse?.text || "";
+  // Text comes from the canonical lookup; route verseText is not authoritative.
+  const displayVerseText = lookedUpVerse?.text || "";
 
   const { data: wordMappings, isLoading: mappingsLoading, error } = useQuery<WordMapping[]>({
-    queryKey: [`/api/strong/verse/${resolvedVerseId}`],
+    queryKey: [`/api/strong/verse/${resolvedVerseId}?translation=${translation}`],
     enabled: !!resolvedVerseId,
   });
 
+  // Build a verseReference string for the POST payload — prefer explicit
+  // param, else derive from bookName + chapter + verse.
+  const verseReference = displayBookName && params.chapter
+    ? `${displayBookName} ${params.chapter}:${resolvedVerse}`
+    : undefined;
+
   const generateMutation = useMutation<WordMapping[]>({
-    mutationFn: () =>
-      apiRequest("POST", "/api/strong/generate", {
+    mutationFn: async () => {
+      if (!resolvedVerseId) throw new Error("Cannot generate word study: verse id not resolved");
+      const res = await apiRequest("POST", "/api/strong/generate", {
         verseId: resolvedVerseId,
+        verseReference,
         bookName: displayBookName,
         chapter: Number(params.chapter),
         verse: Number(resolvedVerse),
-        verseText: displayVerseText,
-      }),
+        // verseText intentionally omitted — server resolves it from verseReference
+        translation,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Word study generation failed (${res.status})`);
+      }
+      return (await res.json()) as WordMapping[];
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/strong/verse/${resolvedVerseId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/strong/verse/${resolvedVerseId}?translation=${translation}`] });
     },
   });
 
@@ -97,20 +120,23 @@ export default function WordStudyScreen() {
       wordMappings &&
       wordMappings.length === 0 &&
       resolvedVerseId &&
-      displayVerseText &&
+      // Only attempt generation once we have canonical text from the server
+      // (lookedUpVerse is populated). Never trigger on stale route text.
+      lookedUpVerse?.text &&
+      verseReference &&
       !generateMutation.isPending &&
       !generationAttempted.current
     ) {
       generationAttempted.current = true;
       generateMutation.mutate();
     }
-  }, [wordMappings, resolvedVerseId, displayVerseText]);
+  }, [wordMappings, resolvedVerseId, lookedUpVerse?.text, verseReference]);
 
   useEffect(() => {
     generationAttempted.current = false;
   }, [resolvedVerseId]);
 
-  const isLoading = mappingsLoading || (needsVerseLookup && !lookedUpVerse) || generateMutation.isPending;
+  const isLoading = mappingsLoading || (hasRefParams && !lookedUpVerse && !lookupError) || generateMutation.isPending;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -182,7 +208,7 @@ export default function WordStudyScreen() {
             </Text>
             <View style={[styles.translationBadge, { backgroundColor: theme.accent + "18" }]}>
               <Text style={[styles.translationText, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
-                KJV
+                {translation}
               </Text>
             </View>
           </View>
@@ -239,7 +265,7 @@ export default function WordStudyScreen() {
           </View>
         )}
 
-        {(error || generateMutation.isError) && (
+        {(error || lookupError || generateMutation.isError) && (
           <View style={[styles.errorBox, { backgroundColor: theme.danger + "18", borderColor: theme.danger + "44" }]}>
             <Ionicons name="alert-circle" size={18} color={theme.danger} />
             <Text style={[styles.errorText, { color: theme.danger, fontFamily: "Inter_400Regular" }]}>
@@ -248,7 +274,7 @@ export default function WordStudyScreen() {
           </View>
         )}
 
-        {!isLoading && !error && !hasData && (
+        {!isLoading && !error && !lookupError && !hasData && (
           <View
             style={[
               styles.emptyBox,

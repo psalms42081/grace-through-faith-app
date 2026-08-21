@@ -19,6 +19,7 @@ import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import * as Haptics from "expo-haptics";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from "./PreviewPrimitives";
+import { useTranslation } from "@/context/TranslationContext";
 
 type Plan = {
   id: string;
@@ -78,6 +79,7 @@ function formatPlanDayReference(books: Book[] | undefined, day: Day | undefined)
 export default function DevotionsPreview() {
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated } = useAuth();
+  const { translation } = useTranslation();
   const qc = useQueryClient();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [seriesId, setSeriesId] = useState<string | null>(null);
@@ -249,7 +251,7 @@ export default function DevotionsPreview() {
                   const current = activeDetails[0]?.data as Detail | undefined;
                   const day = current?.days?.find((item) => item.dayNumber === first.currentDay);
                   if (day?.bookId && day.chapter) {
-                    navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined);
+                    navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined, translation);
                   } else {
                     setDetailId(first.planId);
                   }
@@ -298,7 +300,7 @@ export default function DevotionsPreview() {
               <Pressable
                 onPress={() =>
                   day?.bookId && day.chapter
-                    ? navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined)
+                    ? navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined, translation)
                     : setDetailId(item.planId)
                 }
                 style={s.quietAction}

@@ -22,6 +22,7 @@ import * as Haptics from "expo-haptics";
 import LightDepthSelector from "./LightDepthSelector";
 import { D2, F } from "./tokens";
 import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./PreviewPrimitives";
+import { useTranslation } from "@/context/TranslationContext";
 
 type Day = {
   id: string;
@@ -177,6 +178,7 @@ export default function DevotionalDayPreview() {
   } = useLocalSearchParams<{ planId?: string; groupId?: string; depth?: string }>();
   const { depth, setDepth } = useStudyDepth();
   const { triggerMissionInvite } = useProStatus();
+  const { translation } = useTranslation();
 
   const [journal, setJournal] = useState("");
   const [share, setShare] = useState(false);
@@ -199,7 +201,7 @@ export default function DevotionalDayPreview() {
 
   const passageQuery =
     day?.bookId && day.chapter
-      ? `/api/passage?book=${day.bookId}&chapter=${day.chapter}&translation=KJV`
+      ? `/api/passage?book=${day.bookId}&chapter=${day.chapter}&translation=${translation}`
       : null;
 
   const passage = useQuery<Passage>({ queryKey: [passageQuery], enabled: !!passageQuery });
@@ -313,7 +315,10 @@ export default function DevotionalDayPreview() {
 
         {verses.length ? (
           <View style={s.card}>
-            <Text style={s.label}>SCRIPTURE READING</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <Text style={s.label}>SCRIPTURE READING</Text>
+              <Text style={[s.label, { color: D2.muted, fontFamily: F.inter, letterSpacing: 0 }]}>{day.passageLabel ? `${day.passageLabel} · ${translation}` : translation}</Text>
+            </View>
             {verses.map((v) => (
               <View style={s.verse} key={v.id}>
                 <Text style={s.verseNum}>{v.verse}</Text>

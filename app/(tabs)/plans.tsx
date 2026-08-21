@@ -24,6 +24,7 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
+import { useTranslation } from "@/context/TranslationContext";
 import { HV2, F } from "@/components/home-v2/theme";
 
 // ---- Screen tokens (violet = Plans; coral = ONE Continue CTA + active segment;
@@ -172,6 +173,7 @@ function ProgressRing({ progress, color }: { progress: number; color: string }) 
 export default function PlansV2Screen() {
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated } = useAuth();
+  const { translation } = useTranslation();
   const qc = useQueryClient();
   const [segment, setSegment] = useState<Segment>("My Plans");
   const [activeCategory, setActiveCategory] = useState<string>("All");
@@ -340,7 +342,7 @@ export default function PlansV2Screen() {
     const todayRef = formatRef(books, todayDay);
     const resume = () => {
       if (todayDay?.bookId && todayDay?.chapter) {
-        navigateToScriptureByParts(todayDay.bookId, todayDay.chapter, todayDay.verseStart || undefined);
+        navigateToScriptureByParts(todayDay.bookId, todayDay.chapter, todayDay.verseStart || undefined, translation);
       } else {
         setDetailPlanId(up.planId);
       }

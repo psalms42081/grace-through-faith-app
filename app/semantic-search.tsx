@@ -17,6 +17,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -31,6 +32,11 @@ interface VerseResult {
   verseEnd: number | null;
   text: string;
   relevance: string;
+  translation: string;
+  translationName: string;
+  source: string;
+  provider: string;
+  providerEditionId?: string;
 }
 
 interface NoteResult {
@@ -41,6 +47,8 @@ interface NoteResult {
   chapter: number;
   verse: number;
   verseText: string;
+  verseTranslation: string | null;
+  verseTranslationName: string | null;
   bookName: string;
 }
 
@@ -52,6 +60,8 @@ interface HighlightResult {
   chapter: number;
   verse: number;
   verseText: string;
+  verseTranslation: string | null;
+  verseTranslationName: string | null;
   bookName: string;
 }
 
@@ -63,10 +73,13 @@ interface BookmarkResult {
   chapter: number;
   verse: number;
   verseText: string;
+  verseTranslation: string | null;
+  verseTranslationName: string | null;
   bookName: string;
 }
 
 interface SemanticResponse {
+  translation: string;
   verses: VerseResult[];
   notes: NoteResult[];
   highlights: HighlightResult[];
@@ -97,6 +110,7 @@ export default function SemanticSearchScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated } = useAuth();
+  const { translation } = useTranslation();
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [results, setResults] = useState<SemanticResponse | null>(null);
@@ -123,9 +137,12 @@ export default function SemanticSearchScreen() {
   }, [recentSearches]);
 
   const searchMutation = useMutation({
-    mutationFn: async (searchQuery: string) => {
+    // Translation is part of the request identity: a KJV result must never be
+    // shown for an NKJV reader, and vice-versa.
+    mutationFn: async (vars: { query: string; translation: string }) => {
       const res = await apiRequest("POST", "/api/search/semantic", {
-        query: searchQuery,
+        query: vars.query,
+        translation: vars.translation,
       });
       return (await (res as any).json()) as SemanticResponse;
     },
@@ -141,9 +158,9 @@ export default function SemanticSearchScreen() {
       if (!trimmed || trimmed.length < 3) return;
       Keyboard.dismiss();
       saveRecentSearch(trimmed);
-      searchMutation.mutate(trimmed);
+      searchMutation.mutate({ query: trimmed, translation });
     },
-    [searchMutation, saveRecentSearch]
+    [searchMutation, saveRecentSearch, translation]
   );
 
   const handleClear = useCallback(() => {
@@ -152,9 +169,15 @@ export default function SemanticSearchScreen() {
     inputRef.current?.focus();
   }, []);
 
-  const navigateToVerse = useCallback((bookId: number, chapter: number) => {
-    router.push(`/read/${bookId}/${chapter}`);
-  }, []);
+  // Reader navigation carries the translation so the opened chapter matches the
+  // translation the reader searched in.
+  const navigateToVerse = useCallback(
+    (bookId: number, chapter: number, verseTranslation?: string) => {
+      const tx = verseTranslation || translation;
+      router.push(`/read/${bookId}/${chapter}?translation=${encodeURIComponent(tx)}` as any);
+    },
+    [translation]
+  );
 
   const hasResults = results !== null;
   const notesCount = results?.notes?.length ?? 0;
@@ -308,10 +331,17 @@ export default function SemanticSearchScreen() {
             contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad + 120 }]}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
+            ListHeaderComponent={
+              results.verses.length > 0 ? (
+                <Text style={[styles.txHeader, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  Showing {results.translation} translation
+                </Text>
+              ) : null
+            }
             renderItem={({ item, index }) => (
               <AnimatedItem index={index}>
                 <Pressable
-                  onPress={() => navigateToVerse(item.bookId, item.chapter)}
+                  onPress={() => navigateToVerse(item.bookId, item.chapter, item.translation)}
                   style={({ pressed }) => [
                     styles.verseCard,
                     {
@@ -326,6 +356,13 @@ export default function SemanticSearchScreen() {
                         {item.reference}
                       </Text>
                     </View>
+                    {!!item.translation && (
+                      <View style={[styles.txBadge, { backgroundColor: theme.textMuted + "18" }]}>
+                        <Text style={[styles.txBadgeText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                          {item.translation}
+                        </Text>
+                      </View>
+                    )}
                     <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
                   </View>
                   <Text
@@ -365,7 +402,7 @@ export default function SemanticSearchScreen() {
             renderItem={({ item, index }) => (
               <AnimatedItem index={index}>
                 <Pressable
-                  onPress={() => navigateToVerse(item.bookId, item.chapter)}
+                  onPress={() => navigateToVerse(item.bookId, item.chapter, item.verseTranslation ?? undefined)}
                   style={({ pressed }) => [
                     styles.personalCard,
                     {
@@ -396,6 +433,7 @@ export default function SemanticSearchScreen() {
                       </Text>
                       <Text style={[styles.personalType, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                         {item.type === "note" ? "Note" : "Highlight"}
+                        {item.verseTranslation ? ` · ${item.verseTranslation}` : ""}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
@@ -428,7 +466,7 @@ export default function SemanticSearchScreen() {
             renderItem={({ item, index }) => (
               <AnimatedItem index={index}>
                 <Pressable
-                  onPress={() => navigateToVerse(item.bookId, item.chapter)}
+                  onPress={() => navigateToVerse(item.bookId, item.chapter, item.verseTranslation ?? undefined)}
                   style={({ pressed }) => [
                     styles.personalCard,
                     {
@@ -445,13 +483,12 @@ export default function SemanticSearchScreen() {
                       <Text style={[styles.personalRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                         {item.bookName} {item.chapter}:{item.verse}
                       </Text>
-                      {item.label && (
-                        <Text
-                          style={[styles.personalType, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
-                        >
-                          {item.label}
-                        </Text>
-                      )}
+                      <Text
+                        style={[styles.personalType, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+                      >
+                        {item.label ? item.label : "Bookmark"}
+                        {item.verseTranslation ? ` · ${item.verseTranslation}` : ""}
+                      </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
                   </View>
@@ -646,6 +683,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   refText: { fontSize: 13 },
+  txBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginLeft: "auto",
+    marginRight: 8,
+  },
+  txBadgeText: { fontSize: 11, letterSpacing: 0.5 },
+  txHeader: { fontSize: 12, marginBottom: 10, letterSpacing: 0.3 },
   verseText: { fontSize: 16, lineHeight: 24, marginBottom: 8 },
   relevanceText: { fontSize: 13, lineHeight: 18, fontStyle: "italic" as const },
   personalCard: {

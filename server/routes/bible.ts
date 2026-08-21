@@ -1,420 +1,172 @@
 import { Router } from "express";
-  import { db } from "../db";
-  import {
-    bibleBooks,
-    bibleVerses,
-    bibleTranslations,
-    bibleCache,
-    bibleCacheStats,
-  } from "../../shared/schema";
-  import { eq, and, ilike, sql } from "drizzle-orm";
-  import { cachedResponse } from "../middleware/response-cache";
-  import { getTranslationId } from "../services/languageAwareContent";
+import { db } from "../db";
+import {
+  bibleBooks,
+  bibleVerses,
+  bibleTranslations,
+  bibleCache,
+  bibleCacheStats,
+} from "../../shared/schema";
+import { eq, and, ilike, sql } from "drizzle-orm";
+import { cachedResponse } from "../middleware/response-cache";
+import { getTranslationId } from "../services/languageAwareContent";
+import {
+  normalizeTranslationParam,
+  buildTranslationResponseMeta,
+  API_BIBLE_TRANSLATIONS,
+  searchApiBible,
+  searchNlt,
+  discoverNkjvCapability,
+  resolveChapter,
+  ScriptureError,
+  type ApiBibleTranslationConfig,
+  type ChapterCacheHooks,
+  type LocalBookRef,
+} from "../services/scripture-service";
 
-  const router = Router();
+const router = Router();
 
-  const NLT_BOOK_MAP: Record<string, string> = {
-    "Genesis": "Gen", "Exodus": "Exod", "Leviticus": "Lev", "Numbers": "Num",
-    "Deuteronomy": "Deut", "Joshua": "Josh", "Judges": "Judg", "Ruth": "Ruth",
-    "1 Samuel": "1Sam", "2 Samuel": "2Sam", "1 Kings": "1Kgs", "2 Kings": "2Kgs",
-    "1 Chronicles": "1Chr", "2 Chronicles": "2Chr", "Ezra": "Ezra", "Nehemiah": "Neh",
-    "Esther": "Esth", "Job": "Job", "Psalms": "Ps", "Proverbs": "Prov",
-    "Ecclesiastes": "Eccl", "Song of Solomon": "Song", "Isaiah": "Isa", "Jeremiah": "Jer",
-    "Lamentations": "Lam", "Ezekiel": "Ezek", "Daniel": "Dan", "Hosea": "Hos",
-    "Joel": "Joel", "Amos": "Amos", "Obadiah": "Obad", "Jonah": "Jonah",
-    "Micah": "Mic", "Nahum": "Nah", "Habakkuk": "Hab", "Zephaniah": "Zeph",
-    "Haggai": "Hag", "Zechariah": "Zech", "Malachi": "Mal",
-    "Matthew": "Matt", "Mark": "Mark", "Luke": "Luke", "John": "John",
-    "Acts": "Acts", "Romans": "Rom", "1 Corinthians": "1Cor", "2 Corinthians": "2Cor",
-    "Galatians": "Gal", "Ephesians": "Eph", "Philippians": "Phil", "Colossians": "Col",
-    "1 Thessalonians": "1Thess", "2 Thessalonians": "2Thess", "1 Timothy": "1Tim",
-    "2 Timothy": "2Tim", "Titus": "Titus", "Philemon": "Phlm", "Hebrews": "Heb",
-    "James": "Jas", "1 Peter": "1Pet", "2 Peter": "2Pet", "1 John": "1John",
-    "2 John": "2John", "3 John": "3John", "Jude": "Jude", "Revelation": "Rev",
-  };
+// ─── DB cache helpers ─────────────────────────────────────────────────────────
 
-  const API_BIBLE_BOOK_MAP: Record<string, string> = {
-    "Genesis": "GEN", "Exodus": "EXO", "Leviticus": "LEV", "Numbers": "NUM",
-    "Deuteronomy": "DEU", "Joshua": "JOS", "Judges": "JDG", "Ruth": "RUT",
-    "1 Samuel": "1SA", "2 Samuel": "2SA", "1 Kings": "1KI", "2 Kings": "2KI",
-    "1 Chronicles": "1CH", "2 Chronicles": "2CH", "Ezra": "EZR", "Nehemiah": "NEH",
-    "Esther": "EST", "Job": "JOB", "Psalms": "PSA", "Proverbs": "PRO",
-    "Ecclesiastes": "ECC", "Song of Solomon": "SNG", "Isaiah": "ISA", "Jeremiah": "JER",
-    "Lamentations": "LAM", "Ezekiel": "EZK", "Daniel": "DAN", "Hosea": "HOS",
-    "Joel": "JOL", "Amos": "AMO", "Obadiah": "OBA", "Jonah": "JON",
-    "Micah": "MIC", "Nahum": "NAM", "Habakkuk": "HAB", "Zephaniah": "ZEP",
-    "Haggai": "HAG", "Zechariah": "ZEC", "Malachi": "MAL",
-    "Matthew": "MAT", "Mark": "MRK", "Luke": "LUK", "John": "JHN",
-    "Acts": "ACT", "Romans": "ROM", "1 Corinthians": "1CO", "2 Corinthians": "2CO",
-    "Galatians": "GAL", "Ephesians": "EPH", "Philippians": "PHP", "Colossians": "COL",
-    "1 Thessalonians": "1TH", "2 Thessalonians": "2TH", "1 Timothy": "1TI",
-    "2 Timothy": "2TI", "Titus": "TIT", "Philemon": "PHM", "Hebrews": "HEB",
-    "James": "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN",
-    "2 John": "2JN", "3 John": "3JN", "Jude": "JUD", "Revelation": "REV",
-  };
-
-  const API_BIBLE_TRANSLATIONS: Record<string, { bibleId: string; name: string }> = {
-    "NIV": { bibleId: "78a9f6124f344018-01", name: "New International Version" },
-    "AMP": { bibleId: "a81b73293d3080c9-01", name: "Amplified Bible" },
-    "NASB": { bibleId: "b8ee27bcd1cae43a-01", name: "New American Standard Bible 1995" },
-  };
-
-  const apiBibleCache = new Map<string, { data: any; expires: number }>();
-
-  async function checkBibleCache(translation: string, bookId: number, chapterNum: number): Promise<any[] | null> {
-    try {
-      const cached = await db
-        .select()
-        .from(bibleCache)
-        .where(
-          and(
-            eq(bibleCache.translation, translation),
-            eq(bibleCache.bookId, bookId),
-            eq(bibleCache.chapter, chapterNum)
-          )
+async function checkBibleCache(
+  translation: string,
+  bookId: number,
+  chapterNum: number
+): Promise<any[] | null> {
+  try {
+    const cached = await db
+      .select()
+      .from(bibleCache)
+      .where(
+        and(
+          eq(bibleCache.translation, translation),
+          eq(bibleCache.bookId, bookId),
+          eq(bibleCache.chapter, chapterNum)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (cached.length > 0) {
-        await db
-          .insert(bibleCacheStats)
-          .values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: new Date() })
-          .onConflictDoUpdate({
-            target: [bibleCacheStats.translation],
-            set: {
-              cacheHits: sql`${bibleCacheStats.cacheHits} + 1`,
-              lastHitAt: new Date(),
-            },
-          })
-          .catch(() => {});
-        return cached[0].versesJson as any[];
-      }
-
+    if (cached.length > 0) {
       await db
         .insert(bibleCacheStats)
-        .values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: new Date() })
+        .values({ translation, cacheHits: 1, cacheMisses: 0, lastHitAt: new Date() } as any)
         .onConflictDoUpdate({
           target: [bibleCacheStats.translation],
           set: {
-            cacheMisses: sql`${bibleCacheStats.cacheMisses} + 1`,
-            lastMissAt: new Date(),
-          },
+            cacheHits: sql`${bibleCacheStats.cacheHits} + 1`,
+            lastHitAt: new Date(),
+          } as any,
         })
         .catch(() => {});
-      return null;
-    } catch {
-      return null;
+      return cached[0].versesJson as any[];
     }
+
+    await db
+      .insert(bibleCacheStats)
+      .values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: new Date() } as any)
+      .onConflictDoUpdate({
+        target: [bibleCacheStats.translation],
+        set: {
+          cacheMisses: sql`${bibleCacheStats.cacheMisses} + 1`,
+          lastMissAt: new Date(),
+        } as any,
+      })
+      .catch(() => {});
+    return null;
+  } catch {
+    return null;
   }
+}
 
-  async function storeBibleCache(
-    translation: string,
-    bookId: number,
-    bookName: string,
-    chapterNum: number,
-    verses: any[],
-    sourceApi: string
-  ): Promise<void> {
-    try {
-      await db
-        .insert(bibleCache)
-        .values({
-          translation,
-          bookId,
-          bookName,
-          chapter: chapterNum,
-          versesJson: verses,
-          verseCount: verses.length,
-          sourceApi,
-        })
-        .onConflictDoNothing();
-    } catch (err: any) {
-      console.error(`[bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
-    }
-  }
-
-  function parseApiBibleText(content: string, bookId: number, chapterNum: number, translationAbbr: string): any[] {
-    const verses: any[] = [];
-    const lines = content.split(/\n/);
-    let currentVerse = 0;
-    let currentText = "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      const parts = trimmed.split(/\[(\d+)\]/);
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i].trim();
-        if (!part) continue;
-        const num = parseInt(part, 10);
-        if (!isNaN(num) && num > 0 && num <= 200 && parts[i - 1] !== undefined) {
-          if (currentVerse > 0 && currentText.trim()) {
-            verses.push({
-              id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-              translationId: translationAbbr,
-              bookId,
-              chapter: chapterNum,
-              verse: currentVerse,
-              text: currentText.trim(),
-              searchVector: null,
-            });
-          }
-          currentVerse = num;
-          currentText = "";
-        } else if (currentVerse > 0) {
-          currentText += " " + part;
-        } else if (i === 0 && parts.length > 1) {
-          continue;
-        }
-      }
-    }
-
-    if (currentVerse > 0 && currentText.trim()) {
-      verses.push({
-        id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-        translationId: translationAbbr,
-        bookId,
-        chapter: chapterNum,
-        verse: currentVerse,
-        text: currentText.trim(),
-        searchVector: null,
-      });
-    }
-
-    return verses;
-  }
-
-  async function fetchApiBibleChapter(bookName: string, bookId: number, chapterNum: number, translationAbbr: string) {
-    const translationConfig = API_BIBLE_TRANSLATIONS[translationAbbr];
-    if (!translationConfig) throw new Error(`Unknown API.Bible translation: ${translationAbbr}`);
-
-    const cacheKey = `apibible-${translationAbbr}-${bookId}-${chapterNum}`;
-    const cached = apiBibleCache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
-      return cached.data;
-    }
-
-    const apiKey = process.env.API_BIBLE_KEY;
-    if (!apiKey) throw new Error("API_BIBLE_KEY not configured");
-
-    const apiBibleBookCode = API_BIBLE_BOOK_MAP[bookName];
-    if (!apiBibleBookCode) throw new Error(`No API.Bible book mapping for: ${bookName}`);
-
-    const chapterId = `${apiBibleBookCode}.${chapterNum}`;
-    const url = `https://rest.api.bible/v1/bibles/${translationConfig.bibleId}/chapters/${chapterId}?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false`;
-
-    const response = await fetch(url, {
-      headers: { "api-key": apiKey },
-    });
-    if (!response.ok) throw new Error(`API.Bible returned ${response.status}`);
-    const json = await response.json() as any;
-    const content = json.data?.content || "";
-    const verses = parseApiBibleText(content, bookId, chapterNum, translationAbbr);
-    const result = { verses };
-
-    apiBibleCache.set(cacheKey, { data: result, expires: Date.now() + 3600_000 });
-    if (apiBibleCache.size > 1000) {
-      const oldest = [...apiBibleCache.entries()].sort((a, b) => a[1].expires - b[1].expires);
-      for (let i = 0; i < 200; i++) apiBibleCache.delete(oldest[i][0]);
-    }
-
-    return result;
-  }
-
-  const nltPassageCache = new Map<string, { data: any; expires: number }>();
-
-  function stripNestedSpan(html: string, className: string): string {
-    let result = "";
-    let i = 0;
-    const openTag = `<span class="${className}"`;
-    while (i < html.length) {
-      const idx = html.toLowerCase().indexOf(openTag.toLowerCase(), i);
-      if (idx === -1) {
-        result += html.slice(i);
-        break;
-      }
-      result += html.slice(i, idx);
-      let depth = 1;
-      let j = html.indexOf(">", idx) + 1;
-      while (j < html.length && depth > 0) {
-        if (html.slice(j, j + 5).toLowerCase() === "<span") {
-          depth++;
-          j = html.indexOf(">", j) + 1;
-        } else if (html.slice(j, j + 7).toLowerCase() === "</span>") {
-          depth--;
-          j += 7;
-        } else {
-          j++;
-        }
-      }
-      i = j;
-    }
-    return result;
-  }
-
-  function parseNltHtml(html: string, bookId: number, chapterNum: number): any[] {
-    const verses: any[] = [];
-    const verseRegex = /<verse_export[^>]*bk="[^"]*"[^>]*ch="(\d+)"[^>]*vn="(\d+)"[^>]*>([\s\S]*?)<\/verse_export>/gi;
-    let match;
-    while ((match = verseRegex.exec(html)) !== null) {
-      const vn = parseInt(match[2], 10);
-      let text = match[3];
-      text = text.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, "");
-      text = text.replace(/<p class="psa-title"[^>]*>[\s\S]*?<\/p>/gi, "");
-      text = text.replace(/<p class="subhead"[^>]*>[\s\S]*?<\/p>/gi, "");
-      text = stripNestedSpan(text, "tn");
-      text = text
-        .replace(/<a class="a-tn"[^>]*>\*?<\/a>/gi, "")
-        .replace(/<span class="vn">\d+<\/span>/gi, "")
-        .replace(/<span class="s-heb">[^<]*<\/span>/gi, "")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (text) {
-        verses.push({
-          id: `nlt-${bookId}-${chapterNum}-${vn}`,
-          translationId: "NLT",
-          bookId,
-          chapter: chapterNum,
-          verse: vn,
-          text,
-          searchVector: null,
-        });
-      }
-    }
-    return verses;
-  }
-
-  async function fetchNltChapter(bookName: string, bookId: number, chapterNum: number) {
-    const cacheKey = `nlt-${bookId}-${chapterNum}`;
-    const cached = nltPassageCache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
-      return cached.data;
-    }
-
-    const apiKey = process.env.NLT_API_KEY;
-    if (!apiKey) throw new Error("NLT_API_KEY not configured");
-
-    const nltBook = NLT_BOOK_MAP[bookName] || bookName;
-    const url = `https://api.nlt.to/api/passages?ref=${encodeURIComponent(nltBook)}.${chapterNum}&key=${apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`NLT API returned ${response.status}`);
-    const html = await response.text();
-    const verses = parseNltHtml(html, bookId, chapterNum);
-    const result = { verses };
-
-    nltPassageCache.set(cacheKey, { data: result, expires: Date.now() + 3600_000 });
-    if (nltPassageCache.size > 500) {
-      const oldest = [...nltPassageCache.entries()].sort((a, b) => a[1].expires - b[1].expires);
-      for (let i = 0; i < 100; i++) nltPassageCache.delete(oldest[i][0]);
-    }
-
-    return result;
-  }
-
-  router.get("/api/passage", async (req, res) => {
+async function storeBibleCache(
+  translation: string,
+  bookId: number,
+  bookName: string,
+  chapterNum: number,
+  verses: any[],
+  sourceApi: string
+): Promise<void> {
   try {
-    const { book, chapter, translation = "KJV" } = req.query;
+    await db
+      .insert(bibleCache)
+      .values({
+        translation,
+        bookId,
+        bookName,
+        chapter: chapterNum,
+        versesJson: verses,
+        verseCount: verses.length,
+        sourceApi,
+      } as any)
+      .onConflictDoNothing();
+  } catch (err: any) {
+    console.error(`[bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
+  }
+}
+
+// Cache hooks passed to the canonical resolver so provider chapters are
+// persisted through the same bible_cache path as before.
+const chapterCacheHooks: ChapterCacheHooks = {
+  read: checkBibleCache,
+  write: storeBibleCache,
+};
+
+// ─── Resolve runtime API.Bible translation config ─────────────────────────────
+
+async function getApiBibleTranslations(
+  localBooks: Array<{ name: string; chapterCount: number }>
+): Promise<Record<string, ApiBibleTranslationConfig>> {
+  const translations: Record<string, ApiBibleTranslationConfig> = { ...API_BIBLE_TRANSLATIONS };
+
+  const apiKey = process.env.API_BIBLE_KEY;
+  if (apiKey) {
+    try {
+      const nkjvConfig = await discoverNkjvCapability(apiKey, localBooks);
+      if (nkjvConfig) {
+        translations["NKJV"] = nkjvConfig;
+      }
+    } catch {
+      // NKJV discovery failure must not affect other translations
+    }
+  }
+
+  return translations;
+}
+
+// ─── PASSAGE ─────────────────────────────────────────────────────────────────
+
+router.get("/api/passage", async (req, res) => {
+  try {
+    const { book, chapter } = req.query;
+
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
     }
-    const chapterNum = Number(chapter);
-    if (isNaN(chapterNum) || chapterNum < 1) {
-      return res.status(400).json({ error: "chapter must be a positive number" });
-    }
 
-    let bookRecord;
-    const bookNum = Number(book);
-    if (!isNaN(bookNum)) {
-      bookRecord = await db
-        .select()
-        .from(bibleBooks)
-        .where(eq(bibleBooks.id, bookNum))
-        .limit(1);
-    } else {
-      bookRecord = await db
-        .select()
-        .from(bibleBooks)
-        .where(ilike(bibleBooks.name, String(book)))
-        .limit(1);
-    }
+    const resolved = await resolveChapter({
+      book: String(book),
+      chapter: Number(chapter),
+      translation: req.query.translation as string | undefined,
+      cache: chapterCacheHooks,
+    });
 
-    if (!bookRecord || !bookRecord.length) {
-      return res.status(404).json({ error: "Book not found" });
-    }
-
-    const bookId = bookRecord[0].id;
-    const bookName = bookRecord[0].name;
-
-    const translationUpper = String(translation).toUpperCase();
-
-    if (translationUpper === "NLT") {
-      const cachedVerses = await checkBibleCache("NLT", bookId, chapterNum);
-      if (cachedVerses) {
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: cachedVerses, cached: true });
-      }
-      try {
-        const nltData = await fetchNltChapter(bookName, bookId, chapterNum);
-        if (nltData.verses.length > 0) {
-          storeBibleCache("NLT", bookId, bookName, chapterNum, nltData.verses, "nlt_api");
-        }
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: nltData.verses, cached: false });
-      } catch (err: any) {
-        console.error("NLT API error:", err?.message);
-        return res.status(502).json({ error: "Could not fetch NLT translation" });
-      }
-    }
-
-    if (API_BIBLE_TRANSLATIONS[translationUpper]) {
-      const cachedVerses = await checkBibleCache(translationUpper, bookId, chapterNum);
-      if (cachedVerses) {
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: cachedVerses, cached: true });
-      }
-      try {
-        const abData = await fetchApiBibleChapter(bookName, bookId, chapterNum, translationUpper);
-        if (!abData.verses.length) {
-          console.error(`API.Bible (${translationUpper}): 0 verses parsed for ${bookName} ${chapterNum}`);
-          return res.status(502).json({ error: `Could not parse ${translationUpper} content` });
-        }
-        storeBibleCache(translationUpper, bookId, bookName, chapterNum, abData.verses, "api_bible");
-        return res.json({ book: bookRecord[0], chapter: chapterNum, verses: abData.verses, cached: false });
-      } catch (err: any) {
-        console.error(`API.Bible (${translationUpper}) error:`, err?.message);
-        return res.status(502).json({ error: `Could not fetch ${translationUpper} translation` });
-      }
-    }
-
-    const translationRecord = await db
-      .select()
-      .from(bibleTranslations)
-      .where(eq(bibleTranslations.abbreviation, String(translation)))
-      .limit(1);
-
-    if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
-    }
-
-    const verses = await db
-      .select()
-      .from(bibleVerses)
-      .where(
-        and(
-          eq(bibleVerses.bookId, bookId),
-          eq(bibleVerses.chapter, chapterNum),
-          eq(bibleVerses.translationId, translationRecord[0].id)
-        )
-      )
-      .orderBy(bibleVerses.verse);
-
-    return res.json({ book: bookRecord[0], chapter: chapterNum, verses });
+    return res.json({
+      book: resolved.book,
+      chapter: resolved.chapter,
+      verses: resolved.verses,
+      cached: resolved.cached,
+      ...resolved.meta,
+    });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ─── BOOKS ──────────────────────────────────────────────────────────────────
+// ─── BOOKS ───────────────────────────────────────────────────────────────────
 
 router.get("/api/books", cachedResponse(300), async (_req, res) => {
   try {
@@ -426,30 +178,88 @@ router.get("/api/books", cachedResponse(300), async (_req, res) => {
   }
 });
 
-// ─── TRANSLATIONS ──────────────────────────────────────────────────────────
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
 
-router.get("/api/translations", cachedResponse(600), async (_req, res) => {
+router.get("/api/translations", async (_req, res) => {
   try {
-    const translations = await db.select().from(bibleTranslations);
+    const dbTranslations = await db.select().from(bibleTranslations);
+
+    const result: Array<{
+      id: string;
+      name: string;
+      abbreviation: string;
+      language: string;
+      source: string;
+      provider: string;
+      license: string;
+      available: boolean;
+      providerEditionId?: string;
+    }> = dbTranslations.map((t) => ({
+      id: t.id,
+      name: t.name,
+      abbreviation: t.abbreviation,
+      language: t.language,
+      source: "db",
+      provider: "local",
+      license: "public_domain",
+      available: true,
+    }));
+
     if (process.env.NLT_API_KEY) {
-      translations.push({
+      result.push({
         id: "NLT",
         name: "New Living Translation",
         abbreviation: "NLT",
         language: "en",
-      } as any);
+        source: "nlt_provider",
+        provider: "NLT API",
+        license: "NLT",
+        available: true,
+      });
     }
+
     if (process.env.API_BIBLE_KEY) {
       for (const [abbr, config] of Object.entries(API_BIBLE_TRANSLATIONS)) {
-        translations.push({
+        result.push({
           id: abbr,
           name: config.name,
           abbreviation: abbr,
           language: "en",
-        } as any);
+          source: "api_bible",
+          provider: "API.Bible",
+          license: config.license,
+          available: true,
+          providerEditionId: config.bibleId,
+        });
+      }
+
+      // NKJV: only list if account catalog confirms entitlement + full coverage
+      try {
+        const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+        const nkjvConfig = await discoverNkjvCapability(
+          process.env.API_BIBLE_KEY,
+          allBooks,
+          { forceRefresh: true },
+        );
+        if (nkjvConfig) {
+          result.push({
+            id: "NKJV",
+            name: nkjvConfig.name,
+            abbreviation: "NKJV",
+            language: "en",
+            source: "api_bible",
+            provider: "API.Bible",
+            license: nkjvConfig.license,
+            available: true,
+            providerEditionId: nkjvConfig.bibleId,
+          });
+        }
+      } catch {
+        // NKJV discovery failure must not break the translations list
       }
     }
-    return res.json(translations);
+
+    return res.json(result);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -482,59 +292,58 @@ router.get("/api/translation-for-language", async (req, res) => {
   }
 });
 
-// ─── VERSE ──────────────────────────────────────────────────────────────────
+// ─── VERSE ────────────────────────────────────────────────────────────────────
 
 router.get("/api/verse", async (req, res) => {
   try {
-    const { book, chapter, verse, translation = "KJV" } = req.query;
+    const { book, chapter, verse } = req.query;
+
     if (!book || !chapter || !verse) {
       return res.status(400).json({ error: "book, chapter, and verse are required" });
     }
 
-    const chapterNum = Number(chapter);
-    if (isNaN(chapterNum) || chapterNum < 1) {
-      return res.status(400).json({ error: "chapter must be a positive number" });
+    const verseNum = Number(verse);
+    if (isNaN(verseNum) || verseNum < 1) {
+      return res.status(400).json({ error: "verse must be a positive number" });
     }
 
-    const translationRecord = await db
-      .select()
-      .from(bibleTranslations)
-      .where(eq(bibleTranslations.abbreviation, String(translation)))
-      .limit(1);
+    // Resolve the whole chapter (works for DB, NLT, and API.Bible translations),
+    // then pick the requested verse. Preserves flat verse-field compatibility.
+    const resolved = await resolveChapter({
+      book: String(book),
+      chapter: Number(chapter),
+      translation: req.query.translation as string | undefined,
+      cache: chapterCacheHooks,
+    });
 
-    if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
-    }
+    const verseRecord = (resolved.verses as Array<{ verse: number }>).find(
+      (v) => v.verse === verseNum
+    );
 
-    const verseRecord = await db
-      .select()
-      .from(bibleVerses)
-      .where(
-        and(
-          eq(bibleVerses.bookId, Number(book)),
-          eq(bibleVerses.chapter, chapterNum),
-          eq(bibleVerses.verse, Number(verse)),
-          eq(bibleVerses.translationId, translationRecord[0].id)
-        )
-      )
-      .limit(1);
-
-    if (!verseRecord.length) {
+    if (!verseRecord) {
       return res.status(404).json({ error: "Verse not found" });
     }
 
-    return res.json(verseRecord[0]);
+    return res.json({ ...verseRecord, ...resolved.meta });
   } catch (err) {
+    if (err instanceof ScriptureError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ─── SEARCH ─────────────────────────────────────────────────────────────────
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
 
 router.get("/api/search", async (req, res) => {
   try {
-    const { q, translation = "KJV", limit: limitStr = "50" } = req.query;
+    const { q } = req.query;
+    const { abbreviation: translationAbbr, wasDefaulted } = normalizeTranslationParam(
+      req.query.translation as string | undefined
+    );
+    const limitStr = String(req.query.limit ?? "50");
+
     if (!q) {
       return res.status(400).json({ error: "q (query) is required" });
     }
@@ -542,14 +351,93 @@ router.get("/api/search", async (req, res) => {
     const query = String(q).trim();
     const resultLimit = Math.min(Number(limitStr) || 50, 100);
 
+    if (translationAbbr === "NLT") {
+      const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+      const localBookRefs: LocalBookRef[] = allBooks.map((book) => ({
+        id: book.id,
+        name: book.name,
+        abbreviation: book.abbreviation,
+      }));
+
+      try {
+        const providerResponse = await searchNlt(query, resultLimit, localBookRefs);
+        const meta = buildTranslationResponseMeta(
+          "NLT",
+          "New Living Translation",
+          "nlt_provider",
+          "NLT API"
+        );
+        return res.json({
+          results: providerResponse.results,
+          total: providerResponse.total,
+          returned: providerResponse.results.length,
+          ...meta,
+        });
+      } catch (err: any) {
+        console.error("NLT search provider error:", err?.message);
+        const statusCode =
+          err instanceof ScriptureError ? err.statusCode : (err?.statusCode ?? 502);
+        return res.status(statusCode).json({
+          error:
+            err instanceof ScriptureError
+              ? err.message
+              : "Could not search NLT translation",
+          code: err instanceof ScriptureError ? err.code : "PROVIDER_ERROR",
+          translation: "NLT",
+        });
+      }
+    }
+
+    // API.Bible provider: use provider search API
+    {
+      const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
+      const apiBibleTranslations = await getApiBibleTranslations(allBooks);
+
+      if (apiBibleTranslations[translationAbbr]) {
+        const config = apiBibleTranslations[translationAbbr];
+        try {
+          const localBookRefs: LocalBookRef[] = allBooks.map((b) => ({
+            id: b.id,
+            name: b.name,
+            abbreviation: b.abbreviation,
+          }));
+          const providerResults = await searchApiBible(
+            query,
+            translationAbbr,
+            config,
+            resultLimit,
+            localBookRefs
+          );
+          const meta = buildTranslationResponseMeta(translationAbbr, config.name, "api_bible", "API.Bible", config.bibleId);
+          return res.json({
+            results: providerResults,
+            total: providerResults.length,
+            returned: providerResults.length,
+            ...meta,
+          });
+        } catch (err: any) {
+          console.error(`API.Bible search (${translationAbbr}) error:`, err?.message);
+          const statusCode = err instanceof ScriptureError ? err.statusCode : (err?.statusCode ?? 502);
+          return res.status(statusCode).json({
+            error: `Could not search ${translationAbbr} translation`,
+            translation: translationAbbr,
+          });
+        }
+      }
+    }
+
+    // DB-backed search for corpus-backed translations.
     const translationRecord = await db
       .select()
       .from(bibleTranslations)
-      .where(eq(bibleTranslations.abbreviation, String(translation)))
+      .where(eq(bibleTranslations.abbreviation, translationAbbr))
       .limit(1);
 
     if (!translationRecord.length) {
-      return res.status(404).json({ error: "Translation not found" });
+      if (!wasDefaulted) {
+        return res.status(404).json({ error: `Translation not found: ${translationAbbr}` });
+      }
+      return res.status(404).json({ error: "Default translation (KJV) not found in database" });
     }
 
     const results = await db
@@ -585,12 +473,20 @@ router.get("/api/search", async (req, res) => {
 
     const totalCount = Number(countResult[0]?.count ?? 0);
 
-    return res.json({ results, total: totalCount, returned: results.length });
+    const meta = buildTranslationResponseMeta(
+      translationRecord[0].abbreviation,
+      translationRecord[0].name,
+      "db",
+      "local"
+    );
+    return res.json({ results, total: totalCount, returned: results.length, ...meta });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ─── SEARCH / REFERENCE ───────────────────────────────────────────────────────
 
 router.get("/api/search/reference", async (req, res) => {
   try {
@@ -601,7 +497,9 @@ router.get("/api/search/reference", async (req, res) => {
 
     const query = String(q).trim();
 
-    const refMatch = query.match(/^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/);
+    const refMatch = query.match(
+      /^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(\d+)(?::(\d+)(?:\s*-\s*(\d+))?)?$/
+    );
     if (!refMatch) {
       return res.json({ isReference: false });
     }
@@ -610,11 +508,12 @@ router.get("/api/search/reference", async (req, res) => {
     const bookName = bookPart.trim().toLowerCase();
 
     const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
-    const matchedBook = allBooks.find((b) =>
-      b.name.toLowerCase() === bookName ||
-      b.abbreviation.toLowerCase() === bookName ||
-      b.name.toLowerCase().startsWith(bookName) ||
-      b.name.toLowerCase().replace(/\s+/g, "").startsWith(bookName.replace(/\s+/g, ""))
+    const matchedBook = allBooks.find(
+      (b) =>
+        b.name.toLowerCase() === bookName ||
+        b.abbreviation.toLowerCase() === bookName ||
+        b.name.toLowerCase().startsWith(bookName) ||
+        b.name.toLowerCase().replace(/\s+/g, "").startsWith(bookName.replace(/\s+/g, ""))
     );
 
     if (!matchedBook) {
@@ -634,6 +533,8 @@ router.get("/api/search/reference", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ─── CACHE STATS ──────────────────────────────────────────────────────────────
 
 router.get("/api/bible-cache/stats", async (_req, res) => {
   try {
@@ -684,5 +585,4 @@ router.get("/api/bible-cache/stats", async (_req, res) => {
   }
 });
 
-  export default router;
-  
+export default router;

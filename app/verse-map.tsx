@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { navigateToScripture } from "@/lib/scripture-nav";
+import { useTranslation } from "@/context/TranslationContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +36,12 @@ interface CrossRef {
   bookId: number;
   chapter: number;
   verse: number;
+  // Backend-returned translation/source metadata. Reader navigation and the
+  // per-result badge use these; the active translation is only a fallback.
+  translation?: string;
+  translationName?: string;
+  source?: string;
+  provider?: string;
 }
 
 interface VerseMapData {
@@ -53,6 +60,7 @@ const SECTION_ICONS = {
 
 export default function VerseMapScreen() {
   const { theme } = useTheme();
+  const { translation } = useTranslation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     verseId: string;
@@ -74,29 +82,79 @@ export default function VerseMapScreen() {
 
   const qc = useQueryClient();
 
-  const { data: mapData, isLoading } = useQuery<VerseMapData>({
-    queryKey: [`/api/verse-map/${params.verseId}`],
-    enabled: !!params.verseId,
+  // Identity/display is derived ONLY from the canonical /api/verse response for
+  // bookId/chapter/verse in the active translation. Route params.verseId and
+  // params.verseText are NEVER trusted for display, share, or map identity.
+  const sourceBook = params.bookId || params.bookName;
+  const hasRefParams =
+    !!sourceBook && !!params.chapter && !!params.verse;
+
+  const {
+    data: canonicalVerse,
+    isLoading: sourceLoading,
+    isError: sourceError,
+  } = useQuery<{
+    id: string;
+    verse: number;
+    text: string;
+    translation: string;
+    translationName?: string;
+  }>({
+    queryKey: [
+      `/api/verse?book=${encodeURIComponent(sourceBook || "")}&chapter=${encodeURIComponent(params.chapter || "")}&verse=${encodeURIComponent(params.verse || "")}&translation=${encodeURIComponent(translation)}`,
+    ],
+    enabled: hasRefParams,
+    retry: false,
   });
+
+  // Canonical, resolver-authoritative identity/text/metadata for this screen.
+  const canonicalVerseId = canonicalVerse?.id ?? null;
+  const canonicalText = canonicalVerse?.text ?? "";
+  const canonicalReference =
+    params.verseReference ||
+    (params.bookName && params.chapter && params.verse
+      ? `${params.bookName} ${params.chapter}:${params.verse}`
+      : "");
+  const translationLabel = canonicalVerse?.translation || translation;
+  const translationName = canonicalVerse?.translationName || "";
+
+  // Translation is a distinct key dimension: the verse-map cache is isolated per
+  // translation server-side, so the GET key must carry the active translation.
+  // The key uses the CANONICAL verse id (never the route param).
+  const verseMapKey = canonicalVerseId
+    ? `/api/verse-map/${canonicalVerseId}?translation=${encodeURIComponent(translation)}`
+    : null;
+
+  const { data: mapData, isLoading: mapLoading } = useQuery<VerseMapData>({
+    queryKey: [verseMapKey as string],
+    enabled: !!verseMapKey,
+  });
+
+  const isLoading = sourceLoading || (!!verseMapKey && mapLoading);
 
   const [generateError, setGenerateError] = useState(false);
   const [wordGenTriggered, setWordGenTriggered] = useState(false);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
+      if (!canonicalVerseId) throw new Error("Verse not resolved");
       const res = await apiRequest("POST", "/api/verse-map/generate", {
-        verseId: params.verseId,
-        verseText: params.verseText,
-        verseReference: params.verseReference,
+        // Canonical id + reference only. Client verseText is NEVER sent — the
+        // backend resolves the authoritative canonical text for the active
+        // translation and verifies this id against the resolved first verse.
+        verseId: canonicalVerseId,
+        verseReference: canonicalReference,
         bookName: params.bookName,
         chapter: parseInt(params.chapter || "1"),
         verse: parseInt(params.verse || "1"),
+        translation,
       });
+      if (!res.ok) throw new Error(`Verse map generate failed: ${res.status}`);
       return res.json();
     },
     onSuccess: () => {
       setGenerateError(false);
-      qc.invalidateQueries({ queryKey: [`/api/verse-map/${params.verseId}`] });
+      if (verseMapKey) qc.invalidateQueries({ queryKey: [verseMapKey] });
     },
     onError: () => {
       setGenerateError(true);
@@ -105,25 +163,38 @@ export default function VerseMapScreen() {
 
   const wordGenMutation = useMutation({
     mutationFn: async () => {
+      if (!canonicalVerseId) throw new Error("Verse not resolved");
       const res = await apiRequest("POST", "/api/strong/generate", {
-        verseId: params.verseId,
-        verseText: params.verseText,
+        // Canonical id + reference only; never client verseText.
+        verseId: canonicalVerseId,
+        verseReference: canonicalReference,
         bookName: params.bookName,
         chapter: parseInt(params.chapter || "1"),
         verse: parseInt(params.verse || "1"),
+        translation,
       });
+      if (!res.ok) throw new Error(`Strong generate failed: ${res.status}`);
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [`/api/verse-map/${params.verseId}`] });
+      if (verseMapKey) qc.invalidateQueries({ queryKey: [verseMapKey] });
     },
   });
 
+  // When the active translation (or resolved verse) changes, the query key
+  // changes and a fresh (possibly not-yet-cached) map is fetched. Reset
+  // transient generation state so a stale error/word-gen flag from the previous
+  // translation is never shown.
   useEffect(() => {
-    if (mapData && !mapData.hasCachedData && !generateMutation.isPending) {
+    setGenerateError(false);
+    setWordGenTriggered(false);
+  }, [verseMapKey]);
+
+  useEffect(() => {
+    if (mapData && !mapData.hasCachedData && !generateMutation.isPending && canonicalVerseId) {
       generateMutation.mutate();
     }
-  }, [mapData?.hasCachedData]);
+  }, [mapData?.hasCachedData, verseMapKey]);
 
   useEffect(() => {
     if (
@@ -131,13 +202,12 @@ export default function VerseMapScreen() {
       mapData.words.length === 0 &&
       !wordGenMutation.isPending &&
       !wordGenTriggered &&
-      params.verseId &&
-      params.verseText
+      canonicalVerseId
     ) {
       setWordGenTriggered(true);
       wordGenMutation.mutate();
     }
-  }, [mapData?.words?.length, wordGenTriggered]);
+  }, [mapData?.words?.length, wordGenTriggered, canonicalVerseId]);
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -171,8 +241,8 @@ export default function VerseMapScreen() {
             onPress={() => {
               const firstWord = words[0];
               triggerShare({
-                verseReference: params.verseReference || "",
-                verseText: params.verseText || "",
+                verseReference: canonicalReference,
+                verseText: canonicalText,
                 insightLabel: "Word Study",
                 insightText: firstWord?.entry?.definition
                   ? firstWord.entry.definition.length > 180
@@ -190,12 +260,30 @@ export default function VerseMapScreen() {
         </View>
 
         <View style={[styles.verseCard, { backgroundColor: theme.backgroundCard }]}>
-          <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-            "{params.verseText}"
-          </Text>
-          <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {params.verseReference}
-          </Text>
+          {sourceLoading ? (
+            <ActivityIndicator size="small" color={theme.accent} style={{ paddingVertical: 8 }} />
+          ) : (
+            <Text style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+              {canonicalText ? `"${canonicalText}"` : "\u2014"}
+            </Text>
+          )}
+          <View style={styles.verseRefRow}>
+            <Text style={[styles.verseRef, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              {canonicalReference}
+            </Text>
+            {!!translationLabel && (
+              <View style={[styles.verseTxBadge, { backgroundColor: theme.accent + "14" }]}>
+                <Text style={[styles.verseTxBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  {translationLabel}
+                </Text>
+              </View>
+            )}
+          </View>
+          {!!translationName && (
+            <Text style={[styles.verseTxName, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+              {translationName}
+            </Text>
+          )}
         </View>
       </LinearGradient>
 
@@ -204,16 +292,30 @@ export default function VerseMapScreen() {
         contentContainerStyle={{ paddingBottom: bottomPadding + 30 }}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading && (
+        {!hasRefParams ? (
+          <View style={styles.loadingBox}>
+            <Ionicons name="alert-circle-outline" size={28} color={theme.textMuted} />
+            <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Not enough verse information to build a map.
+            </Text>
+          </View>
+        ) : sourceError ? (
+          <View style={styles.loadingBox}>
+            <Ionicons name="cloud-offline-outline" size={28} color={theme.textMuted} />
+            <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Could not load this verse in {translationLabel}. Please try again later.
+            </Text>
+          </View>
+        ) : isLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               Mapping verse...
             </Text>
           </View>
-        )}
+        ) : null}
 
-        {!isLoading && (
+        {hasRefParams && !sourceError && !isLoading && (
           <>
             <SectionHeader
               title="Original Language"
@@ -332,18 +434,32 @@ export default function VerseMapScreen() {
                     </Text>
                   </View>
                 ) : (
-                  crossRefs.map((ref, i) => (
+                  crossRefs.map((ref, i) => {
+                    // Prefer the backend-returned translation for this specific
+                    // result; the active translation is only a fallback.
+                    const refTranslation = ref.translation || translation;
+                    const badgeLabel = ref.translation || ref.translationName || translation;
+                    return (
                     <Pressable
                       key={i}
-                      onPress={() => navigateToScripture({ ref: ref.reference, bookId: ref.bookId, chapter: ref.chapter })}
+                      onPress={() => navigateToScripture({ ref: ref.reference, bookId: ref.bookId, chapter: ref.chapter }, refTranslation)}
                       style={[styles.crossRefCard, { backgroundColor: theme.backgroundCard }]}
                       testID={`crossref-${i}`}
                     >
                       <View style={styles.crossRefHeader}>
-                        <Text style={[styles.crossRefReference, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        <Text style={[styles.crossRefReference, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
                           {ref.reference}
                         </Text>
-                        <Ionicons name="chevron-forward" size={14} color={theme.textMuted} />
+                        <View style={styles.crossRefHeaderRight}>
+                          {!!badgeLabel && (
+                            <View style={[styles.crossRefTxBadge, { backgroundColor: theme.accent + "14" }]}>
+                              <Text style={[styles.crossRefTxBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                                {badgeLabel}
+                              </Text>
+                            </View>
+                          )}
+                          <Ionicons name="chevron-forward" size={14} color={theme.textMuted} />
+                        </View>
                       </View>
                       <Text style={[styles.crossRefText, { color: theme.text, fontFamily: "Lora_400Regular" }]} numberOfLines={2}>
                         "{ref.text}"
@@ -355,7 +471,8 @@ export default function VerseMapScreen() {
                         </Text>
                       </View>
                     </Pressable>
-                  ))
+                    );
+                  })
                 )}
               </View>
             )}
@@ -400,8 +517,10 @@ export default function VerseMapScreen() {
                 router.push({
                   pathname: "/study-guide" as any,
                   params: {
-                    verseReference: params.verseReference,
-                    verseText: params.verseText,
+                    // Reference-only navigation — the target screen resolves the
+                    // canonical text itself; never forward client verse text.
+                    verseReference: canonicalReference,
+                    bookId: params.bookId,
                     bookName: params.bookName,
                     chapter: params.chapter,
                     verse: params.verse,
@@ -464,7 +583,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   verseText: { fontSize: 15, lineHeight: 24, fontStyle: "italic" },
-  verseRef: { fontSize: 12, marginTop: 8 },
+  verseRefRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" },
+  verseRef: { fontSize: 12 },
+  verseTxBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  verseTxBadgeText: { fontSize: 10, letterSpacing: 0.5 },
+  verseTxName: { fontSize: 11, marginTop: 4 },
   content: { flex: 1 },
   loadingBox: {
     padding: 40,
@@ -530,7 +653,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  crossRefReference: { fontSize: 14 },
+  crossRefReference: { fontSize: 14, flexShrink: 1 },
+  crossRefHeaderRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  crossRefTxBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  crossRefTxBadgeText: { fontSize: 10, letterSpacing: 0.3 },
   crossRefText: { fontSize: 13, lineHeight: 20, fontStyle: "italic" },
   crossRefConnection: {
     flexDirection: "row",

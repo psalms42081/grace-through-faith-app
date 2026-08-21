@@ -57,7 +57,7 @@ const NT_BOOKS = [
 ];
 
 export interface WordStudyEntry {
-  strongId: string;
+  strongId: string | null;
   originalWord: string;
   translatedWord: string;
   lemma: string;
@@ -72,8 +72,9 @@ export async function generateStrongWordStudy(params: {
   bookName: string;
   chapter: number;
   verse: number;
+  translation: string;
 }): Promise<WordStudyEntry[]> {
-  const { verseText, bookName, chapter, verse } = params;
+  const { verseText, bookName, chapter, verse, translation } = params;
 
   const testament = NT_BOOKS.includes(bookName) ? "NT" : "OT";
   const lang = testament === "NT" ? "Greek" : "Hebrew";
@@ -90,23 +91,23 @@ export async function generateStrongWordStudy(params: {
       },
       {
         role: "user",
-        content: `Analyze ${bookName} ${chapter}:${verse} (KJV): "${verseText}"
+        content: `Analyze ${bookName} ${chapter}:${verse}. The English surface text below is from the ${translation} translation: "${verseText}"
 
-Analyze EVERY significant word in this verse (skip only articles like "the", "a", "an" and basic prepositions like "of", "to", "in", "for"). For each word, return Strong's-style data. Return a JSON array:
+Analyze EVERY significant word in this verse (skip only articles like "the", "a", "an" and basic prepositions like "of", "to", "in", "for"). For each word, return Strong's-style data. The English words you cite in "translatedWord" must reflect the ${translation} wording shown above. Return a JSON array:
 [
   {
     "strongId": "${langCode === "he" ? "H" : "G"}XXXX",
     "originalWord": "the ${lang} word",
-    "translatedWord": "the English word in KJV",
+    "translatedWord": "the English word as it appears in the ${translation} text above",
     "lemma": "dictionary form in ${lang} script",
     "transliteration": "romanized form",
     "pronunciation": "how to pronounce it",
     "definition": "concise definition (1-2 sentences)",
-    "kjvUsage": "common KJV translations separated by commas"
+    "kjvUsage": "the KJV translation glosses recorded for this Strong's entry, separated by commas"
   }
 ]
 
-Use real Strong's numbers when you know them. If unsure, use a plausible number with the correct prefix (H for Hebrew, G for Greek).`,
+Use real Strong's numbers only when you are confident of them (H for Hebrew, G for Greek). NEVER fabricate or guess a Strong's number: if you do not know the correct Strong's ID for a word, omit the "strongId" field entirely for that word rather than inventing one.`,
       },
     ],
     temperature: 0.5,
@@ -124,8 +125,8 @@ Use real Strong's numbers when you know them. If unsure, use a plausible number 
     throw new Error("Failed to parse AI response");
   }
 
-  return parsed.map((w: any, i: number) => ({
-    strongId: w.strongId || `${langCode === "he" ? "H" : "G"}${9000 + i}`,
+  return parsed.map((w: any) => ({
+    strongId: typeof w.strongId === "string" && /^[HG]\d+$/i.test(w.strongId.trim()) ? w.strongId.trim().toUpperCase() : null,
     originalWord: w.originalWord || w.lemma || "",
     translatedWord: w.translatedWord || "",
     lemma: w.lemma || w.originalWord || "",
@@ -325,9 +326,10 @@ const PERSONA_PROMPTS: Record<string, { identity: string; style: string }> = {
 export async function generateStudyGuideStart(params: {
   verseReference: string;
   verseText: string;
+  translation: string;
   persona?: string;
 }): Promise<string> {
-  const { verseReference, verseText, persona = "pastoral" } = params;
+  const { verseReference, verseText, translation, persona = "pastoral" } = params;
 
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
 
@@ -366,7 +368,7 @@ RESPONSE RULES:
 - Never invent facts not in the biblical text
 - You are starting in the OBSERVE phase now`;
 
-  const userPrompt = `The student wants to study this verse:\n\n"${verseText}" — ${verseReference}\n\nBegin the OBSERVE phase. Write a brief intro sentence setting up the study (1 sentence), then on a new paragraph ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text. Your response must be exactly two paragraphs separated by a blank line.`;
+  const userPrompt = `The student wants to study this verse (${translation} translation):\n\n"${verseText}" — ${verseReference}\n\nUse the ${translation} wording shown above when you quote or reference the verse. Begin the OBSERVE phase. Write a brief intro sentence setting up the study (1 sentence), then on a new paragraph ask your first observation question about this specific verse. Remember: ask ONE question only, be specific to this text. Your response must be exactly two paragraphs separated by a blank line.`;
 
   const client = createOpenAIClient();
 
@@ -385,12 +387,13 @@ RESPONSE RULES:
 export async function generateStudyGuideResponse(params: {
   verseText: string;
   verseReference: string;
+  translation: string;
   chatMessages: { role: string; content: string }[];
   targetPhase: string;
   currentPhase: string;
   persona?: string;
 }): Promise<string> {
-  const { verseText, verseReference, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
+  const { verseText, verseReference, translation, chatMessages, targetPhase, currentPhase, persona = "pastoral" } = params;
 
   const p = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.pastoral;
 
@@ -405,7 +408,7 @@ export async function generateStudyGuideResponse(params: {
     complete: "The student has completed all three phases. Give a brief, warm summary of what they discovered (1-2 key insights). End with a short prayer prompt. Keep it to 3-4 sentences total.",
   };
 
-  const systemPrompt = `${p.identity} You guide students using the Inductive Bible Study Method (Observe → Interpret → Apply). The student is studying: "${verseText}" — ${verseReference}
+  const systemPrompt = `${p.identity} You guide students using the Inductive Bible Study Method (Observe → Interpret → Apply). The student is studying (${translation} translation): "${verseText}" — ${verseReference}. When you quote or reference the verse, use the ${translation} wording shown here.
 
 ${p.style}
 
@@ -608,9 +611,10 @@ export function parseEvaluationTag(
 export async function generateStudySummary(params: {
   verseReference: string;
   verseText: string;
+  translation: string;
   userAnswers: { observe: string[]; interpret: string[]; apply: string[] };
 }): Promise<string> {
-  const { verseReference, verseText, userAnswers } = params;
+  const { verseReference, verseText, translation, userAnswers } = params;
 
   const client = createOpenAIClient();
 
@@ -627,7 +631,7 @@ Use their actual words and ideas, not generic doctrine. Keep it under 60 words t
       },
       {
         role: "user",
-        content: `Verse: "${verseText}" — ${verseReference}\n\nObserve answers: ${userAnswers.observe.join(" | ")}\n\nInterpret answers: ${userAnswers.interpret.join(" | ")}\n\nApply answers: ${userAnswers.apply.join(" | ")}`,
+        content: `Verse (${translation} translation): "${verseText}" — ${verseReference}\n\nObserve answers: ${userAnswers.observe.join(" | ")}\n\nInterpret answers: ${userAnswers.interpret.join(" | ")}\n\nApply answers: ${userAnswers.apply.join(" | ")}`,
       },
     ],
     max_tokens: 150,
@@ -636,16 +640,43 @@ Use their actual words and ideas, not generic doctrine. Keep it under 60 words t
   return completion.choices[0]?.message?.content || "Study complete. You explored this passage through observation, interpretation, and application.";
 }
 
+/**
+ * A single AI-produced cross-reference candidate. The AI returns ONLY a
+ * reference string and a short connection note. It NEVER returns Scripture
+ * text — the route resolves exact canonical text via the canonical resolver in
+ * the requested translation. This keeps verse-map generation translation-safe.
+ */
+export interface VerseMapCandidate {
+  reference: string;
+  connection: string;
+}
+
+/**
+ * Raw AI output for a verse map: candidate cross-references (reference +
+ * connection only) plus a non-Scripture context snippet. Contains NO Scripture
+ * text of any kind.
+ */
 export interface VerseMapData {
-  crossReferences: any[];
+  crossReferences: VerseMapCandidate[];
   contextSnippet: string;
 }
 
+/**
+ * Generate cross-reference candidates + a context snippet for a verse.
+ *
+ * Translation safety:
+ * - The caller passes the EXACT canonical source text and the selected
+ *   translation name (resolved server-side, never trusted from the client).
+ * - The AI must NOT quote or paraphrase Scripture. It returns only a reference
+ *   string and a short connection note per candidate. The route resolves the
+ *   actual verse text via the canonical resolver in the requested translation.
+ */
 export async function generateVerseMap(params: {
   verseText: string;
   verseReference: string;
+  translation: string;
 }): Promise<VerseMapData> {
-  const { verseText, verseReference } = params;
+  const { verseText, verseReference, translation } = params;
 
   const client = createOpenAIClient();
 
@@ -654,29 +685,33 @@ export async function generateVerseMap(params: {
     messages: [
       {
         role: "system",
-        content: withSdaLens("You are a Bible scholar providing cross-references and context for specific verses. Return valid JSON only, no markdown. Be scholarly and accurate."),
+        content: withSdaLens(
+          `You are a Bible scholar identifying cross-references and context for specific verses in the ${translation} translation. Return valid JSON only, no markdown. Be scholarly and accurate. You must NEVER quote, paraphrase, embed, or reproduce Scripture text of any verse — not the source verse and not any cross-reference. Provide only reference identifiers and connection notes.`
+        ),
       },
       {
         role: "user",
-        content: `For the verse "${verseText}" (${verseReference}), provide:
+        content: `The source verse is ${verseReference} in the ${translation} translation. Its exact canonical text has already been resolved server-side and is provided here only for your analysis — do not echo it back:
+
+"""${verseText}"""
+
+Provide:
 1. Cross-references: 8-10 related verses from across the Bible that illuminate this verse's meaning
 2. A brief historical/cultural context snippet (2-3 sentences)
 
-Return JSON:
+Return JSON in EXACTLY this shape:
 {
   "crossReferences": [
-    { "reference": "John 3:16", "text": "For God so loved...", "connection": "Both passages speak of redemptive love.", "bookId": 43, "chapter": 3, "verse": 16 }
+    { "reference": "John 3:16", "connection": "Both passages speak of redemptive love." }
   ],
   "contextSnippet": "Brief historical and cultural context..."
 }
 
-IMPORTANT rules for the "connection" field:
-- Keep each connection under 20 words
-- Describe only historical, linguistic, or literary connections
-- Do NOT make doctrinal claims or speculative theology
-- Stay concise and neutral. Example: "Both verses highlight Paul's calling as an apostle."
-
-Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66`,
+STRICT rules:
+- NEVER include any Scripture text, quotation, or paraphrase in ANY field. No "text" field. The "contextSnippet" must not quote or paraphrase any verse.
+- Each "reference" must be a standard, resolvable single-chapter reference (e.g. "John 3:16", "1 Corinthians 15:20-22", "Acts 2:29").
+- Keep each "connection" under 20 words.
+- Describe only historical, linguistic, or literary connections. Do NOT make doctrinal claims or speculative theology. Stay concise and neutral. Example: "Both verses highlight Paul's calling as an apostle."`,
       },
     ],
     max_tokens: 1500,
@@ -685,7 +720,19 @@ Use KJV text for verse quotations. Book IDs: Genesis=1, Exodus=2, Leviticus=3, N
   try {
     const raw = completion.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    const crossReferences: VerseMapCandidate[] = Array.isArray(parsed.crossReferences)
+      ? parsed.crossReferences
+          .filter((c: any) => c && typeof c.reference === "string" && c.reference.trim().length > 0)
+          .map((c: any) => ({
+            reference: String(c.reference).trim(),
+            connection: typeof c.connection === "string" ? c.connection.trim() : "",
+          }))
+      : [];
+    return {
+      crossReferences,
+      contextSnippet: typeof parsed.contextSnippet === "string" ? parsed.contextSnippet : "",
+    };
   } catch {
     return { crossReferences: [], contextSnippet: "Context information unavailable." };
   }
@@ -1257,17 +1304,27 @@ Respond with JSON: {"response": "your thoughtful reply", "followUp": "optional f
   }
 }
 
-export interface SemanticSearchResult {
+/**
+ * A single AI-suggested semantic search candidate.
+ *
+ * The AI selects WHICH passage is relevant (reference + relevance rationale)
+ * but NEVER supplies Scripture wording. The server re-resolves the exact
+ * canonical text for the requested translation via resolveReference. There is
+ * intentionally no `text` field here — any AI-produced text must never be shown.
+ */
+export interface SemanticSearchCandidate {
   reference: string;
   bookId: number;
   chapter: number;
   verseStart: number;
   verseEnd: number | null;
-  text: string;
   relevance: string;
 }
 
-export async function generateSemanticSearch(query: string): Promise<SemanticSearchResult[]> {
+export async function generateSemanticSearch(
+  query: string,
+  translation: string,
+): Promise<SemanticSearchCandidate[]> {
   const openai = createOpenAIClient();
 
   const completion = await openai.chat.completions.create({
@@ -1275,7 +1332,9 @@ export async function generateSemanticSearch(query: string): Promise<SemanticSea
     messages: [
       {
         role: "system",
-        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, find the most relevant Bible passages. Return 8-12 results ranked by relevance.
+        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, identify the most relevant Bible passages. Return 8-12 results ranked by relevance.
+
+The reader is using the ${translation} translation. Do NOT quote, paraphrase, or reproduce any Scripture wording. Only identify WHICH passage is relevant. The application resolves the exact ${translation} text itself; any verse text you produce would be discarded.
 
 You serve Adventist believers, so when interpreting queries:
 - Prioritize passages that align with SDA doctrinal understanding (e.g., for "what happens when we die," include passages supporting soul sleep like Ecclesiastes 9:5, Psalms 115:17, John 11:11-14)
@@ -1284,7 +1343,7 @@ You serve Adventist believers, so when interpreting queries:
 - Include prophetic passages from Daniel and Revelation when relevant to the query
 - Never select passages in a way that supports Sunday sacredness, eternal hellfire, or the immortal soul doctrine
 
-Return valid JSON only, no markdown:
+Return valid JSON only, no markdown. Do NOT include verse text of any kind:
 [
   {
     "reference": "John 3:16",
@@ -1292,14 +1351,13 @@ Return valid JSON only, no markdown:
     "chapter": 3,
     "verseStart": 16,
     "verseEnd": null,
-    "text": "For God so loved the world...",
     "relevance": "Brief explanation of why this passage is relevant"
   }
 ]
 
 Book IDs: Genesis=1, Exodus=2, Leviticus=3, Numbers=4, Deuteronomy=5, Joshua=6, Judges=7, Ruth=8, 1Samuel=9, 2Samuel=10, 1Kings=11, 2Kings=12, 1Chronicles=13, 2Chronicles=14, Ezra=15, Nehemiah=16, Esther=17, Job=18, Psalms=19, Proverbs=20, Ecclesiastes=21, SongOfSolomon=22, Isaiah=23, Jeremiah=24, Lamentations=25, Ezekiel=26, Daniel=27, Hosea=28, Joel=29, Amos=30, Obadiah=31, Jonah=32, Micah=33, Nahum=34, Habakkuk=35, Zephaniah=36, Haggai=37, Zechariah=38, Malachi=39, Matthew=40, Mark=41, Luke=42, John=43, Acts=44, Romans=45, 1Corinthians=46, 2Corinthians=47, Galatians=48, Ephesians=49, Philippians=50, Colossians=51, 1Thessalonians=52, 2Thessalonians=53, 1Timothy=54, 2Timothy=55, Titus=56, Philemon=57, Hebrews=58, James=59, 1Peter=60, 2Peter=61, 1John=62, 2John=63, 3John=64, Jude=65, Revelation=66
 
-Use KJV text for verse quotations. Include a mix of well-known and lesser-known passages. Provide the full verse text when possible.`),
+Include a mix of well-known and lesser-known passages. Return references only — never Scripture text.`),
       },
       {
         role: "user",
@@ -1307,7 +1365,7 @@ Use KJV text for verse quotations. Include a mix of well-known and lesser-known 
       },
     ],
     temperature: 0.5,
-    max_tokens: 3000,
+    max_tokens: 2000,
   });
 
   const raw = completion.choices[0]?.message?.content ?? "[]";
@@ -1321,13 +1379,13 @@ Use KJV text for verse quotations. Include a mix of well-known and lesser-known 
     throw new Error("Failed to parse AI response");
   }
 
+  // Never carry AI-produced verse text: only reference + relevance survive.
   return parsed.map((r: any) => ({
     reference: r.reference || "",
     bookId: r.bookId || 1,
     chapter: r.chapter || 1,
     verseStart: r.verseStart || 1,
     verseEnd: r.verseEnd || null,
-    text: r.text || "",
     relevance: r.relevance || "",
   }));
 }
@@ -1580,28 +1638,45 @@ Return JSON:
   };
 }
 
+/**
+ * Generate a short commentary explanation of a passage.
+ *
+ * Translation safety:
+ * - The caller passes the EXACT canonical passage text plus the selected
+ *   translation name (resolved server-side, never trusted from the client).
+ * - The output is COMMENTARY ONLY. The AI must not quote, paraphrase, or embed
+ *   Scripture text — the client already has the canonical verse text. This
+ *   avoids emitting AI-produced (mislabeled) Scripture.
+ */
 export async function generateVerseExplanation(params: {
   reference: string;
+  verseText: string;
+  translation: string;
   lessonContext?: string;
 }): Promise<string> {
-  const { reference, lessonContext } = params;
+  const { reference, verseText, translation, lessonContext } = params;
   const openai = createOpenAIClient();
 
-  const systemPrompt = `You are a Seventh-day Adventist biblical scholar providing clear, faithful explanations of Scripture passages. Your explanations must:
+  const systemPrompt = `You are a Seventh-day Adventist biblical scholar providing clear, faithful COMMENTARY on Scripture passages (from the ${translation} translation). Your explanations must:
 
 1. Be SHORT (3-5 sentences maximum). Do not write essays.
 2. Be grounded in the biblical text itself — explain what the passage says and means in context.
 3. Reflect Adventist theological understanding where relevant (sanctuary, Sabbath, state of the dead, Great Controversy, second coming, health message, etc.) but only when the passage naturally touches those themes. Do not force Adventist distinctives into every answer.
 4. Use clear, lay-friendly language. No academic jargon.
 5. Be reverent and measured in tone — not sensational, not polemical, not devotional fluff.
-6. Reference other Scripture passages briefly when they illuminate the text, but keep cross-references to 1-2 at most.
+6. You MAY name other Scripture references (e.g. "compare Romans 5") but keep them to 1-2 at most.
 7. Never quote or embed Ellen G. White text. You may mention that Adventist thought on a topic can be explored further, but never present EGW as equal to Scripture.
 8. Never speculate beyond what the text says. If a passage is debated, present the Adventist reading calmly without attacking other positions.
-9. Do not use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.`;
+9. Do not use emoji, markdown formatting, bullet points, or numbered lists. Write in flowing prose.
+10. CRITICAL: NEVER quote, paraphrase, or reproduce the Scripture text itself. The reader already sees the verse. Produce COMMENTARY only — describe meaning and context without echoing the wording of this or any other verse.`;
 
-  const userPrompt = lessonContext
-    ? `Explain this passage: ${reference}\n\nThis explanation is being requested within a lesson about: ${lessonContext}`
-    : `Explain this passage: ${reference}`;
+  const contextLine = lessonContext
+    ? `\n\nThis explanation is being requested within a lesson about: ${lessonContext}`
+    : "";
+
+  const userPrompt = `Provide commentary on ${reference} (${translation}). The exact canonical text has already been resolved server-side and is provided here only for your analysis — do not echo or quote it back:
+
+"""${verseText}"""${contextLine}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",

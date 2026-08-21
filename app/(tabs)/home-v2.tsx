@@ -21,6 +21,8 @@ import HeroCard, { HeroTab } from "@/components/home-v2/HeroCard";
 import SSGradientCard from "@/components/home-v2/SSGradientCard";
 import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
+import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
+import { apiRequest } from "@/lib/query-client";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -38,6 +40,7 @@ export default function HomeV2Screen() {
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
   const scrollRef = useRef<ScrollView>(null);
+  const { translation } = useAppTranslation();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -57,23 +60,88 @@ export default function HomeV2Screen() {
     return first ? `${g}, ${first}` : g;
   }, [t, user?.displayName]);
 
-  const verse = useMemo(() => getTodaysVerse(), []);
   const reflection = useMemo(() => getTodaysReflection(), []);
+
+  // Today's VOTD reference ONLY — the reference (e.g. "John 3:16") is safe to
+  // use statically because it is translation-agnostic. The verse TEXT must
+  // always come from the canonical API response for the active translation.
+  // We never render the static KJV text under a non-KJV label.
+  const votdReference = useMemo(() => getTodaysVerse().reference, []);
 
   const { data: books } = useQuery<{ id: number; name: string }[]>({
     queryKey: ["/api/books"],
   });
-  const votdParsed = useMemo(() => {
-    const bookName = verse.reference.replace(/\s+\d+.*$/, "");
-    const match = verse.reference.match(/(\d+):\d+$/);
-    const chapter = match ? parseInt(match[1], 10) : undefined;
-    const book = books?.find((b) => b.name.toLowerCase() === bookName.toLowerCase());
-    return { bookId: book?.id, chapterNumber: chapter };
-  }, [verse.reference, books]);
 
-  const { data: dailySignpost } = useQuery<{ id: string; title: string; description: string }>({
-    queryKey: ["/api/signposts/daily"],
+  // Parse book/chapter/verse from the reference string (e.g. "John 3:16").
+  const votdParsedRef = useMemo(() => {
+    const bookName = votdReference.replace(/\s+\d+.*$/, "");
+    const chapterMatch = votdReference.match(/(\d+):/);
+    const verseMatch = votdReference.match(/:(\d+)/);
+    const chapter = chapterMatch ? parseInt(chapterMatch[1], 10) : 1;
+    const verse = verseMatch ? parseInt(verseMatch[1], 10) : 1;
+    const book = books?.find((b) => b.name.toLowerCase() === bookName.toLowerCase());
+    return { bookId: book?.id, chapterNumber: chapter, verseNumber: verse, bookName };
+  }, [votdReference, books]);
+
+  // Fetch the VOTD verse in the active translation.
+  const canFetchVotd = !!votdParsedRef.bookId;
+  const {
+    data: votdVerseData,
+    isLoading: votdIsLoading,
+    isError: votdIsError,
+  } = useQuery<{ id: string; text: string; translation?: string }>({
+    queryKey: [
+      "/api/verse",
+      {
+        book: votdParsedRef.bookId,
+        chapter: votdParsedRef.chapterNumber,
+        verse: votdParsedRef.verseNumber,
+        translation,
+      },
+    ],
+    queryFn: async () => {
+      const url = `/api/verse?book=${votdParsedRef.bookId}&chapter=${votdParsedRef.chapterNumber}&verse=${votdParsedRef.verseNumber}&translation=${encodeURIComponent(translation)}`;
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
+    enabled: canFetchVotd,
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  // Build the verse object for HeroCard. Text is ONLY ever the canonical API
+  // response for `translation`. Until then we pass empty text so HeroCard shows
+  // its loading / unavailable state — never static text under another label.
+  const verse = useMemo(
+    () => ({ text: votdVerseData?.text ?? "", reference: votdReference }),
+    [votdVerseData?.text, votdReference]
+  );
+
+  // Loading while: books not yet resolved, OR the verse query is in flight.
+  const verseLoading = !canFetchVotd || votdIsLoading;
+  // Error state surfaced to HeroCard so it can show an explicit message
+  // rather than a blank card once loading finishes with no text.
+  const verseUnavailable = canFetchVotd && !votdIsLoading && (votdIsError || !votdVerseData?.text);
+
+  const { data: dailySignpost } = useQuery<{
+    id: string;
+    title: string;
+    description: string;
+    translation: string;
+    questions?: Array<{
+      question: string;
+      verses: Array<{ ref: string; text: string; translation: string }>;
+      commentary?: string;
+    }>;
+  }>({
+    queryKey: ["/api/signposts/daily", translation],
     staleTime: 1000 * 60 * 60 * 24,
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/signposts/daily?translation=${encodeURIComponent(translation)}`,
+      );
+      return res.json();
+    },
   });
 
   const { data: todayData } = useQuery<TodayResponse>({
@@ -161,11 +229,14 @@ export default function HomeV2Screen() {
         activeTab={heroTab}
         onTabChange={setHeroTab}
         verse={verse}
-        bookId={votdParsed.bookId}
-        chapterNumber={votdParsed.chapterNumber}
+        bookId={votdParsedRef.bookId}
+        chapterNumber={votdParsedRef.chapterNumber}
         userId={userId}
         signpost={dailySignpost}
         reflection={reflection}
+        translation={translation}
+        verseLoading={verseLoading}
+        verseUnavailable={verseUnavailable}
       />
 
       <SSGradientCard

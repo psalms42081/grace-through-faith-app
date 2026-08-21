@@ -53,7 +53,7 @@ export const readingHistorySchema = z.object({
   bookId: z.union([z.number().int().positive(), z.string().min(1)]),
   bookName: z.string().min(1, "bookName is required"),
   chapter: z.union([z.number().int().positive(), z.string().min(1)]),
-  translation: z.string().optional(),
+  translation: z.string().trim().min(1, "translation is required"),
 });
 
 export const trackActivitySchema = z.object({

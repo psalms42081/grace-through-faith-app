@@ -19,6 +19,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContentLanguage } from "@/contexts/ContentLanguageContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { useStudyDepth, StudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
@@ -57,8 +58,11 @@ function extractReferences(content: string): string[] {
 }
 
 function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; lessonTitle: string; theme: any }) {
+  const { translation } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
+  // Translation metadata returned by the backend alongside the commentary.
+  const [explTranslation, setExplTranslation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -74,9 +78,14 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
       const res = await apiRequest("POST", "/api/verses/explain", {
         reference,
         lessonContext: lessonTitle,
+        // Send the active translation so the commentary is grounded in the same
+        // edition the reader is using.
+        translation,
       });
       const data = await res.json();
       setExplanation(data.explanation);
+      // Prefer the backend-returned translation metadata; fall back to active.
+      setExplTranslation(data.translation || data.translationName || translation);
     } catch {
       setError(true);
     } finally {
@@ -127,9 +136,19 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
             </Text>
           )}
           {explanation && !loading && (
-            <Text style={[evStyles.explanationText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
-              {explanation}
-            </Text>
+            <>
+              {!!explTranslation && (
+                <View style={evStyles.explTxRow}>
+                  <Ionicons name="book-outline" size={11} color={theme.accent} />
+                  <Text style={[evStyles.explTxLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Commentary · {explTranslation}
+                  </Text>
+                </View>
+              )}
+              <Text style={[evStyles.explanationText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
+                {explanation}
+              </Text>
+            </>
           )}
         </View>
       )}
@@ -189,6 +208,16 @@ const evStyles = StyleSheet.create({
   explanationText: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  explTxRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    marginBottom: 8,
+  },
+  explTxLabel: {
+    fontSize: 11,
+    letterSpacing: 0.3,
   },
   sectionWrapper: {
     marginTop: 16,

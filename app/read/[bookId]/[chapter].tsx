@@ -608,15 +608,26 @@ export default function VerseReaderScreen() {
   const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
-  const { data: availableTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string }[]>({
+  const { data: availableTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string; available?: boolean }[]>({
     queryKey: ["/api/translations"],
   });
+  // Authoritative catalog wins once loaded; only entries with available !== false
+  // are offered in pickers. Static fallback is public-domain only (never NKJV).
   const translationList = availableTranslations
-    ? availableTranslations.map((t) => t.abbreviation)
+    ? availableTranslations.filter((t) => t.available !== false).map((t) => t.abbreviation)
     : DEFAULT_TRANSLATIONS;
+  const catalogLoaded = !!availableTranslations;
 
-  const resolvedTx = translationList.includes(txParam as string) ? (txParam as string) : (translationList.includes(globalTranslation) ? globalTranslation : "KJV");
-  const [translation, setTranslationLocal] = useState<Translation>(resolvedTx);
+  // Normalize the requested code (trim + uppercase) and keep it AS the request
+  // identity. We never silently substitute KJV for an explicit URL translation
+  // or the active global translation — the backend must return an explicit
+  // translation/passage error so we can render an "unavailable" state instead
+  // of relabeling another edition's text.
+  const normalizeCode = useCallback((t: string | null | undefined): string => {
+    return (t ?? "").trim().toUpperCase();
+  }, []);
+  const requestedTx = normalizeCode(txParam) || normalizeCode(globalTranslation) || "KJV";
+  const [translation, setTranslationLocal] = useState<Translation>(requestedTx);
   const userOverrodeTranslation = useRef(false);
 
   useEffect(() => {
@@ -625,12 +636,21 @@ export default function VerseReaderScreen() {
 
   useEffect(() => {
     if (userOverrodeTranslation.current) return;
-    if (txParam && translationList.includes(txParam) && txParam !== translation) {
-      setTranslationLocal(txParam);
-    } else if (!txParam && translationList.includes(globalTranslation) && globalTranslation !== translation) {
-      setTranslationLocal(globalTranslation);
+    const normalizedParam = normalizeCode(txParam);
+    const normalizedGlobal = normalizeCode(globalTranslation);
+    if (normalizedParam && normalizedParam !== translation) {
+      // Honor the explicit URL translation as-is (no availability filtering);
+      // the passage query will surface an explicit error if it is not licensed.
+      setTranslationLocal(normalizedParam);
+    } else if (!normalizedParam && normalizedGlobal && normalizedGlobal !== translation) {
+      setTranslationLocal(normalizedGlobal);
     }
-  }, [txParam, globalTranslation, translationList]);
+  }, [txParam, globalTranslation, translation, normalizeCode]);
+
+  // Whether the resolved translation is absent from the authoritative catalog.
+  // Used (together with a passage error) to render a "not licensed" state
+  // instead of relabeling substituted text. Global selection is NOT changed.
+  const translationUnavailable = catalogLoaded && !translationList.includes(translation);
 
   const setTranslation = useCallback((t: Translation) => {
     userOverrodeTranslation.current = true;
@@ -676,12 +696,16 @@ export default function VerseReaderScreen() {
 
   const isSideBySide = windowWidth >= 600;
 
-  const { data: splitData } = useQuery<PassageResponse>({
+  const { data: splitData, error: splitError } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${splitTranslation}`],
     enabled: splitMode,
   });
 
-  const splitVerses = splitData?.verses ?? [];
+  // If the stored split translation vanished from the authoritative catalog, do
+  // NOT render another translation's text under its label — flag it unavailable.
+  const splitUnavailable = catalogLoaded && !translationList.includes(splitTranslation);
+  const splitLoadFailed = !!splitError || splitUnavailable;
+  const splitVerses = splitLoadFailed ? [] : (splitData?.verses ?? []);
 
   const handlePrimaryScroll = useCallback((event: any) => {
     if (isSyncingScroll.current) return;
@@ -904,7 +928,7 @@ export default function VerseReaderScreen() {
 
   useEffect(() => {
     if (!data?.verses?.length || !bookId || !chapter) return;
-    const prefetchKey = `${bookId}-${chapter}`;
+    const prefetchKey = `${bookId}-${chapter}-${translation}`;
     if (prefetchedRef.current === prefetchKey) return;
     prefetchedRef.current = prefetchKey;
 
@@ -917,10 +941,19 @@ export default function VerseReaderScreen() {
     const prefetchCount = Math.min(5, vrs.length);
     for (let i = 0; i < prefetchCount; i++) {
       const v = vrs[i];
-      queryClient.prefetchQuery({ queryKey: [`/api/verse-map/${v.id}`] });
-      queryClient.prefetchQuery({ queryKey: [`/api/strong/verse/${v.id}`] });
+      const encodedTranslation = encodeURIComponent(translation);
+      queryClient.prefetchQuery({
+        queryKey: [
+          `/api/verse-map/${v.id}?translation=${encodedTranslation}`,
+        ],
+      });
+      queryClient.prefetchQuery({
+        queryKey: [
+          `/api/strong/verse/${v.id}?translation=${encodedTranslation}`,
+        ],
+      });
     }
-  }, [data?.verses, bookId, chapter]);
+  }, [data?.verses, bookId, chapter, translation]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
@@ -1093,15 +1126,39 @@ export default function VerseReaderScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={RV2_INK_MUTED} />
           </View>
-        ) : error ? (
+        ) : (translationUnavailable || error) ? (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={40} color={theme.error} />
+            <Ionicons
+              name={translationUnavailable ? "lock-closed-outline" : "alert-circle-outline"}
+              size={40}
+              color={theme.error}
+            />
             <Text style={[styles.errorText, { color: textColor, fontFamily: "Lora_500Medium" }]}>
-              Unable to load passage
+              {translationUnavailable ? `${translation} unavailable` : "Unable to load passage"}
             </Text>
             <Text style={[styles.errorSub, { color: isDark ? DARK_MUTED : "#999", fontFamily: "Inter_400Regular" }]}>
-              {(error as Error).message}
+              {translationUnavailable
+                ? "This translation isn't licensed or available. Choose another translation to continue reading."
+                : (error as Error).message}
             </Text>
+            {catalogLoaded && translationList.length > 0 && (
+              <View style={{ marginTop: 20, alignSelf: "stretch", paddingHorizontal: 24, gap: 8 }}>
+                {translationList.map((t) => (
+                  <Pressable
+                    key={t}
+                    onPress={() => setTranslation(t)}
+                    style={[styles.translationOption, { borderRadius: 8, backgroundColor: isDark ? "#141416" : LIGHT_SURFACE }]}
+                  >
+                    <Text style={[styles.translationOptionText, { color: textColor, fontFamily: "Inter_600SemiBold" }]}>
+                      {t}
+                    </Text>
+                    <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
+                      {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
         ) : (
           <>
@@ -1153,7 +1210,7 @@ export default function VerseReaderScreen() {
                           {t}
                         </Text>
                         <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                          {TRANSLATION_LABELS[t] || t}
+                          {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
                         </Text>
                       </Pressable>
                     );
@@ -1332,7 +1389,7 @@ export default function VerseReaderScreen() {
                               {t}
                             </Text>
                             <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                              {TRANSLATION_LABELS[t] || t}
+                              {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
                             </Text>
                           </Pressable>
                         );
@@ -1352,16 +1409,30 @@ export default function VerseReaderScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <View style={styles.proseContainer}>
-                    {splitVerses.map((v) => (
-                      <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
-                        <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                          <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
-                            {v.verse}{" "}
-                          </Text>
-                          {v.text}
+                    {splitLoadFailed ? (
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="lock-closed-outline" size={28} color={theme.error} />
+                        <Text style={[styles.errorText, { color: textColor, fontFamily: "Lora_500Medium" }]}>
+                          {splitTranslation} unavailable
+                        </Text>
+                        <Text style={[styles.errorSub, { color: isDark ? DARK_MUTED : "#999", fontFamily: "Inter_400Regular" }]}>
+                          {splitUnavailable
+                            ? "This translation isn't licensed or available. Choose another translation."
+                            : (splitError as Error)?.message || "Could not load this translation."}
                         </Text>
                       </View>
-                    ))}
+                    ) : (
+                      splitVerses.map((v) => (
+                        <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
+                          <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
+                            <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
+                              {v.verse}{" "}
+                            </Text>
+                            {v.text}
+                          </Text>
+                        </View>
+                      ))
+                    )}
                   </View>
                 </ScrollView>
               </View>

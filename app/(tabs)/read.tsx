@@ -40,11 +40,13 @@ export default function ReadScreen() {
   const { translation, setTranslation } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
 
-  const { data: apiTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string }[]>({
+  const { data: apiTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string; available?: boolean }[]>({
     queryKey: ["/api/translations"],
   });
+  // Authoritative catalog wins once loaded; only entries with available !== false
+  // are selectable. Static fallback is public-domain only (never NKJV).
   const TRANSLATIONS = apiTranslations
-    ? apiTranslations.map((t) => ({ id: t.abbreviation, name: t.name }))
+    ? apiTranslations.filter((t) => t.available !== false).map((t) => ({ id: t.abbreviation, name: t.name }))
     : DEFAULT_TRANSLATIONS;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;

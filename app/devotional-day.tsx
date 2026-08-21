@@ -25,6 +25,7 @@ import * as Haptics from "expo-haptics";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface TodayResponse {
   today: DayContent | null;
@@ -293,6 +294,7 @@ export default function DevotionalDayScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { depth, setDepth } = useStudyDepth();
+  const { translation } = useTranslation();
 
   useEffect(() => {
     if (depthParam === "quick" || depthParam === "standard" || depthParam === "deep") {
@@ -322,7 +324,7 @@ export default function DevotionalDayScreen() {
   const enrollment = todayData?.enrollment;
 
   const passageQuery = day?.bookId && day?.chapter
-    ? `/api/passage?book=${day.bookId}&chapter=${day.chapter}&translation=KJV`
+    ? `/api/passage?book=${day.bookId}&chapter=${day.chapter}&translation=${translation}`
     : null;
 
   const { data: passageData } = useQuery<PassageResponse>({
@@ -466,6 +468,15 @@ export default function DevotionalDayScreen() {
               <Text style={[styles.cardLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                 Scripture Reading
               </Text>
+              {day.passageLabel ? (
+                <Text style={[styles.cardLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginLeft: 4 }]}>
+                  {day.passageLabel} · {translation}
+                </Text>
+              ) : (
+                <Text style={[styles.cardLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginLeft: 4 }]}>
+                  {translation}
+                </Text>
+              )}
             </View>
             {filteredVerses.map((v) => (
               <View key={v.id} style={styles.verseLine}>

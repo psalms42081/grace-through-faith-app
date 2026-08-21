@@ -54,8 +54,8 @@ export default function RotatingPanel({
   const resumeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panXRef = useRef(0);
 
-  const todayTouchpoint = touchpoints.length > 0 ? touchpoints[getDayIndex(touchpoints.length)] : { title: "God's Love", excerpt: "For God so loved the world that He gave His only begotten Son." };
-  const todayDevotional = devotionals.length > 0 ? devotionals[getDayIndex(devotionals.length)] : { thought: "Draw near to God, and He will draw near to you.", source: "James 4:8" };
+  const todayTouchpoint = touchpoints.length > 0 ? touchpoints[getDayIndex(touchpoints.length)] : { title: "God's Love", excerpt: "A signpost for today's walk with God." };
+  const todayDevotional = devotionals.length > 0 ? devotionals[getDayIndex(devotionals.length)] : { thought: "Take a quiet moment to notice God's presence today.", source: "Daily Reflection" };
 
   const startAutoRotate = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);

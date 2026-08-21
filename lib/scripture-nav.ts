@@ -11,21 +11,28 @@ export function parseVerseFromRef(ref: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
-export function navigateToScripture(scripture: ScriptureRef): void {
+export function navigateToScripture(scripture: ScriptureRef, translation?: string): void {
   const verse = parseVerseFromRef(scripture.ref);
-  const url = verse
+  let url = verse
     ? `/read/${scripture.bookId}/${scripture.chapter}?verse=${verse}`
     : `/read/${scripture.bookId}/${scripture.chapter}`;
+  if (translation) {
+    url += (url.includes("?") ? "&" : "?") + `translation=${encodeURIComponent(translation)}`;
+  }
   router.push(url as any);
 }
 
 export function navigateToScriptureByParts(
   bookId: number,
   chapter: number,
-  verse?: number | string
+  verse?: number | string,
+  translation?: string
 ): void {
-  const url = verse
+  let url = verse
     ? `/read/${bookId}/${chapter}?verse=${verse}`
     : `/read/${bookId}/${chapter}`;
+  if (translation) {
+    url += (url.includes("?") ? "&" : "?") + `translation=${encodeURIComponent(translation)}`;
+  }
   router.push(url as any);
 }

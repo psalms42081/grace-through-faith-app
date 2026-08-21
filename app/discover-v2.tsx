@@ -22,6 +22,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HV2, F } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/context/TranslationContext";
+import { apiRequest } from "@/lib/query-client";
 
 // ---- Screen tokens ----
 const D = {
@@ -94,16 +96,23 @@ const WATCH_RAIL: { id: string; title: string; source: string; minutes: number; 
   { id: "bp-justice", title: "Justice", source: "BibleProject", minutes: 6, youtubeId: "A14THPoc4-4", tint: "#E4E9F5", ink: "#3A4E8C" }, // 5:48 → 6
 ];
 
-// Search constants — parity with interim search.tsx (do-not-regress §A.5).
-const TRANSLATIONS = ["KJV", "ASV", "WEB"] as const;
-type Translation = (typeof TRANSLATIONS)[number];
+// Translations are fetched live from /api/translations — we never hardcode a
+// fixed list (that would risk showing an entry the backend cannot serve, or
+// inventing one like NKJV that requires entitlement verification).
+interface TranslationOption {
+  id: string;
+  abbreviation: string;
+  name?: string;
+  available?: boolean;
+}
+
 const QUICK_REFS = [
-  { label: "John 3:16", subtitle: "For God so loved..." },
-  { label: "Psalm 23", subtitle: "The Lord is my shepherd..." },
-  { label: "Romans 8:28", subtitle: "All things work together..." },
-  { label: "Genesis 1", subtitle: "In the beginning..." },
-  { label: "Philippians 4:13", subtitle: "I can do all things..." },
-  { label: "Jeremiah 29:11", subtitle: "Plans to prosper you..." },
+  { label: "John 3:16", subtitle: "Popular passage" },
+  { label: "Psalm 23", subtitle: "Popular chapter" },
+  { label: "Romans 8:28", subtitle: "Popular passage" },
+  { label: "Genesis 1", subtitle: "Popular chapter" },
+  { label: "Philippians 4:13", subtitle: "Popular passage" },
+  { label: "Jeremiah 29:11", subtitle: "Popular passage" },
 ];
 
 interface SearchResult {
@@ -134,16 +143,56 @@ export default function DiscoverV2Screen() {
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [translation, setTranslation] = useState<Translation>("KJV");
+  const { translation: contextTranslation, setTranslation: setContextTranslation } = useTranslation();
   const inputRef = useRef<TextInput>(null);
 
+  // ---- Available translations (live) ----
+  const { data: translationsData } = useQuery<TranslationOption[]>({
+    queryKey: ["/api/translations"],
+    staleTime: 1000 * 60 * 10,
+  });
+  // Only translations the backend reports as available may be selected.
+  const availableTranslations = useMemo(
+    () =>
+      (translationsData ?? [])
+        .filter((t) => t.available !== false && !!t.abbreviation)
+        .map((t) => t.abbreviation.toUpperCase()),
+    [translationsData]
+  );
+  // Is the globally-selected translation actually serveable right now?
+  const selectedIsAvailable =
+    availableTranslations.length === 0 // list not loaded yet: don't block
+      ? true
+      : availableTranslations.includes(contextTranslation.toUpperCase());
+  // The translation we actually query with. Keep the global value if available;
+  // otherwise DO NOT silently switch — we gate search below with an explicit
+  // unavailable state instead.
+  const translation = contextTranslation.toUpperCase();
+  const setTranslation = (t: string) => setContextTranslation(t);
+
   const { data: refData } = useQuery<ReferenceResponse>({
-    queryKey: [`/api/search/reference?q=${encodeURIComponent(activeQuery)}`],
+    queryKey: ["/api/search/reference", { q: activeQuery }],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/search/reference?q=${encodeURIComponent(activeQuery)}`
+      );
+      return res.json();
+    },
     enabled: activeQuery.length > 0,
   });
   const { data: searchData, isLoading: searchLoading, error: searchError } = useQuery<SearchResponse>({
-    queryKey: [`/api/search?q=${encodeURIComponent(activeQuery)}&translation=${translation}&limit=50`],
-    enabled: activeQuery.length > 0 && !refData?.isReference,
+    // translation is a distinct key element so results refetch when it changes
+    queryKey: ["/api/search", { q: activeQuery, translation, limit: 50 }],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/search?q=${encodeURIComponent(activeQuery)}&translation=${encodeURIComponent(translation)}&limit=50`
+      );
+      return res.json();
+    },
+    // Never fire result requests for an unavailable translation.
+    enabled: activeQuery.length > 0 && !refData?.isReference && selectedIsAvailable,
   });
 
   // ---- Content data ----
@@ -310,9 +359,9 @@ export default function DiscoverV2Screen() {
         {/* ---- Search mode: results replace the browse content ---- */}
         {searching ? (
           <View style={s.searchResults}>
-            {/* Translation scope pills (parity with interim screen) */}
+            {/* Translation scope pills — only backend-available entries. */}
             <View style={s.translationRow}>
-              {TRANSLATIONS.map((t) => {
+              {availableTranslations.map((t) => {
                 const active = translation === t;
                 return (
                   <Pressable
@@ -332,7 +381,11 @@ export default function DiscoverV2Screen() {
               </Pressable>
             </View>
 
-            {refData?.isReference && refData.bookId ? (
+            {!selectedIsAvailable ? (
+              <Text style={s.searchEmpty}>
+                {translation} is not available right now. Choose another translation above to search.
+              </Text>
+            ) : refData?.isReference && refData.bookId ? (
               <Pressable
                 onPress={() => router.push(`/read/${refData.bookId}/${refData.chapter}?translation=${translation}` as any)}
                 style={({ pressed }) => [s.refCard, { opacity: pressed ? 0.85 : 1 }]}
