@@ -11,3 +11,4 @@
 - [Web preview quirks](gtf-web-preview-quirks.md) — blank appPreview screenshots = onboarding gate/timing, not a broken app; web-only CORS on API calls is pre-existing noise. Use the e2e tester.
 - [Plan taxonomy tiles](gtf-plan-tiles.md) — live plan categories are Identity/Mental Health/Relationships/Seasonal/Spiritual Growth; dedicated tiles + tints exist; Joe's tile-gen rules: one batch, no crescents, no sunbursts.
 - [Path B WCAG deviations](gtf-path-b-wcag.md) — brief's SS gradient light end and #8A8A8A muted text fail 4.5:1 on cream; use ssGradientSafe + inkMutedText from home-v2 theme for all future Path B screens.
+- [Devotions boundary and rollout](gtf-devotions-boundary.md) — Devotions gathers plans, ODB, EGW, and series in one landing; Sabbath School stays separate; review behind preview routes before live swaps.

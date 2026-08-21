@@ -143,6 +143,7 @@ export async function getEgwDailyDevotion(
   bookTitle: string;
   bookId: number;
   date: string;
+  sourceUrl: string;
 } | null> {
   try {
     // Use day of year to pick consistent daily entry
@@ -165,7 +166,9 @@ export async function getEgwDailyDevotion(
     const chapter = chapters[dayOfMonth % chapters.length];
     if (!chapter) return null;
 
-    const chapterParaId = chapter.para_id.includes(".") ? chapter.para_id.split(".").pop() : chapter.para_id;
+    const chapterRef = String(chapter.para_id);
+    const chapterParaId = chapterRef.includes(".") ? chapterRef.split(".").pop()! : chapterRef;
+    const sourceRef = chapterRef.includes(".") ? chapterRef : `${book.id}.${chapterRef}`;
     const content = await egwFetch(
       `/content/books/${book.id}/chapter/${chapterParaId}`,
       { lang }
@@ -187,6 +190,7 @@ export async function getEgwDailyDevotion(
       bookTitle: book.title,
       bookId: book.id,
       date: now.toISOString().split("T")[0],
+      sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
     };
   } catch (err) {
     console.error("[egw] Daily devotion fetch failed:", err);

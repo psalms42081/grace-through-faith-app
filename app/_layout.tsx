@@ -138,6 +138,10 @@ function RootLayoutNav() {
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: true, title: "Devotional Plans" }} />
       <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
+      <Stack.Screen name="devotions-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="devotional-day-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="odb-devotional-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="egw-devotional-preview" options={{ headerShown: false }} />
       <Stack.Screen name="prayer-journal" options={{ headerShown: true, title: "Prayer Journal" }} />
       <Stack.Screen name="topic/[id]" options={{ headerShown: false }} />
       <Stack.Screen
@@ -222,7 +226,16 @@ useEffect(() => {
   useEffect(() => {
     if (fontsLoaded && onboardingChecked && i18nReady) {
       SplashScreen.hideAsync().catch(() => {});
-      if (initialPathRef.current.startsWith("/read-legacy/")) {
+      const directPreviewPaths = [
+        "/devotions-preview",
+        "/devotional-day-preview",
+        "/odb-devotional-preview",
+        "/egw-devotional-preview",
+      ];
+      if (
+        initialPathRef.current.startsWith("/read-legacy/") ||
+        directPreviewPaths.some((previewPath) => initialPathRef.current.startsWith(previewPath))
+      ) {
         return;
       }
       // Always show the splash/intro on every launch

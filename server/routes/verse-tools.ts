@@ -6,9 +6,12 @@ import {
   strongEntries,
   verseStrongMaps,
   verseMapCache,
+  devotionalDays,
+  userPlanEnrollments,
   userPlanProgress,
 } from "../../shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getEffectiveUserId, optionalAuth } from "../middleware/auth";
 import { generateVerseMap, generateQuickInsight } from "../services/ai-engine";
 
 const router = Router();
@@ -121,20 +124,78 @@ router.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
   }
 });
 
-router.post("/api/devotionals/complete", async (req, res) => {
+router.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
   try {
     const { enrollmentId, dayId, journalEntry } = req.body;
     if (!enrollmentId || !dayId) {
       return res.status(400).json({ error: "enrollmentId and dayId are required" });
     }
 
+    const userId = getEffectiveUserId(req);
+    const [enrollment] = await db
+      .select({
+        id: userPlanEnrollments.id,
+        planId: userPlanEnrollments.planId,
+      })
+      .from(userPlanEnrollments)
+      .where(
+        and(
+          eq(userPlanEnrollments.id, String(enrollmentId)),
+          eq(userPlanEnrollments.userId, userId)
+        )
+      )
+      .limit(1);
+
+    if (!enrollment) {
+      return res.status(404).json({ error: "Enrollment not found" });
+    }
+
+    const [day] = await db
+      .select({ id: devotionalDays.id })
+      .from(devotionalDays)
+      .where(
+        and(
+          eq(devotionalDays.id, String(dayId)),
+          eq(devotionalDays.planId, enrollment.planId)
+        )
+      )
+      .limit(1);
+
+    if (!day) {
+      return res.status(400).json({ error: "Day does not belong to this devotional plan" });
+    }
+
     const progress = await db
       .insert(userPlanProgress)
-      .values({ enrollmentId, dayId, journalEntry })
+      .values({
+        enrollmentId: enrollment.id,
+        dayId: day.id,
+        journalEntry,
+      })
       .onConflictDoNothing()
       .returning();
 
-    return res.json({ progress: progress[0] ?? null });
+    const [allDays, completedDays] = await Promise.all([
+      db
+        .select({ id: devotionalDays.id })
+        .from(devotionalDays)
+        .where(eq(devotionalDays.planId, enrollment.planId)),
+      db
+        .select({ dayId: userPlanProgress.dayId })
+        .from(userPlanProgress)
+        .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
+    ]);
+    const completedDayIds = new Set(completedDays.map((item) => item.dayId));
+    const planComplete = allDays.length > 0 && allDays.every((item) => completedDayIds.has(item.id));
+
+    if (planComplete) {
+      await db
+        .update(userPlanEnrollments)
+        .set({ isActive: false })
+        .where(eq(userPlanEnrollments.id, enrollment.id));
+    }
+
+    return res.json({ progress: progress[0] ?? null, planComplete });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });

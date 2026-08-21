@@ -177,10 +177,6 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     const todayDay = allDays.find((d) => !completedDayIds.has(d.id));
 
     if (!todayDay) {
-      await db
-        .update(userPlanEnrollments)
-        .set({ isActive: false })
-        .where(eq(userPlanEnrollments.id, activeEnrollment[0].id));
       return res.json({ today: null, message: "Plan completed!", planComplete: true, completedPlanId: activeEnrollment[0].planId });
     }
 
