@@ -1546,6 +1546,21 @@ export default function VerseReaderScreen() {
             <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
               <View style={styles.sheetHandleLight} />
               <Text style={styles.lightSheetTitle}>{bookName}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Browse all Bible books"
+                onPress={() => {
+                  setShowChapterPicker(false);
+                  audio.handleStop();
+                  router.push("/book-picker");
+                }}
+                style={styles.browseBooksRow}
+                testID="browse-bible-books-reader"
+              >
+                <Ionicons name="library-outline" size={18} color={RV2_INK_MUTED} />
+                <Text style={styles.browseBooksText}>Browse all books</Text>
+                <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
+              </Pressable>
               <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={styles.chapterGrid} showsVerticalScrollIndicator={false}>
                 {Array.from({ length: totalChapters }, (_, i) => i + 1).map((n) => {
                   const isCurrent = n === chapterNum;
@@ -1930,6 +1945,22 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_600SemiBold",
     color: "#1F1A12",
     marginBottom: 12,
+  },
+  browseBooksRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    minHeight: 44,
+    marginBottom: 14,
+    borderRadius: 10,
+    backgroundColor: "#F1EBDD",
+    paddingHorizontal: 14,
+  },
+  browseBooksText: {
+    flex: 1,
+    color: "#1F1A12",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
   },
   chapterGrid: {
     flexDirection: "row",
