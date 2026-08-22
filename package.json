@@ -19,6 +19,7 @@
     "test:devotional-catalog-coordinator": "tsx server/tests/devotional-catalog-coordinator.test.ts",
     "test:devotional-authorship": "npm run test:devotional-catalog && npm run test:devotional-catalog-coordinator && node server/tests/devotional-authorship.test.mjs && npm run test:devotional-authorship-api",
     "test:devotional-authorship-api": "tsx server/tests/devotional-authorship-api.test.ts",
+    "test:kids-story-illustrations": "tsx tests/kids-story-scene-illustration-request.test.ts && tsx server/tests/kids-scene-image-in-flight.test.ts",
     "start": "npx expo start",
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint-with-warning-budget.mjs",

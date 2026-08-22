@@ -45,6 +45,10 @@ import SceneInteraction from "@/components/kids/SceneInteraction";
 import StoryCompletionFlow from "@/components/kids/StoryCompletionFlow";
 import LivingScene from "@/components/kids/LivingScene";
 import CinematicScene from "@/components/kids/CinematicScene";
+import {
+  createSceneIllustrationRequestController,
+  type SceneIllustrationRequestController,
+} from "@/lib/kids-story-scene-illustration-request";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -1015,62 +1019,40 @@ function SceneIllustration({ sceneId, illustrationPrompt, isVisible, onImageLoad
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
-  const requestIdRef = useRef(0);
-  const completedSceneRef = useRef<string | null>(null);
-  const failedSceneRef = useRef<string | null>(null);
-  const onImageLoadedRef = useRef(onImageLoaded);
-  onImageLoadedRef.current = onImageLoaded;
   const baseUrl = useMemo(() => {
     try { return getApiUrl().replace(/\/$/, ""); } catch { return ""; }
   }, []);
+  const requestControllerRef = useRef<SceneIllustrationRequestController | null>(null);
+
+  if (!requestControllerRef.current) {
+    requestControllerRef.current = createSceneIllustrationRequestController({
+      baseUrl,
+      requestImage: async (requestedSceneId) => {
+        const res = await apiRequest("POST", `/api/kids/scene/${requestedSceneId}/generate-image`);
+        return res.json();
+      },
+      onStateChange: (state) => {
+        setImageUrl(state.imageUrl);
+        setLoading(state.loading);
+        setFailed(state.failed);
+        if (state.loading) setImageLoadError(false);
+      },
+      onImageLoaded,
+    });
+  }
+
+  const requestController = requestControllerRef.current;
+  requestController.updateOnImageLoaded(onImageLoaded);
 
   useEffect(() => {
-    if (
-      !isVisible ||
-      !sceneId ||
-      completedSceneRef.current === sceneId ||
-      failedSceneRef.current === sceneId
-    ) return;
+    requestController.start(sceneId, isVisible);
+  }, [isVisible, requestController, sceneId]);
 
-    const requestId = ++requestIdRef.current;
-    let settled = false;
-    setImageUrl(null);
-    setImageLoadError(false);
-    setFailed(false);
-    setLoading(true);
-
-    (async () => {
-      try {
-        const res = await apiRequest("POST", `/api/kids/scene/${sceneId}/generate-image`);
-        const data = await res.json();
-        if (requestIdRef.current !== requestId) return;
-
-        if (data.imageUrl) {
-          const fullUrl = `${baseUrl}${data.imageUrl}`;
-          completedSceneRef.current = sceneId;
-          setImageUrl(fullUrl);
-          onImageLoadedRef.current?.(fullUrl);
-        } else {
-          failedSceneRef.current = sceneId;
-          setFailed(true);
-        }
-      } catch {
-        if (requestIdRef.current === requestId) {
-          failedSceneRef.current = sceneId;
-          setFailed(true);
-        }
-      } finally {
-        settled = true;
-        if (requestIdRef.current === requestId) setLoading(false);
-      }
-    })();
-
+  useEffect(() => {
     return () => {
-      if (!settled && requestIdRef.current === requestId) {
-        requestIdRef.current += 1;
-      }
+      requestController.invalidate();
     };
-  }, [isVisible, sceneId, baseUrl]);
+  }, [requestController]);
 
   if (imageUrl && !imageLoadError) {
     const ExpoImage = require("expo-image").Image;

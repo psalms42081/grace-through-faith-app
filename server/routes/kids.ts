@@ -27,8 +27,10 @@ import { Router } from "express";
     generateSceneImage,
     generateDinnerTableTopic,
   } from "../services/ai-engine";
+  import { createInFlightRequestCoalescer } from "../services/in-flight-request-coalescer";
 
   const router = Router();
+  const sceneImageGeneration = createInFlightRequestCoalescer<string | null>();
 
   async function autoCompleteQuest(userId: string, childId: string | undefined, questType: "read_story" | "practice_verse" | "take_quiz") {
     try {
@@ -732,9 +734,9 @@ router.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLimi
       return res.json({ imageUrl: scene[0].imageUrl });
     }
 
-    const imageUrl = await generateSceneImage(
-      scene[0].illustrationPrompt,
-      id
+    const imageUrl = await sceneImageGeneration.run(
+      id,
+      () => generateSceneImage(scene[0].illustrationPrompt, id),
     );
 
     if (!imageUrl) {

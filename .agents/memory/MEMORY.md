@@ -18,3 +18,4 @@
 - [Publish-safe grandfather checks](gtf-publish-grandfather-checks.md) — avoid NOT VALID in Publish-diffed checks; use a verified fixed-cutoff grandfather branch when legacy rows must survive.
 - [Bible tab entry](gtf-bible-tab-entry.md) — resume the latest chapter for signed-in readers; new and guest readers open today’s verse, with the book browser kept secondary.
 - [Lint warning baselines](lint-warning-baselines.md) — legacy warnings use exact finding fingerprints; lower the allowlist during cleanup and never absorb new findings.
+- [Expo Router route tree](expo-router-route-tree.md) — keep helpers and Node-only tests outside app/ so route discovery cannot warn or break the web bundle.
