@@ -9,6 +9,10 @@ import {
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { fetchWithTimeout } from "./api-client";
 import { buildSourcePacket } from "./source-packet-builder";
+import {
+  extractSabbathSchoolAudioMetadata,
+  normalizeSabbathSchoolAudioUrl,
+} from "./sabbath-school-audio-metadata";
 
 const BASE_URL = "https://sabbath-school.adventech.io/api/v2";
 
@@ -515,6 +519,18 @@ export async function syncQuarterlyAudio(quarterCode: string, lang: string = "en
   );
   if (!audioPayload) return;
 
+  const audioMetadata = extractSabbathSchoolAudioMetadata(
+    audioPayload,
+    quarterCode,
+    lang
+  );
+  if (audioMetadata.length === 0) {
+    console.error(
+      `[SabbathSchool] Audio feed for ${quarterCode} (${lang}) contained no usable lesson-day MP3s; preserving existing audio URLs.`
+    );
+    return;
+  }
+
   const [quarterly] = await db
     .select()
     .from(sabbathSchoolQuarterlies)
@@ -542,35 +558,50 @@ export async function syncQuarterlyAudio(quarterCode: string, lang: string = "en
     dayByLessonAndNumber.set(`${day.lessonId}:${day.dayNumber}`, day.id);
   }
 
-  await db
-    .update(sabbathSchoolDays)
-    .set({ audioUrl: null })
-    .where(inArray(sabbathSchoolDays.lessonId, lessonIds));
-
-  const mediaEntries = collectObjectsDeep(audioPayload);
   const updates = new Map<string, string>();
 
-  for (const entry of mediaEntries) {
-    const audioUrl = getMediaUrl(entry, ["mp3", "audio", "audioUrl", "src", "url", "href", "file", "path"]);
-    if (!audioUrl || !audioUrl.toLowerCase().includes(".mp3")) continue;
-
-    const lessonNumber = getLessonNumberFromMediaEntry(entry);
-    const dayNumber = getDayNumberFromMediaEntry(entry);
-    if (lessonNumber === null || dayNumber === null) continue;
-
-    const lessonId = lessonByNumber.get(lessonNumber);
+  for (const metadata of audioMetadata) {
+    const lessonId = lessonByNumber.get(metadata.lessonNumber);
     if (!lessonId) continue;
-    const dayId = dayByLessonAndNumber.get(`${lessonId}:${dayNumber}`);
+    const dayId = dayByLessonAndNumber.get(`${lessonId}:${metadata.dayNumber}`);
     if (!dayId) continue;
-    updates.set(dayId, audioUrl);
+    updates.set(dayId, metadata.audioUrl);
   }
 
-  for (const [dayId, audioUrl] of updates.entries()) {
-    await db
-      .update(sabbathSchoolDays)
-      .set({ audioUrl })
-      .where(eq(sabbathSchoolDays.id, dayId));
+  if (updates.size === 0) {
+    console.error(
+      `[SabbathSchool] Audio feed for ${quarterCode} (${lang}) did not match any stored lesson days; preserving existing audio URLs.`
+    );
+    return;
   }
+
+  await db.transaction(async (tx) => {
+    for (const [dayId, audioUrl] of updates.entries()) {
+      await tx
+        .update(sabbathSchoolDays)
+        .set({ audioUrl })
+        .where(eq(sabbathSchoolDays.id, dayId));
+    }
+
+    const invalidStoredDayIds = days
+      .filter(
+        (day) =>
+          day.audioUrl &&
+          !updates.has(day.id) &&
+          normalizeSabbathSchoolAudioUrl(day.audioUrl) === null
+      )
+      .map((day) => day.id);
+    if (invalidStoredDayIds.length > 0) {
+      await tx
+        .update(sabbathSchoolDays)
+        .set({ audioUrl: null })
+        .where(inArray(sabbathSchoolDays.id, invalidStoredDayIds));
+    }
+  });
+
+  console.log(
+    `[SabbathSchool] Mapped ${updates.size} usable lesson-day audio tracks for ${quarterCode} (${lang}).`
+  );
 }
 
 export async function syncQuarterlyVideos(quarterCode: string, lang: string = "en"): Promise<void> {
@@ -764,15 +795,6 @@ export async function getCurrentLessonNumber(quarterlyId: string): Promise<numbe
 }
 
 export async function shouldSync(): Promise<boolean> {
-  const dayMissingAudio = await db
-    .select({ id: sabbathSchoolDays.id })
-    .from(sabbathSchoolDays)
-    .where(sql`${sabbathSchoolDays.audioUrl} IS NULL`)
-    .limit(1);
-  if (dayMissingAudio.length > 0) {
-    return true;
-  }
-
   const quarterCode = getCurrentQuarterCode();
 
   const currentQ = await db

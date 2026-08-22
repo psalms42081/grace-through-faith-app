@@ -3973,6 +3973,128 @@ var init_source_packet_builder = __esm({
   }
 });
 
+// server/services/sabbath-school-audio-metadata.ts
+function asObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value;
+}
+function collectObjects(value, out = []) {
+  const object = asObject(value);
+  if (object) {
+    out.push(object);
+    for (const child of Object.values(object)) {
+      collectObjects(child, out);
+    }
+    return out;
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) collectObjects(child, out);
+  }
+  return out;
+}
+function pickString(object, keys) {
+  for (const key of keys) {
+    const value = object[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+function pickPositiveInteger(object, keys) {
+  for (const key of keys) {
+    const value = object[key];
+    const parsed = typeof value === "number" ? value : typeof value === "string" ? Number.parseInt(value, 10) : Number.NaN;
+    if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function parseTarget(object, quarterCode, language) {
+  const directLesson = pickPositiveInteger(object, [
+    "lesson",
+    "lessonNumber",
+    "lesson_number",
+    "week",
+    "weekNumber"
+  ]);
+  const directDay = pickPositiveInteger(object, ["day", "dayNumber", "day_number"]);
+  if (directLesson !== null && directDay !== null) {
+    return { lessonNumber: directLesson, dayNumber: directDay };
+  }
+  const languagePattern = escapeRegExp(language);
+  const quarterPattern = escapeRegExp(quarterCode);
+  const targetPattern = new RegExp(
+    `^${languagePattern}\\/${quarterPattern}\\/(\\d{1,2})\\/(\\d{1,2})$`,
+    "i"
+  );
+  const targetIndexPattern = new RegExp(
+    `^${languagePattern}-${quarterPattern}-(\\d{1,2})-(\\d{1,2})$`,
+    "i"
+  );
+  for (const key of ["target", "targetIndex", "reference", "id"]) {
+    const probe = typeof object[key] === "string" ? object[key].trim() : "";
+    const match = probe.match(targetPattern) || probe.match(targetIndexPattern);
+    if (!match) continue;
+    return {
+      lessonNumber: Number.parseInt(match[1], 10),
+      dayNumber: Number.parseInt(match[2], 10)
+    };
+  }
+  return null;
+}
+function sourcePriority(object) {
+  const artist = pickString(object, ["artist", "author", "source"]) || "";
+  if (/adult bible study guides?/i.test(artist)) return 100;
+  if (/ellen\s+g\.?\s*white|teacher|inside story/i.test(artist)) return -10;
+  return 0;
+}
+function normalizeSabbathSchoolAudioUrl(value, baseUrl) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = baseUrl ? new URL(value.trim(), baseUrl) : new URL(value.trim());
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return null;
+    if (!parsed.pathname.toLowerCase().endsWith(".mp3")) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+function extractSabbathSchoolAudioMetadata(payload, quarterCode, language = "en") {
+  const selected = /* @__PURE__ */ new Map();
+  for (const object of collectObjects(payload)) {
+    const target = parseTarget(object, quarterCode, language);
+    if (!target) continue;
+    const rawUrl = pickString(object, AUDIO_URL_KEYS);
+    const audioUrl = normalizeSabbathSchoolAudioUrl(
+      rawUrl,
+      ADVENTECH_API_BASE_URL
+    );
+    if (!audioUrl) continue;
+    const key = `${target.lessonNumber}:${target.dayNumber}`;
+    const candidate = {
+      ...target,
+      audioUrl,
+      priority: sourcePriority(object)
+    };
+    const current = selected.get(key);
+    if (!current || candidate.priority > current.priority) {
+      selected.set(key, candidate);
+    }
+  }
+  return [...selected.values()].sort(
+    (left, right) => left.lessonNumber - right.lessonNumber || left.dayNumber - right.dayNumber
+  ).map(({ priority: _priority, ...metadata }) => metadata);
+}
+var ADVENTECH_API_BASE_URL, AUDIO_URL_KEYS;
+var init_sabbath_school_audio_metadata = __esm({
+  "server/services/sabbath-school-audio-metadata.ts"() {
+    "use strict";
+    ADVENTECH_API_BASE_URL = "https://sabbath-school.adventech.io/api/v2/";
+    AUDIO_URL_KEYS = ["src", "mp3", "audio", "audioUrl", "url", "href", "file", "path"];
+  }
+});
+
 // server/services/content-engine.ts
 var content_engine_exports = {};
 __export(content_engine_exports, {
@@ -4450,11 +4572,11 @@ function todayUTCMidnight() {
   const now = /* @__PURE__ */ new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
-function asObject(value) {
+function asObject2(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value;
 }
-function pickString(obj, keys) {
+function pickString2(obj, keys) {
   if (!obj) return null;
   for (const key of keys) {
     const value = obj[key];
@@ -4478,19 +4600,19 @@ function pickNumber(obj, keys) {
 }
 function extractCollection(payload, arrayKeys) {
   if (Array.isArray(payload)) {
-    return payload.map((item) => asObject(item)).filter((item) => !!item);
+    return payload.map((item) => asObject2(item)).filter((item) => !!item);
   }
-  const obj = asObject(payload);
+  const obj = asObject2(payload);
   if (!obj) return [];
   for (const key of arrayKeys) {
     const value = obj[key];
     if (Array.isArray(value)) {
-      return value.map((item) => asObject(item)).filter((item) => !!item);
+      return value.map((item) => asObject2(item)).filter((item) => !!item);
     }
   }
   const objValues = Object.values(obj);
-  if (objValues.every((v) => asObject(v))) {
-    return objValues.map((item) => asObject(item)).filter((item) => !!item);
+  if (objValues.every((v) => asObject2(v))) {
+    return objValues.map((item) => asObject2(item)).filter((item) => !!item);
   }
   return [];
 }
@@ -4504,10 +4626,10 @@ function parseLessonNumberFromCode(code) {
   return Number.isNaN(n) ? null : n;
 }
 function getQuarterCodeFromItem(item) {
-  return pickString(item, ["id", "quarter", "quarterCode", "code", "slug"]);
+  return pickString2(item, ["id", "quarter", "quarterCode", "code", "slug"]);
 }
 function getLessonCodeFromItem(item) {
-  return pickString(item, ["id", "lesson", "lessonCode", "code", "slug"]);
+  return pickString2(item, ["id", "lesson", "lessonCode", "code", "slug"]);
 }
 function getLessonNumberFromItem(item, fallbackIndex) {
   const fromFields = pickNumber(item, ["index", "lessonNumber", "lesson_number", "week", "weekNumber"]);
@@ -4517,7 +4639,7 @@ function getLessonNumberFromItem(item, fallbackIndex) {
   return fallbackIndex + 1;
 }
 function getDayContentMarkdown(dayPayload) {
-  const dayObj = asObject(dayPayload);
+  const dayObj = asObject2(dayPayload);
   if (!dayObj) return "";
   const candidates = [
     dayObj.contentMarkdown,
@@ -4537,9 +4659,9 @@ function getDayContentMarkdown(dayPayload) {
         return candidate.join("\n\n");
       }
     }
-    const nested = asObject(candidate);
+    const nested = asObject2(candidate);
     if (nested) {
-      const nestedText = pickString(nested, ["markdown", "content", "text", "body"]);
+      const nestedText = pickString2(nested, ["markdown", "content", "text", "body"]);
       if (nestedText) return nestedText;
     }
   }
@@ -4548,11 +4670,11 @@ function getDayContentMarkdown(dayPayload) {
 function extractDayCodes(lessonItem) {
   const days = lessonItem.days;
   if (!Array.isArray(days)) return [];
-  const codes = days.map((d) => asObject(d)).filter((d) => !!d).map((d) => pickString(d, ["id", "day", "code", "slug"])).filter((d) => !!d);
+  const codes = days.map((d) => asObject2(d)).filter((d) => !!d).map((d) => pickString2(d, ["id", "day", "code", "slug"])).filter((d) => !!d);
   return codes;
 }
 function collectObjectsDeep(value, out = []) {
-  const obj = asObject(value);
+  const obj = asObject2(value);
   if (obj) {
     out.push(obj);
     for (const child of Object.values(obj)) {
@@ -4575,17 +4697,17 @@ function absolutizeMediaUrl(url) {
   }
 }
 function getMediaUrl(entry, keys) {
-  const url = pickString(entry, keys);
+  const url = pickString2(entry, keys);
   if (!url) return null;
   return absolutizeMediaUrl(url);
 }
 function getLessonNumberFromMediaEntry(entry) {
   const direct = pickNumber(entry, ["lesson", "lessonNumber", "lesson_number", "week", "weekNumber"]);
   if (direct !== null) return direct;
-  const lessonCode = pickString(entry, ["lessonCode", "lesson_id", "lessonId"]);
+  const lessonCode = pickString2(entry, ["lessonCode", "lesson_id", "lessonId"]);
   const fromCode = parseLessonNumberFromCode(lessonCode);
   if (fromCode !== null) return fromCode;
-  const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
+  const probe = pickString2(entry, ["target", "path", "url", "src", "id", "reference"]);
   if (!probe) return null;
   const adventechVideoMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})$/);
   if (adventechVideoMatch) {
@@ -4612,7 +4734,7 @@ function getLessonNumberFromMediaEntry(entry) {
 function getDayNumberFromMediaEntry(entry) {
   const direct = pickNumber(entry, ["day", "dayNumber", "day_number", "index"]);
   if (direct !== null) return direct;
-  const probe = pickString(entry, ["target", "path", "url", "src", "id", "reference"]);
+  const probe = pickString2(entry, ["target", "path", "url", "src", "id", "reference"]);
   if (!probe) return null;
   const adventechMatch = probe.match(/^[a-z]{2,3}\/\d{4}-\d{2}[^\/]*\/(\d{1,2})\/(\d{1,2})$/);
   if (adventechMatch) {
@@ -4648,13 +4770,13 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
   const activeQuarterCode = quarterCodeToSync;
   const quarterItems = extractCollection(quarterlyIndex, ["quarterlies", "items", "data"]);
   const quarterInfo = quarterItems.find((item) => getQuarterCodeFromItem(item) === activeQuarterCode) || null;
-  const quarterTitle = pickString(quarterInfo, ["title", "name"]) || activeQuarterCode;
-  const quarterDescription = pickString(quarterInfo, ["description", "intro", "subtitle"]);
-  const quarterHumanDate = pickString(quarterInfo, ["human_date", "humanDate", "date"]);
-  const quarterStartDate = pickString(quarterInfo, ["start_date", "startDate"]);
-  const quarterEndDate = pickString(quarterInfo, ["end_date", "endDate"]);
-  const quarterColorPrimary = pickString(quarterInfo, ["color_primary", "colorPrimary", "color"]);
-  const quarterCoverUrl = pickString(quarterInfo, ["cover", "cover_url", "coverUrl", "image"]) || `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/cover.png`;
+  const quarterTitle = pickString2(quarterInfo, ["title", "name"]) || activeQuarterCode;
+  const quarterDescription = pickString2(quarterInfo, ["description", "intro", "subtitle"]);
+  const quarterHumanDate = pickString2(quarterInfo, ["human_date", "humanDate", "date"]);
+  const quarterStartDate = pickString2(quarterInfo, ["start_date", "startDate"]);
+  const quarterEndDate = pickString2(quarterInfo, ["end_date", "endDate"]);
+  const quarterColorPrimary = pickString2(quarterInfo, ["color_primary", "colorPrimary", "color"]);
+  const quarterCoverUrl = pickString2(quarterInfo, ["cover", "cover_url", "coverUrl", "image"]) || `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/cover.png`;
   const lessonsIndex = await fetchJson(
     `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/index.json`
   );
@@ -4701,9 +4823,9 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
     const lessonItem = lessonItems[i];
     const lessonNum = getLessonNumberFromItem(lessonItem, i);
     const lessonCode = getLessonCodeFromItem(lessonItem) || String(lessonNum).padStart(2, "0");
-    const lessonTitle = pickString(lessonItem, ["title", "name"]) || `Lesson ${lessonNum}`;
-    const lessonStartDate = pickString(lessonItem, ["start_date", "startDate"]);
-    const lessonEndDate = pickString(lessonItem, ["end_date", "endDate"]);
+    const lessonTitle = pickString2(lessonItem, ["title", "name"]) || `Lesson ${lessonNum}`;
+    const lessonStartDate = pickString2(lessonItem, ["start_date", "startDate"]);
+    const lessonEndDate = pickString2(lessonItem, ["end_date", "endDate"]);
     const existingLesson = await db.select().from(sabbathSchoolLessons).where(
       (0, import_drizzle_orm25.and)(
         (0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId),
@@ -4739,9 +4861,9 @@ async function syncQuarter(quarterCodeToSync, lang = "en", generateCompanions = 
         `${BASE_URL}/${lang}/quarterlies/${activeQuarterCode}/lessons/${lessonCode}/days/${dayCode}/read/index.json`
       );
       if (!dayPayload) continue;
-      const dayObj = asObject(dayPayload);
-      const dayTitle = pickString(dayObj, ["title", "name", "dayTitle"]);
-      const dayDate = pickString(dayObj, ["date", "fullDate", "dayDate"]);
+      const dayObj = asObject2(dayPayload);
+      const dayTitle = pickString2(dayObj, ["title", "name", "dayTitle"]);
+      const dayDate = pickString2(dayObj, ["date", "fullDate", "dayDate"]);
       const contentBody = getDayContentMarkdown(dayPayload);
       const existingDay = await db.select().from(sabbathSchoolDays).where(
         (0, import_drizzle_orm25.and)(
@@ -4796,6 +4918,17 @@ async function syncQuarterlyAudio(quarterCode, lang = "en") {
     `${BASE_URL}/${lang}/quarterlies/${quarterCode}/audio.json`
   );
   if (!audioPayload) return;
+  const audioMetadata = extractSabbathSchoolAudioMetadata(
+    audioPayload,
+    quarterCode,
+    lang
+  );
+  if (audioMetadata.length === 0) {
+    console.error(
+      `[SabbathSchool] Audio feed for ${quarterCode} (${lang}) contained no usable lesson-day MP3s; preserving existing audio URLs.`
+    );
+    return;
+  }
   const [quarterly] = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (!quarterly) return;
   const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterly.id));
@@ -4809,24 +4942,34 @@ async function syncQuarterlyAudio(quarterCode, lang = "en") {
   for (const day of days) {
     dayByLessonAndNumber.set(`${day.lessonId}:${day.dayNumber}`, day.id);
   }
-  await db.update(sabbathSchoolDays).set({ audioUrl: null }).where((0, import_drizzle_orm25.inArray)(sabbathSchoolDays.lessonId, lessonIds));
-  const mediaEntries = collectObjectsDeep(audioPayload);
   const updates = /* @__PURE__ */ new Map();
-  for (const entry of mediaEntries) {
-    const audioUrl = getMediaUrl(entry, ["mp3", "audio", "audioUrl", "src", "url", "href", "file", "path"]);
-    if (!audioUrl || !audioUrl.toLowerCase().includes(".mp3")) continue;
-    const lessonNumber = getLessonNumberFromMediaEntry(entry);
-    const dayNumber = getDayNumberFromMediaEntry(entry);
-    if (lessonNumber === null || dayNumber === null) continue;
-    const lessonId = lessonByNumber.get(lessonNumber);
+  for (const metadata of audioMetadata) {
+    const lessonId = lessonByNumber.get(metadata.lessonNumber);
     if (!lessonId) continue;
-    const dayId = dayByLessonAndNumber.get(`${lessonId}:${dayNumber}`);
+    const dayId = dayByLessonAndNumber.get(`${lessonId}:${metadata.dayNumber}`);
     if (!dayId) continue;
-    updates.set(dayId, audioUrl);
+    updates.set(dayId, metadata.audioUrl);
   }
-  for (const [dayId, audioUrl] of updates.entries()) {
-    await db.update(sabbathSchoolDays).set({ audioUrl }).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.id, dayId));
+  if (updates.size === 0) {
+    console.error(
+      `[SabbathSchool] Audio feed for ${quarterCode} (${lang}) did not match any stored lesson days; preserving existing audio URLs.`
+    );
+    return;
   }
+  await db.transaction(async (tx) => {
+    for (const [dayId, audioUrl] of updates.entries()) {
+      await tx.update(sabbathSchoolDays).set({ audioUrl }).where((0, import_drizzle_orm25.eq)(sabbathSchoolDays.id, dayId));
+    }
+    const invalidStoredDayIds = days.filter(
+      (day) => day.audioUrl && !updates.has(day.id) && normalizeSabbathSchoolAudioUrl(day.audioUrl) === null
+    ).map((day) => day.id);
+    if (invalidStoredDayIds.length > 0) {
+      await tx.update(sabbathSchoolDays).set({ audioUrl: null }).where((0, import_drizzle_orm25.inArray)(sabbathSchoolDays.id, invalidStoredDayIds));
+    }
+  });
+  console.log(
+    `[SabbathSchool] Mapped ${updates.size} usable lesson-day audio tracks for ${quarterCode} (${lang}).`
+  );
 }
 async function syncQuarterlyVideos(quarterCode, lang = "en") {
   const videoPayload = await fetchJson(
@@ -4851,13 +4994,13 @@ async function syncQuarterlyVideos(quarterCode, lang = "en") {
     if (lessonNumber === null) continue;
     const lesson = lessonByNumber.get(lessonNumber);
     if (!lesson) continue;
-    const artist = pickString(entry, ["artist", "speaker", "presenter", "author", "name"]) || "Unknown";
+    const artist = pickString2(entry, ["artist", "speaker", "presenter", "author", "name"]) || "Unknown";
     const clip = {
-      title: pickString(entry, ["title", "name", "description"]),
+      title: pickString2(entry, ["title", "name", "description"]),
       src: videoUrl,
       thumbnail: getMediaUrl(entry, ["thumbnail", "thumbnailUrl", "thumb", "image"]),
-      duration: pickString(entry, ["duration", "length"]),
-      target: pickString(entry, ["target", "reference", "id"]),
+      duration: pickString2(entry, ["duration", "length"]),
+      target: pickString2(entry, ["target", "reference", "id"]),
       dayNumber: getDayNumberFromMediaEntry(entry)
     };
     if (!lessonGroups.has(lesson.id)) {
@@ -4965,10 +5108,6 @@ async function getCurrentLessonNumber(quarterlyId) {
   return closest?.lessonNumber || 1;
 }
 async function shouldSync() {
-  const dayMissingAudio = await db.select({ id: sabbathSchoolDays.id }).from(sabbathSchoolDays).where(import_drizzle_orm25.sql`${sabbathSchoolDays.audioUrl} IS NULL`).limit(1);
-  if (dayMissingAudio.length > 0) {
-    return true;
-  }
   const quarterCode = getCurrentQuarterCode();
   const currentQ = await db.select().from(sabbathSchoolQuarterlies).where((0, import_drizzle_orm25.eq)(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
   if (currentQ.length > 0) {
@@ -5103,6 +5242,7 @@ var init_sabbath_school_sync = __esm({
     import_drizzle_orm25 = require("drizzle-orm");
     init_api_client();
     init_source_packet_builder();
+    init_sabbath_school_audio_metadata();
     BASE_URL = "https://sabbath-school.adventech.io/api/v2";
   }
 });
@@ -47544,6 +47684,7 @@ init_schema();
 var import_drizzle_orm26 = require("drizzle-orm");
 init_ai_engine();
 init_sabbath_school_sync();
+init_sabbath_school_audio_metadata();
 var router19 = (0, import_express19.Router)();
 async function findCompanionForLesson(lessonId) {
   const [companion] = await db.select({
@@ -47649,6 +47790,7 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
     }
     const daysWithProgress = days.map((day) => ({
       ...day,
+      audioUrl: normalizeSabbathSchoolAudioUrl(day.audioUrl),
       completed: progress.some((p) => p.dayId === day.id && p.completed),
       journalEntry: progress.find((p) => p.dayId === day.id)?.journalEntry || null
     }));
@@ -47707,6 +47849,7 @@ router19.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
     }
     const daysWithProgress = days.map((day) => ({
       ...day,
+      audioUrl: normalizeSabbathSchoolAudioUrl(day.audioUrl),
       completed: progress.some((p) => p.dayId === day.id && p.completed),
       journalEntry: progress.find((p) => p.dayId === day.id)?.journalEntry || null
     }));

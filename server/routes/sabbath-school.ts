@@ -17,6 +17,7 @@ import {
   getMostRecentQuarterly,
   syncCurrentQuarter,
 } from "../services/sabbath-school-sync";
+import { normalizeSabbathSchoolAudioUrl } from "../services/sabbath-school-audio-metadata";
 
 const router = Router();
 
@@ -187,6 +188,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
 
     const daysWithProgress = days.map((day) => ({
       ...day,
+      audioUrl: normalizeSabbathSchoolAudioUrl(day.audioUrl),
       completed: progress.some((p) => p.dayId === day.id && p.completed),
       journalEntry:
         progress.find((p) => p.dayId === day.id)?.journalEntry || null,
@@ -268,6 +270,7 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
 
     const daysWithProgress = days.map((day) => ({
       ...day,
+      audioUrl: normalizeSabbathSchoolAudioUrl(day.audioUrl),
       completed: progress.some((p) => p.dayId === day.id && p.completed),
       journalEntry:
         progress.find((p) => p.dayId === day.id)?.journalEntry || null,

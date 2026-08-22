@@ -18,6 +18,12 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Audio } from "expo-av";
+import {
+  SABBATH_SCHOOL_AUDIO_UNAVAILABLE_MESSAGE,
+  toggleSabbathSchoolAudio,
+  type SabbathSchoolPlaybackStatus,
+  type SabbathSchoolSound,
+} from "@/lib/sabbath-school-audio";
 
 interface DayData {
   id: string;
@@ -273,65 +279,101 @@ export default function SabbathSchoolDayScreen() {
   const [journalText, setJournalText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
   const [showCompletionState, setShowCompletionState] = useState(false);
-  const [audioSound, setAudioSound] = useState<Audio.Sound | null>(null);
+  const audioSoundRef = useRef<Audio.Sound | null>(null);
+  const audioAttemptRef = useRef(0);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [hasAudioFinished, setHasAudioFinished] = useState(false);
+  const [isAudioUnavailable, setIsAudioUnavailable] = useState(false);
 
   React.useEffect(() => {
+    const attemptRef = audioAttemptRef;
+    const soundRef = audioSoundRef;
     return () => {
-      if (audioSound) {
-        audioSound.unloadAsync().catch(() => {});
-      }
+      attemptRef.current++;
+      const current = soundRef.current;
+      soundRef.current = null;
+      current?.unloadAsync().catch(() => {});
     };
-  }, [audioSound]);
+  }, []);
 
   React.useEffect(() => {
-    setAudioSound((current) => {
-      if (current) current.unloadAsync().catch(() => {});
-      return null;
-    });
+    audioAttemptRef.current++;
+    const current = audioSoundRef.current;
+    audioSoundRef.current = null;
+    current?.unloadAsync().catch(() => {});
     setIsAudioPlaying(false);
     setIsAudioLoading(false);
-  }, [day?.id]);
+    setHasAudioFinished(false);
+    setIsAudioUnavailable(false);
+  }, [day?.id, day?.audioUrl]);
+
+  const markAudioUnavailable = React.useCallback(() => {
+    const current = audioSoundRef.current;
+    audioSoundRef.current = null;
+    current?.unloadAsync().catch(() => {});
+    setIsAudioLoading(false);
+    setIsAudioPlaying(false);
+    setHasAudioFinished(false);
+    setIsAudioUnavailable(true);
+  }, []);
 
   const toggleAudioPlayback = async () => {
-    if (!day?.audioUrl) return;
+    if (!day?.audioUrl || isAudioUnavailable || isAudioLoading) return;
 
-    try {
-      if (audioSound) {
-        const status = await audioSound.getStatusAsync();
-        if (status.isLoaded && status.isPlaying) {
-          await audioSound.pauseAsync();
+    const attempt = audioAttemptRef.current;
+    const existingSound = audioSoundRef.current;
+    if (!existingSound) setIsAudioLoading(true);
+
+    const result = await toggleSabbathSchoolAudio({
+      url: day.audioUrl,
+      sound: existingSound as SabbathSchoolSound | null,
+      hasFinished: hasAudioFinished,
+      prepareAudio: () =>
+        Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+        }),
+      createSound: async (url, onStatus) => {
+        const created = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: true },
+          (status) => onStatus(status as SabbathSchoolPlaybackStatus)
+        );
+        return {
+          sound: created.sound as SabbathSchoolSound,
+          status: created.status as SabbathSchoolPlaybackStatus,
+        };
+      },
+      onStatus: (status) => {
+        if (attempt !== audioAttemptRef.current) return;
+        if (!status.isLoaded) {
+          if (status.error) markAudioUnavailable();
+          return;
+        }
+        setIsAudioPlaying(status.isPlaying ?? false);
+        if (status.didJustFinish) {
           setIsAudioPlaying(false);
-        } else if (status.isLoaded) {
-          await audioSound.playAsync();
-          setIsAudioPlaying(true);
+          setHasAudioFinished(true);
         }
-        return;
-      }
+      },
+    });
 
-      setIsAudioLoading(true);
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: day.audioUrl },
-        { shouldPlay: true },
-        (status) => {
-          if (!status.isLoaded) return;
-          setIsAudioPlaying(status.isPlaying ?? false);
-          if (status.didJustFinish) {
-            setIsAudioPlaying(false);
-          }
-        }
-      );
-
-      setAudioSound(sound);
-      setIsAudioPlaying(true);
-    } catch {
-      setIsAudioPlaying(false);
-    } finally {
-      setIsAudioLoading(false);
+    if (attempt !== audioAttemptRef.current) {
+      if (result.sound) await result.sound.unloadAsync().catch(() => {});
+      return;
     }
+
+    setIsAudioLoading(false);
+    if (result.kind === "unavailable") {
+      markAudioUnavailable();
+      return;
+    }
+
+    audioSoundRef.current = result.sound as Audio.Sound;
+    setIsAudioPlaying(result.kind === "playing");
+    if (result.kind === "playing") setHasAudioFinished(false);
   };
 
   // Keep the latest day record in a ref so the identity-change effect below can
@@ -454,21 +496,48 @@ export default function SabbathSchoolDayScreen() {
             </Text>
           )}
 
-          {day.audioUrl && (
-            <View style={styles.audioRow}>
-              <Pressable
-                onPress={toggleAudioPlayback}
-                disabled={isAudioLoading}
-                hitSlop={8}
-              >
+          {day.audioUrl && !isAudioUnavailable && (
+            <Pressable
+              onPress={toggleAudioPlayback}
+              disabled={isAudioLoading}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isAudioPlaying
+                  ? "Pause today's Sabbath School lesson"
+                  : "Listen to today's Sabbath School lesson"
+              }
+              accessibilityState={{
+                disabled: isAudioLoading,
+                busy: isAudioLoading,
+              }}
+              style={({ pressed }) => [
+                styles.audioRow,
+                pressed && !isAudioLoading ? styles.audioRowPressed : null,
+              ]}
+            >
+              {isAudioLoading ? (
+                <ActivityIndicator size="small" color="#1F7A70" />
+              ) : (
                 <Ionicons
                   name={isAudioPlaying ? "pause-circle-outline" : "play-circle-outline"}
                   size={32}
                   color="#1F7A70"
                 />
-              </Pressable>
+              )}
               <Text style={styles.audioLabel}>
                 {isAudioLoading ? "Loading audio..." : "Listen to Today's Lesson"}
+              </Text>
+            </Pressable>
+          )}
+
+          {isAudioUnavailable && (
+            <View
+              style={styles.audioUnavailableRow}
+              accessibilityRole="alert"
+            >
+              <Ionicons name="alert-circle-outline" size={20} color="#8A5A44" />
+              <Text style={styles.audioUnavailableText}>
+                {SABBATH_SCHOOL_AUDIO_UNAVAILABLE_MESSAGE}
               </Text>
             </View>
           )}
@@ -674,12 +743,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    minHeight: 48,
+    alignSelf: "flex-start",
+    paddingHorizontal: 4,
+    paddingRight: 12,
+    borderRadius: 12,
     marginBottom: 8,
+  },
+  audioRowPressed: {
+    backgroundColor: "rgba(31, 122, 112, 0.08)",
+    opacity: 0.82,
   },
   audioLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "#6B6660",
+  },
+  audioUnavailableRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#F5EDE5",
+    marginBottom: 8,
+  },
+  audioUnavailableText: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6F4937",
   },
   mdContainer: { gap: 4 },
   mdH1: { fontFamily: "Lora_700Bold", fontSize: 22, lineHeight: 30, marginTop: 16 },
