@@ -416,6 +416,22 @@ function setupErrorHandler(app: express.Application) {
 
   setupErrorHandler(app);
 
+  // Data-only devotional catalog coordinator. Must complete BEFORE the server
+  // begins accepting traffic so the approved 21-title catalog is guaranteed
+  // present, provenanced, and fully seeded. Never issues DDL/migrations.
+  {
+    const { ensureDevotionalCatalog } = await import(
+      "./devotional-catalog-coordinator"
+    );
+    const { db: catalogDb, pool: catalogPool } = await import("./db");
+    await ensureDevotionalCatalog({
+      pool: catalogPool,
+      db: catalogDb as unknown as Parameters<
+        typeof ensureDevotionalCatalog
+      >[0]["db"],
+    });
+  }
+
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(
     {

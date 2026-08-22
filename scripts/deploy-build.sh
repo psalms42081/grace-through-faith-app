@@ -1,38 +1,19 @@
 #!/bin/bash
 set -e
 
+echo "=== Verifying production build owns no schema ==="
+npm run test:deploy-build-safety
+
 echo "=== Building server ==="
 npm run server:build
 
-echo "=== Reconciling constraint names ==="
-npx tsx scripts/reconcile-constraints.ts || true
-
-echo "=== Pre-migration: normalize verse columns ==="
-npx tsx scripts/normalize-verse-columns.ts || true
-
-echo "=== Pre-migration: fix video_pipeline_jobs serial→varchar ==="
-psql "$DATABASE_URL" -c "
-DO \$\$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'video_pipeline_jobs' AND column_name = 'id' AND data_type = 'integer'
-  ) THEN
-    DROP TABLE video_pipeline_jobs CASCADE;
-    DROP SEQUENCE IF EXISTS video_pipeline_jobs_id_seq CASCADE;
-    RAISE NOTICE 'Dropped legacy serial-based video_pipeline_jobs table';
-  END IF;
-END
-\$\$;
-" || true
-
-echo "=== Pre-migration: fix video_avatars heygen_avatar_id and voice ==="
+echo "=== Data cleanup: fix video avatar identifiers ==="
 psql "$DATABASE_URL" -c "
 UPDATE video_avatars SET heygen_avatar_id = 'June_expressive_2024112701' WHERE heygen_avatar_id = 'Juniper';
 UPDATE video_avatars SET heygen_voice_id = '68dedac41a9f46a6a4271a95c733823c' WHERE heygen_voice_id = 'hpp4J3VqNfWAUOO0d1Us';
 " || true
 
-echo "=== Pre-schema: dedup video topics by title+language ==="
+echo "=== Data cleanup: dedup video topics by title+language ==="
 psql "$DATABASE_URL" -c "
 DELETE FROM video_topics
 WHERE id NOT IN (
@@ -40,27 +21,11 @@ WHERE id NOT IN (
 );
 " || true
 
-echo "=== Pre-schema: dedup video avatars by name+voice ==="
+echo "=== Data cleanup: dedup video avatars by name+voice ==="
 psql "$DATABASE_URL" -c "
 DELETE FROM video_avatars a USING video_avatars b
 WHERE a.created_at > b.created_at AND a.name = b.name AND a.heygen_voice_id = b.heygen_voice_id;
 " || true
-
-echo "=== Pre-schema: ensure unique index on video_topics ==="
-psql "$DATABASE_URL" -c "
-CREATE UNIQUE INDEX IF NOT EXISTS video_topics_title_language_idx ON video_topics (title, language);
-" || true
-
-echo "=== Pushing schema ==="
-if npx drizzle-kit push --force 2>&1; then
-  echo "Schema push complete via drizzle-kit"
-else
-  echo "drizzle-kit push failed (exit $?), applying fallback SQL migrations..."
-  npx tsx scripts/ensure-tables.ts
-fi
-
-echo "=== Verifying critical tables ==="
-npx tsx scripts/ensure-tables.ts
 
 echo "=== Seeding production data ==="
 
@@ -72,9 +37,6 @@ npx tsx scripts/seed-verses-prod.ts
 
 echo "Seeding context cards & commentators..."
 npx tsx scripts/seed-context.ts || true
-
-echo "=== Preparing approved devotional catalog (CRITICAL) ==="
-npx tsx scripts/prepare-devotional-catalog.ts
 
 echo "Seeding timeline events..."
 npx tsx scripts/seed-timeline.ts || true

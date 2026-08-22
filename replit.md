@@ -46,35 +46,24 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 
 ### Database schema and devotional catalog recovery
 
-`npm run db:push` reconciles the database schema only. Deployment and post-merge
-setup therefore use `scripts/run-numbered-migrations.ts`, which records each
-numbered SQL migration and its checksum in `app_sql_migration`. The runner holds
-a PostgreSQL advisory lock and applies each pending migration and its ledger row
-in one transaction, so repeat deployments cannot run it twice.
+Replit Publish schema diff is the only production schema owner. The production
+build must not run Drizzle schema push, numbered SQL migrations, fallback DDL,
+or schema repair scripts. `npm run test:deploy-build-safety` enforces that rule.
 
-`scripts/prepare-devotional-catalog.ts` holds the same lock across migrations,
-all seeders, and catalog verification, preventing concurrent deployments from
-racing between seeding and migration `0005`. On an empty schema the initial
-snapshot can be applied normally. After the deployment schema push, the initial
-snapshot and migration `0003` are adopted only after required Grace Through
-Faith schema markers and the `0003` retirement postconditions are verified;
-safe migrations `0001` and `0002` still execute so their data backfills are not
-lost, while destructive retirement SQL is not replayed against existing data.
+Development keeps its normal schema path: post-merge setup runs
+`drizzle-kit push --force` against the development database. The historical
+numbered migration tools remain available for explicit development tests and
+manual diagnostics, but no automatic production path invokes them.
 
-Bible-book and Strong's prerequisites plus all four devotional seeders run after
-migration `0004` and before `0005`, ensuring the 21 editorially approved series
-exist before their provenance is promoted to `human_curated`.
+The 21 editorially approved devotional series are maintained by an awaited,
+data-only startup coordinator. It verifies the Publish-managed schema, acquires
+a PostgreSQL advisory lock, repairs missing approved plans or days
+idempotently, applies human-curated provenance, and verifies catalog health
+before the server listens. If required schema is absent it fails with an
+instruction to run Publish to apply schema; startup never attempts DDL.
 
-For a manual recovery outside deployment, use the same ordered flow:
-
-```bash
-npm run db:push
-npm run db:prepare-devotional-catalog
-```
-
-`npm run test:numbered-migrations` verifies both a fresh isolated schema and a
-repeat deployment without touching existing application data. The deployment
-build also runs the catalog check before starting its temporary server.
+`npm run test:numbered-migrations` remains a development-only regression test
+for the historical migration set.
 
 ## User Preferences
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.

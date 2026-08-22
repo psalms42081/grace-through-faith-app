@@ -1,6 +1,5 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
 import { eq } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   devotionalPlans,
   devotionalDays,
@@ -8,9 +7,6 @@ import {
   timelineEvents,
   commentators,
 } from "../shared/schema";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
 
 interface DayData {
   dayNumber: number;
@@ -539,7 +535,10 @@ const PLANS: PlanData[] = [
   },
 ];
 
-async function seed() {
+// ─── Importable data-only function ───────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function seedDevotionals(db: NodePgDatabase<any>): Promise<void> {
   console.log("Seeding devotional plans and days...");
 
   const allLocations = await db.select().from(locations);
@@ -559,7 +558,7 @@ async function seed() {
 
   for (const plan of PLANS) {
     const existingPlan = await db
-      .select()
+      .select({ id: devotionalPlans.id })
       .from(devotionalPlans)
       .where(eq(devotionalPlans.title, plan.title))
       .limit(1);
@@ -568,8 +567,7 @@ async function seed() {
 
     if (existingPlan.length) {
       planId = existingPlan[0].id;
-      console.log(`  Plan "${plan.title}" already exists (id=${planId}), skipping.`);
-      continue;
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}), checking days...`);
     } else {
       const inserted = await db
         .insert(devotionalPlans)
@@ -585,13 +583,24 @@ async function seed() {
           isPublished: false,
           provenance: "legacy_unclassified",
         })
-        .returning();
+        .returning({ id: devotionalPlans.id });
 
       planId = inserted[0].id;
       console.log(`  Inserted plan: "${plan.title}" (id=${planId})`);
     }
 
+    // Partial repair: check which days already exist, insert only missing ones
+    const existingDays = await db
+      .select({ dayNumber: devotionalDays.dayNumber })
+      .from(devotionalDays)
+      .where(eq(devotionalDays.planId, planId));
+    const existingDayNumbers = new Set(existingDays.map((d) => d.dayNumber));
+
     for (const day of plan.days) {
+      if (existingDayNumbers.has(day.dayNumber)) {
+        continue; // already present — idempotent skip
+      }
+
       const locationId = day.locationName
         ? locationMap.get(day.locationName) ?? null
         : null;
@@ -642,10 +651,29 @@ async function seed() {
   }
 
   console.log("\nDevotional seeding complete.");
-  await pool.end();
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+// ─── Optional CLI wrapper ─────────────────────────────────────────────────────
+
+async function runCli() {
+  const { drizzle: drizzleConnect } = await import("drizzle-orm/node-postgres");
+  const { Pool: PgPool } = await import("pg");
+  const pool = new PgPool({ connectionString: process.env.DATABASE_URL });
+  const cliDb = drizzleConnect(pool);
+  try {
+    await seedDevotionals(cliDb);
+  } finally {
+    await pool.end();
+  }
+}
+
+// Detect direct execution (tsx scripts/seed-devotionals.ts)
+const isMain = process.argv[1] != null &&
+  (process.argv[1].endsWith("/seed-devotionals.ts") ||
+   process.argv[1].endsWith("\\seed-devotionals.ts"));
+if (isMain) {
+  runCli().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

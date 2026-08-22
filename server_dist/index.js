@@ -531,27 +531,47 @@ var init_schema = __esm({
       bookId: (0, import_pg_core.integer)("book_id").references(() => bibleBooks.id),
       chapter: (0, import_pg_core.integer)("chapter")
     });
-    devotionalPlans = (0, import_pg_core.pgTable)("devotional_plan", {
-      id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
-      title: (0, import_pg_core.text)("title").notNull(),
-      description: (0, import_pg_core.text)("description"),
-      totalDays: (0, import_pg_core.integer)("total_days").notNull(),
-      theme: (0, import_pg_core.text)("theme"),
-      targetGoals: (0, import_pg_core.jsonb)("target_goals").$type(),
-      difficultyLevel: (0, import_pg_core.varchar)("difficulty_level", { length: 20 }),
-      estimatedMinutesPerDay: (0, import_pg_core.integer)("estimated_minutes_per_day"),
-      category: (0, import_pg_core.varchar)("category", { length: 20 }).default("thematic"),
-      traditionKey: (0, import_pg_core.varchar)("tradition_key", { length: 30 }).default("core").notNull(),
-      isPublished: (0, import_pg_core.boolean)("is_published").default(false),
-      isAiGenerated: (0, import_pg_core.boolean)("is_ai_generated").default(false),
-      generatedForUserId: (0, import_pg_core.varchar)("generated_for_user_id"),
-      // Catalog eligibility is deliberately explicit. Legacy records stay readable
-      // through an enrollment, but require editorial review before being offered.
-      provenance: (0, import_pg_core.varchar)("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
-      curatedBy: (0, import_pg_core.varchar)("curated_by", { length: 120 }),
-      curatedAt: (0, import_pg_core.timestamp)("curated_at"),
-      createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
-    });
+    devotionalPlans = (0, import_pg_core.pgTable)(
+      "devotional_plan",
+      {
+        id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
+        title: (0, import_pg_core.text)("title").notNull(),
+        description: (0, import_pg_core.text)("description"),
+        totalDays: (0, import_pg_core.integer)("total_days").notNull(),
+        theme: (0, import_pg_core.text)("theme"),
+        targetGoals: (0, import_pg_core.jsonb)("target_goals").$type(),
+        difficultyLevel: (0, import_pg_core.varchar)("difficulty_level", { length: 20 }),
+        estimatedMinutesPerDay: (0, import_pg_core.integer)("estimated_minutes_per_day"),
+        category: (0, import_pg_core.varchar)("category", { length: 20 }).default("thematic"),
+        traditionKey: (0, import_pg_core.varchar)("tradition_key", { length: 30 }).default("core").notNull(),
+        isPublished: (0, import_pg_core.boolean)("is_published").default(false),
+        isAiGenerated: (0, import_pg_core.boolean)("is_ai_generated").default(false),
+        generatedForUserId: (0, import_pg_core.varchar)("generated_for_user_id"),
+        // Catalog eligibility is deliberately explicit. Legacy records stay readable
+        // through an enrollment, but require editorial review before being offered.
+        provenance: (0, import_pg_core.varchar)("provenance", { length: 30 }).default("legacy_unclassified").notNull(),
+        curatedBy: (0, import_pg_core.varchar)("curated_by", { length: 120 }),
+        curatedAt: (0, import_pg_core.timestamp)("curated_at"),
+        createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow().notNull()
+      },
+      (table) => ({
+        catalogAuthorshipCheck: (0, import_pg_core.check)(
+          "devotional_plan_catalog_authorship_check",
+          import_drizzle_orm.sql`${table.isPublished} IS NOT TRUE
+        OR (
+          ${table.createdAt} < TIMESTAMP '2026-04-01 00:00:00'
+          AND ${table.provenance} = 'legacy_unclassified'
+          AND ${table.isAiGenerated} IS NOT TRUE
+        )
+        OR (
+          ${table.provenance} = 'human_curated'
+          AND ${table.isAiGenerated} IS NOT TRUE
+          AND ${table.curatedBy} IS NOT NULL
+          AND ${table.curatedAt} IS NOT NULL
+        )`
+        )
+      })
+    );
     devotionalDays = (0, import_pg_core.pgTable)("devotional_day", {
       id: (0, import_pg_core.varchar)("id").primaryKey().default(import_drizzle_orm.sql`gen_random_uuid()`),
       planId: (0, import_pg_core.varchar)("plan_id").notNull().references(() => devotionalPlans.id),
@@ -1984,6 +2004,7 @@ var init_schema = __esm({
 var db_exports = {};
 __export(db_exports, {
   db: () => db,
+  pool: () => pool,
   warnIfDevotionalCatalogIsEmpty: () => warnIfDevotionalCatalogIsEmpty
 });
 async function warnIfDevotionalCatalogIsEmpty() {
@@ -3160,8 +3181,8 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
   try {
     const { db: db2 } = await Promise.resolve().then(() => (init_db(), db_exports));
     const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq57 } = await import("drizzle-orm");
-    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, sceneId)).limit(1);
+    const { eq: eq61 } = await import("drizzle-orm");
+    const [scene] = await db2.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq61(kidsStoryScenes2.id, sceneId)).limit(1);
     if (scene?.imageUrl) {
       if (scene.imageUrl.startsWith("data:image")) {
         return scene.imageUrl;
@@ -3184,11 +3205,11 @@ async function generateSceneImage(illustrationPrompt, sceneId) {
         const base64 = buffer.toString("base64");
         const contentType = imgResponse.headers.get("content-type") || "image/png";
         const dataUrl = `data:${contentType};base64,${base64}`;
-        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq57(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: dataUrl }).where(eq61(kidsStoryScenes2.id, sceneId));
         return dataUrl;
       } catch (fetchErr) {
         console.error("Failed to fetch/convert DALL-E image to base64:", fetchErr);
-        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq57(kidsStoryScenes2.id, sceneId));
+        await db2.update(kidsStoryScenes2).set({ imageUrl: generatedUrl }).where(eq61(kidsStoryScenes2.id, sceneId));
         return generatedUrl;
       }
     }
@@ -9907,8 +9928,8 @@ __export(seed_beliefs_wave1_exports, {
   seedBeliefsWave1: () => seedBeliefsWave1
 });
 async function seedBeliefsWave1(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm52.eq)(formationLessons.id, "w1l-1-2")).limit(1);
-  if (check) {
+  const [check2] = await db2.select().from(formationLessons).where((0, import_drizzle_orm52.eq)(formationLessons.id, "w1l-1-2")).limit(1);
+  if (check2) {
     return;
   }
   console.log("Seeding Wave 1 beliefs content (Beliefs 1-7)...");
@@ -12134,8 +12155,8 @@ __export(seed_beliefs_wave2_exports, {
   seedBeliefsWave2: () => seedBeliefsWave2
 });
 async function seedBeliefsWave2(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w2l-8-1")).limit(1);
-  if (check) {
+  const [check2] = await db2.select().from(formationLessons).where((0, import_drizzle_orm53.eq)(formationLessons.id, "w2l-8-1")).limit(1);
+  if (check2) {
     return;
   }
   console.log("Seeding Wave 2 beliefs content (Beliefs 8-11)...");
@@ -16032,8 +16053,8 @@ __export(seed_beliefs_wave3_exports, {
   seedBeliefsWave3: () => seedBeliefsWave3
 });
 async function seedBeliefsWave3(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w3l-12-1")).limit(1);
-  if (check) {
+  const [check2] = await db2.select().from(formationLessons).where((0, import_drizzle_orm54.eq)(formationLessons.id, "w3l-12-1")).limit(1);
+  if (check2) {
     return;
   }
   console.log("Seeding Wave 3 beliefs content (Beliefs 12-18)...");
@@ -22015,8 +22036,8 @@ __export(seed_beliefs_wave4_exports, {
   seedBeliefsWave4: () => seedBeliefsWave4
 });
 async function seedBeliefsWave4(db2) {
-  const [check] = await db2.select().from(formationLessons).where((0, import_drizzle_orm55.eq)(formationLessons.id, "w4l-19-1")).limit(1);
-  if (check) {
+  const [check2] = await db2.select().from(formationLessons).where((0, import_drizzle_orm55.eq)(formationLessons.id, "w4l-19-1")).limit(1);
+  if (check2) {
     return;
   }
   console.log("Seeding Wave 4 beliefs content (Beliefs 19-28)...");
@@ -35112,6 +35133,2795 @@ var init_fix_devotional_categories = __esm({
   }
 });
 
+// scripts/seed-devotionals.ts
+var seed_devotionals_exports = {};
+__export(seed_devotionals_exports, {
+  seedDevotionals: () => seedDevotionals
+});
+async function seedDevotionals(db2) {
+  console.log("Seeding devotional plans and days...");
+  const allLocations = await db2.select().from(locations);
+  const locationMap = /* @__PURE__ */ new Map();
+  for (const loc of allLocations) {
+    locationMap.set(loc.name, loc.id);
+  }
+  const allEvents = await db2.select().from(timelineEvents);
+  const eventMap = /* @__PURE__ */ new Map();
+  for (const evt of allEvents) {
+    eventMap.set(evt.title, evt.id);
+  }
+  const allCommentators = await db2.select().from(commentators);
+  const commentatorIds = new Set(allCommentators.map((c) => c.id));
+  for (const plan of PLANS) {
+    const existingPlan = await db2.select({ id: devotionalPlans.id }).from(devotionalPlans).where((0, import_drizzle_orm62.eq)(devotionalPlans.title, plan.title)).limit(1);
+    let planId;
+    if (existingPlan.length) {
+      planId = existingPlan[0].id;
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}), checking days...`);
+    } else {
+      const inserted = await db2.insert(devotionalPlans).values({
+        title: plan.title,
+        description: plan.description,
+        totalDays: plan.totalDays,
+        theme: plan.theme,
+        targetGoals: plan.targetGoals,
+        difficultyLevel: plan.difficultyLevel,
+        estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
+        // Publishing requires a separate, explicit human-curation decision.
+        isPublished: false,
+        provenance: "legacy_unclassified"
+      }).returning({ id: devotionalPlans.id });
+      planId = inserted[0].id;
+      console.log(`  Inserted plan: "${plan.title}" (id=${planId})`);
+    }
+    const existingDays = await db2.select({ dayNumber: devotionalDays.dayNumber }).from(devotionalDays).where((0, import_drizzle_orm62.eq)(devotionalDays.planId, planId));
+    const existingDayNumbers = new Set(existingDays.map((d) => d.dayNumber));
+    for (const day of plan.days) {
+      if (existingDayNumbers.has(day.dayNumber)) {
+        continue;
+      }
+      const locationId = day.locationName ? locationMap.get(day.locationName) ?? null : null;
+      const timelineEventId = day.timelineEventTitle ? eventMap.get(day.timelineEventTitle) ?? null : null;
+      const validCommentatorId = day.commentatorId && commentatorIds.has(day.commentatorId) ? day.commentatorId : null;
+      if (day.locationName && !locationId) {
+        console.warn(`    Location not found: "${day.locationName}"`);
+      }
+      if (day.timelineEventTitle && !timelineEventId) {
+        console.warn(`    Timeline event not found: "${day.timelineEventTitle}"`);
+      }
+      if (day.commentatorId && !validCommentatorId) {
+        console.warn(`    Commentator not found: "${day.commentatorId}"`);
+      }
+      await db2.insert(devotionalDays).values({
+        planId,
+        dayNumber: day.dayNumber,
+        title: day.title,
+        bookId: day.bookId,
+        chapter: day.chapter,
+        verseStart: day.verseStart,
+        verseEnd: day.verseEnd,
+        passageLabel: day.passageLabel,
+        contextNote: day.contextNote,
+        keyTermStrongId: day.keyTermStrongId,
+        locationId,
+        timelineEventId,
+        commentatorId: validCommentatorId,
+        historicVoiceExcerpt: day.historicVoiceExcerpt,
+        reflectionQuestions: day.reflectionQuestions,
+        prayerPrompt: day.prayerPrompt,
+        thenContext: day.thenContext,
+        nowApplication: day.nowApplication
+      }).onConflictDoNothing();
+      console.log(`    Day ${day.dayNumber}: "${day.title}"`);
+    }
+  }
+  console.log("\nDevotional seeding complete.");
+}
+async function runCli() {
+  const { drizzle: drizzleConnect } = await import("drizzle-orm/node-postgres");
+  const { Pool: PgPool } = await import("pg");
+  const pool2 = new PgPool({ connectionString: process.env.DATABASE_URL });
+  const cliDb = drizzleConnect(pool2);
+  try {
+    await seedDevotionals(cliDb);
+  } finally {
+    await pool2.end();
+  }
+}
+var import_drizzle_orm62, PLANS, isMain;
+var init_seed_devotionals = __esm({
+  "scripts/seed-devotionals.ts"() {
+    "use strict";
+    import_drizzle_orm62 = require("drizzle-orm");
+    init_schema();
+    PLANS = [
+      {
+        title: "Foundations of Faith",
+        description: "Journey through seven key passages from Genesis to Revelation that lay the bedrock of Christian belief. Each day explores a foundational doctrine \u2014 creation, covenant, law, prophecy, incarnation, redemption, and restoration \u2014 helping you build an unshakeable framework for faith.",
+        totalDays: 7,
+        theme: "Core Doctrines",
+        targetGoals: ["Understand foundational doctrines", "Build a biblical worldview", "Connect Old and New Testaments"],
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 15,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "In the Beginning \u2014 Creation",
+            bookId: 1,
+            chapter: 1,
+            verseStart: 1,
+            verseEnd: 31,
+            passageLabel: "Genesis 1:1-31",
+            contextNote: "Genesis opens the entire biblical narrative with God creating the heavens and earth. Written to ancient Israelites surrounded by polytheistic creation myths, this chapter declares one sovereign God who creates with purpose, order, and goodness.",
+            keyTermStrongId: "H1254",
+            locationName: "Garden of Eden Region",
+            timelineEventTitle: "Creation",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "The work of creation is not a work of human art or device but a work of divine wisdom and power.",
+            reflectionQuestions: [
+              "What does it mean that God declared creation 'good'?",
+              "How does being made in God's image shape your understanding of human dignity?",
+              "Where do you see evidence of God's creative order in the world around you?",
+              "How does the creation account challenge modern views of human origin and purpose?"
+            ],
+            prayerPrompt: "Creator God, thank You for making all things with intention and declaring them good. Help me to see Your image in every person I encounter and to steward Your creation faithfully.",
+            thenContext: "Ancient Israelites lived among cultures with competing creation stories involving chaotic battles between gods. Genesis 1 presented a radically different vision: one God, creating peacefully and purposefully, with humanity as the pinnacle of His work.",
+            nowApplication: "In a culture that often reduces humans to biological accidents or economic units, Genesis 1 affirms that every person carries inherent dignity and purpose. Our work, creativity, and care for others flow from this original design."
+          },
+          {
+            dayNumber: 2,
+            title: "Covenant Promise \u2014 God Calls Abraham",
+            bookId: 1,
+            chapter: 12,
+            verseStart: 1,
+            verseEnd: 9,
+            passageLabel: "Genesis 12:1-9",
+            contextNote: "God calls Abram out of Ur, a prosperous pagan city, promising to make him a great nation and bless all families of the earth through him. This covenant becomes the backbone of the entire biblical storyline.",
+            keyTermStrongId: "H1285",
+            locationName: "Ur",
+            timelineEventTitle: "Call of Abraham",
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "This call of Abram was an act of pure sovereign grace; there was nothing in Abram to merit such a distinction.",
+            reflectionQuestions: [
+              "What is God asking you to leave behind in order to follow Him more fully?",
+              "How do you respond when God's promises seem too large for your circumstances?",
+              "What does Abram's obedience without seeing the destination teach about faith?",
+              "How does God's promise to bless 'all families of the earth' expand your understanding of His plan?"
+            ],
+            prayerPrompt: "Lord, like Abraham, give me the courage to follow where You lead, even when I cannot see the destination. Help me to trust Your covenant promises and to be a blessing to those around me.",
+            thenContext: "Abram's departure from Ur was a complete break from family, culture, and the security of a prosperous civilization. God's promise to make him a great nation seemed impossible \u2014 he was elderly and childless.",
+            nowApplication: "Following God often means stepping into uncertainty with nothing but a promise. Abraham's journey reminds us that faith is not a feeling but a decision to obey when God speaks, even before we see results."
+          },
+          {
+            dayNumber: 3,
+            title: "The Law \u2014 God's Standard Revealed",
+            bookId: 2,
+            chapter: 20,
+            verseStart: 1,
+            verseEnd: 17,
+            passageLabel: "Exodus 20:1-17",
+            contextNote: "At Mount Sinai, God gives Israel the Ten Commandments \u2014 the moral foundation of the Mosaic covenant. These laws defined Israel's relationship with God and with one another, setting them apart from surrounding nations.",
+            keyTermStrongId: "H8451",
+            locationName: "Mount Sinai",
+            timelineEventTitle: "Giving of the Law at Sinai",
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "These ten words are the foundation of all the laws in the Pentateuch, and indeed of all righteous legislation among mankind.",
+            reflectionQuestions: [
+              "Which of the Ten Commandments challenges you most in your daily life?",
+              "How does the law reveal both God's holiness and His care for human flourishing?",
+              "What is the relationship between the law and grace in your understanding?",
+              "How do these ancient commands remain relevant in modern ethical discussions?"
+            ],
+            prayerPrompt: "Holy God, Your commandments reveal Your character and Your care for us. Show me where my life falls short of Your standard, and give me grace to pursue holiness \u2014 not to earn Your love, but because I have already received it.",
+            thenContext: "Israel had just been delivered from Egypt and was being constituted as a covenant nation. The Ten Commandments established the terms of their relationship with God \u2014 not as conditions for earning salvation, but as the grateful response of a redeemed people.",
+            nowApplication: "The law functions as a mirror, revealing our need for grace. While we are not saved by keeping commandments, they still reflect God's unchanging character and provide a moral framework for life in community."
+          },
+          {
+            dayNumber: 4,
+            title: "The Suffering Servant \u2014 Prophecy of Redemption",
+            bookId: 23,
+            chapter: 53,
+            verseStart: 1,
+            verseEnd: 12,
+            passageLabel: "Isaiah 53:1-12",
+            contextNote: "Written approximately 700 years before Christ, Isaiah 53 describes a mysterious 'Suffering Servant' who bears the sins of the people. The original audience expected a conquering Messiah; Isaiah revealed one who would conquer through sacrifice.",
+            keyTermStrongId: "H3444",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "He was wounded for our transgressions \u2014 not for any sin of His own; the chastisement of our peace was upon Him, that we, by His stripes, might be healed.",
+            reflectionQuestions: [
+              "How does understanding the cost of grace change the way you live?",
+              "In what ways does Jesus as the Suffering Servant challenge your expectations of strength?",
+              "What does it mean that 'by His stripes we are healed'?",
+              "How does this prophecy connect the Old Testament to the New Testament?"
+            ],
+            prayerPrompt: "Jesus, by Your wounds I am healed. Help me never to treat Your sacrifice lightly. Let the weight of what You endured transform my gratitude, my worship, and my willingness to serve others sacrificially.",
+            thenContext: "Isaiah spoke to a nation facing judgment and exile. The idea of a Messiah who would suffer and die was counter to every expectation. Yet this servant would bear iniquity, be 'cut off from the land of the living,' and make many righteous.",
+            nowApplication: "Isaiah 53 confronts our desire for a God who fixes everything without cost. True redemption required the deepest sacrifice. This chapter invites us to reckon with the weight of grace \u2014 it was not cheap."
+          },
+          {
+            dayNumber: 5,
+            title: "The Word Made Flesh \u2014 Incarnation",
+            bookId: 43,
+            chapter: 1,
+            verseStart: 1,
+            verseEnd: 18,
+            passageLabel: "John 1:1-18",
+            contextNote: "John's prologue declares that the eternal Word (Logos) who was with God and was God became flesh and dwelt among humanity. This is the cornerstone of Christian theology: God entered the material world fully and personally.",
+            keyTermStrongId: "G3056",
+            locationName: "Bethlehem",
+            timelineEventTitle: "Birth of Jesus Christ",
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "The Word was made flesh \u2014 not by being changed into flesh, but by assuming human nature into union with His divine person.",
+            reflectionQuestions: [
+              "What does it mean that the eternal Word 'became flesh' and dwelt among us?",
+              "How does the incarnation change the way you view ordinary, physical life?",
+              "What does John mean when he says Jesus is 'full of grace and truth'?",
+              "How does the metaphor of light versus darkness apply to your circumstances?"
+            ],
+            prayerPrompt: "Lord Jesus, You are the Word made flesh. Thank You for not remaining distant but entering into the fullness of human experience. Shine Your light into every dark corner of my heart and help me receive Your grace and truth.",
+            thenContext: "John wrote to a mixed audience of Jews (for whom 'the Word' meant God's creative and revelatory power) and Greeks (for whom 'Logos' was the rational principle of the universe). John declared this Logos was not an abstract force but a Person.",
+            nowApplication: "In a culture that separates spiritual from physical, John 1 insists God entered the material world fully. The incarnation means God is not distant \u2014 He moved into the neighborhood. This transforms how we view our bodies, our work, and everyday life."
+          },
+          {
+            dayNumber: 6,
+            title: "No Condemnation \u2014 Freedom in Christ",
+            bookId: 45,
+            chapter: 8,
+            verseStart: 1,
+            verseEnd: 39,
+            passageLabel: "Romans 8:1-39",
+            contextNote: "Romans 8 is the climactic chapter of Paul's letter \u2014 a declaration that those in Christ are free from condemnation, empowered by the Spirit, and held secure by an inseparable love. It addresses guilt, fear, and the assurance of salvation.",
+            keyTermStrongId: "G1343",
+            locationName: "Rome",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "If God be for us, who can be against us? The apostle here challenges all the enemies of the saints to produce anything against them that can prevail.",
+            reflectionQuestions: [
+              "Where in your life are you still living under condemnation rather than in freedom?",
+              "How does the promise that 'all things work together for good' sustain you in hardship?",
+              "What would change if you truly believed nothing can separate you from God's love?",
+              "How is the Holy Spirit interceding for you in your current struggles?"
+            ],
+            prayerPrompt: "Abba, Father \u2014 I am Your child. Thank You that there is no condemnation for me in Christ Jesus. When guilt and shame threaten to define me, remind me that Your Spirit bears witness with my spirit. Nothing can separate me from Your love.",
+            thenContext: "Paul wrote to a community of Jewish and Gentile believers navigating deep theological tensions. Romans 8 resolves the tension between law and grace, declaring that the Spirit gives what the law demanded but could not produce.",
+            nowApplication: "Romans 8 speaks directly to guilt, fear, and insecurity. In a world that constantly evaluates and condemns, Paul declares freedom. The Spirit does not merely help us try harder \u2014 He gives us a new identity as God's children."
+          },
+          {
+            dayNumber: 7,
+            title: "All Things New \u2014 The Promise of Restoration",
+            bookId: 66,
+            chapter: 21,
+            verseStart: 1,
+            verseEnd: 7,
+            passageLabel: "Revelation 21:1-7",
+            contextNote: "The final vision of Scripture: a new heaven and new earth where God dwells directly with His people. Death, mourning, crying, and pain are abolished. The entire biblical narrative culminates in total restoration.",
+            keyTermStrongId: "G2316",
+            locationName: "Patmos",
+            timelineEventTitle: "John's Vision on Patmos",
+            commentatorId: "jfb",
+            historicVoiceExcerpt: "God shall wipe away all tears \u2014 there shall be no more death, neither sorrow, nor crying. The former things are passed away; behold, all things are made new.",
+            reflectionQuestions: [
+              "How does the promise of a renewed creation affect how you handle present suffering?",
+              "What does it mean that God will 'dwell with' His people \u2014 not at a distance but intimately?",
+              "In what ways can you participate now in God's work of making all things new?",
+              "How does this vision of the future shape your priorities today?"
+            ],
+            prayerPrompt: "God of all hope, You are making all things new. When the brokenness of this world weighs on me, lift my eyes to the city You are preparing. Strengthen me to be an agent of Your renewal even now, as I wait for the day when every sorrow is no more.",
+            thenContext: "John received this vision while exiled on Patmos, writing to persecuted churches across Asia Minor. The imagery draws on Old Testament promises \u2014 the new Jerusalem, the wiping away of tears, the end of death \u2014 bringing the biblical narrative to its climax.",
+            nowApplication: "Revelation 21 reframes all present suffering as temporary. God's plan is not to abandon creation but to renew it. This hope is not escapism \u2014 it is the ultimate realism, the destination toward which all of history moves."
+          }
+        ]
+      },
+      {
+        title: "The Life of Christ",
+        description: "Walk through seven pivotal moments in the life of Jesus \u2014 from His miraculous birth to His glorious resurrection. Each day immerses you in a key event, revealing who Jesus is, why He came, and what His life means for yours.",
+        totalDays: 7,
+        theme: "Christology",
+        targetGoals: ["Know Jesus more deeply", "Understand His mission", "Apply His example to daily life"],
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 12,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "Born in Bethlehem",
+            bookId: 42,
+            chapter: 2,
+            verseStart: 1,
+            verseEnd: 20,
+            passageLabel: "Luke 2:1-20",
+            contextNote: "Caesar Augustus ordered a census that brought Mary and Joseph to Bethlehem, fulfilling Micah's prophecy. The King of kings was born not in a palace but in the humblest of circumstances, announced first to shepherds \u2014 the lowest of society.",
+            keyTermStrongId: "G4982",
+            locationName: "Bethlehem",
+            timelineEventTitle: "Birth of Jesus Christ",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Christ was born in an inn, to intimate that He came into the world but as a sojourner, whose home and kingdom are not of this world.",
+            reflectionQuestions: [
+              "What does the humble setting of Jesus' birth reveal about God's values?",
+              "Why were shepherds \u2014 social outsiders \u2014 the first to hear the good news?",
+              "How does the incarnation challenge the way you think about power and status?",
+              "What would it look like to 'treasure and ponder' God's work in your life as Mary did?"
+            ],
+            prayerPrompt: "Lord Jesus, You entered the world in humility and were announced to the lowly. Help me to recognize Your presence in unexpected places and to treasure Your work in my heart as Mary did.",
+            thenContext: "In first-century Palestine under Roman occupation, a census forced families to travel to ancestral towns. Bethlehem was small and overcrowded. The Messiah's arrival in such conditions was scandalously humble \u2014 the opposite of royal expectation.",
+            nowApplication: "God consistently works through what the world overlooks. The birth narrative challenges our assumptions about how God shows up \u2014 not in power and spectacle, but in vulnerability, humility, and among the marginalized."
+          },
+          {
+            dayNumber: 2,
+            title: "Baptized in the Jordan",
+            bookId: 40,
+            chapter: 3,
+            verseStart: 13,
+            verseEnd: 17,
+            passageLabel: "Matthew 3:13-17",
+            contextNote: "Jesus comes to John the Baptist to be baptized in the Jordan River. Though sinless, He identifies with humanity. The heavens open, the Spirit descends like a dove, and the Father declares: 'This is my beloved Son, in whom I am well pleased.'",
+            keyTermStrongId: "G4151",
+            locationName: "Jordan River",
+            timelineEventTitle: "Baptism of Jesus",
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "In this one act, the whole Trinity is manifested: the Father speaks, the Son is baptized, and the Holy Spirit descends.",
+            reflectionQuestions: [
+              "Why did Jesus, who was sinless, submit to baptism?",
+              "What does the Father's declaration of love over Jesus mean for your own identity?",
+              "How does Jesus' baptism mark the beginning of His public mission?",
+              "In what ways has God affirmed your identity and calling?"
+            ],
+            prayerPrompt: "Father, just as You declared Your love over Jesus at His baptism, remind me that I too am beloved. Help me to walk in the identity You have given me and to live out the mission You have called me to.",
+            thenContext: "John's baptism was a baptism of repentance. Jesus' submission to it was an act of solidarity with sinful humanity \u2014 taking on the role of servant from the very beginning of His ministry. The trinitarian revelation was unprecedented.",
+            nowApplication: "Jesus' baptism reveals that identity precedes mission. Before He performed a single miracle, the Father affirmed who He was. We too must ground our doing in our being \u2014 beloved children of God."
+          },
+          {
+            dayNumber: 3,
+            title: "Teaching on the Mountain",
+            bookId: 40,
+            chapter: 5,
+            verseStart: 1,
+            verseEnd: 16,
+            passageLabel: "Matthew 5:1-16",
+            contextNote: "Jesus delivers the Beatitudes \u2014 the opening of the Sermon on the Mount. He declares 'blessed' the poor in spirit, the mourning, the meek, the merciful, and the persecuted. These kingdom values turn worldly wisdom upside down.",
+            keyTermStrongId: "G932",
+            locationName: "Capernaum",
+            timelineEventTitle: "Sermon on the Mount",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Christ begins not with commands but with blessings \u2014 showing that His kingdom is first a gift before it is a demand.",
+            reflectionQuestions: [
+              "Which beatitude challenges your assumptions about what it means to be blessed?",
+              "How does Jesus' definition of blessedness differ from cultural success?",
+              "What does it mean to be 'salt' and 'light' in your specific context?",
+              "How can you be a peacemaker in your relationships this week?"
+            ],
+            prayerPrompt: "Jesus, Your kingdom turns the world's values upside down. Make me poor in spirit and hungry for righteousness. Help me to be salt and light wherever You have placed me \u2014 not for my own glory, but for Yours.",
+            thenContext: "Jesus taught on a hillside in Galilee to disciples and crowds. In a world dominated by Roman military power and religious legalism, He announced a radically different kingdom with radically different values \u2014 one where the humble, the meek, and the merciful are exalted.",
+            nowApplication: "The Beatitudes are not aspirational ideals but the constitution of God's kingdom. They describe the character of those who belong to it. In a culture that celebrates self-promotion, Jesus blesses humility, mercy, and purity of heart."
+          },
+          {
+            dayNumber: 4,
+            title: "Calming the Storm",
+            bookId: 41,
+            chapter: 4,
+            verseStart: 35,
+            verseEnd: 41,
+            passageLabel: "Mark 4:35-41",
+            contextNote: "After a day of teaching, Jesus and His disciples cross the Sea of Galilee. A violent storm threatens to swamp the boat while Jesus sleeps. He rises, rebukes the wind and waves, and they are instantly still. The disciples are terrified \u2014 not by the storm, but by Jesus.",
+            keyTermStrongId: "G4102",
+            locationName: "Sea of Galilee",
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "He who made the winds and the sea could with a word command them into silence, for they are His servants.",
+            reflectionQuestions: [
+              "What storms in your life feel overwhelming right now?",
+              "Why do you think Jesus was able to sleep during the storm?",
+              "What does the disciples' question \u2014 'Do you not care?' \u2014 reveal about their faith?",
+              "How does Jesus' authority over creation change the way you face fear?"
+            ],
+            prayerPrompt: "Lord Jesus, You command the wind and waves. In the storms of my life, help me to trust that You are present even when You seem silent. Replace my fear with faith in Your sovereign power.",
+            thenContext: "The Sea of Galilee is known for sudden, violent storms caused by wind funneling through surrounding valleys. The disciples \u2014 experienced fishermen \u2014 were genuinely terrified. Jesus' command over nature demonstrated an authority that exceeded any prophet before Him.",
+            nowApplication: "This passage speaks to every season of chaos and fear. Jesus does not promise the absence of storms but His presence in them. His peace is not the absence of trouble but the assurance of His authority over it."
+          },
+          {
+            dayNumber: 5,
+            title: "Feeding the Five Thousand",
+            bookId: 43,
+            chapter: 6,
+            verseStart: 1,
+            verseEnd: 14,
+            passageLabel: "John 6:1-14",
+            contextNote: "Jesus feeds over five thousand people with five loaves and two fish from a boy's lunch. This is the only miracle recorded in all four Gospels, underscoring its significance. It reveals Jesus as the provider who satisfies both physical and spiritual hunger.",
+            keyTermStrongId: "G5485",
+            locationName: "Sea of Galilee",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Christ multiplied the loaves in the breaking \u2014 so it is often in the using of our gifts for God's glory that we find them increased.",
+            reflectionQuestions: [
+              "What small resources or abilities are you holding back from God?",
+              "How does the boy's willingness to offer what he had challenge your generosity?",
+              "What does this miracle reveal about Jesus' compassion for physical needs?",
+              "How does Jesus' role as 'bread of life' satisfy your deepest hunger?"
+            ],
+            prayerPrompt: "Lord, You took a small offering and multiplied it beyond imagination. I offer You what I have \u2014 my time, my talents, my resources \u2014 trusting that in Your hands, even the little I bring can feed multitudes.",
+            thenContext: "The crowd had followed Jesus to a remote area near the Sea of Galilee. Philip calculated it would take eight months' wages to feed them. Andrew found a boy with five barley loaves and two fish \u2014 a peasant's lunch \u2014 and Jesus turned it into abundance.",
+            nowApplication: "God does not wait for us to have enough before He acts. He takes what we offer \u2014 however small \u2014 and multiplies it. This miracle invites us to stop calculating our insufficiency and start trusting His sufficiency."
+          },
+          {
+            dayNumber: 6,
+            title: "Crucified for Us",
+            bookId: 43,
+            chapter: 19,
+            verseStart: 17,
+            verseEnd: 30,
+            passageLabel: "John 19:17-30",
+            contextNote: "Jesus is crucified at Golgotha. John records the details with stark restraint \u2014 the inscription on the cross, the soldiers dividing His garments, Jesus committing His mother to John's care, and His final words: 'It is finished.'",
+            keyTermStrongId: "G5547",
+            locationName: "Jerusalem",
+            timelineEventTitle: "Crucifixion of Jesus",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "'It is finished' \u2014 not merely His suffering, but the work of redemption, the fulfillment of all prophecy, and the satisfaction of divine justice.",
+            reflectionQuestions: [
+              "What does Jesus' declaration 'It is finished' mean for your salvation?",
+              "How does the cross reveal both God's justice and His love simultaneously?",
+              "In what ways do you try to add to what Christ has already accomplished?",
+              "How does meditating on the crucifixion change the way you approach God?"
+            ],
+            prayerPrompt: "Jesus, You said 'It is finished.' Help me to rest in the completeness of Your sacrifice. I cannot add to what You have done. Free me from trying to earn what You have freely given. Your cross is enough.",
+            thenContext: "Crucifixion was Rome's most brutal and humiliating form of execution, reserved for the lowest criminals. That the Messiah would die this way was unthinkable to first-century Jews. Yet Jesus embraced it willingly, fulfilling Isaiah's prophecy of the Suffering Servant.",
+            nowApplication: "The cross stands at the center of Christian faith \u2014 not as a symbol of defeat but of victory. 'It is finished' means the debt is paid, the barrier removed, and access to God opened. We approach God not through our merit but through Christ's completed work."
+          },
+          {
+            dayNumber: 7,
+            title: "He Is Risen",
+            bookId: 43,
+            chapter: 20,
+            verseStart: 1,
+            verseEnd: 18,
+            passageLabel: "John 20:1-18",
+            contextNote: "On the first day of the week, Mary Magdalene finds the tomb empty. She encounters the risen Jesus, who calls her by name. She becomes the first witness and herald of the resurrection \u2014 the event that changed everything.",
+            keyTermStrongId: "G386",
+            locationName: "Jerusalem",
+            timelineEventTitle: "Resurrection of Jesus",
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "He called her by name \u2014 'Mary' \u2014 and in that single word she recognized the voice of her Lord, alive forevermore.",
+            reflectionQuestions: [
+              "What does the empty tomb mean for your daily life, not just your eternal destiny?",
+              "Why did Jesus appear first to Mary Magdalene rather than to religious leaders?",
+              "How does the resurrection confirm everything Jesus claimed about Himself?",
+              "In what areas of your life do you need the power of resurrection hope?"
+            ],
+            prayerPrompt: "Risen Lord, You conquered death and called Mary by name. You know my name too. Fill me with resurrection hope \u2014 the confidence that no grave, no failure, no darkness has the final word. You are alive, and because You live, I can face tomorrow.",
+            thenContext: "In first-century Jewish culture, women's testimony was not accepted in court. Yet God chose Mary Magdalene as the first witness of the resurrection \u2014 overturning social hierarchy and demonstrating that the gospel elevates those the world dismisses.",
+            nowApplication: "The resurrection is not just a historical event but a present reality. Because Christ is risen, death is defeated, hope is restored, and every broken thing can be made new. Resurrection power is available to us now \u2014 in our struggles, our grief, and our daily obedience."
+          }
+        ]
+      },
+      {
+        title: "Psalms of Comfort",
+        description: "Spend five days in the Psalms that have comforted God's people through centuries of suffering, loss, and uncertainty. These carefully selected passages offer shelter for the weary soul, reminding you that God is near to the brokenhearted.",
+        totalDays: 5,
+        theme: "Comfort & Encouragement",
+        targetGoals: ["Find comfort in Scripture", "Develop a habit of prayer through the Psalms", "Learn to lament honestly before God"],
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "The Lord Is My Shepherd",
+            bookId: 19,
+            chapter: 23,
+            verseStart: 1,
+            verseEnd: 6,
+            passageLabel: "Psalm 23:1-6",
+            contextNote: "David, the shepherd-king who knew both green pastures and deadly valleys, wrote this psalm from personal experience. It is perhaps the most beloved passage in all of Scripture \u2014 a declaration of trust in God's personal, active provision.",
+            keyTermStrongId: "H7462",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "If the Lord is my shepherd, I shall not want \u2014 not because I will have everything I desire, but because the shepherd knows what the sheep truly needs.",
+            reflectionQuestions: [
+              "In what area of your life do you need to trust that the Lord is your shepherd?",
+              "What 'valley of the shadow of death' are you walking through right now?",
+              "How has God 'prepared a table' for you even in difficult circumstances?",
+              "What does it mean to dwell in the house of the Lord forever?"
+            ],
+            prayerPrompt: "Lord, You are my shepherd and I lack nothing in You. Lead me beside still waters and restore my soul. Even in the darkest valleys, I choose to trust Your rod and staff. Let Your goodness and mercy follow me all the days of my life.",
+            thenContext: "In ancient Israel, shepherds were responsible for every aspect of their flock's welfare \u2014 guiding, feeding, protecting, and carrying the weak. David applied this intimate knowledge to describe God's comprehensive care for His people.",
+            nowApplication: "Psalm 23 is not a promise of a trouble-free life but of a never-alone life. In seasons of anxiety and loss, it reminds us that God's provision is not passive but actively personal \u2014 He leads, restores, comforts, and prepares abundance even in opposition."
+          },
+          {
+            dayNumber: 2,
+            title: "God Is Our Refuge",
+            bookId: 19,
+            chapter: 46,
+            verseStart: 1,
+            verseEnd: 11,
+            passageLabel: "Psalm 46:1-11",
+            contextNote: "This psalm declares God as a refuge and strength even when the earth gives way and mountains fall into the sea. It climaxes with the command: 'Be still, and know that I am God.' Martin Luther drew inspiration from it for his hymn 'A Mighty Fortress Is Our God.'",
+            keyTermStrongId: "H430",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "Be still \u2014 cease from your own restless efforts and know, by experience and submission, that Jehovah alone is God.",
+            reflectionQuestions: [
+              "What does it mean for God to be your 'refuge' in practical terms?",
+              "When have you experienced God as 'a very present help in trouble'?",
+              "What would it look like to truly 'be still' in your current circumstances?",
+              "How does this psalm help you face situations that feel catastrophic?"
+            ],
+            prayerPrompt: "Mighty God, You are my refuge and strength \u2014 a very present help in trouble. When everything shakes, You remain unmoved. Teach me to be still, to release my grip on control, and to rest in the knowledge that You are God.",
+            thenContext: "This psalm may have been written in response to a military threat against Jerusalem, possibly during Hezekiah's reign when Sennacherib's Assyrian army surrounded the city. The imagery of cosmic upheaval reflects the terrifying scale of the danger.",
+            nowApplication: "In a world of constant anxiety, breaking news, and existential dread, Psalm 46 commands us to stop striving. 'Be still' is not passive resignation \u2014 it is active trust in a God who is sovereign over every earthquake, literal and figurative."
+          },
+          {
+            dayNumber: 3,
+            title: "Out of the Depths",
+            bookId: 19,
+            chapter: 130,
+            verseStart: 1,
+            verseEnd: 8,
+            passageLabel: "Psalm 130:1-8",
+            contextNote: "One of the seven penitential psalms and a 'Song of Ascents' sung by pilgrims going up to Jerusalem. The psalmist cries from the depths of despair, pleading for mercy, and finds hope in God's unfailing love and full redemption.",
+            keyTermStrongId: "H2617",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Out of the depths \u2014 not merely of affliction, but of a soul convinced of sin and sensible of its misery without divine mercy.",
+            reflectionQuestions: [
+              "Have you ever cried to God 'out of the depths'? What did that season teach you?",
+              "What does it mean that God does not keep a record of sins?",
+              "How do you experience 'waiting for the Lord' \u2014 with anxiety or with hope?",
+              "Where do you need to trust in God's 'full redemption' today?"
+            ],
+            prayerPrompt: "Lord, out of the depths I cry to You. If You kept a record of sins, I could not stand. But with You there is forgiveness. I wait for You, and in Your word I put my hope. Redeem me from all my iniquities.",
+            thenContext: "The Songs of Ascents (Psalms 120-134) were sung by pilgrims ascending to Jerusalem for the great feasts. Psalm 130 likely expressed the corporate guilt and longing of a people who knew they had failed God yet clung to His promise of redemption.",
+            nowApplication: "Psalm 130 gives language to our darkest moments \u2014 when guilt, grief, or despair push us to the bottom. It teaches us that crying out honestly to God is itself an act of faith. And it promises that with God there is forgiveness and full redemption."
+          },
+          {
+            dayNumber: 4,
+            title: "He Heals the Brokenhearted",
+            bookId: 19,
+            chapter: 147,
+            verseStart: 1,
+            verseEnd: 11,
+            passageLabel: "Psalm 147:1-11",
+            contextNote: "This psalm celebrates God who counts the stars and calls them by name yet also heals the brokenhearted and binds up their wounds. It holds together God's cosmic power and His intimate tenderness \u2014 He is both infinite and near.",
+            keyTermStrongId: "H3068",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "He who numbers the stars also numbers the sighs of the afflicted. No wound is too small for His attention, no grief too hidden for His care.",
+            reflectionQuestions: [
+              "How does it comfort you that the God who counts stars also binds your wounds?",
+              "Where in your life do you need God's healing touch right now?",
+              "What does this psalm teach about what God delights in \u2014 and what He does not?",
+              "How can you praise God even in a season of brokenness?"
+            ],
+            prayerPrompt: "Father, You count the stars and call them by name, yet You also see my brokenness and bind my wounds. Heal my heart today. I bring You my pain, trusting that no grief is too small for Your attention.",
+            thenContext: "Psalm 147 was likely composed after the return from Babylonian exile when Jerusalem was being rebuilt. The community carried deep wounds from decades of displacement. The psalmist celebrates a God who rebuilds cities and heals hearts simultaneously.",
+            nowApplication: "This psalm bridges the gap between theology and therapy. The God of infinite power is also the God of intimate care. He does not merely observe our pain \u2014 He actively heals. And He delights not in human strength but in those who hope in His love."
+          },
+          {
+            dayNumber: 5,
+            title: "Where Can I Go from Your Spirit?",
+            bookId: 19,
+            chapter: 139,
+            verseStart: 1,
+            verseEnd: 18,
+            passageLabel: "Psalm 139:1-18",
+            contextNote: "David reflects on God's omniscience and omnipresence \u2014 He knows every thought, word, and movement before it happens. There is nowhere to flee from God's Spirit. David concludes that he is 'fearfully and wonderfully made,' known completely and loved entirely.",
+            keyTermStrongId: "H3045",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "jfb",
+            historicVoiceExcerpt: "The psalmist does not shrink from being fully known by God \u2014 because to be known by the All-Knowing is to be known by the All-Loving.",
+            reflectionQuestions: [
+              "Does the idea that God knows everything about you bring comfort or discomfort? Why?",
+              "What does it mean to be 'fearfully and wonderfully made'?",
+              "Where have you tried to flee from God's presence, and how did He meet you there?",
+              "How do God's thoughts toward you outnumber the grains of sand?"
+            ],
+            prayerPrompt: "Lord, You have searched me and known me completely \u2014 every thought, every word, every hidden place. And still You love me. Thank You that I am fearfully and wonderfully made. Help me to live in the reality that I am fully known and fully loved.",
+            thenContext: "David wrote as a man who had experienced both the heights of divine favor and the depths of personal failure. Psalm 139 is not the prayer of a perfect person but of one who has learned that God's knowledge is not surveillance but intimate love.",
+            nowApplication: "In an age of privacy anxiety and curated identities, Psalm 139 offers a radical alternative: being fully known by God and finding it to be a gift, not a threat. His omniscience is paired with love \u2014 He knows everything and loves completely."
+          }
+        ]
+      }
+    ];
+    isMain = process.argv[1] != null && (process.argv[1].endsWith("/seed-devotionals.ts") || process.argv[1].endsWith("\\seed-devotionals.ts"));
+    if (isMain) {
+      runCli().catch((err) => {
+        console.error("Seed failed:", err);
+        process.exit(1);
+      });
+    }
+  }
+});
+
+// scripts/seed-sda-devotionals.ts
+var seed_sda_devotionals_exports = {};
+__export(seed_sda_devotionals_exports, {
+  seedSdaDevotionals: () => seedSdaDevotionals
+});
+async function seedSdaDevotionals(db2) {
+  console.log("Seeding SDA-focused devotional plans...");
+  for (const { plan, days } of PLANS2) {
+    const existingPlan = await db2.select({ id: devotionalPlans.id }).from(devotionalPlans).where((0, import_drizzle_orm63.eq)(devotionalPlans.title, plan.title)).limit(1);
+    let planId;
+    if (existingPlan.length) {
+      planId = existingPlan[0].id;
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}).`);
+    } else {
+      const inserted = await db2.insert(devotionalPlans).values({
+        title: plan.title,
+        description: plan.description,
+        totalDays: plan.totalDays,
+        estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
+        // Publishing requires a separate, explicit human-curation decision.
+        isPublished: false,
+        provenance: "legacy_unclassified"
+      }).returning({ id: devotionalPlans.id });
+      planId = inserted[0].id;
+      console.log(`  Inserted plan: "${plan.title}" (id=${planId})`);
+    }
+    const existingDays = await db2.select({ dayNumber: devotionalDays.dayNumber }).from(devotionalDays).where((0, import_drizzle_orm63.eq)(devotionalDays.planId, planId));
+    const existingDayNumbers = new Set(existingDays.map((d) => d.dayNumber));
+    for (const day of days) {
+      if (existingDayNumbers.has(day.dayNumber)) {
+        continue;
+      }
+      await db2.insert(devotionalDays).values({
+        planId,
+        dayNumber: day.dayNumber,
+        title: day.title,
+        bookId: day.bookId,
+        chapter: day.chapter,
+        verseStart: day.verseStart,
+        verseEnd: day.verseEnd,
+        passageLabel: day.passageLabel,
+        contextNote: day.contextNote,
+        reflectionQuestions: day.reflectionQuestions,
+        prayerPrompt: day.prayerPrompt,
+        thenContext: day.thenContext,
+        nowApplication: day.nowApplication
+      }).onConflictDoNothing();
+      console.log(`    Day ${day.dayNumber}: "${day.title}"`);
+    }
+  }
+  console.log("\nSDA devotional plan seeding complete.");
+}
+async function runCli2() {
+  const { drizzle: drizzleConnect } = await import("drizzle-orm/node-postgres");
+  const { Pool: PgPool } = await import("pg");
+  const pool2 = new PgPool({ connectionString: process.env.DATABASE_URL });
+  const cliDb = drizzleConnect(pool2);
+  try {
+    await seedSdaDevotionals(cliDb);
+  } finally {
+    await pool2.end();
+  }
+}
+var import_drizzle_orm63, BOOK_IDS, PLANS2, isMain2;
+var init_seed_sda_devotionals = __esm({
+  "scripts/seed-sda-devotionals.ts"() {
+    "use strict";
+    import_drizzle_orm63 = require("drizzle-orm");
+    init_schema();
+    BOOK_IDS = {
+      Genesis: 1,
+      Exodus: 2,
+      Leviticus: 3,
+      Numbers: 4,
+      Deuteronomy: 5,
+      Nehemiah: 16,
+      Psalms: 19,
+      Proverbs: 20,
+      Ecclesiastes: 21,
+      Isaiah: 23,
+      Jeremiah: 24,
+      Ezekiel: 26,
+      Daniel: 27,
+      Hosea: 28,
+      Joel: 29,
+      Amos: 30,
+      Malachi: 39,
+      Matthew: 40,
+      Mark: 41,
+      Luke: 42,
+      John: 43,
+      Acts: 44,
+      Romans: 45,
+      "1 Corinthians": 46,
+      "2 Corinthians": 47,
+      Galatians: 48,
+      Ephesians: 49,
+      Colossians: 51,
+      "1 Thessalonians": 52,
+      "2 Thessalonians": 53,
+      "1 Timothy": 54,
+      "2 Timothy": 55,
+      Hebrews: 58,
+      James: 59,
+      "1 Peter": 60,
+      "2 Peter": 61,
+      "1 John": 62,
+      Revelation: 66
+    };
+    PLANS2 = [
+      {
+        plan: {
+          title: "The Sabbath Rest",
+          description: "Trace the Sabbath from creation through the New Testament and beyond. Discover why God set apart the seventh day, how Jesus honoured it, and what it means for believers today. Each day explores Scripture's testimony to this sacred gift of rest, worship, and fellowship with the Creator.",
+          totalDays: 7,
+          estimatedMinutesPerDay: 14,
+          isPublished: false,
+          provenance: "legacy_unclassified"
+        },
+        days: [
+          {
+            dayNumber: 1,
+            title: "In the Beginning \u2014 God Rested",
+            bookId: BOOK_IDS.Genesis,
+            chapter: 2,
+            verseStart: 1,
+            verseEnd: 3,
+            passageLabel: "Genesis 2:1\u20133",
+            contextNote: "Before sin, before the law, before Israel \u2014 God rested on the seventh day and made it holy. The Sabbath is woven into creation itself, a memorial of God's finished work and an invitation to delight in His presence.",
+            reflectionQuestions: [
+              "Why did God rest when He never grows weary (Isaiah 40:28)?",
+              "What does God 'blessing' and 'sanctifying' a day tell us about His intentions for time itself?",
+              "How does knowing the Sabbath predates the law change how you think about it?"
+            ],
+            prayerPrompt: "Lord, You made the Sabbath for me before I ever existed. Teach me to receive it not as a burden but as a gift \u2014 a weekly reminder that You finish what You begin.",
+            thenContext: "In the ancient Near East, rest signified sovereignty and completed victory. God resting on the seventh day declared His creation complete and very good.",
+            nowApplication: "The Sabbath invites us to stop striving and trust that God's work is sufficient. In a culture of constant productivity, choosing rest is an act of faith."
+          },
+          {
+            dayNumber: 2,
+            title: "Remember \u2014 The Fourth Commandment",
+            bookId: BOOK_IDS.Exodus,
+            chapter: 20,
+            verseStart: 8,
+            verseEnd: 11,
+            passageLabel: "Exodus 20:8\u201311",
+            contextNote: "God does not say 'begin keeping the Sabbath' but 'remember' \u2014 pointing back to something already established. The command anchors the Sabbath in creation and links rest to the character of the Creator.",
+            reflectionQuestions: [
+              "Why does the commandment begin with 'Remember'? What might Israel have been in danger of forgetting?",
+              "The Sabbath extends to servants, strangers, and even animals. What does this reveal about God's justice?",
+              "How can you structure your week so the Sabbath is genuinely restful?"
+            ],
+            prayerPrompt: "Father, help me remember what You have asked me to remember. May the seventh day be a sign between us \u2014 a weekly confession that You are my Creator and Redeemer.",
+            thenContext: "Israel had been slaves in Egypt with no rest. The Sabbath commandment was a declaration of freedom \u2014 they now belonged to a God who valued their rest.",
+            nowApplication: "Keeping the Sabbath is a radical act of trust: we stop earning and let God provide. It also calls us to ensure others can rest too."
+          },
+          {
+            dayNumber: 3,
+            title: "A Delight, Not a Burden",
+            bookId: BOOK_IDS.Isaiah,
+            chapter: 58,
+            verseStart: 13,
+            verseEnd: 14,
+            passageLabel: "Isaiah 58:13\u201314",
+            contextNote: "Isaiah reframes the Sabbath from obligation to joy. When God's people call the Sabbath a 'delight' and honour Him in it, He promises to raise them up and feed them the heritage of Jacob.",
+            reflectionQuestions: [
+              "What is the difference between legalistic Sabbath-keeping and calling the Sabbath a 'delight'?",
+              "How can your Sabbath practices move from rule-following toward genuine enjoyment of God?",
+              "What activities bring you closest to God's presence and could enrich your Sabbath?"
+            ],
+            prayerPrompt: "God of rest, reshape my Sabbath from duty to delight. Let me find my joy in You and discover that Your commandments are not grievous but life-giving.",
+            thenContext: "Isaiah 58 critiques empty religious ritual. True worship includes justice, mercy, and wholehearted Sabbath-keeping \u2014 not performative piety.",
+            nowApplication: "The Sabbath is meant to be the best day of the week \u2014 time for worship, nature, fellowship, and renewal. When it feels like a burden, something has gone wrong."
+          },
+          {
+            dayNumber: 4,
+            title: "Jesus, Lord of the Sabbath",
+            bookId: BOOK_IDS.Mark,
+            chapter: 2,
+            verseStart: 23,
+            verseEnd: 28,
+            passageLabel: "Mark 2:23\u201328",
+            contextNote: "When the Pharisees criticized His disciples for plucking grain on the Sabbath, Jesus reminded them that the Sabbath was made for man \u2014 not man for the Sabbath. He did not abolish the Sabbath; He reclaimed its purpose.",
+            reflectionQuestions: [
+              "What did Jesus mean by saying 'The Sabbath was made for man'?",
+              "How had the Pharisees turned God's gift into a burden?",
+              "Jesus healed on the Sabbath (Mark 3:1\u20135). How does this show the Sabbath's true purpose?"
+            ],
+            prayerPrompt: "Lord Jesus, You are the Lord of the Sabbath. Free me from any legalism that obscures the beauty of rest. Help me follow Your example of using the Sabbath for restoration and mercy.",
+            thenContext: "By Jesus' day, rabbinic tradition had added hundreds of rules to the Sabbath. Jesus cut through the additions to recover the original intent: a day that serves human flourishing.",
+            nowApplication: "Jesus' Sabbath-keeping was marked by worship, healing, teaching, and fellowship. That pattern guides how we approach the day today."
+          },
+          {
+            dayNumber: 5,
+            title: "A Sabbath Rest Remains",
+            bookId: BOOK_IDS.Hebrews,
+            chapter: 4,
+            verseStart: 1,
+            verseEnd: 11,
+            passageLabel: "Hebrews 4:1\u201311",
+            contextNote: "The writer of Hebrews declares that a 'sabbatismos' \u2014 a Sabbath-rest \u2014 remains for the people of God. This rest is both present reality and future hope, grounded in Christ's finished work.",
+            reflectionQuestions: [
+              "Hebrews uses the Greek word 'sabbatismos' (Sabbath-keeping) rather than 'katapausis' (general rest). Why is this distinction significant?",
+              "How does entering God's rest connect to faith (verse 3)?",
+              "What does it mean to 'cease from your own works as God did from His' (verse 10)?"
+            ],
+            prayerPrompt: "Heavenly Father, thank You that the Sabbath rest was not abolished but remains for Your people. Teach me to enter that rest by faith, ceasing from my own striving and trusting in Christ's completed work.",
+            thenContext: "The Hebrew Christians were under pressure to revert to Judaism or abandon their faith. Hebrews encourages them that the full Sabbath promise \u2014 including its eschatological fulfilment \u2014 still stands.",
+            nowApplication: "The weekly Sabbath is a foretaste of eternal rest. Every seventh day we rehearse the truth that salvation is God's work, not ours."
+          },
+          {
+            dayNumber: 6,
+            title: "The Sabbath in the New Earth",
+            bookId: BOOK_IDS.Isaiah,
+            chapter: 66,
+            verseStart: 22,
+            verseEnd: 23,
+            passageLabel: "Isaiah 66:22\u201323",
+            contextNote: "Isaiah's vision of the new heavens and new earth includes Sabbath worship: 'from one Sabbath to another, shall all flesh come to worship before me.' The Sabbath stretches from Eden past into eternity future.",
+            reflectionQuestions: [
+              "If the Sabbath will be kept in the new earth, what does this imply about its permanence?",
+              "How does this future vision shape your Sabbath-keeping today?",
+              "What would it feel like to worship God with 'all flesh' in the restored creation?"
+            ],
+            prayerPrompt: "Creator God, from Eden to the new earth, the Sabbath is Your gift. Let my weekly worship be a rehearsal for eternity, a taste of the world to come.",
+            thenContext: "Isaiah's prophecy bridges the gap between present suffering and future glory. The Sabbath endures because it is rooted in God's character, not in any temporary dispensation.",
+            nowApplication: "Sabbath-keeping connects us to the past (creation), the present (salvation by grace), and the future (eternal rest). It is a thread running through the entire biblical story."
+          },
+          {
+            dayNumber: 7,
+            title: "Sign of Sanctification",
+            bookId: BOOK_IDS.Ezekiel,
+            chapter: 20,
+            verseStart: 12,
+            verseEnd: 20,
+            passageLabel: "Ezekiel 20:12, 20",
+            contextNote: "God calls the Sabbath a sign between Himself and His people \u2014 a marker of the relationship and a reminder that 'I am the Lord that doth sanctify you.' The Sabbath is not merely about rest but about identity.",
+            reflectionQuestions: [
+              "What does it mean that the Sabbath is a 'sign' between God and His people?",
+              "How is sanctification connected to Sabbath-keeping?",
+              "In what ways does honouring the Sabbath shape your identity as a child of God?"
+            ],
+            prayerPrompt: "Lord, let the Sabbath be a sign that I belong to You. Sanctify me through this day of rest and worship, setting me apart for Your purposes in a restless world.",
+            thenContext: "Ezekiel spoke to Israel in exile \u2014 a people who had neglected God's Sabbaths. The call to honour the Sabbath was a call to return to covenant faithfulness.",
+            nowApplication: "In a world that defines us by what we produce, the Sabbath defines us by Whose we are. Keeping it is a visible declaration of faith."
+          }
+        ]
+      },
+      {
+        plan: {
+          title: "Daniel's Prophecies \u2014 End-Time Visions",
+          description: "Walk through the great prophetic visions of Daniel \u2014 from Nebuchadnezzar's image to the beasts of chapter 7, the 2,300-day prophecy, and the time of the end. Discover how God reveals the sweep of history and His ultimate triumph over earthly powers.",
+          totalDays: 7,
+          estimatedMinutesPerDay: 16,
+          isPublished: false,
+          provenance: "legacy_unclassified"
+        },
+        days: [
+          {
+            dayNumber: 1,
+            title: "The Great Image \u2014 Kingdoms Rise and Fall",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 2,
+            verseStart: 31,
+            verseEnd: 45,
+            passageLabel: "Daniel 2:31\u201345",
+            contextNote: "Nebuchadnezzar's dream reveals the succession of world empires \u2014 Babylon, Medo-Persia, Greece, and Rome \u2014 and a final kingdom set up by God that shall never be destroyed. The stone cut without hands is Christ's eternal kingdom.",
+            reflectionQuestions: [
+              "Why did God choose to reveal future history to a pagan king?",
+              "What confidence does fulfilled prophecy give you about promises still unfulfilled?",
+              "How does knowing that earthly kingdoms are temporary affect how you view current events?"
+            ],
+            prayerPrompt: "Sovereign God, You hold the rise and fall of nations in Your hand. Help me place my hope not in earthly powers but in the kingdom that shall stand forever.",
+            thenContext: "Daniel interpreted this dream around 603 BC. History has confirmed the succession of Babylon, Medo-Persia, Greece, and Rome \u2014 exactly as foretold.",
+            nowApplication: "We live in the 'toes' of the image \u2014 a divided world awaiting the stone kingdom. Prophecy invites us to watch, prepare, and trust."
+          },
+          {
+            dayNumber: 2,
+            title: "Four Beasts and the Son of Man",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 7,
+            verseStart: 1,
+            verseEnd: 14,
+            passageLabel: "Daniel 7:1\u201314",
+            contextNote: "Daniel's vision of four beasts parallels Daniel 2 but adds detail \u2014 especially the little horn power that speaks great words against the Most High and persecutes God's people. The vision climaxes with the Son of Man receiving an everlasting dominion.",
+            reflectionQuestions: [
+              "Why does God repeat and expand His prophetic outline across multiple visions?",
+              "What comfort does verse 14 offer \u2014 'His dominion is an everlasting dominion'?",
+              "How does the Son of Man's triumph assure you when worldly powers seem overwhelming?"
+            ],
+            prayerPrompt: "Ancient of Days, You sit enthroned above all earthly chaos. When the beasts rage, remind me that the final kingdom belongs to the Son of Man \u2014 and to His saints.",
+            thenContext: "Daniel received this vision around 553 BC. The four beasts correspond to the same empires as Daniel 2: Babylon (lion), Medo-Persia (bear), Greece (leopard), and Rome (dreadful beast).",
+            nowApplication: "The little horn's attack on God's law and people has been fulfilled in history. Knowing the script gives confidence that the final scenes will also unfold as God has declared."
+          },
+          {
+            dayNumber: 3,
+            title: "The Judgment Scene",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 7,
+            verseStart: 9,
+            verseEnd: 14,
+            passageLabel: "Daniel 7:9\u201314, 26\u201327",
+            contextNote: "Thrones are set, books are opened, and the Ancient of Days presides over a heavenly court. This pre-advent judgment vindicates God's people and strips the little horn of its power before the Son of Man receives the kingdom.",
+            reflectionQuestions: [
+              "What does it mean that 'the books were opened' (verse 10)?",
+              "How does the heavenly judgment vindicate both God's character and His people?",
+              "Does the idea of judgment fill you with fear or hope? Why?"
+            ],
+            prayerPrompt: "Righteous Judge, I trust that Your judgment is fair, thorough, and full of mercy. Thank You that in Christ, my Advocate, the verdict is already in my favour.",
+            thenContext: "The judgment scene takes place before the second coming \u2014 it is an investigative judgment that determines the destiny of those who have professed faith.",
+            nowApplication: "The pre-advent judgment assures us that God does not act arbitrarily. Every case is examined, every question answered, before Christ returns."
+          },
+          {
+            dayNumber: 4,
+            title: "The 2,300 Days and the Sanctuary",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 8,
+            verseStart: 13,
+            verseEnd: 14,
+            passageLabel: "Daniel 8:13\u201314, 9:24\u201327",
+            contextNote: "The 2,300-day prophecy points to 1844 and the beginning of the heavenly sanctuary's cleansing \u2014 the antitypical Day of Atonement. The 70 weeks of Daniel 9 are 'cut off' from this larger time period, anchoring the prophecy to the Messiah's coming.",
+            reflectionQuestions: [
+              "How does the year-day principle help us understand long-range Bible prophecy?",
+              "What is the significance of the sanctuary being 'cleansed' or 'vindicated'?",
+              "How does the 70-week prophecy confirm Jesus as the Messiah?"
+            ],
+            prayerPrompt: "God of precision, Your prophetic timeline points unmistakably to Jesus. Strengthen my confidence that Your word is sure and that the cleansing of the sanctuary is underway.",
+            thenContext: "The 2,300 days (years) begin in 457 BC with the decree to restore Jerusalem. The 70 weeks (490 years) reach to the Messiah's baptism (AD 27), His death (AD 31), and the gospel going to the Gentiles (AD 34).",
+            nowApplication: "Since 1844, we live in the antitypical Day of Atonement \u2014 a time of judgment and preparation. This is not a reason for fear but for earnest, joyful readiness."
+          },
+          {
+            dayNumber: 5,
+            title: "The Time of the End",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 12,
+            verseStart: 1,
+            verseEnd: 4,
+            passageLabel: "Daniel 12:1\u20134",
+            contextNote: "Daniel's final chapter describes the time of trouble, the deliverance of God's people, the resurrection, and the sealing of the prophecy until the 'time of the end' when knowledge shall increase.",
+            reflectionQuestions: [
+              "Who is Michael (verse 1) and what does His 'standing up' signify?",
+              "How does the promise of resurrection in verse 2 shape your view of death?",
+              "What does it mean that 'knowledge shall be increased' in the time of the end?"
+            ],
+            prayerPrompt: "Prince Michael, stand up for Your people. In the time of trouble, be our deliverer. Give us courage to endure and faith to trust Your promises.",
+            thenContext: "Michael is identified elsewhere in Scripture as Christ (Jude 9, Revelation 12:7). His 'standing up' marks the close of probation and the beginning of final events.",
+            nowApplication: "We live in the time when the sealed prophecies are being unsealed. Understanding Daniel is not optional \u2014 it is preparation for what lies ahead."
+          },
+          {
+            dayNumber: 6,
+            title: "The Three Angels' Messages",
+            bookId: BOOK_IDS.Revelation,
+            chapter: 14,
+            verseStart: 6,
+            verseEnd: 12,
+            passageLabel: "Revelation 14:6\u201312",
+            contextNote: "Three angels carry God's final messages to the world: fear God and worship the Creator, Babylon is fallen, and do not receive the mark of the beast. These messages call the world to decision before Christ returns.",
+            reflectionQuestions: [
+              "The first angel calls us to worship the Creator using Sabbath language (cf. Exodus 20:11). Why is creation worship central to the end times?",
+              "What is 'Babylon' and what does its fall mean for God's people?",
+              "How do the three angels' messages shape your sense of mission?"
+            ],
+            prayerPrompt: "Lord of the harvest, give me a heart that carries Your final messages with urgency, compassion, and faithfulness. Let my life be a living proclamation of the everlasting gospel.",
+            thenContext: "Revelation 14 follows the description of the beast and its image in chapter 13. The three angels' messages are God's counter-message \u2014 a global call to worship the Creator rather than the creature.",
+            nowApplication: "These messages are not abstractions \u2014 they define the mission of God's end-time people. Sharing the everlasting gospel in the context of the judgment hour is our calling."
+          },
+          {
+            dayNumber: 7,
+            title: "The Blessed Hope \u2014 Christ Returns",
+            bookId: BOOK_IDS.Revelation,
+            chapter: 22,
+            verseStart: 12,
+            verseEnd: 20,
+            passageLabel: "Revelation 22:12\u201320",
+            contextNote: "All of Daniel's prophecies and Revelation's visions converge on one event: the visible, glorious return of Jesus Christ. 'Surely I come quickly,' He promises \u2014 and every heart that loves Him replies, 'Even so, come, Lord Jesus.'",
+            reflectionQuestions: [
+              "How does studying prophecy deepen your longing for Christ's return?",
+              "What does it mean to be 'ready' for the second coming?",
+              "How can you live with urgency and peace at the same time?"
+            ],
+            prayerPrompt: "Come, Lord Jesus. You have shown me in Daniel and Revelation that history is moving toward Your triumph. Let me live each day in the light of that blessed hope.",
+            thenContext: "Revelation closes the canon with the same hope that fills Daniel: God wins. The kingdoms of this world become the kingdom of our Lord and of His Christ.",
+            nowApplication: "Prophecy is not given to satisfy curiosity but to prepare a people. The right response to every prophetic truth is worship, readiness, and mission."
+          }
+        ]
+      },
+      {
+        plan: {
+          title: "God's Health Blueprint",
+          description: "Explore what Scripture teaches about caring for the body as God's temple. From the original diet in Eden to Daniel's pulse test and Paul's temple metaphor, discover how physical health is inseparable from spiritual faithfulness. Each day examines a biblical health principle with practical application.",
+          totalDays: 7,
+          estimatedMinutesPerDay: 13,
+          isPublished: false,
+          provenance: "legacy_unclassified"
+        },
+        days: [
+          {
+            dayNumber: 1,
+            title: "The Original Diet \u2014 Eden's Table",
+            bookId: BOOK_IDS.Genesis,
+            chapter: 1,
+            verseStart: 29,
+            verseEnd: 31,
+            passageLabel: "Genesis 1:29\u201331",
+            contextNote: "Before sin entered the world, God prescribed a plant-based diet: fruits, grains, nuts, and vegetables. This was the Creator's ideal for human nourishment \u2014 designed for optimal health in a perfect world.",
+            reflectionQuestions: [
+              "Why would God begin with a plant-based diet rather than immediately permitting meat?",
+              "How does the original diet reflect God's care for both humans and animals?",
+              "What practical steps could move your eating closer to Eden's model?"
+            ],
+            prayerPrompt: "Creator, You designed my body and know what nourishes it best. Give me wisdom and discipline to honour You in my food choices, drawing closer to Your original plan.",
+            thenContext: "The Hebrew word translated 'food' in Genesis 1:29 encompasses seeds, fruits, and green plants. Meat was not permitted until after the Flood (Genesis 9:3).",
+            nowApplication: "While we live in a fallen world, the Eden diet points toward the ideal. Increasing plant-based foods in our diet aligns with the Creator's original design."
+          },
+          {
+            dayNumber: 2,
+            title: "Clean and Unclean \u2014 God's Distinctions",
+            bookId: BOOK_IDS.Leviticus,
+            chapter: 11,
+            verseStart: 1,
+            verseEnd: 8,
+            passageLabel: "Leviticus 11:1\u20138, 44\u201347",
+            contextNote: "God categorized animals as clean or unclean \u2014 a distinction that predates the Mosaic law (Genesis 7:2). These guidelines were given for health and holiness, reflecting God's care for His people's physical wellbeing.",
+            reflectionQuestions: [
+              "The clean/unclean distinction existed before Sinai (Noah knew it). What does this tell us about its purpose?",
+              "Verse 44 connects dietary choices to holiness. How are the two related?",
+              "How do you balance cultural food traditions with biblical dietary guidance?"
+            ],
+            prayerPrompt: "Holy God, You care about every aspect of my life \u2014 including what I eat. Help me honour You with choices that reflect Your wisdom, not just my appetite.",
+            thenContext: "Modern science has confirmed that many animals classified as unclean (pigs, shellfish, scavengers) carry higher parasite and toxin loads. God's ancient wisdom anticipated what we now understand.",
+            nowApplication: "The dietary laws are not arbitrary rules but expressions of a loving Creator's concern for our health. They remain relevant because human physiology has not changed."
+          },
+          {
+            dayNumber: 3,
+            title: "Daniel's Health Test",
+            bookId: BOOK_IDS.Daniel,
+            chapter: 1,
+            verseStart: 8,
+            verseEnd: 20,
+            passageLabel: "Daniel 1:8\u201320",
+            contextNote: "In Babylon, Daniel purposed not to defile himself with the king's meat and wine. After ten days on a plant-based diet, he and his friends were healthier and sharper than all who ate from the royal table.",
+            reflectionQuestions: [
+              "What motivated Daniel's refusal \u2014 legalism or loyalty to God?",
+              "How does Daniel's example show that faithfulness in 'small' things like diet has larger consequences?",
+              "What 'Babylon's table' temptations do you face with food and drink?"
+            ],
+            prayerPrompt: "Lord, give me Daniel's resolve. When the culture offers its rich table, help me purpose in my heart to honour You \u2014 trusting that Your way leads to true flourishing.",
+            thenContext: "The king's food likely included unclean meats and wine offered to idols. Daniel's refusal was both a health decision and a spiritual stand.",
+            nowApplication: "Daniel shows us that dietary faithfulness is not legalism but loyalty. What we eat affects our clarity of mind, our energy, and our capacity to serve God."
+          },
+          {
+            dayNumber: 4,
+            title: "Your Body Is a Temple",
+            bookId: BOOK_IDS["1 Corinthians"],
+            chapter: 6,
+            verseStart: 19,
+            verseEnd: 20,
+            passageLabel: "1 Corinthians 6:19\u201320; 10:31",
+            contextNote: "Paul declares that the believer's body is the temple of the Holy Spirit. Whatever we eat or drink should be done to the glory of God. This elevates health from personal preference to spiritual stewardship.",
+            reflectionQuestions: [
+              "What does it mean practically that your body is a temple of the Holy Spirit?",
+              "How does 'whether ye eat or drink, do all to the glory of God' (10:31) apply to daily food choices?",
+              "What habits might you change if you truly saw your body as God's dwelling place?"
+            ],
+            prayerPrompt: "Holy Spirit, You dwell in me. Let me treat my body as Your temple \u2014 nourishing it with care, protecting it from harm, and using it for Your glory.",
+            thenContext: "In Corinth, the body was viewed as unimportant compared to the soul. Paul corrects this Greek dualism: the body matters because God inhabits it.",
+            nowApplication: "Health reform is not about earning salvation but about honouring the One who lives within us. Diet, exercise, rest, and temperance are acts of worship."
+          },
+          {
+            dayNumber: 5,
+            title: "Temperance \u2014 The Balanced Life",
+            bookId: BOOK_IDS.Proverbs,
+            chapter: 23,
+            verseStart: 20,
+            verseEnd: 21,
+            passageLabel: "Proverbs 23:20\u201321, 29\u201335",
+            contextNote: "Scripture consistently warns against excess \u2014 particularly with wine and strong drink. Temperance (self-control) is a fruit of the Spirit and a foundation of clear-minded discipleship.",
+            reflectionQuestions: [
+              "Why does the Bible give such strong warnings about alcohol?",
+              "Temperance extends beyond drink to food, media, work, and rest. Where do you need more balance?",
+              "How does a clear mind contribute to spiritual discernment?"
+            ],
+            prayerPrompt: "God of balance, give me the fruit of temperance. Free me from any appetite or habit that dulls my mind or diminishes my witness. Let self-control be my strength.",
+            thenContext: "The Hebrew word for 'drunkard' (sobe) describes one who is saturated, overwhelmed. Proverbs warns that excess in any area leads to poverty \u2014 physical, mental, and spiritual.",
+            nowApplication: "In a world of excess, temperance is countercultural. Clear thinking, moderation, and self-control equip us to hear God's voice and respond to His leading."
+          },
+          {
+            dayNumber: 6,
+            title: "Rest, Water, and Sunshine \u2014 Creation's Medicine",
+            bookId: BOOK_IDS.Psalms,
+            chapter: 104,
+            verseStart: 10,
+            verseEnd: 15,
+            passageLabel: "Psalm 104:10\u201315; Genesis 2:10, 15",
+            contextNote: "God's health plan includes more than diet. He provided water, fresh air, sunshine, physical labour (gardening), and rest. These natural remedies are embedded in the creation account and confirmed by modern health science.",
+            reflectionQuestions: [
+              "How does the creation account model a healthy lifestyle (work, rest, nature, community)?",
+              "Which of the natural health principles (water, sunshine, fresh air, exercise, rest, trust in God) do you most neglect?",
+              "How can you build more of God's natural remedies into your daily routine?"
+            ],
+            prayerPrompt: "Great Physician, You have surrounded me with healing \u2014 in water, sunlight, air, and rest. Help me receive these gifts daily and trust Your design for wholeness.",
+            thenContext: "The eight natural remedies (nutrition, exercise, water, sunlight, temperance, air, rest, trust in God) are drawn from principles embedded throughout Scripture.",
+            nowApplication: "Health is holistic. A faithful diet paired with sedentary living and sleep deprivation is incomplete stewardship. God's blueprint addresses the whole person."
+          },
+          {
+            dayNumber: 7,
+            title: "Wholeness \u2014 Spirit, Mind, and Body",
+            bookId: BOOK_IDS["1 Thessalonians"],
+            chapter: 5,
+            verseStart: 23,
+            verseEnd: 23,
+            passageLabel: "1 Thessalonians 5:23; 3 John 1:2",
+            contextNote: "Paul prays for the whole person \u2014 spirit, soul, and body \u2014 to be preserved blameless. John wishes above all things that we may prosper and be in health. God's plan for His people is comprehensive wholeness.",
+            reflectionQuestions: [
+              "Why does God care about the body as well as the soul?",
+              "How does physical health affect your spiritual life and vice versa?",
+              "What one health commitment will you make as a result of this study?"
+            ],
+            prayerPrompt: "Lord, sanctify me wholly \u2014 spirit, soul, and body. Let every dimension of my life be surrendered to You, that I may serve You with full vigour and clarity until You come.",
+            thenContext: "The Greek word 'holoteleis' (wholly/completely) emphasises that sanctification touches every part of our being. No dimension is excluded from God's restorative work.",
+            nowApplication: "True health reform is not a salvation issue but a sanctification issue. As we grow in grace, we grow in stewardship of the body God has entrusted to us."
+          }
+        ]
+      },
+      {
+        plan: {
+          title: "The Heavenly Sanctuary",
+          description: "Journey from the earthly tabernacle to the heavenly sanctuary where Christ ministers as our High Priest. Understand the Day of Atonement, the meaning of the Most Holy Place, and what Christ's intercession means for you today. Each day unfolds another layer of this central biblical teaching.",
+          totalDays: 7,
+          estimatedMinutesPerDay: 15,
+          isPublished: false,
+          provenance: "legacy_unclassified"
+        },
+        days: [
+          {
+            dayNumber: 1,
+            title: "The Pattern on the Mountain",
+            bookId: BOOK_IDS.Exodus,
+            chapter: 25,
+            verseStart: 8,
+            verseEnd: 9,
+            passageLabel: "Exodus 25:8\u20139, 40; Hebrews 8:1\u20135",
+            contextNote: "God told Moses to build a sanctuary 'according to the pattern' shown on the mountain. The earthly tabernacle was a copy \u2014 the real sanctuary is in heaven, where Christ now ministers.",
+            reflectionQuestions: [
+              "Why did God want to 'dwell among' His people (verse 8)?",
+              "What does the heavenly original tell us about the importance of the sanctuary teaching?",
+              "How does knowing there is a real sanctuary in heaven affect your prayer life?"
+            ],
+            prayerPrompt: "God who dwells among Your people, thank You for the sanctuary \u2014 a window into heaven's reality. Help me understand what Christ is doing for me right now in the Most Holy Place.",
+            thenContext: "The Hebrew word 'tavnit' (pattern) implies a detailed blueprint. Moses did not design the tabernacle \u2014 God showed him the heavenly original.",
+            nowApplication: "The earthly sanctuary was an object lesson, a teaching tool pointing to Christ's heavenly ministry. Understanding it unlocks the meaning of the cross, intercession, and judgment."
+          },
+          {
+            dayNumber: 2,
+            title: "The Daily Sacrifice \u2014 The Lamb of God",
+            bookId: BOOK_IDS.Exodus,
+            chapter: 29,
+            verseStart: 38,
+            verseEnd: 42,
+            passageLabel: "Exodus 29:38\u201342; John 1:29",
+            contextNote: "Every morning and evening, a lamb was sacrificed on the altar of burnt offering. This daily sacrifice pointed to Christ, 'the Lamb of God, which taketh away the sin of the world.'",
+            reflectionQuestions: [
+              "What did the daily repetition of sacrifice teach Israel about the seriousness of sin?",
+              "How does John the Baptist's declaration (John 1:29) connect the Old Testament type to Jesus?",
+              "What does it mean to you personally that Christ is your daily sacrifice?"
+            ],
+            prayerPrompt: "Lamb of God, You took away my sin \u2014 once for all. Let me never take for granted the price You paid or the access to God that Your blood provides.",
+            thenContext: "The daily (tamid) sacrifice was the heartbeat of the sanctuary service. It assured Israel that atonement was ongoing and God's presence was accessible.",
+            nowApplication: "Christ's sacrifice was offered once, but its benefits are applied daily. Every morning we can come boldly to the throne of grace because the Lamb has been slain."
+          },
+          {
+            dayNumber: 3,
+            title: "The Holy Place \u2014 Intercession and Light",
+            bookId: BOOK_IDS.Hebrews,
+            chapter: 9,
+            verseStart: 1,
+            verseEnd: 7,
+            passageLabel: "Hebrews 9:1\u20137; Exodus 30:7\u20138",
+            contextNote: "The Holy Place contained three items: the table of showbread (Christ, the Bread of Life), the lampstand (Christ, the Light of the World), and the altar of incense (Christ's intercession). The priests ministered here daily.",
+            reflectionQuestions: [
+              "How do the three articles of furniture in the Holy Place represent Christ's ministry?",
+              "The incense rising with the prayers of God's people (Revelation 8:3\u20134) \u2014 how does this picture encourage your prayer life?",
+              "What does it mean that Christ is continually interceding for you?"
+            ],
+            prayerPrompt: "Great High Priest, You stand in the Holy Place on my behalf. Thank You for the bread of Your Word, the light of Your presence, and the sweet incense of Your prayers for me.",
+            thenContext: "Only priests could enter the Holy Place. The furniture represented God's provision (bread), guidance (light), and the access to His presence through prayer (incense).",
+            nowApplication: "In Christ, every believer has access to the Holy Place. We feed on His Word, walk in His light, and know that our prayers rise with His intercession."
+          },
+          {
+            dayNumber: 4,
+            title: "The Day of Atonement \u2014 Yom Kippur",
+            bookId: BOOK_IDS.Leviticus,
+            chapter: 16,
+            verseStart: 29,
+            verseEnd: 34,
+            passageLabel: "Leviticus 16:29\u201334; 23:27\u201332",
+            contextNote: "Once a year, on the tenth day of the seventh month, the high priest entered the Most Holy Place with blood. The sanctuary was cleansed, sins were transferred to the scapegoat, and the people 'afflicted their souls.' This was Israel's Day of Judgment.",
+            reflectionQuestions: [
+              "Why could the sanctuary become 'defiled' and need cleansing?",
+              "What does it mean to 'afflict your soul' on the Day of Atonement?",
+              "How does this day foreshadow the pre-advent judgment in Daniel 7 and 8?"
+            ],
+            prayerPrompt: "Judge of all the earth, the Day of Atonement points to Your heavenly work of judgment. Search my heart, cleanse me from every hidden sin, and prepare me to stand in that great day.",
+            thenContext: "The Day of Atonement was the most solemn day of the Jewish year. It combined deep self-examination with the assurance that God provided the means of cleansing.",
+            nowApplication: "The antitypical Day of Atonement began in 1844. We live in the time of investigative judgment \u2014 a time for serious self-examination, confession, and confidence in Christ's blood."
+          },
+          {
+            dayNumber: 5,
+            title: "Christ in the Most Holy Place",
+            bookId: BOOK_IDS.Hebrews,
+            chapter: 9,
+            verseStart: 11,
+            verseEnd: 14,
+            passageLabel: "Hebrews 9:11\u201314, 23\u201324",
+            contextNote: "Christ entered the heavenly sanctuary with His own blood \u2014 not the blood of goats and calves. He obtained eternal redemption and now cleanses the heavenly sanctuary itself. His ministry is real, present, and personal.",
+            reflectionQuestions: [
+              "What makes Christ's blood superior to the blood of animals (verses 13\u201314)?",
+              "Why does the heavenly sanctuary need cleansing (verse 23)?",
+              "How does Christ's high priestly ministry give you assurance of salvation?"
+            ],
+            prayerPrompt: "Jesus, my High Priest, You entered heaven itself to appear in the presence of God for me. I rest in the power of Your eternal blood and the certainty of Your intercession.",
+            thenContext: "The heavenly sanctuary is cleansed from the record of confessed sins that have been, as it were, transferred there by faith. This cleansing vindicates God's mercy and justice.",
+            nowApplication: "Christ is not idle in heaven. He is actively ministering, interceding, and completing the work of atonement. This is not a distant theological concept \u2014 it is happening right now for you."
+          },
+          {
+            dayNumber: 6,
+            title: "The Ark, the Law, and God's Character",
+            bookId: BOOK_IDS.Exodus,
+            chapter: 25,
+            verseStart: 21,
+            verseEnd: 22,
+            passageLabel: "Exodus 25:21\u201322; Revelation 11:19",
+            contextNote: "Inside the Most Holy Place, the ark of the covenant contained the Ten Commandments \u2014 covered by the mercy seat, where God's presence dwelt. The law and mercy meet at the ark. Revelation reveals that the ark exists in the heavenly temple.",
+            reflectionQuestions: [
+              "What does it mean that God's throne rests upon His law?",
+              "How do the mercy seat and the law together reveal God's character?",
+              "Revelation 11:19 shows the ark in heaven's temple. Why is this significant for end-time believers?"
+            ],
+            prayerPrompt: "God of law and mercy, Your throne rests on justice and Your love covers my failures. Let me treasure Your commandments as the foundation of Your government and the expression of Your character.",
+            thenContext: "The mercy seat (kapporeth) was the place where the blood was sprinkled on the Day of Atonement. It was literally 'mercy covering the law' \u2014 a picture of grace and justice meeting.",
+            nowApplication: "The heavenly ark containing God's law reminds us that the Ten Commandments are eternal, not temporary. They reflect God's unchanging character and remain the standard of judgment."
+          },
+          {
+            dayNumber: 7,
+            title: "Come Boldly to the Throne of Grace",
+            bookId: BOOK_IDS.Hebrews,
+            chapter: 4,
+            verseStart: 14,
+            verseEnd: 16,
+            passageLabel: "Hebrews 4:14\u201316; 10:19\u201322",
+            contextNote: "Because we have a great High Priest who has passed through the heavens \u2014 Jesus, the Son of God \u2014 we can come boldly to the throne of grace. The sanctuary is not a fearful place but a place of access, mercy, and help.",
+            reflectionQuestions: [
+              "How does knowing that Jesus was 'tempted in all points like as we are' affect your confidence in approaching God?",
+              "What does it mean to 'come boldly' \u2014 not presumptuously but confidently?",
+              "How has this week's study of the sanctuary changed your understanding of what Christ is doing for you?"
+            ],
+            prayerPrompt: "Great High Priest, I come boldly to Your throne \u2014 not because of my worthiness but because of Yours. Thank You for mercy in my failures and grace to help in every time of need.",
+            thenContext: "The book of Hebrews was written to believers tempted to give up. The sanctuary message is meant to encourage: your High Priest understands, intercedes, and will never abandon you.",
+            nowApplication: "The sanctuary is not a doctrine to argue about but a reality to live in. Every prayer you offer reaches a real High Priest in a real sanctuary who really cares."
+          }
+        ]
+      },
+      {
+        plan: {
+          title: "Death, Sleep, and Resurrection",
+          description: "What happens when we die? Does the soul live on? What does the Bible actually teach? This plan examines what Scripture says about death as a sleep, the hope of the resurrection, and the danger of spiritualism \u2014 offering comfort, clarity, and solid biblical ground.",
+          totalDays: 6,
+          estimatedMinutesPerDay: 13,
+          isPublished: false,
+          provenance: "legacy_unclassified"
+        },
+        days: [
+          {
+            dayNumber: 1,
+            title: "Dust to Dust \u2014 The Nature of Humanity",
+            bookId: BOOK_IDS.Genesis,
+            chapter: 2,
+            verseStart: 7,
+            verseEnd: 7,
+            passageLabel: "Genesis 2:7; Ecclesiastes 12:7",
+            contextNote: "God formed man from the dust of the ground and breathed into him the breath of life, and man 'became a living soul.' The soul is not something we have \u2014 it is what we are: body + breath = living being.",
+            reflectionQuestions: [
+              "How does Genesis 2:7 define a 'soul' differently from popular culture?",
+              "If the soul is not a separate entity that leaves the body, how does this change your view of death?",
+              "Why is it important to let the Bible define its own terms rather than importing Greek philosophy?"
+            ],
+            prayerPrompt: "Creator God, You made me from dust and breathed life into me. I am wholly Yours \u2014 body and breath. Help me understand death and life as You have revealed them in Your Word.",
+            thenContext: "The Hebrew word 'nephesh' (soul) means 'living being' \u2014 it is used of animals too (Genesis 1:21, 24). The concept of an immortal soul separate from the body comes from Greek philosophy, not Scripture.",
+            nowApplication: "Understanding that humans are a holistic unity (not a body housing a detachable soul) is the foundation for understanding what happens at death."
+          },
+          {
+            dayNumber: 2,
+            title: "Death Is a Sleep",
+            bookId: BOOK_IDS.John,
+            chapter: 11,
+            verseStart: 11,
+            verseEnd: 14,
+            passageLabel: "John 11:11\u201314; Psalm 115:17; Ecclesiastes 9:5\u20136",
+            contextNote: "Jesus called death a 'sleep' \u2014 not to minimise it, but to define it. The dead know nothing, their love and hatred have perished, and they do not praise the Lord. Death is an unconscious rest until the resurrection.",
+            reflectionQuestions: [
+              "Why did Jesus use the metaphor of 'sleep' for death?",
+              "What comfort does the sleep metaphor offer compared to the idea of conscious suffering after death?",
+              "How does Ecclesiastes 9:5 ('the dead know not anything') settle the question of consciousness after death?"
+            ],
+            prayerPrompt: "Lord Jesus, You are the resurrection and the life. I trust that those who sleep in You are safe in Your keeping, awaiting the morning of resurrection.",
+            thenContext: "The Old Testament consistently describes death as sleep (Daniel 12:2, Psalm 13:3, Job 14:12). Jesus affirmed this teaching and demonstrated His power over it by raising Lazarus.",
+            nowApplication: "The sleep of death means our loved ones are not suffering or watching from heaven \u2014 they rest peacefully until Jesus calls them forth. This is a comforting truth."
+          },
+          {
+            dayNumber: 3,
+            title: "The Wages of Sin Is Death \u2014 Not Eternal Torment",
+            bookId: BOOK_IDS.Romans,
+            chapter: 6,
+            verseStart: 23,
+            verseEnd: 23,
+            passageLabel: "Romans 6:23; Malachi 4:1\u20133; John 3:16",
+            contextNote: "The wages of sin is death \u2014 not eternal conscious torment. God alone has immortality (1 Timothy 6:16). The wicked will be destroyed, consumed, and be as if they had not been \u2014 not tortured forever.",
+            reflectionQuestions: [
+              "How does the clear statement 'the wages of sin is death' differ from the doctrine of eternal torment?",
+              "John 3:16 says believers shall not 'perish' \u2014 what does perishing mean if not destruction?",
+              "How does understanding God's justice reshape His character in your mind?"
+            ],
+            prayerPrompt: "Righteous God, Your justice is true and Your mercy is real. Thank You that the end of sin is destruction, not endless torture \u2014 and that You offer eternal life to all who believe.",
+            thenContext: "The doctrine of eternal conscious torment entered Christianity from Greek philosophy (Plato's immortality of the soul). The Bible teaches conditional immortality \u2014 only God possesses it inherently, and He gives it to believers at the resurrection.",
+            nowApplication: "God is not a cosmic torturer. His justice means sin and sinners will come to a permanent end. Eternal life is a gift, not an inherent possession \u2014 making the gospel truly good news."
+          },
+          {
+            dayNumber: 4,
+            title: "The Resurrection Morning",
+            bookId: BOOK_IDS["1 Thessalonians"],
+            chapter: 4,
+            verseStart: 13,
+            verseEnd: 18,
+            passageLabel: "1 Thessalonians 4:13\u201318; 1 Corinthians 15:51\u201355",
+            contextNote: "The Christian hope is not the soul going to heaven at death \u2014 it is the resurrection at the second coming. The Lord Himself shall descend, the dead in Christ shall rise, and together with the living saints, they shall meet the Lord in the air.",
+            reflectionQuestions: [
+              "If believers went to heaven immediately at death, why would Paul need to comfort the Thessalonians about the resurrection?",
+              "What does 'the dead in Christ shall rise first' tell us about where the dead are now?",
+              "How does the resurrection hope change how you grieve?"
+            ],
+            prayerPrompt: "Lord of the resurrection, I cling to this blessed hope: that You will return, the trumpet will sound, and those who sleep in You will rise to eternal life. Comfort me with this truth.",
+            thenContext: "The Thessalonians feared that their deceased loved ones would miss out on Christ's return. Paul's comfort is not 'they are already in heaven' but 'they will rise when He comes.'",
+            nowApplication: "The resurrection is the cornerstone of Christian hope. Without it, as Paul says, our faith is vain (1 Corinthians 15:14). With it, death truly has lost its sting."
+          },
+          {
+            dayNumber: 5,
+            title: "Beware of Spiritualism",
+            bookId: BOOK_IDS.Deuteronomy,
+            chapter: 18,
+            verseStart: 10,
+            verseEnd: 12,
+            passageLabel: "Deuteronomy 18:10\u201312; Isaiah 8:19\u201320; 1 Samuel 28:7\u201319",
+            contextNote: "God forbids all communication with the dead \u2014 not because it works, but because it opens the door to demonic deception. If the dead are truly asleep, then any 'spirit' claiming to be a departed loved one is an impersonation.",
+            reflectionQuestions: [
+              "Why does God so strongly condemn consulting the dead?",
+              "If the dead are unconscious, who or what appears in s\xE9ances and spiritualistic experiences?",
+              "How does the state of the dead protect us from end-time deception?"
+            ],
+            prayerPrompt: "God of truth, protect me from deception in every form. When the enemy counterfeits the voices of the dead, let me stand on Your Word: 'To the law and to the testimony.'",
+            thenContext: "In the end times, Satan will use miracles and apparitions to deceive (Revelation 16:14; 2 Corinthians 11:14). Understanding that the dead are asleep is a powerful shield against this deception.",
+            nowApplication: "Spiritualism is not a relic of the past \u2014 it permeates modern culture through mediums, near-death experiences, and entertainment. The biblical truth about death is the antidote."
+          },
+          {
+            dayNumber: 6,
+            title: "Immortality \u2014 A Gift at the Resurrection",
+            bookId: BOOK_IDS["1 Corinthians"],
+            chapter: 15,
+            verseStart: 51,
+            verseEnd: 55,
+            passageLabel: "1 Corinthians 15:51\u201355; 1 Timothy 6:15\u201316",
+            contextNote: "Immortality is not something humans naturally possess \u2014 it is a gift bestowed at the resurrection. 'This mortal must put on immortality.' Until then, our lives are 'hid with Christ in God' (Colossians 3:3), safe in His keeping.",
+            reflectionQuestions: [
+              "If humans already had immortal souls, why would Paul say immortality must be 'put on' at the resurrection?",
+              "How does knowing that God 'only hath immortality' (1 Timothy 6:16) reshape your theology?",
+              "What practical hope does conditional immortality give you for the future?"
+            ],
+            prayerPrompt: "Immortal God, I do not possess eternal life in myself \u2014 it is Your gift. I look forward to the day when this mortal puts on immortality and death is swallowed up in victory.",
+            thenContext: "The Greek word 'athanasia' (immortality) appears only here and in 1 Timothy 6:16 in the New Testament. It is never attributed to the human soul \u2014 only to God and to the resurrected saints.",
+            nowApplication: "Death is not the doorway to eternity \u2014 the resurrection is. This shifts our focus from death to the second coming, where the gift of eternal life is bestowed by the Life-giver Himself."
+          }
+        ]
+      }
+    ];
+    isMain2 = process.argv[1] != null && (process.argv[1].endsWith("/seed-sda-devotionals.ts") || process.argv[1].endsWith("\\seed-sda-devotionals.ts"));
+    if (isMain2) {
+      runCli2().catch((err) => {
+        console.error("Seed error:", err);
+        process.exit(1);
+      });
+    }
+  }
+});
+
+// scripts/seed-more-devotionals.ts
+var seed_more_devotionals_exports = {};
+__export(seed_more_devotionals_exports, {
+  seedMoreDevotionals: () => seedMoreDevotionals
+});
+async function seedMoreDevotionals(db2) {
+  console.log("Seeding additional devotional plans and days...");
+  const allLocations = await db2.select().from(locations);
+  const locationMap = /* @__PURE__ */ new Map();
+  for (const loc of allLocations) {
+    locationMap.set(loc.name, loc.id);
+  }
+  const allEvents = await db2.select().from(timelineEvents);
+  const eventMap = /* @__PURE__ */ new Map();
+  for (const evt of allEvents) {
+    eventMap.set(evt.title, evt.id);
+  }
+  const allCommentators = await db2.select().from(commentators);
+  const commentatorIds = new Set(allCommentators.map((c) => c.id));
+  for (const plan of PLANS3) {
+    const existingPlan = await db2.select({ id: devotionalPlans.id }).from(devotionalPlans).where((0, import_drizzle_orm64.eq)(devotionalPlans.title, plan.title)).limit(1);
+    let planId;
+    if (existingPlan.length) {
+      planId = existingPlan[0].id;
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}), checking days...`);
+    } else {
+      const inserted = await db2.insert(devotionalPlans).values({
+        title: plan.title,
+        description: plan.description,
+        totalDays: plan.totalDays,
+        theme: plan.theme,
+        targetGoals: plan.targetGoals,
+        difficultyLevel: plan.difficultyLevel,
+        estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
+        // Publishing requires a separate, explicit human-curation decision.
+        isPublished: false,
+        provenance: "legacy_unclassified"
+      }).returning({ id: devotionalPlans.id });
+      planId = inserted[0].id;
+      console.log(`  Inserted plan: "${plan.title}" (id=${planId})`);
+    }
+    const existingDays = await db2.select({ dayNumber: devotionalDays.dayNumber }).from(devotionalDays).where((0, import_drizzle_orm64.eq)(devotionalDays.planId, planId));
+    const existingDayNumbers = new Set(existingDays.map((d) => d.dayNumber));
+    for (const day of plan.days) {
+      if (existingDayNumbers.has(day.dayNumber)) {
+        continue;
+      }
+      const locationId = day.locationName ? locationMap.get(day.locationName) ?? null : null;
+      const timelineEventId = day.timelineEventTitle ? eventMap.get(day.timelineEventTitle) ?? null : null;
+      const validCommentatorId = day.commentatorId && commentatorIds.has(day.commentatorId) ? day.commentatorId : null;
+      if (day.locationName && !locationId) {
+        console.warn(`    Location not found: "${day.locationName}"`);
+      }
+      if (day.timelineEventTitle && !timelineEventId) {
+        console.warn(`    Timeline event not found: "${day.timelineEventTitle}"`);
+      }
+      if (day.commentatorId && !validCommentatorId) {
+        console.warn(`    Commentator not found: "${day.commentatorId}"`);
+      }
+      await db2.insert(devotionalDays).values({
+        planId,
+        dayNumber: day.dayNumber,
+        title: day.title,
+        bookId: day.bookId,
+        chapter: day.chapter,
+        verseStart: day.verseStart,
+        verseEnd: day.verseEnd,
+        passageLabel: day.passageLabel,
+        contextNote: day.contextNote,
+        keyTermStrongId: day.keyTermStrongId,
+        locationId,
+        timelineEventId,
+        commentatorId: validCommentatorId,
+        historicVoiceExcerpt: day.historicVoiceExcerpt,
+        reflectionQuestions: day.reflectionQuestions,
+        prayerPrompt: day.prayerPrompt,
+        thenContext: day.thenContext,
+        nowApplication: day.nowApplication
+      }).onConflictDoNothing();
+      console.log(`    Day ${day.dayNumber}: "${day.title}"`);
+    }
+  }
+  console.log("\nAdditional devotional seeding complete.");
+}
+async function runCli3() {
+  const { drizzle: drizzleConnect } = await import("drizzle-orm/node-postgres");
+  const { Pool: PgPool } = await import("pg");
+  const pool2 = new PgPool({ connectionString: process.env.DATABASE_URL });
+  const cliDb = drizzleConnect(pool2);
+  try {
+    await seedMoreDevotionals(cliDb);
+  } finally {
+    await pool2.end();
+  }
+}
+var import_drizzle_orm64, PLANS3, isMain3;
+var init_seed_more_devotionals = __esm({
+  "scripts/seed-more-devotionals.ts"() {
+    "use strict";
+    import_drizzle_orm64 = require("drizzle-orm");
+    init_schema();
+    PLANS3 = [
+      {
+        title: "Women of the Bible",
+        description: "Meet seven remarkable women whose faith, courage, and obedience shaped the course of redemptive history. From Ruth's loyalty to Esther's bravery to Mary's surrender, each day reveals how God works powerfully through those the world often overlooks.",
+        totalDays: 7,
+        theme: "Character Studies",
+        targetGoals: [
+          "Learn from the faith and courage of biblical women",
+          "See God's redemptive work through unexpected people",
+          "Apply lessons of loyalty, courage, and trust to daily life"
+        ],
+        difficultyLevel: "intermediate",
+        estimatedMinutesPerDay: 15,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "Sarah \u2014 Laughter from the Impossible",
+            bookId: 1,
+            chapter: 18,
+            verseStart: 1,
+            verseEnd: 15,
+            passageLabel: "Genesis 18:1-15",
+            contextNote: "Three visitors arrive at Abraham's tent and announce that Sarah, at age 90, will bear a son. Sarah laughs in disbelief. Yet God's promise was fulfilled, and she named her son Isaac \u2014 'laughter.' Her story is a testimony that nothing is too hard for the Lord.",
+            keyTermStrongId: "H1285",
+            locationName: null,
+            timelineEventTitle: "Call of Abraham",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Is anything too hard for the Lord? Sarah's laughter was rebuked, but her joy was fulfilled \u2014 for God delights to do the impossible.",
+            reflectionQuestions: [
+              "Where in your life have you laughed at a promise that seemed too good to be true?",
+              "How does Sarah's story challenge your understanding of God's timing?",
+              "What impossible situation do you need to surrender to God today?",
+              "How does barrenness turned to fruitfulness speak to seasons of waiting?"
+            ],
+            prayerPrompt: "Lord, nothing is too hard for You. Where I have laughed in disbelief, replace my doubt with trust. Help me to wait on Your timing, knowing that You fulfill every promise \u2014 even the ones that seem impossible.",
+            thenContext: "In the ancient Near East, a woman's identity and social standing were tied to childbearing. Sarah's decades of barrenness were not just personal grief but public shame. God's promise overturned both her sorrow and societal expectations.",
+            nowApplication: "Sarah's story reminds us that God specializes in the impossible. When our dreams seem dead and our waiting unbearable, He is still at work. The laughter of doubt can become the laughter of joy when God fulfills His word."
+          },
+          {
+            dayNumber: 2,
+            title: "Rahab \u2014 Faith in the Unlikeliest Place",
+            bookId: 6,
+            chapter: 2,
+            verseStart: 1,
+            verseEnd: 21,
+            passageLabel: "Joshua 2:1-21",
+            contextNote: "Rahab, a Canaanite prostitute in Jericho, hides the Israelite spies and declares her faith in the God of Israel. Her courageous act saved her family, and she was grafted into the lineage of King David \u2014 and ultimately Jesus Christ.",
+            keyTermStrongId: "H2617",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "By faith the harlot Rahab perished not \u2014 her past did not define her future, for she believed and acted upon the God of Israel.",
+            reflectionQuestions: [
+              "What does Rahab's inclusion in Jesus' genealogy tell you about God's grace?",
+              "How does her story challenge assumptions about who God can use?",
+              "What risks has faith required you to take?",
+              "How does Rahab's declaration of faith compare to the Israelites' own wavering?"
+            ],
+            prayerPrompt: "God of grace, You used Rahab \u2014 an outsider and outcast \u2014 and placed her in the lineage of Your Son. No past is too broken for Your redemption. Use me, despite my failures, for Your purpose.",
+            thenContext: "Jericho was a fortified Canaanite city standing between Israel and the Promised Land. Rahab's profession placed her on the margins of society. Yet her faith \u2014 expressed in action \u2014 exceeded that of many within Israel itself.",
+            nowApplication: "Rahab's story demolishes every excuse we make about being disqualified by our past. God does not wait for perfection before extending grace. He meets people where they are and transforms them by faith."
+          },
+          {
+            dayNumber: 3,
+            title: "Ruth \u2014 Loyalty Beyond Borders",
+            bookId: 8,
+            chapter: 1,
+            verseStart: 1,
+            verseEnd: 22,
+            passageLabel: "Ruth 1:1-22",
+            contextNote: "After losing her husband, Ruth the Moabitess chooses to leave her homeland and follow her mother-in-law Naomi back to Bethlehem. Her famous declaration \u2014 'Where you go, I will go' \u2014 is one of the most powerful statements of loyalty in all of Scripture.",
+            keyTermStrongId: "H2617",
+            locationName: "Bethlehem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Ruth's resolution was as firm as it was affectionate. She would not be persuaded to go back, for she had fixed her heart on the God of Israel.",
+            reflectionQuestions: [
+              "What does Ruth's decision to follow Naomi reveal about sacrificial love?",
+              "How does loyalty to people sometimes require leaving comfort behind?",
+              "Where is God calling you to faithful commitment even when the future is uncertain?",
+              "How does Ruth's story foreshadow the inclusion of Gentiles in God's family?"
+            ],
+            prayerPrompt: "Lord, give me the loyalty of Ruth \u2014 a heart that clings to what is right even when the road ahead is uncertain. May my commitments reflect Your steadfast love.",
+            thenContext: "Moabites were historically enemies of Israel. For Ruth to leave Moab and pledge herself to Naomi's God was extraordinary. She entered Bethlehem as a widow, a foreigner, and a gleaner \u2014 the lowest social position. Yet God elevated her to the lineage of David.",
+            nowApplication: "Ruth teaches that faithfulness in small, unglamorous acts of love can have eternal significance. Her story encourages us to stay committed to people and to God even when the outcome is invisible."
+          },
+          {
+            dayNumber: 4,
+            title: "Hannah \u2014 Prayer from the Depths",
+            bookId: 9,
+            chapter: 1,
+            verseStart: 1,
+            verseEnd: 28,
+            passageLabel: "1 Samuel 1:1-28",
+            contextNote: "Hannah, barren and taunted by her rival Peninnah, pours out her anguish before God at the tabernacle. God hears her desperate prayer and grants her a son, Samuel, whom she dedicates back to God's service. Her prayer becomes a model of honest, passionate faith.",
+            keyTermStrongId: "H8085",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "Hannah poured out her soul before the Lord \u2014 not with eloquent words, but with the raw honesty of a heart that refused to let go of God.",
+            reflectionQuestions: [
+              "What does Hannah's prayer teach you about bringing raw emotion before God?",
+              "How does her willingness to give Samuel back to God challenge your hold on blessings?",
+              "When have you been misunderstood in your worship, as Eli misunderstood Hannah?",
+              "What promise have you made to God that you need to honor?"
+            ],
+            prayerPrompt: "Lord, like Hannah, I pour out my soul before You \u2014 holding nothing back. Hear my cry, and in Your mercy answer. And when You do, help me to give back to You with the same generosity with which You give to me.",
+            thenContext: "In a culture where barrenness was seen as divine disfavor, Hannah's suffering was intensified by social stigma and personal mockery. Her prayer at Shiloh was so fervent that the priest Eli mistook her for a drunkard. Yet God honored her raw, honest faith.",
+            nowApplication: "Hannah's story invites us to pray with radical honesty. God is not offended by our tears, our anger, or our desperation. He honors prayers that come from the depths \u2014 and He answers in ways that reshape history."
+          },
+          {
+            dayNumber: 5,
+            title: "Esther \u2014 Courage for Such a Time",
+            bookId: 17,
+            chapter: 4,
+            verseStart: 1,
+            verseEnd: 17,
+            passageLabel: "Esther 4:1-17",
+            contextNote: "When Haman plots to destroy all the Jews in Persia, Mordecai challenges Esther to use her position as queen to intercede. Esther agrees to risk her life, saying, 'If I perish, I perish.' Her courage saved an entire nation from annihilation.",
+            keyTermStrongId: null,
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Who knows whether you have come to the kingdom for such a time as this? Providence places us where courage is required.",
+            reflectionQuestions: [
+              "What position or influence has God given you 'for such a time as this'?",
+              "When has God called you to act courageously despite personal risk?",
+              "How does Esther's call for fasting before action challenge your decision-making?",
+              "What does Mordecai's confidence in divine providence teach about God's sovereignty?"
+            ],
+            prayerPrompt: "Lord, You have placed me where I am for a reason. Give me the courage of Esther to speak and act when it matters most \u2014 even at personal cost. I trust that You are working behind the scenes.",
+            thenContext: "Persian law made it punishable by death to approach the king uninvited. Esther had not been summoned in thirty days. Her decision was not merely bold \u2014 it was potentially fatal. Yet she chose obedience to God over self-preservation.",
+            nowApplication: "Esther's story reminds us that our positions, talents, and opportunities are not accidents. God places us strategically. The question is whether we will use our influence for His purposes, even when it costs us."
+          },
+          {
+            dayNumber: 6,
+            title: "Mary of Nazareth \u2014 The Willing Handmaid",
+            bookId: 42,
+            chapter: 1,
+            verseStart: 26,
+            verseEnd: 56,
+            passageLabel: "Luke 1:26-56",
+            contextNote: "The angel Gabriel announces to Mary that she will conceive the Son of God by the Holy Spirit. Mary's response \u2014 'Behold the handmaid of the Lord; be it unto me according to thy word' \u2014 is one of the greatest acts of surrender in Scripture. Her song, the Magnificat, celebrates God's reversal of the world's values.",
+            keyTermStrongId: "G5485",
+            locationName: "Bethlehem",
+            timelineEventTitle: "Birth of Jesus Christ",
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Mary did not fully understand, yet she believed. Her submission was not passive ignorance but active faith in the God who does great things.",
+            reflectionQuestions: [
+              "What does Mary's immediate surrender teach about responding to God's call?",
+              "How does the Magnificat reshape your understanding of power and humility?",
+              "Where is God asking you to say 'yes' before you fully understand?",
+              "How does Mary's example challenge the cultural value of control?"
+            ],
+            prayerPrompt: "Lord, like Mary, I say: be it unto me according to Your word. Where I do not understand Your plan, I choose to trust Your character. Use me for Your glory, however humble the path.",
+            thenContext: "Mary was a young Jewish woman in Nazareth \u2014 an obscure village with no significance. She was betrothed but not yet married. The angel's announcement would bring social scandal, personal danger, and a life of sorrow alongside unmatched blessing.",
+            nowApplication: "Mary's surrender is the model for every believer's response to God: trust without full understanding, obedience before certainty, and worship in the midst of mystery. Her Magnificat teaches that God lifts the humble and fills the hungry."
+          },
+          {
+            dayNumber: 7,
+            title: "Mary Magdalene \u2014 First Witness of the Resurrection",
+            bookId: 43,
+            chapter: 20,
+            verseStart: 1,
+            verseEnd: 18,
+            passageLabel: "John 20:1-18",
+            contextNote: "Mary Magdalene comes to the tomb while it is still dark and finds it empty. Weeping, she encounters the risen Jesus, who calls her by name. She becomes the first person commissioned to proclaim the resurrection \u2014 the apostle to the apostles.",
+            keyTermStrongId: "G386",
+            locationName: "Jerusalem",
+            timelineEventTitle: "Resurrection of Jesus",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Jesus called her by name, and immediately she knew Him. Love recognizes the voice of the Beloved, even through tears.",
+            reflectionQuestions: [
+              "Why did Jesus choose Mary Magdalene as the first witness of the resurrection?",
+              "What does it mean that Jesus called her by name in her moment of deepest grief?",
+              "How does this encounter challenge cultural dismissal of women's testimony?",
+              "Where do you need to hear Jesus calling your name today?"
+            ],
+            prayerPrompt: "Risen Lord, You called Mary by name and turned her grief into the greatest proclamation in history. Call my name today. Let me hear Your voice through my tears and be transformed by Your resurrection power.",
+            thenContext: "In first-century Judaism, a woman's testimony was not accepted in court. That Jesus chose a woman \u2014 and one previously afflicted by seven demons \u2014 as the first witness of the resurrection was a deliberate, radical reversal of cultural norms.",
+            nowApplication: "Mary Magdalene's commissioning reveals God's pattern: He gives the most important message to those the world deems least qualified. The resurrection is good news for every outsider, every broken person, every underestimated voice."
+          }
+        ]
+      },
+      {
+        title: "Prophets and Prophecy",
+        description: "Explore the voices of God's prophets \u2014 men who spoke truth to power, warned of judgment, and promised restoration. Each day examines a key prophetic text, its original context, and its fulfillment, revealing how God's word proves faithful across centuries.",
+        totalDays: 7,
+        theme: "Prophecy & Fulfillment",
+        targetGoals: [
+          "Understand the role of prophets in biblical history",
+          "Trace prophecy from declaration to fulfillment",
+          "Apply prophetic calls to justice and faithfulness today"
+        ],
+        difficultyLevel: "intermediate",
+        estimatedMinutesPerDay: 15,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "Moses \u2014 The Prophet Like No Other",
+            bookId: 5,
+            chapter: 18,
+            verseStart: 15,
+            verseEnd: 22,
+            passageLabel: "Deuteronomy 18:15-22",
+            contextNote: "Moses declares that God will raise up a Prophet like himself from among the people. This prophecy points ultimately to Jesus Christ, the greater Moses who would speak God's words with final authority and lead His people to true freedom.",
+            keyTermStrongId: "H1696",
+            locationName: "Mount Sinai",
+            timelineEventTitle: "Giving of the Law at Sinai",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "The Lord will raise up a Prophet \u2014 not merely a teacher, but one who speaks with the very authority of God, as Moses did face to face.",
+            reflectionQuestions: [
+              "How does Jesus fulfill the role of 'a prophet like Moses'?",
+              "What does it mean that God puts His words in the prophet's mouth?",
+              "How do you discern true prophetic voices from false ones today?",
+              "What characteristics of Moses' leadership do you see fulfilled in Jesus?"
+            ],
+            prayerPrompt: "Lord, You promised a Prophet who would speak Your words with authority. Thank You that Jesus is that Prophet \u2014 the Word made flesh. Help me to listen to His voice above all others.",
+            thenContext: "As Israel prepared to enter the Promised Land, Moses reminded them that they would need ongoing divine guidance. The surrounding nations consulted sorcerers and diviners; Israel was to listen to God's appointed prophets instead.",
+            nowApplication: "This passage establishes the prophetic office and points to Christ as the ultimate Prophet. In a world of competing voices and false authorities, we are called to measure everything against God's revealed Word."
+          },
+          {
+            dayNumber: 2,
+            title: "Elijah \u2014 Showdown on Mount Carmel",
+            bookId: 11,
+            chapter: 18,
+            verseStart: 20,
+            verseEnd: 40,
+            passageLabel: "1 Kings 18:20-40",
+            contextNote: "Elijah challenges 450 prophets of Baal to a contest on Mount Carmel. When Baal fails and God answers with fire from heaven, the people cry, 'The Lord, He is God!' This dramatic confrontation demonstrates that the God of Israel alone is the living God.",
+            keyTermStrongId: "H430",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "The fire of the Lord fell \u2014 and consumed not merely the sacrifice but the wood, the stones, the dust, and the water. No power of Baal could rival such a display.",
+            reflectionQuestions: [
+              "What 'Mount Carmel moments' has God given you \u2014 clear demonstrations of His power?",
+              "How does Elijah's bold faith challenge your own timidity?",
+              "What modern 'Baals' compete for your allegiance and worship?",
+              "Why do you think the people wavered between two opinions?"
+            ],
+            prayerPrompt: "God of Elijah, You are the living God who answers with fire. In a world of false gods and divided loyalties, help me to stand boldly for You. Let Your power be displayed so that all may know You alone are Lord.",
+            thenContext: "Under King Ahab and Queen Jezebel, Israel had descended into Baal worship. Elijah stood virtually alone against an entire corrupt religious system. The drought preceding this event had lasted three years, intensifying the stakes of the confrontation.",
+            nowApplication: "Elijah's story speaks to every believer who feels outnumbered or alone in their faith. God does not need a majority to display His power. One person standing on truth, backed by the living God, is a majority."
+          },
+          {
+            dayNumber: 3,
+            title: "Isaiah \u2014 The Holy God and the Cleansed Prophet",
+            bookId: 23,
+            chapter: 6,
+            verseStart: 1,
+            verseEnd: 13,
+            passageLabel: "Isaiah 6:1-13",
+            contextNote: "In the year King Uzziah died, Isaiah sees the Lord high and lifted up. Seraphim cry 'Holy, holy, holy!' Isaiah is undone by his unworthiness, but a coal from the altar cleanses his lips. When God asks, 'Whom shall I send?' Isaiah responds, 'Here am I; send me.'",
+            keyTermStrongId: "H430",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Woe is me! I am undone \u2014 the prophet could not behold the holiness of God without recognizing the depth of his own defilement. Yet God cleansed him and commissioned him.",
+            reflectionQuestions: [
+              "What does the threefold 'Holy' reveal about God's essential nature?",
+              "When have you felt 'undone' in the presence of God?",
+              "How does God's cleansing precede His commissioning in your life?",
+              "What would it mean for you to say 'Here am I; send me' today?"
+            ],
+            prayerPrompt: "Holy, holy, holy Lord \u2014 I am undone before You. Cleanse me with the coal from Your altar. And then, send me. Here am I, Lord. Use me wherever You will.",
+            thenContext: "King Uzziah's death marked the end of an era of relative stability. Isaiah's vision came at a moment of national uncertainty. In the heavenly throne room, he saw a King who would never die and a kingdom that would never end.",
+            nowApplication: "Isaiah 6 teaches that true calling begins with a vision of God's holiness, which produces humility, which leads to cleansing, which results in mission. We cannot be sent until we have been seen, convicted, and restored."
+          },
+          {
+            dayNumber: 4,
+            title: "Jeremiah \u2014 The Weeping Prophet's Call",
+            bookId: 24,
+            chapter: 1,
+            verseStart: 1,
+            verseEnd: 19,
+            passageLabel: "Jeremiah 1:1-19",
+            contextNote: "God calls Jeremiah before he is born, appointing him as a prophet to the nations. Jeremiah protests his youth, but God touches his mouth and assures him: 'I am with you to deliver you.' Jeremiah's ministry would be marked by tears, rejection, and unwavering faithfulness.",
+            keyTermStrongId: "H3045",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Before you were formed in the womb I knew you \u2014 God's call does not begin with our qualification but with His sovereign knowledge and purpose.",
+            reflectionQuestions: [
+              "How does God's knowledge of Jeremiah before birth speak to your own purpose?",
+              "What excuses do you make when God calls you to difficult tasks?",
+              "How does Jeremiah's faithfulness despite rejection inspire your own perseverance?",
+              "What does it mean to be 'a fortified city' against opposition?"
+            ],
+            prayerPrompt: "Lord, You knew me before I was formed. You appointed me for a purpose. When I feel too young, too weak, or too inadequate, remind me that You have put Your words in my mouth and Your strength at my back.",
+            thenContext: "Jeremiah was called during the reign of Josiah, a rare godly king, but his ministry spanned the final decades before Jerusalem's destruction by Babylon. He preached repentance to a nation that did not want to hear it, and suffered greatly for his obedience.",
+            nowApplication: "Jeremiah's call reminds us that faithfulness is not measured by results but by obedience. God sometimes calls us to speak truth that people reject. Our role is not to guarantee the outcome but to deliver the message with love and integrity."
+          },
+          {
+            dayNumber: 5,
+            title: "Micah \u2014 What the Lord Requires",
+            bookId: 33,
+            chapter: 6,
+            verseStart: 1,
+            verseEnd: 8,
+            passageLabel: "Micah 6:1-8",
+            contextNote: "God brings a legal case against His people, asking what He has done to cause them to turn away. The prophet then distills the essence of true religion: 'Do justly, love mercy, and walk humbly with thy God.' This verse has been called the greatest summary of Old Testament ethics.",
+            keyTermStrongId: "H4941",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "What doth the Lord require? Not rivers of oil or thousands of rams \u2014 but a just life, a merciful heart, and a humble walk with God.",
+            reflectionQuestions: [
+              "How do you practice justice in your daily decisions?",
+              "What does 'loving mercy' look like in your relationships?",
+              "Where do you struggle with walking humbly before God?",
+              "How does this verse challenge religious performance without heart change?"
+            ],
+            prayerPrompt: "Lord, You have shown me what is good. Help me to do justly in every decision, to love mercy toward every person, and to walk humbly with You in every moment. Strip away my pretense and make my faith real.",
+            thenContext: "Micah prophesied to a society characterized by injustice, exploitation of the poor, and religious hypocrisy. The wealthy oppressed the vulnerable while maintaining elaborate religious ceremonies. God declared that no amount of ritual could substitute for genuine righteousness.",
+            nowApplication: "Micah 6:8 remains the antidote to every form of religious hypocrisy. God is not impressed by our activities if our hearts are unjust. True faith expresses itself in how we treat the vulnerable, extend mercy, and walk with humble dependence on God."
+          },
+          {
+            dayNumber: 6,
+            title: "Daniel \u2014 Faithful in a Foreign Land",
+            bookId: 27,
+            chapter: 6,
+            verseStart: 1,
+            verseEnd: 28,
+            passageLabel: "Daniel 6:1-28",
+            contextNote: "Daniel, now an elderly statesman in the Persian court, refuses to stop praying to God despite a decree that makes it punishable by death. He is thrown into the lions' den, but God shuts the lions' mouths. His faithfulness becomes a testimony to the pagan king.",
+            keyTermStrongId: null,
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Daniel's enemies could find no fault in him except concerning the law of his God \u2014 what a testimony to a life lived with integrity.",
+            reflectionQuestions: [
+              "What does Daniel's consistent prayer life teach about spiritual discipline?",
+              "When has your faithfulness to God put you at odds with cultural pressure?",
+              "How does Daniel's testimony impact even the pagan king Darius?",
+              "What does the lions' den teach about God's protection and sovereignty?"
+            ],
+            prayerPrompt: "God of Daniel, You shut the mouths of lions and vindicated Your servant's faithfulness. Give me the same uncompromising devotion \u2014 to pray openly, live with integrity, and trust You with the consequences.",
+            thenContext: "Daniel had been exiled from Jerusalem as a young man and served faithfully through the Babylonian and Persian empires. By the time of this story, he was elderly. His enemies could find no corruption in him \u2014 only his devotion to God.",
+            nowApplication: "Daniel's story challenges us to maintain our spiritual disciplines and convictions even when the culture pressures us to compromise. Consistency in prayer and integrity of character are more powerful than any political strategy."
+          },
+          {
+            dayNumber: 7,
+            title: "Malachi \u2014 The Sun of Righteousness",
+            bookId: 39,
+            chapter: 4,
+            verseStart: 1,
+            verseEnd: 6,
+            passageLabel: "Malachi 4:1-6",
+            contextNote: "The final chapter of the Old Testament looks forward to 'the day of the Lord' \u2014 a day of both judgment and healing. For those who fear God's name, 'the Sun of righteousness shall arise with healing in his wings.' Malachi closes with the promise of Elijah's return before that great day.",
+            keyTermStrongId: "H6666",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "The Sun of righteousness \u2014 unlike the natural sun, He brings not merely light and warmth, but healing. His rising is the hope of every wounded soul.",
+            reflectionQuestions: [
+              "How does the image of a 'Sun of righteousness with healing in His wings' speak to you?",
+              "What does it mean that the same day brings judgment and healing?",
+              "How does the Old Testament's final word \u2014 a promise \u2014 shape your expectation?",
+              "Where do you need the healing rays of Christ's righteousness today?"
+            ],
+            prayerPrompt: "Sun of Righteousness, arise over my life with healing in Your wings. Where there is darkness, bring Your light. Where there is disease of soul, bring Your restoration. I turn my face to You.",
+            thenContext: "Malachi wrote to a disillusioned post-exilic community. The temple had been rebuilt but the glory seemed diminished. Spiritual apathy and cynicism had set in. God's final Old Testament word was both a warning and a promise \u2014 judgment is coming, but so is the Healer.",
+            nowApplication: "Malachi 4 closes the Old Testament with anticipation. For four hundred silent years, these words echoed until John the Baptist appeared as the promised Elijah. The Sun of Righteousness rose in Bethlehem. And one day, He will return in full and final glory."
+          }
+        ]
+      },
+      {
+        title: "Parables of Jesus",
+        description: "Jesus was the master storyteller. Over five days, explore His most memorable parables \u2014 stories that surprised, convicted, and transformed His listeners. Each parable reveals a facet of God's kingdom that challenges how we see the world.",
+        totalDays: 5,
+        theme: "Kingdom of God",
+        targetGoals: [
+          "Understand the purpose and power of Jesus' parables",
+          "See how parables reveal the nature of God's kingdom",
+          "Apply kingdom values to everyday life decisions"
+        ],
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 12,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "The Good Samaritan \u2014 Who Is My Neighbor?",
+            bookId: 42,
+            chapter: 10,
+            verseStart: 25,
+            verseEnd: 37,
+            passageLabel: "Luke 10:25-37",
+            contextNote: "A lawyer tests Jesus by asking what he must do to inherit eternal life. When Jesus asks him what the law says, the man correctly answers: love God and love your neighbor. But wanting to justify himself, he asks, 'Who is my neighbor?' Jesus responds with this devastating parable.",
+            keyTermStrongId: "G26",
+            locationName: "Jerusalem",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "The Samaritan showed mercy \u2014 not asking whether the wounded man was worthy, but seeing only that he was in need. This is the love Christ requires.",
+            reflectionQuestions: [
+              "Who are the 'Samaritans' in your world \u2014 the people you might be tempted to pass by?",
+              "What excuses do you use to avoid helping those in need?",
+              "How does this parable redefine what it means to be a neighbor?",
+              "What would it cost you to 'go and do likewise' this week?"
+            ],
+            prayerPrompt: "Lord Jesus, You told the story of the Good Samaritan to shatter my excuses. Open my eyes to see the wounded on my path. Give me the compassion to stop, the courage to help, and the generosity to give without counting the cost.",
+            thenContext: "Samaritans were despised by Jews as racial and religious half-breeds. By making the hero a Samaritan and the villains a priest and Levite, Jesus deliberately subverted His audience's prejudices. The parable was designed to provoke and convict.",
+            nowApplication: "The Good Samaritan parable asks us not 'Who is my neighbor?' but 'To whom am I being a neighbor?' It destroys every boundary we construct to limit our compassion \u2014 racial, social, political, or religious."
+          },
+          {
+            dayNumber: 2,
+            title: "The Prodigal Son \u2014 A Father's Reckless Love",
+            bookId: 42,
+            chapter: 15,
+            verseStart: 11,
+            verseEnd: 32,
+            passageLabel: "Luke 15:11-32",
+            contextNote: "A younger son demands his inheritance, squanders it in reckless living, and ends up feeding pigs. When he returns home expecting punishment, his father runs to embrace him. But the older son, resentful and self-righteous, refuses to celebrate. Both sons are lost \u2014 one in rebellion, the other in religion.",
+            keyTermStrongId: "G5485",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "The father ran to him \u2014 dignity cast aside, protocol abandoned \u2014 for the love of a father exceeds all propriety when a lost child returns.",
+            reflectionQuestions: [
+              "Do you identify more with the younger son or the older son? Why?",
+              "What does the father's running reveal about God's posture toward repentant sinners?",
+              "How does the older son's resentment expose a different kind of lostness?",
+              "Where do you need to accept the extravagance of God's grace?"
+            ],
+            prayerPrompt: "Father, I have wandered \u2014 sometimes in rebellion, sometimes in self-righteousness. You run to meet me in both. Help me to receive Your grace without shame and to extend it to others without resentment.",
+            thenContext: "In the ancient Near East, for a father to run was a shocking breach of dignity. For a son to demand his inheritance was equivalent to wishing his father dead. Jesus' audience would have expected the father to reject the son. Instead, lavish grace.",
+            nowApplication: "This parable reveals two ways of being lost: through open sin and through self-righteous religion. Both need the Father's grace. The gospel is not just for the obviously broken but also for the secretly proud."
+          },
+          {
+            dayNumber: 3,
+            title: "The Sower \u2014 The Condition of the Heart",
+            bookId: 40,
+            chapter: 13,
+            verseStart: 1,
+            verseEnd: 23,
+            passageLabel: "Matthew 13:1-23",
+            contextNote: "Jesus teaches from a boat, describing a sower who scatters seed on four types of soil: the path, rocky ground, thorns, and good soil. He then explains privately that the seed is the word of God and the soils represent the condition of human hearts in receiving it.",
+            keyTermStrongId: "G3056",
+            locationName: "Sea of Galilee",
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "The same seed was sown in all soils \u2014 the difference lay not in the word preached but in the heart that received it.",
+            reflectionQuestions: [
+              "Which type of soil best describes your heart right now?",
+              "What 'thorns' \u2014 worries, wealth, distractions \u2014 are choking the word in your life?",
+              "How can you cultivate 'good soil' in your daily spiritual practices?",
+              "What does it mean that fruitfulness varies even among good soil?"
+            ],
+            prayerPrompt: "Lord, prepare the soil of my heart. Remove the rocks of stubbornness, uproot the thorns of distraction, and soften the hardened paths of indifference. Let Your word take deep root in me and bear fruit \u2014 thirty, sixty, a hundredfold.",
+            thenContext: "First-century Palestinian farmers sowed seed broadly by hand before plowing. The mixed terrain Jesus described \u2014 paths, rocks, thorns, and good earth \u2014 would have been immediately recognizable to His agricultural audience.",
+            nowApplication: "The Parable of the Sower shifts responsibility from the message to the listener. The seed is always good. The question is the receptivity of our hearts. Spiritual fruitfulness requires intentional cultivation \u2014 removing distractions and deepening roots."
+          },
+          {
+            dayNumber: 4,
+            title: "The Unforgiving Servant \u2014 The Debt We Owe",
+            bookId: 40,
+            chapter: 18,
+            verseStart: 21,
+            verseEnd: 35,
+            passageLabel: "Matthew 18:21-35",
+            contextNote: "Peter asks Jesus how many times he should forgive \u2014 seven times? Jesus replies, seventy times seven. He then tells of a servant forgiven an enormous debt who refuses to forgive a fellow servant a tiny one. The master's response is severe: unforgiveness has devastating consequences.",
+            keyTermStrongId: "G5485",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Ten thousand talents \u2014 a debt so vast it could never be repaid by human effort. Yet forgiven freely. And the forgiven servant could not forgive a hundred pence.",
+            reflectionQuestions: [
+              "How does understanding the size of your forgiven debt change your willingness to forgive others?",
+              "Who do you find hardest to forgive, and why?",
+              "What does this parable teach about the connection between receiving grace and extending it?",
+              "How does unforgiveness imprison the one who holds it?"
+            ],
+            prayerPrompt: "Lord, You have forgiven me an unpayable debt. Forgive me for the times I have withheld mercy from others. Free me from the prison of bitterness and teach me to forgive as You have forgiven me.",
+            thenContext: "Ten thousand talents was an astronomical sum \u2014 roughly 200,000 years of a laborer's wages. Jesus deliberately used an absurd number to illustrate the immensity of God's forgiveness. A hundred denarii, by contrast, was a few months' pay.",
+            nowApplication: "This parable exposes the hypocrisy of accepting God's enormous grace while withholding forgiveness from others. Forgiveness is not optional for the forgiven \u2014 it is the evidence that we have truly understood what we have received."
+          },
+          {
+            dayNumber: 5,
+            title: "The Talents \u2014 Faithful with What You're Given",
+            bookId: 40,
+            chapter: 25,
+            verseStart: 14,
+            verseEnd: 30,
+            passageLabel: "Matthew 25:14-30",
+            contextNote: "A master entrusts his servants with different amounts of money before traveling. Two servants invest and double their master's wealth. The third buries his talent out of fear. Upon the master's return, the faithful are rewarded and the fearful is condemned \u2014 not for failing, but for doing nothing.",
+            keyTermStrongId: "G4102",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Well done, good and faithful servant \u2014 the commendation was not for the amount gained but for the faithfulness exercised with what was given.",
+            reflectionQuestions: [
+              "What talents, resources, or opportunities has God entrusted to you?",
+              "Are you investing what you have been given, or burying it out of fear?",
+              "What does this parable teach about God's expectations of stewardship?",
+              "How does fear of failure prevent you from stepping out in faith?"
+            ],
+            prayerPrompt: "Master, You have entrusted me with gifts, time, and opportunities. Forgive me for the times I have buried them out of fear. Help me to invest boldly, knowing that faithfulness \u2014 not perfection \u2014 is what You require.",
+            thenContext: "A talent was a unit of weight in precious metal \u2014 one talent equaled about 20 years of a laborer's wages. Five talents represented a staggering fortune. The parable illustrates that God distributes gifts differently but expects faithfulness universally.",
+            nowApplication: "The Parable of the Talents condemns not failure but inaction. God does not compare us to others \u2014 He asks whether we were faithful with what He gave us. The enemy of fruitfulness is not inability but fear-driven passivity."
+          }
+        ]
+      },
+      {
+        title: "Walking Through the Wilderness",
+        description: "Journey with Israel through the wilderness from Egypt to the edge of the Promised Land. Each day explores a pivotal moment in the Exodus \u2014 from miraculous deliverance to grumbling and provision \u2014 revealing how God shapes His people through the desert seasons of life.",
+        totalDays: 7,
+        theme: "Faith & Perseverance",
+        targetGoals: [
+          "Understand God's purpose in wilderness seasons",
+          "Learn from Israel's failures and faithfulness",
+          "Trust God's provision when the path is unclear"
+        ],
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 14,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "Deliverance at the Red Sea",
+            bookId: 2,
+            chapter: 14,
+            verseStart: 10,
+            verseEnd: 31,
+            passageLabel: "Exodus 14:10-31",
+            contextNote: "Trapped between the Red Sea and Pharaoh's army, Israel panics. Moses declares, 'Stand still, and see the salvation of the Lord.' God parts the sea, Israel crosses on dry ground, and the pursuing army is destroyed. This is the definitive act of deliverance in the Old Testament.",
+            keyTermStrongId: "H3444",
+            locationName: null,
+            timelineEventTitle: "The Exodus from Egypt",
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Stand still \u2014 not in sloth or despair, but in holy confidence that God will fight for you. The salvation of the Lord requires only that you trust and obey.",
+            reflectionQuestions: [
+              "When has God delivered you from a situation that seemed impossible?",
+              "What does 'Stand still and see the salvation of the Lord' mean for your current struggle?",
+              "How quickly do you forget God's past deliverances when new crises arise?",
+              "What does the Red Sea crossing reveal about God's power over the forces that pursue you?"
+            ],
+            prayerPrompt: "Lord, You parted the sea for Your people. You are the same God today. When I am trapped between fear and impossibility, help me to stand still, to trust, and to see Your salvation.",
+            thenContext: "Israel had been slaves in Egypt for over 400 years. Pharaoh's army represented the most powerful military force in the ancient world. The Red Sea was a wall of impossibility. God's deliverance was not subtle \u2014 it was spectacular and unmistakable.",
+            nowApplication: "The Red Sea moment teaches that God's deliverance often comes at the last possible moment and in ways we never expected. Our role is not to engineer escape but to trust the God who commands wind and water."
+          },
+          {
+            dayNumber: 2,
+            title: "Bitter Water Made Sweet",
+            bookId: 2,
+            chapter: 15,
+            verseStart: 22,
+            verseEnd: 27,
+            passageLabel: "Exodus 15:22-27",
+            contextNote: "Three days after the Red Sea, Israel finds no water. When they reach Marah, the water is bitter and undrinkable. The people grumble. God shows Moses a tree; when cast into the water, it becomes sweet. God reveals Himself as Jehovah Rapha \u2014 'the Lord who heals.'",
+            keyTermStrongId: "H2421",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "The tree cast into the waters made them sweet \u2014 a figure of the cross of Christ, which sweetens every bitter providence.",
+            reflectionQuestions: [
+              "How quickly do you move from celebration to complaint?",
+              "What bitter circumstances in your life need God's sweetening?",
+              "How does the tree at Marah point to the cross of Christ?",
+              "What does the name 'the Lord who heals' mean for your situation?"
+            ],
+            prayerPrompt: "Jehovah Rapha, You are the Lord who heals. Take the bitter waters of my circumstances and make them sweet by Your grace. Help me not to grumble but to trust that You are working even in the desert.",
+            thenContext: "After the spectacular deliverance at the Red Sea, Israel expected smooth passage. Instead, they faced three waterless days and then bitter water. God was teaching them that faith is not tested in the miracle but in the monotony and hardship that follow.",
+            nowApplication: "Marah teaches that mountaintop experiences are followed by valley tests. The same God who parts seas also sweetens bitter water. He is Jehovah Rapha \u2014 present not only in dramatic deliverance but in the daily difficulties that shape our character."
+          },
+          {
+            dayNumber: 3,
+            title: "Manna from Heaven",
+            bookId: 2,
+            chapter: 16,
+            verseStart: 1,
+            verseEnd: 21,
+            passageLabel: "Exodus 16:1-21",
+            contextNote: "Israel grumbles about food, longing for Egypt's provision. God sends manna \u2014 bread from heaven \u2014 each morning and quail each evening. They must gather daily, trusting that tomorrow's supply will come. The manna teaches daily dependence on God.",
+            keyTermStrongId: "H3068",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Manna was given daily \u2014 not stored in abundance \u2014 so that Israel would learn to depend on God each morning. Daily bread for daily need.",
+            reflectionQuestions: [
+              "How does the daily nature of manna challenge your desire for long-term security?",
+              "In what ways do you romanticize past 'Egypts' when present circumstances are hard?",
+              "What does it mean to gather only enough for today and trust God for tomorrow?",
+              "How does Jesus' claim to be the 'Bread of Life' connect to the manna?"
+            ],
+            prayerPrompt: "Father, You provided manna every morning \u2014 enough for the day. Teach me to trust You for daily bread and to resist hoarding out of anxiety. You are faithful, morning by morning.",
+            thenContext: "The wilderness provided no natural food sources for over a million people. Manna was a supernatural provision that appeared with the morning dew. It could not be hoarded except before the Sabbath. God was retraining a slave mentality into a trust mentality.",
+            nowApplication: "Manna teaches that God's provision is daily, not annual. We cannot stockpile enough security to eliminate the need for faith. Each morning is an invitation to trust that the same God who provided yesterday will provide today."
+          },
+          {
+            dayNumber: 4,
+            title: "Water from the Rock",
+            bookId: 2,
+            chapter: 17,
+            verseStart: 1,
+            verseEnd: 7,
+            passageLabel: "Exodus 17:1-7",
+            contextNote: "Again without water, Israel quarrels bitterly with Moses: 'Is the Lord among us, or not?' God instructs Moses to strike the rock at Horeb, and water flows abundantly. Paul later reveals that 'the rock was Christ' \u2014 a source of living water for a thirsty people.",
+            keyTermStrongId: "H776",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "The rock, being smitten, poured forth water for all \u2014 a figure of Christ, who was smitten for us that living water might flow to all who thirst.",
+            reflectionQuestions: [
+              "Why does the same lesson \u2014 trusting God for provision \u2014 need to be repeated so often?",
+              "How does questioning 'Is the Lord among us?' resonate with your doubts?",
+              "What does it mean that the rock was Christ, smitten for our sake?",
+              "Where are you spiritually thirsty and in need of living water?"
+            ],
+            prayerPrompt: "Lord, You brought water from solid rock for Your thirsty people. I come to You thirsty again. Strike the rock of my hardened heart and let living water flow. You are among us \u2014 even when I cannot see You.",
+            thenContext: "Rephidim was a desolate location with no natural water source. Israel's complaint was legitimate in practical terms but revealed a spiritual crisis: they doubted God's presence and care despite repeated miracles. The place was named Massah and Meribah \u2014 'testing' and 'quarreling.'",
+            nowApplication: "The rock at Horeb prefigures Christ, who was 'struck' on the cross so that living water could flow to all. Our repeated thirst is not a sign of failure \u2014 it is an invitation to return to the Source who never runs dry."
+          },
+          {
+            dayNumber: 5,
+            title: "The Golden Calf \u2014 Idolatry in the Desert",
+            bookId: 2,
+            chapter: 32,
+            verseStart: 1,
+            verseEnd: 20,
+            passageLabel: "Exodus 32:1-20",
+            contextNote: "While Moses is on Mount Sinai receiving the law, Israel grows impatient and pressures Aaron to make a golden calf. They declare, 'These be thy gods, O Israel, which brought thee up out of Egypt.' In mere weeks, they have replaced the living God with a manufactured idol.",
+            keyTermStrongId: "H430",
+            locationName: "Mount Sinai",
+            timelineEventTitle: "Giving of the Law at Sinai",
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "They changed their glory into the similitude of an ox that eateth grass \u2014 trading the Creator for a creation of their own hands.",
+            reflectionQuestions: [
+              "What 'golden calves' do you construct when God seems silent or distant?",
+              "How does impatience lead to idolatry in your life?",
+              "What does Aaron's compliance teach about the danger of people-pleasing leadership?",
+              "How quickly can spiritual devotion decay without intentional maintenance?"
+            ],
+            prayerPrompt: "Lord, forgive me for the idols I construct when You seem silent. Break the golden calves of my heart \u2014 the substitutes I worship in place of You. You alone are God. There is no other.",
+            thenContext: "Israel had just witnessed the most dramatic theophany in history at Sinai. Yet within forty days of Moses' absence, they reverted to Egyptian-style idol worship. The golden calf was not a rejection of God but an attempt to make Him manageable and visible \u2014 which is its own form of idolatry.",
+            nowApplication: "The golden calf warns us that idolatry is not just ancient paganism \u2014 it is the human tendency to replace the invisible God with visible substitutes. Any good thing can become an idol when it takes God's place: career, relationships, comfort, or control."
+          },
+          {
+            dayNumber: 6,
+            title: "The Twelve Spies \u2014 Fear vs. Faith",
+            bookId: 4,
+            chapter: 13,
+            verseStart: 26,
+            verseEnd: 33,
+            passageLabel: "Numbers 13:26-33",
+            contextNote: "Twelve spies return from scouting the Promised Land. Ten report that the inhabitants are giants and conquest is impossible. Only Joshua and Caleb declare, 'The Lord is with us.' The majority's fear leads to forty years of wandering. A generation dies without entering the land.",
+            keyTermStrongId: "H2377",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "They saw the giants and forgot the God who had parted the sea. Fear magnifies the obstacle and shrinks the promise.",
+            reflectionQuestions: [
+              "When have you let the 'giants' in your life make you forget God's promises?",
+              "What is the difference between the perspective of the ten spies and that of Joshua and Caleb?",
+              "How does fear-based decision-making rob you of God's best?",
+              "What 'Promised Land' are you hesitating to enter because of fear?"
+            ],
+            prayerPrompt: "Lord, give me the faith of Caleb and Joshua \u2014 to see the giants but believe the promise. When fear tells me I cannot, remind me that You have already gone before me. I will not let what I see overrule what You have said.",
+            thenContext: "The twelve spies all agreed that the land was abundant \u2014 flowing with milk and honey. The evidence was a cluster of grapes so large it required two men to carry it. The disagreement was not about the facts but about the faith to act on God's promise.",
+            nowApplication: "The spy report teaches that facts and faith must coexist. The obstacles were real, but so was God's promise. Fear-based decision-making leads to decades of wandering. Faith-based obedience leads to the Promised Land."
+          },
+          {
+            dayNumber: 7,
+            title: "The Bronze Serpent \u2014 Look and Live",
+            bookId: 4,
+            chapter: 21,
+            verseStart: 4,
+            verseEnd: 9,
+            passageLabel: "Numbers 21:4-9",
+            contextNote: "After more complaining, God sends venomous serpents among the people. When they repent, God instructs Moses to make a bronze serpent and lift it on a pole. Anyone bitten who looks at it will live. Jesus later points to this event as a picture of His own crucifixion: 'As Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up.'",
+            keyTermStrongId: "H3444",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "Look and live \u2014 the simplicity of the remedy was its scandal. No effort, no merit \u2014 only a look of faith at the one lifted up.",
+            reflectionQuestions: [
+              "How does the bronze serpent prefigure Christ lifted up on the cross?",
+              "What does it mean that salvation required only looking \u2014 not earning or achieving?",
+              "Why is the simplicity of the gospel so difficult for human pride?",
+              "Where are you bitten by sin and in need of looking to Christ?"
+            ],
+            prayerPrompt: "Lord Jesus, as Moses lifted the serpent, so You were lifted up \u2014 that whoever looks to You in faith shall not perish but have eternal life. I look to You now. Heal me, save me, and give me life.",
+            thenContext: "The bronze serpent was a radical provision \u2014 the cure resembled the curse. God did not remove the serpents but provided a means of healing in the midst of them. This paradox prefigures the cross, where Christ was 'made sin for us' so that we might be healed.",
+            nowApplication: "John 3:14-15 explicitly connects the bronze serpent to the cross. Salvation is not complicated \u2014 it requires looking to the One who was lifted up. The simplicity offends our pride, but it is the only remedy. Look and live."
+          }
+        ]
+      },
+      {
+        title: "The Armor of God",
+        description: "Paul's letter to the Ephesians culminates in a call to spiritual warfare. Over six days, examine each piece of the armor of God \u2014 truth, righteousness, the gospel, faith, salvation, and the Word \u2014 and learn how to stand firm against the forces of darkness.",
+        totalDays: 6,
+        theme: "Spiritual Warfare",
+        targetGoals: [
+          "Understand each piece of the armor of God",
+          "Recognize the reality of spiritual warfare",
+          "Equip yourself daily for spiritual battles"
+        ],
+        difficultyLevel: "intermediate",
+        estimatedMinutesPerDay: 13,
+        isPublished: true,
+        days: [
+          {
+            dayNumber: 1,
+            title: "Know Your Enemy \u2014 The Call to Stand",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 10,
+            verseEnd: 13,
+            passageLabel: "Ephesians 6:10-13",
+            contextNote: "Paul introduces the spiritual warfare passage by reminding believers that their struggle is not against flesh and blood but against principalities and powers. The call is not to attack but to stand \u2014 to hold ground that Christ has already won.",
+            keyTermStrongId: "G1411",
+            locationName: "Rome",
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "Be strong in the Lord \u2014 not in yourselves. The power that enables us to stand is not our own but is drawn from the might of God Himself.",
+            reflectionQuestions: [
+              "How does recognizing your battle is spiritual change the way you fight?",
+              "What does it mean to 'stand' rather than advance or retreat?",
+              "Where have you been fighting flesh-and-blood battles that are actually spiritual?",
+              "How do you draw on the Lord's strength rather than your own?"
+            ],
+            prayerPrompt: "Lord, I recognize that my battle is not against people but against spiritual forces. Strengthen me with Your might. Teach me to stand \u2014 not in my power but in Yours. I put on Your armor today.",
+            thenContext: "Paul wrote from prison in Rome, likely chained to a Roman soldier. The image of armor was drawn from the very guard watching over him. Yet Paul's vision transcended the physical \u2014 behind human conflict, spiritual forces were at work.",
+            nowApplication: "Ephesians 6 reframes every conflict. Relational tensions, temptations, discouragement, and cultural pressures are not merely human \u2014 they have a spiritual dimension. Awareness of the true enemy changes our strategy from anger at people to dependence on God."
+          },
+          {
+            dayNumber: 2,
+            title: "The Belt of Truth",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 14,
+            verseEnd: 14,
+            passageLabel: "Ephesians 6:14a",
+            contextNote: "The first piece of armor is the belt of truth. In Roman armor, the belt held everything together and allowed the soldier to move freely. Truth is the foundation of spiritual integrity \u2014 without it, every other piece of armor is compromised.",
+            keyTermStrongId: "G225",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "Truth is the girdle that holds everything in place \u2014 a life built on deception will find every other defense compromised.",
+            reflectionQuestions: [
+              "In what areas of your life are you tempted to compromise truth?",
+              "How does self-deception undermine your spiritual defenses?",
+              "What is the relationship between God's truth and personal integrity?",
+              "How can you 'gird yourself with truth' in practical daily ways?"
+            ],
+            prayerPrompt: "God of truth, gird me with Your truth today. Expose every lie I have believed about myself, about You, and about the world. Let truth be the foundation that holds every other piece of my spiritual armor in place.",
+            thenContext: "The Roman soldier's belt (cingulum) was essential \u2014 it cinched the tunic, supported the sword, and allowed freedom of movement. Without it, the soldier was encumbered and vulnerable. Paul uses this to illustrate that truth is foundational to spiritual readiness.",
+            nowApplication: "In an age of deception, misinformation, and self-delusion, the belt of truth is more critical than ever. It means living in alignment with God's revealed truth \u2014 in our beliefs, our speech, our relationships, and our inner lives."
+          },
+          {
+            dayNumber: 3,
+            title: "The Breastplate of Righteousness",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 14,
+            verseEnd: 14,
+            passageLabel: "Ephesians 6:14b",
+            contextNote: "The breastplate protects the vital organs \u2014 the heart. The breastplate of righteousness is both Christ's imputed righteousness (our standing before God) and practical righteousness (our daily obedience). Together, they guard the heart from accusation and corruption.",
+            keyTermStrongId: "G1343",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "The breastplate of righteousness \u2014 both the righteousness of Christ imputed to us and the righteousness wrought in us by the Spirit \u2014 guards the heart from every assault.",
+            reflectionQuestions: [
+              "How does Christ's righteousness protect you from guilt and condemnation?",
+              "Where is your heart vulnerable because of unconfessed sin?",
+              "What is the relationship between positional righteousness and practical holiness?",
+              "How does the enemy attack your sense of identity and standing before God?"
+            ],
+            prayerPrompt: "Lord Jesus, I put on the breastplate of Your righteousness. Guard my heart from the accusations of the enemy. I stand not in my own goodness but in Yours. And by Your Spirit, help me to live in a way that protects my heart.",
+            thenContext: "The Roman breastplate (lorica) covered the torso, protecting the heart and lungs. Without it, any blow to the chest was fatal. Paul understood that the spiritual heart is the primary target of the enemy \u2014 and righteousness is its defense.",
+            nowApplication: "The breastplate has two sides: Christ's righteousness that silences condemnation, and practical holiness that prevents the enemy from gaining a foothold. Both are necessary. We need Christ's record and the Spirit's transformation."
+          },
+          {
+            dayNumber: 4,
+            title: "Shoes of the Gospel of Peace",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 15,
+            verseEnd: 15,
+            passageLabel: "Ephesians 6:15",
+            contextNote: "Roman soldiers wore caligae \u2014 heavy sandals with hobnailed soles that provided grip on any terrain. Paul applies this to the readiness that comes from the gospel of peace. Grounded in the gospel, believers can stand firm on any ground the battle takes them.",
+            keyTermStrongId: "G1515",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "matthew-henry",
+            historicVoiceExcerpt: "The gospel of peace gives the soldier sure footing \u2014 for the one who has peace with God can stand firm on any ground.",
+            reflectionQuestions: [
+              "How does having peace with God affect your ability to face conflict?",
+              "Are you ready to share the gospel when opportunities arise?",
+              "What terrain are you currently standing on \u2014 is your footing sure?",
+              "How does inner peace become a weapon in spiritual warfare?"
+            ],
+            prayerPrompt: "Prince of Peace, fit my feet with the readiness of Your gospel. Give me sure footing on any terrain the enemy chooses. And make me ready \u2014 always ready \u2014 to share the good news that brings peace.",
+            thenContext: "Roman soldiers' hobnailed sandals were essential for maintaining position in battle. Slipping meant death. Paul's metaphor connects the gospel of peace with stability in conflict \u2014 those who know they are at peace with God cannot be knocked off their feet.",
+            nowApplication: "The shoes of the gospel represent both stability and readiness. We stand firm because we are at peace with God through Christ. And we are always ready to bring that peace to others. A believer with gospel footing is immovable and mission-ready."
+          },
+          {
+            dayNumber: 5,
+            title: "The Shield of Faith and Helmet of Salvation",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 16,
+            verseEnd: 17,
+            passageLabel: "Ephesians 6:16-17a",
+            contextNote: "The shield of faith quenches the fiery darts of the enemy \u2014 doubts, temptations, lies, and accusations. The helmet of salvation protects the mind, guarding our confidence that we belong to God. Together, they defend against the enemy's external attacks and internal deceptions.",
+            keyTermStrongId: "G4102",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "adam-clarke",
+            historicVoiceExcerpt: "The shield of faith quenches every fiery dart \u2014 not some, but all. Faith does not merely deflect the enemy's attacks; it extinguishes them.",
+            reflectionQuestions: [
+              "What 'fiery darts' has the enemy been launching at you recently?",
+              "How does active faith \u2014 not passive belief \u2014 serve as a shield?",
+              "What lies about your salvation does the enemy use to attack your confidence?",
+              "How do you protect your mind from thoughts that undermine your identity in Christ?"
+            ],
+            prayerPrompt: "Lord, I take up the shield of faith to quench every fiery dart. And I put on the helmet of salvation to protect my mind. When doubt, accusation, and fear come, I stand behind the shield of what I know to be true about You.",
+            thenContext: "The Roman scutum was a large, door-like shield that could protect the entire body. It was coated with leather and soaked in water before battle, extinguishing flaming arrows. The helmet (galea) protected the head \u2014 the seat of thought and decision-making.",
+            nowApplication: "Faith is not a feeling \u2014 it is the active decision to trust God's promises over the enemy's lies. The helmet of salvation guards the mind, which is the primary battlefield. When we are sure of our salvation, the enemy's accusations lose their power."
+          },
+          {
+            dayNumber: 6,
+            title: "The Sword of the Spirit \u2014 The Word of God",
+            bookId: 49,
+            chapter: 6,
+            verseStart: 17,
+            verseEnd: 20,
+            passageLabel: "Ephesians 6:17b-20",
+            contextNote: "The only offensive weapon in the armor is the sword of the Spirit \u2014 the Word of God. Paul then adds the essential element: prayer. The fully armed believer stands firm, wields the Word, and prays 'always with all prayer and supplication in the Spirit.'",
+            keyTermStrongId: "G3056",
+            locationName: null,
+            timelineEventTitle: null,
+            commentatorId: "john-gill",
+            historicVoiceExcerpt: "The sword of the Spirit \u2014 the Word of God \u2014 is both defensive and offensive. It is the only weapon that can wound the enemy and set captives free.",
+            reflectionQuestions: [
+              "How familiar are you with the Scriptures \u2014 enough to wield them in battle?",
+              "When has a specific Bible verse defeated a specific temptation or lie?",
+              "How does prayer complete the armor and sustain the fight?",
+              "What does it mean to pray 'in the Spirit' during spiritual warfare?"
+            ],
+            prayerPrompt: "Lord, Your Word is my sword. Sharpen it in my hands through study and meditation. And keep me in constant prayer \u2014 alert, persevering, and interceding for all the saints. I will not fight in my strength but in Yours.",
+            thenContext: "The Roman gladius was a short, double-edged sword designed for close combat. Paul's use of 'rhema' (spoken word) rather than 'logos' (general word) suggests specific, timely application of Scripture \u2014 as Jesus demonstrated when He defeated Satan in the wilderness by quoting specific texts.",
+            nowApplication: "The sword of the Spirit is the only offensive weapon in the armor. It requires knowing Scripture well enough to apply it specifically to each situation. Jesus modeled this in His temptation: each lie was countered with 'It is written.' We fight the same way \u2014 not with arguments but with God's Word."
+          }
+        ]
+      }
+    ];
+    isMain3 = process.argv[1] != null && (process.argv[1].endsWith("/seed-more-devotionals.ts") || process.argv[1].endsWith("\\seed-more-devotionals.ts"));
+    if (isMain3) {
+      runCli3().catch((err) => {
+        console.error("Seed failed:", err);
+        process.exit(1);
+      });
+    }
+  }
+});
+
+// server/seed-approved-catalog.ts
+var seed_approved_catalog_exports = {};
+__export(seed_approved_catalog_exports, {
+  seedApprovedCatalog: () => seedApprovedCatalog
+});
+async function seedApprovedCatalog(db2) {
+  console.log("[approved-catalog] Seeding 8 approved supplement plans...");
+  for (const plan of APPROVED_PLANS) {
+    const existing = await db2.select({ id: devotionalPlans.id }).from(devotionalPlans).where((0, import_drizzle_orm65.eq)(devotionalPlans.title, plan.title)).limit(1);
+    let planId;
+    if (existing.length) {
+      planId = existing[0].id;
+      console.log(`  Plan "${plan.title}" already exists (id=${planId}).`);
+    } else {
+      const inserted = await db2.insert(devotionalPlans).values({
+        title: plan.title,
+        description: plan.description,
+        totalDays: plan.totalDays,
+        theme: plan.theme,
+        category: plan.category,
+        difficultyLevel: plan.difficultyLevel,
+        estimatedMinutesPerDay: plan.estimatedMinutesPerDay,
+        // Publishing requires a separate, explicit human-curation decision.
+        isPublished: false,
+        provenance: "legacy_unclassified"
+      }).returning({ id: devotionalPlans.id });
+      planId = inserted[0].id;
+      console.log(`  Inserted plan: "${plan.title}" (id=${planId})`);
+    }
+    const existingDays = await db2.select({ dayNumber: devotionalDays.dayNumber }).from(devotionalDays).where((0, import_drizzle_orm65.eq)(devotionalDays.planId, planId));
+    const existingDayNumbers = new Set(existingDays.map((d) => d.dayNumber));
+    for (const day of plan.days) {
+      if (existingDayNumbers.has(day.dayNumber)) {
+        continue;
+      }
+      await db2.insert(devotionalDays).values({
+        planId,
+        dayNumber: day.dayNumber,
+        title: day.title,
+        bookId: day.bookId,
+        chapter: day.chapter,
+        passageLabel: day.passageLabel,
+        reflectionQuestions: day.reflectionQuestions,
+        prayerPrompt: day.prayerPrompt
+      }).onConflictDoNothing();
+      console.log(`    Day ${day.dayNumber}: "${day.title}"`);
+    }
+  }
+  console.log("[approved-catalog] Supplement seeding complete.");
+}
+var import_drizzle_orm65, APPROVED_PLANS;
+var init_seed_approved_catalog = __esm({
+  "server/seed-approved-catalog.ts"() {
+    "use strict";
+    import_drizzle_orm65 = require("drizzle-orm");
+    init_schema();
+    APPROVED_PLANS = [
+      {
+        title: "A Life of Prayer",
+        description: "Learn to deepen your prayer life through Scripture's greatest examples and teachings on communion with God.",
+        totalDays: 7,
+        theme: "prayer",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 12,
+        days: [
+          { dayNumber: 1, title: "The Lord's Prayer", bookId: 40, chapter: 6, passageLabel: "Matthew 6:5-15", reflectionQuestions: ["What does this prayer teach about God's priorities?", "Which line speaks most to you today?"], prayerPrompt: "Our Father, teach me to pray as You taught the disciples." },
+          { dayNumber: 2, title: "Persistent Prayer", bookId: 42, chapter: 18, passageLabel: "Luke 18:1-8", reflectionQuestions: ["Why does God want us to persist in prayer?", "What have you stopped praying about?"], prayerPrompt: "Give me persistence, Lord, even when answers seem delayed." },
+          { dayNumber: 3, title: "Hannah's Desperate Prayer", bookId: 9, chapter: 1, passageLabel: "1 Samuel 1:1-20", reflectionQuestions: ["What can you learn from Hannah's honesty before God?", "What burdens do you need to pour out?"], prayerPrompt: "Lord, I pour out my heart before You." },
+          { dayNumber: 4, title: "Daniel's Faithful Prayer", bookId: 27, chapter: 6, passageLabel: "Daniel 6:1-23", reflectionQuestions: ["What made Daniel's prayer life so powerful?", "What threatens your prayer time?"], prayerPrompt: "Help me be faithful in prayer, no matter the cost." },
+          { dayNumber: 5, title: "Praying in the Spirit", bookId: 49, chapter: 6, passageLabel: "Ephesians 6:18-20", reflectionQuestions: ["What does it mean to pray in the Spirit?", "How can you pray for others more intentionally?"], prayerPrompt: "Holy Spirit, guide my prayers today." },
+          { dayNumber: 6, title: "Jesus in Gethsemane", bookId: 40, chapter: 26, passageLabel: "Matthew 26:36-46", reflectionQuestions: ["What does Jesus' prayer reveal about surrender?", "Can you pray 'not my will, but Yours'?"], prayerPrompt: "Father, not my will but Yours be done." },
+          { dayNumber: 7, title: "Praying Without Ceasing", bookId: 52, chapter: 5, passageLabel: "1 Thessalonians 5:16-24", reflectionQuestions: ["How can you pray without ceasing in practical terms?", "What would change if you were in constant conversation with God?"], prayerPrompt: "Make my life a constant prayer to You." }
+        ]
+      },
+      {
+        title: "Wisdom for Life",
+        description: "Discover the practical wisdom of Scripture for navigating relationships, decisions, and daily challenges.",
+        totalDays: 7,
+        theme: "wisdom",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        days: [
+          { dayNumber: 1, title: "The Beginning of Wisdom", bookId: 20, chapter: 1, passageLabel: "Proverbs 1:1-7", reflectionQuestions: ["What is the fear of the Lord?", "How do you seek wisdom in your daily life?"], prayerPrompt: "Lord, give me a heart that fears and honors You." },
+          { dayNumber: 2, title: "Ask God for Wisdom", bookId: 59, chapter: 1, passageLabel: "James 1:2-8", reflectionQuestions: ["How do trials produce wisdom?", "Do you ask God for wisdom generously?"], prayerPrompt: "I ask You for wisdom today \u2014 pour it out generously." },
+          { dayNumber: 3, title: "Solomon's Request", bookId: 11, chapter: 3, passageLabel: "1 Kings 3:5-14", reflectionQuestions: ["Why did God honor Solomon's request for wisdom?", "What would you ask God for if He offered anything?"], prayerPrompt: "Give me an understanding heart, Lord." },
+          { dayNumber: 4, title: "The Wise and Foolish Builders", bookId: 40, chapter: 7, passageLabel: "Matthew 7:24-29", reflectionQuestions: ["What foundation are you building your life on?", "Where do you hear God's words but not act on them?"], prayerPrompt: "Help me be a doer of Your Word, not just a hearer." },
+          { dayNumber: 5, title: "Wisdom vs. Folly", bookId: 20, chapter: 9, passageLabel: "Proverbs 9:1-12", reflectionQuestions: ["How does wisdom call to you?", "What foolish paths are tempting you?"], prayerPrompt: "Open my ears to wisdom's call." },
+          { dayNumber: 6, title: "The Wisdom from Above", bookId: 59, chapter: 3, passageLabel: "James 3:13-18", reflectionQuestions: ["What characterizes godly wisdom?", "Is your wisdom pure, peaceable, and gentle?"], prayerPrompt: "Fill me with wisdom from above." },
+          { dayNumber: 7, title: "Walking Wisely", bookId: 49, chapter: 5, passageLabel: "Ephesians 5:15-20", reflectionQuestions: ["How can you make the most of your time?", "What does it look like to walk wisely today?"], prayerPrompt: "Teach me to number my days and walk in wisdom." }
+        ]
+      },
+      {
+        title: "God's Unfailing Love",
+        description: "Experience the depth, width, and height of God's love through the most powerful passages in Scripture.",
+        totalDays: 7,
+        theme: "love",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        days: [
+          { dayNumber: 1, title: "For God So Loved", bookId: 43, chapter: 3, passageLabel: "John 3:16-21", reflectionQuestions: ["What motivated God to send His Son?", "How does God's love change your view of yourself?"], prayerPrompt: "Thank You for loving me so much, Father." },
+          { dayNumber: 2, title: "Nothing Can Separate Us", bookId: 45, chapter: 8, passageLabel: "Romans 8:31-39", reflectionQuestions: ["What in your life makes you feel separated from God's love?", "How does this passage address that fear?"], prayerPrompt: "Help me rest in Your inseparable love." },
+          { dayNumber: 3, title: "The Love Chapter", bookId: 46, chapter: 13, passageLabel: "1 Corinthians 13:1-13", reflectionQuestions: ["Which quality of love challenges you most?", "How can you show this love today?"], prayerPrompt: "Shape my love to look like Yours." },
+          { dayNumber: 4, title: "Love One Another", bookId: 43, chapter: 13, passageLabel: "John 13:31-35", reflectionQuestions: ["Why is love the mark of discipleship?", "Who needs your love most right now?"], prayerPrompt: "Give me a heart that loves as You love." },
+          { dayNumber: 5, title: "Love Your Enemies", bookId: 40, chapter: 5, passageLabel: "Matthew 5:43-48", reflectionQuestions: ["Who is hardest for you to love?", "How does loving enemies reflect God's character?"], prayerPrompt: "Give me strength to love even those who hurt me." },
+          { dayNumber: 6, title: "God Is Love", bookId: 62, chapter: 4, passageLabel: "1 John 4:7-21", reflectionQuestions: ["If God is love, what does that mean for how He sees you?", "How does being loved enable you to love others?"], prayerPrompt: "Let Your perfect love cast out my fears." },
+          { dayNumber: 7, title: "The Greatest Commandment", bookId: 40, chapter: 22, passageLabel: "Matthew 22:34-40", reflectionQuestions: ["How do you love God with all your heart, soul, and mind?", "Who is your neighbor?"], prayerPrompt: "Help me love You and love others with everything I have." }
+        ]
+      },
+      {
+        title: "Living in Hope",
+        description: "Find renewed hope in God's promises \u2014 even in the darkest seasons, His light breaks through.",
+        totalDays: 5,
+        theme: "hope",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        days: [
+          { dayNumber: 1, title: "Hope in God's Plans", bookId: 24, chapter: 29, passageLabel: "Jeremiah 29:11-14", reflectionQuestions: ["What plans does God have for you?", "How does this promise give you hope for the future?"], prayerPrompt: "Lord, I trust that Your plans for me are good." },
+          { dayNumber: 2, title: "Hope That Does Not Disappoint", bookId: 45, chapter: 5, passageLabel: "Romans 5:1-5", reflectionQuestions: ["How does suffering produce hope?", "When has difficulty deepened your trust in God?"], prayerPrompt: "Pour out Your love in my heart through the Holy Spirit." },
+          { dayNumber: 3, title: "A Living Hope", bookId: 60, chapter: 1, passageLabel: "1 Peter 1:3-9", reflectionQuestions: ["What makes our hope 'living'?", "How is your faith being refined?"], prayerPrompt: "Thank You for the living hope I have through Christ's resurrection." },
+          { dayNumber: 4, title: "Hope in the Valley", bookId: 19, chapter: 23, passageLabel: "Psalm 23:1-6", reflectionQuestions: ["What valley are you walking through?", "How is God your shepherd in this season?"], prayerPrompt: "Even in the shadow of death, I will not fear, for You are with me." },
+          { dayNumber: 5, title: "The God of Hope", bookId: 45, chapter: 15, passageLabel: "Romans 15:13", reflectionQuestions: ["What would it look like to overflow with hope?", "How can you share hope with someone today?"], prayerPrompt: "Fill me with all joy and peace in believing, that I may abound in hope." }
+        ]
+      },
+      {
+        title: "Strength in Weakness",
+        description: "Discover how God's power is made perfect in weakness \u2014 finding supernatural strength for every challenge.",
+        totalDays: 5,
+        theme: "faith,strength",
+        category: "foundations",
+        difficultyLevel: "intermediate",
+        estimatedMinutesPerDay: 12,
+        days: [
+          { dayNumber: 1, title: "Power in Weakness", bookId: 47, chapter: 12, passageLabel: "2 Corinthians 12:7-10", reflectionQuestions: ["Where do you feel weakest?", "How might God's power show through your weakness?"], prayerPrompt: "Lord, let Your strength be made perfect in my weakness." },
+          { dayNumber: 2, title: "I Can Do All Things", bookId: 50, chapter: 4, passageLabel: "Philippians 4:10-13", reflectionQuestions: ["What does Paul mean by 'all things'?", "Where do you need Christ's strength today?"], prayerPrompt: "I can do all things through Christ who strengthens me." },
+          { dayNumber: 3, title: "Renewing Your Strength", bookId: 23, chapter: 40, passageLabel: "Isaiah 40:28-31", reflectionQuestions: ["Are you running, walking, or waiting right now?", "How do you wait on the Lord?"], prayerPrompt: "Renew my strength as I wait on You." },
+          { dayNumber: 4, title: "Be Strong and Courageous", bookId: 6, chapter: 1, passageLabel: "Joshua 1:1-9", reflectionQuestions: ["What task feels overwhelming to you?", "How does God's presence change your courage?"], prayerPrompt: "I will be strong and courageous because You are with me." },
+          { dayNumber: 5, title: "The Lord Is My Strength", bookId: 19, chapter: 27, passageLabel: "Psalm 27:1-6", reflectionQuestions: ["Of whom shall you be afraid?", "What does it mean for God to be your light and salvation?"], prayerPrompt: "You are my light, my salvation, my stronghold." }
+        ]
+      },
+      {
+        title: "Finding Peace",
+        description: "In a world of anxiety and noise, discover the peace that surpasses all understanding.",
+        totalDays: 5,
+        theme: "peace,comfort",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        days: [
+          { dayNumber: 1, title: "Peace I Leave with You", bookId: 43, chapter: 14, passageLabel: "John 14:25-31", reflectionQuestions: ["How is Jesus' peace different from the world's?", "What is troubling your heart?"], prayerPrompt: "Lord, let Your peace guard my heart and mind." },
+          { dayNumber: 2, title: "The Peace of God", bookId: 50, chapter: 4, passageLabel: "Philippians 4:4-9", reflectionQuestions: ["What are you anxious about right now?", "How can prayer replace anxiety?"], prayerPrompt: "I bring my anxieties to You and receive Your peace." },
+          { dayNumber: 3, title: "Be Still and Know", bookId: 19, chapter: 46, passageLabel: "Psalm 46:1-11", reflectionQuestions: ["What does it mean to be still before God?", "Where do you need to stop striving?"], prayerPrompt: "Help me be still and know that You are God." },
+          { dayNumber: 4, title: "Perfect Peace", bookId: 23, chapter: 26, passageLabel: "Isaiah 26:1-4", reflectionQuestions: ["What does it mean to keep your mind stayed on God?", "How can you fix your thoughts on Him?"], prayerPrompt: "Keep me in perfect peace as I trust in You." },
+          { dayNumber: 5, title: "Peacemakers", bookId: 40, chapter: 5, passageLabel: "Matthew 5:1-12", reflectionQuestions: ["How can you be a peacemaker today?", "Which beatitude speaks most to your life right now?"], prayerPrompt: "Make me an instrument of Your peace." }
+        ]
+      },
+      {
+        title: "Grace Upon Grace",
+        description: "Explore the richness of God's grace \u2014 unmerited, transforming, and overflowing for every sinner saved.",
+        totalDays: 5,
+        theme: "grace,faith",
+        category: "foundations",
+        difficultyLevel: "beginner",
+        estimatedMinutesPerDay: 10,
+        days: [
+          { dayNumber: 1, title: "Saved by Grace", bookId: 49, chapter: 2, passageLabel: "Ephesians 2:1-10", reflectionQuestions: ["What does it mean that salvation is a gift?", "How does grace change your motivation for doing good?"], prayerPrompt: "Thank You for saving me by grace, not by my efforts." },
+          { dayNumber: 2, title: "Where Sin Abounded", bookId: 45, chapter: 5, passageLabel: "Romans 5:12-21", reflectionQuestions: ["How does grace exceed sin?", "Where do you need an overflow of grace?"], prayerPrompt: "Let Your grace abound in my life." },
+          { dayNumber: 3, title: "The Prodigal Son", bookId: 42, chapter: 15, passageLabel: "Luke 15:11-32", reflectionQuestions: ["Do you identify more with the younger or older son?", "How does the father's response reveal God's grace?"], prayerPrompt: "Father, thank You for running to meet me." },
+          { dayNumber: 4, title: "Sufficient Grace", bookId: 47, chapter: 12, passageLabel: "2 Corinthians 12:1-10", reflectionQuestions: ["Is God's grace enough for you today?", "What thorns in your life is grace sustaining you through?"], prayerPrompt: "Your grace is sufficient for me." },
+          { dayNumber: 5, title: "Grace and Truth", bookId: 43, chapter: 1, passageLabel: "John 1:1-18", reflectionQuestions: ["How did Jesus bring grace and truth together?", "From His fullness, what grace have you received?"], prayerPrompt: "From Your fullness, I receive grace upon grace." }
+        ]
+      },
+      {
+        title: "The Sermon on the Mount",
+        description: "Jesus' most famous teaching \u2014 a radical vision for kingdom living that still challenges and inspires today.",
+        totalDays: 7,
+        theme: "wisdom,faith",
+        category: "foundations",
+        difficultyLevel: "intermediate",
+        estimatedMinutesPerDay: 15,
+        days: [
+          { dayNumber: 1, title: "The Beatitudes", bookId: 40, chapter: 5, passageLabel: "Matthew 5:1-16", reflectionQuestions: ["Which beatitude challenges you most?", "How can you be salt and light today?"], prayerPrompt: "Lord, make me a blessing to the world around me." },
+          { dayNumber: 2, title: "The Law Fulfilled", bookId: 40, chapter: 5, passageLabel: "Matthew 5:17-48", reflectionQuestions: ["How does Jesus go beyond the letter of the law?", "Where does anger or lust need to be addressed in your heart?"], prayerPrompt: "Transform my heart, not just my behavior." },
+          { dayNumber: 3, title: "Secret Righteousness", bookId: 40, chapter: 6, passageLabel: "Matthew 6:1-18", reflectionQuestions: ["Do you do good deeds to be seen?", "How can you serve God in secret?"], prayerPrompt: "Father, let my giving, praying, and fasting be for You alone." },
+          { dayNumber: 4, title: "Treasure in Heaven", bookId: 40, chapter: 6, passageLabel: "Matthew 6:19-34", reflectionQuestions: ["Where is your treasure?", "What are you anxious about that God already knows?"], prayerPrompt: "Help me seek Your kingdom first." },
+          { dayNumber: 5, title: "Do Not Judge", bookId: 40, chapter: 7, passageLabel: "Matthew 7:1-14", reflectionQuestions: ["What planks are in your own eye?", "How do you choose the narrow gate daily?"], prayerPrompt: "Help me examine my own heart before judging others." },
+          { dayNumber: 6, title: "Good Fruit", bookId: 40, chapter: 7, passageLabel: "Matthew 7:15-23", reflectionQuestions: ["What fruit is your life producing?", "How do you know a true follower of Christ?"], prayerPrompt: "Let my life bear fruit that honors You." },
+          { dayNumber: 7, title: "Built on the Rock", bookId: 40, chapter: 7, passageLabel: "Matthew 7:24-29", reflectionQuestions: ["What foundation are you building on?", "Are you hearing AND doing?"], prayerPrompt: "Help me build my life on the solid rock of Your Word." }
+        ]
+      }
+    ];
+  }
+});
+
+// server/devotional-catalog-coordinator.ts
+var devotional_catalog_coordinator_exports = {};
+__export(devotional_catalog_coordinator_exports, {
+  APPROVED_DEVOTIONAL_TITLES: () => APPROVED_DEVOTIONAL_TITLES,
+  DevotionalSchemaNotReadyError: () => DevotionalSchemaNotReadyError,
+  ensureDevotionalCatalog: () => ensureDevotionalCatalog
+});
+async function assertSchemaReady(pool2) {
+  const tableResult = await pool2.query(
+    `SELECT table_name
+       FROM information_schema.tables
+      WHERE table_schema = current_schema()
+        AND table_name = ANY($1::text[])`,
+    [REQUIRED_TABLES]
+  );
+  const presentTables = new Set(tableResult.rows.map((r) => r.table_name));
+  const missing = REQUIRED_TABLES.filter(
+    (t) => !presentTables.has(t)
+  ).map((t) => `table ${t}`);
+  const columnChecks = [
+    ["devotional_plan", REQUIRED_PLAN_COLUMNS],
+    ["devotional_day", REQUIRED_DAY_COLUMNS]
+  ];
+  for (const [tableName, requiredColumns] of columnChecks) {
+    if (!presentTables.has(tableName)) continue;
+    const columnResult = await pool2.query(
+      `SELECT column_name
+         FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = $1
+          AND column_name = ANY($2::text[])`,
+      [tableName, requiredColumns]
+    );
+    const present = new Set(columnResult.rows.map((r) => r.column_name));
+    for (const column of requiredColumns) {
+      if (!present.has(column)) {
+        missing.push(`column ${tableName}.${column}`);
+      }
+    }
+  }
+  if (missing.length > 0) {
+    throw new DevotionalSchemaNotReadyError(missing);
+  }
+}
+async function countHealthyApprovedTitles(db2) {
+  const rows = await db2.execute(import_drizzle_orm66.sql`
+    SELECT
+      p.title,
+      count(*)::int AS row_count,
+      bool_and(p.is_published IS TRUE)                    AS all_published,
+      bool_and(p.is_ai_generated IS FALSE)                AS none_ai,
+      bool_and(p.provenance = 'human_curated')            AS all_curated_provenance,
+      bool_and(p.curated_by IS NOT NULL)                  AS all_curated_by,
+      bool_and(p.curated_at IS NOT NULL)                  AS all_curated_at,
+      max(p.total_days)                                   AS max_total_days,
+      (SELECT count(*)::int
+         FROM devotional_day d
+         JOIN devotional_plan pp ON pp.id = d.plan_id
+        WHERE pp.title = p.title)                         AS day_count
+    FROM devotional_plan p
+    WHERE p.title = ANY(${import_drizzle_orm66.sql.param([...APPROVED_DEVOTIONAL_TITLES])}::text[])
+    GROUP BY p.title
+  `);
+  const byTitle = /* @__PURE__ */ new Map();
+  for (const row of rows.rows) {
+    byTitle.set(row.title, row);
+  }
+  const details = [];
+  let healthy = 0;
+  for (const title of APPROVED_DEVOTIONAL_TITLES) {
+    const row = byTitle.get(title);
+    if (!row) {
+      details.push({ title, issue: "plan missing" });
+      continue;
+    }
+    if (row.row_count !== 1) {
+      details.push({
+        title,
+        issue: `duplicate plan rows (${row.row_count})`
+      });
+      continue;
+    }
+    const eligible = row.all_published === true && row.none_ai === true && row.all_curated_provenance === true && row.all_curated_by === true && row.all_curated_at === true;
+    const totalDays = row.max_total_days ?? 0;
+    const dayCoverageOk = totalDays > 0 && row.day_count >= totalDays;
+    if (eligible && dayCoverageOk) {
+      healthy += 1;
+    } else if (!eligible) {
+      details.push({ title, issue: "not catalog-eligible" });
+    } else {
+      details.push({
+        title,
+        issue: `incomplete day coverage (${row.day_count}/${totalDays})`
+      });
+    }
+  }
+  return { healthy, details };
+}
+async function runDataOnlyRecovery(db2) {
+  const { seedDevotionals: seedDevotionals2 } = await Promise.resolve().then(() => (init_seed_devotionals(), seed_devotionals_exports));
+  const { seedSdaDevotionals: seedSdaDevotionals2 } = await Promise.resolve().then(() => (init_seed_sda_devotionals(), seed_sda_devotionals_exports));
+  const { seedMoreDevotionals: seedMoreDevotionals2 } = await Promise.resolve().then(() => (init_seed_more_devotionals(), seed_more_devotionals_exports));
+  const { seedApprovedCatalog: seedApprovedCatalog2 } = await Promise.resolve().then(() => (init_seed_approved_catalog(), seed_approved_catalog_exports));
+  console.log("[devotional-catalog] Running base devotional seed source...");
+  await seedDevotionals2(db2);
+  console.log("[devotional-catalog] Running SDA devotional seed source...");
+  await seedSdaDevotionals2(db2);
+  console.log("[devotional-catalog] Running additional devotional seed source...");
+  await seedMoreDevotionals2(db2);
+  console.log("[devotional-catalog] Running approved-catalog supplement (8 plans)...");
+  await seedApprovedCatalog2(db2);
+}
+async function promoteProvenance(db2) {
+  await db2.execute(import_drizzle_orm66.sql`
+    UPDATE devotional_plan
+       SET provenance      = 'human_curated',
+           curated_by      = ${CURATED_BY},
+           curated_at      = ${CURATED_AT}::timestamptz,
+           is_published    = true,
+           is_ai_generated = false
+     WHERE title = ANY(${import_drizzle_orm66.sql.param([...APPROVED_DEVOTIONAL_TITLES])}::text[])
+       AND provenance = 'legacy_unclassified'
+       AND (is_ai_generated IS NOT TRUE)
+  `);
+}
+async function verifyCatalog(db2) {
+  const { healthy, details } = await countHealthyApprovedTitles(db2);
+  if (healthy < APPROVED_DEVOTIONAL_TITLES.length) {
+    const summary = details.map((d) => `${d.title} (${d.issue})`).join("; ");
+    throw new Error(
+      `[devotional-catalog] Catalog verification failed after recovery: ${healthy}/${APPROVED_DEVOTIONAL_TITLES.length} approved titles healthy. Outstanding: ${summary}`
+    );
+  }
+}
+async function ensureDevotionalCatalog(options) {
+  const { pool: pool2, db: db2 } = options;
+  await assertSchemaReady(pool2);
+  const client = await pool2.connect();
+  try {
+    await client.query("SELECT pg_advisory_lock(hashtext($1))", [
+      LOCK_KEY_NAMESPACE
+    ]);
+    const initial = await countHealthyApprovedTitles(db2);
+    if (initial.healthy === APPROVED_DEVOTIONAL_TITLES.length) {
+      console.log(
+        `[devotional-catalog] Catalog already healthy (${initial.healthy}/${APPROVED_DEVOTIONAL_TITLES.length} approved titles). No action needed.`
+      );
+      return {
+        status: "already-healthy",
+        approvedTitleCount: initial.healthy
+      };
+    }
+    console.log(
+      `[devotional-catalog] Catalog incomplete (${initial.healthy}/${APPROVED_DEVOTIONAL_TITLES.length} healthy). Running data-only recovery...`
+    );
+    await runDataOnlyRecovery(db2);
+    await promoteProvenance(db2);
+    await verifyCatalog(db2);
+    console.log(
+      `[devotional-catalog] Recovery complete. All ${APPROVED_DEVOTIONAL_TITLES.length} approved titles are catalog-eligible with full day coverage.`
+    );
+    return {
+      status: "recovered",
+      approvedTitleCount: APPROVED_DEVOTIONAL_TITLES.length
+    };
+  } finally {
+    try {
+      await client.query("SELECT pg_advisory_unlock(hashtext($1))", [
+        LOCK_KEY_NAMESPACE
+      ]);
+    } catch {
+    }
+    client.release();
+  }
+}
+var import_drizzle_orm66, APPROVED_DEVOTIONAL_TITLES, CURATED_BY, CURATED_AT, LOCK_KEY_NAMESPACE, REQUIRED_TABLES, REQUIRED_PLAN_COLUMNS, REQUIRED_DAY_COLUMNS, DevotionalSchemaNotReadyError;
+var init_devotional_catalog_coordinator = __esm({
+  "server/devotional-catalog-coordinator.ts"() {
+    "use strict";
+    import_drizzle_orm66 = require("drizzle-orm");
+    APPROVED_DEVOTIONAL_TITLES = [
+      "Foundations of Faith",
+      "The Life of Christ",
+      "Psalms of Comfort",
+      "Women of the Bible",
+      "Prophets and Prophecy",
+      "Parables of Jesus",
+      "Walking Through the Wilderness",
+      "The Armor of God",
+      "The Sabbath Rest",
+      "Daniel's Prophecies \u2014 End-Time Visions",
+      "God's Health Blueprint",
+      "The Heavenly Sanctuary",
+      "Death, Sleep, and Resurrection",
+      "A Life of Prayer",
+      "Wisdom for Life",
+      "God's Unfailing Love",
+      "Living in Hope",
+      "Strength in Weakness",
+      "Finding Peace",
+      "Grace Upon Grace",
+      "The Sermon on the Mount"
+    ];
+    CURATED_BY = "Test Devotionals";
+    CURATED_AT = "2026-08-21 01:30:00+00";
+    LOCK_KEY_NAMESPACE = "grace-through-faith:devotional-catalog-coordinator:v1";
+    REQUIRED_TABLES = [
+      "devotional_plan",
+      "devotional_day",
+      "devotional_plan_provenance_audit"
+    ];
+    REQUIRED_PLAN_COLUMNS = [
+      "id",
+      "title",
+      "total_days",
+      "is_published",
+      "is_ai_generated",
+      "provenance",
+      "curated_by",
+      "curated_at"
+    ];
+    REQUIRED_DAY_COLUMNS = ["id", "plan_id", "day_number"];
+    DevotionalSchemaNotReadyError = class extends Error {
+      constructor(missing) {
+        super(
+          `[devotional-catalog] Required devotional schema is not present: ${missing.join(", ")}. This coordinator never issues DDL or runs migrations \u2014 run Publish to apply schema, then restart the server.`
+        );
+        this.name = "DevotionalSchemaNotReadyError";
+      }
+    };
+  }
+});
+
 // server/services/cache-warmup.ts
 var cache_warmup_exports = {};
 __export(cache_warmup_exports, {
@@ -35119,7 +37929,7 @@ __export(cache_warmup_exports, {
   runCacheWarmup: () => runCacheWarmup
 });
 async function warmContextCards(bookId, chapter, bookName) {
-  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm62.eq)(contextCards.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: contextCards.id }).from(contextCards).where((0, import_drizzle_orm67.and)((0, import_drizzle_orm67.eq)(contextCards.bookId, bookId), (0, import_drizzle_orm67.eq)(contextCards.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateContextCards({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(contextCards).values({
@@ -35137,7 +37947,7 @@ async function warmContextCards(bookId, chapter, bookName) {
   return true;
 }
 async function warmApplicationTemplates(bookId, chapter, bookName) {
-  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm62.eq)(applicationTemplates.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: applicationTemplates.id }).from(applicationTemplates).where((0, import_drizzle_orm67.and)((0, import_drizzle_orm67.eq)(applicationTemplates.bookId, bookId), (0, import_drizzle_orm67.eq)(applicationTemplates.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateApplicationStudy({ bookId, chapter, bookName, depth: "standard" });
   await db.insert(applicationTemplates).values({
@@ -35152,7 +37962,7 @@ async function warmApplicationTemplates(bookId, chapter, bookName) {
   return true;
 }
 async function warmChapterContext(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm62.eq)(chapterContextCache.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterContextCache.id }).from(chapterContextCache).where((0, import_drizzle_orm67.and)((0, import_drizzle_orm67.eq)(chapterContextCache.bookId, bookId), (0, import_drizzle_orm67.eq)(chapterContextCache.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
   const result = await generateChapterContext({ bookId, chapter, bookName });
   await db.insert(chapterContextCache).values({
@@ -35167,9 +37977,9 @@ async function warmChapterContext(bookId, chapter, bookName) {
   return true;
 }
 async function warmPassageSections(bookId, chapter, bookName) {
-  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm62.eq)(chapterPassageSections.chapter, chapter))).limit(1);
+  const existing = await db.select({ id: chapterPassageSections.id }).from(chapterPassageSections).where((0, import_drizzle_orm67.and)((0, import_drizzle_orm67.eq)(chapterPassageSections.bookId, bookId), (0, import_drizzle_orm67.eq)(chapterPassageSections.chapter, chapter))).limit(1);
   if (existing.length > 0) return false;
-  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm62.and)((0, import_drizzle_orm62.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm62.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
+  const verses = await db.select({ verse: bibleVerses.verse, text: bibleVerses.text }).from(bibleVerses).where((0, import_drizzle_orm67.and)((0, import_drizzle_orm67.eq)(bibleVerses.bookId, bookId), (0, import_drizzle_orm67.eq)(bibleVerses.chapter, chapter))).orderBy(bibleVerses.verse);
   if (verses.length === 0) return false;
   const totalVerses = verses.length;
   const chapterText = verses.map((v) => `${v.verse} ${v.text}`).join(" ");
@@ -35221,7 +38031,7 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
   return true;
 }
 async function ensureSdaLensCacheVersion() {
-  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm62.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
+  const [marker] = await db.select().from(searchCache).where((0, import_drizzle_orm67.eq)(searchCache.queryHash, SDA_LENS_MARKER_HASH)).limit(1);
   const stored = marker?.results?.version;
   if (stored === SDA_LENS_VERSION) return;
   console.log(`[sda-lens] Cache version changed (${stored || "none"} -> ${SDA_LENS_VERSION}); purging generated content caches...`);
@@ -35278,14 +38088,14 @@ async function runCacheWarmup() {
   }
   console.log(`[cache-warmup] Complete: ${generated} generated, ${skipped} already cached, ${errors} errors`);
 }
-var import_drizzle_orm62, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
+var import_drizzle_orm67, POPULAR_CHAPTERS, SDA_LENS_MARKER_HASH;
 var init_cache_warmup = __esm({
   "server/services/cache-warmup.ts"() {
     "use strict";
     init_db();
     init_schema();
     init_sda_lens();
-    import_drizzle_orm62 = require("drizzle-orm");
+    import_drizzle_orm67 = require("drizzle-orm");
     init_ai_engine();
     POPULAR_CHAPTERS = [
       { bookId: 1, chapter: 1 },
@@ -56963,11 +59773,11 @@ async function registerRoutes(app2) {
   (async () => {
     try {
       const { videoTopics: videoTopics2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq57, ne: ne2, sql: sql33, and: and37, isNotNull, notInArray } = await import("drizzle-orm");
+      const { eq: eq61, ne: ne2, sql: sql34, and: and37, isNotNull, notInArray } = await import("drizzle-orm");
       const result = await db.update(videoTopics2).set({ pipelineMode: "cinematic", updatedAt: /* @__PURE__ */ new Date() }).where(ne2(videoTopics2.pipelineMode, "cinematic"));
       const busyStatuses = ["queued", "scene-directing", "generating-anchor", "generating-scene-videos", "generating-voiceover", "computing-timing", "assembling-video", "generating-edl", "extracting-timestamps", "generating-broll-images", "generating-broll-videos"];
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1e3);
-      const staleReset = await db.update(videoTopics2).set({ assemblyStatus: null, updatedAt: /* @__PURE__ */ new Date() }).where(sql33`${videoTopics2.assemblyStatus} IS NOT NULL AND ${videoTopics2.assemblyStatus} != 'complete' AND (${videoTopics2.assemblyStatus} LIKE '%failed%' OR ${videoTopics2.updatedAt} < ${tenMinAgo})`);
+      const staleReset = await db.update(videoTopics2).set({ assemblyStatus: null, updatedAt: /* @__PURE__ */ new Date() }).where(sql34`${videoTopics2.assemblyStatus} IS NOT NULL AND ${videoTopics2.assemblyStatus} != 'complete' AND (${videoTopics2.assemblyStatus} LIKE '%failed%' OR ${videoTopics2.updatedAt} < ${tenMinAgo})`);
       console.log("[startup] All video topics migrated to cinematic pipeline mode; stale/failed statuses reset");
     } catch (err) {
       console.error("[startup] Pipeline mode migration error:", err);
@@ -57518,6 +60328,14 @@ function setupErrorHandler(app2) {
   configureExpoAndLanding(app);
   const server = await registerRoutes(app);
   setupErrorHandler(app);
+  {
+    const { ensureDevotionalCatalog: ensureDevotionalCatalog2 } = await Promise.resolve().then(() => (init_devotional_catalog_coordinator(), devotional_catalog_coordinator_exports));
+    const { db: catalogDb, pool: catalogPool } = await Promise.resolve().then(() => (init_db(), db_exports));
+    await ensureDevotionalCatalog2({
+      pool: catalogPool,
+      db: catalogDb
+    });
+  }
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(
     {
@@ -57536,21 +60354,21 @@ function setupErrorHandler(app2) {
       try {
         const { db: startupDb } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { kidsStoryScenes: kidsStoryScenes2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq57 } = await import("drizzle-orm");
-        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
+        const { eq: eq61 } = await import("drizzle-orm");
+        const scene = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq61(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
         if (scene.length && scene[0].imageUrl === "/assets/kids-scenes/creation-animals-scene-2.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq57(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq61(kidsStoryScenes2.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
           console.log("[startup] Updated creation-animals-scene-2 image URL with cache buster");
         }
-        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq57(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
+        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes2.imageUrl }).from(kidsStoryScenes2).where(eq61(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
         if (relScene3.length && relScene3[0].imageUrl === "/assets/kids-scenes/teen-relationships-scene-3.png") {
-          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq57(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
+          await startupDb.update(kidsStoryScenes2).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq61(kidsStoryScenes2.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
           console.log("[startup] Updated teen-relationships-scene-3 image URL with cache buster");
         }
         const { like: like3 } = await import("drizzle-orm");
         const whoseScenes = await startupDb.select({ id: kidsStoryScenes2.id, narration: kidsStoryScenes2.narration }).from(kidsStoryScenes2).where(like3(kidsStoryScenes2.narration, "%knowing exactly whose you are%"));
         for (const s of whoseScenes) {
-          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq57(kidsStoryScenes2.id, s.id));
+          await startupDb.update(kidsStoryScenes2).set({ narration: s.narration.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq61(kidsStoryScenes2.id, s.id));
           console.log("[startup] Fixed 'whose' -> 'who' in scene", s.id);
         }
       } catch (err) {
