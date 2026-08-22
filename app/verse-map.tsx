@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
+import {
+  VerseMapGenerationGate,
+  refreshVerseMapAfterGeneration,
+} from "@/lib/verse-map-generation";
 
 interface StrongWord {
   map: { id: string; verseId: string; strongId: string; wordPosition: number; translatedWord: string };
@@ -134,6 +138,7 @@ export default function VerseMapScreen() {
 
   const [generateError, setGenerateError] = useState(false);
   const [wordGenTriggered, setWordGenTriggered] = useState(false);
+  const verseMapGenerationGate = useRef(new VerseMapGenerationGate()).current;
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -154,7 +159,7 @@ export default function VerseMapScreen() {
     },
     onSuccess: () => {
       setGenerateError(false);
-      if (verseMapKey) qc.invalidateQueries({ queryKey: [verseMapKey] });
+      refreshVerseMapAfterGeneration(qc, verseMapKey);
     },
     onError: () => {
       setGenerateError(true);
@@ -197,17 +202,18 @@ export default function VerseMapScreen() {
   // transient generation state so a stale error/word-gen flag from the previous
   // translation is never shown.
   useEffect(() => {
+    verseMapGenerationGate.resetFor(verseMapKey);
     setGenerateError(false);
     setWordGenTriggered(false);
-  }, [verseMapKey]);
+  }, [verseMapKey, verseMapGenerationGate]);
 
   useEffect(() => {
     if (
       hasMapResponse &&
       !hasCachedMapData &&
       !isGeneratingMap &&
-      !generateError &&
-      canonicalVerseId
+      canonicalVerseId &&
+      verseMapGenerationGate.tryStart(verseMapKey)
     ) {
       generateMap();
     }
@@ -215,9 +221,10 @@ export default function VerseMapScreen() {
     hasMapResponse,
     hasCachedMapData,
     isGeneratingMap,
-    generateError,
     canonicalVerseId,
     generateMap,
+    verseMapKey,
+    verseMapGenerationGate,
   ]);
 
   useEffect(() => {
