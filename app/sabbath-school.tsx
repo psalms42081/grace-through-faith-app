@@ -22,6 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { HV2, F } from "@/components/home-v2/theme";
+import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
+import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 
 // ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
 const SS2 = {
@@ -35,10 +37,6 @@ const SS2 = {
   coral: "#E8604C", // today-dot ONLY
   sage: "#557C55", // done check (icon, ≥3:1 on white)
   pending: "#C9C4B8",
-  dark: "#050507", // THE memory-verse surface (locked canon)
-  cream: "#F0EBE0",
-  creamMuted: "rgba(240,235,224,0.72)",
-  tealSoft: "#7FC8BE", // MEMORY VERSE label on #050507 (≈9:1)
   border: "rgba(31,26,18,0.08)",
   violet: "#7C3AED",
 };
@@ -54,24 +52,6 @@ function weekdayFromDate(dateStr: string | null | undefined): string | null {
   const d = new Date(Date.UTC(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd)));
   if (isNaN(d.getTime())) return null;
   return WEEKDAY_LABELS[d.getUTCDay()];
-}
-
-// Memory verse lives in day 1's contentMarkdown as:
-// <blockquote><p>Memory Text:</p> “…verse…” (<a …>Reference, NKJV</a>).</blockquote>
-function parseMemoryVerse(html: string | null | undefined): { verse: string; reference: string | null } | null {
-  if (!html) return null;
-  const blocks = [...html.matchAll(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi)].map((m) => m[1]);
-  const block = blocks.find((b) => /memory text/i.test(b));
-  if (!block) return null;
-  const stripped = block
-    .replace(/<p>\s*Memory Text:\s*<\/p>/i, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const refMatch = stripped.match(/\(([^()]+)\)\s*\.?\s*$/);
-  const verse = (refMatch ? stripped.slice(0, refMatch.index) : stripped).trim();
-  const reference = refMatch ? refMatch[1].trim() : null;
-  return verse ? { verse, reference } : null;
 }
 
 interface DayData {
@@ -173,8 +153,8 @@ export default function SabbathSchoolV2Screen() {
   const companion = data?.companion || null;
   const totalLessons = data?.totalLessons || 13;
 
-  const memoryVerse = useMemo(
-    () => parseMemoryVerse(days.find((d) => d.dayNumber === 1)?.contentMarkdown),
+  const memoryText = useMemo(
+    () => extractMemoryText(days.find((d) => d.dayNumber === 1)?.contentMarkdown).memoryText,
     [days]
   );
 
@@ -251,7 +231,7 @@ export default function SabbathSchoolV2Screen() {
               <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
               <Text style={s.heroMeta} numberOfLines={2}>
                 {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
-                {memoryVerse?.reference ? `  ·  Memory verse: ${memoryVerse.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
+                {memoryText?.reference ? `  ·  Memory verse: ${memoryText.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
               </Text>
               <View style={s.heroTrack}>
                 <View style={[s.heroFill, { width: `${Math.round((completedCount / Math.max(days.length, 1)) * 100)}%` }]} />
@@ -334,13 +314,7 @@ export default function SabbathSchoolV2Screen() {
           )}
 
           {/* 3. Memory Verse — THE dark surface (locked canon) */}
-          {memoryVerse && (
-            <View style={s.memoryCard} testID="ss2-memory-verse">
-              <Text style={s.memoryLabel}>MEMORY VERSE</Text>
-              <Text style={s.memoryText}>{memoryVerse.verse}</Text>
-              {memoryVerse.reference && <Text style={s.memoryRef}>{memoryVerse.reference}</Text>}
-            </View>
-          )}
+          {memoryText && <MemoryVerseCard memoryText={memoryText} testID="ss2-memory-verse" />}
 
           {/* 4. This Week */}
           <View style={s.section}>
@@ -495,11 +469,6 @@ const s = StyleSheet.create({
   inlinePlayerMeta: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   videoModalTitle: { fontFamily: F.loraSemi, fontSize: 15, color: SS2.ink, lineHeight: 21 },
   videoModalArtist: { fontFamily: F.interMed, fontSize: 12, color: SS2.inkMuted },
-
-  memoryCard: { backgroundColor: SS2.dark, borderRadius: 20, padding: 22, gap: 10 },
-  memoryLabel: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.8, color: SS2.tealSoft },
-  memoryText: { fontFamily: "Lora_400Regular_Italic", fontStyle: "italic", fontSize: 17, lineHeight: 27, color: SS2.cream },
-  memoryRef: { fontFamily: F.interMed, fontSize: 12.5, color: SS2.creamMuted },
 
   weekCard: { backgroundColor: SS2.card, borderRadius: 16, overflow: "hidden", ...HV2.rowShadow },
   dayRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },

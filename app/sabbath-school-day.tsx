@@ -24,6 +24,8 @@ import {
   type SabbathSchoolPlaybackStatus,
   type SabbathSchoolSound,
 } from "@/lib/sabbath-school-audio";
+import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
+import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 
 interface DayData {
   id: string;
@@ -431,6 +433,10 @@ export default function SabbathSchoolDayScreen() {
     () => getReflectionPrompt(day?.title || data?.lesson?.title || null, dayNumber),
     [day?.title, data?.lesson?.title, dayNumber]
   );
+  const memoryTextExtraction = useMemo(
+    () => extractMemoryText(day?.contentMarkdown),
+    [day?.contentMarkdown]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -542,8 +548,18 @@ export default function SabbathSchoolDayScreen() {
             </View>
           )}
 
-          {day.contentMarkdown && (
-            <MarkdownRenderer content={sanitizeContent(day.contentMarkdown)} theme={theme} />
+          {memoryTextExtraction.memoryText && (
+            <MemoryVerseCard
+              memoryText={memoryTextExtraction.memoryText}
+              testID="ss-day-memory-verse"
+            />
+          )}
+
+          {memoryTextExtraction.remainingContent && (
+            <MarkdownRenderer
+              content={sanitizeContent(memoryTextExtraction.remainingContent)}
+              theme={theme}
+            />
           )}
 
           <View style={[styles.sourceAttribution, { borderTopColor: theme.border }]}>
