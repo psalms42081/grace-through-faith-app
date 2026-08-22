@@ -7,7 +7,7 @@ channel = "stable-24_05"
 [deployment]
 deploymentTarget = "autoscale"
 build = ["bash", "scripts/deploy-build.sh"]
-run = ["bash", "-c", "PORT=8081 npm run server:prod"]
+run = ["bash", "-c", "env -u RUN_STARTUP_SEEDS PORT=8081 npm run server:prod"]
 
 [[ports]]
 localPort = 3333
@@ -145,9 +145,6 @@ isValidation = true
 [userenv.shared]
 JWT_SECRET = "yZ2FBZ2rNdnXhatJYysQ5D3TcVMun+Vlad9POu1a2STUEWCS+y4qP3hs9nXYwA+v"
 FEEDBACK_EMAIL_USER = "joseph@gracethroughfaith.app"
-
-[userenv.development]
-RUN_STARTUP_SEEDS = "true"
 
 [userenv.production]
 PORT = "8081"
