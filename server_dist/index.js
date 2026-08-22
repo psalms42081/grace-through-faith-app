@@ -44089,7 +44089,39 @@ var SHOP_ITEMS = [
 
 // server/routes/kids.ts
 init_ai_engine();
+
+// server/services/in-flight-request-coalescer.ts
+function createInFlightRequestCoalescer() {
+  const inFlight = /* @__PURE__ */ new Map();
+  const run = (key, operation) => {
+    const existing = inFlight.get(key);
+    if (existing) return existing;
+    let resolveRequest;
+    let rejectRequest;
+    const promise = new Promise((resolve2, reject) => {
+      resolveRequest = resolve2;
+      rejectRequest = reject;
+    });
+    inFlight.set(key, promise);
+    const clear = () => {
+      if (inFlight.get(key) === promise) {
+        inFlight.delete(key);
+      }
+    };
+    void promise.then(clear, clear);
+    try {
+      void operation().then(resolveRequest, rejectRequest);
+    } catch (error) {
+      rejectRequest(error);
+    }
+    return promise;
+  };
+  return { run };
+}
+
+// server/routes/kids.ts
 var router14 = (0, import_express14.Router)();
+var sceneImageGeneration = createInFlightRequestCoalescer();
 async function autoCompleteQuest(userId, childId, questType) {
   try {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -44594,9 +44626,9 @@ router14.post("/api/kids/scene/:id/generate-image", optionalAuth, aiGenerationLi
     if (scene[0].imageUrl) {
       return res.json({ imageUrl: scene[0].imageUrl });
     }
-    const imageUrl = await generateSceneImage(
-      scene[0].illustrationPrompt,
-      id2
+    const imageUrl = await sceneImageGeneration.run(
+      id2,
+      () => generateSceneImage(scene[0].illustrationPrompt, id2)
     );
     if (!imageUrl) {
       return res.status(500).json({ error: "Image generation failed" });

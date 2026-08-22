@@ -47,8 +47,11 @@ Full handoff document: `GraceThroughFaith_Handoff_v10.md`
 ### Database schema and devotional catalog recovery
 
 Replit Publish schema diff is the only production schema owner. The production
-build must not run Drizzle schema push, numbered SQL migrations, fallback DDL,
-or schema repair scripts. `npm run test:deploy-build-safety` enforces that rule.
+build is completely database-free: it may compile the server and export static
+Expo assets, but it must not connect to PostgreSQL, launch the runtime server,
+seed or verify data, run Drizzle schema push, execute numbered SQL migrations,
+or perform fallback repairs. `npm run test:deploy-build-safety` enforces an
+explicit build-command allowlist.
 
 Development keeps its normal schema path: post-merge setup runs
 `drizzle-kit push --force` against the development database. The historical

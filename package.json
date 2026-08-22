@@ -13,7 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate:numbered": "tsx scripts/run-numbered-migrations.ts",
     "db:prepare-devotional-catalog": "tsx scripts/prepare-devotional-catalog.ts",
-    "test:deploy-build-safety": "node scripts/check-deploy-build-safety.mjs",
+    "test:deploy-build-safety": "node scripts/test-deploy-build-safety.mjs",
     "test:numbered-migrations": "bash scripts/test-numbered-migrations.sh",
     "test:devotional-catalog": "node server/tests/devotional-catalog-health.test.mjs",
     "test:devotional-catalog-coordinator": "tsx server/tests/devotional-catalog-coordinator.test.ts",
