@@ -252,7 +252,7 @@ export default function SabbathSchoolDayScreen() {
     accent: "#1F7A70",
   };
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     lessonNumber: string;
@@ -276,6 +276,7 @@ export default function SabbathSchoolDayScreen() {
   });
 
   const day = data?.lesson?.days?.find((d) => d.dayNumber === dayNumber);
+  const currentLessonId = data?.lesson?.id;
   const totalDays = data?.lesson?.days?.length || 7;
 
   const [journalText, setJournalText] = useState("");
@@ -569,6 +570,48 @@ export default function SabbathSchoolDayScreen() {
             </Text>
           </View>
 
+          {currentLessonId && (
+            <Pressable
+              onPress={() =>
+                isAuthenticated
+                  ? router.push(
+                      `/sabbath-school-day-tutor?lessonId=${encodeURIComponent(currentLessonId)}&dayId=${encodeURIComponent(day.id)}` as any
+                    )
+                  : router.push("/(auth)/login")
+              }
+              disabled={isAuthLoading}
+              style={({ pressed }) => [
+                styles.tutorCta,
+                {
+                  backgroundColor: "rgba(31, 122, 112, 0.09)",
+                  borderColor: "rgba(31, 122, 112, 0.24)",
+                  opacity: isAuthLoading ? 0.6 : pressed ? 0.84 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isAuthenticated
+                  ? "Ask the Study Tutor about this daily lesson"
+                  : "Sign in to ask the Study Tutor"
+              }
+              accessibilityState={{ disabled: isAuthLoading }}
+              testID="ss-day-ask-tutor"
+            >
+              <View style={[styles.tutorIcon, { backgroundColor: "rgba(31, 122, 112, 0.14)" }]}>
+                <Ionicons name="chatbubbles-outline" size={20} color={theme.accent} />
+              </View>
+              <View style={styles.tutorCopy}>
+                <Text style={[styles.tutorTitle, { color: theme.text }]}>Ask the Study Tutor</Text>
+                <Text style={[styles.tutorSubtitle, { color: theme.textSecondary }]}>
+                  {isAuthenticated
+                    ? "Explore today’s lesson with its official source in view."
+                    : "Sign in to ask questions about today’s lesson."}
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color={theme.accent} />
+            </Pressable>
+          )}
+
           <View style={[styles.journalSection, { borderTopColor: theme.border }]}>
             <View style={styles.journalHeader}>
               <Ionicons name="journal-outline" size={18} color={theme.accent} />
@@ -827,6 +870,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     flex: 1,
+  },
+  tutorCta: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 14,
+  },
+  tutorIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  tutorCopy: { flex: 1, gap: 3 },
+  tutorTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+  },
+  tutorSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
   },
   journalSection: {
     marginTop: 16,

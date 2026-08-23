@@ -20,3 +20,4 @@
 - [Bible tab entry](gtf-bible-tab-entry.md) — resume the latest chapter for signed-in readers; new and guest readers open today’s verse, with the book browser kept secondary.
 - [Lint warning baselines](lint-warning-baselines.md) — legacy warnings use exact finding fingerprints; lower the allowlist during cleanup and never absorb new findings.
 - [Expo Router route tree](expo-router-route-tree.md) — keep helpers and Node-only tests outside app/ so route discovery cannot warn or break the web bundle.
+- [Member AI context trust](gtf-member-ai-context.md) — billable lesson tutors require account auth and fresh server-side source verification before questions are enabled.

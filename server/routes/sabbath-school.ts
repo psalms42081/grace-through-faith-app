@@ -11,7 +11,11 @@ import {
 import { eq, and, desc, sql } from "drizzle-orm";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { requireAuth, extractUserId } from "../middleware/auth";
-import { generateDiscussionPrep } from "../services/ai-engine";
+import {
+  generateDiscussionPrep,
+  generateSabbathSchoolTutorResponse,
+  type SabbathSchoolTutorMessage,
+} from "../services/ai-engine";
 import {
   getCurrentLessonNumber,
   getMostRecentQuarterly,
@@ -20,6 +24,36 @@ import {
 import { normalizeSabbathSchoolAudioUrl } from "../services/sabbath-school-audio-metadata";
 
 const router = Router();
+
+async function findDayTutorContext(lessonId: string, dayId: string) {
+  const [context] = await db
+    .select({
+      quarterlyTitle: sabbathSchoolQuarterlies.title,
+      lessonTitle: sabbathSchoolLessons.title,
+      lessonNumber: sabbathSchoolLessons.lessonNumber,
+      dayTitle: sabbathSchoolDays.title,
+      dayNumber: sabbathSchoolDays.dayNumber,
+      sourceContent: sabbathSchoolDays.contentMarkdown,
+    })
+    .from(sabbathSchoolDays)
+    .innerJoin(
+      sabbathSchoolLessons,
+      eq(sabbathSchoolDays.lessonId, sabbathSchoolLessons.id)
+    )
+    .innerJoin(
+      sabbathSchoolQuarterlies,
+      eq(sabbathSchoolLessons.quarterlyId, sabbathSchoolQuarterlies.id)
+    )
+    .where(
+      and(
+        eq(sabbathSchoolDays.id, dayId),
+        eq(sabbathSchoolLessons.id, lessonId)
+      )
+    )
+    .limit(1);
+
+  return context || null;
+}
 
 async function findCompanionForLesson(lessonId: string) {
   const [companion] = await db
@@ -383,6 +417,103 @@ router.post("/api/sabbath-school/complete", async (req, res) => {
     return res.status(500).json({ error: "Failed to save progress" });
   }
 });
+
+router.get("/api/sabbath-school/day-tutor/context", requireAuth, async (req, res) => {
+  try {
+    const lessonId = String(req.query.lessonId || "");
+    const dayId = String(req.query.dayId || "");
+    if (!lessonId || !dayId) {
+      return res.status(400).json({ error: "lessonId and dayId are required" });
+    }
+
+    const context = await findDayTutorContext(lessonId, dayId);
+    if (!context) {
+      return res.status(404).json({ error: "Daily lesson context was not found" });
+    }
+    if (!context.sourceContent?.trim()) {
+      return res.status(409).json({ error: "This daily lesson does not have source content yet" });
+    }
+
+    return res.json({
+      quarterlyTitle: context.quarterlyTitle,
+      lessonTitle: context.lessonTitle,
+      lessonNumber: context.lessonNumber,
+      dayTitle: context.dayTitle,
+      dayNumber: context.dayNumber,
+    });
+  } catch (err) {
+    console.error("Sabbath School day tutor context error:", err);
+    return res.status(500).json({ error: "Daily lesson context could not be loaded" });
+  }
+});
+
+router.post(
+  "/api/sabbath-school/day-tutor",
+  requireAuth,
+  aiGenerationLimiter,
+  async (req, res) => {
+    try {
+      const { lessonId, dayId, question, conversationHistory } = req.body;
+      if (typeof lessonId !== "string" || typeof dayId !== "string") {
+        return res.status(400).json({ error: "lessonId and dayId are required" });
+      }
+      if (typeof question !== "string" || !question.trim()) {
+        return res.status(400).json({ error: "A question is required" });
+      }
+      if (question.trim().length > 1500) {
+        return res.status(400).json({ error: "Questions must be 1,500 characters or fewer" });
+      }
+
+      // Read the source server-side so the client cannot alter the lesson
+      // context sent to the model.
+      const context = await findDayTutorContext(lessonId, dayId);
+
+      if (!context) {
+        return res.status(404).json({ error: "Daily lesson context was not found" });
+      }
+      if (!context.sourceContent?.trim()) {
+        return res.status(409).json({ error: "This daily lesson does not have source content yet" });
+      }
+
+      const history: SabbathSchoolTutorMessage[] = Array.isArray(conversationHistory)
+        ? conversationHistory
+            .slice(-8)
+            .filter(
+              (message): message is SabbathSchoolTutorMessage =>
+                message &&
+                (message.role === "user" || message.role === "assistant") &&
+                typeof message.content === "string" &&
+                message.content.trim().length > 0
+            )
+            .map((message) => ({
+              role: message.role,
+              content: message.content.trim().slice(0, 1500),
+            }))
+        : [];
+
+      const answer = await generateSabbathSchoolTutorResponse({
+        ...context,
+        sourceContent: context.sourceContent.slice(0, 30000),
+        question: question.trim(),
+        conversationHistory: history,
+      });
+
+      return res.json({
+        answer,
+        context: {
+          quarterlyTitle: context.quarterlyTitle,
+          lessonTitle: context.lessonTitle,
+          lessonNumber: context.lessonNumber,
+          dayTitle: context.dayTitle,
+          dayNumber: context.dayNumber,
+        },
+      });
+    } catch (err) {
+      console.error("Sabbath School day tutor error:", err);
+      return res.status(500).json({ error: "Study Tutor could not answer right now" });
+    }
+  }
+);
 
 router.post(
   "/api/sabbath-school/discussion-prep",
