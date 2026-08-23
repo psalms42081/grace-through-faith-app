@@ -17,6 +17,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { safeGoBack } from "@/lib/safe-back";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  buildSabbathSchoolDayRoute,
+  canAskStudyTutor,
+  isFreshTutorContextVerified,
+} from "@/lib/sabbath-school-tutor";
 
 type TutorMessage = {
   role: "user" | "assistant";
@@ -49,7 +54,13 @@ const theme = {
 export default function SabbathSchoolDayTutorScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading: isAuthLoading, userId } = useAuth();
-  const params = useLocalSearchParams<{ lessonId?: string; dayId?: string }>();
+  const params = useLocalSearchParams<{
+    lessonId?: string;
+    dayId?: string;
+    lessonNumber?: string;
+    dayNumber?: string;
+    quarterCode?: string;
+  }>();
   const lessonId = typeof params.lessonId === "string" ? params.lessonId : "";
   const dayId = typeof params.dayId === "string" ? params.dayId : "";
   const [messages, setMessages] = useState<TutorMessage[]>([]);
@@ -98,18 +109,27 @@ export default function SabbathSchoolDayTutorScreen() {
     },
   });
 
-  const isContextVerified =
-    !!loadedContext &&
-    isFetchedAfterMount &&
-    !isContextFetching &&
-    !isContextError;
+  const verificationState = {
+    hasLoadedContext: !!loadedContext,
+    isFetchedAfterMount,
+    isFetching: isContextFetching,
+    isError: isContextError,
+  };
+  const isContextVerified = isFreshTutorContextVerified(verificationState);
   const activeContext = context || (isContextVerified ? loadedContext : null);
-  const canAsk =
-    isAuthenticated &&
-    isContextVerified &&
-    !!lessonId &&
-    !!dayId &&
-    !requestMutation.isPending;
+  const canAsk = canAskStudyTutor({
+    ...verificationState,
+    isAuthenticated,
+    lessonId,
+    dayId,
+    isRequestPending: requestMutation.isPending,
+  });
+  const readerFallback =
+    buildSabbathSchoolDayRoute({
+      lessonNumber: params.lessonNumber,
+      dayNumber: params.dayNumber,
+      quarterCode: params.quarterCode,
+    }) || "/(tabs)/explore";
 
   const contextLabel = useMemo(() => {
     if (!activeContext) return "Today’s official Sabbath School lesson";
@@ -133,7 +153,7 @@ export default function SabbathSchoolDayTutorScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <Pressable
-          onPress={() => safeGoBack(router, "/(tabs)/explore")}
+          onPress={() => safeGoBack(router, readerFallback)}
           hitSlop={12}
           style={styles.backButton}
           accessibilityRole="button"

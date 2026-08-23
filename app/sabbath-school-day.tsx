@@ -26,6 +26,7 @@ import {
 } from "@/lib/sabbath-school-audio";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
+import { buildStudyTutorRoute } from "@/lib/sabbath-school-tutor";
 
 interface DayData {
   id: string;
@@ -496,6 +497,7 @@ export default function SabbathSchoolDayScreen() {
           style={styles.scroll}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
+          testID="ss-day-reader"
         >
           {day.title && (
             <Text style={[styles.dayMainTitle, { color: theme.text }]}>
@@ -517,6 +519,7 @@ export default function SabbathSchoolDayScreen() {
                 disabled: isAudioLoading,
                 busy: isAudioLoading,
               }}
+              testID="ss-day-audio"
               style={({ pressed }) => [
                 styles.audioRow,
                 pressed && !isAudioLoading ? styles.audioRowPressed : null,
@@ -575,7 +578,13 @@ export default function SabbathSchoolDayScreen() {
               onPress={() =>
                 isAuthenticated
                   ? router.push(
-                      `/sabbath-school-day-tutor?lessonId=${encodeURIComponent(currentLessonId)}&dayId=${encodeURIComponent(day.id)}` as any
+                      buildStudyTutorRoute({
+                        lessonId: currentLessonId,
+                        dayId: day.id,
+                        lessonNumber,
+                        dayNumber,
+                        quarterCode,
+                      }) as any
                     )
                   : router.push("/(auth)/login")
               }
