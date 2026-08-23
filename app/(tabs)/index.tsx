@@ -33,6 +33,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors, { getSabbathTheme } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -1550,7 +1551,9 @@ function AdultHomeScreen() {
     currentLessonNumber: number;
     companion: { id: string; slug: string; title: string; description: string | null } | null;
   }>({
-    queryKey: [`/api/sabbath-school/current?userId=${userId}`],
+    queryKey: [
+      withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+    ],
   });
 
   const { data: ringsData } = useQuery<{

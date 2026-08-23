@@ -13,6 +13,7 @@ import {
   extractSabbathSchoolAudioMetadata,
   normalizeSabbathSchoolAudioUrl,
 } from "./sabbath-school-audio-metadata";
+import { sabbathSchoolDateAtUtcMidnight } from "./sabbath-school-date";
 
 const BASE_URL = "https://sabbath-school.adventech.io/api/v2";
 
@@ -56,11 +57,6 @@ function parseDateStr(dateStr: string): Date | null {
   const parsed = new Date(dateStr);
   if (isNaN(parsed.getTime())) return null;
   return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
-}
-
-function todayUTCMidnight(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 type JsonObject = Record<string, unknown>;
@@ -753,8 +749,12 @@ async function buildAndGenerateCompanions(quarterlyId: string, lessonIds: string
   await triggerCompanionGeneration(quarterlyId, packetResults);
 }
 
-export async function getCurrentLessonNumber(quarterlyId: string): Promise<number> {
-  const today = todayUTCMidnight();
+export async function getCurrentLessonNumber(
+  quarterlyId: string,
+  timeZone = "UTC",
+  now = new Date()
+): Promise<number> {
+  const today = sabbathSchoolDateAtUtcMidnight(now, timeZone);
 
   const lessons = await db
     .select()

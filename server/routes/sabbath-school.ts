@@ -21,6 +21,10 @@ import {
   syncCurrentQuarter,
 } from "../services/sabbath-school-sync";
 import { normalizeSabbathSchoolAudioUrl } from "../services/sabbath-school-audio-metadata";
+import {
+  findTodayDayNumber,
+  normalizeSabbathSchoolTimeZone,
+} from "../services/sabbath-school-date";
 import { createDayTutorRouter } from "./sabbath-school-tutor";
 
 const router = Router();
@@ -106,6 +110,8 @@ router.get("/api/sabbath-school/current", async (req, res) => {
     const userId = extractUserId(req);
     const curriculumParam = String(req.query.curriculum || "adult").toLowerCase();
     const curriculum: "adult" | "inverse" = curriculumParam === "inverse" ? "inverse" : "adult";
+    const timeZone = normalizeSabbathSchoolTimeZone(req.query.timeZone);
+    const now = new Date();
 
     let q = (
       await db
@@ -196,7 +202,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
       }
     }
 
-    const currentLessonNum = await getCurrentLessonNumber(q.id);
+    const currentLessonNum = await getCurrentLessonNumber(q.id, timeZone, now);
 
     const currentLesson = lessons.find((l) => l.lessonNumber === currentLessonNum) || lessons[0];
 
@@ -228,9 +234,7 @@ router.get("/api/sabbath-school/current", async (req, res) => {
         progress.find((p) => p.dayId === day.id)?.journalEntry || null,
     }));
 
-    const now = new Date();
-    const todayStr = `${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${now.getUTCFullYear()}`;
-    const todayDayNumber = daysWithProgress.find((d) => d.date === todayStr)?.dayNumber || null;
+    const todayDayNumber = findTodayDayNumber(daysWithProgress, now, timeZone);
 
     const companion = await findCompanionForLesson(currentLesson.id);
 

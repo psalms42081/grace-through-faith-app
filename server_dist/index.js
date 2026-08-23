@@ -4279,6 +4279,51 @@ var init_sabbath_school_audio_metadata = __esm({
   }
 });
 
+// server/services/sabbath-school-date.ts
+function normalizeSabbathSchoolTimeZone(value) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (typeof candidate !== "string" || candidate.length === 0 || candidate.length > 100) {
+    return FALLBACK_TIME_ZONE;
+  }
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: candidate }).format(0);
+    return candidate;
+  } catch {
+    return FALLBACK_TIME_ZONE;
+  }
+}
+function formatSabbathSchoolDate(instant, timeZone) {
+  const normalizedTimeZone = normalizeSabbathSchoolTimeZone(timeZone);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: normalizedTimeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).formatToParts(instant);
+  const day = parts.find((part) => part.type === "day")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
+  if (!day || !month || !year) {
+    throw new Error("Unable to format Sabbath School calendar date");
+  }
+  return `${day}/${month}/${year}`;
+}
+function sabbathSchoolDateAtUtcMidnight(instant, timeZone) {
+  const [day, month, year] = formatSabbathSchoolDate(instant, timeZone).split("/").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+function findTodayDayNumber(days, instant, timeZone) {
+  const today = formatSabbathSchoolDate(instant, timeZone);
+  return days.find((day) => day.date === today)?.dayNumber ?? null;
+}
+var FALLBACK_TIME_ZONE;
+var init_sabbath_school_date = __esm({
+  "server/services/sabbath-school-date.ts"() {
+    "use strict";
+    FALLBACK_TIME_ZONE = "UTC";
+  }
+});
+
 // server/services/content-engine.ts
 var content_engine_exports = {};
 __export(content_engine_exports, {
@@ -4751,10 +4796,6 @@ function parseDateStr(dateStr) {
   const parsed = new Date(dateStr);
   if (isNaN(parsed.getTime())) return null;
   return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
-}
-function todayUTCMidnight() {
-  const now = /* @__PURE__ */ new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 function asObject2(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -5260,8 +5301,8 @@ async function buildAndGenerateCompanions(quarterlyId, lessonIds) {
   console.log(`[source-packet] Built ${packetResults.length}/${lessonIds.length} packets`);
   await triggerCompanionGeneration(quarterlyId, packetResults);
 }
-async function getCurrentLessonNumber(quarterlyId) {
-  const today = todayUTCMidnight();
+async function getCurrentLessonNumber(quarterlyId, timeZone = "UTC", now = /* @__PURE__ */ new Date()) {
+  const today = sabbathSchoolDateAtUtcMidnight(now, timeZone);
   const lessons = await db.select().from(sabbathSchoolLessons).where((0, import_drizzle_orm25.eq)(sabbathSchoolLessons.quarterlyId, quarterlyId)).orderBy(sabbathSchoolLessons.lessonNumber);
   if (lessons.length === 0) return 1;
   for (const lesson of lessons) {
@@ -5427,6 +5468,7 @@ var init_sabbath_school_sync = __esm({
     init_api_client();
     init_source_packet_builder();
     init_sabbath_school_audio_metadata();
+    init_sabbath_school_date();
     BASE_URL = "https://sabbath-school.adventech.io/api/v2";
   }
 });
@@ -47836,6 +47878,7 @@ var import_drizzle_orm26 = require("drizzle-orm");
 init_ai_engine();
 init_sabbath_school_sync();
 init_sabbath_school_audio_metadata();
+init_sabbath_school_date();
 
 // server/routes/sabbath-school-tutor.ts
 var import_express19 = require("express");
@@ -47996,6 +48039,8 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
     const userId = extractUserId(req);
     const curriculumParam = String(req.query.curriculum || "adult").toLowerCase();
     const curriculum = curriculumParam === "inverse" ? "inverse" : "adult";
+    const timeZone = normalizeSabbathSchoolTimeZone(req.query.timeZone);
+    const now = /* @__PURE__ */ new Date();
     let q = (await db.select().from(sabbathSchoolQuarterlies).where(
       (0, import_drizzle_orm26.and)(
         (0, import_drizzle_orm26.eq)(sabbathSchoolQuarterlies.language, "en"),
@@ -48044,7 +48089,7 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
         }
       }
     }
-    const currentLessonNum = await getCurrentLessonNumber(q.id);
+    const currentLessonNum = await getCurrentLessonNumber(q.id, timeZone, now);
     const currentLesson = lessons.find((l) => l.lessonNumber === currentLessonNum) || lessons[0];
     if (!currentLesson) {
       return res.json({ quarterly: q, currentLesson: null, lessons });
@@ -48062,9 +48107,7 @@ router19.get("/api/sabbath-school/current", async (req, res) => {
       completed: progress.some((p) => p.dayId === day.id && p.completed),
       journalEntry: progress.find((p) => p.dayId === day.id)?.journalEntry || null
     }));
-    const now = /* @__PURE__ */ new Date();
-    const todayStr = `${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${now.getUTCFullYear()}`;
-    const todayDayNumber = daysWithProgress.find((d) => d.date === todayStr)?.dayNumber || null;
+    const todayDayNumber = findTodayDayNumber(daysWithProgress, now, timeZone);
     const companion = await findCompanionForLesson(currentLesson.id);
     return res.json({
       quarterly: q,

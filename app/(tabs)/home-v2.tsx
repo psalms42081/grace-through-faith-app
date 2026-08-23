@@ -23,6 +23,7 @@ import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -161,7 +162,11 @@ export default function HomeV2Screen() {
     currentLesson: { title: string; lessonNumber: number } | null;
     completedDays: number;
     currentLessonNumber: number;
-  }>({ queryKey: [`/api/sabbath-school/current?userId=${userId}`] });
+  }>({
+    queryKey: [
+      withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+    ],
+  });
 
   const streak = weeklyData?.currentStreak ?? 0;
   const readToday = recentReads?.[0]?.readAt

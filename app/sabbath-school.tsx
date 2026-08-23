@@ -24,6 +24,7 @@ import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 // ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
 const SS2 = {
@@ -137,7 +138,11 @@ export default function SabbathSchoolV2Screen() {
     todayDayNumber: number | null;
     companion: CompanionData | null;
   }>({
-    queryKey: [`/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`],
+    queryKey: [
+      withDeviceTimeZone(
+        `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`
+      ),
+    ],
   });
 
   const { data: archiveData } = useQuery<{ quarters: QuarterlyData[] }>({
