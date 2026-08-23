@@ -2349,7 +2349,7 @@ Format as JSON:
   "groupDiscussion": ["3-4 discussion questions for small groups"]
 }
 
-Use 3-5 sections. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`)
+Use 3-5 sections and exactly 3-4 groupDiscussion questions. Every shown field is required and must be a non-empty string. Do not add fields that are not shown. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`)
       },
       {
         role: "user",
@@ -58454,7 +58454,6 @@ var import_drizzle_orm44 = require("drizzle-orm");
 init_ai_semaphore();
 
 // server/services/touchpoint-scripture.ts
-var TOUCHPOINT_STUDY_CONTENT_VERSION = "canon-v1";
 function joinVerseText2(verses) {
   return verses.slice().sort((a, b) => a.verse - b.verse).map((v) => typeof v.text === "string" ? v.text.trim() : "").filter((t) => t.length > 0).join(" ").trim();
 }
@@ -58475,7 +58474,8 @@ async function hydrateReference(ref, translation, cache2, resolveReference2 = re
     translationName: resolved.meta.translationName,
     source: resolved.meta.source,
     provider: resolved.meta.provider,
-    ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {}
+    ...resolved.meta.providerEditionId ? { providerEditionId: resolved.meta.providerEditionId } : {},
+    resolved: true
   };
 }
 async function hydrateReferences(refs, translation, cache2, resolveReference2 = resolveReference) {
@@ -58501,7 +58501,8 @@ function deriveTranslationMeta(hydrated) {
     translationName: first.translationName,
     source: first.source,
     provider: first.provider,
-    ...first.providerEditionId ? { providerEditionId: first.providerEditionId } : {}
+    ...first.providerEditionId ? { providerEditionId: first.providerEditionId } : {},
+    scriptureResolution: "resolved"
   };
 }
 async function hydrateQuestions(questions, translation, cache2, resolveReference2 = resolveReference) {
@@ -58554,6 +58555,136 @@ function buildSuppliedScriptureBlock(hydrated) {
 }
 function suppliedReferenceStrings(hydrated) {
   return hydrated.map((h) => h.ref);
+}
+
+// server/services/touchpoint-study.ts
+var import_node_crypto2 = require("node:crypto");
+
+// shared/touchpoint-study.ts
+var import_zod4 = require("zod");
+var TOUCHPOINT_STUDY_SCHEMA_VERSION = "study-schema-v1";
+var TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION = "canonical-scripture-v2";
+var TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS = 6 * 60 * 60 * 1e3;
+var nonEmptyText = import_zod4.z.string().trim().min(1);
+var translationSourceSchema = import_zod4.z.enum(["db", "nlt_provider", "api_bible", "unknown"]);
+var generatedStudyDraftSchema = import_zod4.z.object({
+  title: nonEmptyText,
+  introduction: nonEmptyText,
+  sections: import_zod4.z.array(
+    import_zod4.z.object({
+      heading: nonEmptyText,
+      scripture: nonEmptyText,
+      teaching: nonEmptyText,
+      reflection: nonEmptyText
+    }).strict()
+  ).min(3).max(5),
+  conclusion: nonEmptyText,
+  prayerPrompt: nonEmptyText,
+  groupDiscussion: import_zod4.z.array(nonEmptyText).min(3).max(4)
+}).strict();
+var resolvedStudySectionSchema = import_zod4.z.object({
+  heading: nonEmptyText,
+  scripture: nonEmptyText,
+  scriptureText: nonEmptyText,
+  teaching: nonEmptyText,
+  reflection: nonEmptyText,
+  translation: nonEmptyText,
+  translationName: nonEmptyText,
+  source: translationSourceSchema,
+  provider: nonEmptyText,
+  providerEditionId: nonEmptyText.optional(),
+  resolved: import_zod4.z.literal(true)
+}).strict();
+var touchpointGeneratedStudySchema = import_zod4.z.object({
+  title: nonEmptyText,
+  introduction: nonEmptyText,
+  sections: import_zod4.z.array(resolvedStudySectionSchema).min(3).max(5),
+  conclusion: nonEmptyText,
+  prayerPrompt: nonEmptyText,
+  groupDiscussion: import_zod4.z.array(nonEmptyText).min(3).max(4),
+  translation: nonEmptyText,
+  translationName: nonEmptyText,
+  source: translationSourceSchema,
+  provider: nonEmptyText,
+  providerEditionId: nonEmptyText.optional(),
+  scriptureResolution: import_zod4.z.literal("resolved"),
+  contentVersion: import_zod4.z.literal(TOUCHPOINT_STUDY_SCHEMA_VERSION)
+}).strict();
+
+// server/services/touchpoint-study.ts
+var GeneratedStudyValidationError = class extends Error {
+  constructor(message, cause) {
+    super(message);
+    this.cause = cause;
+    this.name = "GeneratedStudyValidationError";
+  }
+  cause;
+  statusCode = 502;
+};
+function validationError(context, error) {
+  const fields = error.issues.slice(0, 5).map((issue) => `${issue.path.join(".") || "payload"}: ${issue.message}`).join("; ");
+  return new GeneratedStudyValidationError(`${context} failed schema validation: ${fields}`, error);
+}
+function parseGeneratedStudyDraft(content) {
+  let json;
+  try {
+    json = JSON.parse(content);
+  } catch (error) {
+    throw new GeneratedStudyValidationError("Generated study was not valid JSON", error);
+  }
+  const parsed = generatedStudyDraftSchema.safeParse(json);
+  if (!parsed.success) {
+    throw validationError("Generated study", parsed.error);
+  }
+  return parsed.data;
+}
+function parseCachedTouchpointStudy(payload) {
+  const parsed = touchpointGeneratedStudySchema.safeParse(payload);
+  return parsed.success ? parsed.data : null;
+}
+function attachCanonicalScripture(params) {
+  const { draft, byRef, translationMeta, resolveSelection } = params;
+  const candidate = {
+    ...draft,
+    sections: draft.sections.map((section) => {
+      const canonical = resolveSelection(section.scripture, byRef);
+      return {
+        ...section,
+        scripture: canonical.ref,
+        scriptureText: canonical.text,
+        translation: canonical.translation,
+        translationName: canonical.translationName,
+        source: canonical.source,
+        provider: canonical.provider,
+        ...canonical.providerEditionId ? { providerEditionId: canonical.providerEditionId } : {},
+        resolved: true
+      };
+    }),
+    translation: translationMeta.translation,
+    translationName: translationMeta.translationName,
+    source: translationMeta.source,
+    provider: translationMeta.provider,
+    ...translationMeta.providerEditionId ? { providerEditionId: translationMeta.providerEditionId } : {},
+    scriptureResolution: "resolved",
+    contentVersion: TOUCHPOINT_STUDY_SCHEMA_VERSION
+  };
+  const parsed = touchpointGeneratedStudySchema.safeParse(candidate);
+  if (!parsed.success) {
+    throw validationError("Canonical generated study", parsed.error);
+  }
+  return parsed.data;
+}
+function buildTouchpointStudyCacheKey(identity) {
+  const fingerprint = JSON.stringify({
+    studySchemaVersion: TOUCHPOINT_STUDY_SCHEMA_VERSION,
+    translationContractVersion: identity.translationContractVersion ?? TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION,
+    sdaLensVersion: identity.sdaLensVersion,
+    topic: identity.topic,
+    translationMeta: identity.translationMeta,
+    promptRequest: identity.promptRequest
+  });
+  const digest = (0, import_node_crypto2.createHash)("sha256").update(fingerprint).digest("hex");
+  return `tps:${digest.slice(0, 60)}`;
 }
 
 // server/routes/touchpoints.ts
@@ -58706,49 +58837,43 @@ router30.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, asyn
     }
     const suppliedVerses = Array.from(hydrated.byRef.values());
     const suppliedRefs = suppliedReferenceStrings(suppliedVerses);
-    const cacheKey = `touchpoint-study-${TOUCHPOINT_STUDY_CONTENT_VERSION}-${SDA_LENS_VERSION}-${translation}-${topic.id}`;
+    const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
+    const promptRequest = buildTouchpointBibleStudyRequest({
+      topicTitle: topic.title,
+      suppliedBlock,
+      suppliedRefs
+    });
+    const cacheKey = buildTouchpointStudyCacheKey({
+      topic,
+      translationMeta: hydrated.translationMeta,
+      promptRequest,
+      sdaLensVersion: SDA_LENS_VERSION,
+      translationContractVersion: TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION
+    });
     const [cached] = await db.select().from(searchCache).where((0, import_drizzle_orm44.eq)(searchCache.queryHash, cacheKey)).limit(1);
     if (cached && cached.expiresAt > /* @__PURE__ */ new Date()) {
-      return res.json(cached.results);
+      const validatedCache = parseCachedTouchpointStudy(cached.results);
+      if (validatedCache) {
+        return res.json(validatedCache);
+      }
+      console.warn(`[touchpoint-study] Ignoring malformed cache entry ${cacheKey}`);
     }
-    const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
     const client = new (await import("openai")).default({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
     });
-    const response = await client.chat.completions.create(
-      buildTouchpointBibleStudyRequest({
-        topicTitle: topic.title,
-        suppliedBlock,
-        suppliedRefs
-      })
+    const response = await client.chat.completions.create(promptRequest);
+    const draft = parseGeneratedStudyDraft(
+      response.choices[0]?.message?.content || ""
     );
-    const studyContent = JSON.parse(response.choices[0]?.message?.content || "{}");
-    if (Array.isArray(studyContent.sections)) {
-      studyContent.sections = studyContent.sections.map((section) => {
-        const canonical = resolveGeneratedSelection(String(section?.scripture ?? ""), hydrated.byRef);
-        return {
-          ...section,
-          scripture: canonical.ref,
-          scriptureText: canonical.text,
-          translation: canonical.translation,
-          translationName: canonical.translationName,
-          source: canonical.source,
-          provider: canonical.provider,
-          ...canonical.providerEditionId ? { providerEditionId: canonical.providerEditionId } : {}
-        };
-      });
-    }
-    studyContent.translation = hydrated.translationMeta.translation;
-    studyContent.translationName = hydrated.translationMeta.translationName;
-    studyContent.source = hydrated.translationMeta.source;
-    studyContent.provider = hydrated.translationMeta.provider;
-    if (hydrated.translationMeta.providerEditionId) {
-      studyContent.providerEditionId = hydrated.translationMeta.providerEditionId;
-    }
-    studyContent.contentVersion = TOUCHPOINT_STUDY_CONTENT_VERSION;
+    const studyContent = attachCanonicalScripture({
+      draft,
+      byRef: hydrated.byRef,
+      translationMeta: hydrated.translationMeta,
+      resolveSelection: resolveGeneratedSelection
+    });
     await db.insert(searchCache).values({
-      queryText: `Bible Study: ${topic.title} (${translation})`,
+      queryText: `Bible Study: ${topic.title} (${translation}; ${TOUCHPOINT_STUDY_SCHEMA_VERSION})`,
       queryHash: cacheKey,
       results: studyContent,
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1e3)
@@ -60160,7 +60285,7 @@ async function registerRoutes(app2) {
     const markersData = markers ? JSON.parse(decodeURIComponent(markers)) : [];
     const cLat = parseFloat(centerLat) || 39.8283;
     const cLng = parseFloat(centerLng) || -98.5795;
-    const z4 = parseInt(zoom) || 4;
+    const z5 = parseInt(zoom) || 4;
     const uLat = userLat ? parseFloat(userLat) : null;
     const uLng = userLng ? parseFloat(userLng) : null;
     const html = `<!DOCTYPE html>
@@ -60180,7 +60305,7 @@ html,body,#map{width:100%;height:100%}
 <body>
 <div id="map"></div>
 <script>
-var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${cLat},${cLng}],${z4});
+var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${cLat},${cLng}],${z5});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
 ${uLat !== null && uLng !== null ? `L.marker([${uLat},${uLng}],{icon:L.divIcon({className:'',html:'<div class="usr-m"></div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);` : ""}

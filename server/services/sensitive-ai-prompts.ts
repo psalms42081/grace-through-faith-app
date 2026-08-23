@@ -106,7 +106,7 @@ Format as JSON:
   "groupDiscussion": ["3-4 discussion questions for small groups"]
 }
 
-Use 3-5 sections. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`),
+Use 3-5 sections and exactly 3-4 groupDiscussion questions. Every shown field is required and must be a non-empty string. Do not add fields that are not shown. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`),
       },
       {
         role: "user" as const,

@@ -42,8 +42,9 @@ describe("pastoral touchpoint light previews", () => {
   it("keeps the real API, translation, and canonical Scripture safeguards", () => {
     assert.match(previewSource, /\/api\/touchpoints\/\$\{topicId\}/);
     assert.match(previewSource, /\/bible-study/);
-    assert.match(previewSource, /section\.resolved !== false/);
-    assert.match(previewSource, /section\.translation \|\| studyTranslation/);
+    assert.match(previewSource, /section\.resolved === true/);
+    assert.match(previewSource, /TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS/);
+    assert.doesNotMatch(previewSource, /staleTime:\s*Infinity/);
   });
 
   it("omits playful, grading, and progress-pressure furniture", () => {

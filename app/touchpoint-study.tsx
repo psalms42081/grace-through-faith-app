@@ -16,34 +16,13 @@ import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
+import {
+  TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
+  type TouchpointGeneratedStudy,
+} from "@shared/touchpoint-study";
 
 const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
-
-interface StudySection {
-  heading: string;
-  scripture: string;
-  scriptureText: string;
-  teaching: string;
-  reflection: string;
-  // Optional per-section resolution metadata from the backend. When present,
-  // `translation` is the authoritative label for scriptureText and `resolved`
-  // indicates canonical Scripture (vs. no verified text).
-  translation?: string;
-  source?: string;
-  resolved?: boolean;
-}
-
-interface BibleStudy {
-  title: string;
-  introduction: string;
-  sections: StudySection[];
-  conclusion: string;
-  prayerPrompt: string;
-  groupDiscussion: string[];
-  // Study-level translation the backend generated Scripture against.
-  translation?: string;
-}
 
 export default function TouchPointStudyScreen() {
   const { topicId, title, translation: translationParam } = useLocalSearchParams<{ topicId: string; title: string; translation?: string }>();
@@ -55,14 +34,14 @@ export default function TouchPointStudyScreen() {
   // Prefer translation passed via nav params (set at time of generation), fall back to context.
   const translation = translationParam || contextTranslation;
 
-  const { data: study, isLoading, isError } = useQuery<BibleStudy>({
+  const { data: study, isLoading, isError } = useQuery<TouchpointGeneratedStudy>({
     // translation is a distinct key element so switching refetches the study
     queryKey: ["/api/touchpoints", topicId, "bible-study", { translation }],
     queryFn: async () => {
       const res = await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`, { translation });
       return res.json();
     },
-    staleTime: Infinity,
+    staleTime: TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   });
 
   // Prefer the translation the backend actually reports; fall back to requested.
@@ -118,13 +97,11 @@ export default function TouchPointStudyScreen() {
           </Text>
 
           {study.sections?.map((section, i) => {
-            const sectionTranslation = section.translation || studyTranslation;
-            // Only display Scripture text the backend verified as canonical.
-            // When `resolved` is explicitly false, or the backend sent no text,
-            // we must NOT show AI-generated scriptureText — show a pointer to
-            // read it in the reader instead.
+            const sectionTranslation = section.translation;
+            // The server's successful contract requires explicit canonical
+            // resolution. Never display text without that positive marker.
             const hasVerifiedText =
-              section.resolved !== false &&
+              section.resolved === true &&
               typeof section.scriptureText === "string" &&
               section.scriptureText.trim().length > 0;
             return (

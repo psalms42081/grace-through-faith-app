@@ -26,13 +26,9 @@ const TEAL = "#2A8B8B";
 interface Verse {
   ref: string;
   text: string;
-  // Optional metadata the backend may attach once Scripture is resolved
-  // against a specific translation. When present, `translation` is the
-  // authoritative label to display (may differ from the requested one if
-  // the backend fell back). `resolved` false / absent text = no canonical text.
-  translation?: string;
-  source?: string;
-  resolved?: boolean;
+  translation: string;
+  source: string;
+  resolved: true;
 }
 
 interface TouchPointQuestion {
@@ -313,11 +309,9 @@ export default function TouchPointTopicScreen() {
                 {isExpanded && (
                   <View style={[styles.answerContainer, { borderColor }]}>
                     {q.verses.map((v, i) => {
-                      // The label shown next to the reference is whatever the
-                      // backend resolved the text against. Only fall back to the
-                      // requested translation when the backend didn't say.
-                      const verseTranslation = v.translation || translation;
+                      const verseTranslation = v.translation;
                       const hasCanonicalText =
+                        v.resolved === true &&
                         typeof v.text === "string" && v.text.trim().length > 0;
                       return (
                         <View key={i} style={styles.verseBlock}>

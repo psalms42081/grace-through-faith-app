@@ -21,10 +21,21 @@ import {
   resolveGeneratedSelection,
   buildSuppliedScriptureBlock,
   suppliedReferenceStrings,
-  TOUCHPOINT_STUDY_CONTENT_VERSION,
   type HydratedVerse,
   type ReferenceResolver,
 } from "../services/touchpoint-scripture";
+import {
+  attachCanonicalScripture,
+  buildTouchpointStudyCacheKey,
+  GeneratedStudyValidationError,
+  parseCachedTouchpointStudy,
+  parseGeneratedStudyDraft,
+} from "../services/touchpoint-study";
+import {
+  TOUCHPOINT_STUDY_SCHEMA_VERSION,
+  TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION,
+} from "../../shared/touchpoint-study";
+import { SDA_LENS_VERSION } from "../services/sda-lens";
 
 import {
   ScriptureError,
@@ -147,6 +158,7 @@ describe("hydration metadata", () => {
     assert.equal(v.source, "db");
     assert.equal(v.provider, "local");
     assert.equal(v.providerEditionId, undefined);
+    assert.equal(v.resolved, true);
   });
 
   it("joins a same-chapter range into one canonical text string", async () => {
@@ -174,6 +186,7 @@ describe("hydration metadata", () => {
     assert.equal(meta!.translation, "NKJV");
     assert.equal(meta!.translationName, "New King James Version");
     assert.equal(meta!.providerEditionId, "nkjv-edition-mock");
+    assert.equal(meta!.scriptureResolution, "resolved");
   });
 
   it("defaults to KJV when translation omitted (backward compatibility)", async () => {
@@ -234,30 +247,169 @@ describe("explicit failure, never partial or paraphrased", () => {
   });
 });
 
-// ─── Study-cache key translation isolation ────────────────────────────────────
+// ─── Generated-study runtime schema ───────────────────────────────────────────
 
-describe("study cache key translation isolation", () => {
-  // Mirrors the cacheKey format built in the bible-study route.
-  const SDA_LENS_VERSION = "sda-v2";
-  const buildKey = (translation: string, topicId: string) =>
-    `touchpoint-study-${TOUCHPOINT_STUDY_CONTENT_VERSION}-${SDA_LENS_VERSION}-${translation}-${topicId}`;
+const VALID_DRAFT = {
+  title: "Bible Study: Abandonment",
+  introduction: "A complete introduction.",
+  sections: [1, 2, 3].map((n) => ({
+    heading: `Section ${n}`,
+    scripture: "Psalm 27:10",
+    teaching: `Teaching ${n}`,
+    reflection: `Reflection ${n}?`,
+  })),
+  conclusion: "A complete conclusion.",
+  prayerPrompt: "A complete prayer prompt.",
+  groupDiscussion: ["Question one?", "Question two?", "Question three?"],
+};
 
-  it("different translations yield different cache keys (no cross-version reuse)", () => {
-    const kjv = buildKey("KJV", "abandonment");
-    const nkjv = buildKey("NKJV", "abandonment");
-    assert.notEqual(kjv, nkjv);
+describe("generated-study runtime schema", () => {
+  it("rejects malformed or incomplete model output before hydration", () => {
+    assert.throws(
+      () => parseGeneratedStudyDraft(JSON.stringify({ ...VALID_DRAFT, sections: [] })),
+      (err: unknown) => err instanceof GeneratedStudyValidationError && err.statusCode === 502
+    );
+    assert.throws(
+      () => parseGeneratedStudyDraft("{not-json"),
+      (err: unknown) => err instanceof GeneratedStudyValidationError
+    );
   });
 
-  it("cache key embeds an explicit content version to invalidate old paraphrase caches", () => {
-    const key = buildKey("KJV", "abandonment");
-    assert.ok(key.includes(TOUCHPOINT_STUDY_CONTENT_VERSION));
-    // Legacy key format had no content version or translation.
-    const legacy = `touchpoint-study-${SDA_LENS_VERSION}-abandonment`;
-    assert.notEqual(key, legacy);
+  it("rejects model-authored Scripture text and unknown fields", () => {
+    const unsafe = {
+      ...VALID_DRAFT,
+      sections: VALID_DRAFT.sections.map((section) => ({
+        ...section,
+        scriptureText: "Model-authored wording",
+      })),
+    };
+    assert.throws(
+      () => parseGeneratedStudyDraft(JSON.stringify(unsafe)),
+      (err: unknown) => err instanceof GeneratedStudyValidationError
+    );
   });
 
-  it("same topic + same translation is stable", () => {
-    assert.equal(buildKey("KJV", "abandonment"), buildKey("KJV", "abandonment"));
+  it("requires explicit resolved state on every cached Scripture section", async () => {
+    const hydrated = await hydrateQuestions(
+      SAMPLE_QUESTIONS,
+      "KJV",
+      undefined,
+      makeMockResolver()
+    );
+    const study = attachCanonicalScripture({
+      draft: parseGeneratedStudyDraft(JSON.stringify(VALID_DRAFT)),
+      byRef: hydrated.byRef,
+      translationMeta: hydrated.translationMeta,
+      resolveSelection: resolveGeneratedSelection,
+    });
+
+    assert.equal(study.scriptureResolution, "resolved");
+    assert.ok(study.sections.every((section) => section.resolved === true));
+    assert.ok(parseCachedTouchpointStudy(study));
+
+    const unresolved = {
+      ...study,
+      sections: study.sections.map((section, index) =>
+        index === 0 ? { ...section, resolved: false } : section
+      ),
+    };
+    assert.equal(parseCachedTouchpointStudy(unresolved), null);
+  });
+});
+
+// ─── Study-cache invalidation ─────────────────────────────────────────────────
+
+const CACHE_TOPIC = {
+  id: "abandonment",
+  title: "Abandonment",
+  category: "Emotions & Struggles",
+  overview: "Original overview",
+  questions: SAMPLE_QUESTIONS,
+};
+const CACHE_TRANSLATION = {
+  translation: "KJV",
+  translationName: "King James Version",
+  source: "db" as const,
+  provider: "local",
+  scriptureResolution: "resolved" as const,
+};
+const CACHE_PROMPT = {
+  model: "gpt-4o-mini",
+  messages: [{ role: "system", content: "prompt-v1" }],
+};
+const cacheKey = (overrides: Partial<Parameters<typeof buildTouchpointStudyCacheKey>[0]> = {}) =>
+  buildTouchpointStudyCacheKey({
+    topic: CACHE_TOPIC,
+    translationMeta: CACHE_TRANSLATION,
+    promptRequest: CACHE_PROMPT,
+    sdaLensVersion: SDA_LENS_VERSION,
+    translationContractVersion: TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION,
+    ...overrides,
+  });
+
+describe("study cache invalidation", () => {
+  it("is stable for identical inputs and fits the database key limit", () => {
+    assert.equal(cacheKey(), cacheKey());
+    assert.equal(cacheKey().length, 64);
+  });
+
+  it("busts when the topic, prompt, or SDA lens changes", () => {
+    assert.notEqual(
+      cacheKey(),
+      cacheKey({ topic: { ...CACHE_TOPIC, overview: "Updated overview" } })
+    );
+    assert.notEqual(
+      cacheKey(),
+      cacheKey({ promptRequest: { ...CACHE_PROMPT, model: "updated-model" } })
+    );
+    assert.notEqual(cacheKey(), cacheKey({ sdaLensVersion: `${SDA_LENS_VERSION}-next` }));
+  });
+
+  it("busts for translation, provider-edition, and contract changes", () => {
+    assert.notEqual(
+      cacheKey(),
+      cacheKey({
+        translationMeta: {
+          ...CACHE_TRANSLATION,
+          translation: "NKJV",
+          translationName: "New King James Version",
+          source: "api_bible",
+          provider: "API.Bible",
+          providerEditionId: "edition-a",
+        },
+      })
+    );
+    assert.notEqual(
+      cacheKey(),
+      cacheKey({
+        translationMeta: {
+          ...CACHE_TRANSLATION,
+          source: "api_bible",
+          provider: "API.Bible",
+          providerEditionId: "edition-b",
+        },
+      })
+    );
+    assert.notEqual(
+      cacheKey(),
+      cacheKey({ translationContractVersion: `${TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION}-next` })
+    );
+  });
+
+  it("uses the current generated-study schema version", async () => {
+    const hydrated = await hydrateQuestions(
+      SAMPLE_QUESTIONS,
+      "KJV",
+      undefined,
+      makeMockResolver()
+    );
+    const study = attachCanonicalScripture({
+      draft: parseGeneratedStudyDraft(JSON.stringify(VALID_DRAFT)),
+      byRef: hydrated.byRef,
+      translationMeta: hydrated.translationMeta,
+      resolveSelection: resolveGeneratedSelection,
+    });
+    assert.equal(study.contentVersion, TOUCHPOINT_STUDY_SCHEMA_VERSION);
   });
 });
 

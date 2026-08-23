@@ -35,10 +35,6 @@ export type ReferenceResolver = (params: {
   cache?: ChapterCacheHooks;
 }) => Promise<ResolvedScripture & { reference: ParsedReference }>;
 
-/** Content version for the touchpoint bible-study cache. Bump to invalidate
- *  old paraphrase-based caches. */
-export const TOUCHPOINT_STUDY_CONTENT_VERSION = "canon-v1";
-
 /** A single hydrated verse — exact canonical text, no fallback. */
 export interface HydratedVerse {
   ref: string;
@@ -48,6 +44,7 @@ export interface HydratedVerse {
   source: TranslationSource;
   provider: string;
   providerEditionId?: string;
+  resolved: true;
 }
 
 /** Top-level translation metadata attached to hydrated responses. */
@@ -57,6 +54,7 @@ export interface TranslationMetaBlock {
   source: TranslationSource;
   provider: string;
   providerEditionId?: string;
+  scriptureResolution: "resolved";
 }
 
 interface RefBearingVerse {
@@ -115,6 +113,7 @@ export async function hydrateReference(
     ...(resolved.meta.providerEditionId
       ? { providerEditionId: resolved.meta.providerEditionId }
       : {}),
+    resolved: true,
   };
 }
 
@@ -164,6 +163,7 @@ export function deriveTranslationMeta(
     ...(first.providerEditionId
       ? { providerEditionId: first.providerEditionId }
       : {}),
+    scriptureResolution: "resolved",
   };
 }
 

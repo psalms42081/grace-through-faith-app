@@ -18,14 +18,15 @@ import { apiRequest } from "@/lib/query-client";
 import { safeGoBack } from "@/lib/safe-back";
 import { useTranslation } from "@/context/TranslationContext";
 import { HV2, F } from "@/components/home-v2/theme";
+import {
+  TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
+  type TouchpointGeneratedStudy,
+} from "@shared/touchpoint-study";
 
-interface Verse { ref: string; text: string; translation?: string; source?: string; resolved?: boolean }
+interface Verse { ref: string; text: string; translation: string; source: string; resolved: true }
 interface TouchPointQuestion { id: string; question: string; verses: Verse[]; commentary: string }
 interface BibleProjectVideo { id: string; title: string; youtubeId: string; duration: string; description: string; series: string }
 interface TouchPointTopic { id: string; title: string; category: string; overview: string; questions: TouchPointQuestion[]; bibleProjectVideos?: BibleProjectVideo[] }
-interface StudySection { heading: string; scripture: string; scriptureText: string; teaching: string; reflection: string; translation?: string; source?: string; resolved?: boolean }
-interface BibleStudy { title: string; introduction: string; sections: StudySection[]; conclusion: string; prayerPrompt: string; groupDiscussion: string[]; translation?: string }
-
 const TINTS: Record<string, { wash: string; line: string; accent: string }> = {
   grief: { wash: "#EEF3F1", line: "#C9DDD7", accent: "#386F68" },
   anxiety: { wash: "#F3F0E7", line: "#DFD4B8", accent: "#7A6540" },
@@ -111,8 +112,8 @@ export function TouchpointTopicPreview() {
             </Pressable>
             {open && <View style={s.answer}>
               {question.verses.map((verse, verseIndex) => {
-                const verseTranslation = verse.translation || translation;
-                const hasText = typeof verse.text === "string" && verse.text.trim().length > 0;
+                const verseTranslation = verse.translation;
+                const hasText = verse.resolved === true && typeof verse.text === "string" && verse.text.trim().length > 0;
                 return <View key={`${verse.ref}-${verseIndex}`} style={[s.verse, { borderLeftColor: tint.line }]}>
                   <Text style={[s.reference, { color: tint.accent }]}>{verse.ref} <Text style={s.translation}>{verseTranslation}</Text></Text>
                   <Text style={[s.verseText, !hasText && s.unresolved]}>{hasText ? verse.text : `Scripture text for ${verse.ref} could not be resolved in ${verseTranslation}. Open your Bible to read it in your selected translation.`}</Text>
@@ -193,20 +194,20 @@ export function TouchpointStudyPreview() {
   const translation = translationParam || contextTranslation;
   const insets = useSafeAreaInsets();
   const tint = previewTint(topicId);
-  const { data: study, isLoading, isError } = useQuery<BibleStudy>({
+  const { data: study, isLoading, isError } = useQuery<TouchpointGeneratedStudy>({
     queryKey: ["/api/touchpoints", topicId, "bible-study", { translation }],
     queryFn: async () => (await apiRequest("POST", `/api/touchpoints/${topicId}/bible-study`, { translation })).json(),
-    staleTime: Infinity,
+    staleTime: TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   });
   const back = () => safeGoBack(router, `/touchpoint-topic-preview?topicId=${topicId}`);
   if (isLoading) return <View style={s.page}><View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}><PreviewHeader title={title || "Guided study"} onBack={back}/></View><View style={s.state}><ActivityIndicator color={tint.accent}/><Text style={s.stateText}>Preparing your study…</Text></View></View>;
   if (isError || !study) return <View style={s.page}><View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}><PreviewHeader title={title || "Guided study"} onBack={back}/></View><View style={s.state}><Text style={s.stateTitle}>The study could not be opened</Text><Text style={s.stateText}>Return to the topic when you are ready.</Text><Pressable onPress={back} style={s.quietButton}><Text style={s.quietButtonText}>Go back</Text></Pressable></View></View>;
-  const studyTranslation = study.translation || translation;
+  const studyTranslation = study.translation;
   return <View testID="touchpoint-generated-study-container" accessibilityLabel="Generated guided Bible study" style={s.page}>
     <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}><PreviewHeader title={study.title || title || "Guided study"} onBack={back}/></View>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 44 }}>
       <View style={[s.studyOpening, { backgroundColor: tint.wash, borderColor: tint.line }]}><Text style={[s.eyebrow, { color: tint.accent }]}>Guided study · {studyTranslation}</Text><Text style={s.introduction}>{study.introduction}</Text></View>
-      {study.sections.map((section, index) => { const sectionTranslation = section.translation || studyTranslation; const verified = section.resolved !== false && typeof section.scriptureText === "string" && section.scriptureText.trim().length > 0; return <View key={`${section.heading}-${index}`} style={s.studySection}><Text style={s.sectionIndex}>{String(index + 1).padStart(2, "0")}</Text><Text style={s.studyHeading}>{section.heading}</Text><View style={[s.studyScripture, { borderLeftColor: tint.accent }]}><Text style={[s.reference, { color: tint.accent }]}>{section.scripture} <Text style={s.translation}>{sectionTranslation}</Text></Text><Text style={[s.verseText, !verified && s.unresolved]}>{verified ? section.scriptureText : `Scripture text for ${section.scripture} could not be verified in ${sectionTranslation}. Open your Bible to read it in your selected translation.`}</Text></View><Text style={s.teaching}>{section.teaching}</Text><View style={[s.reflection, { backgroundColor: tint.wash }]}><Text style={[s.reflectionLabel, { color: tint.accent }]}>For reflection</Text><Text style={s.reflectionText}>{section.reflection}</Text></View></View> })}
+      {study.sections.map((section, index) => { const sectionTranslation = section.translation; const verified = section.resolved === true && typeof section.scriptureText === "string" && section.scriptureText.trim().length > 0; return <View key={`${section.heading}-${index}`} style={s.studySection}><Text style={s.sectionIndex}>{String(index + 1).padStart(2, "0")}</Text><Text style={s.studyHeading}>{section.heading}</Text><View style={[s.studyScripture, { borderLeftColor: tint.accent }]}><Text style={[s.reference, { color: tint.accent }]}>{section.scripture} <Text style={s.translation}>{sectionTranslation}</Text></Text><Text style={[s.verseText, !verified && s.unresolved]}>{verified ? section.scriptureText : `Scripture text for ${section.scripture} could not be verified in ${sectionTranslation}. Open your Bible to read it in your selected translation.`}</Text></View><Text style={s.teaching}>{section.teaching}</Text><View style={[s.reflection, { backgroundColor: tint.wash }]}><Text style={[s.reflectionLabel, { color: tint.accent }]}>For reflection</Text><Text style={s.reflectionText}>{section.reflection}</Text></View></View> })}
       <View style={[s.closing, { borderTopColor: tint.line }]}><Text style={[s.eyebrow, { color: tint.accent }]}>Closing thought</Text><Text style={s.conclusion}>{study.conclusion}</Text></View>
       {study.prayerPrompt ? <View style={[s.prayer, { backgroundColor: tint.wash, borderColor: tint.line }]}><Text style={[s.reflectionLabel, { color: tint.accent }]}>Prayer</Text><Text style={s.prayerText}>{study.prayerPrompt}</Text></View> : null}
       {study.groupDiscussion?.length ? <View style={s.discussion}><Text style={s.sectionTitle}>If you are with others</Text>{study.groupDiscussion.map((item, i) => <View key={`${item}-${i}`} style={s.discussionRow}><Text style={[s.questionNumber, { color: tint.accent }]}>{String(i + 1).padStart(2, "0")}</Text><Text style={s.discussionText}>{item}</Text></View>)}</View> : null}

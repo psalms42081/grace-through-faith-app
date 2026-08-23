@@ -14,8 +14,17 @@ import {
   resolveGeneratedSelection,
   buildSuppliedScriptureBlock,
   suppliedReferenceStrings,
-  TOUCHPOINT_STUDY_CONTENT_VERSION,
 } from "../services/touchpoint-scripture";
+import {
+  attachCanonicalScripture,
+  buildTouchpointStudyCacheKey,
+  parseCachedTouchpointStudy,
+  parseGeneratedStudyDraft,
+} from "../services/touchpoint-study";
+import {
+  TOUCHPOINT_STUDY_SCHEMA_VERSION,
+  TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION,
+} from "../../shared/touchpoint-study";
 
 const router = Router();
 
@@ -221,67 +230,52 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
 
     const suppliedVerses = Array.from(hydrated.byRef.values());
     const suppliedRefs = suppliedReferenceStrings(suppliedVerses);
+    const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
+    const promptRequest = buildTouchpointBibleStudyRequest({
+      topicTitle: topic.title,
+      suppliedBlock,
+      suppliedRefs,
+    });
 
-    // Cache key includes explicit content version + SDA lens version + normalized
-    // translation + topic id. This invalidates old paraphrase caches and prevents
-    // any cross-version / cross-translation cache reuse.
-    const cacheKey = `touchpoint-study-${TOUCHPOINT_STUDY_CONTENT_VERSION}-${SDA_LENS_VERSION}-${translation}-${topic.id}`;
+    // Fingerprint every generation input. Changes to the topic, prompt, SDA
+    // lens, resolved translation edition, or translation contract all miss.
+    const cacheKey = buildTouchpointStudyCacheKey({
+      topic,
+      translationMeta: hydrated.translationMeta,
+      promptRequest,
+      sdaLensVersion: SDA_LENS_VERSION,
+      translationContractVersion: TOUCHPOINT_STUDY_TRANSLATION_CONTRACT_VERSION,
+    });
     const [cached] = await db.select().from(searchCache)
       .where(eq(searchCache.queryHash, cacheKey))
       .limit(1);
 
     if (cached && cached.expiresAt > new Date()) {
-      return res.json(cached.results);
+      const validatedCache = parseCachedTouchpointStudy(cached.results);
+      if (validatedCache) {
+        return res.json(validatedCache);
+      }
+      console.warn(`[touchpoint-study] Ignoring malformed cache entry ${cacheKey}`);
     }
-
-    const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
 
     const client = new (await import("openai")).default({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
 
-    const response = await client.chat.completions.create(
-      buildTouchpointBibleStudyRequest({
-        topicTitle: topic.title,
-        suppliedBlock,
-        suppliedRefs,
-      }),
+    const response = await client.chat.completions.create(promptRequest);
+    const draft = parseGeneratedStudyDraft(
+      response.choices[0]?.message?.content || ""
     );
-
-    const studyContent = JSON.parse(response.choices[0]?.message?.content || "{}");
-
-    // Hydrate each generated section with canonical text/metadata. AI never
-    // supplies verse wording; we attach it from the canonical resolver result.
-    // An invalid AI selection fails the request explicitly.
-    if (Array.isArray(studyContent.sections)) {
-      studyContent.sections = studyContent.sections.map((section: any) => {
-        const canonical = resolveGeneratedSelection(String(section?.scripture ?? ""), hydrated.byRef);
-        return {
-          ...section,
-          scripture: canonical.ref,
-          scriptureText: canonical.text,
-          translation: canonical.translation,
-          translationName: canonical.translationName,
-          source: canonical.source,
-          provider: canonical.provider,
-          ...(canonical.providerEditionId ? { providerEditionId: canonical.providerEditionId } : {}),
-        };
-      });
-    }
-
-    // Top-level translation identity so cached responses self-identify.
-    studyContent.translation = hydrated.translationMeta.translation;
-    studyContent.translationName = hydrated.translationMeta.translationName;
-    studyContent.source = hydrated.translationMeta.source;
-    studyContent.provider = hydrated.translationMeta.provider;
-    if (hydrated.translationMeta.providerEditionId) {
-      studyContent.providerEditionId = hydrated.translationMeta.providerEditionId;
-    }
-    studyContent.contentVersion = TOUCHPOINT_STUDY_CONTENT_VERSION;
+    const studyContent = attachCanonicalScripture({
+      draft,
+      byRef: hydrated.byRef,
+      translationMeta: hydrated.translationMeta,
+      resolveSelection: resolveGeneratedSelection,
+    });
 
     await db.insert(searchCache).values({
-      queryText: `Bible Study: ${topic.title} (${translation})`,
+      queryText: `Bible Study: ${topic.title} (${translation}; ${TOUCHPOINT_STUDY_SCHEMA_VERSION})`,
       queryHash: cacheKey,
       results: studyContent,
       expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
