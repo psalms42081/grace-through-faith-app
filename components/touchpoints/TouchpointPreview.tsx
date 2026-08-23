@@ -53,6 +53,7 @@ export function TouchpointTopicPreview() {
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showStudyPrompt, setShowStudyPrompt] = useState(false);
+  const [videoOpenError, setVideoOpenError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const tint = previewTint(topicId);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -74,6 +75,14 @@ export function TouchpointTopicPreview() {
           `/touchpoint-study-preview?topicId=${topicId}&title=${encodeURIComponent(data.title || topic?.title || "")}&translation=${encodeURIComponent(translation)}` as any
         ),
     });
+  };
+  const openVideo = async (video: BibleProjectVideo) => {
+    setVideoOpenError(null);
+    try {
+      await Linking.openURL(`https://www.youtube.com/watch?v=${video.youtubeId}`);
+    } catch {
+      setVideoOpenError(video.id);
+    }
   };
   const back = () => safeGoBack(router, "/touchpoints");
 
@@ -113,7 +122,7 @@ export function TouchpointTopicPreview() {
             </View>}
           </View>;
         })}
-        {topic.bibleProjectVideos?.length ? <View style={s.videoBlock}><Text style={s.sectionTitle}>A little more to watch</Text><Text style={s.sectionSub}>Selected teaching on this topic</Text>{topic.bibleProjectVideos.map(video => <Pressable key={video.id} accessibilityRole="link" accessibilityLabel={`Open ${video.title} in YouTube`} onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.youtubeId}`)} style={s.videoCard}><Image source={{ uri: `https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg` }} style={s.thumb}/><View style={s.videoCopy}><Text style={[s.videoSeries, { color: tint.accent }]}>{video.series}</Text><Text numberOfLines={2} style={s.videoTitle}>{video.title}</Text><Text style={s.videoMeta}>{video.duration} · Opens in YouTube</Text></View></Pressable>)}</View> : null}
+        {topic.bibleProjectVideos?.length ? <View style={s.videoBlock}><Text style={s.sectionTitle}>A little more to watch</Text><Text style={s.sectionSub}>Selected teaching on this topic</Text>{topic.bibleProjectVideos.map(video => <Pressable key={video.id} accessibilityRole="link" accessibilityLabel={`Open ${video.title} in YouTube`} onPress={() => openVideo(video)} style={s.videoCard}><Image source={{ uri: `https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg` }} style={s.thumb}/><View style={s.videoCopy}><Text style={[s.videoSeries, { color: tint.accent }]}>{video.series}</Text><Text numberOfLines={2} style={s.videoTitle}>{video.title}</Text><Text style={s.videoMeta}>{video.duration} · Opens in YouTube</Text>{videoOpenError === video.id ? <Text accessibilityRole="alert" style={s.videoError}>This video could not be opened. Please try again later.</Text> : null}</View></Pressable>)}</View> : null}
         <View style={[s.studyCallout, { backgroundColor: tint.wash, borderColor: tint.line }]}>
           <Text style={s.studyTitle}>Stay with this in Scripture</Text>
           <Text style={s.studyBody}>A guided study gathers the passages and reflections into one unhurried place.</Text>
@@ -242,6 +251,7 @@ const s = StyleSheet.create({
   videoSeries: { fontFamily: F.interSemi, fontSize: 9, letterSpacing: 0.65, textTransform: "uppercase", marginBottom: 5 },
   videoTitle: { fontFamily: F.loraSemi, fontSize: 14, color: HV2.ink, lineHeight: 19 },
   videoMeta: { fontFamily: F.inter, fontSize: 11, color: HV2.inkMutedText, marginTop: 6 },
+  videoError: { fontFamily: F.interMed, fontSize: 11, lineHeight: 16, color: HV2.inkMutedText, marginTop: 7 },
   studyCallout: { marginTop: 29, padding: 22, borderRadius: 21, borderWidth: 1 },
   studyTitle: { fontFamily: F.loraSemi, color: HV2.ink, fontSize: 21, letterSpacing: -0.3 },
   studyBody: { fontFamily: F.inter, color: HV2.inkMutedText, fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 17 },

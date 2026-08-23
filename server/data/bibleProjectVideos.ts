@@ -17,14 +17,6 @@ export interface TopicVideoMapping {
 export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
   abandonment: [
     {
-      id: "bp-covenant-faithfulness",
-      title: "Covenant Faithfulness",
-      youtubeId: "s3BXfvCjIkM",
-      duration: "5:40",
-      description: "Explore what it means for God to be faithful — He never abandons His covenant promises.",
-      series: "Character of God",
-    },
-    {
       id: "bp-hesed-loyal-love",
       title: "Khesed — Loyal Love",
       youtubeId: "R2ouoMFBBWk",
@@ -40,14 +32,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       youtubeId: "aNOZ7ocLD74",
       duration: "5:48",
       description: "Trace the biblical concept of sin — missing the mark and its power to enslave.",
-      series: "Biblical Themes",
-    },
-    {
-      id: "bp-new-humanity",
-      title: "New Humanity",
-      youtubeId: "XRRbkMa217I",
-      duration: "5:36",
-      description: "How Jesus creates a new way of being human, free from the patterns that trap us.",
       series: "Biblical Themes",
     },
   ],
@@ -69,24 +53,7 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       series: "Biblical Themes",
     },
   ],
-  anxiety: [
-    {
-      id: "bp-shalom-peace",
-      title: "Shalom — Peace",
-      youtubeId: "oMhesKPKQPo",
-      duration: "5:44",
-      description: "Shalom isn't just the absence of conflict — it's the presence of wholeness and completeness.",
-      series: "Word Study",
-    },
-    {
-      id: "bp-trust",
-      title: "Trust",
-      youtubeId: "s3BXfvCjIkM",
-      duration: "5:40",
-      description: "What does it mean to truly trust God? Explore the Hebrew concept of faithfulness.",
-      series: "Character of God",
-    },
-  ],
+  anxiety: [],
   forgiveness: [
     {
       id: "bp-forgiveness",
@@ -105,24 +72,7 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       series: "Biblical Themes",
     },
   ],
-  grief: [
-    {
-      id: "bp-lament",
-      title: "The Book of Lamentations",
-      youtubeId: "p-dwZ8cPQ7c",
-      duration: "8:07",
-      description: "An overview of Lamentations — the Bible's guide to honest grief before God.",
-      series: "Book Overview",
-    },
-    {
-      id: "bp-hope",
-      title: "Hope",
-      youtubeId: "Lb4dOM4-FVM",
-      duration: "5:32",
-      description: "Biblical hope isn't wishful thinking — it's confident expectation rooted in God's character.",
-      series: "Word Study",
-    },
-  ],
+  grief: [],
   loneliness: [
     {
       id: "bp-wilderness",
@@ -312,14 +262,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       description: "What is truly satisfying in life? Ecclesiastes explores contentment and meaning.",
       series: "Book Overview",
     },
-    {
-      id: "bp-shalom-contentment",
-      title: "Shalom — Peace",
-      youtubeId: "oMhesKPKQPo",
-      duration: "5:44",
-      description: "True contentment is shalom — wholeness, completeness, and rest in God's design.",
-      series: "Word Study",
-    },
   ],
   integrity: [
     {
@@ -376,24 +318,8 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       description: "The Psalms give voice to the darkest human emotions — including depression and despair.",
       series: "Book Overview",
     },
-    {
-      id: "bp-lamentations",
-      title: "The Book of Lamentations",
-      youtubeId: "p-dwZ8cPQ7c",
-      duration: "8:07",
-      description: "Lamentations shows us that God meets us in the depths of sorrow.",
-      series: "Book Overview",
-    },
   ],
   "trust-in-god": [
-    {
-      id: "bp-emet-trust",
-      title: "Faithful — Emet",
-      youtubeId: "s3BXfvCjIkM",
-      duration: "5:40",
-      description: "The Hebrew word emet reveals what it means that God is absolutely trustworthy.",
-      series: "Character of God",
-    },
     {
       id: "bp-abraham",
       title: "The Book of Genesis (Part 2)",
@@ -440,14 +366,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
     },
   ],
   hope: [
-    {
-      id: "bp-hope-theme",
-      title: "Hope",
-      youtubeId: "Lb4dOM4-FVM",
-      duration: "5:32",
-      description: "Biblical hope is confident expectation — not wishful thinking, but trust in God's promises.",
-      series: "Word Study",
-    },
     {
       id: "bp-revelation",
       title: "The Book of Revelation (Part 2)",

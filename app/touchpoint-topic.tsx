@@ -18,7 +18,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
-import WebView from "react-native-webview";
 import { useTranslation } from "@/context/TranslationContext";
 
 const GOLD = "#C9933A";
@@ -64,53 +63,20 @@ interface TouchPointTopic {
 }
 
 function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark: boolean; theme: any }) {
-  const [playing, setPlaying] = useState(false);
+  const [openError, setOpenError] = useState(false);
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
-  const opensExternal = true;
   const youtubeUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
-  const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=https://gracethroughfaith.app`;
 
-  const handlePress = () => {
-    if (opensExternal) {
-      Linking.openURL(youtubeUrl);
-    } else {
-      setPlaying(true);
+  const handlePress = async () => {
+    setOpenError(false);
+    try {
+      await Linking.openURL(youtubeUrl);
+    } catch {
+      setOpenError(true);
     }
   };
-
-  if (playing && !opensExternal) {
-    return (
-      <View style={[vStyles.card, { backgroundColor: cardBg, borderColor }]}>
-        <View style={vStyles.playerWrap}>
-          {Platform.OS === "web" ? (
-            <iframe
-              src={embedUrl}
-              style={{ width: "100%", height: "100%", border: "none", borderRadius: 12 } as any}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <WebView
-              source={{ uri: embedUrl }}
-              style={{ flex: 1, borderRadius: 12 }}
-              allowsInlineMediaPlayback
-              allowsFullscreenVideo
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState
-            />
-          )}
-        </View>
-        <Pressable onPress={() => setPlaying(false)} style={vStyles.closeRow}>
-          <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
-          <Text style={[vStyles.closeText, { color: theme.textSecondary }]}>Close player</Text>
-        </Pressable>
-      </View>
-    );
-  }
 
   return (
     <Pressable
@@ -131,17 +97,20 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
         <View style={vStyles.durationBadge}>
           <Text style={vStyles.durationText}>{video.duration}</Text>
         </View>
-        {opensExternal && (
-          <View style={vStyles.externalBadge}>
-            <Ionicons name="open-outline" size={11} color="#fff" />
-            <Text style={vStyles.externalText}>Opens in YouTube</Text>
-          </View>
-        )}
+        <View style={vStyles.externalBadge}>
+          <Ionicons name="open-outline" size={11} color="#fff" />
+          <Text style={vStyles.externalText}>Opens in YouTube</Text>
+        </View>
       </View>
       <View style={vStyles.info}>
         <Text style={[vStyles.seriesBadge, { color: GOLD }]}>{video.series}</Text>
         <Text style={[vStyles.videoTitle, { color: theme.text }]} numberOfLines={2}>{video.title}</Text>
         <Text style={[vStyles.videoDesc, { color: theme.textSecondary }]} numberOfLines={2}>{video.description}</Text>
+        {openError ? (
+          <Text accessibilityRole="alert" style={[vStyles.openError, { color: theme.textSecondary }]}>
+            This video could not be opened. Please try again later.
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -454,20 +423,11 @@ const vStyles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 2,
   },
-  playerWrap: {
-    height: 210,
-    backgroundColor: "#000",
-  },
-  closeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    padding: 10,
-    justifyContent: "center",
-  },
-  closeText: {
-    fontFamily: "Inter_400Regular",
+  openError: {
+    fontFamily: "Inter_500Medium",
     fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
   },
   externalBadge: {
     position: "absolute",
