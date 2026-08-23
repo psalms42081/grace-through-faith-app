@@ -68,6 +68,16 @@ instruction to run Publish to apply schema; startup never attempts DDL.
 `npm run test:numbered-migrations` remains a development-only regression test
 for the historical migration set.
 
+### Sensitive AI doctrine guard
+
+Run `npm run test:doctrinal-smoke` before releasing a change to AI prompts,
+model selection, or grief/death-sensitive generation routes. It is a free,
+deterministic wiring guard: it verifies the exact production request builders
+prepend the canonical SDA lens, retain the required resurrection and
+after-death instructions, and carry trusted source context. It is also part of
+`npm run check`. It does not call a live model, judge generated wording, or
+replace a member's periodic live review of doctrinal answers.
+
 ## User Preferences
 I prefer iterative development with clear communication on significant changes. Please ask before making any major architectural decisions or large-scale code refactors. I appreciate detailed explanations for complex technical choices. Ensure the application's UI/UX prioritizes a clean, uncluttered design, inspired by modern, immersive dark themes like YouVersion's. Avoid using emojis in the app's UI. When integrating external content, such as Ellen G. White's writings, always link to the external source (egwwritings.org) rather than embedding the text directly.
 

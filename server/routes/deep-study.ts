@@ -1,5 +1,9 @@
 import { Router } from "express";
 import { withSdaLens } from "../services/sda-lens";
+import {
+  buildTopicReflectionRequest,
+  buildVerseExplanationRequest,
+} from "../services/sensitive-ai-prompts";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
@@ -369,27 +373,9 @@ router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, re
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: withSdaLens(`You are a Seventh-day Adventist Bible teacher. Generate a fresh daily reflection for the topic "${topicId}". Include:
-1. A thought-provoking reflection (3-4 sentences) connecting the topic to daily life
-2. A discussion question for small groups or personal journaling
-3. A practical application challenge for today
-4. A lesser-known Bible verse related to this topic (different from common ones)
-
-CRITICAL: Provide ONLY the verse reference (e.g. "Zephaniah 3:17"). Do NOT quote or paraphrase the verse text — the exact wording is looked up canonically afterward. Choose a reference that exists as a single verse or a same-chapter range.
-Return JSON: { "reflection": string, "question": string, "challenge": string, "verseReference": string }`),
-        },
-        {
-          role: "user",
-          content: `Generate today's reflection for the topic: ${topicId}. Today is ${today}. Make it unique and fresh.`,
-        },
-      ],
-      temperature: 0.9,
-    });
+    const response = await client.chat.completions.create(
+      buildTopicReflectionRequest({ topicId, today }),
+    );
 
     const raw = response.choices[0]?.message?.content || "{}";
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
@@ -737,29 +723,13 @@ router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: withSdaLens(`You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
-1. Clarifies its meaning in historical and literary context
-2. Shows how it connects to God's larger plan of salvation
-3. Points to Jesus Christ and the gospel
-4. Offers a practical application for daily life
-5. Cites 1-2 cross-references that illuminate the passage
-Keep the explanation warm, clear, and between 150-250 words. Write in second person ("you") to make it personal.`),
-        },
-        {
-          role: "user",
-          content: `Explain ${reference} (${canonicalTranslation}).
-
-Authoritative ${canonicalTranslation} text of the verse:
-"${verseText}"`,
-        },
-      ],
-      temperature: 0.7,
-    });
+    const response = await client.chat.completions.create(
+      buildVerseExplanationRequest({
+        reference,
+        canonicalTranslation,
+        verseText,
+      }),
+    );
 
     const explanation = response.choices[0]?.message?.content || "";
     const result = {

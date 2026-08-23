@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
+import { SDA_LENS_VERSION } from "../services/sda-lens";
+import { buildTouchpointBibleStudyRequest } from "../services/sensitive-ai-prompts";
 import { TOUCHPOINTS_DATA, TOUCHPOINT_CATEGORIES, searchTouchpoints } from "../data/touchpoints";
 import { BIBLE_PROJECT_VIDEOS } from "../data/bibleProjectVideos";
 import { db } from "../db";
@@ -240,52 +241,13 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: withSdaLens(`You are a faithful Bible teacher creating a structured Bible study. Generate a complete Bible study on the topic of "${topic.title}" that:
-1. Points to Jesus Christ and the gospel
-2. Grounds every point in Scripture
-3. Encourages fellowship and church community
-4. Provides practical application
-
-CRITICAL SCRIPTURE RULE:
-- You MUST NOT write, quote, paraphrase, or invent any Bible verse text.
-- Each section's "scripture" field MUST be EXACTLY one of the supplied reference strings, copied verbatim.
-- Do NOT output verse text anywhere. The verse wording is attached by the system from a canonical source.
-
-The ONLY valid scripture references you may select from are (each line is "Reference: text" for your UNDERSTANDING only — never reproduce the text):
-${suppliedBlock}
-
-Format as JSON:
-{
-  "title": "Bible Study: ${topic.title}",
-  "introduction": "2-3 paragraph introduction connecting the topic to faith",
-  "sections": [
-    {
-      "heading": "Section title",
-      "scripture": "One reference string copied EXACTLY from the supplied list",
-      "teaching": "2-3 paragraphs of teaching",
-      "reflection": "A reflection question"
-    }
-  ],
-  "conclusion": "Closing paragraph pointing to Christ",
-  "prayerPrompt": "A suggested prayer",
-  "groupDiscussion": ["3-4 discussion questions for small groups"]
-}
-
-Use 3-5 sections. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`),
-        },
-        {
-          role: "user",
-          content: `Create a Bible study on "${topic.title}". Select section scriptures ONLY from the supplied reference list. Do not write any verse text yourself.`,
-        },
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-    });
+    const response = await client.chat.completions.create(
+      buildTouchpointBibleStudyRequest({
+        topicTitle: topic.title,
+        suppliedBlock,
+        suppliedRefs,
+      }),
+    );
 
     const studyContent = JSON.parse(response.choices[0]?.message?.content || "{}");
 

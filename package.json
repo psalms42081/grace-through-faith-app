@@ -22,13 +22,14 @@
     "test:kids-story-illustrations": "tsx tests/kids-story-scene-illustration-request.test.ts && tsx server/tests/kids-scene-image-in-flight.test.ts",
     "test:sabbath-school-audio": "tsx --test server/tests/sabbath-school-audio-metadata.test.ts tests/sabbath-school-audio-player.test.ts",
     "test:sabbath-school-tutor": "tsx --test server/tests/sabbath-school-tutor-api.test.ts tests/sabbath-school-study-tutor.test.ts tests/sabbath-school-audio-player.test.ts",
+    "test:doctrinal-smoke": "tsx --test server/tests/doctrinal-ai-smoke.test.ts",
     "test:verse-map-generation": "tsx tests/verse-map-generation.test.ts",
     "start": "npx expo start",
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint-with-warning-budget.mjs",
     "lint:report": "npx expo lint",
     "lint:fix": "npx expo lint --fix",
-    "check": "npm run typecheck && npm run lint && npm run test:deploy-build-safety && npm run test:sabbath-school-tutor"
+    "check": "npm run typecheck && npm run lint && npm run test:deploy-build-safety && npm run test:sabbath-school-tutor && npm run test:doctrinal-smoke"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
