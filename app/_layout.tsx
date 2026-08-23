@@ -184,6 +184,8 @@ function RootLayoutNav() {
       <Stack.Screen name="deep-study-picker-v2" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-topic" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
+      <Stack.Screen name="touchpoint-topic-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="touchpoint-study-preview" options={{ headerShown: false }} />
       <Stack.Screen name="connect-media" options={{ headerShown: false }} />
       <Stack.Screen name="biblical-sabbaths" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
@@ -238,6 +240,8 @@ useEffect(() => {
         "/devotional-day-preview",
         "/odb-devotional-preview",
         "/egw-devotional-preview",
+        "/touchpoint-topic-preview",
+        "/touchpoint-study-preview",
       ];
       if (
         initialPathRef.current.startsWith("/read-legacy/") ||
