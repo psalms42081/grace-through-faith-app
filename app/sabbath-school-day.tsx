@@ -28,6 +28,11 @@ import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { buildStudyTutorRoute } from "@/lib/sabbath-school-tutor";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  buildSabbathSchoolDayNavigator,
+  buildSabbathSchoolDayRoute,
+  weekdayNameForSabbathSchoolDay,
+} from "@/lib/sabbath-school-day-navigation";
 
 interface DayData {
   id: string;
@@ -419,17 +424,21 @@ export default function SabbathSchoolDayScreen() {
     },
   });
 
-  const DAY_NAMES_FALLBACK = ["Sabbath", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sabbath"];
-  const dateMatch = (day?.date || "").match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  let currentDayName = DAY_NAMES_FALLBACK[dayNumber - 1] || `Day ${dayNumber}`;
-  if (dateMatch) {
-    const [, dd, mm, yyyy] = dateMatch;
-    const parsed = new Date(Date.UTC(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd)));
-    if (!isNaN(parsed.getTime())) {
-      currentDayName = WEEKDAY_NAMES[parsed.getUTCDay()];
-    }
-  }
+  const dayNavigatorItems = useMemo(
+    () => buildSabbathSchoolDayNavigator(data?.lesson?.days ?? []),
+    [data?.lesson?.days],
+  );
+  const currentDayName = day
+    ? weekdayNameForSabbathSchoolDay(day)
+    : `Day ${dayNumber}`;
+  const goToDay = (targetDayNumber: number) =>
+    router.replace(
+      buildSabbathSchoolDayRoute({
+        lessonNumber,
+        dayNumber: targetDayNumber,
+        quarterCode,
+      }) as any,
+    );
   const hasNextDay = dayNumber < totalDays;
   const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
   const newCompletedCount = isCompleted ? Math.max(completedDays, (data?.lesson?.days?.filter(d => d.completed || d.dayNumber === dayNumber).length || 0)) : completedDays;
@@ -460,30 +469,90 @@ export default function SabbathSchoolDayScreen() {
         <View style={styles.navBtns}>
           {dayNumber > 1 && (
             <Pressable
-              onPress={() =>
-                router.replace(
-                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber - 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
-                )
-              }
+              onPress={() => goToDay(dayNumber - 1)}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Previous lesson day"
             >
               <Ionicons name="chevron-back" size={22} color={theme.textMuted} />
             </Pressable>
           )}
           {dayNumber < totalDays && (
             <Pressable
-              onPress={() =>
-                router.replace(
-                  `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
-                )
-              }
+              onPress={() => goToDay(dayNumber + 1)}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Next lesson day"
             >
               <Ionicons name="chevron-forward" size={22} color={theme.textMuted} />
             </Pressable>
           )}
         </View>
       </View>
+
+      {dayNavigatorItems.length > 0 && (
+        <View
+          style={[styles.dayPickerBar, { borderBottomColor: theme.border }]}
+          testID="ss-day-picker"
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dayPickerContent}
+          >
+            {dayNavigatorItems.map((item) => {
+              const isActive = item.dayNumber === dayNumber;
+              const isComplete =
+                data?.lesson?.days?.find(
+                  (lessonDay) => lessonDay.dayNumber === item.dayNumber,
+                )?.completed ?? false;
+
+              return (
+                <Pressable
+                  key={item.dayNumber}
+                  onPress={() => goToDay(item.dayNumber)}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`Open ${item.label}'s lesson`}
+                  accessibilityState={{ selected: isActive }}
+                  testID={`ss-day-picker-${item.dayNumber}`}
+                  style={({ pressed }) => [
+                    styles.dayPickerItem,
+                    {
+                      backgroundColor: isActive
+                        ? theme.accent
+                        : theme.backgroundCard,
+                      borderColor: isActive ? theme.accent : theme.border,
+                      opacity: pressed ? 0.78 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayPickerLabel,
+                      { color: isActive ? "#FFFFFF" : theme.text },
+                    ]}
+                  >
+                    {item.shortLabel}
+                  </Text>
+                  <View
+                    style={[
+                      styles.dayPickerStatus,
+                      {
+                        backgroundColor: isActive
+                          ? "#FFFFFF"
+                          : isComplete
+                            ? theme.accent
+                            : "transparent",
+                        borderColor: isActive ? "#FFFFFF" : theme.border,
+                      },
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -717,18 +786,14 @@ export default function SabbathSchoolDayScreen() {
 
               {hasNextDay ? (
                 <Pressable
-                  onPress={() =>
-                    router.replace(
-                      `/sabbath-school-day?lessonNumber=${lessonNumber}&dayNumber=${dayNumber + 1}${quarterCode ? `&quarterCode=${quarterCode}` : ''}` as any
-                    )
-                  }
+                  onPress={() => goToDay(dayNumber + 1)}
                   style={({ pressed }) => [
                     styles.completionPrimaryBtn,
                     { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
                   ]}
                 >
                   <Text style={styles.completionPrimaryText}>
-                    Continue to {DAY_NAMES_FALLBACK[dayNumber] || `Day ${dayNumber + 1}`}
+                    Continue to {dayNavigatorItems.find((item) => item.dayNumber === dayNumber + 1)?.label || `Day ${dayNumber + 1}`}
                   </Text>
                   <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                 </Pressable>
@@ -799,6 +864,33 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: "Lora_700Bold", fontSize: 18 },
   headerSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
   navBtns: { flexDirection: "row", gap: 8, width: 50, justifyContent: "flex-end" },
+  dayPickerBar: {
+    borderBottomWidth: 1,
+    paddingBottom: 12,
+  },
+  dayPickerContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  dayPickerItem: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 48,
+    paddingVertical: 8,
+    gap: 5,
+  },
+  dayPickerLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+    letterSpacing: 0.4,
+  },
+  dayPickerStatus: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    borderWidth: 1,
+  },
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14 },
