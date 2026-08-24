@@ -27,6 +27,7 @@ import { GC_NODES, GCNode } from "@/data/great-controversy";
 import { BELIEFS } from "@/data/beliefs";
 import { navigateToScripture } from "@/lib/scripture-nav";
 import { useTranslation } from "@/context/TranslationContext";
+import { PROPHECY_TEACHING_VIDEOS as PROPHECY_VIDEOS } from "@/data/curatedYoutubeVideos";
 
 const GC_PROGRESS_KEY = "gc_timeline_progress";
 
@@ -51,39 +52,6 @@ const LEGEND_ITEMS = [
   { label: "Belief", color: "#2E7D32" },
   { label: "Hope", color: "#14B8A6" },
 ];
-
-const PROPHECY_VIDEOS = {
-  daniel2: [{
-    id: "4V0p5R7Ga8I",
-    title: "Dream of the Empires",
-    teacher: "Doug Batchelor",
-    duration: "1h 30m",
-  }],
-  daniel7: [{
-    id: "DPzLucu9a0U",
-    title: "The Antichrist Beast",
-    teacher: "Doug Batchelor",
-    duration: "1h 28m",
-  }],
-  daniel89: [{
-    id: "-M2ZerrbD2o",
-    title: "The Longest Time Prophecy",
-    teacher: "Doug Batchelor",
-    duration: "1h 28m",
-  }],
-  revelation: [{
-    id: "c9PAPqa3pRQ",
-    title: "Bowing to the Beast",
-    teacher: "Doug Batchelor",
-    duration: "1h 29m",
-  }],
-  greatControversy: [{
-    id: "N_u66nrvfjE",
-    title: "What Is The Great Controversy?",
-    teacher: "Mark Finley",
-    duration: "1h 0m",
-  }],
-} as const;
 
 if (
   Platform.OS === "android" &&

@@ -15,6 +15,8 @@ const allowedExecutableLines = new Set([
   'echo "=== Database-free production build v1 ==="',
   'echo "=== Verifying production build command allowlist ==="',
   "npm run test:deploy-build-safety",
+  'echo "=== Auditing curated teaching video availability ==="',
+  "npm run audit:touchpoint-videos",
   'echo "=== Building server ==="',
   "npm run server:build",
   'echo "=== Building Expo static (mobile) ==="',
@@ -57,6 +59,7 @@ if (violations.length > 0) {
 
 const expectedPackageScripts = {
   "test:deploy-build-safety": "node scripts/test-deploy-build-safety.mjs",
+  "audit:touchpoint-videos": "tsx scripts/audit-curated-videos.ts",
   "server:build":
     "esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outdir=server_dist",
   "expo:static:build": "node scripts/build.js",

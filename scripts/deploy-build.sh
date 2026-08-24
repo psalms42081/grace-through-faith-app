@@ -5,6 +5,9 @@ echo "=== Database-free production build v1 ==="
 echo "=== Verifying production build command allowlist ==="
 npm run test:deploy-build-safety
 
+echo "=== Auditing curated teaching video availability ==="
+npm run audit:touchpoint-videos
+
 echo "=== Building server ==="
 npm run server:build
 

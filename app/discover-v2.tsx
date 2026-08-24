@@ -24,6 +24,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
+import {
+  DISCOVER_FEATURED_SERIES as FEATURED_SERIES,
+  DISCOVER_WATCH_RAIL as WATCH_RAIL,
+} from "@/data/curatedYoutubeVideos";
 
 // ---- Screen tokens ----
 const D = {
@@ -76,23 +80,10 @@ const TOP_TOPIC_IDS = ["anxiety", "hope", "prayer", "forgiveness", "grief", "sab
 // set is NOT SS-linked, so it uses its own category token (Adventist Doctrines
 // plum), not teal.
 const FEATURED_GRADIENT = ["#5E2F68", "#7A3E86"] as const;
-const FEATURED_SERIES = {
-  title: "The Great Controversy",
-  oneLiner: "The cosmic conflict between Christ and Satan — from Lucifer's rebellion to sin's final end.",
-  episodes: 4,
-  firstYoutubeId: "LF6pjueQsHI",
-};
-
 // Watch rail (§A.2.4) — existing video assignments only. CANONICAL SOURCE:
 // server/data/bibleProjectVideos.ts — ids/youtubeIds/durations copied from
 // there; if that catalog changes, update this curated rail to match.
 // All videos route to YouTube per the existing rule.
-const WATCH_RAIL: { id: string; title: string; source: string; minutes: number; youtubeId: string; tint: string; ink: string }[] = [
-  { id: "gc-origin-of-evil", title: "The Origin of Evil", source: "SDA Church", minutes: 9, youtubeId: "fQ93yx7EPyM", tint: "#F0E6F2", ink: "#7A3E86" },
-  { id: "bp-forgiveness", title: "Forgiveness", source: "BibleProject", minutes: 6, youtubeId: "s-b_RbKvGAk", tint: "#E7F2DF", ink: "#3E6B2A" },
-  { id: "gc-impending-conflict", title: "The Impending Conflict", source: "SDA Church", minutes: 10, youtubeId: "m7T4zHy0VUw", tint: "#F0E6F2", ink: "#7A3E86" },
-  { id: "bp-justice", title: "Justice", source: "BibleProject", minutes: 6, youtubeId: "A14THPoc4-4", tint: "#E4E9F5", ink: "#3A4E8C" }, // 5:48 → 6
-];
 
 // Translations are fetched live from /api/translations — we never hardcode a
 // fixed list (that would risk showing an entry the backend cannot serve, or

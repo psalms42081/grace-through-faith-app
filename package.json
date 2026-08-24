@@ -26,6 +26,7 @@
     "test:touchpoint-preview": "tsx --test tests/touchpoint-topic-preview.test.ts",
     "test:touchpoints": "tsx --test server/tests/touchpoints-scripture.test.ts tests/touchpoint-topic-preview.test.ts",
     "test:touchpoint-videos": "tsx --test server/tests/bible-project-videos.test.ts",
+    "audit:touchpoint-videos": "tsx scripts/audit-curated-videos.ts",
     "test:doctrinal-smoke": "tsx --test server/tests/doctrinal-ai-smoke.test.ts",
     "test:verse-map-generation": "tsx tests/verse-map-generation.test.ts",
     "start": "npx expo start",

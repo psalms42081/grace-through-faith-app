@@ -19,41 +19,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { track } from "@/lib/analytics";
 import ScreenHeader from "@/components/ScreenHeader";
+import { PROPHECY_TEACHING_VIDEOS as PROPHECY_VIDEOS } from "@/data/curatedYoutubeVideos";
 
 const PROPHECY_VIEWED_KEY = "prophecy_viewed";
-
-const PROPHECY_VIDEOS = {
-  daniel2: [{
-    id: "4V0p5R7Ga8I",
-    title: "Dream of the Empires",
-    teacher: "Doug Batchelor",
-    duration: "1h 30m",
-  }],
-  daniel7: [{
-    id: "DPzLucu9a0U",
-    title: "The Antichrist Beast",
-    teacher: "Doug Batchelor",
-    duration: "1h 28m",
-  }],
-  daniel89: [{
-    id: "-M2ZerrbD2o",
-    title: "The Longest Time Prophecy",
-    teacher: "Doug Batchelor",
-    duration: "1h 28m",
-  }],
-  revelation: [{
-    id: "c9PAPqa3pRQ",
-    title: "Bowing to the Beast",
-    teacher: "Doug Batchelor",
-    duration: "1h 29m",
-  }],
-  greatControversy: [{
-    id: "N_u66nrvfjE",
-    title: "What Is The Great Controversy?",
-    teacher: "Mark Finley",
-    duration: "1h 0m",
-  }],
-} as const;
 
 if (
   Platform.OS === "android" &&
