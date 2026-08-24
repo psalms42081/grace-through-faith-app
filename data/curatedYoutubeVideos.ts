@@ -152,7 +152,6 @@ export interface DiscoverWatchRailVideo {
 
 export const DISCOVER_WATCH_RAIL: DiscoverWatchRailVideo[] = [
   { id: "gc-origin-of-evil", title: "The Origin of Evil", source: "SDA Church", minutes: 9, youtubeId: "fQ93yx7EPyM", tint: "#F0E6F2", ink: "#7A3E86" },
-  { id: "bp-forgiveness", title: "Forgiveness", source: "BibleProject", minutes: 6, youtubeId: "s-b_RbKvGAk", tint: "#E7F2DF", ink: "#3E6B2A" },
   { id: "gc-impending-conflict", title: "The Impending Conflict", source: "SDA Church", minutes: 10, youtubeId: "m7T4zHy0VUw", tint: "#F0E6F2", ink: "#7A3E86" },
   { id: "bp-justice", title: "Justice", source: "BibleProject", minutes: 6, youtubeId: "A14THPoc4-4", tint: "#E4E9F5", ink: "#3A4E8C" },
 ];

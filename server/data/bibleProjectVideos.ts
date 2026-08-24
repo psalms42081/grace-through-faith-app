@@ -20,18 +20,25 @@ export const KNOWN_UNAVAILABLE_YOUTUBE_IDS = new Set([
   "oMhesKPKQPo",
   "s3BXfvCjIkM",
   "XRRbkMa217I",
+  "s-b_RbKvGAk",
+  "R2ouoMFBBWk",
+  "qAqBqxVGQYQ",
+  "7wd_GU02Xtg",
+  "OPV3qletNEE",
+  "cBxOGLO0fco",
+  "ry79gV_GJAU",
+  "YZPZ3SppxeI",
+  "oo8a9tBBX_Q",
+  "z6cE06SIAOo",
+  "ENGIKIXXhnc",
+  "wRFBqo3tB8A",
+  "xFHpMOB9jCE",
+  "wGcFBfKz5yUQ",
+  "kS_P1PpMkOE",
+  "aafTwSz_rEk",
 ]);
 export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
-  abandonment: [
-    {
-      id: "bp-hesed-loyal-love",
-      title: "Khesed — Loyal Love",
-      youtubeId: "R2ouoMFBBWk",
-      duration: "5:48",
-      description: "Discover the Hebrew word for God's relentless, loyal love that never lets go.",
-      series: "Word Study",
-    },
-  ],
+  abandonment: [],
   addiction: [
     {
       id: "bp-sin",
@@ -44,14 +51,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
   ],
   anger: [
     {
-      id: "bp-slow-to-anger",
-      title: "Slow to Anger",
-      youtubeId: "qAqBqxVGQYQ",
-      duration: "5:46",
-      description: "Explore what it means that God is 'slow to anger' and how that reshapes our understanding of divine patience.",
-      series: "Character of God",
-    },
-    {
       id: "bp-justice",
       title: "Justice",
       youtubeId: "A14THPoc4-4",
@@ -63,14 +62,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
   anxiety: [],
   forgiveness: [
     {
-      id: "bp-forgiveness",
-      title: "Forgiveness",
-      youtubeId: "s-b_RbKvGAk",
-      duration: "6:20",
-      description: "Trace the theme of forgiveness through the whole biblical story.",
-      series: "Biblical Themes",
-    },
-    {
       id: "bp-atonement",
       title: "Atonement",
       youtubeId: "G_OlRWGLdnw",
@@ -80,24 +71,7 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
     },
   ],
   grief: [],
-  loneliness: [
-    {
-      id: "bp-wilderness",
-      title: "The Wilderness",
-      youtubeId: "xFHpMOB9jCE",
-      duration: "6:01",
-      description: "Why does God sometimes lead his people into harsh, isolated places? The wilderness is where trust deepens.",
-      series: "Biblical Themes",
-    },
-    {
-      id: "bp-the-temple",
-      title: "The Temple",
-      youtubeId: "wRFBqo3tB8A",
-      duration: "5:38",
-      description: "God's desire to dwell with His people — from Eden to the Temple to Jesus.",
-      series: "Biblical Themes",
-    },
-  ],
+  loneliness: [],
   purpose: [
     {
       id: "bp-image-of-god",
@@ -116,24 +90,7 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       series: "Book Overview",
     },
   ],
-  fear: [
-    {
-      id: "bp-fear-of-the-lord",
-      title: "The Fear of the Lord",
-      youtubeId: "ry79gV_GJAU",
-      duration: "6:06",
-      description: "What does it mean to 'fear the Lord'? Explore this surprising biblical concept.",
-      series: "Proverbs Theme",
-    },
-    {
-      id: "bp-spiritual-beings",
-      title: "Spiritual Beings",
-      youtubeId: "cBxOGLO0fco",
-      duration: "5:23",
-      description: "The unseen spiritual realm in the Bible — angels, demons, and God's authority over all.",
-      series: "Biblical Themes",
-    },
-  ],
+  fear: [],
   marriage: [
     {
       id: "bp-song-of-songs",
@@ -143,42 +100,9 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       description: "An overview of the Bible's celebration of romantic love and covenant faithfulness.",
       series: "Book Overview",
     },
-    {
-      id: "bp-covenants",
-      title: "The Covenants",
-      youtubeId: "wGcFBfKz5yUQ",
-      duration: "5:46",
-      description: "God keeps making covenant promises despite human failure — the foundation of every lasting relationship.",
-      series: "Biblical Themes",
-    },
   ],
-  patience: [
-    {
-      id: "bp-slow-to-anger-patience",
-      title: "Slow to Anger",
-      youtubeId: "qAqBqxVGQYQ",
-      duration: "5:46",
-      description: "God's patience isn't passive — it's an active, purposeful restraint rooted in love.",
-      series: "Character of God",
-    },
-    {
-      id: "bp-character-of-god",
-      title: "Character of God — Compassionate",
-      youtubeId: "ENGIKIXXhnc",
-      duration: "5:23",
-      description: "Explore the first word God uses to describe himself: compassionate.",
-      series: "Character of God",
-    },
-  ],
+  patience: [],
   temptation: [
-    {
-      id: "bp-the-test",
-      title: "The Test",
-      youtubeId: "aafTwSz_rEk",
-      duration: "5:37",
-      description: "Why does God allow testing? Trace this theme from the garden to Jesus in the wilderness.",
-      series: "Biblical Themes",
-    },
     {
       id: "bp-sin-theme",
       title: "Sin",
@@ -196,14 +120,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       duration: "8:05",
       description: "Job wrestles with the deepest question: why do the righteous suffer?",
       series: "Book Overview",
-    },
-    {
-      id: "bp-the-suffering-servant",
-      title: "The Servant",
-      youtubeId: "kS_P1PpMkOE",
-      duration: "6:12",
-      description: "Isaiah's portrait of the suffering servant — the one who bears the pain of others.",
-      series: "Biblical Themes",
     },
   ],
   gratitude: [
@@ -251,14 +167,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       description: "You are made in God's image — discover what that means for your identity and calling.",
       series: "Biblical Themes",
     },
-    {
-      id: "bp-son-of-man",
-      title: "Son of Man",
-      youtubeId: "z6cE06SIAOo",
-      duration: "6:15",
-      description: "Jesus calls himself the Son of Man — connecting our identity to his mission.",
-      series: "Biblical Themes",
-    },
   ],
   contentment: [
     {
@@ -288,24 +196,7 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       series: "Biblical Themes",
     },
   ],
-  "doubt-and-faith": [
-    {
-      id: "bp-faith",
-      title: "Faith",
-      youtubeId: "7wd_GU02Xtg",
-      duration: "5:36",
-      description: "What does biblical faith actually look like? It's not blind — it's trusting a God who has proven himself.",
-      series: "Word Study",
-    },
-    {
-      id: "bp-habakkuk",
-      title: "The Book of Habakkuk",
-      youtubeId: "OPV3qletNEE",
-      duration: "7:28",
-      description: "Habakkuk asks God the hard questions — and learns to trust even when the answers don't come.",
-      series: "Book Overview",
-    },
-  ],
+  "doubt-and-faith": [],
   generosity: [
     {
       id: "bp-generosity-theme",
@@ -338,14 +229,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
   ],
   humility: [
     {
-      id: "bp-grace",
-      title: "Grace — Khen",
-      youtubeId: "oo8a9tBBX_Q",
-      duration: "5:40",
-      description: "Grace is God's generous gift to the humble — unmerited favour that changes everything.",
-      series: "Character of God",
-    },
-    {
       id: "bp-philippians",
       title: "The Book of Philippians",
       youtubeId: "oE9qqW1-BkU",
@@ -363,25 +246,8 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       description: "Proverbs is wisdom passed from parent to child — a guide for raising wise hearts.",
       series: "Book Overview",
     },
-    {
-      id: "bp-family-of-god",
-      title: "The Family of God",
-      youtubeId: "ry79gV_GJAU",
-      duration: "6:06",
-      description: "God parents his people with patience, discipline, and unconditional love.",
-      series: "Biblical Themes",
-    },
   ],
-  hope: [
-    {
-      id: "bp-revelation",
-      title: "The Book of Revelation (Part 2)",
-      youtubeId: "YZPZ3SppxeI",
-      duration: "6:10",
-      description: "Revelation's vision of the new creation — the ultimate hope for all who trust God.",
-      series: "Book Overview",
-    },
-  ],
+  hope: [],
   "sabbath-rest": [
     {
       id: "bp-sabbath",
@@ -408,14 +274,6 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
       duration: "5:48",
       description: "Biblical justice is about restoring what's broken and caring for the vulnerable.",
       series: "Biblical Themes",
-    },
-    {
-      id: "bp-compassionate",
-      title: "Compassionate",
-      youtubeId: "ENGIKIXXhnc",
-      duration: "5:23",
-      description: "The first thing God says about himself is that he is compassionate — moved by the suffering of others.",
-      series: "Character of God",
     },
   ],
   "work-vocation": [

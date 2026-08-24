@@ -41,10 +41,10 @@ describe("pastoral topic video availability contract", () => {
     );
   });
 
-  it("never serves a known unavailable YouTube ID under any topic", () => {
-    const returnedIds = Object.values(BIBLE_PROJECT_VIDEOS)
-      .flat()
-      .map((video) => video.youtubeId);
+  it("never registers a known unavailable YouTube ID on any curated surface", () => {
+    const returnedIds = collectAllCuratedYoutubeVideoReferences().map(
+      (video) => video.youtubeId,
+    );
 
     for (const deadId of KNOWN_UNAVAILABLE_YOUTUBE_IDS) {
       assert.equal(returnedIds.includes(deadId), false, `${deadId} must not be returned`);
@@ -266,7 +266,7 @@ describe("pastoral topic video availability contract", () => {
       references.some(
         (reference) =>
           reference.surface === "Discover watch rail" &&
-          reference.cardId === "bp-forgiveness",
+          reference.cardId === "bp-justice",
       ),
     );
     assert.ok(
