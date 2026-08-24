@@ -27,6 +27,7 @@
     "test:touchpoints": "tsx --test server/tests/touchpoints-scripture.test.ts tests/touchpoint-topic-preview.test.ts",
     "test:touchpoint-videos": "tsx --test server/tests/bible-project-videos.test.ts",
     "audit:touchpoint-videos": "tsx scripts/audit-curated-videos.ts",
+    "test:navigation-feedback": "tsx --test tests/navigation-feedback-regressions.test.ts",
     "test:doctrinal-smoke": "tsx --test server/tests/doctrinal-ai-smoke.test.ts",
     "test:verse-map-generation": "tsx tests/verse-map-generation.test.ts",
     "start": "npx expo start",
@@ -34,7 +35,7 @@
     "lint": "node scripts/lint-with-warning-budget.mjs",
     "lint:report": "npx expo lint",
     "lint:fix": "npx expo lint --fix",
-    "check": "npm run typecheck && npm run lint && npm run test:deploy-build-safety && npm run test:sabbath-school-date && npm run test:sabbath-school-tutor && npm run test:touchpoints && npm run test:touchpoint-videos && npm run test:doctrinal-smoke"
+    "check": "npm run typecheck && npm run lint && npm run test:deploy-build-safety && npm run test:sabbath-school-date && npm run test:sabbath-school-tutor && npm run test:touchpoints && npm run test:touchpoint-videos && npm run test:navigation-feedback && npm run test:doctrinal-smoke"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

@@ -82,7 +82,7 @@ export default function BibleEntryScreen() {
       if (attempt !== attemptRef.current) return;
 
       router.replace({
-        pathname: "/read/[bookId]/[chapter]",
+        pathname: "/(tabs)/bible-reader/[bookId]/[chapter]" as any,
         params: {
           bookId: String(destination.bookId),
           chapter: String(destination.chapter),

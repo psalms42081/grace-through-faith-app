@@ -116,6 +116,12 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="bible-reader"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="connect"
         options={{
           title: t("tabs.connect"),

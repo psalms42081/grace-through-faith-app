@@ -13,7 +13,7 @@ import {
   Dimensions,
   PanResponder,
 } from "react-native";
-import { router, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
+import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -603,6 +603,8 @@ const sheetStyles = StyleSheet.create({
 
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
+  const segments = useSegments();
+  const isTabReader = (segments as string[]).includes("bible-reader");
   const { theme } = useTheme();
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
@@ -629,6 +631,12 @@ export default function VerseReaderScreen() {
   const requestedTx = normalizeCode(txParam) || normalizeCode(globalTranslation) || "KJV";
   const [translation, setTranslationLocal] = useState<Translation>(requestedTx);
   const userOverrodeTranslation = useRef(false);
+  const readerBasePath = isTabReader ? "/(tabs)/bible-reader" : "/read";
+  const readerRoute = useCallback(
+    (targetChapter: number) =>
+      `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any,
+    [bookId, readerBasePath, translation],
+  );
 
   useEffect(() => {
     userOverrodeTranslation.current = false;
@@ -959,16 +967,16 @@ export default function VerseReaderScreen() {
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
       audioHandleStop();
-      router.replace(`/read/${bookId}/${chapterNum - 1}?translation=${translation}` as any);
+      router.replace(readerRoute(chapterNum - 1));
     }
-  }, [bookId, chapterNum, canGoPrev, translation, audioHandleStop]);
+  }, [chapterNum, canGoPrev, audioHandleStop, readerRoute]);
 
   const goToNext = useCallback(() => {
     if (canGoNext) {
       audioHandleStop();
-      router.replace(`/read/${bookId}/${chapterNum + 1}?translation=${translation}` as any);
+      router.replace(readerRoute(chapterNum + 1));
     }
-  }, [bookId, chapterNum, canGoNext, translation, audioHandleStop]);
+  }, [chapterNum, canGoNext, audioHandleStop, readerRoute]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -1572,7 +1580,7 @@ export default function VerseReaderScreen() {
                         setShowChapterPicker(false);
                         if (!isCurrent) {
                           audio.handleStop();
-                          router.replace(`/read/${bookId}/${n}?translation=${translation}` as any);
+                          router.replace(readerRoute(n));
                         }
                       }}
                       style={[styles.chapterCell, isCurrent && { backgroundColor: RV2_INK }]}

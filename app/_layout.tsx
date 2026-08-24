@@ -249,8 +249,8 @@ useEffect(() => {
       ) {
         return;
       }
-      // Always show the splash/intro on every launch
-      const timer = setTimeout(() => router.replace("/onboarding"), 50);
+      const targetRoute = needsOnboarding ? "/onboarding" : "/(tabs)";
+      const timer = setTimeout(() => router.replace(targetRoute), 50);
       return () => clearTimeout(timer);
     }
   }, [fontsLoaded, onboardingChecked, needsOnboarding, i18nReady]);
