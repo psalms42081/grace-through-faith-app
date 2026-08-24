@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -22,6 +21,7 @@ import {
   TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   type TouchpointGeneratedStudy,
 } from "@shared/touchpoint-study";
+import { openYouTubeVideo } from "@/lib/open-youtube-video";
 
 interface Verse { ref: string; text: string; translation: string; source: string; resolved: true }
 interface TouchPointQuestion { id: string; question: string; verses: Verse[]; commentary: string }
@@ -79,9 +79,8 @@ export function TouchpointTopicPreview() {
   };
   const openVideo = async (video: BibleProjectVideo) => {
     setVideoOpenError(null);
-    try {
-      await Linking.openURL(`https://www.youtube.com/watch?v=${video.youtubeId}`);
-    } catch {
+    const opened = await openYouTubeVideo(video.youtubeId);
+    if (!opened) {
       setVideoOpenError(video.id);
     }
   };

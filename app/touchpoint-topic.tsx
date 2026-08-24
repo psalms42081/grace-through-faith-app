@@ -8,7 +8,6 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Linking,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -19,6 +18,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
+import { openYouTubeVideo } from "@/lib/open-youtube-video";
 
 const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
@@ -63,13 +63,10 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
-  const youtubeUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
-
   const handlePress = async () => {
     setOpenError(false);
-    try {
-      await Linking.openURL(youtubeUrl);
-    } catch {
+    const opened = await openYouTubeVideo(video.youtubeId);
+    if (!opened) {
       setOpenError(true);
     }
   };

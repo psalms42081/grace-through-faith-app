@@ -14,6 +14,13 @@ export interface TopicVideoMapping {
   videos: BibleProjectVideo[];
 }
 
+export const KNOWN_UNAVAILABLE_YOUTUBE_IDS = new Set([
+  "p-dwZ8cPQ7c",
+  "Lb4dOM4-FVM",
+  "oMhesKPKQPo",
+  "s3BXfvCjIkM",
+  "XRRbkMa217I",
+]);
 export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
   abandonment: [
     {
@@ -473,3 +480,19 @@ export const BIBLE_PROJECT_VIDEOS: Record<string, BibleProjectVideo[]> = {
     },
   ],
 };
+
+export function assertBibleProjectVideoCatalog(
+  catalog: Record<string, BibleProjectVideo[]>
+): void {
+  for (const [topicId, videos] of Object.entries(catalog)) {
+    for (const video of videos) {
+      if (KNOWN_UNAVAILABLE_YOUTUBE_IDS.has(video.youtubeId)) {
+        throw new Error(
+          `Known unavailable YouTube video ${video.youtubeId} is assigned to pastoral topic ${topicId}`
+        );
+      }
+    }
+  }
+}
+
+assertBibleProjectVideoCatalog(BIBLE_PROJECT_VIDEOS);

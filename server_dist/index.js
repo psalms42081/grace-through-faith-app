@@ -57987,6 +57987,13 @@ function searchTouchpoints(query) {
 }
 
 // server/data/bibleProjectVideos.ts
+var KNOWN_UNAVAILABLE_YOUTUBE_IDS = /* @__PURE__ */ new Set([
+  "p-dwZ8cPQ7c",
+  "Lb4dOM4-FVM",
+  "oMhesKPKQPo",
+  "s3BXfvCjIkM",
+  "XRRbkMa217I"
+]);
 var BIBLE_PROJECT_VIDEOS = {
   abandonment: [
     {
@@ -58446,6 +58453,18 @@ var BIBLE_PROJECT_VIDEOS = {
     }
   ]
 };
+function assertBibleProjectVideoCatalog(catalog) {
+  for (const [topicId, videos] of Object.entries(catalog)) {
+    for (const video of videos) {
+      if (KNOWN_UNAVAILABLE_YOUTUBE_IDS.has(video.youtubeId)) {
+        throw new Error(
+          `Known unavailable YouTube video ${video.youtubeId} is assigned to pastoral topic ${topicId}`
+        );
+      }
+    }
+  }
+}
+assertBibleProjectVideoCatalog(BIBLE_PROJECT_VIDEOS);
 
 // server/routes/touchpoints.ts
 init_db();

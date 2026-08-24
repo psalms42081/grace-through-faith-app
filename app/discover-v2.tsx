@@ -12,7 +12,6 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-  Linking,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +23,7 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
+import { openYouTubeVideo } from "@/lib/open-youtube-video";
 
 // ---- Screen tokens ----
 const D = {
@@ -89,8 +89,6 @@ const FEATURED_SERIES = {
 // All videos route to YouTube per the existing rule.
 const WATCH_RAIL: { id: string; title: string; source: string; minutes: number; youtubeId: string; tint: string; ink: string }[] = [
   { id: "gc-origin-of-evil", title: "The Origin of Evil", source: "SDA Church", minutes: 9, youtubeId: "fQ93yx7EPyM", tint: "#F0E6F2", ink: "#7A3E86" },
-  { id: "bp-hope", title: "Hope", source: "BibleProject", minutes: 6, youtubeId: "Lb4dOM4-FVM", tint: "#DDF0FB", ink: "#175F94" },
-  { id: "bp-shalom-peace", title: "Shalom — Peace", source: "BibleProject", minutes: 6, youtubeId: "oMhesKPKQPo", tint: "#DFF6F2", ink: "#14655D" },
   { id: "bp-forgiveness", title: "Forgiveness", source: "BibleProject", minutes: 6, youtubeId: "s-b_RbKvGAk", tint: "#E7F2DF", ink: "#3E6B2A" },
   { id: "gc-impending-conflict", title: "The Impending Conflict", source: "SDA Church", minutes: 10, youtubeId: "m7T4zHy0VUw", tint: "#F0E6F2", ink: "#7A3E86" },
   { id: "bp-justice", title: "Justice", source: "BibleProject", minutes: 6, youtubeId: "A14THPoc4-4", tint: "#E4E9F5", ink: "#3A4E8C" }, // 5:48 → 6
@@ -259,9 +257,9 @@ export default function DiscoverV2Screen() {
   const openTopic = useCallback((topicId: string) => {
     router.push(`/touchpoint-topic?topicId=${topicId}` as any);
   }, []);
-  const openVideo = useCallback((youtubeId: string) => {
+  const openVideo = useCallback(async (youtubeId: string) => {
     // Existing rule: videos open on YouTube (touchpoint-topic behaviour).
-    Linking.openURL(`https://www.youtube.com/watch?v=${youtubeId}`).catch(() => {});
+    await openYouTubeVideo(youtubeId);
   }, []);
 
   // Search mode engages on focus (parity with interim screen: translation

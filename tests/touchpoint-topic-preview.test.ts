@@ -19,6 +19,11 @@ const productionStudySource = readFileSync(
   "utf8"
 );
 
+const youtubeLinkSource = readFileSync(
+  new URL("../lib/open-youtube-video.ts", import.meta.url),
+  "utf8"
+);
+
 describe("pastoral touchpoint light previews", () => {
   it("registers hidden topic and generated-study preview routes", () => {
     assert.match(layoutSource, /name="touchpoint-topic-preview"/);
@@ -61,4 +66,20 @@ describe("pastoral touchpoint light previews", () => {
     assert.doesNotMatch(productionTopicSource, /TouchpointTopicPreview/);
     assert.doesNotMatch(productionStudySource, /TouchpointStudyPreview/);
   });
+
+  it("awaits YouTube opening with a calm fallback and no unreachable embedded player", () => {
+    assert.match(productionTopicSource, /await openYouTubeVideo\(video\.youtubeId\)/);
+    assert.match(previewSource, /await openYouTubeVideo\(video\.youtubeId\)/);
+    assert.match(youtubeLinkSource, /await Linking\.openURL/);
+    assert.match(youtubeLinkSource, /YouTube couldn’t open right now/);
+    assert.match(youtubeLinkSource, /Alert\.alert\("Video unavailable"/);
+    assert.doesNotMatch(productionTopicSource, /WebView|<iframe|embedUrl|setPlaying/);
+    assert.doesNotMatch(discoverSource, /Lb4dOM4-FVM|oMhesKPKQPo/);
+    assert.match(discoverSource, /await openYouTubeVideo\(youtubeId\)/);
+  });
 });
+
+const discoverSource = readFileSync(
+  new URL("../app/discover-v2.tsx", import.meta.url),
+  "utf8"
+);
