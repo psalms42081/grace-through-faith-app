@@ -77,5 +77,5 @@ export function buildSabbathSchoolDayRoute({
     dayNumber: String(dayNumber),
   });
   if (quarterCode) query.set("quarterCode", quarterCode);
-  return `/(tabs)/ss/sabbath-school-day?${query.toString()}`;
+  return `/sabbath-school-day?${query.toString()}`;
 }

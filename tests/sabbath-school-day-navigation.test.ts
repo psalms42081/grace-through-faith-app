@@ -8,7 +8,7 @@ import {
 } from "../lib/sabbath-school-day-navigation";
 
 const dayReaderSource = readFileSync(
-  new URL("../app/sabbath-school-day.tsx", import.meta.url),
+  new URL("../app/(tabs)/sabbath-school-day.tsx", import.meta.url),
   "utf8",
 );
 
@@ -39,7 +39,7 @@ describe("Sabbath School direct day navigation", () => {
         dayNumber: 6,
         quarterCode: "2026-03-cq",
       }),
-      "/(tabs)/ss/sabbath-school-day?lessonNumber=7&dayNumber=6&quarterCode=2026-03-cq",
+      "/sabbath-school-day?lessonNumber=7&dayNumber=6&quarterCode=2026-03-cq",
     );
   });
 

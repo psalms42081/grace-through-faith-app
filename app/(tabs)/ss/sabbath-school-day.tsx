@@ -1,1 +1,1 @@
-export { default } from "../../sabbath-school-day";
+export { default } from "../sabbath-school-day";

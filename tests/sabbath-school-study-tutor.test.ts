@@ -77,17 +77,17 @@ describe("Sabbath School Study Tutor client guard", () => {
 
       assert.equal(
         readerRoute,
-        "/(tabs)/ss/sabbath-school-day?lessonNumber=4&dayNumber=1&quarterCode=2026-03",
+        "/sabbath-school-day?lessonNumber=4&dayNumber=1&quarterCode=2026-03",
       );
       assert.equal(
         tutorRoute,
-        "/(tabs)/ss/sabbath-school-day-tutor?lessonId=lesson+id%2F4&dayId=day+id%2F1&lessonNumber=4&dayNumber=1&quarterCode=2026-03",
+        "/ss/sabbath-school-day-tutor?lessonId=lesson+id%2F4&dayId=day+id%2F1&lessonNumber=4&dayNumber=1&quarterCode=2026-03",
       );
     });
   }
 
   it("keeps reader and audio controls on the return screen contract", () => {
-    const readerSource = readFileSync("app/sabbath-school-day.tsx", "utf8");
+    const readerSource = readFileSync("app/(tabs)/sabbath-school-day.tsx", "utf8");
     const tutorSource = readFileSync("app/sabbath-school-day-tutor.tsx", "utf8");
 
     assert.match(readerSource, /testID="ss-day-reader"/);

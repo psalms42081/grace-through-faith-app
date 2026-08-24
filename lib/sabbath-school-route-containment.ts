@@ -1,7 +1,10 @@
 import { router, useSegments } from "expo-router";
 import { useEffect } from "react";
 
-export const SABBATH_SCHOOL_TAB_ROOT = "/(tabs)/ss/sabbath-school";
+// Use the public path for tab-owned screens when navigating. Including the
+// hidden route group in a router target lets Expo render the right screen, but
+// its web canonicalizer can drop the target query string.
+export const SABBATH_SCHOOL_TAB_ROOT = "/ss/sabbath-school";
 
 export type SabbathSchoolTabScreen =
   | "sabbath-school"
@@ -9,6 +12,16 @@ export type SabbathSchoolTabScreen =
   | "sabbath-school-day"
   | "sabbath-school-day-tutor"
   | "sabbath-school-discussion";
+
+function sabbathSchoolPublicPath(screen: SabbathSchoolTabScreen): string {
+  if (
+    screen === "sabbath-school-day" ||
+    screen === "sabbath-school-quarter"
+  ) {
+    return `/${screen}`;
+  }
+  return `/ss/${screen}`;
+}
 
 export function buildSabbathSchoolTabRoute(
   screen: SabbathSchoolTabScreen,
@@ -21,7 +34,7 @@ export function buildSabbathSchoolTabRoute(
     }
   });
   const suffix = query.toString() ? `?${query.toString()}` : "";
-  return `/(tabs)/ss/${screen}${suffix}`;
+  return `${sabbathSchoolPublicPath(screen)}${suffix}`;
 }
 
 export function useSabbathSchoolTabContainment(
@@ -36,7 +49,7 @@ export function useSabbathSchoolTabContainment(
   useEffect(() => {
     if (!isTabContained && ready) {
       router.replace({
-        pathname: `/(tabs)/ss/${screen}`,
+        pathname: sabbathSchoolPublicPath(screen),
         params: JSON.parse(paramsKey),
       } as any);
     }

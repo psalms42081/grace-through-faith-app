@@ -137,6 +137,18 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="sabbath-school-day"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="sabbath-school-quarter"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="connect"
         options={{
           title: t("tabs.connect"),

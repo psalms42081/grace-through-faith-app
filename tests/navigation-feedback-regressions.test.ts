@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const tabEntrySource = readFileSync(
@@ -30,11 +30,15 @@ const sabbathSchoolTabStackSource = readFileSync(
   "utf8",
 );
 const sabbathSchoolTabDaySource = readFileSync(
-  new URL("../app/(tabs)/ss/sabbath-school-day.tsx", import.meta.url),
+  new URL("../app/(tabs)/sabbath-school-day.tsx", import.meta.url),
+  "utf8",
+);
+const sabbathSchoolTabQuarterSource = readFileSync(
+  new URL("../app/(tabs)/sabbath-school-quarter.tsx", import.meta.url),
   "utf8",
 );
 const sabbathSchoolDaySource = readFileSync(
-  new URL("../app/sabbath-school-day.tsx", import.meta.url),
+  new URL("../app/(tabs)/sabbath-school-day.tsx", import.meta.url),
   "utf8",
 );
 const sabbathSchoolContainmentSource = readFileSync(
@@ -67,12 +71,29 @@ describe("external tester navigation feedback", () => {
   });
 
   it("keeps the Sabbath School chain inside the tab navigator", () => {
+    assert.equal(
+      existsSync(new URL("../app/sabbath-school-day.tsx", import.meta.url)),
+      false,
+    );
+    assert.equal(
+      existsSync(new URL("../app/sabbath-school-quarter.tsx", import.meta.url)),
+      false,
+    );
     assert.match(tabLayoutSource, /name="ss"[\s\S]*?href:\s*null/);
+    assert.match(
+      tabLayoutSource,
+      /name="sabbath-school-day"[\s\S]*?href:\s*null/,
+    );
+    assert.match(
+      tabLayoutSource,
+      /name="sabbath-school-quarter"[\s\S]*?href:\s*null/,
+    );
     assert.match(sabbathSchoolTabStackSource, /headerShown:\s*false/);
     assert.match(sabbathSchoolTabDaySource, /sabbath-school-day/);
+    assert.match(sabbathSchoolTabQuarterSource, /sabbath-school-quarter/);
     assert.match(
       sabbathSchoolContainmentSource,
-      /router\.replace\(\{[\s\S]*?pathname:[\s\S]*?params:/,
+      /router\.replace\(\{[\s\S]*?pathname:\s*sabbathSchoolPublicPath\(screen\)[\s\S]*?params:/,
     );
     assert.match(
       sabbathSchoolDaySource,

@@ -54,7 +54,7 @@ export function buildSabbathSchoolDayRoute({
     dayNumber: String(dayNumber),
   });
   if (quarterCode) query.set("quarterCode", quarterCode);
-  return `/(tabs)/ss/sabbath-school-day?${query.toString()}`;
+  return `/sabbath-school-day?${query.toString()}`;
 }
 
 export function buildStudyTutorRoute({
@@ -68,5 +68,5 @@ export function buildStudyTutorRoute({
   if (lessonNumber !== undefined) query.set("lessonNumber", String(lessonNumber));
   if (dayNumber !== undefined) query.set("dayNumber", String(dayNumber));
   if (quarterCode) query.set("quarterCode", quarterCode);
-  return `/(tabs)/ss/sabbath-school-day-tutor?${query.toString()}`;
+  return `/ss/sabbath-school-day-tutor?${query.toString()}`;
 }
