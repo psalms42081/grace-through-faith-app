@@ -13,11 +13,19 @@ export interface TouchPointResource {
   durationMinutes: number;
 }
 
+export interface CareGuidanceReview {
+  approvedBy: "Joe";
+  approvedAt: string;
+}
+
 export interface TouchPointTopic {
   id: string;
   title: string;
   category: string;
   overview: string;
+  careGuidance?: string;
+  studyCareNote?: string;
+  careGuidanceReview?: CareGuidanceReview;
   questions: TouchPointQuestion[];
   resources?: TouchPointResource[];
 }
@@ -114,7 +122,10 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
     id: "addiction",
     title: "Addiction",
     category: "Emotions & Struggles",
-    overview: "Addiction is a powerful force that can control our thoughts, actions, and relationships. Whether it's substance abuse, pornography, gambling, or any compulsive behavior, addiction promises freedom but delivers slavery. The good news is that God specializes in setting captives free. Through His power, honest community, and daily dependence on Him, chains can be broken. Recovery is not about willpower alone — it's about surrendering to a power greater than our weakness.",
+    overview: "Addiction can affect thoughts, actions, health, and relationships, whether it involves alcohol or other drugs, pornography, gambling, or another compulsive behavior. It is not a sign that you are beyond God's love or simply need more willpower. Prayer, Scripture, and a caring faith community can support recovery, but they do not replace professional addiction treatment. Recovery often includes medical or clinical care, honest support, and practical plans for one day at a time.",
+    careGuidance: "Distinguish spiritual encouragement from addiction treatment and never promise that prayer, faith, or willpower will cure addiction. Encourage appropriate care from a licensed clinician or addiction specialist, a sponsor or peer-recovery group, and an evidence-based treatment program. Describe relapse without shame: it does not erase progress, but it is a reason to reconnect promptly with supports and review the treatment plan. Warn that suddenly stopping alcohol, benzodiazepines, or other dependence-forming substances can cause dangerous withdrawal and should be medically supervised. For a suspected overdose, severe withdrawal symptoms, or any immediate danger, direct the person to contact local emergency services or go to the nearest emergency department now; do not assume a country-specific hotline.",
+    studyCareNote: "Spiritual support can strengthen recovery, but it does not replace care from a licensed clinician or addiction specialist, a sponsor or peer-recovery group, or an evidence-based treatment program. Relapse is not a cause for shame; reconnect promptly with your supports and review your treatment plan. Suddenly stopping alcohol, benzodiazepines, or other dependence-forming substances can cause dangerous withdrawal and should be medically supervised. For a suspected overdose, severe withdrawal symptoms, or any immediate danger, contact local emergency services or go to the nearest emergency department now.",
+    careGuidanceReview: { approvedBy: "Joe", approvedAt: "2026-08-24" },
     questions: [
       {
         id: "addiction-1",
@@ -124,7 +135,7 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "2 Corinthians 5:17" },
           { ref: "Philippians 4:13" },
         ],
-        commentary: "Absolutely. God's power is greater than any addiction. Freedom may come as a sudden breakthrough or as a gradual journey, but God's promise is clear: He can make you new. This doesn't mean temptation disappears, but His strength becomes available to you moment by moment.",
+        commentary: "God's grace offers real hope, dignity, and strength for the work of recovery. That hope is not a guarantee of an instant cure or a substitute for treatment. Freedom commonly unfolds through daily choices, professional care, supportive relationships, and spiritual practices together. Needing ongoing help does not mean your faith has failed.",
       },
       {
         id: "addiction-2",
@@ -134,17 +145,17 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "Galatians 5:17" },
           { ref: "1 John 1:9" },
         ],
-        commentary: "Paul himself described this very struggle. Relapse doesn't mean failure — it means you're in a battle. Each time you fall, God's grace meets you right there. Don't let shame keep you from returning to Him. Confession and community break the cycle of secrecy that feeds addiction.",
+        commentary: "Relapse can be part of a recovery journey; it does not erase your progress or make you unworthy of care. Respond without shame, but take it seriously: reconnect promptly with your clinician, sponsor, recovery group, or treatment program, tell a trusted person what happened, and review the plan for triggers and safety. God's grace invites honesty and another next step, not secrecy or self-condemnation.",
       },
       {
         id: "addiction-3",
-        question: "How can I find the strength to overcome?",
+        question: "What support can help me recover?",
         verses: [
           { ref: "2 Corinthians 12:9" },
           { ref: "James 5:16" },
           { ref: "Psalm 119:11" },
         ],
-        commentary: "Three keys: First, admit your weakness — God's power shows up when you stop pretending you can do it alone. Second, bring others into your struggle through trusted fellowship. Third, fill your mind with Scripture so that when temptation comes, truth is ready. Recovery is a daily choice empowered by God's daily grace.",
+        commentary: "You do not have to recover alone. A licensed clinician or addiction specialist can assess your needs; a sponsor or peer-recovery group can offer accountability and lived support; and an evidence-based treatment program can provide structured care. A pastor and trusted faith community can support your spiritual life alongside that treatment. The right combination differs by person, and asking for help is a courageous step rather than a failure.",
       },
       {
         id: "addiction-4",
@@ -154,6 +165,15 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "Romans 8:1" },
         ],
         commentary: "God loved you at your very worst. His love is not based on your performance — it's based on His character. Your struggle does not diminish His affection for you. He is not standing over you with disappointment; He is beside you with compassion, ready to help you take the next step forward.",
+      },
+      {
+        id: "addiction-5",
+        question: "When does addiction require urgent medical help?",
+        verses: [
+          { ref: "Psalm 46:1" },
+          { ref: "Proverbs 11:14" },
+        ],
+        commentary: "A suspected overdose, severe confusion, seizure, trouble breathing, loss of consciousness, or any immediate danger needs emergency help now: contact local emergency services or go to the nearest emergency department. Do not leave the person alone if it is safe for you to stay. Suddenly stopping alcohol, benzodiazepines, or some other dependence-forming substances can cause dangerous withdrawal, so seek urgent medical guidance rather than trying to detox alone. These steps protect life; they are not a cause for shame.",
       },
     ],
   },
@@ -197,7 +217,10 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
     id: "anxiety",
     title: "Anxiety & Worry",
     category: "Emotions & Struggles",
-    overview: "Anxiety touches nearly every person at some point. The churning stomach, racing thoughts, and sleepless nights can feel overwhelming. While Scripture doesn't dismiss anxiety as trivial, it offers a powerful alternative: bringing our fears to God and receiving His peace in return. Jesus Himself told us not to worry, not because our concerns are unimportant, but because our Father already knows what we need.",
+    overview: "Anxiety touches nearly every person at some point, and persistent or severe anxiety can also be a health condition. The churning stomach, racing thoughts, and sleepless nights can feel overwhelming. Scripture invites us to bring our fears to God, and prayer can offer comfort, perspective, and hope. It is not a guaranteed clinical cure, however, and professional mental-health care can be an important part of faithful, wise support.",
+    careGuidance: "Do not present prayer, stronger faith, or Scripture reading as a guaranteed cure for anxiety or imply that continuing symptoms reflect spiritual failure. Describe spiritual practices as possible sources of comfort and support alongside appropriate care from licensed mental-health professionals and medical clinicians. Encourage urgent local professional or emergency help when a person may be unable to stay safe, without assuming a country-specific hotline.",
+    studyCareNote: "Prayer and Scripture can offer comfort and support, but they are not a guaranteed clinical cure for anxiety, and continuing symptoms are not a spiritual failure. Persistent, severe, or disabling anxiety deserves care from a licensed mental-health professional or medical clinician alongside pastoral support. If you may be unable to stay safe, seek urgent local professional or emergency help now.",
+    careGuidanceReview: { approvedBy: "Joe", approvedAt: "2026-08-24" },
     questions: [
       {
         id: "anxiety-1",
@@ -207,7 +230,7 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "Matthew 6:25-27" },
           { ref: "1 Peter 5:7" },
         ],
-        commentary: "God doesn't scold you for feeling anxious — He invites you to bring your anxiety to Him. The antidote to worry is prayer combined with thanksgiving. When you turn your worries into prayers, something supernatural happens: a peace that defies logic settles over your heart. You are far more valuable to God than the birds He faithfully feeds every day.",
+        commentary: "God does not scold you for feeling anxious — He invites you to bring your fear to Him. Prayer and thanksgiving can help you feel grounded and remind you that you are deeply valued, but they do not guarantee that anxiety symptoms will disappear. Peace may be gradual, may coexist with distress, and may include accepting support from a therapist, counselor, or doctor.",
       },
       {
         id: "anxiety-2",
@@ -217,7 +240,7 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "Psalm 46:1-2" },
           { ref: "John 14:27" },
         ],
-        commentary: "Peace doesn't come from controlling your circumstances — it comes from trusting the One who controls all things. Fix your mind on God's character: His faithfulness, His sovereignty, His love for you. The peace Jesus gives is different from the world's peace. It doesn't depend on things going well; it holds steady even when everything shakes.",
+        commentary: "You can seek peace by remembering God's character, naming what is within your control, caring for your body, and reaching out to supportive people. Trust in God can sustain you without requiring you to feel calm all the time. If anxiety is persistent, severe, or interfering with daily life, professional care can help you develop additional tools; using that care is compatible with faith.",
       },
       {
         id: "anxiety-3",
@@ -270,7 +293,10 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
     id: "grief",
     title: "Grief & Loss",
     category: "Emotions & Struggles",
-    overview: "Grief is the natural response to loss, whether the death of a loved one, the end of a relationship, the loss of health, or shattered dreams. God does not expect us to grieve with stoic composure. Jesus Himself wept at the tomb of Lazarus. In our sorrow, God draws near with comfort, hope, and the assurance that death and loss are not the final chapter. For those who trust in Christ, there is a reunion coming.",
+    overview: "Grief is a natural response to loss, whether the death of a loved one, the end of a relationship, the loss of health, or shattered dreams. God does not expect stoic composure; Jesus Himself wept at the tomb of Lazarus. Scripture offers resurrection hope for those who die in Christ. When a loved one's faith is unknown, we can entrust that person to God's perfect knowledge and mercy without making claims about their eternal future that we cannot know.",
+    careGuidance: "Distinguish pastoral comfort from mental-health treatment. Acknowledge that grief has no fixed timetable while naming traumatic grief and complicated or prolonged grief as reasons to seek assessment from a licensed mental-health professional or bereavement counsellor. If the person has suicidal ideation, fears they may harm themselves, or cannot stay safe, direct them not to remain alone, to contact local emergency services or go to the nearest emergency department now, and to ask a trusted person to stay with them. Mention a local crisis service only as an additional option where available; never assume a country-specific hotline. Express resurrection reunion as Christian hope for those who die in Christ. When a loved one's faith is unknown, entrust them to God's perfect knowledge and mercy without claiming a reunion is certain.",
+    studyCareNote: "Pastoral comfort can accompany grief, but it does not replace professional care. Traumatic grief or complicated or prolonged grief may benefit from a bereavement counsellor or licensed mental-health professional. If you have suicidal thoughts, fear you may harm yourself, or cannot stay safe, do not remain alone: contact local emergency services or go to the nearest emergency department now, and ask a trusted person to stay with you. A local crisis service may also help where one is available. Christian resurrection hope concerns those who die in Christ; when a loved one's faith is unknown, entrust that person to God's perfect knowledge and mercy without assuming a reunion is certain.",
+    careGuidanceReview: { approvedBy: "Joe", approvedAt: "2026-08-24" },
     questions: [
       {
         id: "grief-1",
@@ -279,7 +305,7 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "1 Thessalonians 4:13-14" },
           { ref: "Revelation 21:4" },
         ],
-        commentary: "Christians grieve, but not without hope. The promise of resurrection means that death is not goodbye forever — it is 'see you later.' Let yourself grieve fully; don't rush the process. But lift your eyes to the hope that one day every tear will be wiped away and you will be reunited with those who trusted in Christ.",
+        commentary: "Let yourself grieve without rushing or judging the process. Christian hope rests in Christ's resurrection and His promise to raise those who die in Him. If your loved one's faith was unknown, it is honest to entrust them to God's perfect knowledge and mercy rather than promise an outcome Scripture does not give us authority to declare. Support from family, church, a bereavement group, or a counsellor can accompany you through the loss.",
       },
       {
         id: "grief-2",
@@ -289,6 +315,15 @@ export const TOUCHPOINTS_DATA: TouchPointTopic[] = [
           { ref: "Job 3:11" },
         ],
         commentary: "Job asked some of the most honest questions in all of Scripture — and God honored his honesty. The Psalms are filled with raw cries of 'why?' and 'how long?' Questioning God is not the same as rejecting God. Bring your questions to Him. He is not offended by your honesty; He is honored by your trust.",
+      },
+      {
+        id: "grief-3",
+        question: "When should I seek more help with grief?",
+        verses: [
+          { ref: "Psalm 34:18" },
+          { ref: "Proverbs 11:14" },
+        ],
+        commentary: "Grief has no fixed timetable, but traumatic grief or grief that remains intense enough to disrupt daily life may need added care. A bereavement counsellor or licensed mental-health professional can assess complicated or prolonged grief and trauma while pastoral support continues alongside it. If you have suicidal thoughts, fear you may harm yourself, or cannot stay safe, do not remain alone: contact local emergency services or go to the nearest emergency department now, and ask a trusted person to stay with you. A local crisis service may also help where one is available.",
       },
     ],
   },

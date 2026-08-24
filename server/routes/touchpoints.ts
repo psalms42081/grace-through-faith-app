@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { SDA_LENS_VERSION } from "../services/sda-lens";
-import { buildTouchpointBibleStudyRequest } from "../services/sensitive-ai-prompts";
+import {
+  appendPastoralCareNote,
+  buildTouchpointBibleStudyRequest,
+  hasUnsafeGriefReunionLanguage,
+} from "../services/sensitive-ai-prompts";
 import { TOUCHPOINTS_DATA, TOUCHPOINT_CATEGORIES, searchTouchpoints } from "../data/touchpoints";
 import { BIBLE_PROJECT_VIDEOS } from "../data/bibleProjectVideos";
 import { db } from "../db";
@@ -18,6 +22,7 @@ import {
 import {
   attachCanonicalScripture,
   buildTouchpointStudyCacheKey,
+  GeneratedStudyValidationError,
   parseCachedTouchpointStudy,
   parseGeneratedStudyDraft,
 } from "../services/touchpoint-study";
@@ -232,9 +237,12 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
     const suppliedRefs = suppliedReferenceStrings(suppliedVerses);
     const suppliedBlock = buildSuppliedScriptureBlock(suppliedVerses);
     const promptRequest = buildTouchpointBibleStudyRequest({
+      topicId: topic.id,
       topicTitle: topic.title,
       suppliedBlock,
       suppliedRefs,
+      careGuidance: topic.careGuidance,
+      studyCareNote: topic.studyCareNote,
     });
 
     // Fingerprint every generation input. Changes to the topic, prompt, SDA
@@ -252,10 +260,13 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
 
     if (cached && cached.expiresAt > new Date()) {
       const validatedCache = parseCachedTouchpointStudy(cached.results);
-      if (validatedCache) {
+      if (
+        validatedCache &&
+        !(topic.id === "grief" && hasUnsafeGriefReunionLanguage(validatedCache, topic.studyCareNote))
+      ) {
         return res.json(validatedCache);
       }
-      console.warn(`[touchpoint-study] Ignoring malformed cache entry ${cacheKey}`);
+      console.warn(`[touchpoint-study] Ignoring invalid cache entry ${cacheKey}`);
     }
 
     const client = new (await import("openai")).default({
@@ -263,16 +274,46 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
       baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
 
-    const response = await client.chat.completions.create(promptRequest);
-    const draft = parseGeneratedStudyDraft(
-      response.choices[0]?.message?.content || ""
-    );
-    const studyContent = attachCanonicalScripture({
-      draft,
-      byRef: hydrated.byRef,
-      translationMeta: hydrated.translationMeta,
-      resolveSelection: resolveGeneratedSelection,
-    });
+    let studyContent: ReturnType<typeof attachCanonicalScripture> | undefined;
+    const maxAttempts = topic.id === "grief" ? 3 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await client.chat.completions.create(promptRequest);
+        const draft = parseGeneratedStudyDraft(
+          response.choices[0]?.message?.content || ""
+        );
+        const candidate = attachCanonicalScripture({
+          draft,
+          byRef: hydrated.byRef,
+          translationMeta: hydrated.translationMeta,
+          resolveSelection: resolveGeneratedSelection,
+        });
+        candidate.conclusion = appendPastoralCareNote(
+          candidate.conclusion,
+          topic.studyCareNote,
+        );
+        if (
+          topic.id === "grief" &&
+          hasUnsafeGriefReunionLanguage(candidate, topic.studyCareNote)
+        ) {
+          console.warn(`[touchpoint-study] Rejected unsafe grief draft (${attempt}/${maxAttempts})`);
+          continue;
+        }
+        studyContent = candidate;
+        break;
+      } catch (err) {
+        if (err instanceof GeneratedStudyValidationError && attempt < maxAttempts) {
+          console.warn(`[touchpoint-study] Rejected malformed grief draft (${attempt}/${maxAttempts})`);
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!studyContent) {
+      return res.status(502).json({
+        error: "Could not generate a grief study consistent with the approved pastoral guidance",
+      });
+    }
 
     await db.insert(searchCache).values({
       queryText: `Bible Study: ${topic.title} (${translation}; ${TOUCHPOINT_STUDY_SCHEMA_VERSION})`,

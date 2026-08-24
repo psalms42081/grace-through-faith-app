@@ -4,11 +4,14 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { SDA_LENS_VERSION, SDA_SYSTEM_PROMPT, withSdaLens } from "../services/sda-lens";
 import {
+  appendPastoralCareNote,
   buildSabbathSchoolTutorRequest,
   buildTopicReflectionRequest,
   buildTouchpointBibleStudyRequest,
   buildVerseExplanationRequest,
+  hasUnsafeGriefReunionLanguage,
 } from "../services/sensitive-ai-prompts";
+import { TOUCHPOINTS_DATA } from "../data/touchpoints";
 
 type SensitiveRequest = ReturnType<
   | typeof buildSabbathSchoolTutorRequest
@@ -91,18 +94,240 @@ describe("doctrinal AI smoke guard", () => {
   });
 
   it("builds the grief Bible-study request with the lens and supplied references only", () => {
+    const grief = TOUCHPOINTS_DATA.find((topic) => topic.id === "grief");
+    assert.ok(grief?.careGuidance);
+    assert.ok(grief.studyCareNote);
     const request = buildTouchpointBibleStudyRequest({
+      topicId: "grief",
       topicTitle: "Grief & Loss",
       suppliedBlock: "John 11:25: Invented canonical fixture text.",
       suppliedRefs: ["John 11:25"],
+      careGuidance: grief.careGuidance,
+      studyCareNote: grief.studyCareNote,
     });
 
     assertCanonicalLens(request, [
       'topic of "Grief & Loss"',
       "MUST NOT write, quote, paraphrase, or invent any Bible verse text",
       "John 11:25: Invented canonical fixture text.",
+      "HUMAN-REVIEWED PASTORAL CARE BOUNDARY",
+      "suicidal ideation",
+      "local emergency services",
+      "loved one's faith is unknown",
+      'never promise that "we will be reunited with our loved ones,"',
+      grief.studyCareNote,
     ]);
     assert.deepEqual(request.response_format, { type: "json_object" });
+  });
+
+  it("appends reviewed care notes to generated conclusions exactly once", () => {
+    const note = "Reviewed local care guidance.";
+    const appended = appendPastoralCareNote("Christ remains near.", note);
+    assert.equal(appended, `Christ remains near.\n\n${note}`);
+    assert.equal(appendPastoralCareNote(appended, note), appended);
+    assert.equal(
+      appendPastoralCareNote(`${note}\n\nChrist remains near.\n\n${note}`, note),
+      `Christ remains near.\n\n${note}`,
+    );
+    assert.equal(appendPastoralCareNote(undefined, note), note);
+  });
+
+  it("rejects universal reunion language in generated grief studies", () => {
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "We will be reunited with our loved ones.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "You will see your loved one again.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "God will reunite every grieving family.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your family will be together again.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your loved one will be reunited with family.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your family is guaranteed to be reunited.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your loved one is certain to reunite with family.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion:
+          "Your loved one is certain to reunite with you; even when faith is unknown, those who die in Christ have hope.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your loved one is destined to reunite with you.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "You will see her again.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "We will meet in heaven.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "We will be together forever.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "We'll meet in heaven.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your mother is certainly saved.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "She is in heaven now.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Your mother will be saved.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "She has been saved.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "God has saved her.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "When faith is unknown, entrust the loved one to God's perfect knowledge and mercy.",
+      }),
+      false,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion: "Resurrection reunion is Christian hope rooted in Christ.",
+      }),
+      true,
+    );
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({
+        conclusion:
+          "Resurrection reunion is Christian hope for those who die in Christ; when a loved one's faith is unknown, entrust them to God's mercy.",
+      }),
+      true,
+    );
+    const grief = TOUCHPOINTS_DATA.find((topic) => topic.id === "grief");
+    assert.ok(grief?.studyCareNote);
+    assert.equal(
+      hasUnsafeGriefReunionLanguage({ conclusion: grief.studyCareNote }, grief.studyCareNote),
+      false,
+    );
+  });
+
+  it("keeps human-reviewed clinical and crisis guidance in sensitive topics", () => {
+    const topic = (id: string) => {
+      const result = TOUCHPOINTS_DATA.find((candidate) => candidate.id === id);
+      assert.ok(result, `missing touchpoint topic: ${id}`);
+      return result;
+    };
+    const fullText = (id: string) => {
+      const value = topic(id);
+      return [
+        value.overview,
+        value.careGuidance,
+        value.studyCareNote,
+        ...value.questions.flatMap((question) => [question.question, question.commentary]),
+      ].join("\n");
+    };
+
+    for (const id of ["addiction", "anxiety", "grief"]) {
+      assert.deepEqual(topic(id).careGuidanceReview, {
+        approvedBy: "Joe",
+        approvedAt: "2026-08-24",
+      });
+    }
+
+    const addiction = fullText("addiction");
+    for (const required of [
+      /licensed clinician/i,
+      /sponsor/i,
+      /treatment program/i,
+      /relapse/i,
+      /withdrawal/i,
+      /immediate danger/i,
+      /local emergency services/i,
+      /without shame|not a cause for shame/i,
+    ]) {
+      assert.match(addiction, required);
+    }
+
+    const grief = fullText("grief");
+    for (const required of [
+      /traumatic grief/i,
+      /complicated or prolonged grief/i,
+      /bereavement counsellor/i,
+      /suicidal (ideation|thoughts)/i,
+      /local emergency services/i,
+      /faith (?:was|is) unknown/i,
+      /God's perfect knowledge and mercy/i,
+    ]) {
+      assert.match(grief, required);
+    }
+    assert.doesNotMatch(
+      topic("grief").overview,
+      /there is a reunion coming|you will be reunited/i,
+    );
+
+    const anxiety = fullText("anxiety");
+    assert.match(anxiety, /not a guaranteed clinical cure/i);
+    assert.match(anxiety, /professional mental-health care/i);
+    assert.doesNotMatch(anxiety, /the antidote to worry is prayer/i);
+    assert.doesNotMatch(anxiety, /peace that defies logic settles over your heart/i);
   });
 
   it("builds the daily Study Tutor request with the lens and official lesson source", () => {
@@ -171,5 +396,11 @@ describe("doctrinal AI smoke guard", () => {
         `the production path must call ${contract.call} exactly once`,
       );
     }
+
+    assert.match(
+      contracts[2].source,
+      /careGuidance:\s*topic\.careGuidance[\s\S]*studyCareNote:\s*topic\.studyCareNote[\s\S]*appendPastoralCareNote/,
+      "generated touchpoint studies must receive and append the topic's reviewed care guidance",
+    );
   });
 });

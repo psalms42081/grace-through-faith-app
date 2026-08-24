@@ -5,6 +5,46 @@ export type SensitiveAiHistoryMessage = {
   content: string;
 };
 
+export function appendPastoralCareNote(
+  conclusion: unknown,
+  careNote: string | undefined,
+): string {
+  const base = typeof conclusion === "string" ? conclusion.trim() : "";
+  const note = careNote?.trim() ?? "";
+  if (!note) return base;
+
+  const withoutModelCopies = base
+    .split(note)
+    .join("")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return withoutModelCopies ? `${withoutModelCopies}\n\n${note}` : note;
+}
+
+const UNSAFE_GRIEF_REUNION_PATTERNS = [
+  /\b(?:reunion|reunite(?:d|s)?)\b/i,
+  /\b(?:see|meet|join|be with|hold|embrace)\b.{0,80}\bagain\b/i,
+  /\btogether\b.{0,80}\bagain\b/i,
+  /\b(?:we|you|they|everyone|all)\s+(?:will|shall|can|may)\s+(?:meet|join|be with|hold|embrace)\b.{0,80}\b(?:in heaven|forever|eternally)\b/i,
+  /\b(?:we|you|they|everyone|all)\s+(?:will|shall|can|may)\s+be\s+together\s+(?:forever|eternally)\b/i,
+  /\b(?:we|you|they|everyone|all)(?:'ll|’ll)\s+(?:meet|join|be with|hold|embrace)\b.{0,80}\b(?:in heaven|forever|eternally)\b/i,
+  /\b(?:we|you|they|everyone|all)(?:'ll|’ll)\s+be\s+together\s+(?:forever|eternally)\b/i,
+  /\b(?:in heaven|in paradise|with Jesus|with God)\b/i,
+  /\b(?:he|she|they|my|your|our|their|a)\b.{0,80}\b(?:will be|has been|have been|is|are|was|were|got|gets|will get)\b.{0,40}\bsaved\b/i,
+  /\b(?:God|Jesus)\b.{0,80}\b(?:(?:has|have|will|shall)\s+)?saved\s+(?:him|her|them|(?:my|your|our|their|a)\s+(?:loved one|mother|father|parent|child|spouse|husband|wife|friend))\b/i,
+];
+
+export function hasUnsafeGriefReunionLanguage(
+  study: unknown,
+  reviewedCareNote?: string,
+): boolean {
+  const text = JSON.stringify(study)
+    .split(reviewedCareNote?.trim() ?? "")
+    .join("");
+  return UNSAFE_GRIEF_REUNION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 export function buildTopicReflectionRequest(params: {
   topicId: string;
   today: string;
@@ -65,11 +105,31 @@ Authoritative ${canonicalTranslation} text of the verse:
 }
 
 export function buildTouchpointBibleStudyRequest(params: {
+  topicId?: string;
   topicTitle: string;
   suppliedBlock: string;
   suppliedRefs: string[];
+  careGuidance?: string;
+  studyCareNote?: string;
 }) {
-  const { topicTitle, suppliedBlock, suppliedRefs } = params;
+  const { topicId, topicTitle, suppliedBlock, suppliedRefs, careGuidance, studyCareNote } = params;
+  const griefReunionGuardrail = topicId === "grief"
+    ? `
+- For grief, never promise that "we will be reunited with our loved ones," "we will meet in heaven," "we will be together forever," or that a separation is temporary. Leave all discussion of reunion or an individual loved one's eternal outcome to the server's reviewed care note; do not include reunion/reunite wording, present eternal-state assurances (such as being in heaven, paradise, with Jesus, with God, or saved), or say that someone will see, meet, join, hold, or embrace another person again in the generated draft.`
+    : "";
+  const careBoundary = careGuidance
+    ? `
+
+HUMAN-REVIEWED PASTORAL CARE BOUNDARY:
+- Every point in this guidance is mandatory. Reflect it explicitly in the study and never contradict it.
+- Spiritual care may support a person, but it does not replace appropriate medical, mental-health, or addiction treatment.
+- Do not diagnose, prescribe treatment, promise a cure, shame someone for ongoing symptoms or relapse, or assume a country-specific crisis hotline.
+${griefReunionGuardrail}
+${careGuidance}
+${studyCareNote ? `
+- The server will append this exact reviewed care note to the conclusion. Do not repeat it, weaken it, or write anything that conflicts with it:
+${studyCareNote}` : ""}`
+    : "";
   return {
     model: "gpt-4o-mini",
     messages: [
@@ -80,6 +140,7 @@ export function buildTouchpointBibleStudyRequest(params: {
 2. Grounds every point in Scripture
 3. Encourages fellowship and church community
 4. Provides practical application
+${careBoundary}
 
 CRITICAL SCRIPTURE RULE:
 - You MUST NOT write, quote, paraphrase, or invent any Bible verse text.
@@ -106,7 +167,7 @@ Format as JSON:
   "groupDiscussion": ["3-4 discussion questions for small groups"]
 }
 
-Use 3-5 sections and exactly 3-4 groupDiscussion questions. Every shown field is required and must be a non-empty string. Do not add fields that are not shown. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`),
+Use 3-5 sections and exactly 3-4 groupDiscussion questions. Every shown field is required and must be a non-empty string. Every section MUST include its "reflection" field. Do not add fields that are not shown. Each section's "scripture" must be one of these exact strings: ${JSON.stringify(suppliedRefs)}. Do NOT include a scriptureText field. Keep it warm, personal, and Christ-centered.`),
       },
       {
         role: "user" as const,

@@ -22,4 +22,5 @@
 - [Expo Router route tree](expo-router-route-tree.md) — keep helpers and Node-only tests outside app/ so route discovery cannot warn or break the web bundle.
 - [Member AI context trust](gtf-member-ai-context.md) — billable lesson tutors require account auth and fresh server-side source verification before questions are enabled.
 - [Touchpoint preview rollout](gtf-touchpoint-preview-rollout.md) — pastoral Path B topic/study previews stay hidden until device approval; do not swap production routes early.
-- [Pastoral crisis authorship](gtf-pastoral-crisis-authorship.md) — agent builds region-aware resource plumbing; the human pastoral owner authors and approves all guidance.
+- [Pastoral crisis authorship](gtf-pastoral-crisis-authorship.md) — agent builds region-aware resource plumbing; a designated reviewer authors and approves every guidance sentence.
+- [Pastoral AI safety notes](pastoral-ai-safety-notes.md) — prompts may omit required crisis language; append reviewed care notes deterministically and invalidate generated-study caches.
