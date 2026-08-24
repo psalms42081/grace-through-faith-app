@@ -59,7 +59,7 @@ export default function SabbathSchoolCard() {
 
   return (
     <Pressable
-      onPress={() => router.push("/sabbath-school" as any)}
+      onPress={() => router.push("/(tabs)/ss/sabbath-school" as any)}
       style={({ pressed }) => [styles.card, { opacity: pressed ? 0.9 : 1 }]}
       testID="home-sabbath-school-card"
     >
@@ -98,7 +98,7 @@ export default function SabbathSchoolCard() {
             </View>
             <Pressable
               style={styles.ctaButton}
-              onPress={() => router.push("/sabbath-school" as any)}
+              onPress={() => router.push("/(tabs)/ss/sabbath-school" as any)}
             >
               <Text style={styles.ctaText}>Open Today's Lesson →</Text>
             </Pressable>

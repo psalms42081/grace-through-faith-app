@@ -16,6 +16,10 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import {
+  sabbathSchoolTabBarClearance,
+  useSabbathSchoolTabContainment,
+} from "@/lib/sabbath-school-route-containment";
 
 interface DiscussionData {
   keyQuestions: string[];
@@ -35,9 +39,19 @@ export default function SabbathSchoolDiscussionScreen() {
 
   const lessonId = params.lessonId || "";
   const lessonTitle = params.lessonTitle ? decodeURIComponent(params.lessonTitle) : "This Week's Lesson";
+  const isTabContained = useSabbathSchoolTabContainment(
+    "sabbath-school-discussion",
+    {
+      lessonId,
+      lessonTitle,
+    },
+    !!lessonId,
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) +
+    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
 
   const [data, setData] = useState<DiscussionData | null>(null);
 
@@ -56,6 +70,8 @@ export default function SabbathSchoolDiscussionScreen() {
 
   const baseFontSize = 15;
   const questionFontSize = 14;
+
+  if (!isTabContained) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

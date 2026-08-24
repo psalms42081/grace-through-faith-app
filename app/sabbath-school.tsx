@@ -25,6 +25,11 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  buildSabbathSchoolTabRoute,
+  sabbathSchoolTabBarClearance,
+  useSabbathSchoolTabContainment,
+} from "@/lib/sabbath-school-route-containment";
 
 // ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
 const SS2 = {
@@ -97,6 +102,8 @@ export default function SabbathSchoolV2Screen() {
   const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
   const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
+  const isTabContained =
+    useSabbathSchoolTabContainment("sabbath-school");
 
   const closeVideoModal = async () => {
     try {
@@ -179,11 +186,20 @@ export default function SabbathSchoolV2Screen() {
 
   const pastQuarters = (archiveData?.quarters || []).filter((q) => quarterly && q.id !== quarterly.id);
 
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) +
+    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
   const openDay = (d: DayData) => {
-    const qc = quarterly?.quarterCode ? `&quarterCode=${quarterly.quarterCode}` : "";
-    router.push(`/sabbath-school-day?lessonNumber=${lesson!.lessonNumber}&dayNumber=${d.dayNumber}${qc}` as any);
+    router.push(
+      buildSabbathSchoolTabRoute("sabbath-school-day", {
+        lessonNumber: lesson!.lessonNumber,
+        dayNumber: d.dayNumber,
+        quarterCode: quarterly?.quarterCode,
+      }) as any,
+    );
   };
+
+  if (!isTabContained) return null;
 
   return (
     <View style={s.container}>
@@ -379,7 +395,12 @@ export default function SabbathSchoolV2Screen() {
 
           <Pressable
             onPress={() =>
-              router.push(`/sabbath-school-discussion?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}` as any)
+              router.push(
+                buildSabbathSchoolTabRoute("sabbath-school-discussion", {
+                  lessonId: lesson.id,
+                  lessonTitle: lesson.title,
+                }) as any,
+              )
             }
             style={({ pressed }) => [s.discussionBtn, { opacity: pressed ? 0.85 : 1 }]}
           >
@@ -411,7 +432,10 @@ export default function SabbathSchoolV2Screen() {
                     key={q.id}
                     onPress={() =>
                       router.push(
-                        `/sabbath-school-quarter?quarterCode=${(q as any).quarterCode}&title=${encodeURIComponent(q.title)}` as any
+                        buildSabbathSchoolTabRoute("sabbath-school-quarter", {
+                          quarterCode: (q as any).quarterCode,
+                          title: q.title,
+                        }) as any,
                       )
                     }
                     style={({ pressed }) => [s.archiveCard, { opacity: pressed ? 0.85 : 1 }]}

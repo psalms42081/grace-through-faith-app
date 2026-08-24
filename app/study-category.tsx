@@ -187,7 +187,7 @@ export default function StudyCategoryScreen() {
               id="fundamental-beliefs"
               title="Sabbath School"
               subtitle="This week's lesson, discussion questions, and insights"
-              onPress={() => router.push("/sabbath-school" as any)}
+              onPress={() => router.push("/(tabs)/ss/sabbath-school" as any)}
             />
             <TopicImageCard
               id="prayer"

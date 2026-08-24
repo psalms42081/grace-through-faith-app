@@ -277,7 +277,7 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
       title: `Lesson ${ssData.currentLesson.lessonNumber} · ${ssData.currentLesson.title}`,
       subtitle: ssSubtitle,
       progressLabel: "Continue",
-      route: "/sabbath-school",
+      route: "/(tabs)/ss/sabbath-school",
       updatedAt: new Date().toISOString(),
     });
   }

@@ -22,6 +22,10 @@ import {
   canAskStudyTutor,
   isFreshTutorContextVerified,
 } from "@/lib/sabbath-school-tutor";
+import {
+  sabbathSchoolTabBarClearance,
+  useSabbathSchoolTabContainment,
+} from "@/lib/sabbath-school-route-containment";
 
 type TutorMessage = {
   role: "user" | "assistant";
@@ -63,6 +67,17 @@ export default function SabbathSchoolDayTutorScreen() {
   }>();
   const lessonId = typeof params.lessonId === "string" ? params.lessonId : "";
   const dayId = typeof params.dayId === "string" ? params.dayId : "";
+  const isTabContained = useSabbathSchoolTabContainment(
+    "sabbath-school-day-tutor",
+    {
+      lessonId,
+      dayId,
+      lessonNumber: params.lessonNumber,
+      dayNumber: params.dayNumber,
+      quarterCode: params.quarterCode,
+    },
+    !!lessonId && !!dayId,
+  );
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [input, setInput] = useState("");
   const [context, setContext] = useState<TutorContext | null>(null);
@@ -144,10 +159,14 @@ export default function SabbathSchoolDayTutorScreen() {
   };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) +
+    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
   const requestError = requestMutation.error instanceof Error
     ? requestMutation.error.message
     : "The Study Tutor could not answer right now. Please try again.";
+
+  if (!isTabContained) return null;
 
   return (
     <View style={styles.container}>

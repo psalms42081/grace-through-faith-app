@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const tabEntrySource = readFileSync(
-  new URL("../app/(tabs)/read.tsx", import.meta.url),
+  new URL("../components/bible/BibleEntryScreen.tsx", import.meta.url),
   "utf8",
 );
 const tabLayoutSource = readFileSync(
@@ -16,9 +16,29 @@ const readerSource = readFileSync(
 );
 const tabReaderRouteSource = readFileSync(
   new URL(
-    "../app/(tabs)/bible-reader/[bookId]/[chapter].tsx",
+    "../app/(tabs)/read/[bookId]/[chapter].tsx",
     import.meta.url,
   ),
+  "utf8",
+);
+const bibleTabStackSource = readFileSync(
+  new URL("../app/(tabs)/read/_layout.tsx", import.meta.url),
+  "utf8",
+);
+const sabbathSchoolTabStackSource = readFileSync(
+  new URL("../app/(tabs)/ss/_layout.tsx", import.meta.url),
+  "utf8",
+);
+const sabbathSchoolTabDaySource = readFileSync(
+  new URL("../app/(tabs)/ss/sabbath-school-day.tsx", import.meta.url),
+  "utf8",
+);
+const sabbathSchoolDaySource = readFileSync(
+  new URL("../app/sabbath-school-day.tsx", import.meta.url),
+  "utf8",
+);
+const sabbathSchoolContainmentSource = readFileSync(
+  new URL("../lib/sabbath-school-route-containment.ts", import.meta.url),
   "utf8",
 );
 const rootLayoutSource = readFileSync(
@@ -30,17 +50,41 @@ describe("external tester navigation feedback", () => {
   it("keeps Bible entry and chapter navigation inside the tab navigator", () => {
     assert.match(
       tabEntrySource,
-      /pathname:\s*"\/\(tabs\)\/bible-reader\/\[bookId\]\/\[chapter\]"/,
+      /pathname:\s*"\/\(tabs\)\/read\/\[bookId\]\/\[chapter\]"/,
     );
-    assert.match(tabLayoutSource, /name="bible-reader"/);
-    assert.match(tabLayoutSource, /name="bible-reader"[\s\S]*?href:\s*null/);
+    assert.match(tabLayoutSource, /name="read"/);
+    assert.doesNotMatch(tabLayoutSource, /name="bible-reader"/);
+    assert.match(bibleTabStackSource, /name="\[bookId\]\/\[chapter\]"/);
     assert.match(tabReaderRouteSource, /read\/\[bookId\]\/\[chapter\]/);
     assert.match(readerSource, /useSegments/);
     assert.match(readerSource, /isTabReader/);
+    assert.match(readerSource, /readerBasePath\s*=\s*isTabReader\s*\?\s*"\/\(tabs\)\/read"/);
     assert.match(readerSource, /router\.replace\(readerRoute\(/);
     assert.doesNotMatch(
       readerSource,
       /router\.replace\(`\/read\/\$\{bookId\}/,
+    );
+  });
+
+  it("keeps the Sabbath School chain inside the tab navigator", () => {
+    assert.match(tabLayoutSource, /name="ss"[\s\S]*?href:\s*null/);
+    assert.match(sabbathSchoolTabStackSource, /headerShown:\s*false/);
+    assert.match(sabbathSchoolTabDaySource, /sabbath-school-day/);
+    assert.match(
+      sabbathSchoolContainmentSource,
+      /router\.replace\(\{[\s\S]*?pathname:[\s\S]*?params:/,
+    );
+    assert.match(
+      sabbathSchoolDaySource,
+      /useSabbathSchoolTabContainment/,
+    );
+    assert.match(
+      sabbathSchoolDaySource,
+      /sabbathSchoolTabBarClearance/,
+    );
+    assert.match(
+      rootLayoutSource,
+      /directEntryPaths[\s\S]*?"\/sabbath-school"[\s\S]*?"\/sabbath-school-quarter"[\s\S]*?"\/sabbath-school-day"[\s\S]*?"\/sabbath-school-day-tutor"[\s\S]*?"\/sabbath-school-discussion"/,
     );
   });
 

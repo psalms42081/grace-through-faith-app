@@ -197,7 +197,7 @@ export default function HomeV2Screen() {
       title: "Sabbath School",
       meta: ssData?.currentLesson ? `${dayLabel} — ${ssData.currentLesson.title}` : dayLabel,
       done: ssDoneToday,
-      onPress: () => router.push("/sabbath-school" as any),
+      onPress: () => router.push("/(tabs)/ss/sabbath-school" as any),
     },
     {
       key: "reflection",

@@ -77,11 +77,11 @@ describe("Sabbath School Study Tutor client guard", () => {
 
       assert.equal(
         readerRoute,
-        "/sabbath-school-day?lessonNumber=4&dayNumber=1&quarterCode=2026-03",
+        "/(tabs)/ss/sabbath-school-day?lessonNumber=4&dayNumber=1&quarterCode=2026-03",
       );
       assert.equal(
         tutorRoute,
-        "/sabbath-school-day-tutor?lessonId=lesson+id%2F4&dayId=day+id%2F1&lessonNumber=4&dayNumber=1&quarterCode=2026-03",
+        "/(tabs)/ss/sabbath-school-day-tutor?lessonId=lesson+id%2F4&dayId=day+id%2F1&lessonNumber=4&dayNumber=1&quarterCode=2026-03",
       );
     });
   }

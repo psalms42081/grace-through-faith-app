@@ -24,3 +24,4 @@
 - [Touchpoint preview rollout](gtf-touchpoint-preview-rollout.md) — pastoral Path B topic/study previews stay hidden until device approval; do not swap production routes early.
 - [Pastoral crisis authorship](gtf-pastoral-crisis-authorship.md) — agent builds region-aware resource plumbing; a designated reviewer authors and approves every guidance sentence.
 - [Pastoral AI safety notes](pastoral-ai-safety-notes.md) — prompts may omit required crisis language; append reviewed care notes deterministically and invalidate generated-study caches.
+- [Expo nested-route query URLs](expo-nested-route-query-urls.md) — web redirects into a nested tab stack can retain params in route state while omitting them from the canonical URL.

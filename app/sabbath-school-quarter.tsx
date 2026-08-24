@@ -17,6 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { HV2, F } from "@/components/home-v2/theme";
+import {
+  buildSabbathSchoolTabRoute,
+  sabbathSchoolTabBarClearance,
+  SABBATH_SCHOOL_TAB_ROOT,
+  useSabbathSchoolTabContainment,
+} from "@/lib/sabbath-school-route-containment";
 
 const SSQ = {
   surface: "#FBF7EE",
@@ -48,18 +54,30 @@ export default function SabbathSchoolQuarterV2Screen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { quarterCode, title } = useLocalSearchParams<{ quarterCode: string; title: string }>();
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const isTabContained = useSabbathSchoolTabContainment(
+    "sabbath-school-quarter",
+    {
+      quarterCode,
+      title,
+    },
+    !!quarterCode,
+  );
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) +
+    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
 
   const { data, isLoading } = useQuery<{ quarterly: QuarterlyInfo; lessons: LessonInfo[] }>({
     queryKey: [`/api/sabbath-school/quarter/${quarterCode}`],
     enabled: !!quarterCode,
   });
 
+  if (!isTabContained) return null;
+
   return (
     <View style={s.container}>
       <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/sabbath-school" as any))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace(SABBATH_SCHOOL_TAB_ROOT as any))}
           style={({ pressed }) => [s.backBtn, { opacity: pressed ? 0.6 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -100,7 +118,11 @@ export default function SabbathSchoolQuarterV2Screen() {
                 key={lesson.id}
                 onPress={() =>
                   router.push(
-                    `/sabbath-school-day?lessonNumber=${lesson.lessonNumber}&dayNumber=1&quarterCode=${quarterCode}` as any
+                    buildSabbathSchoolTabRoute("sabbath-school-day", {
+                      lessonNumber: lesson.lessonNumber,
+                      dayNumber: 1,
+                      quarterCode,
+                    }) as any,
                   )
                 }
                 style={({ pressed }) => [s.lessonCard, { opacity: pressed ? 0.7 : 1 }]}

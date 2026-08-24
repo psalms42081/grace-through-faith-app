@@ -604,7 +604,8 @@ const sheetStyles = StyleSheet.create({
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
   const segments = useSegments();
-  const isTabReader = (segments as string[]).includes("bible-reader");
+  const isTabReader =
+    segments[0] === "(tabs)" && (segments as string[]).includes("read");
   const { theme } = useTheme();
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
@@ -631,7 +632,7 @@ export default function VerseReaderScreen() {
   const requestedTx = normalizeCode(txParam) || normalizeCode(globalTranslation) || "KJV";
   const [translation, setTranslationLocal] = useState<Translation>(requestedTx);
   const userOverrodeTranslation = useRef(false);
-  const readerBasePath = isTabReader ? "/(tabs)/bible-reader" : "/read";
+  const readerBasePath = isTabReader ? "/(tabs)/read" : "/read";
   const readerRoute = useCallback(
     (targetChapter: number) =>
       `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any,
@@ -978,7 +979,9 @@ export default function VerseReaderScreen() {
     }
   }, [chapterNum, canGoNext, audioHandleStop, readerRoute]);
 
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const tabBarClearance = isTabReader ? (Platform.OS === "web" ? 84 : 64) : 0;
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
 
   const handleVerseTap = useCallback((item: Verse) => {
     if (showVerseTapHint) dismissVerseTapHint();

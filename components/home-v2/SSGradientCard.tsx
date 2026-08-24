@@ -17,7 +17,7 @@ export default function SSGradientCard({
   quarterTitle, lessonTitle, lessonNumber, completedDays, dayLabel,
 }: Props) {
   const progress = Math.min(Math.max(completedDays / 7, 0), 1);
-  const goToSS = () => router.push("/sabbath-school" as any);
+  const goToSS = () => router.push("/(tabs)/ss/sabbath-school" as any);
 
   return (
     <View style={s.wrap}>

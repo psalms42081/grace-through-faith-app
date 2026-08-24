@@ -33,6 +33,11 @@ import {
   buildSabbathSchoolDayRoute,
   weekdayNameForSabbathSchoolDay,
 } from "@/lib/sabbath-school-day-navigation";
+import {
+  sabbathSchoolTabBarClearance,
+  SABBATH_SCHOOL_TAB_ROOT,
+  useSabbathSchoolTabContainment,
+} from "@/lib/sabbath-school-route-containment";
 
 interface DayData {
   id: string;
@@ -270,9 +275,20 @@ export default function SabbathSchoolDayScreen() {
   const lessonNumber = parseInt(params.lessonNumber || "1");
   const dayNumber = parseInt(params.dayNumber || "1");
   const quarterCode = params.quarterCode || "";
+  const isTabContained = useSabbathSchoolTabContainment(
+    "sabbath-school-day",
+    {
+      lessonNumber: params.lessonNumber,
+      dayNumber: params.dayNumber,
+      quarterCode: params.quarterCode,
+    },
+    !!params.lessonNumber && !!params.dayNumber,
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad =
+    (Platform.OS === "web" ? 34 : insets.bottom) +
+    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
 
   const queryPath = quarterCode
     ? `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&quarterCode=${quarterCode}`
@@ -452,10 +468,12 @@ export default function SabbathSchoolDayScreen() {
     [day?.contentMarkdown]
   );
 
+  if (!isTabContained) return null;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => safeGoBack(router, "/(tabs)/explore")} hitSlop={12} style={styles.backBtn}>
+        <Pressable onPress={() => safeGoBack(router, SABBATH_SCHOOL_TAB_ROOT)} hitSlop={12} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </Pressable>
         <View style={styles.headerCenter}>

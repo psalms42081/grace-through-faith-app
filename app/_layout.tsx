@@ -242,6 +242,12 @@ useEffect(() => {
         "/egw-devotional-preview",
         "/touchpoint-topic-preview",
         "/touchpoint-study-preview",
+        "/sabbath-school",
+        "/sabbath-school-quarter",
+        "/sabbath-school-day",
+        "/sabbath-school-day-tutor",
+        "/sabbath-school-discussion",
+        "/ss/sabbath-school",
       ];
       if (
         initialPathRef.current.startsWith("/read-legacy/") ||

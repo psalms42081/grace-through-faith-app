@@ -55,7 +55,7 @@ const PROMPTS = [
 ];
 
 const WORSHIP_PATHWAYS = [
-  { icon: "book" as const, label: "Sabbath School", route: "/sabbath-school" },
+  { icon: "book" as const, label: "Sabbath School", route: "/(tabs)/ss/sabbath-school" },
   { icon: "school" as const, label: "Study Paths", route: "/study-paths" },
   { icon: "git-network" as const, label: "Great Controversy", route: "/great-controversy" },
   { icon: "telescope" as const, label: "Prophecy Explorer", route: "/prophecy-explorer" },
@@ -456,7 +456,7 @@ export default function SabbathExperienceScreen() {
 
         {currentPhase === "sabbath-morning" && (
           <Pressable
-            onPress={() => router.push("/sabbath-school" as any)}
+            onPress={() => router.push("/(tabs)/ss/sabbath-school" as any)}
             style={({ pressed }) => [
               styles.quickLink,
               {

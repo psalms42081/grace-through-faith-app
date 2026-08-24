@@ -1,6 +1,6 @@
 import { Tabs, router, usePathname } from "expo-router";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { House, BookOpen, CalendarDays, Compass, User } from "lucide-react-native";
 import React, { useEffect } from "react";
@@ -17,6 +17,9 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
   const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
   const pathname = usePathname();
+  const isSabbathSchoolRoute = pathname.startsWith("/ss/sabbath-school");
+  const homeTabColor =
+    !isKidsMode && isSabbathSchoolRoute ? PathB.coral : undefined;
 
   // Path B Phase 1: keep the visible Home in sync with kids mode.
   // Adults use home-v2; kids keep the legacy index Home. href:null only hides
@@ -101,7 +104,19 @@ function ClassicTabLayout() {
           title: t("tabs.home"),
           href: isKidsMode ? null : undefined,
           tabBarIcon: ({ color, size }) => (
-            <House size={size} color={color} />
+            <House size={size} color={homeTabColor ?? color} />
+          ),
+          tabBarLabel: ({ color }) => (
+            <Text
+              style={{
+                color: homeTabColor ?? color,
+                fontFamily: "Inter_500Medium",
+                fontSize: 10,
+                marginBottom: 2,
+              }}
+            >
+              {t("tabs.home")}
+            </Text>
           ),
         }}
       />
@@ -116,7 +131,7 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="bible-reader"
+        name="ss"
         options={{
           href: null,
         }}
