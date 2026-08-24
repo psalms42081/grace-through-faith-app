@@ -3,7 +3,7 @@ name: Pastoral crisis authorship
 description: Human-authorship boundary for clinical, crisis, grief, anxiety, and addiction guidance.
 ---
 
-The agent may design and implement the region-aware crisis-resource frame, placement, data contracts, accessibility, and tests. Joe must personally author and approve every sentence of pastoral and clinical guidance shown in the deepest sensitive-topic content.
+The agent may design and implement the region-aware crisis-resource frame, placement, data contracts, accessibility, and tests. The designated human pastoral owner must personally author and approve every sentence of pastoral and clinical guidance shown in the deepest sensitive-topic content.
 
 **Why:** Guidance at the intersection of SDA theology and trauma-informed practice requires accountable human judgment and provenance. It must not be silently generated or treated as ordinary product copy.
 
