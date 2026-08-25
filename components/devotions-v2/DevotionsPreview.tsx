@@ -214,7 +214,7 @@ export default function DevotionsPreview() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 36 }]}
       >
-        <View style={s.welcome}>
+        <View style={s.welcome} testID="devotions-preview-hero">
           <Text style={s.kicker}>MORNING WATCH</Text>
           <Text style={s.heroTitle}>A little time with God, today.</Text>
           <Text style={s.heroBody}>Make room for Scripture, reflection, and a faithful next step.</Text>

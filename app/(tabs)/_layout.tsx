@@ -83,6 +83,7 @@ function ClassicTabLayout() {
           marginBottom: 2,
         },
         tabBarIconStyle: isKidsMode ? { marginTop: 4 } : undefined,
+        sceneStyle: isWeb ? styles.webScene : undefined,
       }}
     >
       {/* Path B Phase 1: Home tab points at home-v2 for adults.
@@ -263,3 +264,11 @@ function ClassicTabLayout() {
 export default function TabLayout() {
   return <ClassicTabLayout />;
 }
+
+const styles = StyleSheet.create({
+  webScene: {
+    width: "100%",
+    maxWidth: 700,
+    alignSelf: "center",
+  },
+});

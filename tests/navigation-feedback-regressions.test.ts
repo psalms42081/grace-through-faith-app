@@ -49,6 +49,14 @@ const rootLayoutSource = readFileSync(
   new URL("../app/_layout.tsx", import.meta.url),
   "utf8",
 );
+const devotionsSource = readFileSync(
+  new URL("../components/devotions-v2/DevotionsPreview.tsx", import.meta.url),
+  "utf8",
+);
+const devotionsPrimitivesSource = readFileSync(
+  new URL("../components/devotions-v2/PreviewPrimitives.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("external tester navigation feedback", () => {
   it("keeps Bible entry and chapter navigation inside the tab navigator", () => {
@@ -117,6 +125,26 @@ describe("external tester navigation feedback", () => {
     assert.doesNotMatch(
       rootLayoutSource,
       /Always show the splash\/intro on every launch/,
+    );
+  });
+
+  it("keeps the guest Devotions hero intact and centers web tab content", () => {
+    assert.match(
+      devotionsSource,
+      /testID="devotions-preview-hero"[\s\S]*?A little time with God, today\./,
+    );
+    assert.match(devotionsPrimitivesSource, /<BookOpen /);
+    assert.doesNotMatch(
+      devotionsPrimitivesSource,
+      /<Ionicons name="book-outline"/,
+    );
+    assert.match(
+      tabLayoutSource,
+      /sceneStyle:\s*isWeb\s*\?\s*styles\.webScene\s*:\s*undefined/,
+    );
+    assert.match(
+      tabLayoutSource,
+      /webScene:[\s\S]*?maxWidth:\s*700[\s\S]*?alignSelf:\s*"center"/,
     );
   });
 });

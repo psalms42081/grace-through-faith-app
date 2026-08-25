@@ -1,6 +1,7 @@
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BookOpen } from "lucide-react-native";
 import { D2, F } from "./tokens";
 
 export function Header({
@@ -126,7 +127,7 @@ export function EmptyState({
   return (
     <View style={s.empty} testID={testID}>
       <View style={s.emptyIcon}>
-        <Ionicons name="book-outline" size={25} color={D2.violet} />
+        <BookOpen size={25} color={D2.violet} strokeWidth={1.8} />
       </View>
       <Text style={s.stateTitle}>{title}</Text>
       <Text style={s.stateText}>{body}</Text>
