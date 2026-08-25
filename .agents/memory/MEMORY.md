@@ -25,3 +25,4 @@
 - [Pastoral crisis authorship](gtf-pastoral-crisis-authorship.md) — agent builds region-aware resource plumbing; a designated reviewer authors and approves every guidance sentence.
 - [Pastoral AI safety notes](pastoral-ai-safety-notes.md) — prompts may omit required crisis language; append reviewed care notes deterministically and invalidate generated-study caches.
 - [Expo nested-route query URLs](expo-nested-route-query-urls.md) — web redirects into a nested tab stack can retain params in route state while omitting them from the canonical URL.
+- [Mounted tab screens and root modals](expo-mounted-tabs-root-modals.md) — persisted tab screens must not reactively redirect from global route segments or they can replace Sign In and other root modals.

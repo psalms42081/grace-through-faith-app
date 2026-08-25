@@ -109,6 +109,14 @@ describe("external tester navigation feedback", () => {
       /router\.replace\(\{[\s\S]*?pathname:\s*sabbathSchoolPublicPath\(screen\)[\s\S]*?params:/,
     );
     assert.match(
+      sabbathSchoolContainmentSource,
+      /useRef\(segments\[0\]\s*===\s*"\(tabs\)"\)/,
+    );
+    assert.doesNotMatch(
+      sabbathSchoolContainmentSource,
+      /const isTabContained = segments\[0\]\s*===\s*"\(tabs\)"/,
+    );
+    assert.match(
       sabbathSchoolDaySource,
       /useSabbathSchoolTabContainment/,
     );

@@ -1,5 +1,5 @@
 import { router, useSegments } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Use the public path for tab-owned screens when navigating. Including the
 // hidden route group in a router target lets Expo render the right screen, but
@@ -51,7 +51,11 @@ export function useSabbathSchoolTabContainment(
   ready = true,
 ): boolean {
   const segments = useSegments();
-  const isTabContained = segments[0] === "(tabs)";
+  // Tabs keep previously visited screens mounted. Remember how this screen
+  // itself was mounted so an unrelated root modal (such as Sign In) cannot
+  // make a background Sabbath School screen replace the modal route.
+  const isTabContainedRef = useRef(segments[0] === "(tabs)");
+  const isTabContained = isTabContainedRef.current;
   const paramsKey = JSON.stringify(params ?? {});
 
   useEffect(() => {
