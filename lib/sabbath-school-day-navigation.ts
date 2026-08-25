@@ -63,6 +63,25 @@ export function buildSabbathSchoolDayNavigator(
     });
 }
 
+export function getSabbathSchoolDayPickerOffset({
+  activeIndex,
+  viewportWidth,
+  itemWidth = 48,
+  gap = 8,
+  leadingPadding = 16,
+}: {
+  activeIndex: number;
+  viewportWidth: number;
+  itemWidth?: number;
+  gap?: number;
+  leadingPadding?: number;
+}): number {
+  if (activeIndex < 0 || viewportWidth <= 0) return 0;
+  const itemCenter =
+    leadingPadding + activeIndex * (itemWidth + gap) + itemWidth / 2;
+  return Math.max(0, itemCenter - viewportWidth / 2);
+}
+
 export function buildSabbathSchoolDayRoute({
   lessonNumber,
   dayNumber,

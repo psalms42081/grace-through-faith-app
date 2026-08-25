@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import {
   buildSabbathSchoolDayNavigator,
   buildSabbathSchoolDayRoute,
+  getSabbathSchoolDayPickerOffset,
 } from "../lib/sabbath-school-day-navigation";
 
 const dayReaderSource = readFileSync(
@@ -50,5 +51,27 @@ describe("Sabbath School direct day navigation", () => {
     assert.match(dayReaderSource, /accessibilityLabel="Previous lesson day"/);
     assert.match(dayReaderSource, /accessibilityLabel="Next lesson day"/);
     assert.match(dayReaderSource, /buildSabbathSchoolDayRoute/);
+  });
+
+  it("keeps the active weekday visible in the horizontal picker", () => {
+    assert.equal(
+      getSabbathSchoolDayPickerOffset({
+        activeIndex: 0,
+        viewportWidth: 390,
+      }),
+      0,
+    );
+    assert.ok(
+      getSabbathSchoolDayPickerOffset({
+        activeIndex: 6,
+        viewportWidth: 390,
+      }) > 0,
+    );
+    assert.match(dayReaderSource, /ref=\{dayPickerRef\}/);
+    assert.match(dayReaderSource, /scrollTo\(\{/);
+    assert.match(
+      dayReaderSource,
+      /paddingLeft:\s*16,[\s\S]*?paddingRight:\s*32/,
+    );
   });
 });

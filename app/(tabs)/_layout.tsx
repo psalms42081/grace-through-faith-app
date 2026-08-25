@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { KidsColors, PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
+import { isSabbathSchoolTabPath } from "@/lib/sabbath-school-route-containment";
 
 function ClassicTabLayout() {
   const { isKidsMode } = useKidsMode();
@@ -17,7 +18,7 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
   const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
   const pathname = usePathname();
-  const isSabbathSchoolRoute = pathname.startsWith("/ss/sabbath-school");
+  const isSabbathSchoolRoute = isSabbathSchoolTabPath(pathname);
   const homeTabColor =
     !isKidsMode && isSabbathSchoolRoute ? PathB.coral : undefined;
 

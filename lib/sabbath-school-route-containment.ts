@@ -23,6 +23,14 @@ function sabbathSchoolPublicPath(screen: SabbathSchoolTabScreen): string {
   return `/ss/${screen}`;
 }
 
+export function isSabbathSchoolTabPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/ss/sabbath-school") ||
+    pathname === "/sabbath-school-day" ||
+    pathname === "/sabbath-school-quarter"
+  );
+}
+
 export function buildSabbathSchoolTabRoute(
   screen: SabbathSchoolTabScreen,
   params?: Record<string, string | number | null | undefined>,

@@ -31,6 +31,7 @@ import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   buildSabbathSchoolDayNavigator,
   buildSabbathSchoolDayRoute,
+  getSabbathSchoolDayPickerOffset,
   weekdayNameForSabbathSchoolDay,
 } from "@/lib/sabbath-school-day-navigation";
 import {
@@ -311,6 +312,8 @@ export default function SabbathSchoolDayScreen() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [hasAudioFinished, setHasAudioFinished] = useState(false);
   const [isAudioUnavailable, setIsAudioUnavailable] = useState(false);
+  const dayPickerRef = useRef<ScrollView>(null);
+  const [dayPickerViewportWidth, setDayPickerViewportWidth] = useState(0);
 
   React.useEffect(() => {
     const attemptRef = audioAttemptRef;
@@ -444,6 +447,24 @@ export default function SabbathSchoolDayScreen() {
     () => buildSabbathSchoolDayNavigator(data?.lesson?.days ?? []),
     [data?.lesson?.days],
   );
+  React.useEffect(() => {
+    const activeIndex = dayNavigatorItems.findIndex(
+      (item) => item.dayNumber === dayNumber,
+    );
+    if (activeIndex < 0 || dayPickerViewportWidth <= 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      dayPickerRef.current?.scrollTo({
+        x: getSabbathSchoolDayPickerOffset({
+          activeIndex,
+          viewportWidth: dayPickerViewportWidth,
+        }),
+        animated: false,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [dayNavigatorItems, dayNumber, dayPickerViewportWidth]);
   const currentDayName = day
     ? weekdayNameForSabbathSchoolDay(day)
     : `Day ${dayNumber}`;
@@ -514,9 +535,13 @@ export default function SabbathSchoolDayScreen() {
           testID="ss-day-picker"
         >
           <ScrollView
+            ref={dayPickerRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dayPickerContent}
+            onLayout={(event) =>
+              setDayPickerViewportWidth(event.nativeEvent.layout.width)
+            }
           >
             {dayNavigatorItems.map((item) => {
               const isActive = item.dayNumber === dayNumber;
@@ -887,7 +912,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   dayPickerContent: {
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 32,
     gap: 8,
   },
   dayPickerItem: {

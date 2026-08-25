@@ -96,6 +96,11 @@ describe("external tester navigation feedback", () => {
       tabLayoutSource,
       /name="sabbath-school-quarter"[\s\S]*?href:\s*null/,
     );
+    assert.match(tabLayoutSource, /isSabbathSchoolTabPath\(pathname\)/);
+    assert.match(
+      sabbathSchoolContainmentSource,
+      /pathname\.startsWith\("\/ss\/sabbath-school"\)[\s\S]*?pathname === "\/sabbath-school-day"[\s\S]*?pathname === "\/sabbath-school-quarter"/,
+    );
     assert.match(sabbathSchoolTabStackSource, /headerShown:\s*false/);
     assert.match(sabbathSchoolTabDaySource, /sabbath-school-day/);
     assert.match(sabbathSchoolTabQuarterSource, /sabbath-school-quarter/);
