@@ -44,7 +44,6 @@ export default function OnboardingScreen() {
 
   const flameOpacity = useSharedValue(0);
   const flameScale = useSharedValue(0.85);
-  const glowOpacity = useSharedValue(0);
   const quoteOpacity = useSharedValue(0);
   const attributionOpacity = useSharedValue(0);
   const buttonOpacity = useSharedValue(0);
@@ -73,11 +72,6 @@ export default function OnboardingScreen() {
       withTiming(1, { duration: 2500, easing: Easing.out(Easing.cubic) })
     );
 
-    glowOpacity.value = withDelay(
-      1500,
-      withTiming(0.12, { duration: 2500, easing: ease })
-    );
-
     quoteOpacity.value = withDelay(
       3000,
       withTiming(1, { duration: 1800, easing: ease })
@@ -101,7 +95,6 @@ export default function OnboardingScreen() {
     handleEnter,
     flameOpacity,
     flameScale,
-    glowOpacity,
     quoteOpacity,
     attributionOpacity,
     buttonOpacity,
@@ -122,10 +115,6 @@ export default function OnboardingScreen() {
     transform: [{ scale: flameScale.value }],
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   const quoteStyle = useAnimatedStyle(() => ({
     opacity: quoteOpacity.value,
   }));
@@ -141,8 +130,6 @@ export default function OnboardingScreen() {
   return (
     <View style={[s.root, { paddingBottom: bottomPad }]}>
       <View style={s.center}>
-        <Animated.View style={[s.glowRing, glowStyle]} />
-
         <Animated.View style={[s.brandBlock, flameStyle]}>
           <Image
             source={require("@/assets/images/informed-ministries-logo.png")}
@@ -183,13 +170,6 @@ const s = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  glowRing: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: GOLD,
   },
   flame: {
     width: 260,
