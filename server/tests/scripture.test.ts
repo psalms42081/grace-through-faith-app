@@ -8,6 +8,7 @@
 
 import { strict as assert } from "node:assert";
 import { describe, it, beforeEach } from "node:test";
+import { readFileSync } from "node:fs";
 
 import {
   normalizeTranslationParam,
@@ -31,9 +32,51 @@ import {
   searchNlt,
   ScriptureError,
   API_BIBLE_BOOK_MAP,
+  parseApiBibleChapter,
   type ApiBibleCatalogEntry,
   type LocalBookRef,
 } from "../services/scripture-service";
+
+describe("API.Bible provider chapter structure", () => {
+  it("keeps provider headings and paragraph boundaries separate from stable verses", () => {
+    const parsed = parseApiBibleChapter(
+      '<p class="s1">A supplied heading</p><p class="p"><span data-number="1" data-sid="GEN 1:1" class="v">1</span>First provider verse. <span class="v" data-number="2">2</span>Second provider verse.</p>',
+      1, 1, "NIV"
+    );
+    assert.deepEqual(parsed.verses.map((verse) => verse.verse), [1, 2]);
+    assert.deepEqual(parsed.verses.map((verse) => verse.text), [
+      "First provider verse.",
+      "Second provider verse.",
+    ]);
+    assert.deepEqual(parsed.providerContent, {
+      headings: [{ text: "A supplied heading", beforeVerse: 1 }],
+      paragraphs: [{ verseStart: 1, verseEnd: 2 }],
+    });
+  });
+
+  it("handles chapters with no provider headings", () => {
+    const parsed = parseApiBibleChapter(
+      '<p class="p"><span class="v" data-number="1">1</span>Plain verse.</p>',
+      1, 1, "NIV"
+    );
+    assert.deepEqual(parsed.providerContent?.headings, []);
+    assert.deepEqual(parsed.providerContent?.paragraphs, [{ verseStart: 1, verseEnd: 1 }]);
+  });
+});
+
+describe("provider heading response and reader contract", () => {
+  it("returns optional provider structure without changing the verse response field", () => {
+    const route = readFileSync("server/routes/bible.ts", "utf8");
+    assert.match(route, /verses:\s*resolved\.verses/);
+    assert.match(route, /resolved\.providerContent/);
+  });
+
+  it("renders headings only from explicit provider metadata", () => {
+    const reader = readFileSync("app/read/[bookId]/[chapter].tsx", "utf8");
+    assert.match(reader, /data\?\.providerContent\?\.headings/);
+    assert.match(reader, /providerParagraphStarts\.has\(v\.verse\)/);
+  });
+});
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

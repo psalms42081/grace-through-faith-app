@@ -32,7 +32,7 @@ async function checkBibleCache(
   translation: string,
   bookId: number,
   chapterNum: number
-): Promise<any[] | null> {
+): Promise<any | null> {
   try {
     const cached = await db
       .select()
@@ -58,7 +58,7 @@ async function checkBibleCache(
           } as any,
         })
         .catch(() => {});
-      return cached[0].versesJson as any[];
+      return cached[0].versesJson as any;
     }
 
     await db
@@ -83,10 +83,11 @@ async function storeBibleCache(
   bookId: number,
   bookName: string,
   chapterNum: number,
-  verses: any[],
+  verses: any,
   sourceApi: string
 ): Promise<void> {
   try {
+    const verseList = Array.isArray(verses) ? verses : verses?.verses ?? [];
     await db
       .insert(bibleCache)
       .values({
@@ -95,7 +96,7 @@ async function storeBibleCache(
         bookName,
         chapter: chapterNum,
         versesJson: verses,
-        verseCount: verses.length,
+        verseCount: verseList.length,
         sourceApi,
       } as any)
       .onConflictDoNothing();
@@ -154,6 +155,7 @@ router.get("/api/passage", async (req, res) => {
       book: resolved.book,
       chapter: resolved.chapter,
       verses: resolved.verses,
+      ...(resolved.providerContent ? { providerContent: resolved.providerContent } : {}),
       cached: resolved.cached,
       ...resolved.meta,
     });

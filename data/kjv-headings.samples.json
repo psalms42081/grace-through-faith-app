@@ -1,0 +1,235 @@
+[
+  {
+    "book": "Genesis",
+    "chapter": 1,
+    "sections": [
+      {
+        "heading": "The Creation of the World",
+        "startVerse": 1,
+        "endVerse": 5,
+        "paragraphs": [
+          {
+            "startVerse": 1,
+            "endVerse": 5
+          }
+        ]
+      },
+      {
+        "heading": "The Formation of the Firmament and Seas",
+        "startVerse": 6,
+        "endVerse": 10,
+        "paragraphs": [
+          {
+            "startVerse": 6,
+            "endVerse": 10
+          }
+        ]
+      },
+      {
+        "heading": "The Creation of Vegetation",
+        "startVerse": 11,
+        "endVerse": 13,
+        "paragraphs": [
+          {
+            "startVerse": 11,
+            "endVerse": 13
+          }
+        ]
+      },
+      {
+        "heading": "The Creation of Celestial Bodies",
+        "startVerse": 14,
+        "endVerse": 19,
+        "paragraphs": [
+          {
+            "startVerse": 14,
+            "endVerse": 19
+          }
+        ]
+      },
+      {
+        "heading": "The Creation of Aquatic and Aerial Life",
+        "startVerse": 20,
+        "endVerse": 23,
+        "paragraphs": [
+          {
+            "startVerse": 20,
+            "endVerse": 23
+          }
+        ]
+      },
+      {
+        "heading": "The Creation of Land Animals and Humanity",
+        "startVerse": 24,
+        "endVerse": 31,
+        "paragraphs": [
+          {
+            "startVerse": 24,
+            "endVerse": 31
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "book": "Psalms",
+    "chapter": 23,
+    "sections": [
+      {
+        "heading": "The Lord as Shepherd",
+        "startVerse": 1,
+        "endVerse": 6,
+        "paragraphs": [
+          {
+            "startVerse": 1,
+            "endVerse": 6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "book": "Matthew",
+    "chapter": 5,
+    "sections": [
+      {
+        "heading": "The Beatitudes: Blessings for the Humble",
+        "startVerse": 1,
+        "endVerse": 12,
+        "paragraphs": [
+          {
+            "startVerse": 1,
+            "endVerse": 12
+          }
+        ]
+      },
+      {
+        "heading": "Salt and Light: The Influence of Believers",
+        "startVerse": 13,
+        "endVerse": 16,
+        "paragraphs": [
+          {
+            "startVerse": 13,
+            "endVerse": 16
+          }
+        ]
+      },
+      {
+        "heading": "Fulfillment of the Law",
+        "startVerse": 17,
+        "endVerse": 20,
+        "paragraphs": [
+          {
+            "startVerse": 17,
+            "endVerse": 20
+          }
+        ]
+      },
+      {
+        "heading": "Teaching on Anger and Reconciliation",
+        "startVerse": 21,
+        "endVerse": 26,
+        "paragraphs": [
+          {
+            "startVerse": 21,
+            "endVerse": 26
+          }
+        ]
+      },
+      {
+        "heading": "Teaching on Adultery and Lust",
+        "startVerse": 27,
+        "endVerse": 30,
+        "paragraphs": [
+          {
+            "startVerse": 27,
+            "endVerse": 30
+          }
+        ]
+      },
+      {
+        "heading": "Teaching on Divorce and Oaths",
+        "startVerse": 31,
+        "endVerse": 37,
+        "paragraphs": [
+          {
+            "startVerse": 31,
+            "endVerse": 37
+          }
+        ]
+      },
+      {
+        "heading": "Teaching on Revenge and Love for Enemies",
+        "startVerse": 38,
+        "endVerse": 48,
+        "paragraphs": [
+          {
+            "startVerse": 38,
+            "endVerse": 48
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "book": "Revelation",
+    "chapter": 22,
+    "sections": [
+      {
+        "heading": "The River of Life and the Tree of Life",
+        "startVerse": 1,
+        "endVerse": 2,
+        "paragraphs": [
+          {
+            "startVerse": 1,
+            "endVerse": 2
+          }
+        ]
+      },
+      {
+        "heading": "The Eternal State of the Redeemed",
+        "startVerse": 3,
+        "endVerse": 5,
+        "paragraphs": [
+          {
+            "startVerse": 3,
+            "endVerse": 5
+          }
+        ]
+      },
+      {
+        "heading": "The Faithfulness of God's Promises",
+        "startVerse": 6,
+        "endVerse": 12,
+        "paragraphs": [
+          {
+            "startVerse": 6,
+            "endVerse": 12
+          }
+        ]
+      },
+      {
+        "heading": "The Invitation to the Thirsty",
+        "startVerse": 13,
+        "endVerse": 17,
+        "paragraphs": [
+          {
+            "startVerse": 13,
+            "endVerse": 17
+          }
+        ]
+      },
+      {
+        "heading": "Warnings and Final Exhortations",
+        "startVerse": 18,
+        "endVerse": 21,
+        "paragraphs": [
+          {
+            "startVerse": 18,
+            "endVerse": 21
+          }
+        ]
+      }
+    ]
+  }
+]

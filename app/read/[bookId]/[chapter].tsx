@@ -102,6 +102,11 @@ interface PassageResponse {
   book: { id: number; name: string; chapterCount: number };
   chapter: number;
   verses: Verse[];
+  /** API.Bible-only source structure; local KJV responses do not include this. */
+  providerContent?: {
+    headings?: { text: string; beforeVerse?: number }[];
+    paragraphs?: { verseStart: number; verseEnd: number }[];
+  };
 }
 
 function BottomSheetToolbar({
@@ -859,18 +864,23 @@ export default function VerseReaderScreen() {
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
 
-  const { data: highlightsData } = useQuery<{ id: string; verseId: string; color: string }[]>({
+  const { data: highlightsData } = useQuery<{ id: string; verseId: string; color: string; bookId?: number; chapter?: number; verse?: number }[]>({
     queryKey: [`/api/highlights/${userId}`],
   });
 
-  const { data: bookmarksData } = useQuery<{ id: string; verseId: string; label: string }[]>({
+  const { data: bookmarksData } = useQuery<{ id: string; verseId: string; label: string; bookId?: number; chapter?: number; verse?: number }[]>({
     queryKey: [`/api/bookmarks/${userId}`],
   });
 
   const highlightColorMap = useMemo(() => {
     const map = new Map<string, string>();
     if (highlightsData) {
-      for (const h of highlightsData) map.set(h.verseId, h.color);
+      for (const h of highlightsData) {
+        map.set(h.verseId, h.color);
+        if (h.bookId && h.chapter && h.verse) {
+          map.set(`${h.bookId}:${h.chapter}:${h.verse}`, h.color);
+        }
+      }
     }
     return map;
   }, [highlightsData]);
@@ -878,7 +888,12 @@ export default function VerseReaderScreen() {
   const bookmarkedVerseIds = useMemo(() => {
     const set = new Set<string>();
     if (bookmarksData) {
-      for (const b of bookmarksData) set.add(b.verseId);
+      for (const b of bookmarksData) {
+        set.add(b.verseId);
+        if (b.bookId && b.chapter && b.verse) {
+          set.add(`${b.bookId}:${b.chapter}:${b.verse}`);
+        }
+      }
     }
     return set;
   }, [bookmarksData]);
@@ -891,6 +906,21 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+  // Do not infer headings from KJV verse text. These maps are populated only
+  // when the provider explicitly returned its own chapter structure.
+  const providerHeadings = useMemo(() => {
+    const byVerse = new Map<number, string[]>();
+    for (const heading of data?.providerContent?.headings ?? []) {
+      if (heading.beforeVerse && heading.text) {
+        byVerse.set(heading.beforeVerse, [...(byVerse.get(heading.beforeVerse) ?? []), heading.text]);
+      }
+    }
+    return byVerse;
+  }, [data?.providerContent?.headings]);
+  const providerParagraphStarts = useMemo(
+    () => new Set((data?.providerContent?.paragraphs ?? []).map((paragraph) => paragraph.verseStart)),
+    [data?.providerContent?.paragraphs]
+  );
 
   const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef, bookName);
   const { handleStop: audioHandleStop } = audio;
@@ -1014,7 +1044,9 @@ export default function VerseReaderScreen() {
   useEffect(() => () => { if (stripToastTimer.current) clearTimeout(stripToastTimer.current); }, []);
 
   const firstVerseId = verses[0]?.id;
-  const chapterBookmarked = firstVerseId ? bookmarkedVerseIds.has(firstVerseId) : false;
+  const chapterBookmarked = firstVerseId
+    ? bookmarkedVerseIds.has(firstVerseId) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:1`)
+    : false;
 
   const handleChapterBookmark = useCallback(async () => {
     if (!isAuthenticated) { showStripToast("Sign in to save"); return; }
@@ -1053,18 +1085,18 @@ export default function VerseReaderScreen() {
     if (index === audio.speakingVerseIndex) {
       return "rgba(255, 241, 118, 0.28)";
     }
-    const hColor = highlightColorMap.get(verseId);
+    const hColor = highlightColorMap.get(verseId) ?? highlightColorMap.get(`${bookId}:${chapterNum}:${verseNum}`);
     if (hColor) {
       const c = canonHighlightBg(hColor);
       if (c) return c + "50";
       return "rgba(255, 241, 118, 0.28)";
     }
     return "transparent";
-  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap]);
+  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap, bookId, chapterNum]);
 
   const readerBg = RV2_SURFACE;
   const textColor = RV2_INK;
-  const verseNumColor = "rgba(31,26,18,0.40)"; // inkMuted grey — never coral, never gold
+  const verseNumColor = RV2_INK_MUTED; // WCAG-safe grey — never coral, never gold
   const chapterNumColor = "rgba(31,26,18,0.07)"; // ghosted chapter number on cream
   const headerPillBg = RV2_PILL;
   const headerBorderColor = RV2_BORDER;
@@ -1254,7 +1286,7 @@ export default function VerseReaderScreen() {
             >
 
               <View style={styles.chapterHeader}>
-                <Text style={[styles.bookNameLabel, { color: isDark ? "#555" : "#AAA" }]}>
+                <Text style={[styles.bookNameLabel, { color: RV2_INK_MUTED }]}>
                   {bookName?.toUpperCase()}
                 </Text>
                 <Text style={[styles.chapterNumber, { color: chapterNumColor }]}>
@@ -1280,7 +1312,7 @@ export default function VerseReaderScreen() {
                 {verses.map((v, i) => {
                   const isActive = activeVerse === v.verse;
                   const highlightBg = getHighlightBg(v.id, v.verse, i);
-                  const isBookmarked = bookmarkedVerseIds.has(v.id);
+                  const isBookmarked = bookmarkedVerseIds.has(v.id) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
                   const hasHighlightBg = highlightBg !== "transparent";
                   const isSpeaking = i === audio.speakingVerseIndex && audio.isSpeaking && !audio.isPaused;
 
@@ -1291,8 +1323,17 @@ export default function VerseReaderScreen() {
                       : "transparent";
 
                   return (
+                    <View key={v.id}>
+                      {(providerHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
+                        <Text
+                          key={`${v.id}-heading-${headingIndex}`}
+                          style={[styles.providerHeading, { color: textColor }]}
+                          accessibilityRole="header"
+                        >
+                          {heading}
+                        </Text>
+                      ))}
                     <Pressable
-                      key={v.id}
                       onPress={() => handleVerseTap(v)}
                       onLongPress={() => handleVerseLongPress(v)}
                       delayLongPress={400}
@@ -1303,6 +1344,7 @@ export default function VerseReaderScreen() {
                           borderRadius: (isActive || hasHighlightBg) ? 8 : 4,
                           borderLeftWidth: isSpeaking ? 2 : 0,
                           borderLeftColor: isSpeaking ? RV2_INK_MUTED : "transparent",
+                          marginTop: providerParagraphStarts.has(v.verse) && i > 0 ? 12 : 0,
                         },
                       ]}
                     >
@@ -1316,6 +1358,7 @@ export default function VerseReaderScreen() {
                         )}
                       </Text>
                     </Pressable>
+                    </View>
                   );
                 })}
               </View>
@@ -2044,6 +2087,13 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 4,
+  },
+  providerHeading: {
+    fontSize: 16,
+    lineHeight: 23,
+    fontFamily: "Lora_700Bold",
+    marginTop: 20,
+    marginBottom: 6,
   },
   quietRowText: {
     flex: 1,

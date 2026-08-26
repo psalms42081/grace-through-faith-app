@@ -171,7 +171,9 @@ export function buildApiBibleCacheKey(
   bookId: number,
   chapterNum: number
 ): string {
-  return `apibible-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
+  // Titles are part of the provider chapter representation. Version this key so
+  // an in-process entry fetched before titles were requested cannot hide them.
+  return `apibible-structure-v2-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
 }
 
 export function buildNltCacheKey(bookId: number, chapterNum: number): string {
@@ -205,7 +207,8 @@ export const NLT_PERSISTENT_CACHE_KEY = "NLT";
 export function buildEditionCacheKey(translationAbbr: string, bibleId: string): string {
   const abbr = translationAbbr.toUpperCase().trim().slice(0, 4);
   const hash = createHash("sha256")
-    .update(translationAbbr.toUpperCase().trim() + "|" + bibleId)
+    // This also invalidates persistent rows whose JSON only contained verses.
+    .update("structure-v2|" + translationAbbr.toUpperCase().trim() + "|" + bibleId)
     .digest("hex")
     .slice(0, 6);
   return abbr + hash;
@@ -694,61 +697,125 @@ export function parseNltHtml(html: string, bookId: number, chapterNum: number): 
   return verses;
 }
 
-export function parseApiBibleText(
+export interface ProviderHeading {
+  text: string;
+  /** The first verse following this heading, when the provider supplies one. */
+  beforeVerse?: number;
+}
+
+export interface ProviderParagraph {
+  verseStart: number;
+  verseEnd: number;
+}
+
+export interface ProviderChapterStructure {
+  headings: ProviderHeading[];
+  paragraphs: ProviderParagraph[];
+}
+
+export interface ApiBibleChapterData {
+  verses: any[];
+  /** Present only for API.Bible responses; local editions deliberately omit it. */
+  providerContent?: ProviderChapterStructure;
+}
+
+function apiBiblePlainText(value: string): string {
+  return value
+    .replace(
+      /<span\b(?=[^>]*\bclass=["'][^"']*\bv\b[^"']*["'])(?=[^>]*\bdata-number=["'](\d+)["'])[^>]*>[\s\S]*?<\/span>/gi,
+      "[$1]"
+    )
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Parse API.Bible's text/HTML hybrid without inventing headings or paragraphs. */
+export function parseApiBibleChapter(
   content: string,
   bookId: number,
   chapterNum: number,
   translationAbbr: string
-): any[] {
+): ApiBibleChapterData {
   const verses: any[] = [];
-  const lines = content.split(/\n/);
+  const headings: ProviderHeading[] = [];
+  const paragraphs: ProviderParagraph[] = [];
+  // API.Bible uses paragraph tags for both prose and section titles. Keep each
+  // provider block intact before extracting its [verse] markers.
+  const blocks = Array.from(content.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi));
+  const sourceBlocks = blocks.length
+    ? blocks.map((match) => ({ attrs: match[1], text: apiBiblePlainText(match[2]) }))
+    : content.split(/\n/).map((text) => ({ attrs: "", text: apiBiblePlainText(text) }));
   let currentVerse = 0;
   let currentText = "";
+  let pendingHeadings: ProviderHeading[] = [];
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  const flushVerse = () => {
+    if (currentVerse > 0 && currentText.trim()) {
+      verses.push({
+        id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
+        translationId: translationAbbr, bookId, chapter: chapterNum, verse: currentVerse,
+        text: currentText.trim(), searchVector: null,
+      });
+    }
+  };
+  for (const block of sourceBlocks) {
+    const trimmed = block.text.trim();
     if (!trimmed) continue;
+    const isHeading = /class\s*=\s*["'][^"']*\b(?:s\d*|ms\d*|mt\d*|d|r)\b/i.test(block.attrs);
+    // `content-type=text` NIV currently supplies titles as an unnumbered line
+    // immediately before the first numbered prose line (rather than HTML).
+    // Preserve that supplied line; never synthesize one from verse content.
+    if ((isHeading || !/\[\d+\]/.test(trimmed)) && !/\[\d+\]/.test(trimmed)) {
+      pendingHeadings.push({ text: trimmed });
+      continue;
+    }
 
     const parts = trimmed.split(/\[(\d+)\]/);
+    const blockVerses: number[] = [];
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i].trim();
       if (!part) continue;
       const num = parseInt(part, 10);
       if (!isNaN(num) && num > 0 && num <= 200 && parts[i - 1] !== undefined) {
         if (currentVerse > 0 && currentText.trim()) {
-          verses.push({
-            id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-            translationId: translationAbbr,
-            bookId,
-            chapter: chapterNum,
-            verse: currentVerse,
-            text: currentText.trim(),
-            searchVector: null,
-          });
+          flushVerse();
         }
         currentVerse = num;
         currentText = "";
+        blockVerses.push(num);
+        if (pendingHeadings.length) {
+          headings.push(...pendingHeadings.map((heading) => ({ ...heading, beforeVerse: num })));
+          pendingHeadings = [];
+        }
       } else if (currentVerse > 0) {
         currentText += " " + part;
       } else if (i === 0 && parts.length > 1) {
         continue;
       }
     }
+    if (blockVerses.length) {
+      paragraphs.push({ verseStart: blockVerses[0], verseEnd: blockVerses[blockVerses.length - 1] });
+    }
   }
 
-  if (currentVerse > 0 && currentText.trim()) {
-    verses.push({
-      id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`,
-      translationId: translationAbbr,
-      bookId,
-      chapter: chapterNum,
-      verse: currentVerse,
-      text: currentText.trim(),
-      searchVector: null,
-    });
-  }
+  flushVerse();
 
-  return verses;
+  return { verses, providerContent: { headings, paragraphs } };
+}
+
+/** Backwards-compatible verse-only parser used by existing callers/tests. */
+export function parseApiBibleText(
+  content: string, bookId: number, chapterNum: number, translationAbbr: string
+): any[] {
+  return parseApiBibleChapter(content, bookId, chapterNum, translationAbbr).verses;
 }
 
 // ─── In-process caches (translation-isolated) ─────────────────────────────────
@@ -803,7 +870,7 @@ export async function fetchApiBibleChapter(
   chapterNum: number,
   translationAbbr: string,
   config: ApiBibleTranslationConfig
-): Promise<{ verses: any[] }> {
+): Promise<ApiBibleChapterData> {
   const cacheKey = buildApiBibleCacheKey(translationAbbr, config.bibleId, bookId, chapterNum);
   const cached = apiBibleCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
@@ -817,7 +884,7 @@ export async function fetchApiBibleChapter(
   if (!apiBibleBookCode) throw new Error(`No API.Bible book mapping for: ${bookName}`);
 
   const chapterId = `${apiBibleBookCode}.${chapterNum}`;
-  const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/chapters/${chapterId}?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false`;
+  const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/chapters/${chapterId}?content-type=html&include-verse-numbers=true&include-titles=true&include-chapter-numbers=false`;
 
   const response = await fetch(url, {
     headers: { "api-key": apiKey },
@@ -847,8 +914,7 @@ export async function fetchApiBibleChapter(
 
   const json = (await response.json()) as any;
   const content = json.data?.content || "";
-  const verses = parseApiBibleText(content, bookId, chapterNum, translationAbbr);
-  const result = { verses };
+  const result = parseApiBibleChapter(content, bookId, chapterNum, translationAbbr);
 
   apiBibleCache.set(cacheKey, { data: result, expires: Date.now() + 3600_000 });
   evictOldest(apiBibleCache, 1000, 200);
@@ -1149,6 +1215,8 @@ export interface ResolvedScripture {
   book: ResolvedBook;
   chapter: number;
   verses: any[];
+  /** Provider-only presentation metadata. Omitted for database/local chapters. */
+  providerContent?: ProviderChapterStructure;
   /** True when the verses came from the DB/provider cache */
   cached: boolean;
   meta: {
@@ -1199,13 +1267,13 @@ async function resolveBookRecord(book: string | number): Promise<ResolvedBook | 
  * service stays free of the bible_cache stats bookkeeping specifics.
  */
 export interface ChapterCacheHooks {
-  read: (translation: string, bookId: number, chapterNum: number) => Promise<any[] | null>;
+  read: (translation: string, bookId: number, chapterNum: number) => Promise<any | null>;
   write: (
     translation: string,
     bookId: number,
     bookName: string,
     chapterNum: number,
-    verses: any[],
+    verses: any,
     sourceApi: string
   ) => Promise<void> | void;
 }
@@ -1282,9 +1350,17 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
       providerEditionId: config.bibleId,
     };
     if (params.cache) {
-      const cachedVerses = await params.cache.read(editionCacheKey, bookId, chapterNum);
-      if (cachedVerses) {
-        return { book: bookRecord, chapter: chapterNum, verses: cachedVerses, cached: true, meta };
+      const cachedChapter = await params.cache.read(editionCacheKey, bookId, chapterNum);
+      if (cachedChapter) {
+        // The versioned edition key means this is normally the structured shape;
+        // tolerate an array for defensive compatibility with cache adapters.
+        const cachedData = Array.isArray(cachedChapter)
+          ? { verses: cachedChapter }
+          : cachedChapter as ApiBibleChapterData;
+        return {
+          book: bookRecord, chapter: chapterNum, verses: cachedData.verses,
+          providerContent: cachedData.providerContent, cached: true, meta,
+        };
       }
     }
     try {
@@ -1293,9 +1369,12 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
         throw new ScriptureError("PROVIDER_ERROR", `Could not parse ${translationAbbr} content`, 502);
       }
       if (params.cache) {
-        await params.cache.write(editionCacheKey, bookId, bookName, chapterNum, abData.verses, "api_bible");
+        await params.cache.write(editionCacheKey, bookId, bookName, chapterNum, abData, "api_bible");
       }
-      return { book: bookRecord, chapter: chapterNum, verses: abData.verses, cached: false, meta };
+      return {
+        book: bookRecord, chapter: chapterNum, verses: abData.verses,
+        providerContent: abData.providerContent, cached: false, meta,
+      };
     } catch (err: any) {
       if (err instanceof ScriptureError) throw err;
       throw new ScriptureError("PROVIDER_ERROR", `Could not fetch ${translationAbbr} translation: ${err?.message}`, 502);

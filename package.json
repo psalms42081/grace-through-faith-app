@@ -34,6 +34,8 @@
     "test:navigation-feedback": "tsx --test tests/navigation-feedback-regressions.test.ts",
     "test:doctrinal-smoke": "tsx --test server/tests/doctrinal-ai-smoke.test.ts",
     "test:verse-map-generation": "tsx tests/verse-map-generation.test.ts",
+    "generate:kjv-headings": "tsx scripts/generate-kjv-headings.ts",
+    "test:kjv-headings": "tsx --test tests/kjv-headings-generation.test.ts",
     "start": "npx expo start",
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint-with-warning-budget.mjs",

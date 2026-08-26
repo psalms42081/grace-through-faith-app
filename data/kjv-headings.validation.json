@@ -1,0 +1,10 @@
+{
+  "valid": true,
+  "errors": [],
+  "counts": {
+    "books": 66,
+    "chapters": 1189,
+    "verses": 31102,
+    "sections": 4297
+  }
+}

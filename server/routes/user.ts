@@ -10,6 +10,7 @@ import { Router } from "express";
     readingHistory,
     readingStreaks,
     bibleBooks,
+    bibleTranslations,
     bibleVerses,
   } from "../../shared/schema";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
@@ -23,6 +24,38 @@ import { Router } from "express";
   } from "../../shared/calendar-date";
 
   const router = Router();
+
+  const PROVIDER_VERSE_ID = /^[a-z0-9]+-(\d+)-(\d+)-(\d+)$/i;
+
+  /**
+   * User annotations keep their existing bible_verse foreign key. API.Bible
+   * verse IDs encode the same canonical location but are not database rows, so
+   * resolve them to the local KJV row before persistence.
+   */
+  async function resolveAnnotationVerseId(verseId: string): Promise<string | null> {
+    const [existing] = await db
+      .select({ id: bibleVerses.id })
+      .from(bibleVerses)
+      .where(eq(bibleVerses.id, verseId))
+      .limit(1);
+    if (existing) return existing.id;
+
+    const match = PROVIDER_VERSE_ID.exec(verseId);
+    if (!match) return null;
+    const [, rawBookId, rawChapter, rawVerse] = match;
+    const [canonical] = await db
+      .select({ id: bibleVerses.id })
+      .from(bibleVerses)
+      .innerJoin(bibleTranslations, eq(bibleVerses.translationId, bibleTranslations.id))
+      .where(and(
+        eq(bibleTranslations.abbreviation, "KJV"),
+        eq(bibleVerses.bookId, Number(rawBookId)),
+        eq(bibleVerses.chapter, Number(rawChapter)),
+        eq(bibleVerses.verse, Number(rawVerse)),
+      ))
+      .limit(1);
+    return canonical?.id ?? null;
+  }
 
   router.post("/api/user/start-trial", requireAuth, async (req, res) => {
   try {
@@ -284,9 +317,11 @@ router.post("/api/notes", requireAuth, validate(noteSchema), async (req, res) =>
   try {
     const userId = req.authUserId!;
     const { verseId, content } = req.body;
+    const persistedVerseId = await resolveAnnotationVerseId(verseId);
+    if (!persistedVerseId) return res.status(400).json({ error: "Verse not found" });
     const note = await db
       .insert(userNotes)
-      .values({ userId, verseId, content })
+      .values({ userId, verseId: persistedVerseId, content })
       .returning();
     return res.json(note[0]);
   } catch (err) {
@@ -330,9 +365,11 @@ router.post("/api/highlights", requireAuth, validate(highlightSchema), async (re
   try {
     const userId = req.authUserId!;
     const { verseId, color = "yellow" } = req.body;
+    const persistedVerseId = await resolveAnnotationVerseId(verseId);
+    if (!persistedVerseId) return res.status(400).json({ error: "Verse not found" });
     const highlight = await db
       .insert(userHighlights)
-      .values({ userId, verseId, color })
+      .values({ userId, verseId: persistedVerseId, color })
       .onConflictDoNothing()
       .returning();
     return res.json(highlight[0] ?? null);
@@ -377,9 +414,11 @@ router.post("/api/bookmarks", requireAuth, validate(bookmarkSchema), async (req,
   try {
     const userId = req.authUserId!;
     const { verseId, label } = req.body;
+    const persistedVerseId = await resolveAnnotationVerseId(verseId);
+    if (!persistedVerseId) return res.status(400).json({ error: "Verse not found" });
     const bookmark = await db
       .insert(userBookmarks)
-      .values({ userId, verseId, label })
+      .values({ userId, verseId: persistedVerseId, label })
       .onConflictDoNothing()
       .returning();
     return res.json(bookmark[0] ?? null);

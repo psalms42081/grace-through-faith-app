@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "kjv-headings-v1",
+  "lensVersion": "sda-v2",
+  "model": "gpt-4o-mini",
+  "source": "data/kjv.json",
+  "generatedAt": "2026-08-26T23:09:09.554Z",
+  "books": 66,
+  "chapters": 1189,
+  "verses": 31102,
+  "sections": 4297
+}

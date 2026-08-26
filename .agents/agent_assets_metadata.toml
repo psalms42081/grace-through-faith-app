@@ -66,3 +66,31 @@ uri = "file://attached_assets/informed-ministries/informed-logo.webp"
 type = "image"
 title = "Informed Ministries Logo"
 description = "Exact current header wordmark downloaded from informedministries.com.au, including the open-book mark and stylised INFORMED name."
+
+[[outputs]]
+id = "kxUQdYh-i6Ka6_-f4qdw7"
+uri = "file://data/kjv-headings.generated.json"
+type = "unspecified"
+title = "Complete original KJV structure dataset"
+description = "Review-only JSON covering all 66 books, 1,189 chapters, and 31,102 source verses. It is not connected to the reader runtime."
+
+[[outputs]]
+id = "JoU3oUYll4jaEraPYMnYZ"
+uri = "file://data/kjv-headings.validation.json"
+type = "unspecified"
+title = "KJV dataset validation report"
+description = "Machine validation result confirming exact verse coverage, ordered non-overlapping ranges, and no structural errors."
+
+[[outputs]]
+id = "gJpzscU_w-wLib5oUulHR"
+uri = "file://data/kjv-headings.manifest.json"
+type = "unspecified"
+title = "KJV dataset generation manifest"
+description = "Generation provenance, schema/lens versions, model, source, timestamp, and corpus counts."
+
+[[outputs]]
+id = "dZl4kmfF1_UEGav8_xmw_"
+uri = "file://data/kjv-headings.samples.json"
+type = "unspecified"
+title = "KJV dataset representative samples"
+description = "Small review set spanning representative Old and New Testament chapters."
