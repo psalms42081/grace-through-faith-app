@@ -11,7 +11,6 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Audio } from "expo-av";
 import { track } from "@/lib/analytics";
 import Animated, {
   useSharedValue,
@@ -40,8 +39,8 @@ export default function OnboardingScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const hasStartedRef = useRef(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
   const cancelledRef = useRef(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flameOpacity = useSharedValue(0);
   const flameScale = useSharedValue(0.85);
@@ -53,8 +52,9 @@ export default function OnboardingScreen() {
   const handleEnter = useCallback(async () => {
     track("onboarding_completed", { method: "enter" });
     cancelledRef.current = true;
-    if (soundRef.current) {
-      try { await soundRef.current.stopAsync(); } catch {}
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
     }
     await AsyncStorage.setItem(ONBOARDING_KEY, "true");
     router.replace("/(tabs)");
@@ -93,34 +93,10 @@ export default function OnboardingScreen() {
       withTiming(1, { duration: 1000, easing: ease })
     );
 
-    // Configure audio session then play voiceover
-    setTimeout(async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false,
-          staysActiveInBackground: false,
-        });
-        const { sound } = await Audio.Sound.createAsync(
-          require("@/assets/audio/invitation-quote.mp3"),
-          { shouldPlay: true, volume: 0.7 },
-          (status) => {
-            // Auto-advance as soon as the voiceover finishes
-            if (status.isLoaded && status.didJustFinish) {
-              setTimeout(() => handleEnter(), 1500);
-            }
-          }
-        );
-        if (!cancelledRef.current) {
-          soundRef.current = sound;
-        } else {
-          sound.unloadAsync().catch(() => {});
-        }
-      } catch {
-        // If audio fails, auto-advance after a generous delay
-        setTimeout(() => handleEnter(), 10000);
-      }
-    }, 3200);
+    // Preserve the previous voiceover-completion timing without playing audio.
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      if (!cancelledRef.current) handleEnter();
+    }, 11750);
   }, [
     handleEnter,
     flameOpacity,
@@ -134,11 +110,9 @@ export default function OnboardingScreen() {
   useEffect(() => {
     return () => {
       cancelledRef.current = true;
-      if (soundRef.current) {
-        soundRef.current
-          .stopAsync()
-          .catch(() => {})
-          .finally(() => soundRef.current?.unloadAsync().catch(() => {}));
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
       }
     };
   }, []);
@@ -169,12 +143,13 @@ export default function OnboardingScreen() {
       <View style={s.center}>
         <Animated.View style={[s.glowRing, glowStyle]} />
 
-        <Animated.View style={flameStyle}>
+        <Animated.View style={[s.brandBlock, flameStyle]}>
           <Image
-            source={require("@/assets/images/adventist-symbol-gold.png")}
+            source={require("@/assets/images/informed-ministries-logo.png")}
             style={s.flame}
             resizeMode="contain"
           />
+          <Text style={s.ministryName}>Informed Ministries</Text>
         </Animated.View>
 
         <View style={s.quoteBlock}>
@@ -217,11 +192,21 @@ const s = StyleSheet.create({
     backgroundColor: GOLD,
   },
   flame: {
-    width: 90,
+    width: 260,
     height: 90,
   },
+  brandBlock: {
+    alignItems: "center",
+  },
+  ministryName: {
+    marginTop: 8,
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: PARCHMENT,
+    letterSpacing: 1.2,
+  },
   quoteBlock: {
-    marginTop: 48,
+    marginTop: 20,
     paddingHorizontal: 40,
     alignItems: "center",
   },
