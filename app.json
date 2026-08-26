@@ -27,7 +27,7 @@
       "package": "com.graceThroughFaith",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#1A1F3C",
+        "backgroundColor": "#1E2B5E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -68,8 +68,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#1A1F3C",
+          "icon": "./assets/images/android-notification-icon.png",
+          "color": "#1E2B5E",
           "defaultChannel": "daily-reminders",
           "sounds": [],
           "mode": "default"
