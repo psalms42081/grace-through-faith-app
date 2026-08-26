@@ -212,7 +212,11 @@ export default function HomeV2Screen() {
 
   const { data: ssData } = useQuery<{
     quarterly: { title: string; colorPrimary: string | null } | null;
-    currentLesson: { title: string; lessonNumber: number } | null;
+    currentLesson: {
+      title: string;
+      lessonNumber: number;
+      days: { dayNumber: number; title: string | null }[];
+    } | null;
     completedDays: number;
     currentLessonNumber: number;
     todayDayNumber: number | null;
@@ -241,6 +245,9 @@ export default function HomeV2Screen() {
   // value is only a loading fallback and uses the same Home clock.
   const ssDayIndex =
     ssData?.todayDayNumber ?? localDay.sabbathSchoolDayNumber;
+  const ssTodayTitle =
+    ssData?.currentLesson?.days.find((day) => day.dayNumber === ssDayIndex)?.title ??
+    ssData?.currentLesson?.title;
   const ssDoneToday = (ssData?.completedDays ?? 0) >= ssDayIndex;
 
   const planTitle = todayData?.enrollment?.plan?.title;
@@ -261,7 +268,7 @@ export default function HomeV2Screen() {
       icon: require("@/assets/illustrations/rhythm-sabbath-school.png"),
       iconBg: "#DFF6F2",
       title: "Sabbath School",
-      meta: ssData?.currentLesson ? `${dayLabel} — ${ssData.currentLesson.title}` : dayLabel,
+      meta: ssTodayTitle ? `${dayLabel} — ${ssTodayTitle}` : dayLabel,
       done: ssDoneToday,
       onPress: () => router.push("/(tabs)/ss/sabbath-school" as any),
     },
@@ -313,7 +320,7 @@ export default function HomeV2Screen() {
       <SSGradientCard
         quarterTitle={ssData?.quarterly?.title}
         quarterColor={ssData?.quarterly?.colorPrimary}
-        lessonTitle={ssData?.currentLesson?.title}
+        lessonTitle={ssTodayTitle}
         lessonNumber={ssData?.currentLesson?.lessonNumber ?? ssData?.currentLessonNumber}
         completedDays={ssData?.completedDays ?? 0}
         dayLabel={dayLabel}
