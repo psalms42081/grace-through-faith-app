@@ -160,4 +160,11 @@ describe("external tester navigation feedback", () => {
       /webScene:[\s\S]*?maxWidth:\s*700[\s\S]*?alignSelf:\s*"center"/,
     );
   });
+
+  it("carries the current Bible chapter into Guided Study", () => {
+    assert.match(
+      readerSource,
+      /label:\s*"Guided Study"[\s\S]*?pathname:\s*"\/study-guide"[\s\S]*?verseReference:\s*`\$\{bookName\} \$\{chapterNum\}:1`[\s\S]*?chapter:\s*String\(chapterNum\)[\s\S]*?verse:\s*"1"/,
+    );
+  });
 });
