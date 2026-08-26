@@ -59,3 +59,10 @@ uri = "file://screenshots/read-state-options.html"
 type = "text"
 title = "Read-state recolor — Option A (coral) vs Option B (green)"
 description = "Side-by-side of the READ chip and read-chapter cells in both remap options. Coral is currently live in the app."
+
+[[outputs]]
+id = "dZXAWSfHzvnBIsc7bKcZg"
+uri = "file://attached_assets/informed-ministries/informed-logo.webp"
+type = "image"
+title = "Informed Ministries Logo"
+description = "Exact current header wordmark downloaded from informedministries.com.au, including the open-book mark and stylised INFORMED name."
