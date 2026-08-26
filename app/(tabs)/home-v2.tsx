@@ -202,7 +202,7 @@ export default function HomeV2Screen() {
   });
 
   const { data: ssData } = useQuery<{
-    quarterly: { title: string } | null;
+    quarterly: { title: string; colorPrimary: string | null } | null;
     currentLesson: { title: string; lessonNumber: number } | null;
     completedDays: number;
     currentLessonNumber: number;
@@ -303,6 +303,7 @@ export default function HomeV2Screen() {
 
       <SSGradientCard
         quarterTitle={ssData?.quarterly?.title}
+        quarterColor={ssData?.quarterly?.colorPrimary}
         lessonTitle={ssData?.currentLesson?.title}
         lessonNumber={ssData?.currentLesson?.lessonNumber ?? ssData?.currentLessonNumber}
         completedDays={ssData?.completedDays ?? 0}

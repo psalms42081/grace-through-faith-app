@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Audio } from "expo-av";
 import {
@@ -60,6 +61,7 @@ interface LessonResponse {
   };
   quarterly: {
     title: string;
+    colorPrimary: string | null;
   };
 }
 
@@ -255,15 +257,6 @@ function sanitizeContent(content: string): string {
 
 export default function SabbathSchoolDayScreen() {
   useTheme(); // Path B light sweep: pinned light; teal = Sabbath School category token
-  const theme = {
-    background: "#FBF7EE",
-    backgroundCard: "#FFFFFF",
-    text: "#1F1A12",
-    textSecondary: "#3F3A31",
-    textMuted: "#6B6660",
-    border: "#E7E0D2",
-    accent: "#1F7A70",
-  };
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
@@ -298,6 +291,16 @@ export default function SabbathSchoolDayScreen() {
   const { data, isLoading } = useQuery<LessonResponse>({
     queryKey: [queryPath],
   });
+  const quarterTheme = getSabbathSchoolQuarterTheme(data?.quarterly?.colorPrimary);
+  const theme = {
+    background: "#FBF7EE",
+    backgroundCard: "#FFFFFF",
+    text: "#1F1A12",
+    textSecondary: "#3F3A31",
+    textMuted: "#6B6660",
+    border: "#E7E0D2",
+    accent: quarterTheme.primary,
+  };
 
   const day = data?.lesson?.days?.find((d) => d.dayNumber === dayNumber);
   const currentLessonId = data?.lesson?.id;
@@ -637,16 +640,18 @@ export default function SabbathSchoolDayScreen() {
               testID="ss-day-audio"
               style={({ pressed }) => [
                 styles.audioRow,
-                pressed && !isAudioLoading ? styles.audioRowPressed : null,
+                pressed && !isAudioLoading
+                  ? { backgroundColor: quarterTheme.tint, opacity: 0.82 }
+                  : null,
               ]}
             >
               {isAudioLoading ? (
-                <ActivityIndicator size="small" color="#1F7A70" />
+                <ActivityIndicator size="small" color={quarterTheme.primary} />
               ) : (
                 <Ionicons
                   name={isAudioPlaying ? "pause-circle-outline" : "play-circle-outline"}
                   size={32}
-                  color="#1F7A70"
+                  color={quarterTheme.primary}
                 />
               )}
               <Text style={styles.audioLabel}>
@@ -707,8 +712,8 @@ export default function SabbathSchoolDayScreen() {
               style={({ pressed }) => [
                 styles.tutorCta,
                 {
-                  backgroundColor: "rgba(31, 122, 112, 0.09)",
-                  borderColor: "rgba(31, 122, 112, 0.24)",
+                  backgroundColor: quarterTheme.tint,
+                  borderColor: quarterTheme.border,
                   opacity: isAuthLoading ? 0.6 : pressed ? 0.84 : 1,
                 },
               ]}
@@ -721,7 +726,7 @@ export default function SabbathSchoolDayScreen() {
               accessibilityState={{ disabled: isAuthLoading }}
               testID="ss-day-ask-tutor"
             >
-              <View style={[styles.tutorIcon, { backgroundColor: "rgba(31, 122, 112, 0.14)" }]}>
+              <View style={[styles.tutorIcon, { backgroundColor: quarterTheme.tint }]}>
                 <Ionicons name="chatbubbles-outline" size={20} color={theme.accent} />
               </View>
               <View style={styles.tutorCopy}>
@@ -956,10 +961,6 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     borderRadius: 12,
     marginBottom: 8,
-  },
-  audioRowPressed: {
-    backgroundColor: "rgba(31, 122, 112, 0.08)",
-    opacity: 0.82,
   },
   audioLabel: {
     fontFamily: "Inter_400Regular",

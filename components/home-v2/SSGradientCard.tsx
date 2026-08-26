@@ -3,9 +3,11 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { HV2, F } from "./theme";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 
 interface Props {
   quarterTitle?: string | null;
+  quarterColor?: string | null;
   lessonTitle?: string | null;
   lessonNumber?: number | null;
   completedDays: number;
@@ -14,15 +16,16 @@ interface Props {
 
 // The ONE gradient on this screen (§1.3). All other cards are flat white.
 export default function SSGradientCard({
-  quarterTitle, lessonTitle, lessonNumber, completedDays, dayLabel,
+  quarterTitle, quarterColor, lessonTitle, lessonNumber, completedDays, dayLabel,
 }: Props) {
   const progress = Math.min(Math.max(completedDays / 7, 0), 1);
+  const quarterTheme = getSabbathSchoolQuarterTheme(quarterColor);
   const goToSS = () => router.push("/(tabs)/ss/sabbath-school" as any);
 
   return (
     <View style={s.wrap}>
       <LinearGradient
-        colors={[...HV2.ssGradientSafe]}
+        colors={[...quarterTheme.gradient]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={s.inner}
@@ -45,7 +48,7 @@ export default function SSGradientCard({
         </View>
         <View style={s.btnRow}>
           <Pressable style={s.continueBtn} onPress={goToSS} accessibilityRole="button">
-            <Text style={s.continueLabel}>Continue — {dayLabel}</Text>
+            <Text style={[s.continueLabel, { color: quarterTheme.primary }]}>Continue — {dayLabel}</Text>
           </Pressable>
           <Pressable style={s.watchBtn} onPress={goToSS} accessibilityRole="button">
             <Text style={s.watchLabel}>▶ Watch</Text>
@@ -96,7 +99,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  continueLabel: { fontFamily: F.interSemi, fontSize: 13.5, color: "#1F7A70" },
+  continueLabel: { fontFamily: F.interSemi, fontSize: 13.5 },
   watchBtn: {
     backgroundColor: "rgba(255,255,255,0.20)",
     borderRadius: 999,

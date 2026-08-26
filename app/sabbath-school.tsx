@@ -25,6 +25,7 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
   buildSabbathSchoolTabRoute,
   sabbathSchoolTabBarClearance,
@@ -158,6 +159,7 @@ export default function SabbathSchoolV2Screen() {
   });
 
   const quarterly = data?.quarterly;
+  const quarterTheme = getSabbathSchoolQuarterTheme(quarterly?.colorPrimary);
   const lesson = data?.currentLesson;
   const days = getLessonDays(lesson);
   const completedCount = data?.completedDays || 0;
@@ -236,7 +238,7 @@ export default function SabbathSchoolV2Screen() {
           {/* 1. Lesson hero — the screen's ONE gradient */}
           <View style={s.heroWrap}>
             <LinearGradient
-              colors={[...HV2.ssGradientSafe]}
+              colors={[...quarterTheme.gradient]}
               start={{ x: 0, y: 0 }}
               end={{ x: 0.8, y: 1 }}
               style={s.heroInner}
@@ -265,7 +267,7 @@ export default function SabbathSchoolV2Screen() {
                   accessibilityRole="button"
                   testID="ss2-hero-cta"
                 >
-                  <Text style={s.heroCtaText} numberOfLines={1}>
+                  <Text style={[s.heroCtaText, { color: quarterTheme.primary }]} numberOfLines={1}>
                     Continue — {weekdayFromDate(currentDay.date) || DAY_FALLBACK[currentDay.dayNumber - 1] || `Day ${currentDay.dayNumber}`}
                     {currentDay.title ? `: ${currentDay.title}` : ""}
                   </Text>
@@ -298,7 +300,7 @@ export default function SabbathSchoolV2Screen() {
                         {clip.thumbnail ? (
                           <Image source={{ uri: clip.thumbnail }} style={s.videoThumb} resizeMode="cover" />
                         ) : (
-                          <View style={[s.videoThumb, { backgroundColor: SS2.tealTint }]} />
+                          <View style={[s.videoThumb, { backgroundColor: quarterTheme.tint }]} />
                         )}
                         <View style={s.videoCardMeta}>
                           <Text style={s.videoTitle} numberOfLines={2}>{clip.title || "Lesson Clip"}</Text>
@@ -350,7 +352,7 @@ export default function SabbathSchoolV2Screen() {
                     onPress={() => openDay(day)}
                     style={({ pressed }) => [
                       s.dayRow,
-                      isToday && s.dayRowToday,
+                      isToday && { backgroundColor: quarterTheme.tint },
                       index < days.length - 1 && s.dayRowDivider,
                       { opacity: pressed ? 0.7 : 1 },
                     ]}
@@ -366,7 +368,7 @@ export default function SabbathSchoolV2Screen() {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.dayLabel, isToday && { color: SS2.teal }]}>{label}{isToday ? "  ·  Today" : ""}</Text>
+                      <Text style={[s.dayLabel, isToday && { color: quarterTheme.primary }]}>{label}{isToday ? "  ·  Today" : ""}</Text>
                       <Text style={s.dayTitle} numberOfLines={2}>{day.title || `Day ${day.dayNumber}`}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={SS2.inkMuted} />
@@ -402,7 +404,10 @@ export default function SabbathSchoolV2Screen() {
                 }) as any,
               )
             }
-            style={({ pressed }) => [s.discussionBtn, { opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              s.discussionBtn,
+              { backgroundColor: quarterTheme.primary, opacity: pressed ? 0.85 : 1 },
+            ]}
           >
             <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
             <View style={{ flex: 1 }}>
@@ -415,9 +420,12 @@ export default function SabbathSchoolV2Screen() {
           {/* Archive → quarter screens */}
           <Pressable
             onPress={() => setShowArchive(!showArchive)}
-            style={({ pressed }) => [s.archiveToggle, { opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [
+              s.archiveToggle,
+              { borderColor: quarterTheme.border, opacity: pressed ? 0.7 : 1 },
+            ]}
           >
-            <Ionicons name="library-outline" size={18} color={SS2.teal} />
+            <Ionicons name="library-outline" size={18} color={quarterTheme.primary} />
             <Text style={s.archiveToggleText}>{t("sabbathSchool.viewArchive", { defaultValue: "Past Quarters" })}</Text>
             <Ionicons name={showArchive ? "chevron-up" : "chevron-down"} size={16} color={SS2.inkMuted} />
           </Pressable>
@@ -438,7 +446,13 @@ export default function SabbathSchoolV2Screen() {
                         }) as any,
                       )
                     }
-                    style={({ pressed }) => [s.archiveCard, { opacity: pressed ? 0.85 : 1 }]}
+                    style={({ pressed }) => [
+                      s.archiveCard,
+                      {
+                        borderLeftColor: getSabbathSchoolQuarterTheme(q.colorPrimary).primary,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}
                   >
                     <Text style={s.archiveCardTitle}>{q.title}</Text>
                     {q.humanDate && <Text style={s.archiveCardDate}>{q.humanDate}</Text>}
@@ -481,7 +495,7 @@ const s = StyleSheet.create({
   heroFill: { height: 6, borderRadius: 3, backgroundColor: "#FFFFFF" },
   heroProgressText: { fontFamily: F.interSemi, fontSize: 11.5, color: "#FFFFFF", marginTop: 6 },
   heroCta: { marginTop: 14, alignSelf: "flex-start", backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 18, paddingVertical: 11, maxWidth: "100%" },
-  heroCtaText: { fontFamily: F.interSemi, fontSize: 13.5, color: SS2.teal },
+  heroCtaText: { fontFamily: F.interSemi, fontSize: 13.5 },
 
   section: { gap: 10 },
   sectionTitle: { fontFamily: F.loraSemi, fontSize: 17, color: SS2.ink },
@@ -501,7 +515,6 @@ const s = StyleSheet.create({
 
   weekCard: { backgroundColor: SS2.card, borderRadius: 16, overflow: "hidden", ...HV2.rowShadow },
   dayRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
-  dayRowToday: { backgroundColor: SS2.tealTint },
   dayRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: SS2.border },
   dayStatus: { width: 22, alignItems: "center" },
   todayDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: SS2.coral },
@@ -513,14 +526,14 @@ const s = StyleSheet.create({
   companionLabel: { fontFamily: F.interSemi, fontSize: 10, letterSpacing: 1, color: SS2.violet },
   companionTitle: { fontFamily: F.loraSemi, fontSize: 15, lineHeight: 21, color: SS2.ink, marginTop: 2 },
 
-  discussionBtn: { flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 15, backgroundColor: SS2.teal },
+  discussionBtn: { flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 14, paddingHorizontal: 18, paddingVertical: 15 },
   discussionTitle: { fontFamily: F.interSemi, fontSize: 15, color: "#FFFFFF" },
   discussionSub: { fontFamily: F.inter, fontSize: 12, color: "#FFFFFF", marginTop: 1 },
 
-  archiveToggle: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, borderColor: SS2.tealBorder, backgroundColor: SS2.card, paddingHorizontal: 16, paddingVertical: 14 },
+  archiveToggle: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, backgroundColor: SS2.card, paddingHorizontal: 16, paddingVertical: 14 },
   archiveToggleText: { fontFamily: F.interSemi, fontSize: 14, color: SS2.ink, flex: 1 },
   archiveEmpty: { fontFamily: F.inter, fontSize: 13, color: SS2.inkMuted, textAlign: "center", paddingVertical: 12 },
-  archiveCard: { backgroundColor: SS2.card, borderRadius: 14, padding: 16, gap: 4, borderLeftWidth: 3, borderLeftColor: SS2.teal, ...HV2.rowShadow },
+  archiveCard: { backgroundColor: SS2.card, borderRadius: 14, padding: 16, gap: 4, borderLeftWidth: 3, ...HV2.rowShadow },
   archiveCardTitle: { fontFamily: F.loraSemi, fontSize: 16, color: SS2.ink, lineHeight: 22 },
   archiveCardDate: { fontFamily: F.inter, fontSize: 11, color: SS2.inkMuted },
 

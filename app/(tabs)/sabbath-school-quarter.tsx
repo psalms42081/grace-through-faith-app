@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { HV2, F } from "@/components/home-v2/theme";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
   buildSabbathSchoolTabRoute,
   sabbathSchoolTabBarClearance,
@@ -70,6 +71,7 @@ export default function SabbathSchoolQuarterV2Screen() {
     queryKey: [`/api/sabbath-school/quarter/${quarterCode}`],
     enabled: !!quarterCode,
   });
+  const quarterTheme = getSabbathSchoolQuarterTheme(data?.quarterly?.colorPrimary);
 
   if (!isTabContained) return null;
 
@@ -106,7 +108,7 @@ export default function SabbathSchoolQuarterV2Screen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Quarter header — flat teal card, no gradient */}
-          <View style={s.quarterCard}>
+          <View style={[s.quarterCard, { backgroundColor: quarterTheme.primary }]}>
             <Text style={s.quarterEyebrow}>SABBATH SCHOOL QUARTERLY</Text>
             <Text style={s.quarterTitle}>{data.quarterly.title}</Text>
             {data.quarterly.humanDate && <Text style={s.quarterDate}>{data.quarterly.humanDate}</Text>}
@@ -128,7 +130,7 @@ export default function SabbathSchoolQuarterV2Screen() {
                 style={({ pressed }) => [s.lessonCard, { opacity: pressed ? 0.7 : 1 }]}
               >
                 <View style={s.lessonCardTop}>
-                  <Text style={s.lessonNumber}>
+                  <Text style={[s.lessonNumber, { color: quarterTheme.primary }]}>
                     {t("sabbathSchool.lesson", { defaultValue: "Lesson" }).toUpperCase()} {lesson.lessonNumber}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={SSQ.inkMuted} />
@@ -167,13 +169,13 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SSQ.inkMuted, textAlign: "center" },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
-  quarterCard: { backgroundColor: SSQ.teal, borderRadius: 20, padding: 20, gap: 6, ...HV2.cardShadow },
+  quarterCard: { borderRadius: 20, padding: 20, gap: 6, ...HV2.cardShadow },
   quarterEyebrow: { fontFamily: F.interBold, fontSize: 10.5, letterSpacing: 1.6, color: "rgba(255,255,255,0.9)" },
   quarterTitle: { fontFamily: F.loraBold, fontSize: 20, color: "#FFFFFF", lineHeight: 28 },
   quarterDate: { fontFamily: F.inter, fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 2 },
   lessonCard: { backgroundColor: SSQ.card, borderRadius: 14, padding: 14, gap: 4, ...HV2.rowShadow },
   lessonCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  lessonNumber: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1, color: SSQ.teal },
+  lessonNumber: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1 },
   lessonTitle: { fontFamily: F.interMed, fontSize: 14, lineHeight: 20, color: SSQ.ink },
   lessonDates: { fontFamily: F.inter, fontSize: 11, color: SSQ.inkMuted },
   companionBadge: {
