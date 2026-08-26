@@ -11,11 +11,12 @@ export function useTheme(isKidsMode?: false): { theme: RegularTheme; isDark: boo
 export function useTheme(isKidsMode: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme };
 export function useTheme(isKidsMode?: boolean): { theme: RegularTheme | KidsTheme; isDark: boolean; colorScheme: ColorScheme } {
   const colorScheme: ColorScheme = useColorScheme();
-  // App is always dark-themed regardless of device setting
-  const isDark = true;
+  // Consumer/member screens are light-first regardless of the device setting.
+  // Dedicated media and immersive routes own their dark player surfaces locally.
+  const isDark = false;
   const theme = isKidsMode
-    ? KidsColors.dark
-    : Colors.dark;
+    ? KidsColors.light
+    : Colors.light;
 
   return { theme, isDark, colorScheme };
 }

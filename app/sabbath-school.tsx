@@ -25,6 +25,8 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import { apiRequest } from "@/lib/query-client";
+import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
   buildSabbathSchoolTabRoute,
@@ -101,10 +103,17 @@ export default function SabbathSchoolV2Screen() {
   const { t } = useTranslation();
   const [showArchive, setShowArchive] = useState(false);
   const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
+  const [clock, setClock] = useState(() => new Date());
   const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
   const isTabContained =
     useSabbathSchoolTabContainment("sabbath-school");
+  const localDateKey = useMemo(() => getHomeLocalDay(clock).dateKey, [clock]);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setClock(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const closeVideoModal = async () => {
     try {
@@ -147,10 +156,20 @@ export default function SabbathSchoolV2Screen() {
     companion: CompanionData | null;
   }>({
     queryKey: [
-      withDeviceTimeZone(
-        `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`
-      ),
+      "sabbath-school-current",
+      userId,
+      selectedCurriculum,
+      localDateKey,
     ],
+    queryFn: async () => {
+      const response = await apiRequest(
+        "GET",
+        withDeviceTimeZone(
+          `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`,
+        ),
+      );
+      return response.json();
+    },
   });
 
   const { data: archiveData } = useQuery<{ quarters: QuarterlyData[] }>({

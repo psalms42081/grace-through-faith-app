@@ -15,10 +15,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
 
 const GOLD = "#C9933A";
-const BG = "#050507";
+const INK_MUTED = "#6B6660";
 
 interface OdbDevotional {
   id: number;
@@ -40,7 +40,6 @@ interface OdbDevotional {
 
 export default function OdbDevotionalScreen() {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
   const params = useLocalSearchParams<{ id?: string }>();
   const postId = params.id;
 
@@ -78,13 +77,13 @@ export default function OdbDevotionalScreen() {
       <View style={[s.container, { paddingTop: insets.top + webTopPad }]}>
         <View style={s.header}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={24} color={PathB.ink} />
           </Pressable>
           <Text style={[s.headerTitle, { fontFamily: "Inter_600SemiBold" }]}>Our Daily Bread</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={{ alignItems: "center", paddingTop: 60 }}>
-          <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.3)" />
+          <Ionicons name="cloud-offline-outline" size={48} color={INK_MUTED} />
           <Text style={[s.errorText, { fontFamily: "Inter_400Regular" }]}>
             Unable to load devotional
           </Text>
@@ -112,13 +111,13 @@ export default function OdbDevotionalScreen() {
     <View style={[s.container, { paddingTop: insets.top + webTopPad }]}>
       <View style={s.header}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={PathB.ink} />
         </Pressable>
         <Text style={[s.headerTitle, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           Our Daily Bread
         </Text>
         <Pressable onPress={handleShare} hitSlop={12}>
-          <Ionicons name="share-outline" size={22} color="#FFFFFF" />
+          <Ionicons name="share-outline" size={22} color={PathB.ink} />
         </Pressable>
       </View>
 
@@ -127,7 +126,7 @@ export default function OdbDevotionalScreen() {
         showsVerticalScrollIndicator={false}
       >
         <LinearGradient
-          colors={["#1A3A1A", "#0D1B2A", BG]}
+          colors={["#1A3A1A", "#0D1B2A", "#1A1F3C"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.heroBanner}
@@ -160,7 +159,7 @@ export default function OdbDevotionalScreen() {
 
         {devotional.passage ? (
           <View style={s.passageRow}>
-            <Ionicons name="document-text-outline" size={14} color="rgba(255,255,255,0.5)" />
+            <Ionicons name="document-text-outline" size={14} color={INK_MUTED} />
             <Text style={[s.passageText, { fontFamily: "Inter_500Medium" }]}>
               Read: {devotional.passage}
             </Text>
@@ -237,7 +236,7 @@ export default function OdbDevotionalScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: PathB.surface,
   },
   header: {
     flexDirection: "row",
@@ -247,14 +246,14 @@ const s = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    color: "#FFFFFF",
+    color: PathB.ink,
     fontSize: 17,
     flex: 1,
     textAlign: "center",
     marginHorizontal: 12,
   },
   errorText: {
-    color: "rgba(255,255,255,0.5)",
+    color: INK_MUTED,
     fontSize: 15,
     marginTop: 12,
   },
@@ -294,7 +293,7 @@ const s = StyleSheet.create({
     padding: 14,
   },
   verseText: {
-    color: "rgba(255,255,255,0.85)",
+    color: PathB.ink,
     fontSize: 15,
     lineHeight: 22,
   },
@@ -311,7 +310,7 @@ const s = StyleSheet.create({
     marginTop: 12,
   },
   passageText: {
-    color: "rgba(255,255,255,0.6)",
+    color: INK_MUTED,
     fontSize: 13,
   },
   section: {
@@ -325,7 +324,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   bodyText: {
-    color: "rgba(255,255,255,0.85)",
+    color: PathB.ink,
     fontSize: 16,
     lineHeight: 26,
   },
@@ -343,7 +342,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   thoughtText: {
-    color: "rgba(255,255,255,0.85)",
+    color: PathB.ink,
     fontSize: 15,
     lineHeight: 24,
   },
@@ -361,7 +360,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   insightAuthor: {
-    color: "rgba(255,255,255,0.4)",
+    color: INK_MUTED,
     fontSize: 13,
     marginTop: 8,
     textAlign: "right",
@@ -372,12 +371,12 @@ const s = StyleSheet.create({
     gap: 8,
     marginHorizontal: 20,
     marginTop: 20,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 8,
     padding: 12,
   },
   bibleYearText: {
-    color: "rgba(255,255,255,0.6)",
+    color: INK_MUTED,
     fontSize: 13,
   },
   readMoreBtn: {

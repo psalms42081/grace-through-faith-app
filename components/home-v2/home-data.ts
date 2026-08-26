@@ -79,6 +79,15 @@ export function parseBibleReference(reference: string): {
   return { bookName: match[1].trim(), chapterNumber: Number(match[2]) };
 }
 
+function normalizedBibleBookName(name: string): string {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "psalm" ? "psalms" : normalized;
+}
+
+export function bibleBookNamesMatch(referenceName: string, canonicalName: string): boolean {
+  return normalizedBibleBookName(referenceName) === normalizedBibleBookName(canonicalName);
+}
+
 export function assertReflectionReadingAlignment(
   reflectionReference: string,
   readingTarget: {

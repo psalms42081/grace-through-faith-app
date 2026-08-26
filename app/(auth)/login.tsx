@@ -177,18 +177,18 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#050507" },
+  container: { flex: 1, backgroundColor: "#F5EFE0" },
   scroll: { flexGrow: 1, padding: 24 },
   header: { alignItems: "center", marginTop: 32, marginBottom: 32, gap: 8 },
   title: {
     fontSize: 28,
-    color: "#F0E8D8",
+    color: "#2C1810",
     fontFamily: "Lora_700Bold",
     marginTop: 12,
   },
   subtitle: {
     fontSize: 14,
-    color: "#999",
+    color: "#6B6660",
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
@@ -205,20 +205,20 @@ const s = StyleSheet.create({
   form: { gap: 6 },
   label: {
     fontSize: 13,
-    color: "#999",
+    color: "#6B6660",
     fontFamily: "Inter_500Medium",
     marginTop: 8,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#FFFDF6",
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: "#F0E8D8",
+    color: "#2C1810",
     fontFamily: "Inter_400Regular",
     borderWidth: 1,
-    borderColor: "#2A2A3E",
+    borderColor: "#DDD0B8",
   },
   passwordRow: { position: "relative" as const },
   passwordInput: { paddingRight: 48 },
@@ -247,10 +247,10 @@ const s = StyleSheet.create({
     gap: 6,
     marginTop: 28,
   },
-  footerText: { color: "#999", fontSize: 14, fontFamily: "Inter_400Regular" },
+  footerText: { color: "#6B6660", fontSize: 14, fontFamily: "Inter_400Regular" },
   linkText: { color: "#C9933A", fontSize: 14, fontFamily: "Inter_600SemiBold" },
   skipBtn: { alignItems: "center" as const, marginTop: 16 },
-  skipText: { color: "#666", fontSize: 13, fontFamily: "Inter_400Regular" },
+  skipText: { color: "#6B6660", fontSize: 13, fontFamily: "Inter_400Regular" },
   forgotBtn: { alignItems: "center" as const, marginTop: 12 },
   forgotText: { color: "#C9933A", fontSize: 13, fontFamily: "Inter_500Medium" },
   resetInfo: {
@@ -264,7 +264,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   resetInfoText: {
-    color: "#B8A07A",
+    color: "#6B6660",
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     flex: 1,

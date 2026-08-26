@@ -20,6 +20,7 @@ import {
   getHomeLocalDay,
   getTodaysReflection,
   getTodaysVerse,
+  bibleBookNamesMatch,
   parseBibleReference,
 } from "@/components/home-v2/home-data";
 import HomeHeader from "@/components/home-v2/HomeHeader";
@@ -85,8 +86,13 @@ export default function HomeV2Screen() {
     [localDay.dayIndex],
   );
 
-  const { data: books } = useQuery<{ id: number; name: string }[]>({
+  const {
+    data: books,
+    isPending: booksIsPending,
+    isError: booksIsError,
+  } = useQuery<{ id: number; name: string }[]>({
     queryKey: ["/api/books"],
+    retry: 1,
   });
 
   // Parse book/chapter/verse from the reference string (e.g. "John 3:16").
@@ -96,15 +102,14 @@ export default function HomeV2Screen() {
     const verseMatch = votdReference.match(/:(\d+)/);
     const chapter = chapterMatch ? parseInt(chapterMatch[1], 10) : 1;
     const verse = verseMatch ? parseInt(verseMatch[1], 10) : 1;
-    const book = books?.find((b) => b.name.toLowerCase() === bookName.toLowerCase());
+    const book = books?.find((b) => bibleBookNamesMatch(bookName, b.name));
     return { bookId: book?.id, chapterNumber: chapter, verseNumber: verse, bookName };
   }, [votdReference, books]);
 
   const reflectionReadingTarget = useMemo(() => {
     const parsed = parseBibleReference(reflection.reference);
     const book = books?.find(
-      (candidate) =>
-        candidate.name.toLowerCase() === parsed.bookName.toLowerCase(),
+      (candidate) => bibleBookNamesMatch(parsed.bookName, candidate.name),
     );
     return {
       reference: reflection.reference,
@@ -128,6 +133,8 @@ export default function HomeV2Screen() {
         chapter: votdParsedRef.chapterNumber,
         verse: votdParsedRef.verseNumber,
         translation,
+        dateKey: localDay.dateKey,
+        timeZone: deviceTimeZone,
       },
     ],
     queryFn: async () => {
@@ -137,6 +144,7 @@ export default function HomeV2Screen() {
     },
     enabled: canFetchVotd,
     staleTime: 1000 * 60 * 60, // 1 hour
+    retry: 1,
   });
 
   // Build the verse object for HeroCard. Text is ONLY ever the canonical API
@@ -147,11 +155,12 @@ export default function HomeV2Screen() {
     [votdVerseData?.text, votdReference]
   );
 
-  // Loading while: books not yet resolved, OR the verse query is in flight.
-  const verseLoading = !canFetchVotd || votdIsLoading;
-  // Error state surfaced to HeroCard so it can show an explicit message
-  // rather than a blank card once loading finishes with no text.
-  const verseUnavailable = canFetchVotd && !votdIsLoading && (votdIsError || !votdVerseData?.text);
+  // A missing or failed book dependency is terminal, not an infinite loading state.
+  const verseLoading = booksIsPending || (canFetchVotd && votdIsLoading);
+  const verseUnavailable =
+    booksIsError ||
+    (!booksIsPending && !canFetchVotd) ||
+    (canFetchVotd && !votdIsLoading && (votdIsError || !votdVerseData?.text));
 
   const { data: dailySignpost } = useQuery<{
     id: string;
