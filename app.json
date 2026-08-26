@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Grace through Faith",
+    "name": "Informed Ministries",
     "slug": "grace-through-faith",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/informed-ministries-icon.png",
     "scheme": "graceThroughFaith",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
