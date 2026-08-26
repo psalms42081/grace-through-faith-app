@@ -209,13 +209,19 @@ export default function RootLayout() {
     Inter_700Bold,
   });
   const [onboardingChecked, setOnboardingChecked] = useState(false);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(true);
   const [i18nReady, setI18nReady] = useState(false);
+  const [startupFallbackElapsed, setStartupFallbackElapsed] = useState(false);
 
 useEffect(() => {
   initI18n().then(() => setI18nReady(true)).catch(() => setI18nReady(true));
   initAnalytics();
 }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStartupFallbackElapsed(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -228,8 +234,11 @@ useEffect(() => {
       .finally(() => setOnboardingChecked(true));
   }, []);
 
+  const startupReady =
+    (fontsLoaded && onboardingChecked && i18nReady) || startupFallbackElapsed;
+
   useEffect(() => {
-    if (fontsLoaded && onboardingChecked && i18nReady) {
+    if (startupReady) {
       SplashScreen.hideAsync().catch(() => {});
       const directEntryPaths = [
         "/devotions",
@@ -258,9 +267,9 @@ useEffect(() => {
       const timer = setTimeout(() => router.replace(targetRoute), 50);
       return () => clearTimeout(timer);
     }
-  }, [fontsLoaded, onboardingChecked, needsOnboarding, i18nReady]);
+  }, [needsOnboarding, startupReady]);
 
-  if (!fontsLoaded || !onboardingChecked || !i18nReady) return null;
+  if (!startupReady) return null;
 
   return (
     <ErrorBoundary>
