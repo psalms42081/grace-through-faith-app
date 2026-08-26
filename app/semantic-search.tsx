@@ -340,13 +340,11 @@ export default function SemanticSearchScreen() {
             }
             renderItem={({ item, index }) => (
               <AnimatedItem index={index}>
-                <Pressable
-                  onPress={() => navigateToVerse(item.bookId, item.chapter, item.translation)}
-                  style={({ pressed }) => [
+                <View
+                  style={[
                     styles.verseCard,
                     {
                       backgroundColor: theme.backgroundCard,
-                      opacity: pressed ? 0.7 : 1,
                     },
                   ]}
                 >
@@ -363,7 +361,6 @@ export default function SemanticSearchScreen() {
                         </Text>
                       </View>
                     )}
-                    <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
                   </View>
                   <Text
                     style={[styles.verseText, { color: theme.text, fontFamily: "Lora_400Regular" }]}
@@ -373,11 +370,34 @@ export default function SemanticSearchScreen() {
                   </Text>
                   <Text
                     style={[styles.relevanceText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
-                    numberOfLines={2}
                   >
                     {item.relevance}
                   </Text>
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Read ${item.reference} in the Bible`}
+                    testID={`semantic-search-read-passage-${item.bookId}-${item.chapter}`}
+                    onPress={() => navigateToVerse(item.bookId, item.chapter, item.translation)}
+                    style={({ pressed }) => [
+                      styles.readPassageButton,
+                      {
+                        backgroundColor: theme.accent + "14",
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="book-outline" size={16} color={theme.accent} />
+                    <Text
+                      style={[
+                        styles.readPassageText,
+                        { color: theme.accent, fontFamily: "Inter_600SemiBold" },
+                      ]}
+                    >
+                      Read passage
+                    </Text>
+                    <Ionicons name="chevron-forward" size={15} color={theme.accent} />
+                  </Pressable>
+                </View>
               </AnimatedItem>
             )}
             ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -694,6 +714,17 @@ const styles = StyleSheet.create({
   txHeader: { fontSize: 12, marginBottom: 10, letterSpacing: 0.3 },
   verseText: { fontSize: 16, lineHeight: 24, marginBottom: 8 },
   relevanceText: { fontSize: 13, lineHeight: 18, fontStyle: "italic" as const },
+  readPassageButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 10,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  readPassageText: { fontSize: 13 },
   personalCard: {
     borderRadius: 16,
     padding: 16,
