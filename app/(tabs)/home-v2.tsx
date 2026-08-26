@@ -1,7 +1,7 @@
 // Path B Home v2 — Brief 01 Phase 1.
 // Replaces the Home presentation without touching the index.tsx monolith
 // (rollback: repoint the Home tab at "index" in app/(tabs)/_layout.tsx).
-import React, { useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { ScrollView, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +15,13 @@ import ChildPickerModal from "@/components/home/ChildPickerModal";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 
 import { HV2 } from "@/components/home-v2/theme";
-import { getTodaysVerse, getTodaysReflection } from "@/components/home-v2/home-data";
+import {
+  formatGreeting,
+  getHomeLocalDay,
+  getTodaysReflection,
+  getTodaysVerse,
+  parseBibleReference,
+} from "@/components/home-v2/home-data";
 import HomeHeader from "@/components/home-v2/HomeHeader";
 import HeroCard, { HeroTab } from "@/components/home-v2/HeroCard";
 import SSGradientCard from "@/components/home-v2/SSGradientCard";
@@ -23,7 +29,7 @@ import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
-import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -40,34 +46,44 @@ export default function HomeV2Screen() {
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
+  const [clock, setClock] = useState(() => new Date());
   const scrollRef = useRef<ScrollView>(null);
   const { translation } = useAppTranslation();
+  const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const now = new Date();
-  const dateLine = now.toLocaleDateString("en-AU", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const dayLabel = now.toLocaleDateString("en-AU", { weekday: "long" });
+  useEffect(() => {
+    const timer = setInterval(() => setClock(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
+  const { dateLine, dayLabel } = localDay;
 
   const greeting = useMemo(() => {
-    const hour = new Date().getHours();
     const g =
-      hour < 12 ? t("home.goodMorning") : hour < 17 ? t("home.goodAfternoon") : t("home.goodEvening");
-    const first = user?.displayName?.split(" ")[0];
-    return first ? `${g}, ${first}` : g;
-  }, [t, user?.displayName]);
+      localDay.daypart === "morning"
+        ? t("home.goodMorning")
+        : localDay.daypart === "afternoon"
+          ? t("home.goodAfternoon")
+          : t("home.goodEvening");
+    return formatGreeting(g, user?.displayName);
+  }, [localDay.daypart, t, user?.displayName]);
 
-  const reflection = useMemo(() => getTodaysReflection(), []);
+  const reflection = useMemo(
+    () => getTodaysReflection(localDay.dayIndex),
+    [localDay.dayIndex],
+  );
 
   // Today's VOTD reference ONLY — the reference (e.g. "John 3:16") is safe to
   // use statically because it is translation-agnostic. The verse TEXT must
   // always come from the canonical API response for the active translation.
   // We never render the static KJV text under a non-KJV label.
-  const votdReference = useMemo(() => getTodaysVerse().reference, []);
+  const votdReference = useMemo(
+    () => getTodaysVerse(localDay.dayIndex).reference,
+    [localDay.dayIndex],
+  );
 
   const { data: books } = useQuery<{ id: number; name: string }[]>({
     queryKey: ["/api/books"],
@@ -83,6 +99,20 @@ export default function HomeV2Screen() {
     const book = books?.find((b) => b.name.toLowerCase() === bookName.toLowerCase());
     return { bookId: book?.id, chapterNumber: chapter, verseNumber: verse, bookName };
   }, [votdReference, books]);
+
+  const reflectionReadingTarget = useMemo(() => {
+    const parsed = parseBibleReference(reflection.reference);
+    const book = books?.find(
+      (candidate) =>
+        candidate.name.toLowerCase() === parsed.bookName.toLowerCase(),
+    );
+    return {
+      reference: reflection.reference,
+      bookName: parsed.bookName,
+      bookId: book?.id,
+      chapterNumber: parsed.chapterNumber,
+    };
+  }, [books, reflection]);
 
   // Fetch the VOTD verse in the active translation.
   const canFetchVotd = !!votdParsedRef.bookId;
@@ -134,12 +164,14 @@ export default function HomeV2Screen() {
       commentary?: string;
     }>;
   }>({
-    queryKey: ["/api/signposts/daily", translation],
+    queryKey: ["/api/signposts/daily", translation, deviceTimeZone, localDay.dateKey],
     staleTime: 1000 * 60 * 60 * 24,
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
-        `/api/signposts/daily?translation=${encodeURIComponent(translation)}`,
+        withDeviceTimeZone(
+          `/api/signposts/daily?translation=${encodeURIComponent(translation)}`,
+        ),
       );
       return res.json();
     },
@@ -154,7 +186,19 @@ export default function HomeV2Screen() {
   >({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
-    queryKey: [`/api/reading-streaks/weekly?userId=${userId}`],
+    queryKey: [
+      "home-reading-streak-weekly",
+      userId,
+      deviceTimeZone,
+      localDay.dateKey,
+    ],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`),
+      );
+      return res.json();
+    },
   });
 
   const { data: ssData } = useQuery<{
@@ -162,19 +206,32 @@ export default function HomeV2Screen() {
     currentLesson: { title: string; lessonNumber: number } | null;
     completedDays: number;
     currentLessonNumber: number;
+    todayDayNumber: number | null;
   }>({
     queryKey: [
-      withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+      "home-sabbath-school-current",
+      userId,
+      deviceTimeZone,
+      localDay.dateKey,
     ],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+      );
+      return res.json();
+    },
   });
 
   const streak = weeklyData?.currentStreak ?? 0;
   const readToday = recentReads?.[0]?.readAt
-    ? new Date(recentReads[0].readAt).toDateString() === now.toDateString()
+    ? getHomeLocalDay(new Date(recentReads[0].readAt)).dateKey === localDay.dateKey
     : false;
 
-  // SS day index with the Adventech week running Sabbath→Friday (Sat = day 1)
-  const ssDayIndex = ((now.getDay() + 1) % 7) + 1;
+  // Prefer the timezone-aware day number returned by the SS API. The local
+  // value is only a loading fallback and uses the same Home clock.
+  const ssDayIndex =
+    ssData?.todayDayNumber ?? localDay.sabbathSchoolDayNumber;
   const ssDoneToday = (ssData?.completedDays ?? 0) >= ssDayIndex;
 
   const planTitle = todayData?.enrollment?.plan?.title;
@@ -203,7 +260,7 @@ export default function HomeV2Screen() {
       key: "reflection",
       icon: require("@/assets/illustrations/rhythm-reflection.png"),
       iconBg: "#FFF0D9",
-      title: "Evening Reflection",
+      title: `${localDay.daypart[0].toUpperCase()}${localDay.daypart.slice(1)} Reflection`,
       // TODO: no per-day reflection tracking exists yet — done-state lands with that API
       meta: "2 min · quiet moment",
       done: false,
@@ -225,9 +282,7 @@ export default function HomeV2Screen() {
         dateLine={dateLine}
         greeting={greeting}
         streak={streak}
-        initial={(user?.displayName?.[0] ?? "G").toUpperCase()}
         onKidsPress={() => setShowChildPicker(true)}
-        onAvatarPress={() => router.push("/profile" as any)}
       />
 
       <HeroCard
@@ -239,6 +294,8 @@ export default function HomeV2Screen() {
         userId={userId}
         signpost={dailySignpost}
         reflection={reflection}
+        reflectionDaypart={localDay.daypart}
+        reflectionReadingTarget={reflectionReadingTarget}
         translation={translation}
         verseLoading={verseLoading}
         verseUnavailable={verseUnavailable}

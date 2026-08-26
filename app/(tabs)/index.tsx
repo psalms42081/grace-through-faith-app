@@ -1541,7 +1541,7 @@ function AdultHomeScreen() {
   });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
-    queryKey: [`/api/reading-streaks/weekly?userId=${userId}`],
+    queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)],
   });
 
   const { data: ssData } = useQuery<{

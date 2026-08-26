@@ -5,6 +5,10 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
 import { HV2, F } from "./theme";
+import {
+  assertReflectionReadingAlignment,
+  type HomeDaypart,
+} from "./home-data";
 
 export type HeroTab = "verse" | "signpost" | "reflection";
 
@@ -16,7 +20,14 @@ interface Props {
   chapterNumber?: number;
   userId?: string;
   signpost?: { id: string; title: string; description: string } | null;
-  reflection: { thought: string; source: string };
+  reflection: { thought: string; reference: string };
+  reflectionDaypart: HomeDaypart;
+  reflectionReadingTarget: {
+    reference: string;
+    bookName: string;
+    bookId?: number;
+    chapterNumber: number;
+  };
   translation?: string;
   verseLoading?: boolean;
   verseUnavailable?: boolean;
@@ -40,11 +51,20 @@ function showAuthGate() {
 }
 
 export default function HeroCard({
-  activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection, translation, verseLoading, verseUnavailable,
+  activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection,
+  reflectionDaypart, reflectionReadingTarget, translation, verseLoading, verseUnavailable,
 }: Props) {
   const [saved, setSaved] = useState(false);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
+  assertReflectionReadingAlignment(
+    reflection.reference,
+    reflectionReadingTarget,
+  );
+  const readingTarget =
+    activeTab === "reflection"
+      ? reflectionReadingTarget
+      : { bookId, chapterNumber, bookName };
 
   const handleBookmark = async () => {
     const isGuest = !userId || userId.startsWith("device-");
@@ -64,7 +84,7 @@ export default function HeroCard({
   const handleShare = async () => {
     const msg =
       activeTab === "reflection"
-        ? `${reflection.thought}\n\u2014 ${reflection.source}`
+        ? `${reflection.thought}\n\u2014 Reflection on ${reflection.reference}`
         : `\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`;
     try {
       await Share.share({ message: msg });
@@ -72,10 +92,10 @@ export default function HeroCard({
   };
 
   const handleRead = () => {
-    if (bookId && chapterNumber) {
+    if (readingTarget.bookId && readingTarget.chapterNumber) {
       const url = translation
-        ? `/read/${bookId}/${chapterNumber}?translation=${encodeURIComponent(translation)}`
-        : `/read/${bookId}/${chapterNumber}`;
+        ? `/read/${readingTarget.bookId}/${readingTarget.chapterNumber}?translation=${encodeURIComponent(translation)}`
+        : `/read/${readingTarget.bookId}/${readingTarget.chapterNumber}`;
       router.push(url as any);
     }
   };
@@ -125,9 +145,9 @@ export default function HeroCard({
       )}
       {activeTab === "reflection" && (
         <View style={s.body}>
-          <Text style={s.eyebrow}>EVENING REFLECTION</Text>
+          <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
           <Text style={s.verse}>{reflection.thought}</Text>
-          <Text style={s.cite}>{reflection.source}</Text>
+          <Text style={s.cite}>Reflection on {reflection.reference}</Text>
         </View>
       )}
 
@@ -150,13 +170,14 @@ export default function HeroCard({
           </Pressable>
         ) : (
           <Pressable
-            style={s.primary}
+            style={[s.primary, !readingTarget.bookId && s.primaryDisabled]}
             onPress={handleRead}
+            disabled={!readingTarget.bookId}
             accessibilityRole="button"
-            accessibilityLabel={`Read ${bookName} ${chapterNumber ?? ""}`}
+            accessibilityLabel={`Read ${readingTarget.bookName} ${readingTarget.chapterNumber ?? ""}`}
           >
             <Text style={s.primaryLabel}>
-              Read {bookName}{chapterNumber ? ` ${chapterNumber}` : ""}
+              Read {readingTarget.bookName}{readingTarget.chapterNumber ? ` ${readingTarget.chapterNumber}` : ""}
             </Text>
           </Pressable>
         )}
@@ -218,6 +239,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
+  primaryDisabled: { opacity: 0.5 },
   primaryLabel: { fontFamily: F.interSemi, fontSize: 14.5, color: "#FFFFFF" },
   iconBtn: {
     width: 44,

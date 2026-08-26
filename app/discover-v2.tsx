@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   DISCOVER_FEATURED_SERIES as FEATURED_SERIES,
   DISCOVER_WATCH_RAIL as WATCH_RAIL,
@@ -191,7 +192,7 @@ export default function DiscoverV2Screen() {
   const { data: devotionalPlans } = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
   const { data: odbRecent } = useQuery<OdbDevotional[]>({ queryKey: ["/api/odb/recent?count=7"] });
   const { data: weeklyStreak } = useQuery<{ currentStreak: number }>({
-    queryKey: [`/api/reading-streaks/weekly?userId=${userId}`],
+    queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)],
     enabled: !!userId,
   });
   const streak = weeklyStreak?.currentStreak ?? 0;
@@ -293,14 +294,6 @@ export default function DiscoverV2Screen() {
             <Ionicons name="flame" size={14} color={D.gold} />
             <Text style={s.streakCount}>{streak}</Text>
           </View>
-          <Pressable
-            onPress={() => router.push("/(tabs)/profile" as any)}
-            style={s.avatar}
-            accessibilityRole="button"
-            accessibilityLabel="Open profile"
-          >
-            <Text style={s.avatarInitial}>{(user?.displayName?.[0] ?? "G").toUpperCase()}</Text>
-          </Pressable>
         </View>
 
         {/* Search bar */}
@@ -650,11 +643,6 @@ const s = StyleSheet.create({
     ...HV2.rowShadow,
   },
   streakCount: { fontFamily: F.interSemi, fontSize: 13, color: D.ink },
-  avatar: {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: "#E8604C",
-    alignItems: "center", justifyContent: "center",
-  },
-  avatarInitial: { fontFamily: F.interSemi, fontSize: 15, color: "#FFFFFF" },
 
   searchWrap: { paddingHorizontal: 20, marginTop: 14, gap: 10 },
   searchBar: {

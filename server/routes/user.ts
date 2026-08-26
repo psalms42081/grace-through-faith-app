@@ -15,6 +15,12 @@ import { Router } from "express";
   import { eq, and, sql, desc, asc } from "drizzle-orm";
   import { requireAuth, optionalAuth, getEffectiveUserId } from "../middleware/auth";
   import { validate, noteSchema, highlightSchema, bookmarkSchema, prayerSchema, readingHistorySchema } from "../middleware/validate";
+  import {
+    addCalendarDays,
+    getCalendarDate,
+    getSundayWeekStartDateKey,
+    normalizeTimeZone,
+  } from "../../shared/calendar-date";
 
   const router = Router();
 
@@ -504,7 +510,8 @@ router.post("/api/reading-history", optionalAuth, validate(readingHistorySchema)
       .values({ userId, bookId: Number(bookId), bookName, chapter: Number(chapter), translation })
       .returning();
 
-    const today = new Date().toISOString().split("T")[0];
+    const timeZone = normalizeTimeZone(req.query.timeZone);
+    const today = getCalendarDate(new Date(), timeZone).dateKey;
     const existing = await db
       .select()
       .from(readingStreaks)
@@ -522,9 +529,7 @@ router.post("/api/reading-history", optionalAuth, validate(readingHistorySchema)
       const lastDate = streak.lastReadDate;
       if (lastDate === today) {
       } else {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
+        const yesterdayStr = addCalendarDays(today, -1);
         let newStreak = 1;
         if (lastDate === yesterdayStr) {
           newStreak = (streak.currentStreak ?? 0) + 1;
@@ -609,10 +614,9 @@ router.get("/api/reading-streaks", optionalAuth, async (req, res) => {
     if (!streak) {
       return res.json({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
     }
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const timeZone = normalizeTimeZone(req.query.timeZone);
+    const today = getCalendarDate(new Date(), timeZone).dateKey;
+    const yesterdayStr = addCalendarDays(today, -1);
     if (streak.lastReadDate !== today && streak.lastReadDate !== yesterdayStr) {
       await db
         .update(readingStreaks)
@@ -639,35 +643,42 @@ router.get("/api/reading-streaks/weekly", optionalAuth, async (req, res) => {
         lastReadDate: null,
       });
     }
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - dayOfWeek);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const timeZone = normalizeTimeZone(req.query.timeZone);
+    const startOfWeekDateKey = getSundayWeekStartDateKey(new Date(), timeZone);
 
     const reads = await db
-      .select({ readAt: readingHistory.readAt })
+      .select({
+        localDate: sql<string>`to_char(
+          (${readingHistory.readAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone},
+          'YYYY-MM-DD'
+        )`,
+      })
       .from(readingHistory)
       .where(
         and(
           eq(readingHistory.userId, userId),
-          sql`${readingHistory.readAt} >= ${startOfWeek.toISOString()}::timestamp`
+          sql`((${readingHistory.readAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone})::date >= ${startOfWeekDateKey}::date`
         )
       );
 
     const daysRead: boolean[] = [false, false, false, false, false, false, false];
     for (const r of reads) {
-      const d = new Date(r.readAt).getDay();
+      const d = new Date(`${r.localDate}T00:00:00.000Z`).getUTCDay();
       daysRead[d] = true;
     }
 
     const perfectWeekResult = await db.execute(sql`
       SELECT COUNT(*) as count FROM (
-        SELECT date_trunc('week', ${readingHistory.readAt}) as week_start
+        SELECT date_trunc(
+          'week',
+          (${readingHistory.readAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone}
+        ) as week_start
         FROM ${readingHistory}
         WHERE ${readingHistory.userId} = ${userId}
         GROUP BY week_start
-        HAVING COUNT(DISTINCT EXTRACT(DOW FROM ${readingHistory.readAt})) = 7
+        HAVING COUNT(DISTINCT EXTRACT(
+          DOW FROM (${readingHistory.readAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone}
+        )) = 7
       ) pw
     `);
     const perfectWeeks = Number(perfectWeekResult.rows?.[0]?.count ?? 0);

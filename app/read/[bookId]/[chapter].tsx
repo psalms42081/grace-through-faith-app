@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import useBibleAudio from "@/hooks/useBibleAudio";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -910,7 +911,7 @@ export default function VerseReaderScreen() {
 
     readingHistoryTimerRef.current = setTimeout(() => {
       readingHistoryTimerRef.current = null;
-      apiRequest("POST", "/api/reading-history", {
+      apiRequest("POST", withDeviceTimeZone("/api/reading-history"), {
         userId,
         bookId: bookIdNum,
         bookName: bookNameSnapshot,
@@ -919,9 +920,9 @@ export default function VerseReaderScreen() {
       })
         .then(() => {
           queryClient.invalidateQueries({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
+          queryClient.invalidateQueries({ queryKey: [withDeviceTimeZone(`/api/reading-streaks?userId=${userId}`)] });
           queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks/weekly?userId=${userId}`] });
+          queryClient.invalidateQueries({ queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)] });
         })
         .catch(() => {});
     }, 60_000);

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getCalendarDayIndex } from "../../shared/calendar-date";
 import { SDA_LENS_VERSION } from "../services/sda-lens";
 import {
   appendPastoralCareNote,
@@ -134,9 +135,7 @@ function sendScriptureFailure(res: any, err: unknown, contextLabel: string) {
 
 router.get("/api/signposts/daily", async (req, res) => {
   try {
-    const dayOfYear = Math.floor(
-      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-    );
+    const dayOfYear = getCalendarDayIndex(new Date(), req.query.timeZone);
     const topic = TOUCHPOINTS_DATA[dayOfYear % TOUCHPOINTS_DATA.length];
     if (!topic) {
       return res.status(404).json({ error: "No signpost available" });

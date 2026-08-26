@@ -25,6 +25,7 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -122,7 +123,7 @@ function ProfileScreenInner() {
   });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
-    queryKey: [`/api/reading-streaks/weekly?userId=${uid}`],
+    queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${uid}`)],
   });
 
   const { data: growthData } = useQuery<GrowthData>({

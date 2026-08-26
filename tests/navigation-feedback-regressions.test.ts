@@ -57,6 +57,22 @@ const devotionsPrimitivesSource = readFileSync(
   new URL("../components/devotions-v2/PreviewPrimitives.tsx", import.meta.url),
   "utf8",
 );
+const homeHeaderSource = readFileSync(
+  new URL("../components/home-v2/HomeHeader.tsx", import.meta.url),
+  "utf8",
+);
+const homeV2Source = readFileSync(
+  new URL("../app/(tabs)/home-v2.tsx", import.meta.url),
+  "utf8",
+);
+const discoverV2Source = readFileSync(
+  new URL("../app/discover-v2.tsx", import.meta.url),
+  "utf8",
+);
+const legacyHomeSource = readFileSync(
+  new URL("../app/(tabs)/index.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("external tester navigation feedback", () => {
   it("keeps Bible entry and chapter navigation inside the tab navigator", () => {
@@ -166,5 +182,28 @@ describe("external tester navigation feedback", () => {
       readerSource,
       /label:\s*"Guided Study"[\s\S]*?pathname:\s*"\/study-guide"[\s\S]*?verseReference:\s*`\$\{bookName\} \$\{chapterNum\}:1`[\s\S]*?chapter:\s*String\(chapterNum\)[\s\S]*?verse:\s*"1"/,
     );
+  });
+
+  it("keeps profile avatars out of non-Profile headers", () => {
+    assert.match(
+      homeHeaderSource,
+      /accessibilityLabel="Switch to Kids Mode"[\s\S]*?accessibilityLabel=\{`\$\{streak\} day reading streak`\}/,
+    );
+    assert.doesNotMatch(homeHeaderSource, /avatar|initial|Profile/);
+    assert.doesNotMatch(homeV2Source, /onAvatarPress=|initial=\{/);
+
+    assert.match(
+      discoverV2Source,
+      /<Text style=\{s\.title\}>Discover<\/Text>[\s\S]*?<View style=\{\{ flex: 1 \}\} \/>[\s\S]*?<View style=\{s\.streakPill\}/,
+    );
+    assert.doesNotMatch(discoverV2Source, /s\.avatar|avatarInitial|Open profile/);
+
+    const kidsHomeSource = legacyHomeSource.slice(
+      legacyHomeSource.indexOf("function KidsHomeScreen()"),
+      legacyHomeSource.indexOf("export default function HomeScreen()"),
+    );
+    assert.match(kidsHomeSource, /accessibilityLabel="Switch child"/);
+    assert.match(kidsHomeSource, /accessibilityLabel="Exit Kids Mode"/);
+    assert.doesNotMatch(kidsHomeSource, /avatar|Open profile/);
   });
 });
