@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
@@ -25,7 +26,6 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
-import { apiRequest } from "@/lib/query-client";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
@@ -103,9 +103,18 @@ export default function SabbathSchoolV2Screen() {
   const { t } = useTranslation();
   const [showArchive, setShowArchive] = useState(false);
   const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
+  const [videoError, setVideoError] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [clock, setClock] = useState(() => new Date());
   const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
+  const isValidVideoSource = useCallback((src: string) => {
+    try {
+      return new URL(src).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, []);
   const isTabContained =
     useSabbathSchoolTabContainment("sabbath-school");
   const localDateKey = useMemo(() => getHomeLocalDay(clock).dateKey, [clock]);
@@ -115,6 +124,12 @@ export default function SabbathSchoolV2Screen() {
     return () => clearInterval(timer);
   }, []);
 
+  React.useEffect(() => {
+    if (!activeVideo || videoError || videoReady) return;
+    const timer = setTimeout(() => setVideoError(true), 20000);
+    return () => clearTimeout(timer);
+  }, [activeVideo, videoError, videoReady]);
+
   const closeVideoModal = async () => {
     try {
       if (videoRef.current) {
@@ -123,6 +138,8 @@ export default function SabbathSchoolV2Screen() {
       }
     } catch {}
     setActiveVideo(null);
+    setVideoError(false);
+    setVideoReady(false);
   };
 
   // Release the video player when this screen unmounts (navigation away /
@@ -202,8 +219,13 @@ export default function SabbathSchoolV2Screen() {
 
   const lessonVideoClips = (lesson?.videoByArtist ?? [])
     .flatMap((group) => (group?.clips ?? []).map((clip) => ({ ...clip, artist: group.artist })))
-    .filter((clip) => !!clip.src)
+    .filter((clip) => !!clip.src && isValidVideoSource(clip.src))
     .slice(0, 5);
+  const activePlaybackUrl = activeVideo
+    ? Platform.OS === "web"
+      ? `${getApiUrl()}api/sabbath-school/video?url=${encodeURIComponent(activeVideo.src)}`
+      : activeVideo.src
+    : "";
 
   const pastQuarters = (archiveData?.quarters || []).filter((q) => quarterly && q.id !== quarterly.id);
 
@@ -299,7 +321,7 @@ export default function SabbathSchoolV2Screen() {
           {lessonVideoClips.length > 0 && (
             <View style={s.section}>
               <Text style={s.sectionTitle}>Watch This Lesson</Text>
-              <View style={[s.videoLayerStack, activeVideo ? { minHeight: 300 } : null]}>
+              <View style={s.videoLayerStack}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.videoRow}>
                   {lessonVideoClips.map((clip, index) => {
                     const isActive = activeVideo?.src === clip.src;
@@ -312,6 +334,8 @@ export default function SabbathSchoolV2Screen() {
                             return;
                           }
                           if (isActive) { closeVideoModal(); return; }
+                          setVideoError(false);
+                          setVideoReady(false);
                           setActiveVideo({ src: clip.src, title: clip.title || "Lesson Clip", artist: clip.artist });
                         }}
                         style={({ pressed }) => [s.videoCard, { opacity: pressed ? 0.85 : 1 }]}
@@ -331,15 +355,56 @@ export default function SabbathSchoolV2Screen() {
                 </ScrollView>
                 {activeVideo && (
                   <View style={s.inlinePlayerCard}>
-                    <Video
-                      ref={videoRef}
-                      key={activeVideo.src}
-                      source={{ uri: activeVideo.src }}
-                      style={s.inlineVideo}
-                      resizeMode={ResizeMode.CONTAIN}
-                      shouldPlay
-                      useNativeControls
-                    />
+                    {videoError ? (
+                      <View style={s.inlineVideoError}>
+                        <Ionicons name="videocam-off-outline" size={28} color="#FFFFFF" />
+                        <Text style={s.inlineVideoErrorText}>This lesson video could not start in the app.</Text>
+                        <Pressable
+                          onPress={() => Linking.openURL(activePlaybackUrl).catch(() => {})}
+                          style={s.inlineVideoErrorButton}
+                        >
+                          <Text style={s.inlineVideoErrorButtonText}>Open in browser</Text>
+                        </Pressable>
+                      </View>
+                    ) : Platform.OS === "web" ? (
+                      React.createElement("video", {
+                        key: activeVideo.src,
+                        src: activePlaybackUrl,
+                        controls: true,
+                        autoPlay: true,
+                        playsInline: true,
+                        style: {
+                          width: "100%",
+                          aspectRatio: "16 / 9",
+                          backgroundColor: "#000000",
+                          display: "block",
+                        },
+                        onError: () => setVideoError(true),
+                        onLoadedMetadata: () => setVideoReady(true),
+                        onCanPlay: () => setVideoReady(true),
+                      })
+                    ) : (
+                      <Video
+                        ref={videoRef}
+                        key={activeVideo.src}
+                        source={{ uri: activePlaybackUrl }}
+                        style={s.inlineVideo}
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay
+                        useNativeControls
+                        onLoad={() => setVideoReady(true)}
+                        onError={() => setVideoError(true)}
+                        onPlaybackStatusUpdate={(status) => {
+                          if (status.isLoaded) setVideoReady(true);
+                          else if (status.error) setVideoError(true);
+                        }}
+                      />
+                    )}
+                    {!videoReady && !videoError && (
+                      <View pointerEvents="none" style={s.inlineVideoLoading}>
+                        <ActivityIndicator size="large" color="#FFFFFF" />
+                      </View>
+                    )}
                     <View style={s.inlinePlayerMeta}>
                       <View style={{ flex: 1 }}>
                         <Text style={s.videoModalTitle} numberOfLines={2}>{activeVideo.title}</Text>
@@ -526,8 +591,13 @@ const s = StyleSheet.create({
   videoCardMeta: { paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
   videoTitle: { fontFamily: F.interMed, fontSize: 12, color: SS2.ink, lineHeight: 17 },
   videoArtist: { fontFamily: F.inter, fontSize: 11, color: SS2.inkMuted },
-  inlinePlayerCard: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 2, borderRadius: 12, borderWidth: 1, borderColor: SS2.border, overflow: "hidden", backgroundColor: SS2.card },
+  inlinePlayerCard: { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: SS2.border, overflow: "hidden", backgroundColor: SS2.card },
   inlineVideo: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#000" },
+  inlineVideoError: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#171717", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 24 },
+  inlineVideoLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.32)" },
+  inlineVideoErrorText: { color: "#FFFFFF", fontFamily: F.interMed, fontSize: 13, lineHeight: 19, textAlign: "center" },
+  inlineVideoErrorButton: { backgroundColor: SS2.coral, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
+  inlineVideoErrorButtonText: { color: "#FFFFFF", fontFamily: F.interSemi, fontSize: 13 },
   inlinePlayerMeta: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   videoModalTitle: { fontFamily: F.loraSemi, fontSize: 15, color: SS2.ink, lineHeight: 21 },
   videoModalArtist: { fontFamily: F.interMed, fontSize: 12, color: SS2.inkMuted },

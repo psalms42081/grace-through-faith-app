@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
@@ -256,6 +257,8 @@ function sanitizeContent(content: string): string {
 }
 
 export default function SabbathSchoolDayScreen() {
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
+  const [wideReading, setWideReading] = useState(false);
   useTheme(); // Path B light sweep: pinned light; teal = Sabbath School category token
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -480,6 +483,7 @@ export default function SabbathSchoolDayScreen() {
       }) as any,
     );
   const hasNextDay = dayNumber < totalDays;
+  const useWideReading = wideReading || (viewportWidth > viewportHeight && viewportWidth >= 700);
   const completedDays = data?.lesson?.days?.filter(d => d.completed).length || 0;
   const newCompletedCount = isCompleted ? Math.max(completedDays, (data?.lesson?.days?.filter(d => d.completed || d.dayNumber === dayNumber).length || 0)) : completedDays;
 
@@ -509,6 +513,19 @@ export default function SabbathSchoolDayScreen() {
           </Text>
         </View>
         <View style={styles.navBtns}>
+          <Pressable
+            onPress={() => setWideReading((value) => !value)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={useWideReading ? "Use focused lesson width" : "Use wide lesson width"}
+            accessibilityState={{ selected: useWideReading }}
+          >
+            <Ionicons
+              name={useWideReading ? "contract-outline" : "expand-outline"}
+              size={20}
+              color={useWideReading ? quarterTheme.primary : theme.textMuted}
+            />
+          </Pressable>
           {dayNumber > 1 && (
             <Pressable
               onPress={() => goToDay(dayNumber - 1)}
@@ -613,7 +630,15 @@ export default function SabbathSchoolDayScreen() {
       ) : (
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingBottom: bottomPad + 40,
+              width: "100%",
+              maxWidth: useWideReading ? 1120 : 760,
+              alignSelf: "center",
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           testID="ss-day-reader"
         >

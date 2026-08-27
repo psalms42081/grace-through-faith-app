@@ -43,6 +43,7 @@ import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
 import VotdHeroCard from "@/components/home/VotdHeroCard";
+import { bibleBookNamesMatch } from "@/components/home-v2/home-data";
 import { getBookImage } from "@/constants/bible-books";
 import ContinueCard from "@/components/home/ContinueCard";
 import { useResumeJourney } from "@/hooks/useResumeJourney";
@@ -1446,13 +1447,13 @@ function AdultHomeScreen() {
     const verseMatch = ref.match(/:(\d+)$/);
     const verseNum = verseMatch ? parseInt(verseMatch[1], 10) : undefined;
     const book = homeBooks?.find(
-      (b) => b.name.toLowerCase() === bookName.toLowerCase()
+      (b) => bibleBookNamesMatch(bookName, b.name)
     );
     return { bookId: book?.id, chapterNumber: chapter, verseNumber: verseNum };
   }, [verse.reference, homeBooks]);
 
   // Fetch VOTD text in the active translation via /api/passage.
-  const { data: votdPassage } = useQuery<{
+  const { data: votdPassage, isLoading: votdLoading, isError: votdError } = useQuery<{
     book: { id: number; name: string };
     chapter: number;
     verses: Array<{ verse: number; text: string }>;
@@ -1469,6 +1470,7 @@ function AdultHomeScreen() {
     },
     enabled: !!votdParsed.bookId && !!votdParsed.chapterNumber,
     staleTime: 1000 * 60 * 60 * 24,
+    retry: 2,
   });
 
   // Extract the specific verse text from the passage response.
@@ -1482,10 +1484,16 @@ function AdultHomeScreen() {
   const resolvedVotd = useMemo(
     () => ({
       reference: verse.reference,
-      text: votdResolvedText ?? "",
+      text: votdResolvedText ?? (
+        votdError ||
+        (!!homeBooks && !votdParsed.bookId) ||
+        (!votdLoading && !!votdPassage && !votdResolvedText)
+          ? "Verse text is temporarily unavailable."
+          : ""
+      ),
       translation: votdPassage?.translation || bibleTranslation,
     }),
-    [verse.reference, votdResolvedText, votdPassage?.translation, bibleTranslation]
+    [verse.reference, votdResolvedText, votdError, homeBooks, votdParsed.bookId, votdLoading, votdPassage, bibleTranslation]
   );
 
   const { data: egwDevotion } = useQuery<{

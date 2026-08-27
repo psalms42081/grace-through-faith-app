@@ -700,7 +700,16 @@ export default function GreatControversyScreen() {
             {PROPHECY_VIDEOS.greatControversy.map((video) => (
               <Pressable
                 key={video.id}
-                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/sermon-player",
+                    params: {
+                      videoId: video.id,
+                      title: video.title,
+                      speaker: video.teacher,
+                    },
+                  })
+                }
                 style={styles.teacherVideoCard}
               >
                 <View style={styles.teacherThumbWrap}>

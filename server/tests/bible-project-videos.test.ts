@@ -280,7 +280,7 @@ describe("pastoral topic video availability contract", () => {
       references.some(
         (reference) =>
           reference.surface === "Great Controversy teacher rail" &&
-          reference.youtubeId === "N_u66nrvfjE",
+          reference.youtubeId === "m7T4zHy0VUw",
       ),
     );
   });

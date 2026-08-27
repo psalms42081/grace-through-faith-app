@@ -28,3 +28,4 @@
 - [Mounted tab screens and root modals](expo-mounted-tabs-root-modals.md) — persisted tab screens must not reactively redirect from global route segments or they can replace Sign In and other root modals.
 - [Device-local daily boundaries](device-local-daily-boundaries.md) — daily content, SS markers, and streaks use the device IANA zone; cache dates must never be appended to request URLs.
 - [Sabbath School quarter colors](sabbath-school-quarter-colors.md) — canonical adult SS uses each feed-supplied quarter color when safe; teal remains the fallback and completion green stays semantic.
+- [Sabbath School video transport](sabbath-school-video-transport.md) — Adventech web MP4s need range-preserving proxying; connect timeouts must not terminate active streams.

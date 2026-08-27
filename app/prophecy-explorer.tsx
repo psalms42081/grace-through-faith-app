@@ -8,7 +8,6 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
-  Linking,
   Image,
 } from "react-native";
 import { router } from "expo-router";
@@ -1548,7 +1547,16 @@ export default function ProphecyExplorerScreen() {
             {EXPLORER_TEACHER_VIDEOS.map((video) => (
               <Pressable
                 key={video.id}
-                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/sermon-player",
+                    params: {
+                      videoId: video.id,
+                      title: video.title,
+                      speaker: video.teacher,
+                    },
+                  })
+                }
                 style={styles.teacherVideoCard}
               >
                 <View style={styles.teacherThumbWrap}>

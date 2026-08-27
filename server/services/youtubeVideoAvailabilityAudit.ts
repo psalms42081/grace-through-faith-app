@@ -36,6 +36,7 @@ export interface YoutubeVideoAvailabilityAuditOptions {
 interface YoutubeVideoStatus {
   privacyStatus?: string;
   uploadStatus?: string;
+  embeddable?: boolean;
 }
 
 interface YoutubeVideoListItem {
@@ -104,6 +105,10 @@ function unavailableReason(item: YoutubeVideoListItem | undefined): string | und
   const uploadStatus = item.status?.uploadStatus;
   if (uploadStatus && uploadStatus !== "processed") {
     return `YouTube reports the upload status as ${uploadStatus}.`;
+  }
+
+  if (item.status?.embeddable === false) {
+    return "YouTube reports that this video cannot be embedded in the app.";
   }
 
   if (!item.status) {

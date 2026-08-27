@@ -126,10 +126,10 @@ export const PROPHECY_TEACHING_VIDEOS = {
     duration: "1h 29m",
   }],
   greatControversy: [{
-    id: "N_u66nrvfjE",
-    title: "What Is The Great Controversy?",
-    teacher: "Mark Finley",
-    duration: "1h 0m",
+    id: "m7T4zHy0VUw",
+    title: "The Impending Conflict",
+    teacher: "SDA Church",
+    duration: "10m",
   }],
 } as const satisfies Record<string, readonly ProphecyTeachingVideo[]>;
 

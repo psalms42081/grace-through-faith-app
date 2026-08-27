@@ -3678,23 +3678,23 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
               )}
 
               {(card.authorInfo || card.dateWritten || card.audience) && (
-                <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <View style={{ marginTop: 16, gap: 8 }}>
                   {card.authorInfo && (
-                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, width: "100%" }}>
                       <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Author</Text>
-                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.authorInfo}</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: "Inter_400Regular", flexShrink: 1 }}>{card.authorInfo}</Text>
                     </View>
                   )}
                   {card.dateWritten && (
-                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, width: "100%" }}>
                       <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Date</Text>
-                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.dateWritten}</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: "Inter_400Regular", flexShrink: 1 }}>{card.dateWritten}</Text>
                     </View>
                   )}
                   {card.audience && (
-                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                    <View style={{ backgroundColor: theme.accent + "12", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, width: "100%" }}>
                       <Text style={{ color: theme.textMuted, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Audience</Text>
-                      <Text style={{ color: theme.textSecondary, fontSize: 12, fontFamily: "Inter_400Regular" }}>{card.audience}</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: "Inter_400Regular", flexShrink: 1 }}>{card.audience}</Text>
                     </View>
                   )}
                 </View>

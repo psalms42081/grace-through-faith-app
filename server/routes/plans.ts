@@ -76,6 +76,19 @@ router.post("/api/user-plans", requireAuth, async (req, res) => {
       return res.status(409).json({ error: "Already enrolled in this plan" });
     }
 
+    if (existing.length > 0) {
+      const [restarted] = await db
+        .update(userPlans)
+        .set({
+          startDate: new Date(),
+          currentDay: 1,
+          completedAt: null,
+        })
+        .where(and(eq(userPlans.id, existing[0].id), eq(userPlans.userId, userId)))
+        .returning();
+      return res.status(200).json(restarted);
+    }
+
     const [enrolled] = await db
       .insert(userPlans)
       .values({
@@ -151,13 +164,6 @@ router.patch("/api/user-plans/:id/day/:day", requireAuth, async (req, res) => {
       .select()
       .from(planDays)
       .where(and(eq(planDays.planId, enrollment.planId), eq(planDays.dayNumber, dayNum)));
-
-    if (planDay) {
-      await db
-        .update(planDays)
-        .set({ completedAt: new Date() })
-        .where(eq(planDays.id, planDay.id));
-    }
 
     const [plan] = await db
       .select()
