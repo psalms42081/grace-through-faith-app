@@ -54,7 +54,7 @@ function ShareCardContent({
 
         <View style={cs.watermark}>
           <View style={cs.watermarkDot} />
-          <Text style={cs.watermarkText}>Grace through Faith</Text>
+          <Text style={cs.watermarkText}>Informed Ministries</Text>
         </View>
       </View>
     </View>
@@ -75,7 +75,7 @@ export function useShareInsight() {
           if (Platform.OS === "web") {
             const text = `"${data.verseText}"\n\n${data.verseReference}${
               data.insightText ? `\n\n${data.insightLabel || "Word Study"}: ${data.insightText}` : ""
-            }\n\nShared via Grace through Faith`;
+            }\n\nShared via Informed Ministries`;
 
             if (typeof navigator !== "undefined" && navigator.share) {
               await navigator.share({ text });

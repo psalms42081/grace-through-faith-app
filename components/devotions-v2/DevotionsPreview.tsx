@@ -206,7 +206,7 @@ export default function DevotionsPreview() {
     <View style={s.root}>
       <Header
         title="Devotions"
-        eyebrow="Grace through Faith"
+        eyebrow="Informed Ministries"
         topInset={insets.top}
         testID="devotions-preview-header"
       />

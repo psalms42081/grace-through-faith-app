@@ -248,7 +248,7 @@ export async function assembleCinematicVideo(
           );
         } else {
           endCardFilter =
-            `drawtext=fontfile='${fontPath}':text='Grace Through Faith':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h/2)-40:alpha='if(lt(t,0.5),t/0.5,if(lt(t,3),1,(${END_CARD_DURATION}-t)/1))',` +
+            `drawtext=fontfile='${fontPath}':text='Informed Ministries':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=(h/2)-40:alpha='if(lt(t,0.5),t/0.5,if(lt(t,3),1,(${END_CARD_DURATION}-t)/1))',` +
             `drawtext=fontfile='${fontPath}':text='${escapedScripture}':fontcolor=white:fontsize=36:x=(w-text_w)/2:y=(h/2)+40:alpha='if(lt(t,0.5),t/0.5,if(lt(t,3),1,(${END_CARD_DURATION}-t)/1))',` +
             `drawtext=fontfile='${fontPath}':text='${escapedUrl}':fontcolor=0xCCCCCC:fontsize=28:x=(w-text_w)/2:y=(h/2)+100:alpha='if(lt(t,0.8),t/0.8,if(lt(t,3),1,(${END_CARD_DURATION}-t)/1))'`;
 

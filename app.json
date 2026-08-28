@@ -27,7 +27,7 @@
       "package": "com.graceThroughFaith",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#1E2B5E",
+        "backgroundColor": "#1A1F3C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -66,10 +66,21 @@
       ],
       "expo-web-browser",
       [
+        "expo-splash-screen",
+        {
+          "android": {
+            "image": "./assets/images/android-icon-foreground.png",
+            "backgroundColor": "#1A1F3C",
+            "iconBackgroundColor": "#1A1F3C",
+            "resizeMode": "contain"
+          }
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/images/android-notification-icon.png",
-          "color": "#1E2B5E",
+          "color": "#1A1F3C",
           "defaultChannel": "daily-reminders",
           "sounds": [],
           "mode": "default"
@@ -78,15 +89,15 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Grace through Faith to use your location to find nearby churches.",
-          "locationWhenInUsePermission": "Allow Grace through Faith to use your location to find nearby churches."
+          "locationAlwaysAndWhenInUsePermission": "Allow Informed Ministries to use your location to find nearby churches.",
+          "locationWhenInUsePermission": "Allow Informed Ministries to use your location to find nearby churches."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Grace through Faith to use your camera for live fellowship video.",
-          "microphonePermission": "Allow Grace through Faith to use your microphone for live fellowship audio."
+          "cameraPermission": "Allow Informed Ministries to use your camera for live fellowship video.",
+          "microphonePermission": "Allow Informed Ministries to use your microphone for live fellowship audio."
         }
       ]
     ],

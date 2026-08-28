@@ -210,7 +210,7 @@ function ProfileScreenInner() {
 
   const handleShareProfile = useCallback(async () => {
     const profileName = user?.displayName || "Guest";
-    const message = `Check out my faith journey on Grace Through Faith! I'm ${profileName} with a ${streak}-day reading streak.`;
+    const message = `Check out my faith journey on Informed Ministries! I'm ${profileName} with a ${streak}-day reading streak.`;
     if (Platform.OS === "web") {
       await Clipboard.setStringAsync(message);
       showToast("Profile copied to clipboard!", "success");
@@ -242,7 +242,7 @@ function ProfileScreenInner() {
           {isAuthenticated ? (user?.displayName || "User") : "Guest"}
         </Text>
         <Text style={[st.userSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {isAuthenticated ? (user?.email || "Grace through Faith") : "Grace through Faith"}
+          {isAuthenticated ? (user?.email || "Informed Ministries") : "Informed Ministries"}
         </Text>
         {isPatron && (
           <View style={st.patronBadge}>

@@ -259,8 +259,8 @@ export async function assembleVideo(
       try {
         const fontPath = findFontPath();
         const drawtextFilter = fontPath
-          ? `drawtext=fontfile='${fontPath}':text='Grace Through Faith':fontcolor=white:fontsize=52:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,0.5),t/0.5,if(lt(t,2.5),1,(3-t)/0.5))'`
-          : `drawtext=text='Grace Through Faith':fontcolor=white:fontsize=52:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,0.5),t/0.5,if(lt(t,2.5),1,(3-t)/0.5))'`;
+          ? `drawtext=fontfile='${fontPath}':text='Informed Ministries':fontcolor=white:fontsize=52:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,0.5),t/0.5,if(lt(t,2.5),1,(3-t)/0.5))'`
+          : `drawtext=text='Informed Ministries':fontcolor=white:fontsize=52:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,0.5),t/0.5,if(lt(t,2.5),1,(3-t)/0.5))'`;
         console.log(`[assembly] End card using drawtext, font: ${fontPath || "built-in default"}`);
         execSync(
           `"${ffmpeg}" -y -f lavfi -i color=c=black:s=${OUTPUT_WIDTH}x${OUTPUT_HEIGHT}:d=${END_CARD_DURATION}:r=30 ` +

@@ -53,7 +53,7 @@ export default function PrivacyScreen() {
         <Text style={[styles.updated, { color: theme.textSecondary }]}>Last updated: March 27, 2026</Text>
 
         <P theme={theme}>
-          Grace Through Faith ("the App") is a faith-based mobile application designed to support spiritual growth through Bible study, devotional plans, prayer journaling, and evangelism video content. This Privacy Policy explains what information we collect, how we use it, and how we protect it.
+          Informed Ministries ("the App") is a faith-based mobile application designed to support spiritual growth through Bible study, devotional plans, prayer journaling, and evangelism video content. This Privacy Policy explains what information we collect, how we use it, and how we protect it.
         </P>
 
         <Section title="1. Information We Collect" theme={theme}>

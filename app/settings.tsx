@@ -390,8 +390,8 @@ export default function SettingsScreen() {
         {renderRow("trash-outline", "Clear Cache", {
           onPress: handleClearCache,
         })}
-        {renderRow("information-circle-outline", "About Grace Through Faith", {
-          onPress: () => showToast("Grace Through Faith — Spiritual Formation for Adventists", "info"),
+        {renderRow("information-circle-outline", "About Informed Ministries", {
+          onPress: () => showToast("Informed Ministries — Spiritual Formation for Adventists", "info"),
         })}
         {renderRow("code-slash-outline", "App Version", {
           rightText: "1.0.0",

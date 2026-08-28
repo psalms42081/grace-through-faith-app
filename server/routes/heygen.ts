@@ -65,7 +65,7 @@ router.post("/api/heygen/generate", requireAuth, async (req, res) => {
             },
           },
         ],
-        title: title?.trim() || "Grace Through Faith Video",
+        title: title?.trim() || "Informed Ministries Video",
         callback_id: "gtf-callback",
       }),
     });
@@ -82,7 +82,7 @@ router.post("/api/heygen/generate", requireAuth, async (req, res) => {
     if (videoId) {
       await db.insert(heygenVideos).values({
         videoId,
-        title: title?.trim() || "Grace Through Faith Video",
+        title: title?.trim() || "Informed Ministries Video",
         avatarId,
         script: script.trim(),
         status: "pending",

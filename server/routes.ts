@@ -344,7 +344,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
               <p style="margin:0;white-space:pre-wrap;">${safeMessage}</p>
             </div>
             ${safeContext ? `<div style="margin-top:12px;padding:12px;background:#fafafa;border-radius:8px;font-size:13px;color:#888;"><strong>Context:</strong> ${safeContext}</div>` : ""}
-            <p style="margin-top:20px;font-size:12px;color:#999;">Grace Through Faith App — Automated Feedback Notification</p>
+            <p style="margin-top:20px;font-size:12px;color:#999;">Informed Ministries App — Automated Feedback Notification</p>
           </div>
         `;
 
@@ -369,7 +369,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
               socketTimeout: 12000,
             });
             await transporter.sendMail({
-              from: `"Grace Through Faith" <${feedbackEmailUser}>`,
+              from: `"Informed Ministries" <${feedbackEmailUser}>`,
               to: "joseph@gracethroughfaith.app",
               subject: `[Feedback] ${topicLabel} — from ${displayName}`,
               html: emailHtml,

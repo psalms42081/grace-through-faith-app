@@ -160,7 +160,7 @@ function FullscreenPlayer({
 
   const handleShare = useCallback(async () => {
     try {
-      const message = `${video.title}${video.scriptureAnchor ? ` - ${video.scriptureAnchor}` : ""}\n\nWatch this short faith video on the Grace Through Faith app!`;
+      const message = `${video.title}${video.scriptureAnchor ? ` - ${video.scriptureAnchor}` : ""}\n\nWatch this short faith video on the Informed Ministries app!`;
       await Share.share({ message, title: video.title });
     } catch (_e) {}
   }, [video]);

@@ -1664,7 +1664,7 @@ function AdultHomeScreen() {
               : greeting}
           </Text>
           <Text style={[s.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            Grace Through Faith
+            Informed Ministries
           </Text>
           <Text style={[s.headerTagline, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             Read · Reflect · Pray · Practice · Grow

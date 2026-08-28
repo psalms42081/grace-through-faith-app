@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -54,7 +55,12 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={s.header}>
-          <Ionicons name="book" size={48} color="#C9933A" />
+          <Image
+            source={require("@/assets/images/informed-ministries-icon.png")}
+            style={s.brandMark}
+            resizeMode="contain"
+            accessibilityLabel="Informed Ministries"
+          />
           <Text style={s.title}>{resetMode ? t("auth.resetPassword") : t("auth.signIn")}</Text>
           <Text style={s.subtitle}>
             {resetMode
@@ -180,6 +186,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5EFE0" },
   scroll: { flexGrow: 1, padding: 24 },
   header: { alignItems: "center", marginTop: 32, marginBottom: 32, gap: 8 },
+  brandMark: { width: 56, height: 56, borderRadius: 12 },
   title: {
     fontSize: 28,
     color: "#2C1810",

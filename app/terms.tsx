@@ -53,18 +53,18 @@ export default function TermsScreen() {
         <Text style={[styles.updated, { color: theme.textSecondary }]}>Last updated: April 2026</Text>
 
         <P theme={theme}>
-          Welcome to Grace Through Faith. By using our application, you agree to these Terms of Service. Please read them carefully. If you do not agree with these terms, please do not use the App.
+          Welcome to Informed Ministries. By using our application, you agree to these Terms of Service. Please read them carefully. If you do not agree with these terms, please do not use the App.
         </P>
 
         <Section title="1. Acceptance of Terms" theme={theme}>
           <P theme={theme}>
-            By creating an account or using any part of Grace Through Faith ("the App"), you agree to be bound by these Terms of Service. These terms apply to all users of the App, including visitors, registered users, and subscribers.
+            By creating an account or using any part of Informed Ministries ("the App"), you agree to be bound by these Terms of Service. These terms apply to all users of the App, including visitors, registered users, and subscribers.
           </P>
         </Section>
 
         <Section title="2. Use of the App" theme={theme}>
           <P theme={theme}>
-            Grace Through Faith is a faith-based spiritual formation platform designed to support Bible study, prayer, devotional growth, and community connection within the Seventh-day Adventist tradition. You agree to use the App in a manner consistent with its purpose and in accordance with these terms.
+            Informed Ministries is a faith-based spiritual formation platform designed to support Bible study, prayer, devotional growth, and community connection within the Seventh-day Adventist tradition. You agree to use the App in a manner consistent with its purpose and in accordance with these terms.
           </P>
           <P theme={theme}>You agree not to:</P>
           <BulletList theme={theme} items={[
@@ -87,7 +87,7 @@ export default function TermsScreen() {
 
         <Section title="4. Premium Subscriptions and Billing" theme={theme}>
           <P theme={theme}>
-            Grace Through Faith offers optional premium features through paid subscriptions. By subscribing, you agree to the pricing and payment terms presented at the time of purchase.
+            Informed Ministries offers optional premium features through paid subscriptions. By subscribing, you agree to the pricing and payment terms presented at the time of purchase.
           </P>
           <BulletList theme={theme} items={[
             "Subscriptions renew automatically unless cancelled before the renewal date",
@@ -111,7 +111,7 @@ export default function TermsScreen() {
 
         <Section title="6. Intellectual Property" theme={theme}>
           <P theme={theme}>
-            All content, design, code, and materials within Grace Through Faith — including but not limited to study guides, devotional content, video productions, artwork, and the App's interface — are the intellectual property of Grace Through Faith or its licensors.
+            All content, design, code, and materials within Informed Ministries — including but not limited to study guides, devotional content, video productions, artwork, and the App's interface — are the intellectual property of Informed Ministries or its licensors.
           </P>
           <P theme={theme}>
             Scripture quotations are provided under licence or from public domain translations. Ellen G. White writings are sourced through the official White Estate API and remain the property of the Ellen G. White Estate.
@@ -123,7 +123,7 @@ export default function TermsScreen() {
 
         <Section title="7. Disclaimer of Warranties" theme={theme}>
           <P theme={theme}>
-            Grace Through Faith is provided on an "as is" and "as available" basis. While we strive to keep the App reliable and accurate, we make no warranties — express or implied — regarding the completeness, accuracy, or availability of the App or its content.
+            Informed Ministries is provided on an "as is" and "as available" basis. While we strive to keep the App reliable and accurate, we make no warranties — express or implied — regarding the completeness, accuracy, or availability of the App or its content.
           </P>
           <P theme={theme}>
             The App provides spiritual resources and educational content. It is not a substitute for professional counselling, medical advice, or pastoral care. If you are in crisis, please reach out to a trusted pastor, counsellor, or emergency service.
@@ -132,7 +132,7 @@ export default function TermsScreen() {
 
         <Section title="8. Limitation of Liability" theme={theme}>
           <P theme={theme}>
-            To the fullest extent permitted by law, Grace Through Faith and its creators shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the App. This includes, but is not limited to, loss of data, interruption of service, or reliance on any content provided through the App.
+            To the fullest extent permitted by law, Informed Ministries and its creators shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the App. This includes, but is not limited to, loss of data, interruption of service, or reliance on any content provided through the App.
           </P>
         </Section>
 
@@ -147,7 +147,7 @@ export default function TermsScreen() {
             If you have any questions about these Terms of Service, please contact us at joseph@gracethroughfaith.app.
           </P>
           <P theme={theme}>
-            Grace Through Faith{"\n"}
+            Informed Ministries{"\n"}
             gracethroughfaith.app
           </P>
         </Section>

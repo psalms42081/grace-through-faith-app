@@ -295,7 +295,7 @@ export default function GroupDetailScreen() {
     if (!data?.group) return;
     try {
       await Share.share({
-        message: `Join my group "${data.group.name}" on Grace Through Faith! Use invite code: ${data.group.joinCode}`,
+        message: `Join my group "${data.group.name}" on Informed Ministries! Use invite code: ${data.group.joinCode}`,
       });
     } catch {}
   };

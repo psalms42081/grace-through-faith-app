@@ -77,7 +77,7 @@ export default function FeedbackScreen() {
             Thank You
           </Text>
           <Text style={[st.successDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Thanks for your feedback. Your input helps us improve Grace Through Faith.
+            Thanks for your feedback. Your input helps us improve Informed Ministries.
           </Text>
           <Pressable
             onPress={() => router.back()}

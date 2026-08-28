@@ -370,7 +370,7 @@ router.post("/api/video-topics/:id/submit-heygen", requireAuth, requirePipelineA
         width: 1080,
         height: 1920,
       },
-      title: `${topic.title} - Grace Through Faith`,
+      title: `${topic.title} - Informed Ministries`,
       callback_id: `video-topic-${id}`,
     };
 
