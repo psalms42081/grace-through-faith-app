@@ -1,8 +1,6 @@
-import { getCalendarDate, getCalendarDayIndex } from "../../shared/calendar-date";
-import {
-  EGW_FALLBACK_BOOK_IDS,
-  EGW_FALLBACK_DEVOTIONS,
-} from "../data/egw-fallback-devotions";
+import { and, asc, eq } from "drizzle-orm";
+import { getCalendarDate } from "../../shared/calendar-date";
+import { egwChapters } from "../../shared/schema";
 
 const EGW_API_BASE = "https://a.egwwritings.org";
 const EGW_TOKEN_URL = "https://cpanel.egwwritings.org/connect/token";
@@ -134,12 +132,65 @@ export async function getBookCover(bookId: number, size: "small" | "medium" | "l
   return `${EGW_API_BASE}/covers/${bookId}?type=${size}`;
 }
 
-// Confirmed EGW book IDs from /api/egw/books
+// Confirmed EGW book IDs from /api/egw/books — order is the existing month rotation.
 const EGW_DEVOTIONAL_BOOKS = [
-  { id: 108, title: "Steps to Christ" },
-  { id: 130, title: "The Desire of Ages" },
-  { id: 15, title: "Christ's Object Lessons" },
-];
+  { id: 108, title: "Steps to Christ", slug: "steps-to-christ" },
+  { id: 130, title: "The Desire of Ages", slug: "desire-of-ages" },
+  { id: 15, title: "Christ's Object Lessons", slug: "christs-object-lessons" },
+] as const;
+
+export const EGW_EXCERPT_MAX_CHARS = 600;
+
+export type EgwDailySource = "local" | "live";
+
+export type EgwDailyDevotion = {
+  title: string;
+  content: string;
+  bookTitle: string;
+  bookId: number;
+  chapterNumber: number;
+  date: string;
+  sourceUrl: string;
+  source: EgwDailySource;
+};
+
+function bookSourceUrl(bookId: number): string {
+  return `https://egwwritings.org/book/b${bookId}`;
+}
+
+function cutAtSentenceBoundary(text: string, maxChars: number): string {
+  const window = text.slice(0, maxChars);
+  const matches = [...window.matchAll(/[.!?]["']?/g)];
+  const last = matches[matches.length - 1];
+  if (last?.index != null && last.index > 0) {
+    return text.slice(0, last.index + last[0].length).trim();
+  }
+  const firstSentence = text.match(/^[\s\S]*?[.!?]["']?/);
+  if (firstSentence) return firstSentence[0].trim();
+  return text.trim();
+}
+
+/** First N paragraphs that fit the card length; never cuts mid-sentence. */
+export function excerptEgwParagraphs(
+  paragraphs: string[],
+  maxChars = EGW_EXCERPT_MAX_CHARS,
+): string {
+  const parts = paragraphs.map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (parts.length === 0) return "";
+
+  const selected: string[] = [];
+  let size = 0;
+  for (const para of parts) {
+    const extra = selected.length === 0 ? para.length : 2 + para.length;
+    if (selected.length === 0 && para.length > maxChars) {
+      return cutAtSentenceBoundary(para, maxChars);
+    }
+    if (size + extra > maxChars) break;
+    selected.push(para);
+    size += extra;
+  }
+  return selected.join("\n\n");
+}
 
 function asEgwList(data: any): any[] {
   if (Array.isArray(data)) return data;
@@ -157,18 +208,55 @@ export function resolveEgwDailyCalendar(instant: Date, timeZone: unknown) {
   };
 }
 
-export async function getEgwDailyDevotion(
-  lang: string = "en",
+async function getEgwLocalDailyDevotion(
   timeZone?: unknown,
-): Promise<{
-  title: string;
-  content: string;
-  bookTitle: string;
-  bookId: number;
-  date: string;
-  sourceUrl: string;
-  source: "live";
-} | null> {
+): Promise<EgwDailyDevotion | null> {
+  const local = resolveEgwDailyCalendar(new Date(), timeZone);
+  const book = EGW_DEVOTIONAL_BOOKS[local.bookIndex];
+  const { db } = await import("../db");
+
+  const chapterRows = await db
+    .select({ chapterNumber: egwChapters.chapterNumber })
+    .from(egwChapters)
+    .where(eq(egwChapters.bookSlug, book.slug))
+    .orderBy(asc(egwChapters.chapterNumber));
+
+  if (!chapterRows.length) return null;
+
+  const picked = chapterRows[local.dayOfMonthIndex % chapterRows.length];
+  const [chapter] = await db
+    .select()
+    .from(egwChapters)
+    .where(
+      and(
+        eq(egwChapters.bookSlug, book.slug),
+        eq(egwChapters.chapterNumber, picked.chapterNumber),
+      ),
+    )
+    .limit(1);
+
+  if (!chapter) return null;
+
+  const paragraphs = Array.isArray(chapter.paragraphs) ? chapter.paragraphs : [];
+  const content = excerptEgwParagraphs(paragraphs);
+  if (!content) return null;
+
+  return {
+    title: chapter.chapterTitle,
+    content,
+    bookTitle: chapter.book || book.title,
+    bookId: book.id,
+    chapterNumber: chapter.chapterNumber,
+    date: local.dateKey,
+    sourceUrl: bookSourceUrl(book.id),
+    source: "local",
+  };
+}
+
+async function getEgwLiveDailyDevotion(
+  lang: string,
+  timeZone?: unknown,
+): Promise<EgwDailyDevotion | null> {
   const local = resolveEgwDailyCalendar(new Date(), timeZone);
   const book = EGW_DEVOTIONAL_BOOKS[local.bookIndex];
 
@@ -188,51 +276,47 @@ export async function getEgwDailyDevotion(
   );
   if (!content) return null;
 
-  const rawText = Array.isArray(content)
-    ? content.filter((p: any) => p.element_type === "p" && !p.content.includes("non-egw-foreword") && p.content.length > 50).map((p: any) => p.content || "").join(" ")
-    : (content.content || "");
-  const text = rawText
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .substring(0, 600);
+  const rawParagraphs: string[] = Array.isArray(content)
+    ? content
+        .filter((p: any) => p.element_type === "p" && !String(p.content || "").includes("non-egw-foreword") && String(p.content || "").length > 50)
+        .map((p: any) => String(p.content || "").replace(/<[^>]+>/g, " "))
+    : [String(content.content || "").replace(/<[^>]+>/g, " ")];
+
+  const text = excerptEgwParagraphs(rawParagraphs);
+  if (!text) return null;
 
   return {
     title: chapter.title || `Day ${local.dayOfMonthIndex + 1}`,
     content: text,
     bookTitle: book.title,
     bookId: book.id,
+    chapterNumber: (local.dayOfMonthIndex % chapters.length) + 1,
     date: local.dateKey,
     sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
     source: "live",
   };
 }
 
-export function getEgwFallbackDevotion(timeZone?: unknown): {
-  title: string;
-  content: string;
-  bookTitle: string;
-  bookId: number;
-  date: string;
-  sourceUrl: null;
-  source: "fallback";
-  id: string;
-} | null {
-  if (!EGW_FALLBACK_DEVOTIONS.length) return null;
-  const instant = new Date();
-  const calendar = getCalendarDate(instant, timeZone);
-  const dayIndex = getCalendarDayIndex(instant, timeZone);
-  const entry = EGW_FALLBACK_DEVOTIONS[dayIndex % EGW_FALLBACK_DEVOTIONS.length];
-  return {
-    title: entry.chapterTitle,
-    content: entry.excerpt,
-    bookTitle: entry.book,
-    bookId: EGW_FALLBACK_BOOK_IDS[entry.book],
-    date: calendar.dateKey,
-    sourceUrl: null,
-    source: "fallback",
-    id: entry.id,
-  };
+export async function getEgwDailyDevotion(
+  lang: string = "en",
+  timeZone?: unknown,
+): Promise<EgwDailyDevotion | null> {
+  try {
+    const local = await getEgwLocalDailyDevotion(timeZone);
+    if (local) return local;
+    console.warn("[egw] Local chapter miss for today's rotation; trying live API");
+  } catch (err) {
+    console.error("[egw] Local chapter lookup failed:", err);
+  }
+
+  if (!isEgwConfigured()) return null;
+
+  try {
+    return await getEgwLiveDailyDevotion(lang, timeZone);
+  } catch (err) {
+    console.error("[egw] Live API devotion failed:", err);
+    return null;
+  }
 }
 
 export function isEgwConfigured(): boolean {

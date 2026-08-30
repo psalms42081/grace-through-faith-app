@@ -10,7 +10,6 @@ import {
   searchTopical,
   getBookCover,
   getEgwDailyDevotion,
-  getEgwFallbackDevotion,
 } from "../services/egwService";
 
 const router = Router();
@@ -133,37 +132,22 @@ router.get("/devotional/today", async (req, res) => {
   const timeZone = req.query.timeZone;
   const lang = String(req.query.lang || "en");
 
-  const serveFallback = (reason: string) => {
-    const fallback = getEgwFallbackDevotion(timeZone);
-    if (!fallback) {
-      return res.status(502).json({ error: "Failed to fetch devotional" });
-    }
-    console.warn("[egw] Daily devotion served from fallback", {
-      reason,
-      date: fallback.date,
-      id: fallback.id,
-      book: fallback.bookTitle,
-    });
-    return res.json(fallback);
-  };
-
-  if (!isEgwConfigured()) {
-    return serveFallback("not_configured");
-  }
-
   try {
     const devotion = await getEgwDailyDevotion(lang, timeZone);
     if (!devotion) {
-      return serveFallback("live_empty");
+      console.error("[egw] Daily devotion unavailable after local lookup");
+      return res.status(500).json({ error: "Daily devotion unavailable" });
     }
-    console.log("[egw] Daily devotion served from live API", {
+    console.log("[egw] Daily devotion served", {
+      source: devotion.source,
       date: devotion.date,
       book: devotion.bookTitle,
+      chapter: devotion.chapterNumber,
     });
     return res.json(devotion);
   } catch (err) {
     console.error("[egw] Devotional endpoint error:", err);
-    return serveFallback("live_error");
+    return res.status(500).json({ error: "Daily devotion unavailable" });
   }
 });
 

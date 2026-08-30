@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { D2, F } from "./tokens";
-import { ErrorState, Header, LoadingState } from "./PreviewPrimitives";
+import { Header, LoadingState } from "./PreviewPrimitives";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 type Egw = {
@@ -13,9 +13,10 @@ type Egw = {
   content: string;
   bookTitle: string;
   bookId: number;
+  chapterNumber?: number;
   date: string;
-  sourceUrl: string | null;
-  source?: "live" | "fallback";
+  sourceUrl: string;
+  source?: "local" | "live";
 };
 
 function formatExcerpt(content: string) {
@@ -37,11 +38,11 @@ export default function EgwDevotionalPreview() {
     );
   }
 
-  if (q.error || !d) {
+  if (!d) {
     return (
       <View style={s.root}>
         <Header title="Ellen G. White" topInset={insets.top} onBack={() => router.back()} />
-        <ErrorState onRetry={() => q.refetch()} label="This reflection could not be loaded." />
+        {q.isFetching ? <LoadingState label="Opening today's reflection" /> : null}
       </View>
     );
   }
@@ -61,28 +62,34 @@ export default function EgwDevotionalPreview() {
           <Text style={s.title}>{d.title}</Text>
           <View style={s.source}>
             <Ionicons name="library-outline" size={15} color={D2.amber} />
-            <Text style={s.sourceText}>{d.bookTitle}</Text>
+            <Text style={s.sourceText}>
+              {d.bookTitle}
+              {d.chapterNumber ? ` · Chapter ${d.chapterNumber}` : ""}
+            </Text>
           </View>
         </View>
 
         <View style={s.attribution}>
           <Ionicons name="shield-checkmark-outline" size={16} color={D2.amber} />
-          <Text style={s.attributionText}>Excerpt from Ellen G. White devotional writings</Text>
+          <Text style={s.attributionText}>
+            Ellen G. White — {d.bookTitle}
+            {d.chapterNumber ? `, chapter ${d.chapterNumber}` : ""}
+          </Text>
         </View>
 
         <Text style={s.body}>{formatExcerpt(d.content)}</Text>
 
-        {d.source !== "fallback" && d.sourceUrl ? (
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => Linking.openURL(d.sourceUrl as string)}
-            style={s.external}
-            testID="egw-devotional-preview-source"
-          >
-            <Text style={s.externalText}>Read this chapter on EGW Writings</Text>
-            <Ionicons name="open-outline" size={15} color={D2.amber} />
-          </Pressable>
-        ) : null}
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => Linking.openURL(d.sourceUrl)}
+          style={s.external}
+          testID="egw-devotional-preview-source"
+        >
+          <Text style={s.externalText}>
+            {d.source === "live" ? "Read this chapter on EGW Writings" : "Read this book on EGW Writings"}
+          </Text>
+          <Ionicons name="open-outline" size={15} color={D2.amber} />
+        </Pressable>
       </ScrollView>
     </View>
   );
