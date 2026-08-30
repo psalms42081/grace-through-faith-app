@@ -2546,3 +2546,28 @@ export const contentTranslations = pgTable(
 
 export type ContentTranslation = typeof contentTranslations.$inferSelect;
 export type InsertContentTranslation = typeof contentTranslations.$inferInsert;
+
+// ─── EGW LOCAL CHAPTERS (ingested from public-domain EPUBs) ───────────────────
+
+export const egwChapters = pgTable(
+  "egw_chapters",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    book: text("book").notNull(),
+    bookSlug: varchar("book_slug", { length: 64 }).notNull(),
+    chapterNumber: integer("chapter_number").notNull(),
+    chapterTitle: text("chapter_title").notNull(),
+    paragraphs: jsonb("paragraphs").$type<string[]>().notNull(),
+    ingestedAt: timestamp("ingested_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    slugChapterUniq: uniqueIndex("egw_chapters_slug_chapter_uniq").on(
+      table.bookSlug,
+      table.chapterNumber,
+    ),
+    slugIdx: index("egw_chapters_slug_idx").on(table.bookSlug),
+  }),
+);
+
+export type EgwChapter = typeof egwChapters.$inferSelect;
+export type InsertEgwChapter = typeof egwChapters.$inferInsert;

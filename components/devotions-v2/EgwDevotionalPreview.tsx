@@ -14,7 +14,8 @@ type Egw = {
   bookTitle: string;
   bookId: number;
   date: string;
-  sourceUrl: string;
+  sourceUrl: string | null;
+  source?: "live" | "fallback";
 };
 
 function formatExcerpt(content: string) {
@@ -71,15 +72,17 @@ export default function EgwDevotionalPreview() {
 
         <Text style={s.body}>{formatExcerpt(d.content)}</Text>
 
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => Linking.openURL(d.sourceUrl)}
-          style={s.external}
-          testID="egw-devotional-preview-source"
-        >
-          <Text style={s.externalText}>Read this chapter on EGW Writings</Text>
-          <Ionicons name="open-outline" size={15} color={D2.amber} />
-        </Pressable>
+        {d.source !== "fallback" && d.sourceUrl ? (
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => Linking.openURL(d.sourceUrl as string)}
+            style={s.external}
+            testID="egw-devotional-preview-source"
+          >
+            <Text style={s.externalText}>Read this chapter on EGW Writings</Text>
+            <Ionicons name="open-outline" size={15} color={D2.amber} />
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );

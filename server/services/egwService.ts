@@ -1,4 +1,8 @@
-import { getCalendarDate } from "../../shared/calendar-date";
+import { getCalendarDate, getCalendarDayIndex } from "../../shared/calendar-date";
+import {
+  EGW_FALLBACK_BOOK_IDS,
+  EGW_FALLBACK_DEVOTIONS,
+} from "../data/egw-fallback-devotions";
 
 const EGW_API_BASE = "https://a.egwwritings.org";
 const EGW_TOKEN_URL = "https://cpanel.egwwritings.org/connect/token";
@@ -163,6 +167,7 @@ export async function getEgwDailyDevotion(
   bookId: number;
   date: string;
   sourceUrl: string;
+  source: "live";
 } | null> {
   const local = resolveEgwDailyCalendar(new Date(), timeZone);
   const book = EGW_DEVOTIONAL_BOOKS[local.bookIndex];
@@ -199,6 +204,34 @@ export async function getEgwDailyDevotion(
     bookId: book.id,
     date: local.dateKey,
     sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
+    source: "live",
+  };
+}
+
+export function getEgwFallbackDevotion(timeZone?: unknown): {
+  title: string;
+  content: string;
+  bookTitle: string;
+  bookId: number;
+  date: string;
+  sourceUrl: null;
+  source: "fallback";
+  id: string;
+} | null {
+  if (!EGW_FALLBACK_DEVOTIONS.length) return null;
+  const instant = new Date();
+  const calendar = getCalendarDate(instant, timeZone);
+  const dayIndex = getCalendarDayIndex(instant, timeZone);
+  const entry = EGW_FALLBACK_DEVOTIONS[dayIndex % EGW_FALLBACK_DEVOTIONS.length];
+  return {
+    title: entry.chapterTitle,
+    content: entry.excerpt,
+    bookTitle: entry.book,
+    bookId: EGW_FALLBACK_BOOK_IDS[entry.book],
+    date: calendar.dateKey,
+    sourceUrl: null,
+    source: "fallback",
+    id: entry.id,
   };
 }
 

@@ -63,7 +63,7 @@ type Day = {
 type Detail = Plan & { days: Day[] };
 type Book = { id: number; name: string; abbreviation: string; testament: string; chapterCount: number };
 type Odb = { id: number; title: string; date: string; author: string };
-type Egw = { title: string; content: string; bookTitle: string; bookId: number; date: string };
+type Egw = { title: string; content: string; bookTitle: string; bookId: number; date: string; source?: "live" | "fallback" };
 type DevotionalPlanDay = { id: string; dayNumber: number; title: string; passageLabel: string | null };
 
 function formatPlanDayReference(books: Book[] | undefined, day: Day | undefined) {
