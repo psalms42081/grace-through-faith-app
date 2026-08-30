@@ -92,9 +92,17 @@ export function TypographyPreviewProse({
                       <Text style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine * 0.72 }]}>
                         {v.verse}{" "}
                       </Text>
-                      {v.text}
+                      {v.text.split("\n").map((line, lineIndex) => (
+                        <Text
+                          key={`${v.id}-ln${lineIndex}`}
+                          style={lineIndex > 0 ? s.poetryContinue : undefined}
+                        >
+                          {lineIndex > 0 ? "\n\u2003" : ""}
+                          {line}
+                        </Text>
+                      ))}
                       {isBookmarked ? <Text style={s.bookmarkMark}> ◆</Text> : null}
-                      {" "}
+                      {v.text.includes("\n") ? "\n" : " "}
                     </Text>
                   );
                 })}
@@ -130,6 +138,10 @@ const s = StyleSheet.create({
   verseNum: {
     fontFamily: "Inter_600SemiBold",
     color: "#6B6660",
+  },
+  poetryContinue: {
+    fontFamily: "Lora_400Regular",
+    color: "#1F1A12",
   },
   bookmarkMark: {
     color: "#6B6660",

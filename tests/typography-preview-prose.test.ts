@@ -87,5 +87,7 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /onLongPress=\{\(\) => onVerseLongPress\(v\)\}/);
     assert.match(prose, /delayLongPress=\{400\}/);
     assert.match(prose, /getHighlightBg\(v\.id, v\.verse, index\)/);
+    assert.match(prose, /v\.text\.split\("\\n"\)/);
+    assert.match(prose, /poetryContinue/);
   });
 });

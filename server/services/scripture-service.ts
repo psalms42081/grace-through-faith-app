@@ -171,9 +171,10 @@ export function buildApiBibleCacheKey(
   bookId: number,
   chapterNum: number
 ): string {
-  // Titles are part of the provider chapter representation. Version this key so
-  // an in-process entry fetched before titles were requested cannot hide them.
-  return `apibible-structure-v2-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
+  // Titles and poetry line-breaks are part of the provider chapter
+  // representation. Version this key so an in-process entry fetched under
+  // an older parser (poetry-as-heading) cannot hide the corrected shape.
+  return `apibible-structure-v3-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
 }
 
 export function buildNltCacheKey(bookId: number, chapterNum: number): string {
@@ -208,7 +209,7 @@ export function buildEditionCacheKey(translationAbbr: string, bibleId: string): 
   const abbr = translationAbbr.toUpperCase().trim().slice(0, 4);
   const hash = createHash("sha256")
     // This also invalidates persistent rows whose JSON only contained verses.
-    .update("structure-v2|" + translationAbbr.toUpperCase().trim() + "|" + bibleId)
+    .update("structure-v3|" + translationAbbr.toUpperCase().trim() + "|" + bibleId)
     .digest("hex")
     .slice(0, 6);
   return abbr + hash;
@@ -736,6 +737,18 @@ export function isStructuredApiBibleCache(cached: unknown): cached is ApiBibleCh
   );
 }
 
+/** First USFM-like class token on an API.Bible `<p>` tag. */
+export function apiBibleBlockClass(attrs: string): string {
+  const m = attrs.match(/class\s*=\s*["']([^"']*)["']/i);
+  if (!m) return "";
+  return m[1].trim().split(/\s+/)[0] || "";
+}
+
+/** Genuine titles only — never q/m/pi/li poetry or continuation. */
+export function isApiBibleTitleClass(cls: string): boolean {
+  return /^(?:s\d*|ms\d*|mt\d*|d|r)$/i.test(cls);
+}
+
 function apiBiblePlainText(value: string): string {
   return value
     .replace(
@@ -783,15 +796,29 @@ export function parseApiBibleChapter(
       });
     }
   };
+  const appendVerseText = (chunk: string, asNewLine: boolean) => {
+    const piece = chunk.trim();
+    if (!piece || currentVerse <= 0) return;
+    if (!currentText) {
+      currentText = piece;
+      return;
+    }
+    currentText += (asNewLine ? "\n" : " ") + piece;
+  };
   for (const block of sourceBlocks) {
     const trimmed = block.text.trim();
     if (!trimmed) continue;
-    const isHeading = /class\s*=\s*["'][^"']*\b(?:s\d*|ms\d*|mt\d*|d|r)\b/i.test(block.attrs);
-    // `content-type=text` NIV currently supplies titles as an unnumbered line
-    // immediately before the first numbered prose line (rather than HTML).
-    // Preserve that supplied line; never synthesize one from verse content.
-    if ((isHeading || !/\[\d+\]/.test(trimmed)) && !/\[\d+\]/.test(trimmed)) {
+    const cls = apiBibleBlockClass(block.attrs);
+    const isHeading = isApiBibleTitleClass(cls);
+    const hasVerseNum = /\[\d+\]/.test(trimmed);
+    // Titles only from genuine title classes. Unnumbered q/m/pi/li (poetry
+    // and prose continuations) stay on the preceding verse — never headings.
+    if (isHeading && !hasVerseNum) {
       pendingHeadings.push({ text: trimmed });
+      continue;
+    }
+    if (!hasVerseNum) {
+      appendVerseText(trimmed, true);
       continue;
     }
 
@@ -813,12 +840,14 @@ export function parseApiBibleChapter(
           pendingHeadings = [];
         }
       } else if (currentVerse > 0) {
-        currentText += " " + part;
+        appendVerseText(part, false);
       } else if (i === 0 && parts.length > 1) {
         continue;
       }
     }
-    if (blockVerses.length) {
+    // Prose paragraphs only. Poetry q* lines stay in the current verse run
+    // without opening a new paragraph group.
+    if (blockVerses.length && /^(?:p\d*|nb)$/i.test(cls)) {
       paragraphs.push({ verseStart: blockVerses[0], verseEnd: blockVerses[blockVerses.length - 1] });
     }
   }

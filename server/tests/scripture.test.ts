@@ -33,6 +33,7 @@ import {
   ScriptureError,
   API_BIBLE_BOOK_MAP,
   parseApiBibleChapter,
+  isApiBibleTitleClass,
   isStructuredApiBibleCache,
   type ApiBibleCatalogEntry,
   type LocalBookRef,
@@ -62,6 +63,137 @@ describe("API.Bible provider chapter structure", () => {
     );
     assert.deepEqual(parsed.providerContent?.headings, []);
     assert.deepEqual(parsed.providerContent?.paragraphs, [{ verseStart: 1, verseEnd: 1 }]);
+  });
+
+  it("keeps poetry continuation lines (q, q2, m) inside the preceding verse run", () => {
+    const parsed = parseApiBibleChapter(
+      [
+        '<p class="s1">Invented Section Title</p>',
+        '<p class="p"><span class="v" data-number="1">1</span>Prose opener of the mock chapter.</p>',
+        '<p class="p"><span class="v" data-number="2">2</span>He began to teach them.</p>',
+        '<p class="m">He said:</p>',
+        '<p class="s1">Invented Beatitudes</p>',
+        '<p class="q"><span class="v" data-number="3">3</span>Blessed are the invented poor,</p>',
+        '<p class="q">for theirs is the mock kingdom.</p>',
+        '<p class="q"><span class="v" data-number="4">4</span>Blessed are those who invented grief,</p>',
+        '<p class="q">for they will be mock-comforted.</p>',
+        '<p class="q"><span class="v" data-number="5">5</span>Blessed are the invented meek,</p>',
+        '<p class="q2">for they will inherit the mock earth.</p>',
+      ].join(""),
+      40, 5, "NIV"
+    );
+    assert.deepEqual(parsed.verses.map((verse) => verse.verse), [1, 2, 3, 4, 5]);
+    assert.equal(parsed.verses[1].text, "He began to teach them.\nHe said:");
+    assert.equal(parsed.verses[2].text, "Blessed are the invented poor,\nfor theirs is the mock kingdom.");
+    assert.equal(parsed.verses[3].text, "Blessed are those who invented grief,\nfor they will be mock-comforted.");
+    assert.equal(parsed.verses[4].text, "Blessed are the invented meek,\nfor they will inherit the mock earth.");
+    assert.deepEqual(parsed.providerContent?.headings, [
+      { text: "Invented Section Title", beforeVerse: 1 },
+      { text: "Invented Beatitudes", beforeVerse: 3 },
+    ]);
+    for (const heading of parsed.providerContent?.headings ?? []) {
+      assert.equal(heading.text.includes("Blessed"), false);
+      assert.equal(heading.text.startsWith("for "), false);
+      assert.equal(heading.text.includes("He said:"), false);
+    }
+    assert.deepEqual(parsed.providerContent?.paragraphs, [
+      { verseStart: 1, verseEnd: 1 },
+      { verseStart: 2, verseEnd: 2 },
+    ]);
+  });
+
+  it("keeps psalm, proverb, oracle, and magnificat q/q2 lines on their verses", () => {
+    const psalm = parseApiBibleChapter(
+      [
+        '<p class="d">A mock psalm of invented attribution.</p>',
+        '<p class="q"><span class="v" data-number="1">1</span>The invented shepherd line,</p>',
+        '<p class="q">I shall not want mock pasture.</p>',
+        '<p class="q"><span class="v" data-number="2">2</span>He makes me lie in mock fields,</p>',
+        '<p class="q2">he leads me beside mock water.</p>',
+      ].join(""),
+      19, 23, "NIV"
+    );
+    assert.deepEqual(psalm.providerContent?.headings, [
+      { text: "A mock psalm of invented attribution.", beforeVerse: 1 },
+    ]);
+    assert.equal(psalm.verses[0].text, "The invented shepherd line,\nI shall not want mock pasture.");
+    assert.equal(psalm.verses[1].text, "He makes me lie in mock fields,\nhe leads me beside mock water.");
+
+    const acrostic = parseApiBibleChapter(
+      [
+        '<p class="s1">Mock Letter A</p>',
+        '<p class="q"><span class="v" data-number="1">1</span>Blessed are the mock walkers,</p>',
+        '<p class="q">who walk in invented law.</p>',
+        '<p class="s1">Mock Letter B</p>',
+        '<p class="q"><span class="v" data-number="9">9</span>How can a mock youth stay on course?</p>',
+        '<p class="q">By living according to invented word.</p>',
+      ].join(""),
+      19, 119, "NIV"
+    );
+    assert.deepEqual(acrostic.providerContent?.headings, [
+      { text: "Mock Letter A", beforeVerse: 1 },
+      { text: "Mock Letter B", beforeVerse: 9 },
+    ]);
+    assert.ok(acrostic.verses[0].text.includes("who walk in invented law."));
+    assert.ok(acrostic.verses[1].text.includes("By living according to invented word."));
+
+    const proverb = parseApiBibleChapter(
+      [
+        '<p class="q"><span class="v" data-number="5">5</span>Trust in the invented Lord,</p>',
+        '<p class="q">and lean not on mock insight;</p>',
+        '<p class="q"><span class="v" data-number="6">6</span>in all mock ways submit to him,</p>',
+        '<p class="q2">and he will make mock paths straight.</p>',
+      ].join(""),
+      20, 3, "NIV"
+    );
+    assert.deepEqual(proverb.providerContent?.headings, []);
+    assert.ok(proverb.verses[0].text.includes("lean not on mock insight"));
+    assert.ok(proverb.verses[1].text.includes("make mock paths straight"));
+
+    const oracle = parseApiBibleChapter(
+      [
+        '<p class="q"><span class="v" data-number="5">5</span>He was pierced for mock transgression,</p>',
+        '<p class="q">he was crushed for invented iniquity;</p>',
+        '<p class="q">the mock punishment brought us peace,</p>',
+        '<p class="q">and by his wounds we are mock-healed.</p>',
+      ].join(""),
+      23, 53, "NIV"
+    );
+    assert.equal(oracle.verses.length, 1);
+    assert.equal(oracle.verses[0].verse, 5);
+    assert.equal(oracle.providerContent?.headings.length, 0);
+    assert.ok(oracle.verses[0].text.includes("crushed for invented iniquity"));
+    assert.ok(oracle.verses[0].text.includes("we are mock-healed"));
+
+    const magnificat = parseApiBibleChapter(
+      [
+        '<p class="s1">Invented Song</p>',
+        '<p class="q"><span class="v" data-number="46">46</span>My invented soul magnifies,</p>',
+        '<p class="q"><span class="v" data-number="47">47</span>and my invented spirit rejoices</p>',
+        '<p class="q">in the mock savior.</p>',
+        '<p class="q"><span class="v" data-number="48">48</span>for he has seen invented humility.</p>',
+      ].join(""),
+      42, 1, "NIV"
+    );
+    assert.deepEqual(magnificat.providerContent?.headings, [
+      { text: "Invented Song", beforeVerse: 46 },
+    ]);
+    assert.equal(magnificat.verses[1].text, "and my invented spirit rejoices\nin the mock savior.");
+    assert.equal(magnificat.verses[2].text.includes("invented humility"), true);
+  });
+});
+
+describe("isApiBibleTitleClass", () => {
+  it("accepts genuine title classes only", () => {
+    for (const cls of ["s", "s1", "s2", "ms", "ms1", "mt", "mt1", "d", "r"]) {
+      assert.equal(isApiBibleTitleClass(cls), true, cls);
+    }
+  });
+
+  it("rejects poetry and continuation classes", () => {
+    for (const cls of ["q", "q1", "q2", "m", "pi", "pi1", "li", "li1", "p", "nb"]) {
+      assert.equal(isApiBibleTitleClass(cls), false, cls);
+    }
   });
 });
 
