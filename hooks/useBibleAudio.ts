@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView } from "react-native";
-import { Audio, AVPlaybackStatus } from "expo-av";
-import type { AVPlaybackStatusSuccess } from "expo-av";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -93,7 +93,8 @@ export default function useBibleAudio(
   const currentIndexRef = useRef(-1);
   const versesRef = useRef<Verse[]>([]);
   const speechRateRef = useRef(1);
-  const playerRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
+  const playerSubRef = useRef<{ remove: () => void } | null>(null);
   const selectedVoiceRef = useRef("ellen_white");
   const selectedDeviceVoiceIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -112,8 +113,10 @@ export default function useBibleAudio(
         playbackTimeoutRef.current = null;
       }
       if (playerRef.current) {
-        try { playerRef.current.stopAsync(); } catch {}
-        try { playerRef.current.unloadAsync(); } catch {}
+        try { playerSubRef.current?.remove(); } catch {}
+        playerSubRef.current = null;
+        try { playerRef.current.pause(); } catch {}
+        try { playerRef.current.remove(); } catch {}
         playerRef.current = null;
       }
       Speech.stop();
@@ -135,10 +138,10 @@ export default function useBibleAudio(
   }, []);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "duckOthers",
     }).catch(() => {});
   }, []);
 
@@ -170,10 +173,14 @@ export default function useBibleAudio(
     }
     if (playerRef.current) {
       try {
-        await playerRef.current.stopAsync();
+        playerRef.current.pause();
       } catch {}
       try {
-        await playerRef.current.unloadAsync();
+        playerSubRef.current?.remove();
+      } catch {}
+      playerSubRef.current = null;
+      try {
+        playerRef.current.remove();
       } catch {}
       playerRef.current = null;
     }
@@ -349,19 +356,18 @@ export default function useBibleAudio(
 
       const audioUri = new URL(`/api/tts/audio/${audioId}`, apiUrl).href;
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { shouldPlay: false, rate: speechRateRef.current, shouldCorrectPitch: true, progressUpdateIntervalMillis: 150 },
-      );
+      const player = createAudioPlayer({ uri: audioUri }, { updateInterval: 150 });
+      player.shouldCorrectPitch = true;
+      player.playbackRate = speechRateRef.current;
 
-      playerRef.current = sound;
+      playerRef.current = player;
       batchInfoRef.current = { startIndex: index, endIndex: batchEnd, charOffsets };
       setIsLoadingAudio(false);
 
       const playFinished = await new Promise<boolean>((resolve) => {
         let resolved = false;
 
-        sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        const sub = player.addListener("playbackStatusUpdate", (status) => {
           if (resolved) return;
           if (session !== sessionRef.current) {
             resolved = true;
@@ -370,10 +376,9 @@ export default function useBibleAudio(
           }
 
           if (!status.isLoaded) return;
-          const s = status as AVPlaybackStatusSuccess;
 
-          if (s.isPlaying && s.positionMillis != null && s.durationMillis && s.durationMillis > 0) {
-            const progress = s.positionMillis / s.durationMillis;
+          if (status.playing && status.duration > 0) {
+            const progress = status.currentTime / status.duration;
             const charPosition = progress * totalChars;
             const batch = batchInfoRef.current;
             if (batch) {
@@ -391,11 +396,12 @@ export default function useBibleAudio(
             }
           }
 
-          if (s.didJustFinish) {
+          if (status.didJustFinish) {
             resolved = true;
             resolve(true);
           }
         });
+        playerSubRef.current = sub;
 
         const timeout = setTimeout(() => {
           if (!resolved) {
@@ -405,9 +411,11 @@ export default function useBibleAudio(
         }, 60000);
         playbackTimeoutRef.current = timeout;
 
-        sound.playAsync().then(() => {}).catch((e: any) => {
+        try {
+          player.play();
+        } catch {
           if (!resolved) { resolved = true; resolve(false); }
-        });
+        }
       });
 
       playbackTimeoutRef.current = null;
@@ -451,7 +459,7 @@ export default function useBibleAudio(
         speakVerseFallback(currentIndexRef.current, sessionRef.current);
       } else if (playerRef.current) {
         try {
-          playerRef.current.playAsync();
+          playerRef.current.play();
         } catch {
           speakVerseAI(currentIndexRef.current, sessionRef.current);
         }
@@ -481,7 +489,7 @@ export default function useBibleAudio(
     } else {
       try {
         if (playerRef.current) {
-          playerRef.current.pauseAsync();
+          playerRef.current.pause();
         }
       } catch {}
     }

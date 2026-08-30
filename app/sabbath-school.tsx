@@ -1,6 +1,6 @@
 // Sabbath School — Path B light (Brief 03, swapped in as canonical in Phase B).
 // Rollback: previous dark screen is in git history (pre-swap checkpoint).
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Image,
   Linking,
 } from "react-native";
-import { Video, ResizeMode } from "expo-av";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -106,7 +106,6 @@ export default function SabbathSchoolV2Screen() {
   const [videoError, setVideoError] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [clock, setClock] = useState(() => new Date());
-  const videoRef = React.useRef<Video | null>(null);
   const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
   const isValidVideoSource = useCallback((src: string) => {
     try {
@@ -131,32 +130,10 @@ export default function SabbathSchoolV2Screen() {
   }, [activeVideo, videoError, videoReady]);
 
   const closeVideoModal = async () => {
-    try {
-      if (videoRef.current) {
-        await videoRef.current.stopAsync();
-        await videoRef.current.unloadAsync();
-      }
-    } catch {}
     setActiveVideo(null);
     setVideoError(false);
     setVideoReady(false);
   };
-
-  // Release the video player when this screen unmounts (navigation away /
-  // reload). Without this, Android tears the player down during host destroy
-  // on a background thread → ExoPlayer "accessed on the wrong thread" crash.
-  React.useEffect(() => {
-    return () => {
-      const v = videoRef.current;
-      videoRef.current = null;
-      if (v) {
-        v.stopAsync()
-          .catch(() => {})
-          .then(() => v.unloadAsync())
-          .catch(() => {});
-      }
-    };
-  }, []);
 
   const { data: userPrefs } = useQuery<{ preferredCurriculum?: string | null }>({
     queryKey: ["/api/user/preferences"],
@@ -384,20 +361,12 @@ export default function SabbathSchoolV2Screen() {
                         onCanPlay: () => setVideoReady(true),
                       })
                     ) : (
-                      <Video
-                        ref={videoRef}
+                      <SabbathSchoolInlineVideo
                         key={activeVideo.src}
-                        source={{ uri: activePlaybackUrl }}
+                        uri={activePlaybackUrl}
                         style={s.inlineVideo}
-                        resizeMode={ResizeMode.CONTAIN}
-                        shouldPlay
-                        useNativeControls
-                        onLoad={() => setVideoReady(true)}
+                        onReady={() => setVideoReady(true)}
                         onError={() => setVideoError(true)}
-                        onPlaybackStatusUpdate={(status) => {
-                          if (status.isLoaded) setVideoReady(true);
-                          else if (status.error) setVideoError(true);
-                        }}
                       />
                     )}
                     {!videoReady && !videoError && (
@@ -556,6 +525,43 @@ export default function SabbathSchoolV2Screen() {
         </ScrollView>
       )}
     </View>
+  );
+}
+
+function SabbathSchoolInlineVideo({
+  uri,
+  style,
+  onReady,
+  onError,
+}: {
+  uri: string;
+  style: object;
+  onReady: () => void;
+  onError: () => void;
+}) {
+  const player = useVideoPlayer(uri, (p) => {
+    p.play();
+  });
+  const onReadyRef = React.useRef(onReady);
+  const onErrorRef = React.useRef(onError);
+  onReadyRef.current = onReady;
+  onErrorRef.current = onError;
+
+  useEffect(() => {
+    const sub = player.addListener("statusChange", ({ status, error }) => {
+      if (status === "readyToPlay") onReadyRef.current();
+      if (status === "error" || error) onErrorRef.current();
+    });
+    return () => sub.remove();
+  }, [player]);
+
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit="contain"
+      nativeControls
+    />
   );
 }
 

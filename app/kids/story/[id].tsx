@@ -36,7 +36,7 @@ import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, setIsAudioActiveAsync, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
-import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
+import { useVideoPlayer, VideoView } from "expo-video";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { useKidsMode } from "@/context/KidsModeContext";
@@ -1180,7 +1180,10 @@ function VideoStoryPlayer({
   isLittleLambs: boolean;
   onVideoEnd?: () => void;
 }) {
-  const videoRef = useRef<Video>(null);
+  const player = useVideoPlayer(videoUrl, (p) => {
+    p.loop = false;
+    p.timeUpdateEventInterval = 0.15;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -1232,60 +1235,53 @@ function VideoStoryPlayer({
   }, [currentTimeMs, duration]);
 
   useEffect(() => {
-    if (isActive && videoRef.current && isLoaded && !hasError) {
-      videoRef.current.playAsync().catch(() => {});
+    if (isActive && isLoaded && !hasError) {
+      player.play();
       setIsPlaying(true);
-    } else if (!isActive && videoRef.current) {
-      videoRef.current.pauseAsync().catch(() => {});
+    } else if (!isActive) {
+      player.pause();
       setIsPlaying(false);
     }
-  }, [isActive, isLoaded, hasError]);
+  }, [isActive, isLoaded, hasError, player]);
 
-  // Release the player on unmount — otherwise Android destroys it during host
-  // teardown on a background thread (ExoPlayer wrong-thread crash on reload/nav).
   useEffect(() => {
-    const video = videoRef.current;
-    return () => {
-      if (video) {
-        video.stopAsync()
-          .catch(() => {})
-          .then(() => video.unloadAsync())
-          .catch(() => {});
+    const statusSub = player.addListener("statusChange", ({ status, error }) => {
+      if (status === "readyToPlay") {
+        setIsLoaded(true);
+        setDuration((player.duration || 0) * 1000);
       }
-    };
-  }, []);
-
-  const handlePlaybackStatus = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) {
-      if ((status as any).error) {
+      if (status === "error" || error) {
         setHasError(true);
       }
-      return;
-    }
-    setCurrentTimeMs(status.positionMillis || 0);
-    setDuration(status.durationMillis || 0);
-    setIsPlaying(status.isPlaying);
-    if (!isLoaded) setIsLoaded(true);
-    if (status.didJustFinish) {
+    });
+    const timeSub = player.addListener("timeUpdate", ({ currentTime }) => {
+      setCurrentTimeMs(currentTime * 1000);
+      setDuration((player.duration || 0) * 1000);
+      setIsPlaying(player.playing);
+    });
+    const endSub = player.addListener("playToEnd", () => {
       setIsPlaying(false);
       onVideoEnd?.();
-    }
-  };
+    });
+    return () => {
+      statusSub.remove();
+      timeSub.remove();
+      endSub.remove();
+    };
+  }, [player, onVideoEnd]);
 
   const togglePlayPause = async () => {
-    if (!videoRef.current) return;
     if (isPlaying) {
-      await videoRef.current.pauseAsync();
+      player.pause();
     } else {
-      await videoRef.current.playAsync();
+      player.play();
     }
   };
 
   const replayVideo = async () => {
-    if (!videoRef.current) return;
     setHasError(false);
-    await videoRef.current.setPositionAsync(0);
-    await videoRef.current.playAsync();
+    player.currentTime = 0;
+    player.play();
   };
 
   const moodColors = MOOD_PARTICLES[mood]?.colors || ["#A78BFA"];
@@ -1294,15 +1290,11 @@ function VideoStoryPlayer({
   return (
     <View style={videoStyles.container}>
       <View style={videoStyles.videoArea}>
-        <Video
-          ref={videoRef}
-          source={{ uri: videoUrl }}
+        <VideoView
+          player={player}
           style={videoStyles.video}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay={false}
-          isLooping={false}
-          onPlaybackStatusUpdate={handlePlaybackStatus}
-          isMuted={false}
+          contentFit="cover"
+          nativeControls={false}
         />
 
         {hasError && (

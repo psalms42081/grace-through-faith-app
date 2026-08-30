@@ -19,7 +19,7 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import { Camera } from "expo-camera";
-import { Audio } from "expo-av";
+import { requestRecordingPermissionsAsync } from "expo-audio";
 
 interface StreamSession {
   id: string;
@@ -426,7 +426,7 @@ export default function StreamScreen() {
       try {
         const [camResult, micResult] = await Promise.all([
           Camera.requestCameraPermissionsAsync(),
-          Audio.requestPermissionsAsync(),
+          requestRecordingPermissionsAsync(),
         ]);
 
         if (camResult.granted && micResult.granted) {

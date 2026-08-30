@@ -19,7 +19,8 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { Audio } from "expo-av";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import type { AudioPlayer } from "expo-audio";
 import {
   SABBATH_SCHOOL_AUDIO_UNAVAILABLE_MESSAGE,
   toggleSabbathSchoolAudio,
@@ -312,7 +313,7 @@ export default function SabbathSchoolDayScreen() {
   const [journalText, setJournalText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
   const [showCompletionState, setShowCompletionState] = useState(false);
-  const audioSoundRef = useRef<Audio.Sound | null>(null);
+  const audioSoundRef = useRef<SabbathSchoolSound | null>(null);
   const audioAttemptRef = useRef(0);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -365,20 +366,44 @@ export default function SabbathSchoolDayScreen() {
       sound: existingSound as SabbathSchoolSound | null,
       hasFinished: hasAudioFinished,
       prepareAudio: () =>
-        Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false,
-          staysActiveInBackground: false,
+        setAudioModeAsync({
+          playsInSilentMode: true,
+          allowsRecording: false,
+          shouldPlayInBackground: false,
         }),
       createSound: async (url, onStatus) => {
-        const created = await Audio.Sound.createAsync(
-          { uri: url },
-          { shouldPlay: true },
-          (status) => onStatus(status as SabbathSchoolPlaybackStatus)
-        );
+        const player: AudioPlayer = createAudioPlayer({ uri: url }, { updateInterval: 250 });
+        const sound: SabbathSchoolSound = {
+          getStatusAsync: async () => ({
+            isLoaded: true,
+            isPlaying: player.playing,
+            didJustFinish: false,
+          }),
+          pauseAsync: async () => {
+            player.pause();
+          },
+          playAsync: async () => {
+            player.play();
+          },
+          replayAsync: async () => {
+            await player.seekTo(0);
+            player.play();
+          },
+          unloadAsync: async () => {
+            player.remove();
+          },
+        };
+        player.addListener("playbackStatusUpdate", (status) => {
+          onStatus({
+            isLoaded: status.isLoaded,
+            isPlaying: status.playing,
+            didJustFinish: status.didJustFinish,
+          });
+        });
+        player.play();
         return {
-          sound: created.sound as SabbathSchoolSound,
-          status: created.status as SabbathSchoolPlaybackStatus,
+          sound,
+          status: { isLoaded: true, isPlaying: true },
         };
       },
       onStatus: (status) => {
@@ -406,7 +431,7 @@ export default function SabbathSchoolDayScreen() {
       return;
     }
 
-    audioSoundRef.current = result.sound as Audio.Sound;
+    audioSoundRef.current = result.sound;
     setIsAudioPlaying(result.kind === "playing");
     if (result.kind === "playing") setHasAudioFinished(false);
   };

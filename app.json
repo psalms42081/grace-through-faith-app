@@ -17,7 +17,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.graceThroughFaith",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       },
       "entitlements": {
         "aps-environment": "development"
@@ -99,7 +101,13 @@
           "cameraPermission": "Allow Informed Ministries to use your camera for live fellowship video.",
           "microphonePermission": "Allow Informed Ministries to use your microphone for live fellowship audio."
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-image",
+      "expo-localization",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

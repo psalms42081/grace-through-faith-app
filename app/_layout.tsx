@@ -21,24 +21,22 @@ import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-// Android Expo Go (SDK 53+) removed push notification support entirely.
-// Calling setNotificationHandler there throws — guard against it.
-function _isAndroidExpoGo() {
-  if (Platform.OS !== "android") return false;
+// Expo Go (SDK 53+) throws on a static import of expo-notifications (Android).
+// Check first, then lazy-require only for real builds.
+function _isExpoGo() {
   try {
-    const env = (Constants as any).executionEnvironment;
-    if (env) return env === "storeClient";
-    return (Constants as any).appOwnership === "expo";
+    return Constants.executionEnvironment === "storeClient";
   } catch {
     return false;
   }
 }
 
-if (!_isAndroidExpoGo()) {
+if (_isExpoGo()) {
+  console.log("[push] Push notification setup skipped — Expo Go does not support remote push.");
+} else {
+  const Notifications = require("expo-notifications");
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,

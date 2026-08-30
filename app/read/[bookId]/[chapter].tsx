@@ -848,14 +848,21 @@ export default function VerseReaderScreen() {
     }, [userId])
   );
 
-  // Hide Android nav bar while reading (immersive mode); restore on leave
+  // Hide Android nav bar while reading (immersive mode); restore on leave.
+  // SDK 57 / edge-to-edge may leave these methods undefined — skip if so.
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS !== "android") return;
-      NavigationBar.setVisibilityAsync("hidden");
-      NavigationBar.setBehaviorAsync("overlay-swipe");
+      const callNavBar = (fn: unknown, ...args: string[]) => {
+        if (typeof fn !== "function") return;
+        try {
+          Promise.resolve((fn as (...a: string[]) => unknown)(...args)).catch(() => {});
+        } catch {}
+      };
+      callNavBar(NavigationBar.setVisibilityAsync, "hidden");
+      callNavBar(NavigationBar.setBehaviorAsync, "overlay-swipe");
       return () => {
-        NavigationBar.setVisibilityAsync("visible");
+        callNavBar(NavigationBar.setVisibilityAsync, "visible");
       };
     }, [])
   );
