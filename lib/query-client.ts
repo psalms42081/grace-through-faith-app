@@ -149,6 +149,9 @@ export const getQueryFn: <T>(options: {
 
 const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
+/** Must match server `buildEditionCacheKey` / `apibible-structure-v3` parse. */
+export const QUERY_PERSIST_BUSTER = "structure-v3";
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -166,8 +169,19 @@ export const queryClient = new QueryClient({
   },
 });
 
-const CACHE_KEY = "grace-through-faith-cache-v10";
-const OLD_CACHE_KEYS = ["grace-through-faith-cache", "grace-through-faith-cache-v2", "grace-through-faith-cache-v3", "grace-through-faith-cache-v4", "grace-through-faith-cache-v5", "grace-through-faith-cache-v6", "grace-through-faith-cache-v7", "grace-through-faith-cache-v8", "grace-through-faith-cache-v9"];
+const CACHE_KEY = `grace-through-faith-cache-v11-${QUERY_PERSIST_BUSTER}`;
+const OLD_CACHE_KEYS = [
+  "grace-through-faith-cache",
+  "grace-through-faith-cache-v2",
+  "grace-through-faith-cache-v3",
+  "grace-through-faith-cache-v4",
+  "grace-through-faith-cache-v5",
+  "grace-through-faith-cache-v6",
+  "grace-through-faith-cache-v7",
+  "grace-through-faith-cache-v8",
+  "grace-through-faith-cache-v9",
+  "grace-through-faith-cache-v10",
+];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
 AsyncStorage.multiRemove(OLD_CACHE_KEYS).catch(() => {});

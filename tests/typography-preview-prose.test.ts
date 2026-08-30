@@ -47,6 +47,15 @@ describe("splitParagraphGroupAtHeadings", () => {
 });
 
 describe("typography preview source contracts", () => {
+  it("versions persisted React Query cache to structure-v3 so stale passages refetch", () => {
+    const qc = readFileSync(new URL("../lib/query-client.ts", import.meta.url), "utf8");
+    const layout = readFileSync(new URL("../app/_layout.tsx", import.meta.url), "utf8");
+    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v3"/);
+    assert.match(qc, /grace-through-faith-cache-v11-\$\{QUERY_PERSIST_BUSTER\}/);
+    assert.match(qc, /"grace-through-faith-cache-v10"/);
+    assert.match(layout, /buster: QUERY_PERSIST_BUSTER/);
+  });
+
   it("gates new typography behind preview=typography and keeps live verse blocks", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
     assert.match(reader, /previewParam === "typography"/);

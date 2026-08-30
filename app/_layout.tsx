@@ -7,7 +7,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { queryClient, asyncStoragePersister } from "@/lib/query-client";
+import { queryClient, asyncStoragePersister, QUERY_PERSIST_BUSTER } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
@@ -273,7 +273,11 @@ useEffect(() => {
     <ErrorBoundary>
       <PersistQueryClientProvider
         client={queryClient}
-        persistOptions={{ persister: asyncStoragePersister, maxAge: 1000 * 60 * 60 * 24 * 30 }}
+        persistOptions={{
+          persister: asyncStoragePersister,
+          maxAge: 1000 * 60 * 60 * 24 * 30,
+          buster: QUERY_PERSIST_BUSTER,
+        }}
       >
         <AuthProvider>
           <TranslationProvider>
