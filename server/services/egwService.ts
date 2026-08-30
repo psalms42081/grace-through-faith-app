@@ -1,3 +1,5 @@
+import { getCalendarDate } from "../../shared/calendar-date";
+
 const EGW_API_BASE = "https://a.egwwritings.org";
 const EGW_TOKEN_URL = "https://cpanel.egwwritings.org/connect/token";
 
@@ -135,8 +137,25 @@ const EGW_DEVOTIONAL_BOOKS = [
   { id: 15, title: "Christ's Object Lessons" },
 ];
 
+function asEgwList(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+export function resolveEgwDailyCalendar(instant: Date, timeZone: unknown) {
+  const calendar = getCalendarDate(instant, timeZone);
+  return {
+    dateKey: calendar.dateKey,
+    bookIndex: (calendar.month - 1) % EGW_DEVOTIONAL_BOOKS.length,
+    dayOfMonthIndex: calendar.day - 1,
+  };
+}
+
 export async function getEgwDailyDevotion(
-  lang: string = "en"
+  lang: string = "en",
+  timeZone?: unknown,
 ): Promise<{
   title: string;
   content: string;
@@ -145,57 +164,42 @@ export async function getEgwDailyDevotion(
   date: string;
   sourceUrl: string;
 } | null> {
-  try {
-    // Use day of year to pick consistent daily entry
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const diff = now.getTime() - start.getTime();
-    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const local = resolveEgwDailyCalendar(new Date(), timeZone);
+  const book = EGW_DEVOTIONAL_BOOKS[local.bookIndex];
 
-    // Pick book based on month (rotate through devotionals)
-    const bookIndex = now.getMonth() % EGW_DEVOTIONAL_BOOKS.length;
-    const book = EGW_DEVOTIONAL_BOOKS[bookIndex];
+  const toc = asEgwList(await egwFetch(`/content/books/${book.id}/toc`, { lang }));
+  if (!toc.length) return null;
 
-    // Fetch table of contents for the book
-    const toc = await egwFetch(`/content/books/${book.id}/toc`, { lang });
-    if (!Array.isArray(toc) || !toc.length) return null;
+  const chapters = toc.filter((c: any) => c.level === 1 && c.title && !c.dup);
+  const chapter = chapters[local.dayOfMonthIndex % chapters.length];
+  if (!chapter) return null;
 
-    // Pick chapter based on day of month
-    const dayOfMonth = now.getDate() - 1;
-    const chapters = toc.filter((c: any) => c.level === 1 && c.title && !c.dup);
-    const chapter = chapters[dayOfMonth % chapters.length];
-    if (!chapter) return null;
+  const chapterRef = String(chapter.para_id);
+  const chapterParaId = chapterRef.includes(".") ? chapterRef.split(".").pop()! : chapterRef;
+  const sourceRef = chapterRef.includes(".") ? chapterRef : `${book.id}.${chapterRef}`;
+  const content = await egwFetch(
+    `/content/books/${book.id}/chapter/${chapterParaId}`,
+    { lang }
+  );
+  if (!content) return null;
 
-    const chapterRef = String(chapter.para_id);
-    const chapterParaId = chapterRef.includes(".") ? chapterRef.split(".").pop()! : chapterRef;
-    const sourceRef = chapterRef.includes(".") ? chapterRef : `${book.id}.${chapterRef}`;
-    const content = await egwFetch(
-      `/content/books/${book.id}/chapter/${chapterParaId}`,
-      { lang }
-    );
-    if (!content) return null;
+  const rawText = Array.isArray(content)
+    ? content.filter((p: any) => p.element_type === "p" && !p.content.includes("non-egw-foreword") && p.content.length > 50).map((p: any) => p.content || "").join(" ")
+    : (content.content || "");
+  const text = rawText
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .substring(0, 600);
 
-    const rawText = Array.isArray(content)
-      ? content.filter((p: any) => p.element_type === "p" && !p.content.includes("non-egw-foreword") && p.content.length > 50).map((p: any) => p.content || "").join(" ")
-      : (content.content || "");
-    const text = rawText
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .substring(0, 600);
-
-    return {
-      title: chapter.title || `Day ${dayOfMonth + 1}`,
-      content: text,
-      bookTitle: book.title,
-      bookId: book.id,
-      date: now.toISOString().split("T")[0],
-      sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
-    };
-  } catch (err) {
-    console.error("[egw] Daily devotion fetch failed:", err);
-    return null;
-  }
+  return {
+    title: chapter.title || `Day ${local.dayOfMonthIndex + 1}`,
+    content: text,
+    bookTitle: book.title,
+    bookId: book.id,
+    date: local.dateKey,
+    sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
+  };
 }
 
 export function isEgwConfigured(): boolean {

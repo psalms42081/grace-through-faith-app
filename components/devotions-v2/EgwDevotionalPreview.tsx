@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { D2, F } from "./tokens";
 import { ErrorState, Header, LoadingState } from "./PreviewPrimitives";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 type Egw = {
   title: string;
@@ -23,7 +24,7 @@ function formatExcerpt(content: string) {
 
 export default function EgwDevotionalPreview() {
   const insets = useSafeAreaInsets();
-  const q = useQuery<Egw>({ queryKey: ["/api/egw/devotional/today"], staleTime: 86400000 });
+  const q = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
   const d = q.data;
 
   if (q.isLoading) {

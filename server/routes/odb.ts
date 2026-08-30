@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
 
 const router = Router();
 
@@ -8,6 +9,7 @@ const CACHE_TTL = 15 * 60 * 1000;
 interface CachedData<T> {
   data: T;
   ts: number;
+  dateKey: string;
 }
 
 let todayCache: CachedData<any> | null = null;
@@ -56,54 +58,76 @@ function mapPost(p: any) {
   };
 }
 
-router.get("/api/odb/today", async (_req: Request, res: Response) => {
+function dateKeyFromRequest(req: Request): string {
+  return getCalendarDate(new Date(), normalizeTimeZone(req.query.timeZone)).dateKey;
+}
+
+async function fetchOdbPosts(perPage: number): Promise<any[]> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
-    if (todayCache && Date.now() - todayCache.ts < CACHE_TTL) {
+    const resp = await fetch(`${ODB_API}?per_page=${perPage}&orderby=date&order=desc`, {
+      signal: ctrl.signal,
+    });
+    if (!resp.ok) {
+      const error = new Error("Failed to fetch ODB posts");
+      (error as Error & { status: number }).status = 502;
+      throw error;
+    }
+    const posts = await resp.json();
+    return Array.isArray(posts) ? posts : [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+router.get("/api/odb/today", async (req: Request, res: Response) => {
+  try {
+    const dateKey = dateKeyFromRequest(req);
+    if (todayCache && todayCache.dateKey === dateKey && Date.now() - todayCache.ts < CACHE_TTL) {
       return res.json(todayCache.data);
     }
 
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    const resp = await fetch(`${ODB_API}?per_page=1&orderby=date&order=desc`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!resp.ok) {
-      return res.status(502).json({ error: "Failed to fetch ODB devotional" });
-    }
-    const posts = await resp.json();
-    if (!posts.length) {
+    const posts = await fetchOdbPosts(10);
+    const match = posts.map(mapPost).find((p) => p.date === dateKey);
+    if (!match) {
       return res.status(404).json({ error: "No devotional found" });
     }
 
-    const mapped = mapPost(posts[0]);
-    todayCache = { data: mapped, ts: Date.now() };
-    res.json(mapped);
+    todayCache = { data: match, ts: Date.now(), dateKey };
+    res.json(match);
   } catch (err) {
     console.error("[ODB] today error:", err);
+    if ((err as { status?: number }).status === 502) {
+      return res.status(502).json({ error: "Failed to fetch ODB devotional" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 router.get("/api/odb/recent", async (req: Request, res: Response) => {
   try {
+    const dateKey = dateKeyFromRequest(req);
     const count = Math.max(1, Math.min(parseInt(req.query.count as string) || 7, 30));
 
-    if (recentCache && Date.now() - recentCache.ts < CACHE_TTL && recentCache.data.length >= count) {
+    if (
+      recentCache &&
+      recentCache.dateKey === dateKey &&
+      Date.now() - recentCache.ts < CACHE_TTL &&
+      recentCache.data.length >= count
+    ) {
       return res.json(recentCache.data.slice(0, count));
     }
 
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    const resp = await fetch(`${ODB_API}?per_page=${count}&orderby=date&order=desc`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!resp.ok) {
-      return res.status(502).json({ error: "Failed to fetch ODB devotionals" });
-    }
-    const posts = await resp.json();
-    const mapped = posts.map(mapPost);
-    recentCache = { data: mapped, ts: Date.now() };
-    res.json(mapped);
+    const posts = await fetchOdbPosts(Math.min(count + 5, 30));
+    const mapped = posts.map(mapPost).filter((p) => p.date && p.date <= dateKey);
+    recentCache = { data: mapped, ts: Date.now(), dateKey };
+    res.json(mapped.slice(0, count));
   } catch (err) {
     console.error("[ODB] recent error:", err);
+    if ((err as { status?: number }).status === 502) {
+      return res.status(502).json({ error: "Failed to fetch ODB devotionals" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });

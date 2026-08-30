@@ -20,6 +20,7 @@ import * as Haptics from "expo-haptics";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 type Plan = {
   id: string;
@@ -93,8 +94,8 @@ export default function DevotionsPreview() {
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
   const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
-  const odb = useQuery<Odb[]>({ queryKey: ["/api/odb/recent?count=7"], staleTime: 600000 });
-  const egw = useQuery<Egw>({ queryKey: ["/api/egw/devotional/today"], staleTime: 86400000 });
+  const odb = useQuery<Odb>({ queryKey: [withDeviceTimeZone("/api/odb/today")], staleTime: 600000 });
+  const egw = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
   const today = useQuery<{
     today: any;
     enrollment?: { id: string; planId: string };
@@ -353,19 +354,13 @@ export default function DevotionsPreview() {
         <View style={s.dailyRow}>
           <Pressable
             style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
-            onPress={() =>
-              router.push(
-                odb.data?.[0]?.id
-                  ? (`/odb-devotional-preview?id=${odb.data[0].id}` as any)
-                  : ("/odb-devotional-preview" as any),
-              )
-            }
+            onPress={() => router.push("/odb-devotional-preview" as any)}
             testID="devotions-preview-odb-card"
           >
             <Ionicons name="sunny-outline" size={21} color={D2.amber} />
             <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
             <Text style={s.cardTitle} numberOfLines={2}>
-              {odb.data?.[0]?.title || "Today's bread"}
+              {odb.data?.title || "Today's bread"}
             </Text>
             <Text style={s.cardSub}>A short pause for the day</Text>
           </Pressable>

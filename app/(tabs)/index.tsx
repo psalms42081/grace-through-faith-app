@@ -1503,7 +1503,7 @@ function AdultHomeScreen() {
     bookId: number;
     date: string;
   }>({
-    queryKey: ["/api/egw/devotional/today"],
+    queryKey: [withDeviceTimeZone("/api/egw/devotional/today")],
     staleTime: 1000 * 60 * 60 * 24,
   });
 

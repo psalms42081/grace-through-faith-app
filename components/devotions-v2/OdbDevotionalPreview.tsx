@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { D2, F } from "./tokens";
 import { ErrorState, Header, LoadingState } from "./PreviewPrimitives";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 type Odb = {
   id: number;
@@ -57,7 +58,7 @@ function decodeHtmlEntities(value: string) {
 export default function OdbDevotionalPreview() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
-  const endpoint = id ? `/api/odb/post/${id}` : "/api/odb/today";
+  const endpoint = id ? `/api/odb/post/${id}` : withDeviceTimeZone("/api/odb/today");
 
   const query = useQuery<Odb>({ queryKey: [endpoint], staleTime: 600000, refetchOnMount: true });
   const d = query.data;

@@ -190,7 +190,9 @@ export default function DiscoverV2Screen() {
     queryKey: ["/api/touchpoints"],
   });
   const { data: devotionalPlans } = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
-  const { data: odbRecent } = useQuery<OdbDevotional[]>({ queryKey: ["/api/odb/recent?count=7"] });
+  const { data: odbRecent } = useQuery<OdbDevotional[]>({
+    queryKey: [withDeviceTimeZone("/api/odb/recent?count=7")],
+  });
   const { data: weeklyStreak } = useQuery<{ currentStreak: number }>({
     queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)],
     enabled: !!userId,

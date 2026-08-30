@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
+import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
 const GOLD = "#C9933A";
 const INK_MUTED = "#6B6660";
@@ -43,7 +44,7 @@ export default function OdbDevotionalScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const postId = params.id;
 
-  const endpoint = postId ? `/api/odb/post/${postId}` : "/api/odb/today";
+  const endpoint = postId ? `/api/odb/post/${postId}` : withDeviceTimeZone("/api/odb/today");
 
   const { data: devotional, isLoading, error, refetch } = useQuery<OdbDevotional>({
     queryKey: [endpoint],

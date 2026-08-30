@@ -129,9 +129,12 @@ router.get("/covers/:bookId", async (req, res) => {
 });
 
 router.get("/devotional/today", async (req, res) => {
+  if (!isEgwConfigured()) {
+    return res.status(503).json({ error: "EGW API credentials not configured" });
+  }
   try {
     const lang = String(req.query.lang || "en");
-    const devotion = await getEgwDailyDevotion(lang);
+    const devotion = await getEgwDailyDevotion(lang, req.query.timeZone);
     if (!devotion) {
       return res.status(404).json({
         error: "No devotional available",
@@ -140,7 +143,7 @@ router.get("/devotional/today", async (req, res) => {
     return res.json(devotion);
   } catch (err) {
     console.error("[egw] Devotional endpoint error:", err);
-    return res.status(500).json({ error: "Failed to fetch devotional" });
+    return res.status(502).json({ error: "Failed to fetch devotional" });
   }
 });
 
