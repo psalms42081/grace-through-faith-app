@@ -99,7 +99,16 @@ async function storeBibleCache(
         verseCount: verseList.length,
         sourceApi,
       } as any)
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [bibleCache.translation, bibleCache.bookId, bibleCache.chapter],
+        set: {
+          versesJson: verses,
+          verseCount: verseList.length,
+          bookName,
+          sourceApi,
+          fetchedAt: new Date(),
+        } as any,
+      });
   } catch (err: any) {
     console.error(`[bible-cache] Failed to store ${translation} ${bookName} ${chapterNum}:`, err?.message);
   }

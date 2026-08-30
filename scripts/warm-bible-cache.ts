@@ -2,6 +2,12 @@ import "dotenv/config";
 import { db } from "../server/db";
 import { bibleBooks, bibleCache } from "../shared/schema";
 import { eq, and, ilike } from "drizzle-orm";
+import {
+  API_BIBLE_TRANSLATIONS,
+  buildEditionCacheKey,
+  fetchApiBibleChapter,
+  isStructuredApiBibleCache,
+} from "../server/services/scripture-service";
 
 const NLT_BOOK_MAP: Record<string, string> = {
   Genesis: "Gen", Exodus: "Exod", Leviticus: "Lev", Numbers: "Num",
@@ -21,32 +27,6 @@ const NLT_BOOK_MAP: Record<string, string> = {
   "2 Timothy": "2Tim", Titus: "Titus", Philemon: "Phlm", Hebrews: "Heb",
   James: "Jas", "1 Peter": "1Pet", "2 Peter": "2Pet", "1 John": "1John",
   "2 John": "2John", "3 John": "3John", Jude: "Jude", Revelation: "Rev",
-};
-
-const API_BIBLE_BOOK_MAP: Record<string, string> = {
-  Genesis: "GEN", Exodus: "EXO", Leviticus: "LEV", Numbers: "NUM",
-  Deuteronomy: "DEU", Joshua: "JOS", Judges: "JDG", Ruth: "RUT",
-  "1 Samuel": "1SA", "2 Samuel": "2SA", "1 Kings": "1KI", "2 Kings": "2KI",
-  "1 Chronicles": "1CH", "2 Chronicles": "2CH", Ezra: "EZR", Nehemiah: "NEH",
-  Esther: "EST", Job: "JOB", Psalms: "PSA", Proverbs: "PRO",
-  Ecclesiastes: "ECC", "Song of Solomon": "SNG", Isaiah: "ISA", Jeremiah: "JER",
-  Lamentations: "LAM", Ezekiel: "EZK", Daniel: "DAN", Hosea: "HOS",
-  Joel: "JOL", Amos: "AMO", Obadiah: "OBA", Jonah: "JON",
-  Micah: "MIC", Nahum: "NAM", Habakkuk: "HAB", Zephaniah: "ZEP",
-  Haggai: "HAG", Zechariah: "ZEC", Malachi: "MAL",
-  Matthew: "MAT", Mark: "MRK", Luke: "LUK", John: "JHN",
-  Acts: "ACT", Romans: "ROM", "1 Corinthians": "1CO", "2 Corinthians": "2CO",
-  Galatians: "GAL", Ephesians: "EPH", Philippians: "PHP", Colossians: "COL",
-  "1 Thessalonians": "1TH", "2 Thessalonians": "2TH", "1 Timothy": "1TI",
-  "2 Timothy": "2TI", Titus: "TIT", Philemon: "PHM", Hebrews: "HEB",
-  James: "JAS", "1 Peter": "1PE", "2 Peter": "2PE", "1 John": "1JN",
-  "2 John": "2JN", "3 John": "3JN", Jude: "JUD", Revelation: "REV",
-};
-
-const API_BIBLE_TRANSLATIONS: Record<string, { bibleId: string; name: string }> = {
-  NIV: { bibleId: "78a9f6124f344018-01", name: "New International Version" },
-  AMP: { bibleId: "a81b73293d3080c9-01", name: "Amplified Bible" },
-  NASB: { bibleId: "b8ee27bcd1cae43a-01", name: "New American Standard Bible 1995" },
 };
 
 const CHAPTERS_TO_WARM: { book: string; chapters: number[] }[] = [
@@ -99,36 +79,6 @@ function parseNltHtml(html: string, bookId: number, chapterNum: number): any[] {
   return verses;
 }
 
-function parseApiBibleText(content: string, bookId: number, chapterNum: number, translationAbbr: string): any[] {
-  const verses: any[] = [];
-  const lines = content.split(/\n/);
-  let currentVerse = 0;
-  let currentText = "";
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const parts = trimmed.split(/\[(\d+)\]/);
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i].trim();
-      if (!part) continue;
-      const num = parseInt(part, 10);
-      if (!isNaN(num) && num > 0 && num <= 200 && parts[i - 1] !== undefined) {
-        if (currentVerse > 0 && currentText.trim()) {
-          verses.push({ id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`, translationId: translationAbbr, bookId, chapter: chapterNum, verse: currentVerse, text: currentText.trim(), searchVector: null });
-        }
-        currentVerse = num;
-        currentText = "";
-      } else if (currentVerse > 0) {
-        currentText += " " + part;
-      }
-    }
-  }
-  if (currentVerse > 0 && currentText.trim()) {
-    verses.push({ id: `${translationAbbr.toLowerCase()}-${bookId}-${chapterNum}-${currentVerse}`, translationId: translationAbbr, bookId, chapter: chapterNum, verse: currentVerse, text: currentText.trim(), searchVector: null });
-  }
-  return verses;
-}
-
 async function fetchNltChapter(bookName: string, bookId: number, chapterNum: number): Promise<any[]> {
   const apiKey = process.env.NLT_API_KEY;
   if (!apiKey) throw new Error("NLT_API_KEY not set");
@@ -140,27 +90,21 @@ async function fetchNltChapter(bookName: string, bookId: number, chapterNum: num
   return parseNltHtml(html, bookId, chapterNum);
 }
 
-async function fetchApiBibleChapter(bookName: string, bookId: number, chapterNum: number, translationAbbr: string): Promise<any[]> {
-  const apiKey = process.env.API_BIBLE_KEY;
-  if (!apiKey) throw new Error("API_BIBLE_KEY not set");
-  const config = API_BIBLE_TRANSLATIONS[translationAbbr];
-  if (!config) throw new Error(`Unknown translation: ${translationAbbr}`);
-  const bookCode = API_BIBLE_BOOK_MAP[bookName];
-  if (!bookCode) throw new Error(`No book mapping for: ${bookName}`);
-  const chapterId = `${bookCode}.${chapterNum}`;
-  const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/chapters/${chapterId}?content-type=text&include-verse-numbers=true&include-titles=false&include-chapter-numbers=false`;
-  const response = await fetch(url, { headers: { "api-key": apiKey } });
-  if (!response.ok) throw new Error(`API.Bible ${response.status}`);
-  const json = (await response.json()) as any;
-  const content = json.data?.content || "";
-  return parseApiBibleText(content, bookId, chapterNum, translationAbbr);
+function cacheKeyFor(translation: string): string {
+  if (translation === "NLT") return "NLT";
+  const config = API_BIBLE_TRANSLATIONS[translation];
+  if (!config) throw new Error(`Unknown translation: ${translation}`);
+  return buildEditionCacheKey(translation, config.bibleId);
 }
 
 async function isAlreadyCached(translation: string, bookId: number, chapter: number): Promise<boolean> {
-  const existing = await db.select({ id: bibleCache.id }).from(bibleCache)
-    .where(and(eq(bibleCache.translation, translation), eq(bibleCache.bookId, bookId), eq(bibleCache.chapter, chapter)))
+  const key = cacheKeyFor(translation);
+  const existing = await db.select({ versesJson: bibleCache.versesJson }).from(bibleCache)
+    .where(and(eq(bibleCache.translation, key), eq(bibleCache.bookId, bookId), eq(bibleCache.chapter, chapter)))
     .limit(1);
-  return existing.length > 0;
+  if (!existing.length) return false;
+  if (translation === "NLT") return true;
+  return isStructuredApiBibleCache(existing[0].versesJson);
 }
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
@@ -204,34 +148,49 @@ async function main() {
       }
 
       try {
-        let verses: any[];
+        let payload: any;
+        let verseCount = 0;
         let sourceApi: string;
+        const cacheKey = cacheKeyFor(translation);
 
         if (translation === "NLT") {
-          verses = await fetchNltChapter(bookName, bookId, chapter);
+          payload = await fetchNltChapter(bookName, bookId, chapter);
+          verseCount = payload.length;
           sourceApi = "nlt_api";
         } else {
-          verses = await fetchApiBibleChapter(bookName, bookId, chapter, translation);
+          const config = API_BIBLE_TRANSLATIONS[translation];
+          if (!config) throw new Error(`Unknown translation: ${translation}`);
+          payload = await fetchApiBibleChapter(bookName, bookId, chapter, translation, config);
+          verseCount = payload.verses.length;
           sourceApi = "api_bible";
         }
 
-        if (verses.length === 0) {
+        if (verseCount === 0) {
           console.log(`  WARN: ${bookName} ${chapter} (${translation}) — 0 verses returned`);
           totalErrors++;
           continue;
         }
 
         await db.insert(bibleCache).values({
-          translation,
+          translation: cacheKey,
           bookId,
           bookName,
           chapter,
-          versesJson: verses,
-          verseCount: verses.length,
+          versesJson: payload,
+          verseCount,
           sourceApi,
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: [bibleCache.translation, bibleCache.bookId, bibleCache.chapter],
+          set: {
+            versesJson: payload,
+            verseCount,
+            bookName,
+            sourceApi,
+            fetchedAt: new Date(),
+          },
+        });
 
-        console.log(`  OK: ${bookName} ${chapter} (${translation}) — ${verses.length} verses cached`);
+        console.log(`  OK: ${bookName} ${chapter} (${translation}) — ${verseCount} verses cached`);
         totalFetched++;
 
         await sleep(1500);

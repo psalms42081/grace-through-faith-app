@@ -33,6 +33,7 @@ import {
   ScriptureError,
   API_BIBLE_BOOK_MAP,
   parseApiBibleChapter,
+  isStructuredApiBibleCache,
   type ApiBibleCatalogEntry,
   type LocalBookRef,
 } from "../services/scripture-service";
@@ -75,6 +76,34 @@ describe("provider heading response and reader contract", () => {
     const reader = readFileSync("app/read/[bookId]/[chapter].tsx", "utf8");
     assert.match(reader, /data\?\.providerContent\?\.headings/);
     assert.match(reader, /providerParagraphStarts\.has\(v\.verse\)/);
+  });
+
+  it("keeps live verse-block layout when typography preview is off", () => {
+    const reader = readFileSync("app/read/[bookId]/[chapter].tsx", "utf8");
+    assert.match(reader, /isTypographyPreview && !splitMode \?/);
+    assert.match(reader, /TypographyPreviewProse/);
+    assert.match(reader, /preview=typography/);
+    assert.match(reader, /verses\.map\(\(v, i\) =>/);
+    assert.match(reader, /useBibleAudio\(verses,/);
+  });
+});
+
+describe("isStructuredApiBibleCache — stale titles-off rows", () => {
+  it("accepts verses plus providerContent arrays, including empty ones", () => {
+    assert.equal(
+      isStructuredApiBibleCache({
+        verses: [{ id: "niv-1-1-1", verse: 1, text: "In the beginning" }],
+        providerContent: { headings: [], paragraphs: [] },
+      }),
+      true,
+    );
+  });
+
+  it("rejects verse-only arrays and objects missing providerContent", () => {
+    assert.equal(isStructuredApiBibleCache([{ id: "niv-1-1-1", verse: 1, text: "In the beginning" }]), false);
+    assert.equal(isStructuredApiBibleCache({ verses: [] }), false);
+    assert.equal(isStructuredApiBibleCache(null), false);
+    assert.equal(isStructuredApiBibleCache(undefined), false);
   });
 });
 

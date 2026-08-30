@@ -719,6 +719,23 @@ export interface ApiBibleChapterData {
   providerContent?: ProviderChapterStructure;
 }
 
+/**
+ * True when a bible_cache payload is the structured API.Bible shape
+ * (verses + providerContent). Verse-only arrays and objects missing
+ * providerContent are stale titles-off rows and must not be served.
+ * Empty headings/paragraphs arrays still count as structured.
+ */
+export function isStructuredApiBibleCache(cached: unknown): cached is ApiBibleChapterData {
+  if (!cached || typeof cached !== "object" || Array.isArray(cached)) return false;
+  const row = cached as ApiBibleChapterData;
+  return (
+    Array.isArray(row.verses) &&
+    !!row.providerContent &&
+    Array.isArray(row.providerContent.headings) &&
+    Array.isArray(row.providerContent.paragraphs)
+  );
+}
+
 function apiBiblePlainText(value: string): string {
   return value
     .replace(
@@ -1351,16 +1368,18 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
     };
     if (params.cache) {
       const cachedChapter = await params.cache.read(editionCacheKey, bookId, chapterNum);
-      if (cachedChapter) {
-        // The versioned edition key means this is normally the structured shape;
-        // tolerate an array for defensive compatibility with cache adapters.
-        const cachedData = Array.isArray(cachedChapter)
-          ? { verses: cachedChapter }
-          : cachedChapter as ApiBibleChapterData;
+      if (isStructuredApiBibleCache(cachedChapter)) {
         return {
-          book: bookRecord, chapter: chapterNum, verses: cachedData.verses,
-          providerContent: cachedData.providerContent, cached: true, meta,
+          book: bookRecord, chapter: chapterNum, verses: cachedChapter.verses,
+          providerContent: cachedChapter.providerContent, cached: true, meta,
         };
+      }
+      if (cachedChapter) {
+        console.warn("[bible-cache] Stale API.Bible row lacks providerContent; refetching", {
+          translation: translationAbbr,
+          bookId,
+          chapter: chapterNum,
+        });
       }
     }
     try {

@@ -26,6 +26,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
+import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
@@ -608,7 +609,8 @@ const sheetStyles = StyleSheet.create({
 });
 
 export default function VerseReaderScreen() {
-  const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
+  const { bookId, chapter, translation: txParam, verse: verseParam, preview: previewParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; preview?: string }>();
+  const isTypographyPreview = previewParam === "typography";
   const segments = useSegments();
   const isTabReader =
     segments[0] === "(tabs)" && (segments as string[]).includes("read");
@@ -640,10 +642,18 @@ export default function VerseReaderScreen() {
   const userOverrodeTranslation = useRef(false);
   const readerBasePath = isTabReader ? "/(tabs)/read" : "/read";
   const readerRoute = useCallback(
-    (targetChapter: number) =>
-      `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any,
-    [bookId, readerBasePath, translation],
+    (targetChapter: number) => {
+      const query = `translation=${encodeURIComponent(translation)}${isTypographyPreview ? "&preview=typography" : ""}`;
+      return `${readerBasePath}/${bookId}/${targetChapter}?${query}` as any;
+    },
+    [bookId, readerBasePath, translation, isTypographyPreview],
   );
+
+  const openTypographyPreview = useCallback(() => {
+    router.push(
+      `${readerBasePath}/${bookId}/${chapter}?translation=${encodeURIComponent(translation)}&preview=typography` as any,
+    );
+  }, [readerBasePath, bookId, chapter, translation]);
 
   useEffect(() => {
     userOverrodeTranslation.current = false;
@@ -1104,7 +1114,7 @@ export default function VerseReaderScreen() {
   const readerBg = RV2_SURFACE;
   const textColor = RV2_INK;
   const verseNumColor = RV2_INK_MUTED; // WCAG-safe grey — never coral, never gold
-  const chapterNumColor = "rgba(31,26,18,0.07)"; // ghosted chapter number on cream
+  const chapterNumColor = isTypographyPreview ? RV2_INK : "rgba(31,26,18,0.07)"; // preview: solid; live: ghosted
   const headerPillBg = RV2_PILL;
   const headerBorderColor = RV2_BORDER;
 
@@ -1137,6 +1147,26 @@ export default function VerseReaderScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerRow}>
+              {isTypographyPreview ? (
+                <View
+                  testID="reader-typography-preview-pill"
+                  accessibilityLabel="Preview"
+                  style={styles.previewPill}
+                >
+                  <Text style={styles.previewPillText}>PREVIEW</Text>
+                </View>
+              ) : (
+                <Pressable
+                  testID="reader-typography-preview-entry"
+                  accessibilityRole="button"
+                  accessibilityLabel="Preview"
+                  onPress={openTypographyPreview}
+                  hitSlop={8}
+                  style={styles.previewPill}
+                >
+                  <Text style={styles.previewPillText}>PREVIEW</Text>
+                </Pressable>
+              )}
               <Pressable
                 testID="split-screen-toggle"
                 accessibilityLabel="Toggle split screen"
@@ -1316,7 +1346,21 @@ export default function VerseReaderScreen() {
               )}
 
               <View style={styles.proseContainer}>
-                {verses.map((v, i) => {
+                {isTypographyPreview && !splitMode ? (
+                  <TypographyPreviewProse
+                    verses={verses}
+                    headingsByVerse={providerHeadings}
+                    paragraphStarts={providerParagraphStarts}
+                    fontScale={fontScale}
+                    getHighlightBg={getHighlightBg}
+                    onVerseTap={handleVerseTap}
+                    onVerseLongPress={handleVerseLongPress}
+                    activeVerse={activeVerse}
+                    bookmarkedVerseIds={bookmarkedVerseIds}
+                    bookId={String(bookId)}
+                    chapterNum={chapterNum}
+                  />
+                ) : verses.map((v, i) => {
                   const isActive = activeVerse === v.verse;
                   const highlightBg = getHighlightBg(v.id, v.verse, i);
                   const isBookmarked = bookmarkedVerseIds.has(v.id) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
@@ -1730,6 +1774,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  previewPill: {
+    backgroundColor: "#147B7C",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 7,
+  },
+  previewPillText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    letterSpacing: 0.9,
   },
   headerIconBtn: {
     padding: 4,
