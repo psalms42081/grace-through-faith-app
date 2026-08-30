@@ -767,6 +767,7 @@ export default function VerseReaderScreen() {
   const stripHiddenRef = useRef(false);
   const [stripHidden, setStripHiddenState] = useState(false);
   const lastScrollY = useRef(0);
+  const previewTouchY = useRef(0);
 
   useEffect(() => {
     AsyncStorage.getItem(RV2_FONT_SCALE_KEY).then((v) => {
@@ -794,6 +795,17 @@ export default function VerseReaderScreen() {
     if (y < 40) { setStripHidden(false); return; }
     if (dy > 6) setStripHidden(true);
     else if (dy < -6) setStripHidden(false);
+  }, [setStripHidden]);
+
+  const onPreviewChromeTouchStart = useCallback((event: any) => {
+    previewTouchY.current = event.nativeEvent.pageY;
+  }, []);
+
+  const onPreviewChromeTouchEnd = useCallback((event: any) => {
+    if (!stripHiddenRef.current) return;
+    if (Math.abs(event.nativeEvent.pageY - previewTouchY.current) < 10) {
+      setStripHidden(false);
+    }
   }, [setStripHidden]);
 
   const [showVerseTapHint, setShowVerseTapHint] = useState(false);
@@ -1032,18 +1044,20 @@ export default function VerseReaderScreen() {
     (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
 
   const handleVerseTap = useCallback((item: Verse) => {
+    if (isTypographyPreview) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.selectionAsync();
     setToolbarVerse(null);
     setActiveVerse((prev) => (prev === item.verse ? null : item.verse));
-  }, [showVerseTapHint, dismissVerseTapHint]);
+  }, [isTypographyPreview, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const handleVerseLongPress = useCallback((item: Verse) => {
+    if (isTypographyPreview) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setActiveVerse(item.verse);
     setToolbarVerse(item);
-  }, [showVerseTapHint, dismissVerseTapHint]);
+  }, [isTypographyPreview, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const dismissToolbar = useCallback(() => {
     setToolbarVerse(null);
@@ -1313,6 +1327,8 @@ export default function VerseReaderScreen() {
                 handleReaderScroll(e);
                 if (splitMode) handlePrimaryScroll(e);
               }}
+              onTouchStart={isTypographyPreview ? onPreviewChromeTouchStart : undefined}
+              onTouchEnd={isTypographyPreview ? onPreviewChromeTouchEnd : undefined}
               scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
@@ -1561,70 +1577,108 @@ export default function VerseReaderScreen() {
               />
             )}
 
-            {/* A.3: reader controls strip — hides on scroll-down, reappears on scroll-up */}
-            {!audio.isActive && !toolbarVerse && (
-              <Animated.View
-                style={[
-                  styles.controlsStrip,
-                  {
-                    bottom: bottomPad + 54,
-                    opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-                    transform: [{ translateY: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 70] }) }],
-                  },
-                ]}
-                pointerEvents={stripHidden ? "none" : "auto"}
-              >
-                <Pressable
-                  onPress={audio.handlePlay}
-                  accessibilityLabel="Listen to chapter"
-                  accessibilityRole="button"
-                  style={styles.listenBtn}
+            {/* Preview chrome: one floating play + chapter pill. Live keeps the A.3 strip. */}
+            {isTypographyPreview ? (
+              !audio.isActive && !toolbarVerse && (
+                <Animated.View
+                  testID="reader-typography-preview-chrome"
+                  style={[
+                    styles.previewFloatingRow,
+                    {
+                      paddingBottom: bottomPad + 8,
+                      opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                      transform: [{ translateY: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 72] }) }],
+                    },
+                  ]}
+                  pointerEvents={stripHidden ? "none" : "auto"}
                 >
-                  <Ionicons name="play" size={18} color="#fff" style={{ marginLeft: 2 }} />
-                </Pressable>
-                <Pressable
-                  onPress={handleChapterBookmark}
-                  accessibilityLabel="Bookmark chapter"
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  style={styles.stripIconBtn}
-                >
-                  <Ionicons name={chapterBookmarked ? "bookmark" : "bookmark-outline"} size={20} color={RV2_INK} />
-                </Pressable>
-                <View style={styles.stripDivider} />
-                {CANON_HIGHLIGHTS.map((key) => (
                   <Pressable
-                    key={key}
-                    onPress={() => handleStripHighlight(key)}
-                    accessibilityLabel={`Highlight selected verse ${HIGHLIGHT_COLORS[key].label}`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.stripDot,
-                      { backgroundColor: HIGHLIGHT_COLORS[key].bg, opacity: activeVerse ? (pressed ? 0.6 : 1) : 0.35 },
+                    onPress={audio.handlePlay}
+                    accessibilityLabel="Listen to chapter"
+                    accessibilityRole="button"
+                    style={styles.listenBtn}
+                  >
+                    <Ionicons name="play" size={16} color="#fff" style={{ marginLeft: 1 }} />
+                  </Pressable>
+                  <View style={styles.bottomPill}>
+                    <Pressable onPress={goToPrev} disabled={!canGoPrev} hitSlop={8} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
+                      <Ionicons name="chevron-back" size={16} color={RV2_INK} />
+                    </Pressable>
+                    <Text style={styles.bottomPillText}>{bookName} {chapter}</Text>
+                    <Pressable onPress={goToNext} disabled={!canGoNext} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
+                      <Ionicons name="chevron-forward" size={16} color={RV2_INK} />
+                    </Pressable>
+                  </View>
+                </Animated.View>
+              )
+            ) : (
+              <>
+                {/* A.3: reader controls strip — hides on scroll-down, reappears on scroll-up */}
+                {!audio.isActive && !toolbarVerse && (
+                  <Animated.View
+                    style={[
+                      styles.controlsStrip,
+                      {
+                        bottom: bottomPad + 54,
+                        opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                        transform: [{ translateY: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 70] }) }],
+                      },
                     ]}
-                  />
-                ))}
-              </Animated.View>
-            )}
-            {stripToast && (
-              <View style={[styles.stripToast, { bottom: bottomPad + 112 }]}>
-                <Text style={styles.stripToastText}>{stripToast}</Text>
-              </View>
-            )}
+                    pointerEvents={stripHidden ? "none" : "auto"}
+                  >
+                    <Pressable
+                      onPress={audio.handlePlay}
+                      accessibilityLabel="Listen to chapter"
+                      accessibilityRole="button"
+                      style={styles.listenBtn}
+                    >
+                      <Ionicons name="play" size={18} color="#fff" style={{ marginLeft: 2 }} />
+                    </Pressable>
+                    <Pressable
+                      onPress={handleChapterBookmark}
+                      accessibilityLabel="Bookmark chapter"
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      style={styles.stripIconBtn}
+                    >
+                      <Ionicons name={chapterBookmarked ? "bookmark" : "bookmark-outline"} size={20} color={RV2_INK} />
+                    </Pressable>
+                    <View style={styles.stripDivider} />
+                    {CANON_HIGHLIGHTS.map((key) => (
+                      <Pressable
+                        key={key}
+                        onPress={() => handleStripHighlight(key)}
+                        accessibilityLabel={`Highlight selected verse ${HIGHLIGHT_COLORS[key].label}`}
+                        hitSlop={6}
+                        style={({ pressed }) => [
+                          styles.stripDot,
+                          { backgroundColor: HIGHLIGHT_COLORS[key].bg, opacity: activeVerse ? (pressed ? 0.6 : 1) : 0.35 },
+                        ]}
+                      />
+                    ))}
+                  </Animated.View>
+                )}
+                {stripToast && (
+                  <View style={[styles.stripToast, { bottom: bottomPad + 112 }]}>
+                    <Text style={styles.stripToastText}>{stripToast}</Text>
+                  </View>
+                )}
 
-            {/* Chapter prev/next pill stays at the bottom, restyled light */}
-            {!audio.isActive && (
-              <View style={[styles.bottomPillWrap, { paddingBottom: bottomPad + 8 }]}>
-                <View style={styles.bottomPill}>
-                  <Pressable onPress={goToPrev} disabled={!canGoPrev} hitSlop={8} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
-                    <Ionicons name="chevron-back" size={16} color={RV2_INK} />
-                  </Pressable>
-                  <Text style={styles.bottomPillText}>{bookName} {chapter}</Text>
-                  <Pressable onPress={goToNext} disabled={!canGoNext} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
-                    <Ionicons name="chevron-forward" size={16} color={RV2_INK} />
-                  </Pressable>
-                </View>
-              </View>
+                {/* Chapter prev/next pill stays at the bottom, restyled light */}
+                {!audio.isActive && (
+                  <View style={[styles.bottomPillWrap, { paddingBottom: bottomPad + 8 }]}>
+                    <View style={styles.bottomPill}>
+                      <Pressable onPress={goToPrev} disabled={!canGoPrev} hitSlop={8} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
+                        <Ionicons name="chevron-back" size={16} color={RV2_INK} />
+                      </Pressable>
+                      <Text style={styles.bottomPillText}>{bookName} {chapter}</Text>
+                      <Pressable onPress={goToNext} disabled={!canGoNext} hitSlop={8} style={{ opacity: canGoNext ? 1 : 0.3 }}>
+                        <Ionicons name="chevron-forward" size={16} color={RV2_INK} />
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </>
             )}
 
             {/* Active audio keeps the full player bar */}
@@ -2020,6 +2074,17 @@ const styles = StyleSheet.create({
     color: "#FBF7EE",
     fontSize: 12,
     fontFamily: "Inter_500Medium",
+  },
+  previewFloatingRow: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingTop: 8,
   },
   bottomPillWrap: {
     position: "absolute",

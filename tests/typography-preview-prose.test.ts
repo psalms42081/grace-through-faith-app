@@ -66,6 +66,21 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(warmer, /content-type=text/);
   });
 
+  it("preview chrome is one floating play+pill row; highlight colours stay in the sheet", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(reader, /testID="reader-typography-preview-chrome"/);
+    assert.match(reader, /previewFloatingRow/);
+    const previewChrome = reader.slice(reader.indexOf("Preview chrome:"));
+    const liveChromeStart = previewChrome.indexOf("A.3: reader controls strip");
+    assert.ok(liveChromeStart > 0);
+    const previewOnly = previewChrome.slice(0, liveChromeStart);
+    assert.match(previewOnly, /listenBtn/);
+    assert.match(previewOnly, /bottomPill/);
+    assert.doesNotMatch(previewOnly, /handleStripHighlight/);
+    assert.doesNotMatch(previewOnly, /CANON_HIGHLIGHTS\.map/);
+    assert.match(reader, /handleHighlight\(key\)/);
+  });
+
   it("nested preview runs stay keyed by verse.id", () => {
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
     assert.match(prose, /key=\{v\.id\}/);
