@@ -77,6 +77,8 @@ const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
 const RV2_BORDER = "#E7E0D2";
 const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
 const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
+/** Internal one-release rollback. Default off = new typography + floating chrome. */
+const READER_LEGACY_VERSE_BLOCKS = false;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SPLIT_MODE_KEY = "@grace-through-faith/split-mode";
 const SPLIT_TRANSLATION_KEY = "@grace-through-faith/split-translation";
@@ -609,8 +611,8 @@ const sheetStyles = StyleSheet.create({
 });
 
 export default function VerseReaderScreen() {
-  const { bookId, chapter, translation: txParam, verse: verseParam, preview: previewParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; preview?: string }>();
-  const isTypographyPreview = previewParam === "typography";
+  const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
+  const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
   const isTabReader =
     segments[0] === "(tabs)" && (segments as string[]).includes("read");
@@ -642,18 +644,10 @@ export default function VerseReaderScreen() {
   const userOverrodeTranslation = useRef(false);
   const readerBasePath = isTabReader ? "/(tabs)/read" : "/read";
   const readerRoute = useCallback(
-    (targetChapter: number) => {
-      const query = `translation=${encodeURIComponent(translation)}${isTypographyPreview ? "&preview=typography" : ""}`;
-      return `${readerBasePath}/${bookId}/${targetChapter}?${query}` as any;
-    },
-    [bookId, readerBasePath, translation, isTypographyPreview],
+    (targetChapter: number) =>
+      `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any,
+    [bookId, readerBasePath, translation],
   );
-
-  const openTypographyPreview = useCallback(() => {
-    router.push(
-      `${readerBasePath}/${bookId}/${chapter}?translation=${encodeURIComponent(translation)}&preview=typography` as any,
-    );
-  }, [readerBasePath, bookId, chapter, translation]);
 
   useEffect(() => {
     userOverrodeTranslation.current = false;
@@ -1044,20 +1038,20 @@ export default function VerseReaderScreen() {
     (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
 
   const handleVerseTap = useCallback((item: Verse) => {
-    if (isTypographyPreview) setStripHidden(false);
+    if (useNewTypography) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.selectionAsync();
     setToolbarVerse(null);
     setActiveVerse((prev) => (prev === item.verse ? null : item.verse));
-  }, [isTypographyPreview, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
+  }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const handleVerseLongPress = useCallback((item: Verse) => {
-    if (isTypographyPreview) setStripHidden(false);
+    if (useNewTypography) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setActiveVerse(item.verse);
     setToolbarVerse(item);
-  }, [isTypographyPreview, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
+  }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const dismissToolbar = useCallback(() => {
     setToolbarVerse(null);
@@ -1128,7 +1122,7 @@ export default function VerseReaderScreen() {
   const readerBg = RV2_SURFACE;
   const textColor = RV2_INK;
   const verseNumColor = RV2_INK_MUTED; // WCAG-safe grey — never coral, never gold
-  const chapterNumColor = isTypographyPreview ? RV2_INK : "rgba(31,26,18,0.07)"; // preview: solid; live: ghosted
+  const chapterNumColor = useNewTypography ? RV2_INK : "rgba(31,26,18,0.07)";
   const headerPillBg = RV2_PILL;
   const headerBorderColor = RV2_BORDER;
 
@@ -1161,26 +1155,6 @@ export default function VerseReaderScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerRow}>
-              {isTypographyPreview ? (
-                <View
-                  testID="reader-typography-preview-pill"
-                  accessibilityLabel="Preview"
-                  style={styles.previewPill}
-                >
-                  <Text style={styles.previewPillText}>PREVIEW</Text>
-                </View>
-              ) : (
-                <Pressable
-                  testID="reader-typography-preview-entry"
-                  accessibilityRole="button"
-                  accessibilityLabel="Preview"
-                  onPress={openTypographyPreview}
-                  hitSlop={8}
-                  style={styles.previewPill}
-                >
-                  <Text style={styles.previewPillText}>PREVIEW</Text>
-                </Pressable>
-              )}
               <Pressable
                 testID="split-screen-toggle"
                 accessibilityLabel="Toggle split screen"
@@ -1327,8 +1301,8 @@ export default function VerseReaderScreen() {
                 handleReaderScroll(e);
                 if (splitMode) handlePrimaryScroll(e);
               }}
-              onTouchStart={isTypographyPreview ? onPreviewChromeTouchStart : undefined}
-              onTouchEnd={isTypographyPreview ? onPreviewChromeTouchEnd : undefined}
+              onTouchStart={useNewTypography ? onPreviewChromeTouchStart : undefined}
+              onTouchEnd={useNewTypography ? onPreviewChromeTouchEnd : undefined}
               scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
@@ -1362,7 +1336,7 @@ export default function VerseReaderScreen() {
               )}
 
               <View style={styles.proseContainer}>
-                {isTypographyPreview && !splitMode ? (
+                {useNewTypography && !splitMode ? (
                   <TypographyPreviewProse
                     verses={verses}
                     headingsByVerse={providerHeadings}
@@ -1577,11 +1551,11 @@ export default function VerseReaderScreen() {
               />
             )}
 
-            {/* Preview chrome: one floating play + chapter pill. Live keeps the A.3 strip. */}
-            {isTypographyPreview ? (
+            {/* New chrome: one floating play + chapter pill. Legacy keeps the A.3 strip. */}
+            {useNewTypography ? (
               !audio.isActive && !toolbarVerse && (
                 <Animated.View
-                  testID="reader-typography-preview-chrome"
+                  testID="reader-floating-chrome"
                   style={[
                     styles.previewFloatingRow,
                     {
@@ -1828,18 +1802,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  previewPill: {
-    backgroundColor: "#147B7C",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 7,
-  },
-  previewPillText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_700Bold",
-    fontSize: 9,
-    letterSpacing: 0.9,
   },
   headerIconBtn: {
     padding: 4,

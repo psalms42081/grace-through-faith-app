@@ -1,0 +1,877 @@
+{
+  "note": "NOT WIRED. Existing Task #76 corpus (original-prompt AI headings). Poetry line-breaks not included yet. Spot-check these chapters; do not ship until you approve.",
+  "schemaVersion": "kjv-headings-v1",
+  "lensVersion": "sda-v2",
+  "sourceManifest": "data/kjv-headings.manifest.json",
+  "chapters": [
+    {
+      "book": "Genesis",
+      "chapter": 1,
+      "sections": [
+        {
+          "heading": "The Creation of the World",
+          "startVerse": 1,
+          "endVerse": 5,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 5
+            }
+          ]
+        },
+        {
+          "heading": "The Formation of the Firmament and Seas",
+          "startVerse": 6,
+          "endVerse": 10,
+          "paragraphs": [
+            {
+              "startVerse": 6,
+              "endVerse": 10
+            }
+          ]
+        },
+        {
+          "heading": "The Creation of Vegetation",
+          "startVerse": 11,
+          "endVerse": 13,
+          "paragraphs": [
+            {
+              "startVerse": 11,
+              "endVerse": 13
+            }
+          ]
+        },
+        {
+          "heading": "The Creation of Celestial Bodies",
+          "startVerse": 14,
+          "endVerse": 19,
+          "paragraphs": [
+            {
+              "startVerse": 14,
+              "endVerse": 19
+            }
+          ]
+        },
+        {
+          "heading": "The Creation of Aquatic and Aerial Life",
+          "startVerse": 20,
+          "endVerse": 23,
+          "paragraphs": [
+            {
+              "startVerse": 20,
+              "endVerse": 23
+            }
+          ]
+        },
+        {
+          "heading": "The Creation of Land Animals and Humanity",
+          "startVerse": 24,
+          "endVerse": 31,
+          "paragraphs": [
+            {
+              "startVerse": 24,
+              "endVerse": 31
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Psalms",
+      "chapter": 119,
+      "sections": [
+        {
+          "heading": "Blessings of Obedience",
+          "startVerse": 1,
+          "endVerse": 8,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 8
+            }
+          ]
+        },
+        {
+          "heading": "Desire for God's Word",
+          "startVerse": 9,
+          "endVerse": 16,
+          "paragraphs": [
+            {
+              "startVerse": 9,
+              "endVerse": 16
+            }
+          ]
+        },
+        {
+          "heading": "Seeking Understanding and Guidance",
+          "startVerse": 17,
+          "endVerse": 24,
+          "paragraphs": [
+            {
+              "startVerse": 17,
+              "endVerse": 24
+            }
+          ]
+        },
+        {
+          "heading": "Longing for God's Judgments",
+          "startVerse": 25,
+          "endVerse": 32,
+          "paragraphs": [
+            {
+              "startVerse": 25,
+              "endVerse": 32
+            }
+          ]
+        },
+        {
+          "heading": "Pleading for Help and Deliverance",
+          "startVerse": 33,
+          "endVerse": 40,
+          "paragraphs": [
+            {
+              "startVerse": 33,
+              "endVerse": 40
+            }
+          ]
+        },
+        {
+          "heading": "Affliction and Hope in God's Word",
+          "startVerse": 41,
+          "endVerse": 48,
+          "paragraphs": [
+            {
+              "startVerse": 41,
+              "endVerse": 48
+            }
+          ]
+        },
+        {
+          "heading": "Faithfulness Amidst Trials",
+          "startVerse": 49,
+          "endVerse": 56,
+          "paragraphs": [
+            {
+              "startVerse": 49,
+              "endVerse": 56
+            }
+          ]
+        },
+        {
+          "heading": "The Goodness of God's Law",
+          "startVerse": 57,
+          "endVerse": 64,
+          "paragraphs": [
+            {
+              "startVerse": 57,
+              "endVerse": 64
+            }
+          ]
+        },
+        {
+          "heading": "Affliction and Learning from God's Word",
+          "startVerse": 65,
+          "endVerse": 72,
+          "paragraphs": [
+            {
+              "startVerse": 65,
+              "endVerse": 72
+            }
+          ]
+        },
+        {
+          "heading": "Hope and Comfort in God's Promises",
+          "startVerse": 73,
+          "endVerse": 80,
+          "paragraphs": [
+            {
+              "startVerse": 73,
+              "endVerse": 80
+            }
+          ]
+        },
+        {
+          "heading": "Crying Out for Salvation",
+          "startVerse": 81,
+          "endVerse": 88,
+          "paragraphs": [
+            {
+              "startVerse": 81,
+              "endVerse": 88
+            }
+          ]
+        },
+        {
+          "heading": "The Eternal Nature of God's Word",
+          "startVerse": 89,
+          "endVerse": 96,
+          "paragraphs": [
+            {
+              "startVerse": 89,
+              "endVerse": 96
+            }
+          ]
+        },
+        {
+          "heading": "The Value of God's Law",
+          "startVerse": 97,
+          "endVerse": 104,
+          "paragraphs": [
+            {
+              "startVerse": 97,
+              "endVerse": 104
+            }
+          ]
+        },
+        {
+          "heading": "Commitment to Obey God's Judgments",
+          "startVerse": 105,
+          "endVerse": 112,
+          "paragraphs": [
+            {
+              "startVerse": 105,
+              "endVerse": 112
+            }
+          ]
+        },
+        {
+          "heading": "Pleading for Help and Deliverance",
+          "startVerse": 113,
+          "endVerse": 120,
+          "paragraphs": [
+            {
+              "startVerse": 113,
+              "endVerse": 120
+            }
+          ]
+        },
+        {
+          "heading": "Seeking Justice and Understanding",
+          "startVerse": 121,
+          "endVerse": 128,
+          "paragraphs": [
+            {
+              "startVerse": 121,
+              "endVerse": 128
+            }
+          ]
+        },
+        {
+          "heading": "Longing for God's Word and Deliverance",
+          "startVerse": 129,
+          "endVerse": 136,
+          "paragraphs": [
+            {
+              "startVerse": 129,
+              "endVerse": 136
+            }
+          ]
+        },
+        {
+          "heading": "Righteousness and Faithfulness of God",
+          "startVerse": 137,
+          "endVerse": 144,
+          "paragraphs": [
+            {
+              "startVerse": 137,
+              "endVerse": 144
+            }
+          ]
+        },
+        {
+          "heading": "Crying Out for Help and Deliverance",
+          "startVerse": 145,
+          "endVerse": 152,
+          "paragraphs": [
+            {
+              "startVerse": 145,
+              "endVerse": 152
+            }
+          ]
+        },
+        {
+          "heading": "The Fate of the Wicked",
+          "startVerse": 153,
+          "endVerse": 160,
+          "paragraphs": [
+            {
+              "startVerse": 153,
+              "endVerse": 160
+            }
+          ]
+        },
+        {
+          "heading": "Rejoicing in God's Word",
+          "startVerse": 161,
+          "endVerse": 168,
+          "paragraphs": [
+            {
+              "startVerse": 161,
+              "endVerse": 168
+            }
+          ]
+        },
+        {
+          "heading": "Longing for Salvation and Deliverance",
+          "startVerse": 169,
+          "endVerse": 176,
+          "paragraphs": [
+            {
+              "startVerse": 169,
+              "endVerse": 176
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Daniel",
+      "chapter": 2,
+      "sections": [
+        {
+          "heading": "Nebuchadnezzar's Troubling Dream",
+          "startVerse": 1,
+          "endVerse": 13,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 13
+            }
+          ]
+        },
+        {
+          "heading": "Daniel's Request for Time and Revelation",
+          "startVerse": 14,
+          "endVerse": 23,
+          "paragraphs": [
+            {
+              "startVerse": 14,
+              "endVerse": 23
+            }
+          ]
+        },
+        {
+          "heading": "Daniel Interprets the Dream",
+          "startVerse": 24,
+          "endVerse": 45,
+          "paragraphs": [
+            {
+              "startVerse": 24,
+              "endVerse": 45
+            }
+          ]
+        },
+        {
+          "heading": "Nebuchadnezzar Honors Daniel",
+          "startVerse": 46,
+          "endVerse": 49,
+          "paragraphs": [
+            {
+              "startVerse": 46,
+              "endVerse": 49
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Daniel",
+      "chapter": 7,
+      "sections": [
+        {
+          "heading": "Daniel's Vision of Four Beasts",
+          "startVerse": 1,
+          "endVerse": 8,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 8
+            }
+          ]
+        },
+        {
+          "heading": "The Ancient of Days and the Judgment",
+          "startVerse": 9,
+          "endVerse": 14,
+          "paragraphs": [
+            {
+              "startVerse": 9,
+              "endVerse": 14
+            }
+          ]
+        },
+        {
+          "heading": "The Interpretation of the Beasts",
+          "startVerse": 15,
+          "endVerse": 28,
+          "paragraphs": [
+            {
+              "startVerse": 15,
+              "endVerse": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Matthew",
+      "chapter": 5,
+      "sections": [
+        {
+          "heading": "The Beatitudes: Blessings for the Humble",
+          "startVerse": 1,
+          "endVerse": 12,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 12
+            }
+          ]
+        },
+        {
+          "heading": "Salt and Light: The Influence of Believers",
+          "startVerse": 13,
+          "endVerse": 16,
+          "paragraphs": [
+            {
+              "startVerse": 13,
+              "endVerse": 16
+            }
+          ]
+        },
+        {
+          "heading": "Fulfillment of the Law",
+          "startVerse": 17,
+          "endVerse": 20,
+          "paragraphs": [
+            {
+              "startVerse": 17,
+              "endVerse": 20
+            }
+          ]
+        },
+        {
+          "heading": "Teaching on Anger and Reconciliation",
+          "startVerse": 21,
+          "endVerse": 26,
+          "paragraphs": [
+            {
+              "startVerse": 21,
+              "endVerse": 26
+            }
+          ]
+        },
+        {
+          "heading": "Teaching on Adultery and Lust",
+          "startVerse": 27,
+          "endVerse": 30,
+          "paragraphs": [
+            {
+              "startVerse": 27,
+              "endVerse": 30
+            }
+          ]
+        },
+        {
+          "heading": "Teaching on Divorce and Oaths",
+          "startVerse": 31,
+          "endVerse": 37,
+          "paragraphs": [
+            {
+              "startVerse": 31,
+              "endVerse": 37
+            }
+          ]
+        },
+        {
+          "heading": "Teaching on Revenge and Love for Enemies",
+          "startVerse": 38,
+          "endVerse": 48,
+          "paragraphs": [
+            {
+              "startVerse": 38,
+              "endVerse": 48
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Matthew",
+      "chapter": 6,
+      "sections": [
+        {
+          "heading": "Giving to the Needy: True Generosity",
+          "startVerse": 1,
+          "endVerse": 4,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 4
+            }
+          ]
+        },
+        {
+          "heading": "Prayer: The Lord's Prayer",
+          "startVerse": 5,
+          "endVerse": 15,
+          "paragraphs": [
+            {
+              "startVerse": 5,
+              "endVerse": 15
+            }
+          ]
+        },
+        {
+          "heading": "Fasting: A Private Act of Worship",
+          "startVerse": 16,
+          "endVerse": 18,
+          "paragraphs": [
+            {
+              "startVerse": 16,
+              "endVerse": 18
+            }
+          ]
+        },
+        {
+          "heading": "Treasures in Heaven: Priorities in Life",
+          "startVerse": 19,
+          "endVerse": 21,
+          "paragraphs": [
+            {
+              "startVerse": 19,
+              "endVerse": 21
+            }
+          ]
+        },
+        {
+          "heading": "The Eye: A Window to the Soul",
+          "startVerse": 22,
+          "endVerse": 23,
+          "paragraphs": [
+            {
+              "startVerse": 22,
+              "endVerse": 23
+            }
+          ]
+        },
+        {
+          "heading": "Serving Two Masters: God vs. Wealth",
+          "startVerse": 24,
+          "endVerse": 24,
+          "paragraphs": [
+            {
+              "startVerse": 24,
+              "endVerse": 24
+            }
+          ]
+        },
+        {
+          "heading": "Do Not Worry: Trust in God's Provision",
+          "startVerse": 25,
+          "endVerse": 34,
+          "paragraphs": [
+            {
+              "startVerse": 25,
+              "endVerse": 34
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Matthew",
+      "chapter": 7,
+      "sections": [
+        {
+          "heading": "Judging Others: Self-Reflection",
+          "startVerse": 1,
+          "endVerse": 5,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 5
+            }
+          ]
+        },
+        {
+          "heading": "Discernment: Not Giving What is Holy to Dogs",
+          "startVerse": 6,
+          "endVerse": 6,
+          "paragraphs": [
+            {
+              "startVerse": 6,
+              "endVerse": 6
+            }
+          ]
+        },
+        {
+          "heading": "Ask, Seek, Knock: Assurance of God's Response",
+          "startVerse": 7,
+          "endVerse": 11,
+          "paragraphs": [
+            {
+              "startVerse": 7,
+              "endVerse": 11
+            }
+          ]
+        },
+        {
+          "heading": "The Golden Rule: Treat Others Well",
+          "startVerse": 12,
+          "endVerse": 12,
+          "paragraphs": [
+            {
+              "startVerse": 12,
+              "endVerse": 12
+            }
+          ]
+        },
+        {
+          "heading": "The Narrow Gate: The Way to Life",
+          "startVerse": 13,
+          "endVerse": 14,
+          "paragraphs": [
+            {
+              "startVerse": 13,
+              "endVerse": 14
+            }
+          ]
+        },
+        {
+          "heading": "Beware of False Prophets: Recognizing True and False",
+          "startVerse": 15,
+          "endVerse": 20,
+          "paragraphs": [
+            {
+              "startVerse": 15,
+              "endVerse": 20
+            }
+          ]
+        },
+        {
+          "heading": "True Discipleship: Doing the Will of God",
+          "startVerse": 21,
+          "endVerse": 23,
+          "paragraphs": [
+            {
+              "startVerse": 21,
+              "endVerse": 23
+            }
+          ]
+        },
+        {
+          "heading": "The Wise and Foolish Builders: Foundations of Faith",
+          "startVerse": 24,
+          "endVerse": 27,
+          "paragraphs": [
+            {
+              "startVerse": 24,
+              "endVerse": 27
+            }
+          ]
+        },
+        {
+          "heading": "The Authority of Jesus' Teaching",
+          "startVerse": 28,
+          "endVerse": 29,
+          "paragraphs": [
+            {
+              "startVerse": 28,
+              "endVerse": 29
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "John",
+      "chapter": 3,
+      "sections": [
+        {
+          "heading": "Nicodemus Visits Jesus",
+          "startVerse": 1,
+          "endVerse": 10,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 10
+            }
+          ]
+        },
+        {
+          "heading": "The New Birth Explained",
+          "startVerse": 11,
+          "endVerse": 21,
+          "paragraphs": [
+            {
+              "startVerse": 11,
+              "endVerse": 21
+            }
+          ]
+        },
+        {
+          "heading": "John the Baptist's Final Testimony",
+          "startVerse": 22,
+          "endVerse": 36,
+          "paragraphs": [
+            {
+              "startVerse": 22,
+              "endVerse": 36
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Revelation",
+      "chapter": 12,
+      "sections": [
+        {
+          "heading": "The Woman and the Dragon",
+          "startVerse": 1,
+          "endVerse": 4,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 4
+            }
+          ]
+        },
+        {
+          "heading": "The Birth of the Male Child and the Woman's Flight",
+          "startVerse": 5,
+          "endVerse": 6,
+          "paragraphs": [
+            {
+              "startVerse": 5,
+              "endVerse": 6
+            }
+          ]
+        },
+        {
+          "heading": "War in Heaven and the Dragon's Defeat",
+          "startVerse": 7,
+          "endVerse": 9,
+          "paragraphs": [
+            {
+              "startVerse": 7,
+              "endVerse": 9
+            }
+          ]
+        },
+        {
+          "heading": "The Accuser Cast Down and the Saints' Victory",
+          "startVerse": 10,
+          "endVerse": 12,
+          "paragraphs": [
+            {
+              "startVerse": 10,
+              "endVerse": 12
+            }
+          ]
+        },
+        {
+          "heading": "The Dragon's Persecution of the Woman",
+          "startVerse": 13,
+          "endVerse": 17,
+          "paragraphs": [
+            {
+              "startVerse": 13,
+              "endVerse": 17
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Revelation",
+      "chapter": 13,
+      "sections": [
+        {
+          "heading": "The Beast from the Sea",
+          "startVerse": 1,
+          "endVerse": 4,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 4
+            }
+          ]
+        },
+        {
+          "heading": "The Beast's Authority and Blasphemy",
+          "startVerse": 5,
+          "endVerse": 10,
+          "paragraphs": [
+            {
+              "startVerse": 5,
+              "endVerse": 10
+            }
+          ]
+        },
+        {
+          "heading": "The Second Beast and the Image of the First Beast",
+          "startVerse": 11,
+          "endVerse": 15,
+          "paragraphs": [
+            {
+              "startVerse": 11,
+              "endVerse": 15
+            }
+          ]
+        },
+        {
+          "heading": "The Mark of the Beast",
+          "startVerse": 16,
+          "endVerse": 18,
+          "paragraphs": [
+            {
+              "startVerse": 16,
+              "endVerse": 18
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Revelation",
+      "chapter": 14,
+      "sections": [
+        {
+          "heading": "The Lamb and the 144,000",
+          "startVerse": 1,
+          "endVerse": 5,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 5
+            }
+          ]
+        },
+        {
+          "heading": "The Three Angels' Messages",
+          "startVerse": 6,
+          "endVerse": 12,
+          "paragraphs": [
+            {
+              "startVerse": 6,
+              "endVerse": 12
+            }
+          ]
+        },
+        {
+          "heading": "The Harvest of the Earth",
+          "startVerse": 13,
+          "endVerse": 20,
+          "paragraphs": [
+            {
+              "startVerse": 13,
+              "endVerse": 20
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

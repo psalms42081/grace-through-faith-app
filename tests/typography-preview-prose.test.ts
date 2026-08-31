@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import {
+  gapAfterVerseInRun,
   groupVersesByParagraphStarts,
   splitParagraphGroupAtHeadings,
 } from "../lib/group-verses-by-paragraph";
@@ -23,6 +24,28 @@ describe("groupVersesByParagraphStarts", () => {
   it("splits on provider starts without reordering verse identity", () => {
     const groups = groupVersesByParagraphStarts(verses, new Set([1, 3]));
     assert.deepEqual(groups.map((g) => g.map((v) => v.id)), [["a-1", "a-2"], ["a-3", "a-4"]]);
+  });
+});
+
+describe("gapAfterVerseInRun", () => {
+  it("starts every numbered verse on a new line in a poetry run, including single-line verses", () => {
+    const run = [
+      { text: "The invented shepherd line." },
+      { text: "He makes me lie in mock fields,\nhe leads me beside mock water." },
+      { text: "He restores my mock soul." },
+    ];
+    assert.equal(gapAfterVerseInRun(run, 0), "\n");
+    assert.equal(gapAfterVerseInRun(run, 1), "\n");
+    assert.equal(gapAfterVerseInRun(run, 2), "");
+  });
+
+  it("keeps prose verses inline and adds no trailing gap", () => {
+    const run = [
+      { text: "First prose verse." },
+      { text: "Second prose verse." },
+    ];
+    assert.equal(gapAfterVerseInRun(run, 0), " ");
+    assert.equal(gapAfterVerseInRun(run, 1), "");
   });
 });
 
@@ -56,12 +79,13 @@ describe("typography preview source contracts", () => {
     assert.match(layout, /buster: QUERY_PERSIST_BUSTER/);
   });
 
-  it("gates new typography behind preview=typography and keeps live verse blocks", () => {
+  it("promotes new typography by default and keeps verse-block behind a rollback flag", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
-    assert.match(reader, /previewParam === "typography"/);
-    assert.match(reader, /testID="reader-typography-preview-entry"/);
-    assert.match(reader, /testID="reader-typography-preview-pill"/);
-    assert.match(reader, /backgroundColor: "#147B7C"/);
+    assert.match(reader, /READER_LEGACY_VERSE_BLOCKS = false/);
+    assert.match(reader, /useNewTypography && !splitMode \?/);
+    assert.doesNotMatch(reader, /previewParam === "typography"/);
+    assert.doesNotMatch(reader, /testID="reader-typography-preview-entry"/);
+    assert.doesNotMatch(reader, /testID="reader-typography-preview-pill"/);
     assert.match(reader, /verses\.map\(\(v, i\) =>/);
     assert.match(reader, /useBibleAudio\(verses,/);
   });
@@ -75,18 +99,18 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(warmer, /content-type=text/);
   });
 
-  it("preview chrome is one floating play+pill row; highlight colours stay in the sheet", () => {
+  it("live chrome is one floating play+pill row; highlight colours stay in the sheet", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
-    assert.match(reader, /testID="reader-typography-preview-chrome"/);
+    assert.match(reader, /testID="reader-floating-chrome"/);
     assert.match(reader, /previewFloatingRow/);
-    const previewChrome = reader.slice(reader.indexOf("Preview chrome:"));
-    const liveChromeStart = previewChrome.indexOf("A.3: reader controls strip");
+    const newChrome = reader.slice(reader.indexOf("New chrome:"));
+    const liveChromeStart = newChrome.indexOf("A.3: reader controls strip");
     assert.ok(liveChromeStart > 0);
-    const previewOnly = previewChrome.slice(0, liveChromeStart);
-    assert.match(previewOnly, /listenBtn/);
-    assert.match(previewOnly, /bottomPill/);
-    assert.doesNotMatch(previewOnly, /handleStripHighlight/);
-    assert.doesNotMatch(previewOnly, /CANON_HIGHLIGHTS\.map/);
+    const defaultChrome = newChrome.slice(0, liveChromeStart);
+    assert.match(defaultChrome, /listenBtn/);
+    assert.match(defaultChrome, /bottomPill/);
+    assert.doesNotMatch(defaultChrome, /handleStripHighlight/);
+    assert.doesNotMatch(defaultChrome, /CANON_HIGHLIGHTS\.map/);
     assert.match(reader, /handleHighlight\(key\)/);
   });
 
@@ -97,6 +121,7 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /delayLongPress=\{400\}/);
     assert.match(prose, /getHighlightBg\(v\.id, v\.verse, index\)/);
     assert.match(prose, /v\.text\.split\("\\n"\)/);
-    assert.match(prose, /poetryContinue/);
+    assert.match(prose, /testID="reader-typography-prose"/);
+    assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
   });
 });

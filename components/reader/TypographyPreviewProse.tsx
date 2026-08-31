@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
+  gapAfterVerseInRun,
   groupVersesByParagraphStarts,
   splitParagraphGroupAtHeadings,
 } from "@/lib/group-verses-by-paragraph";
@@ -49,7 +50,7 @@ export function TypographyPreviewProse({
   const superSize = 10 * fontScale;
 
   return (
-    <View style={s.prose} testID="reader-typography-preview-prose">
+    <View style={s.prose} testID="reader-typography-prose">
       {groups.map((group) => {
         const runs = splitParagraphGroupAtHeadings(group, headingsByVerse);
         return runs.map((run) => {
@@ -66,7 +67,7 @@ export function TypographyPreviewProse({
                 </Text>
               ))}
               <Text style={[s.body, { fontSize: bodySize, lineHeight: bodyLine }]}>
-                {run.verses.map((v) => {
+                {run.verses.map((v, verseIndex) => {
                   const index = indexById.get(v.id) ?? -1;
                   const highlightBg = getHighlightBg(v.id, v.verse, index);
                   const isActive = activeVerse === v.verse;
@@ -102,7 +103,7 @@ export function TypographyPreviewProse({
                         </Text>
                       ))}
                       {isBookmarked ? <Text style={s.bookmarkMark}> ◆</Text> : null}
-                      {v.text.includes("\n") ? "\n" : " "}
+                      {gapAfterVerseInRun(run.verses, verseIndex)}
                     </Text>
                   );
                 })}
@@ -120,15 +121,15 @@ const s = StyleSheet.create({
     paddingBottom: 24,
   },
   paragraphBlock: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   heading: {
     fontSize: 16,
     lineHeight: 23,
     fontFamily: "Lora_700Bold",
     color: "#1F1A12",
-    marginTop: 8,
-    marginBottom: 10,
+    marginTop: 4,
+    marginBottom: 8,
   },
   body: {
     fontFamily: "Lora_400Regular",

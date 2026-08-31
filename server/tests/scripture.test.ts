@@ -210,11 +210,11 @@ describe("provider heading response and reader contract", () => {
     assert.match(reader, /providerParagraphStarts\.has\(v\.verse\)/);
   });
 
-  it("keeps live verse-block layout when typography preview is off", () => {
+  it("keeps verse-block layout behind the internal rollback flag", () => {
     const reader = readFileSync("app/read/[bookId]/[chapter].tsx", "utf8");
-    assert.match(reader, /isTypographyPreview && !splitMode \?/);
+    assert.match(reader, /useNewTypography && !splitMode \?/);
     assert.match(reader, /TypographyPreviewProse/);
-    assert.match(reader, /preview=typography/);
+    assert.match(reader, /READER_LEGACY_VERSE_BLOCKS = false/);
     assert.match(reader, /verses\.map\(\(v, i\) =>/);
     assert.match(reader, /useBibleAudio\(verses,/);
   });

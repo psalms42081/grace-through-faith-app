@@ -1,5 +1,5 @@
 /**
- * Layout-only grouping for the typography preview. Does not reorder or
+ * Layout-only grouping for reader typography. Does not reorder or
  * filter the source verses[] array — callers map groups back onto the
  * original identity used by audio and highlights.
  */
@@ -43,4 +43,20 @@ export function splitParagraphGroupAtHeadings<T extends { verse: number }>(
   }
   if (verses.length) runs.push({ headings, verses });
   return runs;
+}
+
+export function isPoetryRun<T extends { text: string }>(verses: T[]): boolean {
+  return verses.some((v) => v.text.includes("\n"));
+}
+
+/**
+ * Between verses in a run: if any verse is line-broken (poetry), every
+ * numbered verse starts on a new line. Prose stays inline. Nothing after the last verse.
+ */
+export function gapAfterVerseInRun<T extends { text: string }>(
+  verses: T[],
+  index: number,
+): "\n" | " " | "" {
+  if (index < 0 || index >= verses.length - 1) return "";
+  return isPoetryRun(verses) ? "\n" : " ";
 }
