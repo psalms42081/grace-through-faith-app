@@ -264,6 +264,34 @@ router.post("/api/auth/update-role", requireAuth, async (req, res) => {
   }
 });
 
+router.put("/api/auth/profile", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const displayName = String(req.body?.displayName ?? "").trim();
+    if (displayName.length < 1 || displayName.length > 80) {
+      return res.status(400).json({ error: "Display name must be 1–80 characters" });
+    }
+
+    await db.update(users).set({ displayName }).where(eq(users.id, userId));
+    const [updated] = await db.select().from(users).where(eq(users.id, userId));
+    return res.json({
+      user: {
+        id: updated.id,
+        displayName: updated.displayName,
+        email: updated.email,
+        familyId: updated.familyId,
+        isPro: updated.isPro,
+        isPatron: updated.isPatron,
+        role: updated.role,
+        organizationId: updated.organizationId,
+      },
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    return res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
 router.get("/api/auth/me", async (req, res) => {
   try {
     const userId = getAuthUserId(req);

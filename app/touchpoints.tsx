@@ -13,10 +13,9 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
-
-const GOLD = "#C9933A";
 
 const TOPIC_TILE_MAP: Record<string, { color: string; icon: string }> = {
   "abandonment":       { color: "#0D7377", icon: "heart" },
@@ -142,7 +141,7 @@ export default function TouchPointsScreen() {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={GOLD} />
+          <ActivityIndicator size="large" color={PathB.coral} />
         </View>
       ) : (
         <ScrollView
@@ -159,8 +158,8 @@ export default function TouchPointsScreen() {
               style={[
                 styles.categoryChip,
                 {
-                  backgroundColor: !activeCategory ? GOLD : cardBg,
-                  borderColor: !activeCategory ? GOLD : borderColor,
+                  backgroundColor: !activeCategory ? PathB.coral : cardBg,
+                  borderColor: !activeCategory ? PathB.coral : borderColor,
                 },
               ]}
             >
@@ -183,8 +182,8 @@ export default function TouchPointsScreen() {
                 style={[
                   styles.categoryChip,
                   {
-                    backgroundColor: activeCategory === cat ? GOLD : cardBg,
-                    borderColor: activeCategory === cat ? GOLD : borderColor,
+                    backgroundColor: activeCategory === cat ? PathB.coral : cardBg,
+                    borderColor: activeCategory === cat ? PathB.coral : borderColor,
                   },
                 ]}
               >

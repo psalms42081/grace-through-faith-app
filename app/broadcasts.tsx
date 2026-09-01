@@ -15,11 +15,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "@/hooks/useTheme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
+import { PathB } from "@/constants/colors";
 import BroadcastCard, { broadcastSources, type BroadcastSource } from "@/components/BroadcastCard";
 
 export default function BroadcastsScreen() {
-  const { theme, isDark } = useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -76,8 +77,8 @@ export default function BroadcastsScreen() {
         contentContainerStyle={[st.content, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[st.infoBanner, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
-          <Ionicons name="information-circle-outline" size={18} color={theme.accent} />
+        <View style={[st.infoBanner, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+          <Ionicons name="information-circle-outline" size={18} color={PathB.ink} />
           <Text style={[st.infoText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             {t("broadcasts.disclaimer")}
           </Text>
@@ -106,7 +107,7 @@ export default function BroadcastsScreen() {
               {activeSource?.name || ""}
             </Text>
             <Pressable onPress={handleOpenInBrowser} hitSlop={12}>
-              <Ionicons name="open-outline" size={20} color={theme.accent} />
+              <Ionicons name="open-outline" size={20} color={PathB.ink} />
             </Pressable>
           </View>
 
@@ -120,7 +121,7 @@ export default function BroadcastsScreen() {
                 onPress={handleOpenInBrowser}
                 style={({ pressed }) => [
                   st.openBrowserBtn,
-                  { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 },
                 ]}
               >
                 <Ionicons name="open-outline" size={18} color="#fff" />
@@ -133,7 +134,7 @@ export default function BroadcastsScreen() {
             <>
               {webViewLoading && (
                 <View style={st.loadingOverlay}>
-                  <ActivityIndicator size="large" color={theme.accent} />
+                  <ActivityIndicator size="large" color={PathB.coral} />
                   <Text style={[st.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                     {t("broadcasts.loadingStream")}
                   </Text>

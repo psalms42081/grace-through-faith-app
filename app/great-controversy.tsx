@@ -20,7 +20,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenHeader from "@/components/ScreenHeader";
 import { apiRequest } from "@/lib/query-client";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { GC_NODES, GCNode } from "@/data/great-controversy";
@@ -46,7 +47,7 @@ const TIMELINE_PHASES = [
 ];
 
 const LEGEND_ITEMS = [
-  { label: "Scripture", color: "#C9933A" },
+  { label: "Scripture", color: PathB.coralInk },
   { label: "History", color: "#3B82F6" },
   { label: "Prophecy", color: "#8B5CF6" },
   { label: "Belief", color: "#2E7D32" },
@@ -114,13 +115,13 @@ function NodeCard({
   return (
     <View style={styles.nodeRow}>
       <View style={styles.spineColumn}>
-        <View style={[styles.spineLine, { backgroundColor: "rgba(201, 147, 58, 0.3)" }]} />
+        <View style={[styles.spineLine, { backgroundColor: PathB.coral + "4D" }]} />
         <View
           style={[
             styles.nodeDot,
             {
               backgroundColor: node.color,
-              borderColor: node.isCurrentEra ? "#C9933A" : "rgba(245, 240, 232, 0.2)",
+              borderColor: node.isCurrentEra ? PathB.coral : theme.border,
               borderWidth: node.isCurrentEra ? 3 : 1.5,
             },
           ]}
@@ -144,10 +145,10 @@ function NodeCard({
             styles.card,
             {
               backgroundColor: isExpanded
-                ? "rgba(201, 147, 58, 0.12)"
+                ? PathB.coral + "14"
                 : theme.backgroundCard,
               borderColor: isExpanded
-                ? "rgba(201, 147, 58, 0.3)"
+                ? PathB.coral + "4D"
                 : theme.border,
               opacity: pressed ? 0.85 : 1,
             },
@@ -188,10 +189,10 @@ function NodeCard({
               </Text>
 
               {depth !== "quick" && (
-                <View style={[styles.significanceBox, { backgroundColor: "rgba(201, 147, 58, 0.08)" }]}>
+                <View style={[styles.significanceBox, { backgroundColor: SWEEP_LIGHT.backgroundSecondary }]}>
                   <View style={styles.significanceHeader}>
-                    <Ionicons name="diamond-outline" size={14} color="#C9933A" />
-                    <Text style={[styles.significanceLabel, { color: "#C9933A" }]}>
+                    <Ionicons name="diamond-outline" size={14} color={PathB.ink} />
+                    <Text style={[styles.significanceLabel, { color: PathB.ink }]}>
                       Why This Matters
                     </Text>
                   </View>
@@ -203,8 +204,8 @@ function NodeCard({
 
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="book-outline" size={14} color={theme.accent} />
-                  <Text style={[styles.sectionLabel, { color: theme.accent }]}>
+                  <Ionicons name="book-outline" size={14} color={PathB.ink} />
+                  <Text style={[styles.sectionLabel, { color: PathB.ink }]}>
                     Key Scriptures
                   </Text>
                 </View>
@@ -216,16 +217,16 @@ function NodeCard({
                       style={({ pressed }) => [
                         styles.scriptureChip,
                         {
-                          backgroundColor: "rgba(201, 147, 58, 0.1)",
-                          borderColor: "rgba(201, 147, 58, 0.2)",
+                          backgroundColor: SWEEP_LIGHT.backgroundSecondary,
+                          borderColor: theme.border,
                           opacity: pressed ? 0.7 : 1,
                         },
                       ]}
                     >
-                      <Text style={[styles.scriptureChipText, { color: "#C9933A" }]}>
+                      <Text style={[styles.scriptureChipText, { color: PathB.ink }]}>
                         {s.ref}
                       </Text>
-                      <Ionicons name="open-outline" size={10} color="#C9933A" />
+                      <Ionicons name="open-outline" size={10} color={PathB.ink} />
                     </Pressable>
                   ))}
                 </View>
@@ -314,26 +315,26 @@ function NodeCard({
                     style={({ pressed }) => [
                       styles.aiButton,
                       {
-                        backgroundColor: "rgba(201, 147, 58, 0.12)",
-                        borderColor: "rgba(201, 147, 58, 0.3)",
+                        backgroundColor: SWEEP_LIGHT.backgroundSecondary,
+                        borderColor: theme.border,
                         opacity: pressed ? 0.7 : 1,
                       },
                     ]}
                   >
                     {aiLoading ? (
-                      <ActivityIndicator size="small" color="#C9933A" />
+                      <ActivityIndicator size="small" color={PathB.ink} />
                     ) : (
-                      <Ionicons name="sparkles" size={16} color="#C9933A" />
+                      <Ionicons name="sparkles" size={16} color={PathB.ink} />
                     )}
-                    <Text style={[styles.aiButtonText, { color: "#C9933A" }]}>
+                    <Text style={[styles.aiButtonText, { color: PathB.ink }]}>
                       {aiData ? "AI Insight" : "Explore with AI Guide"}
                     </Text>
                   </Pressable>
                   {aiData && (
-                    <View style={[styles.aiInsightBox, { backgroundColor: "rgba(201, 147, 58, 0.06)" }]}>
+                    <View style={[styles.aiInsightBox, { backgroundColor: SWEEP_LIGHT.backgroundSecondary }]}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 }}>
-                        <Ionicons name="sparkles" size={10} color="#C9933A" />
-                        <Text style={{ fontSize: 10, color: "#C9933A", fontFamily: "Inter_500Medium" }}>AI-assisted -- verify with Scripture</Text>
+                        <Ionicons name="sparkles" size={10} color={PathB.ink} />
+                        <Text style={{ fontSize: 10, color: PathB.ink, fontFamily: "Inter_500Medium" }}>AI-assisted -- verify with Scripture</Text>
                       </View>
                       <Text style={[styles.aiInsightText, { color: theme.textSecondary }]}>
                         {aiData.narrative}
@@ -353,8 +354,8 @@ function NodeCard({
                         </View>
                       )}
                       {aiData.reflection ? (
-                        <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(201, 147, 58, 0.15)" }}>
-                          <Text style={[styles.aiInsightText, { color: "#C9933A", fontFamily: "Lora_400Regular_Italic", fontSize: 13 }]}>
+                        <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.border }}>
+                          <Text style={[styles.aiInsightText, { color: PathB.ink, fontFamily: "Lora_400Regular_Italic", fontSize: 13 }]}>
                             {aiData.reflection}
                           </Text>
                         </View>
@@ -404,8 +405,8 @@ function NodeCard({
 
               <View style={[styles.nextStepsSection, { borderTopColor: theme.border }]}>
                 <View style={styles.nextStepsHeader}>
-                  <Ionicons name="arrow-forward-circle-outline" size={14} color={theme.accent} />
-                  <Text style={[styles.nextStepsLabel, { color: theme.accent }]}>
+                  <Ionicons name="arrow-forward-circle-outline" size={14} color={PathB.ink} />
+                  <Text style={[styles.nextStepsLabel, { color: PathB.ink }]}>
                     Next Steps
                   </Text>
                 </View>
@@ -416,14 +417,14 @@ function NodeCard({
                       style={({ pressed }) => [
                         styles.nextStepButton,
                         {
-                          backgroundColor: "rgba(201, 147, 58, 0.08)",
-                          borderColor: "rgba(201, 147, 58, 0.2)",
+                          backgroundColor: SWEEP_LIGHT.backgroundSecondary,
+                          borderColor: theme.border,
                           opacity: pressed ? 0.7 : 1,
                         },
                       ]}
                     >
-                      <Ionicons name="book-outline" size={16} color="#C9933A" />
-                      <Text style={[styles.nextStepText, { color: "#C9933A" }]} numberOfLines={1}>
+                      <Ionicons name="book-outline" size={16} color={PathB.ink} />
+                      <Text style={[styles.nextStepText, { color: PathB.ink }]} numberOfLines={1}>
                         Read the key passage
                       </Text>
                     </Pressable>
@@ -497,7 +498,7 @@ function NodeCard({
 }
 
 export default function GreatControversyScreen() {
-  const { theme } = useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const { depth } = useStudyDepth();
   const { translation } = useTranslation();
@@ -631,12 +632,12 @@ export default function GreatControversyScreen() {
                   styles.phaseChip,
                   {
                     backgroundColor: isActive
-                      ? "rgba(201, 147, 58, 0.18)"
+                      ? SWEEP_LIGHT.backgroundSecondary
                       : viewed
                       ? "rgba(46, 125, 50, 0.08)"
-                      : "rgba(245, 240, 232, 0.06)",
+                      : PathB.surfaceCard,
                     borderColor: isActive
-                      ? "#C9933A"
+                      ? PathB.ink
                       : viewed
                       ? "rgba(46, 125, 50, 0.3)"
                       : theme.border,
@@ -650,7 +651,7 @@ export default function GreatControversyScreen() {
                   style={[
                     styles.phaseChipText,
                     {
-                      color: isActive ? "#C9933A" : viewed ? "#2E7D32" : theme.textMuted,
+                      color: isActive ? PathB.ink : viewed ? "#2E7D32" : theme.textMuted,
                     },
                   ]}
                 >
@@ -798,7 +799,7 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_700Bold",
     fontSize: 16,
     lineHeight: 22,
-    color: "#C9933A",
+    color: PathB.ink,
     marginLeft: 16,
     marginBottom: 12,
     letterSpacing: 0.1,
@@ -850,7 +851,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.ink,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -902,7 +903,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 50,
     left: -2,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -911,7 +912,7 @@ const styles = StyleSheet.create({
   youAreHereText: {
     fontFamily: "Inter_700Bold",
     fontSize: 8,
-    color: "#050507",
+    color: "#FFFFFF",
     letterSpacing: 1,
   },
   cardColumn: {

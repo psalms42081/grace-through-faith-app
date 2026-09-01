@@ -13,7 +13,9 @@ import { useLocalSearchParams, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { apiRequest } from "@/lib/query-client";
 
 interface CommentaryEntry {
@@ -75,7 +77,7 @@ export default function HistoricVoicesScreen() {
     chapter: string;
     bookName: string;
   }>();
-  const { theme } = useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [activeCommentator, setActiveCommentator] = useState<string | null>(null);
@@ -169,8 +171,8 @@ export default function HistoricVoicesScreen() {
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: !activeCommentator ? theme.accent : theme.backgroundCard,
-                    borderColor: !activeCommentator ? theme.accent : theme.border,
+                    backgroundColor: !activeCommentator ? SWEEP_LIGHT.backgroundSecondary : PathB.surfaceCard,
+                    borderColor: !activeCommentator ? PathB.ink : theme.border,
                   },
                 ]}
                 testID="filter-all"
@@ -182,7 +184,7 @@ export default function HistoricVoicesScreen() {
                   style={[
                     styles.filterChipText,
                     {
-                      color: !activeCommentator ? "#fff" : theme.textSecondary,
+                      color: !activeCommentator ? PathB.ink : theme.textSecondary,
                       fontFamily: !activeCommentator ? "Inter_600SemiBold" : "Inter_500Medium",
                     },
                   ]}
@@ -200,8 +202,8 @@ export default function HistoricVoicesScreen() {
                     style={[
                       styles.filterChip,
                       {
-                        backgroundColor: isActive ? theme.accent : theme.backgroundCard,
-                        borderColor: isActive ? theme.accent : isPioneer ? theme.accent + "50" : theme.border,
+                        backgroundColor: isActive ? SWEEP_LIGHT.backgroundSecondary : PathB.surfaceCard,
+                        borderColor: isActive ? PathB.ink : theme.border,
                       },
                     ]}
                     testID={`filter-${name.replace(/\s/g, "-").toLowerCase()}`}
@@ -213,7 +215,7 @@ export default function HistoricVoicesScreen() {
                       style={[
                         styles.filterChipText,
                         {
-                          color: isActive ? "#fff" : isPioneer ? theme.accent : theme.textSecondary,
+                          color: isActive ? PathB.ink : isPioneer ? PathB.ink : theme.textSecondary,
                           fontFamily: isActive || isPioneer ? "Inter_600SemiBold" : "Inter_500Medium",
                         },
                       ]}
@@ -236,7 +238,7 @@ export default function HistoricVoicesScreen() {
 
         {(isLoading || generateMutation.isPending) && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={theme.accent} />
+            <ActivityIndicator size="large" color={PathB.coral} />
             <Text style={[styles.loadingText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               Loading commentary...
             </Text>
@@ -251,9 +253,9 @@ export default function HistoricVoicesScreen() {
             </Text>
             <Pressable
               onPress={() => generateMutation.mutate()}
-              style={[styles.retryBtn, { borderColor: theme.accent }]}
+              style={[styles.retryBtn, { backgroundColor: PathB.coral, borderColor: PathB.coral }]}
             >
-              <Text style={[styles.retryText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>Retry</Text>
             </Pressable>
           </View>
         )}
@@ -279,8 +281,8 @@ export default function HistoricVoicesScreen() {
         {adventistEntries.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
-              <Ionicons name="star" size={14} color={theme.accent} />
-              <Text style={[styles.sectionTitle, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+              <Ionicons name="star" size={14} color={PathB.ink} />
+              <Text style={[styles.sectionTitle, { color: PathB.ink, fontFamily: "Inter_700Bold" }]}>
                 Adventist Pioneers
               </Text>
             </View>
@@ -293,18 +295,18 @@ export default function HistoricVoicesScreen() {
                     styles.commentCard,
                     {
                       backgroundColor: theme.backgroundCard,
-                      borderColor: theme.accent + "40",
+                      borderColor: theme.border,
                       borderLeftWidth: 3,
-                      borderLeftColor: theme.accent,
+                      borderLeftColor: PathB.coral,
                     },
                   ]}
                 >
                   <View style={styles.commentHeader}>
                     <View style={styles.commentHeaderLeft}>
-                      <View style={[styles.adventistBadge, { backgroundColor: theme.accent + "18" }]}>
-                        <Ionicons name="star" size={10} color={theme.accent} />
+                      <View style={[styles.adventistBadge, { backgroundColor: SWEEP_LIGHT.backgroundSecondary }]}>
+                        <Ionicons name="star" size={10} color={PathB.ink} />
                       </View>
-                      <Text style={[styles.commentatorName, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[styles.commentatorName, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                         {item.commentator.name}
                       </Text>
                     </View>
@@ -313,16 +315,19 @@ export default function HistoricVoicesScreen() {
                     {item.entry.content}
                   </Text>
                   <View style={styles.egwFooter}>
+                    <Text style={[styles.aiSummaryLabel, { color: HV2.inkMutedText, fontFamily: "Inter_600SemiBold" }]}>
+                      AI-generated summary
+                    </Text>
                     <Text style={[styles.egwDisclaimer, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      Thematic summary based on {item.commentator.name}'s known theological emphases.
+                      Thematic summary based on {item.commentator.name}'s known theological emphases. Not a quotation from their published works.
                     </Text>
                     {isEgw && (
                       <Pressable
                         onPress={() => Linking.openURL("https://egwwritings.org")}
                         style={({ pressed }) => [styles.egwLink, { opacity: pressed ? 0.6 : 1 }]}
                       >
-                        <Ionicons name="open-outline" size={13} color={theme.accent} />
-                        <Text style={[styles.egwLinkText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                        <Ionicons name="open-outline" size={13} color={PathB.coralInk} />
+                        <Text style={[styles.egwLinkText, { color: PathB.coralInk, fontFamily: "Inter_500Medium" }]}>
                           Read more on egwwritings.org
                         </Text>
                       </Pressable>
@@ -452,8 +457,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "#E7E0D2",
     gap: 8,
+  },
+  aiSummaryLabel: {
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
   },
   egwDisclaimer: { fontSize: 11, fontStyle: "italic" as const },
   egwLink: {

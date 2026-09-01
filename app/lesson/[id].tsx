@@ -23,7 +23,8 @@ import { useTranslation } from "@/context/TranslationContext";
 import { useStudyDepth, StudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 
@@ -100,31 +101,31 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
         style={({ pressed }) => [
           evStyles.refBtn,
           {
-            backgroundColor: expanded ? theme.accent + "15" : theme.accent + "08",
-            borderColor: expanded ? theme.accent + "40" : theme.accent + "20",
+            backgroundColor: expanded ? PathB.ink + "15" : PathB.ink + "08",
+            borderColor: expanded ? PathB.ink + "40" : PathB.ink + "20",
             opacity: pressed ? 0.8 : 1,
           },
         ]}
       >
         <View style={evStyles.refRow}>
-          <Ionicons name="book" size={14} color={theme.accent} />
+          <Ionicons name="book" size={14} color={PathB.ink} />
           <Text style={[evStyles.refText, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
             {reference}
           </Text>
         </View>
         <View style={evStyles.explainTag}>
-          <Ionicons name="search" size={12} color={theme.accent} />
-          <Text style={[evStyles.explainLabel, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+          <Ionicons name="search" size={12} color={PathB.ink} />
+          <Text style={[evStyles.explainLabel, { color: PathB.ink, fontFamily: "Inter_500Medium" }]}>
             {expanded && explanation ? "Hide" : "Explain"}
           </Text>
         </View>
       </Pressable>
 
       {expanded && (
-        <View style={[evStyles.explanationBox, { backgroundColor: theme.accent + "06", borderColor: theme.accent + "18" }]}>
+        <View style={[evStyles.explanationBox, { backgroundColor: PathB.ink + "06", borderColor: PathB.ink + "18" }]}>
           {loading && (
             <View style={evStyles.loadingRow}>
-              <ActivityIndicator size="small" color={theme.accent} />
+              <ActivityIndicator size="small" color={PathB.ink} />
               <Text style={[evStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 Generating explanation...
               </Text>
@@ -139,8 +140,8 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
             <>
               {!!explTranslation && (
                 <View style={evStyles.explTxRow}>
-                  <Ionicons name="book-outline" size={11} color={theme.accent} />
-                  <Text style={[evStyles.explTxLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <Ionicons name="book-outline" size={11} color={PathB.ink} />
+                  <Text style={[evStyles.explTxLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                     Commentary · {explTranslation}
                   </Text>
                 </View>
@@ -242,13 +243,13 @@ const evStyles = StyleSheet.create({
 function SabbathPillToggle({ isSabbath, onToggle, theme }: { isSabbath: boolean; onToggle: () => void; theme: any }) {
   return (
     <Pressable onPress={onToggle} style={[sabbathStyles.pillOuter, { backgroundColor: theme.backgroundElevated, borderColor: theme.border }]}>
-      <View style={[sabbathStyles.pillOption, !isSabbath && { backgroundColor: theme.accent + "20" }]}>
-        <Text style={[sabbathStyles.pillText, { color: !isSabbath ? theme.accent : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+      <View style={[sabbathStyles.pillOption, !isSabbath && { backgroundColor: PathB.ink + "20" }]}>
+        <Text style={[sabbathStyles.pillText, { color: !isSabbath ? PathB.ink : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
           Study
         </Text>
       </View>
-      <View style={[sabbathStyles.pillOption, isSabbath && { backgroundColor: theme.accent + "20" }]}>
-        <Text style={[sabbathStyles.pillText, { color: isSabbath ? theme.accent : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+      <View style={[sabbathStyles.pillOption, isSabbath && { backgroundColor: PathB.ink + "20" }]}>
+        <Text style={[sabbathStyles.pillText, { color: isSabbath ? PathB.ink : theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
           Sabbath
         </Text>
       </View>
@@ -258,8 +259,8 @@ function SabbathPillToggle({ isSabbath, onToggle, theme }: { isSabbath: boolean;
 
 function SabbathReadingBanner({ theme }: { theme: any }) {
   return (
-    <View style={[sabbathStyles.banner, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
-      <Text style={[sabbathStyles.bannerTitle, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+    <View style={[sabbathStyles.banner, { backgroundColor: PathB.ink + "08", borderColor: PathB.ink + "20" }]}>
+      <Text style={[sabbathStyles.bannerTitle, { color: PathB.ink, fontFamily: "Lora_700Bold" }]}>
         Sabbath Reading
       </Text>
       <Text style={[sabbathStyles.bannerSub, { color: theme.textSecondary, fontFamily: "Lora_400Regular_Italic" }]}>
@@ -384,12 +385,12 @@ function SabbathActionsSheet({
                     <Ionicons
                       name={item.icon as any}
                       size={20}
-                      color={item.accent ? theme.accent : (item as any).color || theme.text}
+                      color={item.accent ? PathB.ink : (item as any).color || theme.text}
                     />
                     <Text
                       style={[
                         sabbathStyles.sheetRowText,
-                        { color: item.accent ? theme.accent : theme.text, fontFamily: "Inter_500Medium" },
+                        { color: item.accent ? PathB.ink : theme.text, fontFamily: "Inter_500Medium" },
                       ]}
                     >
                       {item.label}
@@ -537,7 +538,7 @@ interface LessonData {
 }
 
 const SECTION_ICONS: Record<string, { icon: string; color: string; label: string }> = {
-  anchor: { icon: "book", color: "#C9933A", label: "Scripture" },
+  anchor: { icon: "book", color: PathB.ink, label: "Scripture" },
   explain: { icon: "bulb", color: "#5B86E5", label: "Explanation" },
   integrate: { icon: "git-merge", color: "#8B5CF6", label: "Integration" },
   practice: { icon: "fitness", color: "#2E7D32", label: "Practice" },
@@ -567,7 +568,7 @@ function SectionHeader({ type, title, isCompleted, isSabbath }: { type: string; 
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { theme, isDark } = useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { resolvedLang } = useContentLanguage();
@@ -744,7 +745,7 @@ export default function LessonScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.loadingContainer, { paddingTop: topPad + 60 }]}>
-          <ActivityIndicator size="large" color={theme.accent} />
+          <ActivityIndicator size="large" color={PathB.coral} />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>Loading lesson...</Text>
         </View>
       </View>
@@ -764,7 +765,7 @@ export default function LessonScreen() {
           <Text style={[styles.errorText, { color: theme.textSecondary }]}>
             Could not load this lesson. Please try again later.
           </Text>
-          <Pressable onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: theme.accent }]}>
+          <Pressable onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: PathB.coral }]}>
             <Text style={styles.retryBtnText}>Go Back</Text>
           </Pressable>
         </View>
@@ -803,16 +804,16 @@ export default function LessonScreen() {
                     style={[
                       styles.progressStep,
                       done
-                        ? { backgroundColor: theme.accent }
+                        ? { backgroundColor: PathB.coral }
                         : isCurrent
-                          ? { backgroundColor: theme.accent + "40", borderWidth: 2, borderColor: theme.accent }
+                          ? { backgroundColor: PathB.coral + "40", borderWidth: 2, borderColor: PathB.coral }
                           : { backgroundColor: theme.border },
                     ]}
                   >
                     {done && <Ionicons name="checkmark" size={10} color="#fff" />}
                   </View>
                   {i < sections.length - 1 && (
-                    <View style={[styles.progressLine, { backgroundColor: done ? theme.accent : theme.border }]} />
+                    <View style={[styles.progressLine, { backgroundColor: done ? PathB.coral : theme.border }]} />
                   )}
                 </View>
               );
@@ -842,15 +843,15 @@ export default function LessonScreen() {
         {sabbathMode && <SabbathReadingBanner theme={theme} />}
 
         {lesson.anchorText && (
-          <View style={[styles.anchorBanner, { backgroundColor: theme.accent + "10", borderColor: theme.accent + "30" }]}>
-            <Ionicons name="book-outline" size={18} color={theme.accent} />
-            <Text style={[styles.anchorRef, { color: theme.accent }]}>{lesson.anchorText}</Text>
+          <View style={[styles.anchorBanner, { backgroundColor: PathB.ink + "10", borderColor: PathB.ink + "30" }]}>
+            <Ionicons name="book-outline" size={18} color={PathB.ink} />
+            <Text style={[styles.anchorRef, { color: PathB.ink }]}>{lesson.anchorText}</Text>
             {lesson.anchorBookId > 0 && (
               <Pressable
                 onPress={() => router.push(`/read/${lesson.anchorBookId}/${lesson.anchorChapter}`)}
                 hitSlop={8}
               >
-                <Ionicons name="open-outline" size={16} color={theme.accent} />
+                <Ionicons name="open-outline" size={16} color={PathB.ink} />
               </Pressable>
             )}
           </View>
@@ -871,9 +872,9 @@ export default function LessonScreen() {
                 {
                   backgroundColor: theme.backgroundCard,
                   borderColor: isCurrent && !sabbathMode
-                    ? theme.accent + "60"
+                    ? PathB.ink + "60"
                     : (isCompleted && !sabbathMode)
-                      ? theme.accent + "40"
+                      ? PathB.ink + "40"
                       : theme.border,
                 },
                 isCurrent && !sabbathMode && { borderWidth: 1.5 },
@@ -920,11 +921,11 @@ export default function LessonScreen() {
                       return fallbackRefs.length > 0 ? (
                         <View style={evStyles.sectionWrapper}>
                           <View style={evStyles.dividerRow}>
-                            <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                            <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                            <View style={[evStyles.dividerLine, { backgroundColor: PathB.ink + "25" }]} />
+                            <Text style={[evStyles.dividerText, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                               Explain a Passage
                             </Text>
-                            <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                            <View style={[evStyles.dividerLine, { backgroundColor: PathB.ink + "25" }]} />
                           </View>
                           {fallbackRefs.map((ref: string) => (
                             <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
@@ -935,11 +936,11 @@ export default function LessonScreen() {
                     return refs.length > 0 ? (
                       <View style={evStyles.sectionWrapper}>
                         <View style={evStyles.dividerRow}>
-                          <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
-                          <Text style={[evStyles.dividerText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                          <View style={[evStyles.dividerLine, { backgroundColor: PathB.ink + "25" }]} />
+                          <Text style={[evStyles.dividerText, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                             Explain a Passage
                           </Text>
-                          <View style={[evStyles.dividerLine, { backgroundColor: theme.accent + "25" }]} />
+                          <View style={[evStyles.dividerLine, { backgroundColor: PathB.ink + "25" }]} />
                         </View>
                         {refs.map((ref) => (
                           <ExplainPassage key={ref} reference={ref} lessonTitle={lesson.title} theme={theme} />
@@ -975,11 +976,11 @@ export default function LessonScreen() {
                       }}
                       style={({ pressed }) => [
                         styles.markCompleteBtn,
-                        { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
+                        { backgroundColor: PathB.ink + "12", opacity: pressed ? 0.7 : 1 },
                       ]}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
-                      <Text style={[styles.markCompleteText, { color: theme.accent }]}>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={PathB.ink} />
+                      <Text style={[styles.markCompleteText, { color: PathB.ink }]}>
                         {sectionIndex < sections.length - 1 ? "Complete & Continue" : "Mark Complete"}
                       </Text>
                     </Pressable>
@@ -991,13 +992,13 @@ export default function LessonScreen() {
         })}
 
         {depth === "quick" && lesson && (
-          <View style={[styles.sectionCard, { backgroundColor: theme.backgroundCard, borderColor: theme.accent + "30" }]}>
+          <View style={[styles.sectionCard, { backgroundColor: theme.backgroundCard, borderColor: PathB.ink + "30" }]}>
             <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 12 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#C9933A18", alignItems: "center" as const, justifyContent: "center" as const }}>
-                <Ionicons name="flash" size={20} color="#C9933A" />
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: SWEEP_LIGHT.backgroundSecondary, alignItems: "center" as const, justifyContent: "center" as const }}>
+                <Ionicons name="flash" size={20} color={PathB.ink} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.8, color: "#C9933A", marginBottom: 2 }}>
+                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.8, color: PathB.coralInk, marginBottom: 2 }}>
                   Key Takeaway
                 </Text>
                 <Text style={{ fontSize: 16, fontFamily: "Lora_600SemiBold", color: theme.text }}>
@@ -1012,7 +1013,7 @@ export default function LessonScreen() {
         )}
 
         {depth === "deep" && lesson && (
-          <View style={[styles.sectionCard, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "25" }]}>
+          <View style={[styles.sectionCard, { backgroundColor: PathB.ink + "08", borderColor: PathB.ink + "25" }]}>
             <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 12 }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#8B5CF618", alignItems: "center" as const, justifyContent: "center" as const }}>
                 <Ionicons name="telescope" size={20} color="#8B5CF6" />
@@ -1080,14 +1081,14 @@ export default function LessonScreen() {
                               ? theme.error + "18"
                               : isCorrect
                                 ? theme.success + "18"
-                                : theme.accent + "15"
+                                : PathB.ink + "15"
                             : theme.backgroundElevated,
                           borderColor: isSelected
                             ? isWrong
                               ? theme.error + "50"
                               : isCorrect
                                 ? theme.success + "50"
-                                : theme.accent + "40"
+                                : PathB.ink + "40"
                             : theme.border,
                         },
                       ]}
@@ -1096,8 +1097,8 @@ export default function LessonScreen() {
                         style={[
                           styles.optionRadio,
                           {
-                            borderColor: isSelected ? theme.accent : theme.textMuted + "50",
-                            backgroundColor: isSelected ? theme.accent : "transparent",
+                            borderColor: isSelected ? PathB.ink : theme.textMuted + "50",
+                            backgroundColor: isSelected ? PathB.ink : "transparent",
                           },
                         ]}
                       >
@@ -1134,7 +1135,7 @@ export default function LessonScreen() {
                   {
                     backgroundColor:
                       Object.keys(assessmentAnswers).length === assessment.items.length
-                        ? theme.accent
+                        ? PathB.ink
                         : theme.textMuted + "30",
                     opacity: pressed ? 0.8 : 1,
                   },
@@ -1198,7 +1199,7 @@ export default function LessonScreen() {
             disabled={completeMutation.isPending}
             style={({ pressed }) => [
               styles.completeBtn,
-              { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+              { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 },
             ]}
           >
             {completeMutation.isPending ? (
@@ -1226,7 +1227,7 @@ export default function LessonScreen() {
             },
           ]}
         >
-          <Ionicons name="ellipsis-horizontal" size={22} color={theme.accent} />
+          <Ionicons name="ellipsis-horizontal" size={22} color={PathB.ink} />
         </Pressable>
       )}
 
@@ -1258,12 +1259,12 @@ export default function LessonScreen() {
         <View style={mcStyles.overlay}>
           <View style={[mcStyles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
             <View style={mcStyles.iconRow}>
-              <View style={[mcStyles.iconCircle, { backgroundColor: theme.accent + "20" }]}>
-                <Ionicons name="ribbon" size={32} color={theme.accent} />
+              <View style={[mcStyles.iconCircle, { backgroundColor: PathB.ink + "20" }]}>
+                <Ionicons name="ribbon" size={32} color={PathB.ink} />
               </View>
             </View>
 
-            <Text style={[mcStyles.heading, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+            <Text style={[mcStyles.heading, { color: PathB.ink, fontFamily: "Lora_700Bold" }]}>
               Module Completed
             </Text>
 
@@ -1274,8 +1275,8 @@ export default function LessonScreen() {
                 </Text>
 
                 {moduleCompletionData.learningObjective ? (
-                  <View style={[mcStyles.objectiveBox, { borderColor: theme.accent + "25", backgroundColor: theme.accent + "08" }]}>
-                    <Text style={[mcStyles.objectiveLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <View style={[mcStyles.objectiveBox, { borderColor: PathB.ink + "25", backgroundColor: PathB.ink + "08" }]}>
+                    <Text style={[mcStyles.objectiveLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                       LEARNING OBJECTIVE
                     </Text>
                     <Text style={[mcStyles.objectiveText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
@@ -1307,8 +1308,8 @@ export default function LessonScreen() {
                       style={[
                         mcStyles.ratingBtn,
                         {
-                          backgroundColor: confidenceRating >= n ? theme.accent : theme.accent + "12",
-                          borderColor: confidenceRating >= n ? theme.accent : theme.border,
+                          backgroundColor: confidenceRating >= n ? PathB.ink : PathB.ink + "12",
+                          borderColor: confidenceRating >= n ? PathB.ink : theme.border,
                         },
                       ]}
                     >
@@ -1358,7 +1359,7 @@ export default function LessonScreen() {
               }}
               style={({ pressed }) => [
                 mcStyles.doneBtn,
-                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 },
               ]}
             >
               {confidenceMutation.isPending ? (
@@ -1384,12 +1385,12 @@ export default function LessonScreen() {
             <View style={tcStyles.accentLine} />
 
             <View style={tcStyles.iconRow}>
-              <View style={[tcStyles.iconCircle, { backgroundColor: theme.accent + "15" }]}>
-                <Ionicons name="sparkles" size={36} color={theme.accent} />
+              <View style={[tcStyles.iconCircle, { backgroundColor: PathB.ink + "15" }]}>
+                <Ionicons name="sparkles" size={36} color={PathB.ink} />
               </View>
             </View>
 
-            <Text style={[tcStyles.heading, { color: theme.accent, fontFamily: "Lora_700Bold" }]}>
+            <Text style={[tcStyles.heading, { color: PathB.ink, fontFamily: "Lora_700Bold" }]}>
               Journey Complete
             </Text>
 
@@ -1401,7 +1402,7 @@ export default function LessonScreen() {
 
             <View style={[tcStyles.statsRow, { borderColor: theme.border }]}>
               <View style={tcStyles.stat}>
-                <Text style={[tcStyles.statNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                <Text style={[tcStyles.statNum, { color: PathB.ink, fontFamily: "Inter_700Bold" }]}>
                   {trackCompletionData?.totalModules || 0}
                 </Text>
                 <Text style={[tcStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -1410,7 +1411,7 @@ export default function LessonScreen() {
               </View>
               <View style={[tcStyles.statDivider, { backgroundColor: theme.border }]} />
               <View style={tcStyles.stat}>
-                <Text style={[tcStyles.statNum, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                <Text style={[tcStyles.statNum, { color: PathB.ink, fontFamily: "Inter_700Bold" }]}>
                   {trackCompletionData?.totalLessons || 0}
                 </Text>
                 <Text style={[tcStyles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -1419,7 +1420,7 @@ export default function LessonScreen() {
               </View>
             </View>
 
-            <View style={[tcStyles.quoteBox, { backgroundColor: theme.accent + "08", borderColor: theme.accent + "20" }]}>
+            <View style={[tcStyles.quoteBox, { backgroundColor: PathB.ink + "08", borderColor: PathB.ink + "20" }]}>
               <Text style={[tcStyles.quoteText, { color: theme.text, fontFamily: "Lora_400Regular_Italic" }]}>
                 The goal of doctrine is not merely understanding{"\u2014"}but transformation.
               </Text>
@@ -1436,7 +1437,7 @@ export default function LessonScreen() {
               }}
               style={({ pressed }) => [
                 tcStyles.doneBtn,
-                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 },
               ]}
             >
               <Text style={[tcStyles.doneBtnText, { fontFamily: "Inter_600SemiBold" }]}>
@@ -1465,7 +1466,7 @@ const tcStyles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
   },
   iconRow: {
     alignItems: "center" as const,
@@ -1691,13 +1692,13 @@ const sectionStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: "Lora_600SemiBold",
-    color: "#F0EBE0",
+    color: PathB.ink,
   },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#C9933A",
+    backgroundColor: "#2E7D32",
     alignItems: "center",
     justifyContent: "center",
   },

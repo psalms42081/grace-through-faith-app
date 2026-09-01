@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
@@ -21,7 +22,6 @@ import {
   type TouchpointGeneratedStudy,
 } from "@shared/touchpoint-study";
 
-const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
 
 export default function TouchPointStudyScreen() {
@@ -69,7 +69,7 @@ export default function TouchPointStudyScreen() {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={GOLD} />
+          <ActivityIndicator size="large" color={PathB.coral} />
           <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
             Generating your Bible study...
           </Text>
@@ -82,9 +82,9 @@ export default function TouchPointStudyScreen() {
           </Text>
           <Pressable
             onPress={() => safeGoBack(router, `/touchpoint-topic?topicId=${topicId}`)}
-            style={[styles.retryBtn, { borderColor: GOLD }]}
+            style={[styles.retryBtn, { borderColor: PathB.coral }]}
           >
-            <Text style={[styles.retryText, { color: GOLD }]}>Go Back</Text>
+            <Text style={[styles.retryText, { color: PathB.coral }]}>Go Back</Text>
           </Pressable>
         </View>
       ) : (
@@ -134,8 +134,8 @@ export default function TouchPointStudyScreen() {
                 {section.teaching}
               </Text>
 
-              <View style={[styles.reflectionBox, { backgroundColor: GOLD + "10", borderColor: GOLD + "30" }]}>
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color={GOLD} />
+              <View style={[styles.reflectionBox, { backgroundColor: PathB.coral + "10", borderColor: PathB.coral + "30" }]}>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color={PathB.coral} />
                 <Text style={[styles.reflectionText, { color: theme.textSecondary }]}>
                   {section.reflection}
                 </Text>
@@ -145,7 +145,7 @@ export default function TouchPointStudyScreen() {
           })}
 
           <View style={[styles.conclusionBox, { borderTopColor: borderColor }]}>
-            <Text style={[styles.conclusionLabel, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.conclusionLabel, { color: PathB.coralInk, fontFamily: "Inter_600SemiBold" }]}>
               Conclusion
             </Text>
             <Text style={[styles.conclusionText, { color: theme.text }]}>
@@ -174,7 +174,7 @@ export default function TouchPointStudyScreen() {
               </Text>
               {study.groupDiscussion.map((q, i) => (
                 <View key={i} style={[styles.discussionRow, { borderColor }]}>
-                  <Text style={[styles.discussionNumber, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[styles.discussionNumber, { color: PathB.coralInk, fontFamily: "Inter_600SemiBold" }]}>
                     {i + 1}
                   </Text>
                   <Text style={[styles.discussionText, { color: theme.text }]}>

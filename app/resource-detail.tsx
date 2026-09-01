@@ -13,7 +13,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import ScreenHeader from "@/components/ScreenHeader";
 
 interface ResourceDetail {
@@ -65,7 +67,7 @@ function SectionCard({
       sStyles.card,
       {
         backgroundColor: theme.backgroundCard,
-        borderColor: isCurrent ? theme.accent + "60" : completed ? "#22C55E30" : theme.border,
+        borderColor: isCurrent ? PathB.coral : completed ? "#22C55E30" : theme.border,
       },
       isCurrent && { borderWidth: 1.5 },
     ]}>
@@ -106,11 +108,11 @@ function SectionCard({
               onPress={onToggleComplete}
               style={({ pressed }) => [
                 sStyles.completeBtn,
-                { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
+                { backgroundColor: PathB.coral, opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
-              <Text style={[sStyles.completeBtnText, { color: theme.accent }]}>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+              <Text style={[sStyles.completeBtnText, { color: "#fff" }]}>
                 Complete & Continue
               </Text>
             </Pressable>
@@ -134,7 +136,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
   if (!content) return null;
 
   const DEPTH_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-    surface: { label: "Starter", color: "#C9933A", bg: "rgba(201,147,58,0.15)" },
+    surface: { label: "Starter", color: PathB.coralInk, bg: PathB.coral + "18" },
     intermediate: { label: "Group Discussion", color: "#1E88E5", bg: "rgba(30,136,229,0.15)" },
     deep: { label: "Go Deeper", color: "#8B5CF6", bg: "rgba(139,92,246,0.15)" },
   };
@@ -145,7 +147,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
         <SectionCard
           title="This Week's Big Picture"
           icon="book-outline"
-          iconColor="#C9933A"
+          iconColor={PathB.ink}
           theme={theme}
           completed={completedSections.has("overview")}
           onToggleComplete={() => toggleSection("overview")}
@@ -187,8 +189,8 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                 <Text style={[sStyles.guidanceLabel, { color: "#1565C0" }]}>Open your Bible and read</Text>
               </View>
               <View style={sStyles.scriptureChip}>
-                <Ionicons name="document-text-outline" size={13} color={theme.accent} />
-                <Text style={[sStyles.scriptureRef, { color: theme.accent }]}>{reading}</Text>
+                <Ionicons name="document-text-outline" size={13} color={PathB.ink} />
+                <Text style={[sStyles.scriptureRef, { color: PathB.ink }]}>{reading}</Text>
               </View>
             </View>
           )}
@@ -206,10 +208,10 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           {day.keyInsight && (
             <View style={sStyles.guidanceBlock}>
               <View style={sStyles.guidanceHeader}>
-                <Ionicons name="bulb-outline" size={14} color="#C9933A" />
-                <Text style={[sStyles.guidanceLabel, { color: "#C9933A" }]}>Key Insight</Text>
+                <Ionicons name="bulb-outline" size={14} color={PathB.ink} />
+                <Text style={[sStyles.guidanceLabel, { color: PathB.ink }]}>Key Insight</Text>
               </View>
-              <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_400Regular_Italic" }]}>
+              <Text style={[sStyles.promptText, { color: PathB.ink, fontFamily: "Lora_400Regular_Italic" }]}>
                 {day.keyInsight}
               </Text>
             </View>
@@ -246,7 +248,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
             return (
               <View key={i} style={sStyles.questionBlock}>
                 <View style={{ flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 8 }}>
-                  <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[sStyles.listNum, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                     {i + 1}.
                   </Text>
                   <View style={{ flex: 1 }}>
@@ -308,7 +310,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                       <Text style={[sStyles.guidanceLabel, { color: "#E65100" }]}>This week's verse</Text>
                     </View>
                     <View style={sStyles.verseCard}>
-                      <Text style={[sStyles.promptText, { color: "#C9933A", fontFamily: "Lora_600SemiBold", textAlign: "center" as const }]}>
+                      <Text style={[sStyles.promptText, { color: PathB.ink, fontFamily: "Lora_600SemiBold", textAlign: "center" as const }]}>
                         "{mv.verse}"
                       </Text>
                       <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, textAlign: "center" as const, marginTop: 4 }}>
@@ -325,8 +327,8 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                     </View>
                     {mv.meditationSteps.map((step: string, i: number) => (
                       <View key={i} style={sStyles.numberedStep}>
-                        <View style={[sStyles.stepCircle, { borderColor: theme.accent }]}>
-                          <Text style={[sStyles.stepCircleNum, { color: theme.accent }]}>{i + 1}</Text>
+                        <View style={[sStyles.stepCircle, { borderColor: PathB.ink }]}>
+                          <Text style={[sStyles.stepCircleNum, { color: PathB.ink }]}>{i + 1}</Text>
                         </View>
                         <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
                           {step}
@@ -408,7 +410,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
                   </View>
                   {content.familyWorshipAdaptation.discussionForKids.map((q: string, i: number) => (
                     <View key={i} style={sStyles.listItem}>
-                      <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                      <Text style={[sStyles.listNum, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                         {i + 1}.
                       </Text>
                       <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
@@ -451,12 +453,12 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           {Array.isArray(content.egwConnections) ? (
             content.egwConnections.map((conn: any, i: number) => (
               <View key={i} style={sStyles.egwItem}>
-                <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[sStyles.bodyText, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                   {conn.topic}
                 </Text>
                 <View style={sStyles.scriptureChip}>
-                  <Ionicons name="bookmark-outline" size={12} color={theme.accent} />
-                  <Text style={{ color: theme.accent, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                  <Ionicons name="bookmark-outline" size={12} color={PathB.ink} />
+                  <Text style={{ color: PathB.ink, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                     {conn.bookReference}
                   </Text>
                 </View>
@@ -494,7 +496,7 @@ function TopicalStudyContent({ content, theme, completedSections, toggleSection,
         <SectionCard
           title="Introduction"
           icon="document-text-outline"
-          iconColor="#C9933A"
+          iconColor={PathB.ink}
           theme={theme}
           completed={completedSections.has("intro")}
           onToggleComplete={() => toggleSection("intro")}
@@ -531,7 +533,7 @@ function TopicalStudyContent({ content, theme, completedSections, toggleSection,
           ) : Array.isArray(content.scriptureFoundation) ? (
             content.scriptureFoundation.map((s: any, i: number) => (
               <View key={i} style={{ marginBottom: i < content.scriptureFoundation.length - 1 ? 16 : 0 }}>
-                <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Lora_600SemiBold" }]}>
+                <Text style={[sStyles.bodyText, { color: PathB.ink, fontFamily: "Lora_600SemiBold" }]}>
                   {s.reference}
                 </Text>
                 {s.text && (
@@ -593,7 +595,7 @@ function TopicalStudyContent({ content, theme, completedSections, toggleSection,
             const guidance = typeof q === "object" && q.guidanceNote ? q.guidanceNote : null;
             return (
               <View key={i} style={sStyles.listItem}>
-                <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[sStyles.listNum, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                   {i + 1}.
                 </Text>
                 <View style={{ flex: 1 }}>
@@ -673,7 +675,7 @@ function TopicalStudyContent({ content, theme, completedSections, toggleSection,
         >
           {content.furtherStudy.map((item: any, i: number) => (
             <View key={i} style={{ marginBottom: i < content.furtherStudy.length - 1 ? 10 : 0 }}>
-              <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[sStyles.bodyText, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                 {typeof item === "string" ? item : item.resource}
               </Text>
               {typeof item === "object" && item.description && (
@@ -708,7 +710,7 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
         <SectionCard
           title={content.theme ? `Theme: ${content.theme}` : "Introduction"}
           icon="document-text-outline"
-          iconColor="#C9933A"
+          iconColor={PathB.ink}
           theme={theme}
           completed={completedSections.has("fw-intro")}
           onToggleComplete={() => toggleSection("fw-intro")}
@@ -743,7 +745,7 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
         >
           {day.reading && (
             <View style={sStyles.subSection}>
-              <Text style={[sStyles.subLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[sStyles.subLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                 Reading
               </Text>
               {typeof day.reading === "string" ? (
@@ -752,7 +754,7 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
                 </Text>
               ) : (
                 <>
-                  <Text style={[sStyles.bodyText, { color: "#C9933A", fontFamily: "Lora_600SemiBold" }]}>
+                  <Text style={[sStyles.bodyText, { color: PathB.ink, fontFamily: "Lora_600SemiBold" }]}>
                     {day.reading.reference}
                   </Text>
                   {day.reading.summary && (
@@ -806,7 +808,7 @@ function FamilyWorshipContent({ content, theme, completedSections, toggleSection
                 </Text>
                 {qList.map((q: string, qi: number) => (
                   <View key={qi} style={sStyles.listItem}>
-                    <Text style={[sStyles.listNum, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    <Text style={[sStyles.listNum, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                       {qi + 1}.
                     </Text>
                     <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular", flex: 1 }]}>
@@ -889,7 +891,7 @@ function GenericContent({ content, theme, completedSections, toggleSection, isSe
           key={key}
           title={key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
           icon="document-text-outline"
-          iconColor="#C9933A"
+          iconColor={PathB.ink}
           theme={theme}
           completed={completedSections.has(key)}
           onToggleComplete={() => toggleSection(key)}
@@ -940,7 +942,7 @@ function getSectionKeys(resource: ResourceDetail | undefined | null): string[] {
 
 export default function ResourceDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const { theme } = useTheme();
+  const theme = SWEEP_LIGHT;
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
@@ -1038,7 +1040,7 @@ export default function ResourceDetailScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ScreenHeader title="Resource" testID="resource-detail-header" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#C9933A" />
+          <ActivityIndicator size="large" color={PathB.coral} />
         </View>
       </View>
     );
@@ -1080,7 +1082,7 @@ export default function ResourceDetailScreen() {
             <Ionicons
               name={bookmarkIcon as any}
               size={24}
-              color={resource.isBookmarked ? "#C9933A" : theme.text}
+              color={resource.isBookmarked ? PathB.coral : theme.text}
             />
           </Pressable>
         }
@@ -1088,14 +1090,14 @@ export default function ResourceDetailScreen() {
 
       {bookmarkToast && (
         <View style={styles.bookmarkToast}>
-          <Ionicons name="bookmark" size={14} color="#C9933A" />
+          <Ionicons name="bookmark" size={14} color={PathB.ink} />
           <Text style={styles.bookmarkToastText}>Saved to Library</Text>
         </View>
       )}
 
       {authToast && (
         <View style={[styles.bookmarkToast, { backgroundColor: "rgba(30,30,40,0.96)" }]}>
-          <Ionicons name="log-in-outline" size={14} color="#C9933A" />
+          <Ionicons name="log-in-outline" size={14} color={PathB.ink} />
           <Text style={styles.bookmarkToastText}>Sign in to save to Library</Text>
         </View>
       )}
@@ -1116,7 +1118,7 @@ export default function ResourceDetailScreen() {
           <View style={styles.heroMeta}>
             {resource.estimatedMinutes && (
               <View style={styles.heroMetaItem}>
-                <Ionicons name="time-outline" size={14} color="rgba(237,229,213,0.65)" />
+                <Ionicons name="time-outline" size={14} color={HV2.inkMutedText} />
                 <Text style={[styles.heroMetaText, { fontFamily: "Inter_400Regular" }]}>
                   {resource.estimatedMinutes} min
                 </Text>
@@ -1124,7 +1126,7 @@ export default function ResourceDetailScreen() {
             )}
             {isCompanion && totalSections > 0 && (
               <View style={styles.heroMetaItem}>
-                <Ionicons name="layers-outline" size={14} color="rgba(237,229,213,0.65)" />
+                <Ionicons name="layers-outline" size={14} color={HV2.inkMutedText} />
                 <Text style={[styles.heroMetaText, { fontFamily: "Inter_400Regular" }]}>
                   {totalSections} sections
                 </Text>
@@ -1134,12 +1136,12 @@ export default function ResourceDetailScreen() {
         </View>
 
         <View style={styles.progressSection}>
-          <View style={[styles.progressBar, { backgroundColor: "rgba(201,147,58,0.15)" }]}>
+          <View style={[styles.progressBar, { backgroundColor: PathB.coral + "26" }]}>
             <View
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: "#C9933A",
+                  backgroundColor: PathB.coral,
                   width: `${Math.round((completedSections.size / Math.max(totalSections, 1)) * 100)}%`,
                 },
               ]}
@@ -1273,13 +1275,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   heroTitle: {
-    color: "#EDE5D5",
+    color: PathB.ink,
     fontSize: 20,
     textAlign: "center",
     lineHeight: 28,
   },
   heroDesc: {
-    color: "rgba(237,229,213,0.65)",
+    color: HV2.inkMutedText,
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
@@ -1295,7 +1297,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   heroMetaText: {
-    color: "rgba(237,229,213,0.65)",
+    color: HV2.inkMutedText,
     fontSize: 12,
   },
   progressSection: { gap: 6 },
@@ -1318,8 +1320,8 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,
-    backgroundColor: "rgba(201, 147, 58, 0.15)",
-    borderColor: "rgba(201, 147, 58, 0.3)",
+    backgroundColor: PathB.coral + "26",
+    borderColor: PathB.coral + "4D",
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 14,
@@ -1329,7 +1331,7 @@ const styles = StyleSheet.create({
   bookmarkToastText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
-    color: "#C9933A",
+    color: PathB.ink,
   },
 });
 
@@ -1446,8 +1448,8 @@ const sStyles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.3)",
-    backgroundColor: "rgba(201,147,58,0.08)",
+    borderColor: PathB.coral + "4D",
+    backgroundColor: PathB.coral + "14",
   },
   scriptureRef: {
     fontSize: 14,
@@ -1458,8 +1460,8 @@ const sStyles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.25)",
-    backgroundColor: "rgba(201,147,58,0.06)",
+    borderColor: PathB.coral + "40",
+    backgroundColor: PathB.coral + "10",
   },
   numberedStep: {
     flexDirection: "row",

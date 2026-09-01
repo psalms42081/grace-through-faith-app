@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,6 +32,9 @@ import {
 } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
+import { ENABLE_PREMIUM } from "@/lib/feature-flags";
+import NotificationSettings from "@/components/profile/NotificationSettings";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
 // Path B light sweep tokens
 const CORAL = "#E8604C";
@@ -65,12 +69,16 @@ export default function SettingsScreen() {
   const { isDark } = useTheme(); // Path B light sweep: screen is pinned light
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, userId, isAuthenticated, logout } = useAuth();
-  const { isPatron } = useProStatus();
+  const { user, userId, isAuthenticated, logout, refreshUser } = useAuth();
+  const { isPatron, showProGate } = useProStatus();
   const { showToast } = useToast();
   const { t } = useTranslation();
 
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [notifExpanded, setNotifExpanded] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language || "en");
 
   // Voice pickers
@@ -196,6 +204,38 @@ export default function SettingsScreen() {
     showToast("Cache cleared successfully", "success");
   }, [showToast]);
 
+  const handleEditProfile = useCallback(() => {
+    if (!isAuthenticated) {
+      router.push("/(auth)/login" as any);
+      return;
+    }
+    setEditDisplayName(user?.displayName || "");
+    setShowEditProfile(true);
+  }, [isAuthenticated, router, user?.displayName]);
+
+  const handleSaveProfile = useCallback(async () => {
+    const name = editDisplayName.trim();
+    if (!name) {
+      showToast("Enter a display name", "error");
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await apiRequest("PUT", "/api/auth/profile", { displayName: name });
+      await refreshUser();
+      setShowEditProfile(false);
+      showToast("Profile updated", "success");
+    } catch {
+      showToast("Could not update profile. Try again.", "error");
+    } finally {
+      setSavingProfile(false);
+    }
+  }, [editDisplayName, refreshUser, showToast]);
+
+  const handleNotificationSettings = useCallback(() => {
+    setNotifExpanded((v) => !v);
+  }, []);
+
   const handleSignOut = useCallback(() => {
     if (Platform.OS === "web") {
       const confirmed = window.confirm("Are you sure you want to sign out?");
@@ -292,17 +332,26 @@ export default function SettingsScreen() {
       >
         {renderSectionHeader("ACCOUNT")}
         {renderRow("person-outline", "Edit Profile", {
-          onPress: () => comingSoon("Edit Profile"),
-          showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
+          onPress: handleEditProfile,
+          showChevron: true,
+          rightText: isAuthenticated ? (user?.displayName || undefined) : "Sign in",
         })}
         {renderRow("notifications-outline", "Notification Settings", {
-          onPress: () => comingSoon("Notification Settings"),
-          showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
+          onPress: handleNotificationSettings,
+          showChevron: true,
+          isLast: !ENABLE_PREMIUM && !notifExpanded,
         })}
-        {renderRow("diamond-outline", isPatron ? "Mission Partner" : "Go Premium", {
-          onPress: () => comingSoon(isPatron ? "Mission Partner" : "Go Premium"),
+        {notifExpanded && (
+          <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+            <NotificationSettings
+              theme={SWEEP_LIGHT as any}
+              expanded
+              onToggle={handleNotificationSettings}
+            />
+          </View>
+        )}
+        {ENABLE_PREMIUM && renderRow("diamond-outline", isPatron ? "Mission Partner" : "Go Premium", {
+          onPress: () => (isPatron ? comingSoon("Mission Partner") : showProGate()),
           showChevron: false,
           rightText: isPatron ? "Active" : undefined,
           rightElement: !isPatron ? <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} /> : undefined,
@@ -366,14 +415,18 @@ export default function SettingsScreen() {
         {renderSectionHeader("FORMATION")}
         {renderRow("alarm-outline", "Daily Reminder Time", {
           onPress: () => comingSoon("Daily Reminder Time"),
-          showChevron: false,
+          showChevron: true,
           rightText: "9:00 AM",
-          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
+          rightElement: ENABLE_PREMIUM ? (
+            <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />
+          ) : undefined,
         })}
         {renderRow("flame-outline", "Streak Notifications", {
           onPress: () => comingSoon("Streak Notifications"),
-          showChevron: false,
-          rightElement: <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />,
+          showChevron: !ENABLE_PREMIUM,
+          rightElement: ENABLE_PREMIUM ? (
+            <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />
+          ) : undefined,
           isLast: true,
         })}
 
@@ -432,8 +485,8 @@ export default function SettingsScreen() {
             }}
             style={({ pressed }) => [s.signOutBtn, { opacity: pressed ? 0.85 : 1 }]}
           >
-            <Ionicons name="refresh-outline" size={20} color="#F59E0B" />
-            <Text style={[s.signOutText, { color: "#F59E0B", fontFamily: "Inter_600SemiBold" }]}>
+            <Ionicons name="refresh-outline" size={20} color="#EF4444" />
+            <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
               Reset Reading History
             </Text>
           </Pressable>
@@ -520,6 +573,52 @@ export default function SettingsScreen() {
           </View>
         </Modal>
       ))}
+
+      <Modal
+        visible={showEditProfile}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowEditProfile(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalSheet, { backgroundColor: "#FFFFFF" }]}>
+            <View style={s.modalHandle} />
+            <Text style={[s.modalTitle, { color: TEXT, fontFamily: "Inter_700Bold" }]}>
+              Edit Profile
+            </Text>
+            <Text style={[s.modalSubtitle, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
+              This name appears on your profile.
+            </Text>
+            <View style={{ paddingHorizontal: 24 }}>
+              <Text style={[s.voiceRole, { color: TEXT_MUTED, marginBottom: 8 }]}>Display name</Text>
+              <TextInput
+                value={editDisplayName}
+                onChangeText={setEditDisplayName}
+                placeholder="Your name"
+                placeholderTextColor={TEXT_MUTED}
+                autoFocus
+                maxLength={80}
+                style={s.profileInput}
+                testID="settings-edit-display-name"
+              />
+              <Pressable
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+                style={({ pressed }) => [s.profileSaveBtn, { opacity: pressed || savingProfile ? 0.85 : 1 }]}
+                testID="settings-save-profile"
+              >
+                <Text style={s.profileSaveText}>{savingProfile ? "Saving…" : "Save"}</Text>
+              </Pressable>
+            </View>
+            <TouchableOpacity
+              style={[s.modalCancel, { borderColor: ROW_BORDER }]}
+              onPress={() => setShowEditProfile(false)}
+            >
+              <Text style={[s.modalCancelText, { color: TEXT_MUTED }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Language Picker Modal ─────────────────────────────────────────── */}
       <Modal
@@ -720,5 +819,29 @@ const s = StyleSheet.create({
   signOutText: {
     fontSize: 16,
     color: "#EF4444",
+  },
+  profileInput: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: ROW_BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: TEXT,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 16,
+  },
+  profileSaveBtn: {
+    backgroundColor: CORAL,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  profileSaveText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
   },
 });

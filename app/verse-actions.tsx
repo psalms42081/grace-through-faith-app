@@ -14,11 +14,11 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
 import { useTranslation } from "@/context/TranslationContext";
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
 
-const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
 
 interface PassageVerse {
@@ -172,11 +172,11 @@ export default function VerseActionsSheet() {
           nestedScrollEnabled
         >
           <View style={[styles.verseCard, { backgroundColor: cardBg, borderColor }]}>
-            <Text style={[styles.verseRef, { color: GOLD, fontFamily: "Inter_500Medium" }]}>
+            <Text style={[styles.verseRef, { color: PathB.coralInk, fontFamily: "Inter_500Medium" }]}>
               {reference}
             </Text>
             {sourceLoading ? (
-              <ActivityIndicator size="small" color={GOLD} style={{ paddingVertical: 8, alignSelf: "flex-start" }} />
+              <ActivityIndicator size="small" color={PathB.coralInk} style={{ paddingVertical: 8, alignSelf: "flex-start" }} />
             ) : sourceError ? (
               <Text style={[styles.verseText, { color: "#EF4444", fontFamily: "Inter_500Medium" }]}>
                 Could not load this verse in {txLabel}. Please try again later.
@@ -186,15 +186,15 @@ export default function VerseActionsSheet() {
                 {canonicalText}
               </Text>
             )}
-            <View style={[styles.translationTag, { backgroundColor: GOLD + "12" }]}>
-              <Text style={[styles.translationText, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+            <View style={[styles.translationTag, { backgroundColor: PathB.coralInk + "12" }]}>
+              <Text style={[styles.translationText, { color: PathB.coralInk, fontFamily: "Inter_600SemiBold" }]}>
                 {txName ? `${txLabel} \u00B7 ${txName}` : txLabel}
               </Text>
             </View>
           </View>
 
           <View style={styles.sectionHeader}>
-            <Ionicons name="git-compare-outline" size={18} color={GOLD} />
+            <Ionicons name="git-compare-outline" size={18} color={PathB.coralInk} />
             <Text style={[styles.sectionTitle, { color: textColor, fontFamily: "Inter_600SemiBold" }]}>
               Compare Translations
             </Text>
@@ -202,7 +202,7 @@ export default function VerseActionsSheet() {
 
           {catalogLoading ? (
             <View style={styles.crossRefLoading}>
-              <ActivityIndicator size="small" color={GOLD} />
+              <ActivityIndicator size="small" color={PathB.coralInk} />
               <Text style={[styles.loadingText, { color: mutedColor, fontFamily: "Inter_400Regular" }]}>
                 Loading translations...
               </Text>
@@ -238,7 +238,7 @@ export default function VerseActionsSheet() {
           )}
 
           <View style={[styles.sectionHeader, { marginTop: 28 }]}>
-            <Ionicons name="link-outline" size={18} color={GOLD} />
+            <Ionicons name="link-outline" size={18} color={PathB.coralInk} />
             <Text style={[styles.sectionTitle, { color: textColor, fontFamily: "Inter_600SemiBold" }]}>
               Cross References
             </Text>
@@ -246,7 +246,7 @@ export default function VerseActionsSheet() {
 
           {crossRefLoading ? (
             <View style={styles.crossRefLoading}>
-              <ActivityIndicator size="small" color={GOLD} />
+              <ActivityIndicator size="small" color={PathB.coralInk} />
               <Text style={[styles.loadingText, { color: mutedColor, fontFamily: "Inter_400Regular" }]}>
                 Finding cross references...
               </Text>
@@ -281,15 +281,15 @@ export default function VerseActionsSheet() {
                   <Text style={[styles.crossRefRef, { color: TEAL, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{cr.ref}</Text>
                   <View style={styles.crossRefHeaderRight}>
                     {!!badgeLabel && (
-                      <View style={[styles.crossRefTxBadge, { backgroundColor: GOLD + "18" }]}>
-                        <Text style={[styles.crossRefTxBadgeText, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>{badgeLabel}</Text>
+                      <View style={[styles.crossRefTxBadge, { backgroundColor: PathB.coralInk + "18" }]}>
+                        <Text style={[styles.crossRefTxBadgeText, { color: PathB.coralInk, fontFamily: "Inter_600SemiBold" }]}>{badgeLabel}</Text>
                       </View>
                     )}
                     <Ionicons name="chevron-forward" size={14} color={mutedColor} />
                   </View>
                 </View>
                 <Text style={[styles.crossRefText, { color: textColor, fontFamily: "Inter_400Regular" }]}>{cr.text}</Text>
-                <View style={[styles.connectionBox, { borderLeftColor: GOLD + "50" }]}>
+                <View style={[styles.connectionBox, { borderLeftColor: PathB.coralInk + "50" }]}>
                   <Text style={[styles.connectionText, { color: mutedColor, fontFamily: "Inter_400Regular" }]}>{cr.connection}</Text>
                 </View>
               </Pressable>

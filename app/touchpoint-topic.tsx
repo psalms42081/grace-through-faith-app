@@ -14,13 +14,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
 
-const GOLD = "#C9933A";
 const TEAL = "#2A8B8B";
 
 interface Verse {
@@ -96,7 +96,7 @@ function VideoCard({ video, isDark, theme }: { video: BibleProjectVideo; isDark:
         </View>
       </View>
       <View style={vStyles.info}>
-        <Text style={[vStyles.seriesBadge, { color: GOLD }]}>{video.series}</Text>
+        <Text style={[vStyles.seriesBadge, { color: PathB.coralInk }]}>{video.series}</Text>
         <Text style={[vStyles.videoTitle, { color: theme.text }]} numberOfLines={2}>{video.title}</Text>
         <Text style={[vStyles.videoDesc, { color: theme.textSecondary }]} numberOfLines={2}>{video.description}</Text>
         {openError ? (
@@ -180,7 +180,7 @@ export default function TouchPointTopicScreen() {
           </Pressable>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={GOLD} />
+          <ActivityIndicator size="large" color={PathB.coral} />
         </View>
       </View>
     );
@@ -204,9 +204,9 @@ export default function TouchPointTopicScreen() {
           </Text>
           <Pressable
             onPress={() => router.replace("/touchpoints")}
-            style={{ backgroundColor: GOLD, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}
+            style={{ backgroundColor: PathB.coral, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}
           >
-            <Text style={{ color: "#050507", fontFamily: "Inter_600SemiBold" }}>Browse all topics</Text>
+            <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold" }}>Browse all topics</Text>
           </Pressable>
         </View>
       </View>
@@ -228,9 +228,9 @@ export default function TouchPointTopicScreen() {
           disabled={studyMutation.isPending}
         >
           {studyMutation.isPending ? (
-            <ActivityIndicator size="small" color={GOLD} />
+            <ActivityIndicator size="small" color={PathB.coral} />
           ) : (
-            <Ionicons name="sparkles" size={22} color={GOLD} />
+            <Ionicons name="sparkles" size={22} color={PathB.coral} />
           )}
         </Pressable>
       </View>
@@ -246,7 +246,7 @@ export default function TouchPointTopicScreen() {
         {videos.length > 0 && (
           <View style={styles.videoSection}>
             <View style={styles.videoSectionHeader}>
-              <Ionicons name="videocam" size={20} color={GOLD} />
+              <Ionicons name="videocam" size={20} color={PathB.coral} />
               <Text style={[styles.videoSectionTitle, { color: theme.text }]}>
                 Watch
               </Text>
@@ -332,7 +332,7 @@ export default function TouchPointTopicScreen() {
                         </View>
                       );
                     })}
-                    <View style={[styles.commentaryBlock, { borderLeftColor: GOLD + "60" }]}>
+                    <View style={[styles.commentaryBlock, { borderLeftColor: PathB.coral + "60" }]}>
                       <Text style={[styles.commentaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
                         {q.commentary}
                       </Text>

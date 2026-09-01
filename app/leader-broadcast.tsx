@@ -4,12 +4,13 @@ import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 
 export default function LeaderBroadcastScreen() {
-  const { theme } = useTheme();
+  const theme = SWEEP_LIGHT;
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -109,15 +110,15 @@ export default function LeaderBroadcastScreen() {
                       paddingVertical: 8,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: selectedTarget === `org:${org.id}` ? "#C9933A" : "#D4A853",
-                      backgroundColor: selectedTarget === `org:${org.id}` ? "#C9933A20" : theme.background,
+                      borderColor: selectedTarget === `org:${org.id}` ? PathB.coral : theme.border,
+                      backgroundColor: selectedTarget === `org:${org.id}` ? PathB.coral + "20" : theme.background,
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 5,
                     }}
                   >
-                    <Ionicons name="business" size={14} color={selectedTarget === `org:${org.id}` ? "#C9933A" : theme.textMuted} />
-                    <Text style={{ color: selectedTarget === `org:${org.id}` ? "#C9933A" : theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    <Ionicons name="business" size={14} color={selectedTarget === `org:${org.id}` ? PathB.coral : theme.textMuted} />
+                    <Text style={{ color: selectedTarget === `org:${org.id}` ? PathB.coralInk : theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
                       {org.name} ({org.memberCount})
                     </Text>
                   </Pressable>
@@ -180,7 +181,7 @@ export default function LeaderBroadcastScreen() {
               broadcastMutation.mutate();
             }}
             disabled={broadcastMutation.isPending}
-            style={{ backgroundColor: "#8B5CF6", borderRadius: 12, padding: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, opacity: broadcastMutation.isPending ? 0.6 : 1 }}
+            style={{ backgroundColor: PathB.coral, borderRadius: 12, padding: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, opacity: broadcastMutation.isPending ? 0.6 : 1 }}
           >
             {broadcastMutation.isPending ? (
               <ActivityIndicator color="#fff" size="small" />

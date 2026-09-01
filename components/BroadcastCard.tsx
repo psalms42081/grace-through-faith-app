@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, Linking, Image, ImageSourcePropType } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { PathB } from "@/constants/colors";
 import { useTranslation } from "react-i18next";
 
 export interface BroadcastSource {
@@ -47,7 +48,7 @@ export const broadcastSources: BroadcastSource[] = [
     websiteUrl: "https://www.amazingfacts.org",
     logo: require("@/assets/ministry-logos/amazing-facts.png"),
     logoBg: "#1A1200",
-    color: "#C9933A",
+    color: PathB.coral,
   },
   {
     id: "it-is-written",
@@ -102,7 +103,7 @@ export default function BroadcastCard({ source, theme, onWatch }: Props) {
           onPress={() => onWatch(source)}
           style={({ pressed }) => [
             st.watchBtn,
-            { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+            { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 },
           ]}
         >
           <Ionicons name="play" size={18} color="#fff" />
@@ -115,11 +116,11 @@ export default function BroadcastCard({ source, theme, onWatch }: Props) {
           onPress={() => Linking.openURL(source.websiteUrl)}
           style={({ pressed }) => [
             st.websiteBtn,
-            { backgroundColor: theme.accent + "12", opacity: pressed ? 0.7 : 1 },
+            { backgroundColor: PathB.coral + "12", opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Ionicons name="open-outline" size={16} color={theme.accent} />
-          <Text style={[st.websiteBtnText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+          <Ionicons name="open-outline" size={16} color={PathB.ink} />
+          <Text style={[st.websiteBtnText, { color: PathB.ink, fontFamily: "Inter_500Medium" }]}>
             {t("broadcasts.openWebsite")}
           </Text>
         </Pressable>

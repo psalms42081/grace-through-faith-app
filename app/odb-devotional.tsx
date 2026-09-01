@@ -18,7 +18,6 @@ import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
-const GOLD = "#C9933A";
 const INK_MUTED = "#6B6660";
 
 interface OdbDevotional {
@@ -68,7 +67,7 @@ export default function OdbDevotionalScreen() {
   if (isLoading) {
     return (
       <View style={[s.container, { paddingTop: insets.top + webTopPad }]}>
-        <ActivityIndicator size="large" color={GOLD} style={{ marginTop: 60 }} />
+        <ActivityIndicator size="large" color={PathB.coral} style={{ marginTop: 60 }} />
       </View>
     );
   }
@@ -144,7 +143,7 @@ export default function OdbDevotionalScreen() {
 
         {devotional.verse ? (
           <View style={s.verseCard}>
-            <Ionicons name="book-outline" size={16} color={GOLD} style={{ marginRight: 8 }} />
+            <Ionicons name="book-outline" size={16} color={PathB.coral} style={{ marginRight: 8 }} />
             <View style={{ flex: 1 }}>
               <Text style={[s.verseText, { fontFamily: "Lora_400Regular_Italic" }]}>
                 {devotional.verse}
@@ -209,7 +208,7 @@ export default function OdbDevotionalScreen() {
 
         {devotional.bibleInAYear ? (
           <View style={s.bibleYearRow}>
-            <Ionicons name="calendar-outline" size={14} color={GOLD} />
+            <Ionicons name="calendar-outline" size={14} color={PathB.coral} />
             <Text style={[s.bibleYearText, { fontFamily: "Inter_500Medium" }]}>
               Bible in a Year: {devotional.bibleInAYear}
             </Text>
@@ -227,7 +226,7 @@ export default function OdbDevotionalScreen() {
           <Text style={[s.readMoreText, { fontFamily: "Inter_600SemiBold" }]}>
             Read on odb.org
           </Text>
-          <Ionicons name="open-outline" size={16} color={GOLD} />
+          <Ionicons name="open-outline" size={16} color="#FFFFFF" />
         </Pressable>
       </ScrollView>
     </View>
@@ -263,7 +262,7 @@ const s = StyleSheet.create({
     paddingVertical: 28,
   },
   heroLabel: {
-    color: GOLD,
+    color: PathB.coral,
     fontSize: 11,
     letterSpacing: 1.5,
     marginBottom: 6,
@@ -287,9 +286,9 @@ const s = StyleSheet.create({
     flexDirection: "row",
     marginHorizontal: 20,
     marginTop: 16,
-    backgroundColor: "rgba(201,147,58,0.08)",
+    backgroundColor: PathB.coral + "14",
     borderLeftWidth: 3,
-    borderLeftColor: GOLD,
+    borderLeftColor: PathB.coral,
     borderRadius: 8,
     padding: 14,
   },
@@ -299,7 +298,7 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
   verseRef: {
-    color: GOLD,
+    color: PathB.coralInk,
     fontSize: 13,
     marginTop: 6,
   },
@@ -319,7 +318,7 @@ const s = StyleSheet.create({
     marginTop: 20,
   },
   sectionLabel: {
-    color: GOLD,
+    color: PathB.coralInk,
     fontSize: 11,
     letterSpacing: 1.2,
     marginBottom: 8,
@@ -332,12 +331,12 @@ const s = StyleSheet.create({
   thoughtCard: {
     marginHorizontal: 20,
     marginTop: 24,
-    backgroundColor: "rgba(201,147,58,0.06)",
+    backgroundColor: PathB.coral + "10",
     borderRadius: 12,
     padding: 16,
   },
   thoughtLabel: {
-    color: GOLD,
+    color: PathB.coralInk,
     fontSize: 11,
     letterSpacing: 1.2,
     marginBottom: 8,
@@ -388,12 +387,11 @@ const s = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 24,
     paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: GOLD,
+    backgroundColor: PathB.coral,
     borderRadius: 12,
   },
   readMoreText: {
-    color: GOLD,
+    color: "#FFFFFF",
     fontSize: 15,
   },
 });

@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MissionInviteModal from "@/components/MissionInviteModal";
+import { ENABLE_PREMIUM } from "@/lib/feature-flags";
 
 const COOLDOWN_KEY = "@grace-through-faith/mission-invite-last-shown";
 const COOLDOWN_DAYS = 7;
@@ -69,6 +70,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   }, [isPatron]);
 
   const showProGate = useCallback(() => {
+    if (!ENABLE_PREMIUM) return;
     if (!isPatron) {
       setModalVisible(true);
     }
