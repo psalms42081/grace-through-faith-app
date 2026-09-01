@@ -6,8 +6,6 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { router, Stack } from "expo-router";
@@ -18,6 +16,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/query-client";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import EmptyState from "@/components/ui/EmptyState";
 
 interface EnrichedNote {
@@ -216,14 +215,14 @@ function BookmarkItem({
         <Pressable
           onPress={(e) => {
             e.stopPropagation?.();
-            if (Platform.OS === "web") {
-              onDelete(item.id);
-            } else {
-              Alert.alert("Delete Bookmark", "Remove this bookmark?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => onDelete(item.id) },
-              ]);
-            }
+            void confirmWebSafe({
+              title: "Delete Bookmark",
+              message: "Remove this bookmark?",
+              confirmLabel: "Delete",
+              destructive: true,
+            }).then((ok) => {
+              if (ok) onDelete(item.id);
+            });
           }}
           hitSlop={12}
         >

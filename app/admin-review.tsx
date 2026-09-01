@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Alert,
   Platform,
   RefreshControl,
   TextInput,
@@ -19,6 +18,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
 interface FilteredItem {
   id: string;
@@ -1340,9 +1341,9 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
     onSuccess: () => {
       refetch();
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/leader-requests") });
-      Alert.alert("Approved", "Leader access has been granted.");
+      notifyToast("Leader access has been granted.", "success");
     },
-    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to approve"),
+    onError: (err: any) => notifyToast(err?.message || "Failed to approve", "error"),
   });
 
   const rejectMutation = useMutation({
@@ -1352,9 +1353,9 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
     onSuccess: () => {
       refetch();
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/leader-requests") });
-      Alert.alert("Rejected", "Request has been rejected.");
+      notifyToast("Request has been rejected.", "info");
     },
-    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to reject"),
+    onError: (err: any) => notifyToast(err?.message || "Failed to reject", "error"),
   });
 
   const requests = data?.requests || [];
@@ -1435,16 +1436,13 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
             <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <Pressable
                 onPress={() => {
-                  if (Platform.OS === "web") {
-                    if (window.confirm(`Grant leader access to ${req.fullName}?`)) {
-                      approveMutation.mutate(req.id);
-                    }
-                  } else {
-                    Alert.alert("Approve Leader", `Grant leader access to ${req.fullName}?`, [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Approve", onPress: () => approveMutation.mutate(req.id) },
-                    ]);
-                  }
+                  void confirmWebSafe({
+                    title: "Approve Leader",
+                    message: `Grant leader access to ${req.fullName}?`,
+                    confirmLabel: "Approve",
+                  }).then((ok) => {
+                    if (ok) approveMutation.mutate(req.id);
+                  });
                 }}
                 disabled={approveMutation.isPending}
                 style={{ flex: 1, backgroundColor: "#10B981", borderRadius: 8, padding: 10, alignItems: "center" }}
@@ -1453,16 +1451,14 @@ function LeaderRequestsTab({ theme }: { theme: any }) {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  if (Platform.OS === "web") {
-                    if (window.confirm(`Reject leader request from ${req.fullName}?`)) {
-                      rejectMutation.mutate(req.id);
-                    }
-                  } else {
-                    Alert.alert("Reject Request", `Reject leader request from ${req.fullName}?`, [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Reject", style: "destructive", onPress: () => rejectMutation.mutate(req.id) },
-                    ]);
-                  }
+                  void confirmWebSafe({
+                    title: "Reject Request",
+                    message: `Reject leader request from ${req.fullName}?`,
+                    confirmLabel: "Reject",
+                    destructive: true,
+                  }).then((ok) => {
+                    if (ok) rejectMutation.mutate(req.id);
+                  });
                 }}
                 disabled={rejectMutation.isPending}
                 style={{ flex: 1, backgroundColor: "#EF4444", borderRadius: 8, padding: 10, alignItems: "center" }}
@@ -1531,14 +1527,10 @@ function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: an
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
       const msg = `Found ${data.crossReferences?.length || 0} cross-references.\n+${data.inserted} new, ${data.skipped} already existed.`;
-      if (Platform.OS === "web") {
-        window.alert(msg);
-      } else {
-        Alert.alert("Cross-References Expanded", msg);
-      }
+      notifyToast(msg, "success");
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Could not expand cross-references");
+      notifyToast(err?.message || "Could not expand cross-references", "error");
     },
   });
 
@@ -1565,7 +1557,7 @@ function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: an
       setIsAdding(false);
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Could not add scripture");
+      notifyToast(err?.message || "Could not add scripture", "error");
     },
   });
 
@@ -1577,7 +1569,7 @@ function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: an
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Could not delete scripture");
+      notifyToast(err?.message || "Could not delete scripture", "error");
     },
   });
 
@@ -1589,7 +1581,7 @@ function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: an
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics", topicId, "scriptures"] });
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
-      Alert.alert("Pipeline Started", "Video generation has begun for this scripture.");
+      notifyToast("Video generation has begun for this scripture.", "success");
     },
     onSettled: (_data, _err, videoId) => {
       setGeneratingVideoIds((prev) => {
@@ -1599,34 +1591,29 @@ function ScriptureVideosSection({ topicId, theme }: { topicId: string; theme: an
       });
     },
     onError: (err: any) => {
-      Alert.alert("Pipeline Failed", err?.message || "Could not start pipeline.");
+      notifyToast(err?.message || "Could not start pipeline.", "error");
     },
   });
 
   const handleDelete = (videoId: string, scripture: string) => {
-    if (Platform.OS === "web") {
-      if (window.confirm(`Remove "${scripture}" from this topic?`)) {
-        deleteScriptureMutation.mutate(videoId);
-      }
-    } else {
-      Alert.alert("Remove Scripture", `Remove "${scripture}" from this topic?`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => deleteScriptureMutation.mutate(videoId) },
-      ]);
-    }
+    void confirmWebSafe({
+      title: "Remove Scripture",
+      message: `Remove "${scripture}" from this topic?`,
+      confirmLabel: "Remove",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) deleteScriptureMutation.mutate(videoId);
+    });
   };
 
   const handleGenerate = (videoId: string, scripture: string) => {
-    if (Platform.OS === "web") {
-      if (window.confirm(`Generate cinematic video for "${scripture}"? This will generate a full script, scenes, voiceover, and assemble into a cinematic video.`)) {
-        generateVideoMutation.mutate(videoId);
-      }
-    } else {
-      Alert.alert("Generate Video", `Generate cinematic video for "${scripture}"?`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Generate", onPress: () => generateVideoMutation.mutate(videoId) },
-      ]);
-    }
+    void confirmWebSafe({
+      title: "Generate Video",
+      message: `Generate cinematic video for "${scripture}"? This will generate a full script, scenes, voiceover, and assemble into a cinematic video.`,
+      confirmLabel: "Generate",
+    }).then((ok) => {
+      if (ok) generateVideoMutation.mutate(videoId);
+    });
   };
 
   const pipelineLabel = (status: string | null): string => {
@@ -1777,29 +1764,19 @@ function ExpandAllButton({ theme }: { theme: any }) {
 
   const handleExpandAll = async () => {
     const msg = "Expand cross-references for ALL 53 topics? GPT will find 7 related scriptures per topic. This runs in the background.";
-    let confirmed = false;
-    if (Platform.OS === "web") {
-      confirmed = window.confirm(msg);
-    } else {
-      confirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert("Expand All Cross-References", msg, [
-          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-          { text: "Expand All", onPress: () => resolve(true) },
-        ]);
-      });
-    }
+    const confirmed = await confirmWebSafe({
+      title: "Expand All Cross-References",
+      message: msg,
+      confirmLabel: "Expand All",
+    });
     if (!confirmed) return;
 
     setIsExpanding(true);
     try {
       await apiRequest("POST", "/api/video-topics/expand-all-cross-references", { maxReferences: 7 });
-      if (Platform.OS === "web") {
-        window.alert("Cross-reference expansion started for all topics. This runs in the background — scriptures will appear as they're found.");
-      } else {
-        Alert.alert("Started", "Cross-reference expansion is running in the background.");
-      }
+      notifyToast("Cross-reference expansion is running in the background.", "success");
     } catch (err: any) {
-      Alert.alert("Error", err?.message || "Failed to start expansion");
+      notifyToast(err?.message || "Failed to start expansion", "error");
     } finally {
       setIsExpanding(false);
     }
@@ -1858,7 +1835,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
       });
     },
     onError: (err: any) => {
-      Alert.alert("Generation Failed", err?.message || "Could not generate script.");
+      notifyToast(err?.message || "Could not generate script.", "error");
     },
   });
 
@@ -1867,10 +1844,10 @@ function VideoTopicsTab({ theme }: { theme: any }) {
       return apiRequest("DELETE", "/api/video-avatars/cleanup-unused");
     },
     onSuccess: () => {
-      Alert.alert("Cleanup Complete", "Unused avatars have been removed.");
+      notifyToast("Unused avatars have been removed.", "success");
     },
     onError: (err: any) => {
-      Alert.alert("Cleanup Failed", err?.message || "Could not clean up avatars.");
+      notifyToast(err?.message || "Could not clean up avatars.", "error");
     },
   });
 
@@ -1882,10 +1859,10 @@ function VideoTopicsTab({ theme }: { theme: any }) {
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
       setEditingId(null);
       setEditText("");
-      Alert.alert("Saved", "Script has been updated.");
+      notifyToast("Script has been updated.", "success");
     },
     onError: (err: any) => {
-      Alert.alert("Save Failed", err?.message || "Could not save script.");
+      notifyToast(err?.message || "Could not save script.", "error");
     },
   });
 
@@ -1896,7 +1873,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
-      Alert.alert("Pipeline Started", "The cinematic video pipeline has been started in the background.");
+      notifyToast("The cinematic video pipeline has been started in the background.", "success");
     },
     onSettled: (_data, _err, id) => {
       setCinematicIds((prev) => {
@@ -1906,7 +1883,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
       });
     },
     onError: (err: any) => {
-      Alert.alert("Pipeline Failed", err?.message || "Could not start cinematic pipeline.");
+      notifyToast(err?.message || "Could not start cinematic pipeline.", "error");
     },
   });
 
@@ -1917,15 +1894,15 @@ function VideoTopicsTab({ theme }: { theme: any }) {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/video-topics"] });
       queryClient.invalidateQueries({ queryKey: ["/api/evangelism-videos"] });
-      Alert.alert(
-        variables.action === "approve" ? "Approved" : "Rejected",
+      notifyToast(
         variables.action === "approve"
           ? "Video has been approved and published."
-          : "Video has been rejected."
+          : "Video has been rejected.",
+        variables.action === "approve" ? "success" : "info",
       );
     },
     onError: (err: any) => {
-      Alert.alert("Review Failed", err?.message || "Could not process review.");
+      notifyToast(err?.message || "Could not process review.", "error");
     },
   });
 
@@ -1934,19 +1911,13 @@ function VideoTopicsTab({ theme }: { theme: any }) {
     const desc = isCinematic
       ? `Start cinematic narrative pipeline for "${title}"? This will generate scenes with AI, voiceover, and assemble into a cinematic video.`
       : `Start cinematic pipeline for "${title}"? This will generate B-roll, extract timestamps, and assemble the final video.`;
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm(desc);
-      if (confirmed) cinematicMutation.mutate(id);
-    } else {
-      Alert.alert(
-        "Generate Cinematic Video",
-        desc,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Start", onPress: () => cinematicMutation.mutate(id) },
-        ]
-      );
-    }
+    void confirmWebSafe({
+      title: "Generate Cinematic Video",
+      message: desc,
+      confirmLabel: "Start",
+    }).then((ok) => {
+      if (ok) cinematicMutation.mutate(id);
+    });
   };
 
   const handleApprove = (id: string) => {
@@ -1956,7 +1927,7 @@ function VideoTopicsTab({ theme }: { theme: any }) {
   const handleReject = (id: string) => {
     const notes = reviewNotesMap[id];
     if (!notes?.trim()) {
-      Alert.alert("Notes Required", "Please add review notes before rejecting.");
+      notifyToast("Please add review notes before rejecting.", "error");
       return;
     }
     reviewMutation.mutate({ id, action: "reject", notes });
@@ -2022,16 +1993,14 @@ function VideoTopicsTab({ theme }: { theme: any }) {
           <Pressable
             style={[vtStyles.actionBtn, { backgroundColor: "#EF4444" }]}
             onPress={() => {
-              if (Platform.OS === "web") {
-                if (window.confirm("Remove all unused avatar records from the database? This only removes avatars not linked to any topic.")) {
-                  cleanupAvatarsMutation.mutate();
-                }
-              } else {
-                Alert.alert("Clean Up Avatars", "Remove all unused avatar records?", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Remove", style: "destructive", onPress: () => cleanupAvatarsMutation.mutate() },
-                ]);
-              }
+              void confirmWebSafe({
+                title: "Clean Up Avatars",
+                message: "Remove all unused avatar records from the database? This only removes avatars not linked to any topic.",
+                confirmLabel: "Remove",
+                destructive: true,
+              }).then((ok) => {
+                if (ok) cleanupAvatarsMutation.mutate();
+              });
             }}
             disabled={cleanupAvatarsMutation.isPending}
           >
@@ -2282,20 +2251,13 @@ function VideoTopicsTab({ theme }: { theme: any }) {
                         <Pressable
                           style={[vtStyles.actionBtn, { backgroundColor: "#8B5CF6" }]}
                           onPress={() => {
-                            if (Platform.OS === "web") {
-                              if (window.confirm("Regenerate script? This will replace the current script with a new AI-generated one.")) {
-                                generateMutation.mutate(topic.id);
-                              }
-                            } else {
-                              Alert.alert(
-                                "Regenerate Script",
-                                "This will replace the current script with a new AI-generated one.",
-                                [
-                                  { text: "Cancel", style: "cancel" },
-                                  { text: "Regenerate", onPress: () => generateMutation.mutate(topic.id) },
-                                ]
-                              );
-                            }
+                            void confirmWebSafe({
+                              title: "Regenerate Script",
+                              message: "This will replace the current script with a new AI-generated one.",
+                              confirmLabel: "Regenerate",
+                            }).then((ok) => {
+                              if (ok) generateMutation.mutate(topic.id);
+                            });
                           }}
                           disabled={isGenerating}
                         >
@@ -2706,10 +2668,10 @@ export default function AdminReviewScreen() {
       }
       setRollbackConfirm(null);
       setPreviewId(null);
-      Alert.alert("Rollback Complete", "The previous version has been restored.");
+      notifyToast("The previous version has been restored.", "success");
     },
     onError: (err: any) => {
-      Alert.alert("Rollback Failed", err?.message || "Could not complete rollback.");
+      notifyToast(err?.message || "Could not complete rollback.", "error");
     },
   });
 
@@ -2754,16 +2716,13 @@ export default function AdminReviewScreen() {
 
   const handleGenerate = useCallback(
     (quarterCode: string) => {
-      if (Platform.OS === "web") {
-        if (confirm(`Generate all companions for ${quarterCode}? This may take several minutes.`)) {
-          generateMutation.mutate(quarterCode);
-        }
-      } else {
-        Alert.alert("Generate Quarter", `Generate all companions for ${quarterCode}?`, [
-          { text: "Cancel", style: "cancel" },
-          { text: "Generate", onPress: () => generateMutation.mutate(quarterCode) },
-        ]);
-      }
+      void confirmWebSafe({
+        title: "Generate Quarter",
+        message: `Generate all companions for ${quarterCode}? This may take several minutes.`,
+        confirmLabel: "Generate",
+      }).then((ok) => {
+        if (ok) generateMutation.mutate(quarterCode);
+      });
     },
     [generateMutation]
   );
@@ -3095,10 +3054,10 @@ function UserDetailModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [detailPath] });
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/admin/users") });
-      Alert.alert("Success", "User role updated successfully.");
+      notifyToast("User role updated successfully.", "success");
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Failed to update user role.");
+      notifyToast(err?.message || "Failed to update user role.", "error");
     },
   });
 
@@ -3108,41 +3067,36 @@ function UserDetailModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.startsWith("/api/admin/users") });
-      Alert.alert("Deleted", "User account has been removed.");
+      notifyToast("User account has been removed.", "success");
       onClose();
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Failed to delete user.");
+      notifyToast(err?.message || "Failed to delete user.", "error");
     },
   });
 
   const handleDelete = () => {
     if (!userId || !data) return;
     const name = data.user.displayName || data.user.email || userId;
-    if (Platform.OS === "web") {
-      if (confirm(`Permanently delete "${name}"? This cannot be undone.`)) {
-        deleteMutation.mutate(userId);
-      }
-    } else {
-      Alert.alert("Delete User", `Permanently delete "${name}"? This cannot be undone.`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(userId) },
-      ]);
-    }
+    void confirmWebSafe({
+      title: "Delete User",
+      message: `Permanently delete "${name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) deleteMutation.mutate(userId);
+    });
   };
 
   const handleRoleChange = (newRole: string) => {
     if (!userId) return;
-    if (Platform.OS === "web") {
-      if (confirm(`Change this user's role to "${newRole}"?`)) {
-        roleMutation.mutate({ id: userId, role: newRole });
-      }
-    } else {
-      Alert.alert("Change Role", `Change this user's role to "${newRole}"?`, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Confirm", onPress: () => roleMutation.mutate({ id: userId, role: newRole }) },
-      ]);
-    }
+    void confirmWebSafe({
+      title: "Change Role",
+      message: `Change this user's role to "${newRole}"?`,
+      confirmLabel: "Confirm",
+    }).then((ok) => {
+      if (ok) roleMutation.mutate({ id: userId, role: newRole });
+    });
   };
 
   const roleOptions = ROLE_OPTIONS;
@@ -3361,7 +3315,7 @@ function UserRowRolePicker({ user, theme, isOpen, onToggle }: { user: AdminUser;
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes("/api/admin/users") });
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Failed to update role.");
+      notifyToast(err?.message || "Failed to update role.", "error");
     },
   });
 
@@ -3372,20 +3326,13 @@ function UserRowRolePicker({ user, theme, isOpen, onToggle }: { user: AdminUser;
     }
     const label = ROLE_LABELS[newRole] || newRole;
     const userName = user.displayName || user.username;
-    if (Platform.OS === "web") {
-      if (confirm(`Change ${userName}'s role to ${label}?`)) {
-        roleMutation.mutate(newRole);
-      }
-    } else {
-      Alert.alert(
-        "Change Role",
-        `Change ${userName}'s role to ${label}?`,
-        [
-          { text: "Cancel", style: "cancel" as const },
-          { text: "Confirm", onPress: () => roleMutation.mutate(newRole) },
-        ]
-      );
-    }
+    void confirmWebSafe({
+      title: "Change Role",
+      message: `Change ${userName}'s role to ${label}?`,
+      confirmLabel: "Confirm",
+    }).then((ok) => {
+      if (ok) roleMutation.mutate(newRole);
+    });
     onToggle();
   };
 

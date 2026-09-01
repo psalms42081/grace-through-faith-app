@@ -10,7 +10,6 @@ import {
   Image,
   Modal,
   TextInput,
-  Alert,
   StatusBar,
 } from "react-native";
 import type { ImageSourcePropType } from "react-native";

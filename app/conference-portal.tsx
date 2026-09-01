@@ -7,7 +7,6 @@ import {
   Pressable,
   Platform,
   TextInput,
-  Alert,
   ActivityIndicator,
   Modal,
   FlatList,
@@ -21,6 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { safeGoBack } from "@/lib/safe-back";
 import { useAuth } from "@/contexts/AuthContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
+import { useToast } from "@/contexts/ToastContext";
 
 const GOLD = "#C9933A";
 const BG = "#050507";
@@ -167,6 +167,7 @@ export default function ConferencePortalScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
 
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -237,18 +238,9 @@ export default function ConferencePortalScreen() {
       setChurchSearch("");
       setSearchResults([]);
       const msg = `${church.name} has been added to your conference.`;
-      if (Platform.OS === "web") {
-        window.alert(msg);
-      } else {
-        Alert.alert("Church Added", msg);
-      }
+      showToast(msg, "success");
     } catch {
-      const errMsg = "Failed to add church. Please try again.";
-      if (Platform.OS === "web") {
-        window.alert(errMsg);
-      } else {
-        Alert.alert("Error", errMsg);
-      }
+      showToast("Failed to add church. Please try again.", "error");
     }
   }
 
@@ -621,8 +613,7 @@ export default function ConferencePortalScreen() {
 
         <Pressable
           onPress={() => {
-            const msg = "Invoice download will be available after your subscription is activated.";
-            if (Platform.OS === "web") { window.alert(msg); } else { Alert.alert("Coming Soon", msg); }
+            showToast("Invoice download will be available after your subscription is activated.", "info");
           }}
           style={styles.invoiceBtn}
         >

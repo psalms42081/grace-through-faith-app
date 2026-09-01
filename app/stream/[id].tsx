@@ -6,7 +6,6 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
-  Alert,
   Linking,
 } from "react-native";
 import { WebView } from "react-native-webview";
@@ -18,6 +17,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
+import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { Camera } from "expo-camera";
 import { requestRecordingPermissionsAsync } from "expo-audio";
 import { displayInitials } from "@/lib/user-initials";
@@ -411,6 +412,7 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
 export default function StreamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { userId, user } = useAuth();
   const queryClient = useQueryClient();
@@ -463,12 +465,7 @@ export default function StreamScreen() {
       safeGoBack(router);
     },
     onError: () => {
-      const msg = "Could not end the session. Please try again.";
-      if (Platform.OS === "web") {
-        alert(msg);
-      } else {
-        Alert.alert("Error", msg);
-      }
+      showToast("Could not end the session. Please try again.", "error");
     },
   });
 
@@ -476,20 +473,14 @@ export default function StreamScreen() {
   const isEnded = session?.status === "ended";
 
   const handleEnd = useCallback(() => {
-    if (Platform.OS === "web") {
-      if (confirm("End this live session for everyone?")) {
-        endMutation.mutate();
-      }
-    } else {
-      Alert.alert(
-        "End Session",
-        "End this live session for everyone?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "End", style: "destructive", onPress: () => endMutation.mutate() },
-        ]
-      );
-    }
+    void confirmWebSafe({
+      title: "End Session",
+      message: "End this live session for everyone?",
+      confirmLabel: "End",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) endMutation.mutate();
+    });
   }, [endMutation]);
 
   const handleWebViewMessage = useCallback((event: any) => {

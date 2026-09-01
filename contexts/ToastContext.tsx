@@ -23,6 +23,13 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
 
+let toastBridge: ((message: string, type?: ToastType) => void) | null = null;
+
+/** Module-level toast for helpers and nested screens that cannot use the hook. */
+export function notifyToast(message: string, type: ToastType = "info") {
+  toastBridge?.(message, type);
+}
+
 export function useToast() {
   return useContext(ToastContext);
 }
@@ -64,6 +71,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       ]).start(() => setToast(null));
     }, 2500);
   }, [opacity, translateY]);
+
+  React.useEffect(() => {
+    toastBridge = showToast;
+    return () => {
+      if (toastBridge === showToast) toastBridge = null;
+    };
+  }, [showToast]);
 
   const topOffset = Platform.OS === "web" ? 67 + 12 : insets.top + 12;
   const colors = toast ? COLOR_MAP[toast.type] : COLOR_MAP.info;

@@ -21,6 +21,7 @@ import { ContentLanguageProvider } from "@/contexts/ContentLanguageContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { StudyDepthProvider } from "@/contexts/StudyDepthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { WebSafeConfirmHost } from "@/components/WebSafeConfirm";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
 import Constants from "expo-constants";
@@ -140,7 +141,7 @@ function RootLayoutNav() {
       <Stack.Screen name="verse-map" options={{ headerShown: false }} />
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: false }} />
-      <Stack.Screen name="devotional-day" options={{ headerShown: true, title: "Today's Reading" }} />
+      <Stack.Screen name="devotional-day" options={{ headerShown: false }} />
       <Stack.Screen name="devotions-preview" options={{ headerShown: false }} />
       <Stack.Screen name="devotional-day-preview" options={{ headerShown: false }} />
       <Stack.Screen name="odb-devotional-preview" options={{ headerShown: false }} />
@@ -246,6 +247,7 @@ useEffect(() => {
         "/devotions",
         "/plans",
         "/devotionals",
+        "/devotional-day",
         "/devotions-preview",
         "/devotional-day-preview",
         "/odb-devotional-preview",
@@ -312,8 +314,10 @@ useEffect(() => {
                         <GestureHandlerRootView style={{ flex: 1 }}>
                           <KeyboardProvider>
                             <ToastProvider>
-                              <RootLayoutNav />
-                              <MiniPlayer />
+                              <WebSafeConfirmHost>
+                                <RootLayoutNav />
+                                <MiniPlayer />
+                              </WebSafeConfirmHost>
                             </ToastProvider>
                           </KeyboardProvider>
                         </GestureHandlerRootView>

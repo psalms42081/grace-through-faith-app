@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
 import { WebView } from "react-native-webview";
@@ -17,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { joinApiPath } from "@/lib/join-api-path";
@@ -811,10 +811,14 @@ export default function BibleGroupLiveScreen() {
           {isHost && (
             <Pressable
               onPress={() => {
-                Alert.alert("End room", "End this room for everyone?", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "End room", style: "destructive", onPress: () => endMutation.mutate() },
-                ]);
+                void confirmWebSafe({
+                  title: "End room",
+                  message: "End this room for everyone?",
+                  confirmLabel: "End room",
+                  destructive: true,
+                }).then((ok) => {
+                  if (ok) endMutation.mutate();
+                });
               }}
               style={s.nativeEnd}
             >

@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   ScrollView,
@@ -23,6 +22,8 @@ import { HV2 } from "@/components/home-v2/theme";
 import ChurchMap from "@/components/ChurchMap";
 import EmptyState from "@/components/ui/EmptyState";
 import { apiRequest } from "@/lib/query-client";
+import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
 const C = {
   surface: PathB.surface,
@@ -62,6 +63,7 @@ if (Platform.OS !== "web") {
 
 export default function ChurchConnectScreen() {
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -123,13 +125,13 @@ export default function ChurchConnectScreen() {
       setLocationStatus("loading");
       try {
         if (!navigator.geolocation) {
-          Alert.alert("Location Unavailable", "Your browser does not support location services. Try searching by city name instead.");
+          showToast("Your browser does not support location services. Try searching by city name instead.", "info");
           setLocationStatus("denied");
           return;
         }
         const timeoutId = setTimeout(() => {
           setLocationStatus("denied");
-          Alert.alert("Location Timed Out", "Could not get your location. Make sure location is enabled in your browser settings, then try again. You can also search by city name.");
+          showToast("Could not get your location. Search by city name, or enable location and try again.", "info");
         }, 8000);
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -142,9 +144,15 @@ export default function ChurchConnectScreen() {
             clearTimeout(timeoutId);
             setLocationStatus("denied");
             if (err.code === 1) {
-              Alert.alert("Location Denied", "You've blocked location access for this site. To enable it:\n\n• iPhone Safari: Settings → Safari → Location → Allow\n• Chrome: Tap the lock icon next to the URL → Location → Allow\n\nOr search by city name instead.");
+              void confirmWebSafe({
+                title: "Location Denied",
+                message:
+                  "You've blocked location access for this site. To enable it:\n\n• iPhone Safari: Settings → Safari → Location → Allow\n• Chrome: Tap the lock icon next to the URL → Location → Allow\n\nOr search by city name instead.",
+                confirmLabel: "OK",
+                cancelLabel: null,
+              });
             } else {
-              Alert.alert("Location Error", "Could not determine your location. Try searching by city name instead.");
+              showToast("Could not determine your location. Try searching by city name instead.", "error");
             }
           },
           { timeout: 7000, enableHighAccuracy: false, maximumAge: 300000 }
@@ -205,7 +213,7 @@ export default function ChurchConnectScreen() {
 
   const submitTellUs = async () => {
     if (!tellName.trim() || !tellCity.trim() || !tellCountry.trim()) {
-      Alert.alert("Missing details", "Please enter the church name, city, and country.");
+      showToast("Please enter the church name, city, and country.", "error");
       return;
     }
     setTellSubmitting(true);
@@ -220,9 +228,9 @@ export default function ChurchConnectScreen() {
       setTellName("");
       setTellCountry("");
       setTellAddress("");
-      Alert.alert("Thank you", "We'll review this and add it if we can verify it. It will not appear in the directory until then.");
+      showToast("We'll review this and add it if we can verify it.", "success");
     } catch {
-      Alert.alert("Could not send", "Please try again in a moment.");
+      showToast("Could not send. Please try again in a moment.", "error");
     } finally {
       setTellSubmitting(false);
     }

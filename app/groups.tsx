@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
@@ -50,6 +50,7 @@ export default function GroupsScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { isGuest, userId } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -142,11 +143,7 @@ export default function GroupsScreen() {
           msg = parsed.error || msg;
         }
       } catch {}
-      if (Platform.OS === "web") {
-        alert(msg);
-      } else {
-        Alert.alert("Join Failed", msg);
-      }
+      showToast(msg, "error");
     },
   });
 

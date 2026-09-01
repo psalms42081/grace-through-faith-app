@@ -8,7 +8,6 @@ import {
   Platform,
   ActivityIndicator,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
 } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -20,6 +19,7 @@ import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -402,15 +402,14 @@ export default function BibleGroupHomeScreen() {
             disabled={startLiveMutation.isPending || endLiveMutation.isPending}
             onPress={() => {
               if (liveSession) {
-                const endRoom = () => endLiveMutation.mutate();
-                if (Platform.OS === "web") {
-                  if (typeof confirm === "function" && confirm("End this room for everyone?")) endRoom();
-                } else {
-                  Alert.alert("End room", "End this room for everyone?", [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "End room", style: "destructive", onPress: endRoom },
-                  ]);
-                }
+                void confirmWebSafe({
+                  title: "End room",
+                  message: "End this room for everyone?",
+                  confirmLabel: "End room",
+                  destructive: true,
+                }).then((ok) => {
+                  if (ok) endLiveMutation.mutate();
+                });
               } else {
                 startLiveMutation.mutate();
               }
@@ -436,28 +435,14 @@ export default function BibleGroupHomeScreen() {
               {isHost && member.role !== "host" && (
                 <Pressable
                   onPress={() => {
-                    const removeMember = () => removeMutation.mutate(member.userId);
-                    if (Platform.OS === "web") {
-                      if (
-                        typeof confirm === "function" &&
-                        confirm(`Remove ${member.displayName} from this group?`)
-                      ) {
-                        removeMember();
-                      }
-                    } else {
-                      Alert.alert(
-                        "Remove member",
-                        `Remove ${member.displayName} from this group?`,
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Remove",
-                            style: "destructive",
-                            onPress: removeMember,
-                          },
-                        ],
-                      );
-                    }
+                    void confirmWebSafe({
+                      title: "Remove member",
+                      message: `Remove ${member.displayName} from this group?`,
+                      confirmLabel: "Remove",
+                      destructive: true,
+                    }).then((ok) => {
+                      if (ok) removeMutation.mutate(member.userId);
+                    });
                   }}
                   testID={`bible-group-remove-${member.userId}`}
                 >
@@ -509,14 +494,14 @@ export default function BibleGroupHomeScreen() {
           <Pressable
             style={s.archiveBtn}
             onPress={() => {
-              Alert.alert(
-                "Archive group",
-                "The group will be hidden. Members will no longer see it.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Archive", style: "destructive", onPress: () => archiveMutation.mutate() },
-                ],
-              );
+              void confirmWebSafe({
+                title: "Archive group",
+                message: "The group will be hidden. Members will no longer see it.",
+                confirmLabel: "Archive",
+                destructive: true,
+              }).then((ok) => {
+                if (ok) archiveMutation.mutate();
+              });
             }}
             testID="bible-group-archive"
           >

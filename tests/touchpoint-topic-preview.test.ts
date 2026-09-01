@@ -90,9 +90,9 @@ describe("pastoral touchpoint light previews", () => {
   it("awaits YouTube opening with a calm fallback and no unreachable embedded player", () => {
     assert.match(productionTopicSource, /await openYouTubeVideo\(video\.youtubeId\)/);
     assert.match(previewSource, /await openYouTubeVideo\(video\.youtubeId\)/);
-    assert.match(youtubeLinkSource, /await Linking\.openURL/);
     assert.match(youtubeLinkSource, /YouTube couldn’t open right now/);
-    assert.match(youtubeLinkSource, /Alert\.alert\("Video unavailable"/);
+    assert.match(youtubeLinkSource, /notifyToast\(/);
+    assert.doesNotMatch(youtubeLinkSource, /Alert\.alert/);
     assert.doesNotMatch(productionTopicSource, /WebView|<iframe|embedUrl|setPlaying/);
     assert.doesNotMatch(discoverSource, /Lb4dOM4-FVM|oMhesKPKQPo/);
     assert.match(discoverSource, /await openYouTubeVideo\(youtubeId\)/);

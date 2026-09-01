@@ -21,9 +21,9 @@ export default function DevotionalCard({ hasActivePlan, progress, total, enrollm
     <Pressable
       onPress={() => {
         if (hasActivePlan && enrollmentPlanId) {
-          router.push(`/devotional-day?planId=${enrollmentPlanId}`);
+          router.push(`/devotional-day-preview?planId=${enrollmentPlanId}` as any);
         } else if (hasActivePlan) {
-          router.push("/devotional-day");
+          router.push("/devotional-day-preview" as any);
         } else {
           router.push("/devotions" as any);
         }

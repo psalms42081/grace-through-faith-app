@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, Platform, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Platform, ScrollView } from "react-native";
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,11 +7,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { apiRequest } from "@/lib/query-client";
 
 export default function LeaderBroadcastScreen() {
   const theme = SWEEP_LIGHT;
   const { user } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
@@ -54,10 +56,10 @@ export default function LeaderBroadcastScreen() {
       setTitle("");
       setContent("");
       const targetLabel = selectedTarget?.startsWith("org:") ? "your organization" : "the group";
-      Alert.alert("Sent", `Your announcement has been broadcast to ${targetLabel}.`);
+      showToast(`Your announcement has been broadcast to ${targetLabel}.`, "success");
     },
     onError: (err: any) => {
-      Alert.alert("Error", err?.message || "Failed to send announcement");
+      showToast(err?.message || "Failed to send announcement", "error");
     },
   });
 
@@ -167,15 +169,15 @@ export default function LeaderBroadcastScreen() {
           <Pressable
             onPress={() => {
               if (!selectedTarget) {
-                Alert.alert("Error", "Please select who to send this to");
+                showToast("Please select who to send this to", "error");
                 return;
               }
               if (!title.trim()) {
-                Alert.alert("Error", "Please enter an announcement title");
+                showToast("Please enter an announcement title", "error");
                 return;
               }
               if (!content.trim()) {
-                Alert.alert("Error", "Please enter an announcement message");
+                showToast("Please enter an announcement message", "error");
                 return;
               }
               broadcastMutation.mutate();

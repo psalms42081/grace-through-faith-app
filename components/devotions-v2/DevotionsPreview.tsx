@@ -1,6 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,17 +9,24 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import * as Haptics from "expo-haptics";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  DEVOTIONAL_CATALOG_QUERY_KEY,
+  isApprovedHumanDevotionalPlan,
+  type DevotionalCatalogPlan,
+} from "@/lib/devotional-catalog";
 
 type Plan = {
   id: string;
@@ -32,14 +38,7 @@ type Plan = {
   type: string;
   status: string;
 };
-type DevotionalPlan = {
-  id: string;
-  title: string;
-  description: string;
-  totalDays: number;
-  theme: string | null;
-  category: string | null;
-};
+type DevotionalPlan = DevotionalCatalogPlan;
 type UserPlan = {
   id: string;
   planId: string;
@@ -80,11 +79,22 @@ function formatPlanDayReference(books: Book[] | undefined, day: Day | undefined)
 export default function DevotionsPreview() {
   const insets = useSafeAreaInsets();
   const { userId, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const { translation } = useTranslation();
   const qc = useQueryClient();
+  const params = useLocalSearchParams<{ seriesId?: string }>();
+  const paramSeriesId = typeof params.seriesId === "string" && params.seriesId.length > 0
+    ? params.seriesId
+    : Array.isArray(params.seriesId) && params.seriesId[0]
+      ? params.seriesId[0]
+      : null;
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [seriesId, setSeriesId] = useState<string | null>(null);
+  const [seriesId, setSeriesId] = useState<string | null>(paramSeriesId);
   const [category, setCategory] = useState("All");
+
+  useEffect(() => {
+    if (paramSeriesId) setSeriesId(paramSeriesId);
+  }, [paramSeriesId]);
 
   const plans = useQuery<Plan[]>({ queryKey: ["/api/plans"] });
   const userPlans = useQuery<UserPlan[]>({
@@ -93,7 +103,7 @@ export default function DevotionsPreview() {
     enabled: isAuthenticated,
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
-  const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
+  const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: [...DEVOTIONAL_CATALOG_QUERY_KEY] });
   const odb = useQuery<Odb>({
     queryKey: [withDeviceTimeZone("/api/odb/today")],
     staleTime: 600000,
@@ -131,6 +141,10 @@ export default function DevotionsPreview() {
     () => new Set((userPlans.data || []).map((plan) => plan.planId)),
     [userPlans.data],
   );
+  const catalogSeries = useMemo(
+    () => (devotionalPlans.data || []).filter(isApprovedHumanDevotionalPlan),
+    [devotionalPlans.data],
+  );
   const categories = useMemo(
     () => [
       "All",
@@ -160,7 +174,7 @@ export default function DevotionsPreview() {
       setDetailId(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: () => Alert.alert("Could not start plan", "Please try again in a moment."),
+    onError: () => showToast("Could not start plan. Please try again in a moment.", "error"),
   });
 
   const completeDay = useMutation({
@@ -180,9 +194,10 @@ export default function DevotionsPreview() {
       qc.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
       qc.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}&planId=${id}`] });
       setSeriesId(null);
+      if (paramSeriesId) router.setParams({ seriesId: undefined });
       router.push(`/devotional-day-preview?planId=${id}&depth=quick` as any);
     },
-    onError: () => Alert.alert("Could not start series", "Please try again in a moment."),
+    onError: () => showToast("Could not start series. Please try again in a moment.", "error"),
   });
 
   const gate = (
@@ -190,10 +205,14 @@ export default function DevotionsPreview() {
     message = "Create a free account to keep a reading rhythm and track your progress.",
   ) => {
     if (!isAuthenticated) {
-      Alert.alert("Sign In Required", message, [
-        { text: "Not Now", style: "cancel" },
-        { text: "Sign In", onPress: () => router.push("/(auth)/login") },
-      ]);
+      void confirmWebSafe({
+        title: "Sign In Required",
+        message,
+        confirmLabel: "Sign In",
+        cancelLabel: "Not Now",
+      }).then((ok) => {
+        if (ok) router.push("/(auth)/login");
+      });
       return;
     }
     action();
@@ -397,8 +416,8 @@ export default function DevotionsPreview() {
         />
         {devotionalPlans.isLoading ? (
           <LoadingState />
-        ) : (devotionalPlans.data || []).length ? (
-          (devotionalPlans.data || []).map((p) => (
+        ) : catalogSeries.length ? (
+          catalogSeries.map((p) => (
             <Pressable
               key={p.id}
               style={s.rowCard}
@@ -524,16 +543,20 @@ export default function DevotionsPreview() {
         onStart={() => detail.data && gate(() => enroll.mutate(detail.data!.id))}
       />
       <SeriesModal
-        plan={(devotionalPlans.data || []).find((item) => item.id === seriesId)}
+        plan={catalogSeries.find((item) => item.id === seriesId)}
         days={seriesDetail.data || []}
         visible={!!seriesId}
         loading={seriesDetail.isLoading}
         active={today.data?.enrollment?.planId === seriesId}
-        onClose={() => setSeriesId(null)}
+        onClose={() => {
+          setSeriesId(null);
+          if (paramSeriesId) router.setParams({ seriesId: undefined });
+        }}
         onStart={() => {
           if (!seriesId) return;
           if (today.data?.enrollment?.planId === seriesId) {
             setSeriesId(null);
+            if (paramSeriesId) router.setParams({ seriesId: undefined });
             router.push(`/devotional-day-preview?planId=${seriesId}&depth=quick` as any);
             return;
           }

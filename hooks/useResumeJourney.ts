@@ -175,7 +175,7 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
       title: planTitle,
       subtitle: `Day ${todayData.today.dayNumber} of ${todayData.totalDays}`,
       progressLabel: "Continue",
-      route: "/devotional-day",
+      route: "/devotional-day-preview",
       params: { planId: todayData.enrollment.planId },
       updatedAt: new Date().toISOString(),
     });

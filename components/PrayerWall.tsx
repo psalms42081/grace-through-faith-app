@@ -7,7 +7,6 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import Animated, {
   useSharedValue,

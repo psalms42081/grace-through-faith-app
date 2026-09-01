@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
-  Alert,
   TextInput,
   Share,
   Modal,
@@ -23,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import PrayerWall from "@/components/PrayerWall";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
@@ -302,20 +302,14 @@ export default function GroupDetailScreen() {
   };
 
   const handleLeave = () => {
-    if (Platform.OS === "web") {
-      if (confirm("Are you sure you want to leave this group?")) {
-        leaveMutation.mutate();
-      }
-    } else {
-      Alert.alert(
-        "Leave Group",
-        "Are you sure you want to leave this group?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Leave", style: "destructive", onPress: () => leaveMutation.mutate() },
-        ]
-      );
-    }
+    void confirmWebSafe({
+      title: "Leave Group",
+      message: "Are you sure you want to leave this group?",
+      confirmLabel: "Leave",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) leaveMutation.mutate();
+    });
   };
 
   const myMembership = data?.members?.find(m => m.userId === userId);
@@ -539,7 +533,7 @@ export default function GroupDetailScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.push(`/devotional-day?planId=${planProgress.plan!.id}&groupId=${id}`)}
+            onPress={() => router.push(`/devotional-day-preview?planId=${planProgress.plan!.id}&groupId=${id}` as any)}
             style={[s.startReadingBtn, { backgroundColor: theme.accent }]}
           >
             <Ionicons name="book" size={18} color="#fff" />

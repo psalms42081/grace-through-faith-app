@@ -12,6 +12,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,6 +30,11 @@ import {
   DISCOVER_FEATURED_SERIES as FEATURED_SERIES,
   DISCOVER_WATCH_RAIL as WATCH_RAIL,
 } from "@/data/curatedYoutubeVideos";
+import {
+  DEVOTIONAL_CATALOG_QUERY_KEY,
+  isApprovedHumanDevotionalPlan,
+  type DevotionalCatalogPlan,
+} from "@/lib/devotional-catalog";
 
 // ---- Screen tokens ----
 const D = {
@@ -115,7 +121,6 @@ interface TouchpointsResponse {
   categories: string[];
   topics: { id: string; title: string; category: string; questionCount?: number }[];
 }
-interface DevotionalPlan { id: string; title: string; description: string; totalDays: number; theme: string | null; category: string | null }
 interface OdbDevotional { id: number; title: string; date: string; author: string }
 
 const SAVED_SERIES_KEY = "gtf-discover-saved-series";
@@ -189,7 +194,13 @@ export default function DiscoverV2Screen() {
   const { data: touchpoints, isLoading: topicsLoading } = useQuery<TouchpointsResponse>({
     queryKey: ["/api/touchpoints"],
   });
-  const { data: devotionalPlans } = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
+  const { data: devotionalPlans } = useQuery<DevotionalCatalogPlan[]>({
+    queryKey: [...DEVOTIONAL_CATALOG_QUERY_KEY],
+  });
+  const catalogSeries = useMemo(
+    () => (devotionalPlans ?? []).filter(isApprovedHumanDevotionalPlan),
+    [devotionalPlans],
+  );
   const { data: odbRecent } = useQuery<OdbDevotional[]>({
     queryKey: [withDeviceTimeZone("/api/odb/recent?count=7")],
   });
@@ -542,6 +553,11 @@ export default function DiscoverV2Screen() {
                     testID={`discover2-video-${v.id}`}
                   >
                     <View style={[s.videoThumb, { backgroundColor: v.tint }]}>
+                      <Image
+                        source={{ uri: `https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg` }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
                       <View style={s.playBadge}>
                         <Ionicons name="play" size={16} color={v.ink} />
                       </View>
@@ -557,11 +573,11 @@ export default function DiscoverV2Screen() {
             </View>
 
             {/* ---- Daily Devotionals rail (§A.2.5) ---- */}
-            {((devotionalPlans?.length ?? 0) > 0 || (odbRecent?.length ?? 0) > 0) && (
+            {((catalogSeries.length ?? 0) > 0 || (odbRecent?.length ?? 0) > 0) && (
               <View style={s.section}>
                 <Text style={s.sectionTitle}>Daily Devotionals</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.rail}>
-                  {(devotionalPlans ?? []).map((dp) => {
+                  {catalogSeries.map((dp) => {
                     const isEgw = `${dp.title} ${dp.theme ?? ""} ${dp.category ?? ""}`.toLowerCase().includes("egw")
                       || `${dp.title} ${dp.theme ?? ""}`.toLowerCase().includes("ellen");
                     const tint = isEgw ? "#FFF0D9" : "#EAE6FA";
@@ -569,7 +585,7 @@ export default function DiscoverV2Screen() {
                     return (
                       <Pressable
                         key={dp.id}
-                        onPress={() => router.push(`/devotional-day?planId=${dp.id}&depth=quick` as any)}
+                        onPress={() => router.push(`/devotions?seriesId=${encodeURIComponent(dp.id)}` as any)}
                         style={({ pressed }) => [s.devoCard, { backgroundColor: tint, opacity: pressed ? 0.85 : 1 }]}
                       >
                         <Text style={[s.devoEyebrow, { color: ink }]}>{isEgw ? "EGW DEVOTIONAL" : "DEVOTIONAL"}</Text>
@@ -752,11 +768,11 @@ const s = StyleSheet.create({
   },
   playBadge: {
     width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.85)",
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center", justifyContent: "center", zIndex: 1,
   },
   videoChip: {
     position: "absolute", left: 8, bottom: 8, borderRadius: 999,
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: 8, paddingVertical: 3, zIndex: 1,
   },
   videoChipText: { fontFamily: F.interSemi, fontSize: 10, letterSpacing: 0.4 },
   videoTitle: { fontFamily: F.interSemi, fontSize: 13.5, color: D.ink, marginTop: 8, lineHeight: 18 },

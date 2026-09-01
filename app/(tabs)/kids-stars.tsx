@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";

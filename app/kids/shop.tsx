@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Alert,
   Animated as RNAnimated,
 } from "react-native";
 import { router, Stack } from "expo-router";
@@ -18,6 +17,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { SHOP_ITEMS, SHOP_CATEGORIES, getShopItemsByCategory, DAILY_QUEST_STAR_REWARD, type ShopItem } from "@/constants/kids-shop";
+import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
 const KIDS_BG = "#1A1040";
 const KIDS_CARD = "#251860";
@@ -88,6 +89,7 @@ export default function KidsShopScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { userId } = useAuth();
+  const { showToast } = useToast();
   const { activeChildProfileId } = useKidsMode();
 
   const [selectedCategory, setSelectedCategory] = useState<ShopItem["category"]>("avatar_frame");
@@ -143,7 +145,7 @@ export default function KidsShopScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/kids/progress`] });
     },
     onError: (err: any) => {
-      Alert.alert("Oops!", err?.message || "Could not purchase this item");
+      showToast(err?.message || "Could not purchase this item", "error");
     },
   });
 
@@ -162,17 +164,13 @@ export default function KidsShopScreen() {
   });
 
   const handleBuy = useCallback((item: ShopItem) => {
-    Alert.alert(
-      `Get ${item.name}?`,
-      `This costs ${item.starCost} stars. You have ${availableStars} stars.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Buy!",
-          onPress: () => purchaseMutation.mutate(item),
-        },
-      ]
-    );
+    void confirmWebSafe({
+      title: `Get ${item.name}?`,
+      message: `This costs ${item.starCost} stars. You have ${availableStars} stars.`,
+      confirmLabel: "Buy!",
+    }).then((ok) => {
+      if (ok) purchaseMutation.mutate(item);
+    });
   }, [availableStars, purchaseMutation]);
 
   const handleEquip = useCallback((item: ShopItem) => {

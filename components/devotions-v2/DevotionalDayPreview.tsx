@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useProStatus } from "@/contexts/ProContext";
@@ -171,6 +171,7 @@ function Reflection({
 export default function DevotionalDayPreview() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { showToast } = useToast();
   const {
     planId,
     groupId,
@@ -239,7 +240,7 @@ export default function DevotionalDayPreview() {
       queryClient.invalidateQueries({ queryKey: [endpoint] });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
     } catch {
-      Alert.alert("Could not save", "Your reading is still here. Please try again.");
+      showToast("Could not save. Your reading is still here. Please try again.", "error");
     } finally {
       setPending(false);
     }

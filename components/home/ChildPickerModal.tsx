@@ -8,7 +8,6 @@ import {
   Platform,
   Modal,
   TextInput,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

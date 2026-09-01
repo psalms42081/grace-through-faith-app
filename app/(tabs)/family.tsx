@@ -8,7 +8,6 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +21,8 @@ import { useTheme } from "@/hooks/useTheme";
 import FamilyHeatmap from "@/components/FamilyHeatmap";
 import PrayerWall from "@/components/PrayerWall";
 import FamilyWorshipLauncher from "@/components/FamilyWorshipLauncher";
+import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
 interface FamilyInfo {
   id: string;
@@ -98,6 +99,7 @@ export default function FamilyDashboard() {
   const insets = useSafeAreaInsets();
   const { isPro, showProGate } = useProStatus();
   const { userId, user, isGuest, isAuthenticated, refreshUser } = useAuth();
+  const { showToast } = useToast();
   const qc = useQueryClient();
   const router = useRouter();
 
@@ -150,7 +152,7 @@ export default function FamilyDashboard() {
     onError: (err: any) => {
       const msg = err.message || "";
       const errorText = msg.includes(":") ? msg.split(":").slice(1).join(":").trim() : msg;
-      Alert.alert("Could not join", errorText || "Invalid invite code. Please check and try again.");
+      showToast(errorText || "Invalid invite code. Please check and try again.", "error");
     },
   });
 
@@ -220,18 +222,14 @@ export default function FamilyDashboard() {
   }, [addChildMutation, newChildName, selectedAvatar]);
 
   const handleDeleteChild = useCallback((childId: string, childName: string) => {
-    Alert.alert(
-      "Remove Profile",
-      `Remove ${childName}'s profile? Their progress data will remain.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => deleteChildMutation.mutate(childId),
-        },
-      ]
-    );
+    void confirmWebSafe({
+      title: "Remove Profile",
+      message: `Remove ${childName}'s profile? Their progress data will remain.`,
+      confirmLabel: "Remove",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) deleteChildMutation.mutate(childId);
+    });
   }, [deleteChildMutation]);
 
   const handleConversationStarter = useCallback(async (childId: string) => {

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Share, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator } from "react-native";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { HV2, F } from "./theme";
 import {
   assertReflectionReadingAlignment,
@@ -40,14 +41,14 @@ const TABS: { key: HeroTab; label: string }[] = [
 ];
 
 function showAuthGate() {
-  Alert.alert(
-    "Sign In Required",
-    "Create a free account to save verses and reflect on God\u2019s Word.",
-    [
-      { text: "Not Now", style: "cancel" },
-      { text: "Sign In", onPress: () => router.push("/(auth)/login") },
-    ],
-  );
+  void confirmWebSafe({
+    title: "Sign In Required",
+    message: "Create a free account to save verses and reflect on God’s Word.",
+    confirmLabel: "Sign In",
+    cancelLabel: "Not Now",
+  }).then((ok) => {
+    if (ok) router.push("/(auth)/login");
+  });
 }
 
 export default function HeroCard({

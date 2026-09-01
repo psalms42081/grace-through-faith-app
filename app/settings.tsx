@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Alert,
   Modal,
   FlatList,
   TouchableOpacity,
@@ -83,6 +82,9 @@ export default function SettingsScreen() {
   // Voice pickers
   const [showNarratorPicker, setShowNarratorPicker] = useState(false);
   const [narratorVoiceKey, setNarratorVoiceKey] = useState("ellen_white");
+  const [resetHistoryOpen, setResetHistoryOpen] = useState(false);
+  const [resettingHistory, setResettingHistory] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   useEffect(() => {
     setCurrentLang(i18n.language || "en");
@@ -105,12 +107,8 @@ export default function SettingsScreen() {
   const currentLangLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.label ?? "English";
 
   const comingSoon = useCallback((feature: string) => {
-    if (Platform.OS === "web") {
-      window.alert(`${feature} will be available in a future update.`);
-    } else {
-      Alert.alert("Coming Soon", `${feature} will be available in a future update.`);
-    }
-  }, []);
+    showToast(`${feature} will be available in a future update.`, "info");
+  }, [showToast]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -206,20 +204,34 @@ export default function SettingsScreen() {
   }, []);
 
   const handleSignOut = useCallback(() => {
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm("Are you sure you want to sign out?");
-      if (confirmed) logout();
-    } else {
-      Alert.alert(
-        "Sign Out",
-        "Are you sure you want to sign out?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Sign Out", style: "destructive", onPress: () => logout() },
-        ],
-      );
-    }
+    setSignOutOpen(true);
+    setResetHistoryOpen(false);
+  }, []);
+
+  const confirmSignOut = useCallback(() => {
+    setSignOutOpen(false);
+    logout();
   }, [logout]);
+
+  const handleResetHistory = useCallback(async () => {
+    setResettingHistory(true);
+    try {
+      await apiRequest("DELETE", "/api/reading-history/reset");
+      queryClient.removeQueries({
+        predicate: (query) =>
+          typeof query.queryKey[0] === "string" &&
+          (query.queryKey[0] as string).includes("/api/reading-history"),
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
+      setResetHistoryOpen(false);
+      showToast("Reading history cleared", "success");
+    } catch {
+      showToast("Could not reset reading history. Try again.", "error");
+    } finally {
+      setResettingHistory(false);
+    }
+  }, [showToast, userId]);
 
   const renderSectionHeader = (title: string) => (
     <View style={s.sectionHeaderWrap}>
@@ -398,59 +410,97 @@ export default function SettingsScreen() {
         })}
 
         {isAuthenticated && (
-          <Pressable
-            onPress={() => {
-              Alert.alert(
-                "Reset Reading History",
-                "This will clear all your Bible reading history so chapters no longer appear as read. This cannot be undone.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Reset",
-                    style: "destructive",
-                    onPress: async () => {
-                      try {
-                        await apiRequest("DELETE", "/api/reading-history/reset");
-                        // Clear ALL reading-history caches (recent + per-book)
-                        queryClient.removeQueries({
-                          predicate: (query) =>
-                            typeof query.queryKey[0] === "string" &&
-                            (query.queryKey[0] as string).includes("/api/reading-history"),
-                        });
-                        queryClient.invalidateQueries({ queryKey: [`/api/reading-streaks?userId=${userId}`] });
-                        queryClient.invalidateQueries({ queryKey: [`/api/spiritual-rings?userId=${userId}`] });
-                        Alert.alert("Done", "Your reading history has been cleared.");
-                      } catch {
-                        Alert.alert("Error", "Could not reset reading history. Try again.");
-                      }
-                    },
-                  },
-                ]
-              );
-            }}
-            style={({ pressed }) => [s.signOutBtn, { opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Ionicons name="refresh-outline" size={20} color="#EF4444" />
-            <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
-              Reset Reading History
-            </Text>
-          </Pressable>
+          <>
+            <Pressable
+              onPress={() => {
+                setResetHistoryOpen((open) => !open);
+                setSignOutOpen(false);
+              }}
+              style={({ pressed }) => [s.signOutBtn, { opacity: pressed ? 0.85 : 1 }]}
+              testID="settings-reset-history"
+              accessibilityRole="button"
+              accessibilityLabel="Reset reading history"
+            >
+              <Ionicons name="refresh-outline" size={20} color="#EF4444" />
+              <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
+                Reset Reading History
+              </Text>
+            </Pressable>
+            {resetHistoryOpen ? (
+              <View testID="settings-reset-history-confirm" style={s.inlineConfirm}>
+                <Text style={s.inlineConfirmText}>
+                  This will clear all your Bible reading history so chapters no longer appear as read. This cannot be undone.
+                </Text>
+                <View style={s.inlineConfirmRow}>
+                  <Pressable
+                    onPress={() => setResetHistoryOpen(false)}
+                    disabled={resettingHistory}
+                    style={({ pressed }) => [s.inlineConfirmCancel, pressed && { opacity: 0.76 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel reset"
+                  >
+                    <Text style={s.inlineConfirmCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleResetHistory}
+                    disabled={resettingHistory}
+                    style={({ pressed }) => [s.inlineConfirmDanger, (resettingHistory || pressed) && { opacity: 0.76 }]}
+                    testID="settings-reset-history-confirm-ok"
+                    accessibilityRole="button"
+                    accessibilityLabel="Confirm reset reading history"
+                  >
+                    <Text style={s.inlineConfirmDangerText}>
+                      {resettingHistory ? "Resetting…" : "Reset"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+          </>
         )}
 
         {isAuthenticated && (
-          <Pressable
-            onPress={handleSignOut}
-            style={({ pressed }) => [
-              s.signOutBtn,
-              { opacity: pressed ? 0.85 : 1 },
-            ]}
-            testID="settings-sign-out"
-          >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-            <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
-              Sign Out
-            </Text>
-          </Pressable>
+          <>
+            <Pressable
+              onPress={handleSignOut}
+              style={({ pressed }) => [
+                s.signOutBtn,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
+              testID="settings-sign-out"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+              <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
+                Sign Out
+              </Text>
+            </Pressable>
+            {signOutOpen ? (
+              <View testID="settings-sign-out-confirm" style={s.inlineConfirm}>
+                <Text style={s.inlineConfirmText}>
+                  Are you sure you want to sign out?
+                </Text>
+                <View style={s.inlineConfirmRow}>
+                  <Pressable
+                    onPress={() => setSignOutOpen(false)}
+                    style={({ pressed }) => [s.inlineConfirmCancel, pressed && { opacity: 0.76 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel sign out"
+                  >
+                    <Text style={s.inlineConfirmCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={confirmSignOut}
+                    style={({ pressed }) => [s.inlineConfirmDanger, pressed && { opacity: 0.76 }]}
+                    testID="settings-sign-out-confirm-ok"
+                    accessibilityRole="button"
+                    accessibilityLabel="Confirm sign out"
+                  >
+                    <Text style={s.inlineConfirmDangerText}>Sign Out</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+          </>
         )}
       </ScrollView>
 
@@ -788,5 +838,50 @@ const s = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
+  },
+  inlineConfirm: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: ROW_BORDER,
+  },
+  inlineConfirmText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: TEXT_MUTED,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 14,
+  },
+  inlineConfirmRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  inlineConfirmCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ROW_BORDER,
+    alignItems: "center",
+  },
+  inlineConfirmCancelText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: TEXT,
+  },
+  inlineConfirmDanger: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+  },
+  inlineConfirmDangerText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
   },
 });

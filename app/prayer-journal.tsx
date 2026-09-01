@@ -8,7 +8,6 @@ import {
   TextInput,
   Modal,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Stack } from "expo-router";
@@ -19,6 +18,7 @@ import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
 import { track } from "@/lib/analytics";
@@ -134,16 +134,14 @@ export default function PrayerJournalScreen() {
   });
 
   const handleDelete = (id: string) => {
-    if (Platform.OS === "web") {
-      if (window.confirm("Delete this prayer request?")) {
-        deleteMutation.mutate(id);
-      }
-    } else {
-      Alert.alert("Delete Prayer", "Are you sure you want to delete this prayer request?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(id) },
-      ]);
-    }
+    void confirmWebSafe({
+      title: "Delete Prayer",
+      message: "Are you sure you want to delete this prayer request?",
+      confirmLabel: "Delete",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) deleteMutation.mutate(id);
+    });
   };
 
   const activePrayers = prayers?.filter((p) => !p.answered) ?? [];

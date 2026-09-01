@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Platform, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
@@ -66,14 +66,6 @@ export default function NotificationSettings({
       setEnabled(false);
       if (!result.canAskAgain) {
         setPermDenied(true);
-        Alert.alert(
-          "Notifications Blocked",
-          "You previously denied notification access. To enable reminders, open your device settings and allow notifications for this app.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: openAppSettings },
-          ]
-        );
       }
     }
     setLoading(false);

@@ -8,7 +8,6 @@ import {
   Pressable,
   ScrollView,
   Share,
-  Alert,
   Modal,
   TextInput,
   Platform,
@@ -20,6 +19,7 @@ import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
+import { confirmWebSafe, showWebSafeActions } from "@/components/WebSafeConfirm";
 
 const GOLD = "#C9933A";
 const SIGNPOST_COLORS: Record<string, string> = {
@@ -77,14 +77,14 @@ interface VotdHeroCardProps {
 }
 
 function showAuthGate() {
-  Alert.alert(
-    "Sign In Required",
-    "Create a free account to save verses and reflect on God\u2019s Word.",
-    [
-      { text: "Not Now", style: "cancel" },
-      { text: "Sign In", onPress: () => router.push("/(auth)/login") },
-    ],
-  );
+  void confirmWebSafe({
+    title: "Sign In Required",
+    message: "Create a free account to save verses and reflect on God’s Word.",
+    confirmLabel: "Sign In",
+    cancelLabel: "Not Now",
+  }).then((ok) => {
+    if (ok) router.push("/(auth)/login");
+  });
 }
 
 export default function VotdHeroCard({
@@ -150,35 +150,28 @@ export default function VotdHeroCard({
   };
 
   const handleMore = () => {
-    const options = ["Read Full Chapter", "Copy Verse", "Cancel"];
-    const cancelIndex = 2;
-
-    const actions: Record<number, () => void> = {
-      0: () => {
-        if (bookId && chapterNumber) {
-          const txParam = translation ? `?translation=${encodeURIComponent(translation)}` : "";
-          router.push(`/read/${bookId}/${chapterNumber}${txParam}` as any);
-        }
-      },
-      1: async () => {
-        await Clipboard.setStringAsync(`\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      },
-    };
-
-    if (Platform.OS === "ios") {
-      const { ActionSheetIOS } = require("react-native");
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex },
-        (idx: number) => actions[idx]?.(),
-      );
-    } else {
-      Alert.alert("More", undefined, [
-        { text: "Read Full Chapter", onPress: actions[0] },
-        { text: "Copy Verse", onPress: actions[1] },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    }
+    showWebSafeActions({
+      title: "More",
+      actions: [
+        {
+          label: "Read Full Chapter",
+          onPress: () => {
+            if (bookId && chapterNumber) {
+              const txParam = translation ? `?translation=${encodeURIComponent(translation)}` : "";
+              router.push(`/read/${bookId}/${chapterNumber}${txParam}` as any);
+            }
+          },
+        },
+        {
+          label: "Copy Verse",
+          onPress: () => {
+            void Clipboard.setStringAsync(`\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`).then(() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            });
+          },
+        },
+      ],
+    });
   };
 
   return (
