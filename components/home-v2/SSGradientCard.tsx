@@ -2,7 +2,10 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { HV2, F } from "./theme";
-import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import {
+  getSabbathSchoolQuarterTheme,
+  SABBATH_SCHOOL_PENDING_SURFACE,
+} from "@/lib/sabbath-school-quarter-theme";
 
 interface Props {
   quarterTitle?: string | null;
@@ -22,10 +25,12 @@ export default function SSGradientCard({
   onContinue, onOpenOverview, onWatch,
 }: Props) {
   const progress = Math.min(Math.max(progressDays / 7, 0), 1);
-  const quarterTheme = getSabbathSchoolQuarterTheme(quarterColor);
+  const quarterTheme = getSabbathSchoolQuarterTheme(
+    quarterColor || SABBATH_SCHOOL_PENDING_SURFACE,
+  );
 
   return (
-    <View style={s.wrap}>
+    <View style={[s.wrap, { backgroundColor: quarterTheme.primary }]}>
       <LinearGradient
         colors={[...quarterTheme.gradient]}
         start={{ x: 0, y: 0 }}

@@ -66,6 +66,12 @@ describe("Sabbath School continue target", () => {
     assert.equal(sabbathSchoolContinueProgressCount(resumed), 3);
   });
 
+  it("Home Continue card ignores last-read and always uses today", () => {
+    assert.doesNotMatch(homeSource, /useSabbathSchoolLastRead/);
+    assert.match(homeSource, /lastRead:\s*null/);
+    assert.match(cardSource, /Continue — \{dayLabel\}/);
+  });
+
   it("ignores last-read from a previous lesson", () => {
     const continueDay = resolveSabbathSchoolContinueDay({
       days: lesson10Days,

@@ -35,7 +35,6 @@ import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   resolveSabbathSchoolContinueDay,
   sabbathSchoolContinueProgressCount,
-  useSabbathSchoolLastRead,
 } from "@/lib/sabbath-school-continue";
 import { weekdayNameForSabbathSchoolDay } from "@/lib/sabbath-school-day-navigation";
 import {
@@ -223,7 +222,6 @@ export default function HomeV2Screen() {
     },
   });
 
-  const { lastRead: ssLastRead } = useSabbathSchoolLastRead(userId);
   const { data: ssData } = useQuery<{
     quarterly: { title: string; colorPrimary: string | null; quarterCode?: string } | null;
     currentLesson: {
@@ -292,12 +290,16 @@ export default function HomeV2Screen() {
   const continueDay = resolveSabbathSchoolContinueDay({
     days: ssData?.currentLesson?.days ?? [],
     todayDayNumber: ssData?.todayDayNumber ?? localDay.sabbathSchoolDayNumber,
-    lastRead: ssLastRead,
+    // Card always leads with today. Last-opened is lesson-screen chips only.
+    lastRead: null,
     currentLessonNumber: ssLessonNumber,
     currentQuarterCode: ssData?.quarterly?.quarterCode,
   });
   const continueDayLabel = continueDay
-    ? weekdayNameForSabbathSchoolDay(continueDay)
+    ? weekdayNameForSabbathSchoolDay({
+        dayNumber: continueDay.dayNumber,
+        date: continueDay.date ?? null,
+      })
     : dayLabel;
   const continueDayTitle = continueDay?.title ?? ssData?.currentLesson?.title;
   const ssProgressDays = sabbathSchoolContinueProgressCount(continueDay);

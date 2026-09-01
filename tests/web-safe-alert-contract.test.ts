@@ -41,11 +41,14 @@ describe("web-safe alerts", () => {
     );
   });
 
-  it("resets reading history with an inline confirm and the existing endpoint", () => {
+  it("resets reading history with a web-safe confirm sheet and the existing endpoint", () => {
     const settings = readFileSync(join(REPO_ROOT, "app", "settings.tsx"), "utf8");
-    assert.match(settings, /testID="settings-reset-history-confirm"/);
+    assert.match(settings, /confirmWebSafe/);
+    assert.match(settings, /testID:\s*"settings-reset-history-confirm"/);
+    assert.match(settings, /testID:\s*"settings-sign-out-confirm"/);
     assert.match(settings, /DELETE", "\/api\/reading-history\/reset"/);
     assert.match(settings, /Reading history cleared/);
     assert.doesNotMatch(settings, /Alert\.alert|window\.confirm|window\.alert/);
+    assert.doesNotMatch(settings, /inlineConfirm/);
   });
 });

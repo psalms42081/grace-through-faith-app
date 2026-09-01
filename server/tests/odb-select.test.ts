@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { pickPublishedForDate } from "../odb-select";
+import { isOdbTodayCacheFresh, pickPublishedForDate } from "../odb-select";
 
 describe("ODB published-day selection", () => {
   const posts = [
@@ -34,5 +34,36 @@ describe("ODB published-day selection", () => {
   it("returns null when nothing has been published yet", () => {
     assert.equal(pickPublishedForDate([{ date: "2026-09-02" }], "2026-09-01"), null);
     assert.equal(pickPublishedForDate([], "2026-09-01"), null);
+  });
+
+  it("rechecks today's date every 15 minutes even after an Aug 31 match", () => {
+    const now = Date.parse("2026-09-02T00:00:00+10:00");
+    const exactAug31 = {
+      todayDateKey: "2026-08-31",
+      today: { date: "2026-08-31" },
+      ts: now - 60 * 1000,
+    };
+    assert.equal(isOdbTodayCacheFresh(exactAug31, "2026-09-02", now), false);
+
+    const fallbackForSep2 = {
+      todayDateKey: "2026-09-02",
+      today: { date: "2026-08-31" },
+      ts: now - 16 * 60 * 1000,
+    };
+    assert.equal(isOdbTodayCacheFresh(fallbackForSep2, "2026-09-02", now), false);
+
+    const recentCheck = {
+      todayDateKey: "2026-09-02",
+      today: { date: "2026-09-02" },
+      ts: now - 5 * 60 * 1000,
+    };
+    assert.equal(isOdbTodayCacheFresh(recentCheck, "2026-09-02", now), true);
+
+    const exactButStale = {
+      todayDateKey: "2026-09-02",
+      today: { date: "2026-09-02" },
+      ts: now - 24 * 60 * 60 * 1000,
+    };
+    assert.equal(isOdbTodayCacheFresh(exactButStale, "2026-09-02", now), false);
   });
 });

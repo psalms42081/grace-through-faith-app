@@ -136,7 +136,11 @@ export function WebSafeConfirmHost({ children }: { children: React.ReactNode }) 
                   pressed && s.pressed,
                   hideCancel && { flex: 1 },
                 ]}
-                testID="web-safe-confirm-ok"
+                testID={
+                  confirmReq?.testID
+                    ? `${confirmReq.testID}-ok`
+                    : "web-safe-confirm-ok"
+                }
                 accessibilityRole="button"
                 accessibilityLabel={confirmReq?.confirmLabel ?? "OK"}
               >

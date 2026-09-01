@@ -1,5 +1,7 @@
 export type DatedPost = { date: string };
 
+export const ODB_UPSTREAM_RECHECK_MS = 15 * 60 * 1000;
+
 function dayKey(value: string): string {
   return (value || "").slice(0, 10);
 }
@@ -21,3 +23,18 @@ export function pickPublishedForDate<T extends DatedPost>(
   if (exact) return { post: exact, exact: true };
   return { post: eligible[0], exact: false };
 }
+
+/** True only when we already checked this calendar day within the 15-minute window. */
+export function isOdbTodayCacheFresh(
+  cache: {
+    todayDateKey: string;
+    today?: { date?: string };
+    ts: number;
+  },
+  dateKey: string,
+  now = Date.now(),
+): boolean {
+  if (cache.todayDateKey !== dateKey) return false;
+  return now - cache.ts < ODB_UPSTREAM_RECHECK_MS;
+}
+

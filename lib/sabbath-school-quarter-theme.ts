@@ -1,4 +1,5 @@
 export const SABBATH_SCHOOL_FALLBACK_COLOR = "#1F7A70";
+export const SABBATH_SCHOOL_PENDING_SURFACE = "#1F1A12";
 
 export interface SabbathSchoolQuarterTheme {
   primary: string;

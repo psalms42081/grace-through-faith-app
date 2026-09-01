@@ -3,13 +3,11 @@ import os from "os";
 import path from "path";
 import { Router, type Request, type Response } from "express";
 import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
-import { pickPublishedForDate } from "../odb-select";
+import { isOdbTodayCacheFresh, pickPublishedForDate } from "../odb-select";
 
 const router = Router();
 
 const ODB_API = "https://odb.org/wp-json/wp/v2/posts";
-const FRESH_TTL_MS = 24 * 60 * 60 * 1000;
-const UNPUBLISHED_TTL_MS = 15 * 60 * 1000;
 const CACHE_FILE = path.join(os.tmpdir(), "informed-ministries-odb-daily-cache.json");
 
 type MappedPost = ReturnType<typeof mapPost>;
@@ -103,15 +101,8 @@ function storeDailyCache(cache: DailyCache) {
   saveDiskCache(cache);
 }
 
-function cacheTtl(cache: DailyCache): number {
-  return cache.exact ? FRESH_TTL_MS : UNPUBLISHED_TTL_MS;
-}
-
 function isFreshTodayCache(cache: DailyCache, dateKey: string): boolean {
-  return (
-    cache.todayDateKey === dateKey &&
-    Date.now() - cache.ts < cacheTtl(cache)
-  );
+  return isOdbTodayCacheFresh(cache, dateKey);
 }
 
 function isSourceUnreachable(err: unknown): boolean {
@@ -221,8 +212,7 @@ router.get("/api/odb/recent", async (req: Request, res: Response) => {
   try {
     if (
       cached &&
-      cached.todayDateKey === dateKey &&
-      Date.now() - cached.ts < cacheTtl(cached) &&
+      isOdbTodayCacheFresh(cached, dateKey) &&
       cached.posts.length >= count
     ) {
       return res.json(cached.posts.filter((p) => p.date && p.date <= dateKey).slice(0, count));
