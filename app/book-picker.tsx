@@ -10,15 +10,16 @@ import {
   Modal,
 } from "react-native";
 import { router, useSegments } from "expo-router";
-import { useNavigationState } from "@react-navigation/native";
 import { useResumeBibleTabChapter } from "@/components/bible/useResumeBibleTabChapter";
 import {
   bibleTabBookPath,
   goBibleBooksBack,
   isBibleTabSegments,
-  stackCanGoBackFromState,
 } from "@/lib/bible-tab-navigation";
-import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
+import {
+  useCanPopNestedStack,
+  useHardwareBackToHomeWhenAtStackRoot,
+} from "@/lib/use-hardware-back-to-home";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -50,7 +51,7 @@ export default function BookPickerScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const segments = useSegments();
   const isBibleTabHome = isBibleTabSegments(segments);
-  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  const canPopStack = useCanPopNestedStack();
   useResumeBibleTabChapter(isBibleTabHome);
   useHardwareBackToHomeWhenAtStackRoot(true, canPopStack);
 

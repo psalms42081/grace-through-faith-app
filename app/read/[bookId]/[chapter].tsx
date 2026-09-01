@@ -14,7 +14,6 @@ import {
   PanResponder,
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments } from "expo-router";
-import { useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,9 +33,11 @@ import {
   goBibleReaderBack,
   isBibleTabSegments,
   openBibleTabBooks,
-  stackCanGoBackFromState,
 } from "@/lib/bible-tab-navigation";
-import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
+import {
+  useCanPopNestedStack,
+  useHardwareBackToHomeWhenAtStackRoot,
+} from "@/lib/use-hardware-back-to-home";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -623,7 +624,7 @@ export default function VerseReaderScreen() {
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
   const isTabReader = isBibleTabSegments(segments);
-  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  const canPopStack = useCanPopNestedStack();
   useHardwareBackToHomeWhenAtStackRoot(isTabReader, canPopStack);
   const handleReaderBack = useCallback(() => {
     goBibleReaderBack(router, canPopStack, isTabReader);

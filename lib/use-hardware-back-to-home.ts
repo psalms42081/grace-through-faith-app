@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 import { BackHandler, Platform } from "react-native";
-import { router } from "expo-router";
-import { goHomeTab } from "@/lib/bible-tab-navigation";
+import { router, useNavigation } from "expo-router";
+import { goHomeTab, stackCanGoBackFromState } from "@/lib/bible-tab-navigation";
+
+/** Nested-stack pop check via expo-router's useNavigation — not @react-navigation/native. */
+export function useCanPopNestedStack(): boolean {
+  const navigation = useNavigation();
+  return stackCanGoBackFromState(navigation.getState());
+}
 
 /**
  * Android hardware back at a Bible-tab (or root Books) stack root goes to Home.

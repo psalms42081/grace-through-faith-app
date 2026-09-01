@@ -96,6 +96,13 @@ describe("external tester navigation feedback", () => {
     assert.match(bibleTabStackSource, /name="\[bookId\]\/index"/);
     assert.match(bibleTabStackSource, /name="\[bookId\]\/\[chapter\]"/);
     assert.match(tabReaderRouteSource, /read\/\[bookId\]\/\[chapter\]/);
+    assert.doesNotMatch(readerSource, /@react-navigation\//);
+    assert.doesNotMatch(bookPickerSource, /@react-navigation\//);
+    assert.doesNotMatch(
+      readFileSync(new URL("../app/read/[bookId]/index.tsx", import.meta.url), "utf8"),
+      /@react-navigation\//,
+    );
+    assert.match(readerSource, /useCanPopNestedStack\(\)/);
     assert.match(readerSource, /goBibleReaderBack\(router, canPopStack, isTabReader\)/);
     assert.match(readerSource, /testID="bible-reader-back"/);
     assert.match(readerSource, /useHardwareBackToHomeWhenAtStackRoot\(isTabReader, canPopStack\)/);

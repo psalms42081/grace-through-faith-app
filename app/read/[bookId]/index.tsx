@@ -9,15 +9,17 @@ import {
   Platform,
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useSegments } from "expo-router";
-import { useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
-import { bibleTabBookPath, goBibleReaderBack, isBibleTabSegments, stackCanGoBackFromState } from "@/lib/bible-tab-navigation";
-import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
+import { bibleTabBookPath, goBibleReaderBack, isBibleTabSegments } from "@/lib/bible-tab-navigation";
+import {
+  useCanPopNestedStack,
+  useHardwareBackToHomeWhenAtStackRoot,
+} from "@/lib/use-hardware-back-to-home";
 
 // Read-state recolor (Batch 1 review packet) — gold is reserved for
 // streak/analytics and teal for Sabbath School, so read indicators remap.
@@ -57,7 +59,7 @@ export default function ChapterPickerScreen() {
   const { userId } = useAuth();
   const segments = useSegments();
   const isTabContained = isBibleTabSegments(segments);
-  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  const canPopStack = useCanPopNestedStack();
   useHardwareBackToHomeWhenAtStackRoot(isTabContained, canPopStack);
   const chapterRoute = (chapter: number) =>
     `${isTabContained ? bibleTabBookPath(bookId ?? "") : `/read/${bookId}`}/${chapter}`;
