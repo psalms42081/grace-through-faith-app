@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
@@ -78,10 +78,16 @@ type LiveSession = {
   startedAt: string;
   endedAt: string | null;
   roomName: string;
-  lastHeartbeatAt: string;
+  lastHeartbeatAt: string | null;
 };
 
 type LiveResponse = { session: LiveSession | null };
+
+function openLiveSession(data: LiveResponse | undefined): LiveSession | null {
+  const session = data?.session ?? null;
+  if (!session || session.endedAt != null) return null;
+  return session;
+}
 
 type SsCurrent = {
   quarterly: { quarterCode?: string } | null;
@@ -133,17 +139,27 @@ export default function BibleGroupHomeScreen() {
     enabled: isAuthenticated && !!id,
   });
 
-  const { data: liveData } = useQuery<LiveResponse>({
+  const { data: liveData, refetch: refetchLive } = useQuery<LiveResponse>({
     queryKey: ["/api/bible-groups", id, "live"],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/bible-groups/${id}/live`);
       return res.json();
     },
     enabled: isAuthenticated && !!id && !isKidsMode,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     refetchInterval: 15_000,
   });
 
-  const liveSession = liveData?.session ?? null;
+  const liveSession = openLiveSession(liveData);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated || !id || isKidsMode) return;
+      void refetchLive();
+    }, [isAuthenticated, id, isKidsMode, refetchLive]),
+  );
 
   const curriculum = data?.group.curriculum === "inverse" ? "inverse" : "adult";
   const { data: ssData } = useQuery<SsCurrent>({
@@ -244,7 +260,9 @@ export default function BibleGroupHomeScreen() {
   const startLiveMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/bible-groups/${id}/live/start`);
-      return res.json();
+      const body = await res.json();
+      await apiRequest("POST", `/api/bible-groups/${id}/live/heartbeat`).catch(() => {});
+      return body;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/bible-groups", id, "live"] });
@@ -367,7 +385,7 @@ export default function BibleGroupHomeScreen() {
               : "This week's lesson"}
           </Text>
           <Text style={s.lessonMeta}>Open {continueLabel} in Sabbath School</Text>
-          {showLiveUi && liveSession && (
+          {showLiveUi && liveSession != null && liveSession.endedAt == null && (
             <Pressable
               onPress={() => router.push(`/bible-group-live/${id}` as any)}
               testID="bible-group-join-live"
@@ -418,18 +436,28 @@ export default function BibleGroupHomeScreen() {
               {isHost && member.role !== "host" && (
                 <Pressable
                   onPress={() => {
-                    Alert.alert(
-                      "Remove member",
-                      `Remove ${member.displayName} from this group?`,
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Remove",
-                          style: "destructive",
-                          onPress: () => removeMutation.mutate(member.userId),
-                        },
-                      ],
-                    );
+                    const removeMember = () => removeMutation.mutate(member.userId);
+                    if (Platform.OS === "web") {
+                      if (
+                        typeof confirm === "function" &&
+                        confirm(`Remove ${member.displayName} from this group?`)
+                      ) {
+                        removeMember();
+                      }
+                    } else {
+                      Alert.alert(
+                        "Remove member",
+                        `Remove ${member.displayName} from this group?`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Remove",
+                            style: "destructive",
+                            onPress: removeMember,
+                          },
+                        ],
+                      );
+                    }
                   }}
                   testID={`bible-group-remove-${member.userId}`}
                 >

@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
+import {
+  activeLiveSessionOrNull,
+  LIVE_HEARTBEAT_STALE_MS,
+} from "../server/services/bible-group-live-session";
 
 const repoRoot = path.resolve(process.cwd());
 
@@ -40,9 +44,61 @@ describe("bible group live API paths", () => {
     assert.match(routes, /Live rooms are not configured/);
     assert.match(routes, /isLiveKitConfigured/);
     assert.match(routes, /identity: userId/);
+    assert.match(routes, /isNull\(bibleSmallGroupLiveSessions\.endedAt\)/);
+    assert.doesNotMatch(routes, /isNotNull\(bibleSmallGroupLiveSessions\.endedAt\)/);
+    assert.match(
+      routes,
+      /res\.json\(\{ session: session \? publicLiveSession\(session\) : null \}\)/,
+    );
+    assert.match(routes, /isLiveSessionStale/);
+    assert.match(routes, /endLiveSessionRow\(row\)/);
     const community = read("server/routes/community.ts");
     assert.doesNotMatch(community, /bible_small_group_live_session/);
     assert.doesNotMatch(community, /\/api\/bible-groups\/:id\/live/);
+  });
+});
+
+describe("GET /api/bible-groups/:id/live active session policy", () => {
+  const now = Date.parse("2026-09-01T10:00:00.000Z");
+
+  it("returns null when there is no session", () => {
+    assert.equal(activeLiveSessionOrNull(null, now), null);
+    assert.equal(activeLiveSessionOrNull(undefined, now), null);
+  });
+
+  it("returns an open session with NULL heartbeat if started_at is 1 minute ago", () => {
+    const startedAt = new Date(now - 60_000);
+    const row = {
+      endedAt: null,
+      lastHeartbeatAt: null,
+      startedAt,
+      id: "open-null-heartbeat",
+    };
+    assert.equal(activeLiveSessionOrNull(row, now), row);
+  });
+
+  it("treats an open session with last heartbeat 6 minutes ago as stale (auto-end → null)", () => {
+    assert.ok(LIVE_HEARTBEAT_STALE_MS === 5 * 60 * 1000);
+    const startedAt = new Date(now - 10 * 60 * 1000);
+    const lastHeartbeatAt = new Date(now - 6 * 60 * 1000);
+    const row = {
+      endedAt: null,
+      lastHeartbeatAt,
+      startedAt,
+      id: "stale-heartbeat",
+    };
+    assert.equal(activeLiveSessionOrNull(row, now), null);
+  });
+
+  it("returns null for an already ended session", () => {
+    const startedAt = new Date(now - 60_000);
+    const row = {
+      endedAt: new Date(now - 10_000),
+      lastHeartbeatAt: new Date(now - 20_000),
+      startedAt,
+      id: "ended",
+    };
+    assert.equal(activeLiveSessionOrNull(row, now), null);
   });
 });
 
@@ -61,5 +117,24 @@ describe("live room client", () => {
     const html = read("server/templates/bible-group-live-room.html");
     assert.match(html, /\/api\/streams\/livekit-client\.umd\.js/);
     assert.doesNotMatch(html, /livekit-room\.html/);
+  });
+
+  it("joins only on a non-null open session and polls live on focus plus 15s", () => {
+    const screen = read("app/bible-group/[id].tsx");
+    assert.match(screen, /liveSession != null && liveSession\.endedAt == null/);
+    assert.match(screen, /function openLiveSession/);
+    assert.match(screen, /session\.endedAt != null/);
+    assert.match(screen, /refetchInterval: 15_000/);
+    assert.match(screen, /refetchOnWindowFocus: true/);
+    assert.match(screen, /refetchOnMount: "always"/);
+    assert.match(screen, /useFocusEffect/);
+    assert.match(screen, /void refetchLive\(\)/);
+    assert.match(screen, /\/live\/heartbeat/);
+    assert.match(
+      screen,
+      /qc\.invalidateQueries\(\{ queryKey: \["\/api\/bible-groups", id, "live"\] \}\)/,
+    );
+    assert.match(screen, /Platform\.OS === "web"/);
+    assert.match(screen, /Remove \$\{member\.displayName\} from this group\?/);
   });
 });

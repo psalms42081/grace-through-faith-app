@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { D2, F } from "./tokens";
@@ -58,10 +58,20 @@ function decodeHtmlEntities(value: string) {
 export default function OdbDevotionalPreview() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const endpoint = id ? `/api/odb/post/${id}` : withDeviceTimeZone("/api/odb/today");
 
-  const query = useQuery<Odb>({ queryKey: [endpoint], staleTime: 600000, refetchOnMount: true });
+  const query = useQuery<Odb>({
+    queryKey: [endpoint],
+    staleTime: 600000,
+    refetchOnMount: "always",
+    retry: false,
+  });
   const d = query.data;
+
+  const retryFetch = () => {
+    queryClient.resetQueries({ queryKey: [endpoint] });
+  };
 
   const share = () =>
     d &&
@@ -71,7 +81,7 @@ export default function OdbDevotionalPreview() {
       url: d.url,
     }).catch(() => {});
 
-  if (query.isLoading) {
+  if ((query.isLoading || query.isFetching) && !d) {
     return (
       <View style={s.root}>
         <Header title="Our Daily Bread" topInset={insets.top} onBack={() => router.back()} />
@@ -85,7 +95,7 @@ export default function OdbDevotionalPreview() {
       <View style={s.root}>
         <Header title="Our Daily Bread" topInset={insets.top} onBack={() => router.back()} />
         <ErrorState
-          onRetry={() => query.refetch()}
+          onRetry={retryFetch}
           label="Our Daily Bread is taking a moment to load."
         />
       </View>

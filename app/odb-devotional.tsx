@@ -14,7 +14,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 
@@ -44,12 +44,18 @@ export default function OdbDevotionalScreen() {
   const postId = params.id;
 
   const endpoint = postId ? `/api/odb/post/${postId}` : withDeviceTimeZone("/api/odb/today");
+  const queryClient = useQueryClient();
 
-  const { data: devotional, isLoading, error, refetch } = useQuery<OdbDevotional>({
+  const { data: devotional, isLoading, isFetching, error } = useQuery<OdbDevotional>({
     queryKey: [endpoint],
     staleTime: 10 * 60 * 1000,
-    refetchOnMount: true,
+    refetchOnMount: "always",
+    retry: false,
   });
+
+  const retryFetch = () => {
+    queryClient.resetQueries({ queryKey: [endpoint] });
+  };
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
@@ -64,7 +70,7 @@ export default function OdbDevotionalScreen() {
     } catch {}
   };
 
-  if (isLoading) {
+  if ((isLoading || isFetching) && !devotional) {
     return (
       <View style={[s.container, { paddingTop: insets.top + webTopPad }]}>
         <ActivityIndicator size="large" color={PathB.coral} style={{ marginTop: 60 }} />
@@ -88,7 +94,7 @@ export default function OdbDevotionalScreen() {
             Unable to load devotional
           </Text>
           <Pressable
-            onPress={() => refetch()}
+            onPress={retryFetch}
             style={({ pressed }) => [s.readMoreBtn, { marginTop: 16, width: 160 }, pressed && { opacity: 0.7 }]}
           >
             <Text style={[s.readMoreText, { fontFamily: "Inter_600SemiBold" }]}>Try Again</Text>

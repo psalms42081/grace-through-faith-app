@@ -22,6 +22,7 @@ import {
   getLiveKitUrl,
   isLiveKitConfigured,
 } from "../services/livekit";
+import { isLiveSessionStale } from "../services/bible-group-live-session";
 import {
   ADULT_CONFIRM_REQUIRED,
   generateBibleGroupInviteCode,
@@ -102,7 +103,6 @@ async function weekPointerFor(
   return resolveCurrentWeekPointer(curriculum, timeZone);
 }
 
-const LIVE_HEARTBEAT_STALE_MS = 5 * 60 * 1000;
 const LIVE_ROOMS_UNCONFIGURED = { error: "Live rooms are not configured" };
 
 function publicLiveSession(row: typeof bibleSmallGroupLiveSessions.$inferSelect) {
@@ -148,9 +148,8 @@ async function endLiveSessionRow(row: typeof bibleSmallGroupLiveSessions.$inferS
 
 async function resolveActiveLiveSession(groupId: string) {
   const row = await loadActiveLiveRow(groupId);
-  if (!row) return null;
-  const beat = row.lastHeartbeatAt?.getTime() ?? row.startedAt.getTime();
-  if (Date.now() - beat > LIVE_HEARTBEAT_STALE_MS) {
+  if (!row || row.endedAt != null) return null;
+  if (isLiveSessionStale(row)) {
     await endLiveSessionRow(row);
     return null;
   }
@@ -687,6 +686,7 @@ router.post(
             groupId: ctx.group.id,
             startedBy: userId,
             roomName,
+            lastHeartbeatAt: sql`now()`,
           })
           .returning();
         session = inserted;

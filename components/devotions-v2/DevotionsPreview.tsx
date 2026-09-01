@@ -94,7 +94,11 @@ export default function DevotionsPreview() {
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
   const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: ["/api/devotionals/plans"] });
-  const odb = useQuery<Odb>({ queryKey: [withDeviceTimeZone("/api/odb/today")], staleTime: 600000 });
+  const odb = useQuery<Odb>({
+    queryKey: [withDeviceTimeZone("/api/odb/today")],
+    staleTime: 600000,
+    refetchOnMount: "always",
+  });
   const egw = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
   const today = useQuery<{
     today: any;
@@ -362,7 +366,15 @@ export default function DevotionsPreview() {
             <Text style={s.cardTitle} numberOfLines={2}>
               {odb.data?.title || "Today's bread"}
             </Text>
-            <Text style={s.cardSub}>A short pause for the day</Text>
+            <Text style={s.cardSub}>
+              {odb.data?.date
+                ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "A short pause for the day"}
+            </Text>
           </Pressable>
           <Pressable
             style={[s.dailyCard, { backgroundColor: "#F7EBDD" }]}

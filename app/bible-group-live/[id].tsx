@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,7 @@ type GroupDetail = {
   };
 };
 
-type LiveResponse = { session: { id: string } | null };
+type LiveResponse = { session: { id: string; endedAt?: string | null } | null };
 
 type TokenResponse = {
   token: string;
@@ -644,18 +644,29 @@ export default function BibleGroupLiveScreen() {
     enabled: isAuthenticated && !!id && !isKidsMode,
   });
 
-  const { data: liveData, isLoading: liveLoading } = useQuery<LiveResponse>({
+  const { data: liveData, isLoading: liveLoading, refetch: refetchLive } = useQuery<LiveResponse>({
     queryKey: ["/api/bible-groups", id, "live"],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/bible-groups/${id}/live`);
       return res.json();
     },
     enabled: isAuthenticated && !!id && !isKidsMode,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     refetchInterval: 15_000,
   });
 
   const isHost = data?.group.role === "host";
-  const liveSession = liveData?.session ?? null;
+  const liveSession =
+    liveData?.session && liveData.session.endedAt == null ? liveData.session : null;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated || !id || isKidsMode) return;
+      void refetchLive();
+    }, [isAuthenticated, id, isKidsMode, refetchLive]),
+  );
 
   useEffect(() => {
     if (isKidsMode) goToProfile();
