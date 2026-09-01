@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PrayerWall from "@/components/PrayerWall";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { displayInitials } from "@/lib/user-initials";
 
 interface GroupMember {
   id: string;
@@ -515,7 +516,7 @@ export default function GroupDetailScreen() {
               <View key={member.userId} style={[s.memberProgressRow, { borderColor: theme.border }]}>
                 <View style={[s.memberAvatar, { backgroundColor: theme.accent + "20" }]}>
                   <Text style={[{ color: theme.accent, fontSize: 12, fontFamily: "Inter_600SemiBold" }]}>
-                    {member.displayName[0]?.toUpperCase() || "M"}
+                    {displayInitials(member.displayName || "")}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -983,7 +984,7 @@ function DiscussionCard({
       <View style={s.discHeader}>
         <View style={[s.discAvatar, { backgroundColor: theme.accent + "20" }]}>
           <Text style={[s.discAvatarText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {(disc.authorName || "M")[0].toUpperCase()}
+            {displayInitials(disc.authorName || "")}
           </Text>
         </View>
         <View style={{ flex: 1 }}>

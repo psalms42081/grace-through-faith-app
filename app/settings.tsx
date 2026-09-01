@@ -638,7 +638,7 @@ export default function SettingsScreen() {
               style={[s.langRow, s.langRowFirst, { borderColor: ROW_BORDER }]}
               onPress={handleUseDeviceLang}
             >
-              <Ionicons name="phone-portrait-outline" size={18} color={CORAL} style={{ marginRight: 12 }} />
+              <Ionicons name="phone-portrait-outline" size={18} color={TEXT} style={{ marginRight: 12 }} />
               <Text style={[s.langLabel, { color: TEXT }]}>
                 {t("profile.useDeviceLanguage", "Use Device Language")}
               </Text>

@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
+import { PathB } from "@/constants/colors";
 
 interface FamilyPrayer {
   id: string;
@@ -85,7 +86,7 @@ function GlowCard({
     : isDark ? "#1A1A22" : "#FEFDFB";
 
   const cardBorder = prayer.answered
-    ? "#C9933A40"
+    ? theme.success + "40"
     : isDark ? "#2A2A3A" : "#E8E0D0";
 
   const timeSince = getTimeSince(prayer.createdAt);
@@ -99,7 +100,7 @@ function GlowCard({
         style={[
           styles.glowOverlay,
           {
-            borderColor: "#C9933A",
+            borderColor: theme.success,
             borderRadius: 14,
           },
           glowStyle,
@@ -112,7 +113,7 @@ function GlowCard({
           <Ionicons
             name={prayer.answered ? "checkmark-circle" : "flame-outline"}
             size={16}
-            color={prayer.answered ? "#C9933A" : theme.accent}
+            color={prayer.answered ? theme.success : PathB.ink}
           />
           <Text style={[styles.authorName, { color: theme.textSecondary }]}>
             {prayer.authorName || "Family Member"}
@@ -131,7 +132,7 @@ function GlowCard({
 
       {prayer.scripturalVerse && (
         <View style={[styles.scriptureBox, { backgroundColor: isDark ? "#0F0F18" : "#F5F0E5" }]}>
-          <Ionicons name="book-outline" size={14} color={theme.accent} />
+          <Ionicons name="book-outline" size={14} color={PathB.ink} />
           <View style={styles.scriptureTextContainer}>
             <Text style={[styles.scriptureVerse, { color: theme.text }]}>
               {prayer.scripturalVerse}
@@ -152,7 +153,7 @@ function GlowCard({
           disabled={supportPending}
           testID={`prayer-support-${prayer.id}`}
         >
-          <Ionicons name="heart" size={16} color="#C9933A" />
+          <Ionicons name="heart" size={16} color={PathB.coral} />
           <Text style={[styles.supportText, { color: theme.text }]}>
             {prayer.supportCount > 0 ? `${prayer.supportCount} Prayed` : "Pray for This"}
           </Text>
@@ -161,7 +162,7 @@ function GlowCard({
         <Pressable
           style={[
             styles.answeredToggle,
-            prayer.answered && { backgroundColor: "#C9933A20" },
+            prayer.answered && { backgroundColor: theme.success + "20" },
           ]}
           onPress={() => onToggleAnswered(prayer.id, !prayer.answered)}
           testID={`prayer-answered-${prayer.id}`}
@@ -169,12 +170,12 @@ function GlowCard({
           <Ionicons
             name={prayer.answered ? "trophy" : "trophy-outline"}
             size={15}
-            color={prayer.answered ? "#C9933A" : theme.textMuted}
+            color={prayer.answered ? theme.success : theme.textMuted}
           />
           <Text
             style={[
               styles.answeredText,
-              { color: prayer.answered ? "#C9933A" : theme.textMuted },
+              { color: prayer.answered ? theme.success : theme.textMuted },
             ]}
           >
             {prayer.answered ? "Praise Report" : "Answered?"}
@@ -293,14 +294,14 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
       <View style={styles.titleRow}>
-        <Ionicons name={isGroupMode ? "heart" : "flame"} size={18} color={theme.accent} />
+        <Ionicons name={isGroupMode ? "heart" : "flame"} size={18} color={PathB.ink} />
         <Text style={[styles.title, { color: theme.text }]}>{isGroupMode ? "Group Prayer Wall" : "Family Altar"}</Text>
         <Pressable
-          style={[styles.addButton, { backgroundColor: theme.accent + "15" }]}
+          style={[styles.addButton, { backgroundColor: PathB.ink + "0F" }]}
           onPress={() => setShowForm(!showForm)}
           testID="prayer-add-btn"
         >
-          <Ionicons name={showForm ? "close" : "add"} size={18} color={theme.accent} />
+          <Ionicons name={showForm ? "close" : "add"} size={18} color={PathB.ink} />
         </Pressable>
       </View>
 
@@ -341,7 +342,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
             testID="prayer-author-input"
           />
           <Pressable
-            style={[styles.postButton, { backgroundColor: theme.accent, opacity: prayerTitle.trim() ? 1 : 0.5 }]}
+            style={[styles.postButton, { backgroundColor: PathB.coral, opacity: prayerTitle.trim() ? 1 : 0.5 }]}
             onPress={handlePost}
             disabled={!prayerTitle.trim() || postMutation.isPending}
             testID="prayer-post-btn"
@@ -378,8 +379,8 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       {answeredPrayers.length > 0 && (
         <View style={styles.answeredSection}>
           <View style={styles.answeredHeader}>
-            <Ionicons name="trophy" size={16} color="#C9933A" />
-            <Text style={[styles.answeredTitle, { color: "#C9933A" }]}>
+            <Ionicons name="trophy" size={16} color={theme.success} />
+            <Text style={[styles.answeredTitle, { color: theme.success }]}>
               Praise Reports ({answeredPrayers.length})
             </Text>
           </View>
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: "#C9933A20",
+    borderTopColor: "#E7E0D2",
   },
   answeredHeader: {
     flexDirection: "row",

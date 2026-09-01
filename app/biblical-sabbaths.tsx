@@ -15,12 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { safeGoBack } from "@/lib/safe-back";
+import { PathB } from "@/constants/colors";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const GOLD = "#C9933A";
+const SABBATH_GOLD = "#D4A245"; // sunny glyph only
 const FILTERS = ["All", "Weekly", "Annual", "Sabbatical & Jubilee"] as const;
 
 type SabbathScripture = {
@@ -63,12 +64,12 @@ function formatScriptureRef(s: SabbathScripture): string {
 
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    weekly: "#2A8B8B",
-    annual: "#C9933A",
-    sabbatical: "#7B68EE",
-    jubilee: "#E06B75",
+    weekly: PathB.catSabbath,
+    annual: PathB.catEGW,
+    sabbatical: PathB.catPlans,
+    jubilee: PathB.catHealth,
   };
-  const color = colors[type] || GOLD;
+  const color = colors[type] || PathB.ink;
   return (
     <View style={[styles.typeBadge, { backgroundColor: `${color}20`, borderColor: `${color}50` }]}>
       <Text style={[styles.typeBadgeText, { color }]}>
@@ -90,10 +91,10 @@ function SabbathCard({ item, isExpanded, onToggle, onScripturePress }: {
     <Pressable
       onPress={onToggle}
       testID={`sabbath-card-${item.type}`}
-      style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: `${GOLD}15` }]}
+      style={[styles.card, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
     >
       <View style={styles.cardHeader}>
-        <Text style={[styles.hebrewName, { color: GOLD, fontFamily: "Lora_700Bold" }]}>
+        <Text style={[styles.hebrewName, { color: PathB.ink, fontFamily: "Lora_700Bold" }]}>
           {item.hebrewName}
         </Text>
         <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
@@ -108,7 +109,7 @@ function SabbathCard({ item, isExpanded, onToggle, onScripturePress }: {
             </Text>
           </View>
         </View>
-        <Text style={[styles.anchorRef, { color: GOLD, fontFamily: "Lora_400Regular" }]}>
+        <Text style={[styles.anchorRef, { color: PathB.inkMuted, fontFamily: "Lora_400Regular" }]}>
           {item.anchorScripture}
         </Text>
         <Text style={[styles.description, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
@@ -118,23 +119,23 @@ function SabbathCard({ item, isExpanded, onToggle, onScripturePress }: {
 
       {isExpanded && (
         <View style={styles.expandedSection}>
-          <View style={[styles.divider, { backgroundColor: `${GOLD}20` }]} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          <Text style={[styles.sectionLabel, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[styles.sectionLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
             Historical Context
           </Text>
           <Text style={[styles.sectionBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             {item.historicalContext}
           </Text>
 
-          <Text style={[styles.sectionLabel, { color: GOLD, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
+          <Text style={[styles.sectionLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
             Points to Christ
           </Text>
           <Text style={[styles.sectionBody, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             {item.propheticSignificance}
           </Text>
 
-          <Text style={[styles.sectionLabel, { color: GOLD, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
+          <Text style={[styles.sectionLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold", marginTop: 20 }]}>
             Scriptures
           </Text>
           <View style={styles.scriptureChips}>
@@ -145,18 +146,18 @@ function SabbathCard({ item, isExpanded, onToggle, onScripturePress }: {
                 onPress={() => onScripturePress(s)}
                 style={({ pressed }) => [
                   styles.scriptureChip,
-                  { backgroundColor: `${GOLD}12`, borderColor: `${GOLD}30`, opacity: pressed ? 0.7 : 1 },
+                  { backgroundColor: PathB.surface, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
                 ]}
               >
                 <View>
                   <Text style={[styles.chipLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
                     {s.label}
                   </Text>
-                  <Text style={[styles.chipRef, { color: GOLD, fontFamily: "Lora_400Regular" }]}>
+                  <Text style={[styles.chipRef, { color: PathB.inkMuted, fontFamily: "Lora_400Regular" }]}>
                     {formatScriptureRef(s)}
                   </Text>
                 </View>
-                <Ionicons name="open-outline" size={14} color={GOLD} />
+                <Ionicons name="open-outline" size={14} color={PathB.inkMuted} />
               </Pressable>
             ))}
           </View>
@@ -218,14 +219,14 @@ export default function BiblicalSabbathsScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.heroCard, { backgroundColor: `${GOLD}08`, borderColor: `${GOLD}20` }]}>
-          <View style={[styles.heroIconWrap, { backgroundColor: `${GOLD}15` }]}>
-            <Ionicons name="sunny" size={28} color={GOLD} />
+        <View style={[styles.heroCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <View style={[styles.heroIconWrap, { backgroundColor: SABBATH_GOLD + "18" }]}>
+            <Ionicons name="sunny" size={28} color={SABBATH_GOLD} />
           </View>
           <Text style={[styles.heroTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
             The Biblical Sabbaths
           </Text>
-          <Text style={[styles.heroSubtitle, { color: GOLD, fontFamily: "Lora_400Regular" }]}>
+          <Text style={[styles.heroSubtitle, { color: PathB.inkMuted, fontFamily: "Lora_400Regular" }]}>
             From Creation to Eternity — God's Rhythm of Rest and Restoration
           </Text>
           <Text style={[styles.heroIntro, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
@@ -255,8 +256,8 @@ export default function BiblicalSabbathsScreen() {
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: isActive ? GOLD : `${GOLD}10`,
-                    borderColor: isActive ? GOLD : `${GOLD}30`,
+                    backgroundColor: isActive ? PathB.coral : theme.backgroundCard,
+                    borderColor: isActive ? PathB.coral : theme.border,
                   },
                 ]}
               >
@@ -264,7 +265,7 @@ export default function BiblicalSabbathsScreen() {
                   style={[
                     styles.filterText,
                     {
-                      color: isActive ? "#0A0A0A" : theme.textSecondary,
+                      color: isActive ? "#fff" : theme.textSecondary,
                       fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
                     },
                   ]}
@@ -278,15 +279,15 @@ export default function BiblicalSabbathsScreen() {
 
         {isError ? (
           <View style={styles.loadingWrap}>
-            <Ionicons name="alert-circle-outline" size={32} color={GOLD} style={{ marginBottom: 12 }} />
+            <Ionicons name="alert-circle-outline" size={32} color={PathB.inkMuted} style={{ marginBottom: 12 }} />
             <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 12 }]}>
               Failed to load sabbath types.
             </Text>
             <Pressable
               onPress={() => refetch()}
-              style={[styles.retryBtn, { borderColor: `${GOLD}40` }]}
+              style={[styles.retryBtn, { borderColor: PathB.coral, backgroundColor: PathB.coral }]}
             >
-              <Text style={[styles.retryText, { color: GOLD, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[styles.retryText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
                 Retry
               </Text>
             </Pressable>

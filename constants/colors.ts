@@ -1,4 +1,5 @@
 const gold = "#C9933A";
+const coral = "#E8604C";
 const navy = "#1A1F3C";
 const parchment = "#F5EFE0";
 const ink = "#2C1810";
@@ -13,15 +14,15 @@ const Colors = {
     text: ink,
     textSecondary: "#7A6855",
     textMuted: "#A89880",
-    accent: gold,
-    accentDark: "#A87828",
-    accentSoft: "rgba(201,147,58,0.08)",
+    accent: coral,
+    accentDark: "#C24431",
+    accentSoft: "rgba(232,96,76,0.08)",
     primary: navy,
     border: "#DDD0B8",
     borderLight: "#EDE5D5",
-    tint: gold,
+    tint: coral,
     tabIconDefault: "#A89880",
-    tabIconSelected: gold,
+    tabIconSelected: coral,
     divider: "#E8DCC8",
     error: "#C0392B",
     danger: "#C0392B",
@@ -143,6 +144,8 @@ const KidsColors = {
 };
 
 function getSabbathTheme(base: typeof Colors.dark | typeof Colors.light, isDark: boolean) {
+  // Sabbath chrome inherits accent/tint from the base theme (Path B coral on light).
+  // Gold #D4A245 is reserved for candle/sunset glyphs — not buttons, chips, or labels.
   if (isDark) {
     return {
       ...base,
@@ -151,10 +154,6 @@ function getSabbathTheme(base: typeof Colors.dark | typeof Colors.light, isDark:
       backgroundCard: "#16150F",
       backgroundElevated: "#1E1D16",
       surface: "#16150F",
-      accent: "#D4A245",
-      accentDark: "#B8892E",
-      tint: "#D4A245",
-      tabIconSelected: "#D4A245",
       border: "#1F1E17",
       borderLight: "#181710",
     };
@@ -164,10 +163,6 @@ function getSabbathTheme(base: typeof Colors.dark | typeof Colors.light, isDark:
     background: "#F7F0E0",
     backgroundSecondary: "#FFF6E4",
     backgroundCard: "#FFFBF0",
-    accent: "#D4A245",
-    accentDark: "#B8892E",
-    tint: "#D4A245",
-    tabIconSelected: "#D4A245",
   };
 }
 

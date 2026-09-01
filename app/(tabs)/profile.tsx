@@ -26,6 +26,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useProStatus } from "@/contexts/ProContext";
 import { apiRequest } from "@/lib/query-client";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import { displayInitials } from "@/lib/user-initials";
 
 const C = {
   surface: PathB.surface,
@@ -219,12 +220,7 @@ function ProfileScreenInner() {
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
   const todayIdx = new Date().getDay();
 
-  const initials = (() => {
-    const name = user?.displayName || "";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase() || "G";
-  })();
+  const initials = displayInitials(isAuthenticated ? (user?.displayName || "User") : "Guest");
 
   const activityItems = useMemo<ActivityItem[]>(() => {
     const items: ActivityItem[] = [];

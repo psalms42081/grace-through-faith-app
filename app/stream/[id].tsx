@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import { Camera } from "expo-camera";
 import { requestRecordingPermissionsAsync } from "expo-audio";
+import { displayInitials } from "@/lib/user-initials";
 
 interface StreamSession {
   id: string;
@@ -332,7 +333,7 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
                 color: "#fff",
                 zIndex: 0,
               }}>
-                {(p.name || "?")[0].toUpperCase()}
+                {displayInitials(p.name || "")}
               </div>
             )}
             <div style={{

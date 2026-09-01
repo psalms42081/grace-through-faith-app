@@ -110,12 +110,12 @@ describe("Path B sweep Batch 3", () => {
     }
   });
 
-  it("does not flip Colors.light.accent; Kids gold and Sabbath gold stay; org tools stay off", () => {
-    assert.equal(Colors.light.accent, "#C9933A");
-    assert.equal(Colors.light.tabIconSelected, "#C9933A");
+  it("Batch 4 flipped Colors.light.accent to coral; Kids gold stays; org tools stay off", () => {
+    assert.equal(Colors.light.accent, PathB.coral);
+    assert.equal(Colors.light.tabIconSelected, PathB.coral);
     assert.equal(PathB.coral, "#E8604C");
     assert.equal(KidsColors.light.starGold, "#F5A623");
-    assert.equal(getSabbathTheme(Colors.light, false).accent, "#D4A245");
+    assert.equal(getSabbathTheme(Colors.light, false).accent, PathB.coral);
     assert.equal(ENABLE_ORG_TOOLS, false);
   });
 });

@@ -22,6 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
 import { SpeakerCardSkeleton, ContentLoadingMessage } from "@/components/ui/Skeleton";
+import { PathB } from "@/constants/colors";
 
 interface SmallGroup {
   id: string;
@@ -203,8 +204,8 @@ export default function GroupsScreen() {
       style={[s.groupCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}
     >
       <View style={s.groupCardHeader}>
-        <View style={[s.groupIcon, { backgroundColor: theme.accent + "20" }]}>
-          <Ionicons name={getTypeIcon(item.groupType)} size={20} color={theme.accent} />
+        <View style={[s.groupIcon, { backgroundColor: PathB.ink + "0F" }]}>
+          <Ionicons name={getTypeIcon(item.groupType)} size={20} color={PathB.ink} />
         </View>
         <View style={s.groupCardInfo}>
           <Text style={[s.groupName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
@@ -214,16 +215,16 @@ export default function GroupsScreen() {
             <Text style={[s.groupMembers, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               {item.memberCount} member{item.memberCount !== 1 ? "s" : ""}
             </Text>
-            <View style={[s.typeBadge, { backgroundColor: theme.accent + "15" }]}>
-              <Text style={[s.typeBadgeText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            <View style={[s.typeBadge, { backgroundColor: PathB.ink + "0F" }]}>
+              <Text style={[s.typeBadgeText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
                 {getTypeLabel(item.groupType)}
               </Text>
             </View>
           </View>
         </View>
         {myGroupIds.has(item.id) && showJoinBtn ? (
-          <View style={[s.joinBadge, { backgroundColor: theme.accent + "20" }]}>
-            <Text style={[s.joinBadgeText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Joined</Text>
+          <View style={[s.joinBadge, { backgroundColor: PathB.ink + "0F" }]}>
+            <Text style={[s.joinBadgeText, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>Joined</Text>
           </View>
         ) : myGroupIds.has(item.id) ? (
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
@@ -231,7 +232,7 @@ export default function GroupsScreen() {
           <Pressable
             onPress={() => joinPublicMutation.mutate(item.joinCode)}
             disabled={joinPublicMutation.isPending}
-            style={[s.joinBadge, { backgroundColor: theme.accent, opacity: joinPublicMutation.isPending ? 0.6 : 1 }]}
+            style={[s.joinBadge, { backgroundColor: PathB.coral, opacity: joinPublicMutation.isPending ? 0.6 : 1 }]}
           >
             {joinPublicMutation.isPending ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -291,17 +292,17 @@ export default function GroupsScreen() {
       <View style={s.tabRow}>
         <Pressable
           onPress={() => setTab("my")}
-          style={[s.tabBtn, tab === "my" && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
+          style={[s.tabBtn, tab === "my" && { borderBottomColor: PathB.coral, borderBottomWidth: 2 }]}
         >
-          <Text style={[s.tabText, { color: tab === "my" ? theme.accent : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[s.tabText, { color: tab === "my" ? PathB.coralInk : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             My Groups
           </Text>
         </Pressable>
         <Pressable
           onPress={() => setTab("browse")}
-          style={[s.tabBtn, tab === "browse" && { borderBottomColor: theme.accent, borderBottomWidth: 2 }]}
+          style={[s.tabBtn, tab === "browse" && { borderBottomColor: PathB.coral, borderBottomWidth: 2 }]}
         >
-          <Text style={[s.tabText, { color: tab === "browse" ? theme.accent : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[s.tabText, { color: tab === "browse" ? PathB.coralInk : theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
             Browse
           </Text>
         </Pressable>
@@ -375,8 +376,8 @@ export default function GroupsScreen() {
                 style={[
                   s.filterChip,
                   {
-                    backgroundColor: filterType === gt.key ? theme.accent : (isDark ? "#1A1A2E" : "#F5F3EE"),
-                    borderColor: filterType === gt.key ? theme.accent : theme.border,
+                    backgroundColor: filterType === gt.key ? PathB.ink : (isDark ? "#1A1A2E" : "#F5F3EE"),
+                    borderColor: filterType === gt.key ? PathB.ink : theme.border,
                   },
                 ]}
               >
@@ -453,21 +454,21 @@ export default function GroupsScreen() {
                     style={[
                       s.typeOption,
                       {
-                        backgroundColor: groupType === gt.key ? theme.accent + "20" : (isDark ? "#1A1A2E" : "#F5F3EE"),
-                        borderColor: groupType === gt.key ? theme.accent : theme.border,
+                        backgroundColor: groupType === gt.key ? PathB.ink + "0F" : (isDark ? "#1A1A2E" : "#F5F3EE"),
+                        borderColor: groupType === gt.key ? PathB.ink : theme.border,
                       },
                     ]}
                   >
                     <Ionicons
                       name={gt.icon as keyof typeof Ionicons.glyphMap}
                       size={16}
-                      color={groupType === gt.key ? theme.accent : theme.textMuted}
+                      color={groupType === gt.key ? PathB.ink : theme.textMuted}
                     />
                     <Text
                       style={[
                         s.typeOptionText,
                         {
-                          color: groupType === gt.key ? theme.accent : theme.textSecondary,
+                          color: groupType === gt.key ? PathB.ink : theme.textSecondary,
                           fontFamily: "Inter_500Medium",
                         },
                       ]}
@@ -490,7 +491,7 @@ export default function GroupsScreen() {
                     Anyone can find and join
                   </Text>
                 </View>
-                <View style={[s.toggleSwitch, { backgroundColor: isPublic ? theme.accent : (isDark ? "#333" : "#DDD") }]}>
+                <View style={[s.toggleSwitch, { backgroundColor: isPublic ? PathB.ink : (isDark ? "#333" : "#DDD") }]}>
                   <View style={[s.toggleKnob, { transform: [{ translateX: isPublic ? 18 : 2 }] }]} />
                 </View>
               </Pressable>

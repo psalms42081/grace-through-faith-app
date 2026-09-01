@@ -57,8 +57,8 @@ export default function LanguageSettings({
               { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
             ]}
           >
-            <Ionicons name="phone-portrait-outline" size={16} color={theme.accent} />
-            <Text style={[styles.langOptionText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            <Ionicons name="phone-portrait-outline" size={16} color={theme.text} />
+            <Text style={[styles.langOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
               {useDeviceLanguageLabel}
             </Text>
           </Pressable>
@@ -71,10 +71,9 @@ export default function LanguageSettings({
                 style={({ pressed }) => [
                   styles.langOption,
                   { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.divider },
-                  isActive && { backgroundColor: theme.accent + "10" },
                 ]}
               >
-                <Text numberOfLines={1} style={[styles.langOptionText, { color: isActive ? theme.accent : theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                <Text numberOfLines={1} style={[styles.langOptionText, { color: theme.text, fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                   {lang.label}
                 </Text>
                 {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}

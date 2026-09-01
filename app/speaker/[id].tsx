@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { getSpeakerById, getSpeakerImage, type SDASpeaker } from "@/constants/sda-speakers";
+import { displayInitials } from "@/lib/user-initials";
 
 function VideoCard({ videoId, title, theme, onPress }: { videoId: string; title: string; theme: any; onPress: () => void }) {
   const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
@@ -110,7 +111,7 @@ export default function SpeakerDetailScreen() {
           ) : (
             <View style={[st.avatar, { backgroundColor: speaker.color + "20" }]}>
               <Text style={[st.avatarInitials, { color: speaker.color, fontFamily: "Inter_700Bold" }]}>
-                {speaker.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                {displayInitials(speaker.name)}
               </Text>
             </View>
           )}

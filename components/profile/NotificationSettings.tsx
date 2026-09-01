@@ -137,10 +137,10 @@ export default function NotificationSettings({
               {permDenied && !enabled && (
                 <Pressable
                   onPress={openAppSettings}
-                  style={[styles.settingsLink, { backgroundColor: theme.accent + "12" }]}
+                  style={[styles.settingsLink, { backgroundColor: theme.backgroundSecondary }]}
                 >
-                  <Ionicons name="settings-outline" size={14} color={theme.accent} />
-                  <Text style={[styles.settingsText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                  <Ionicons name="settings-outline" size={14} color={theme.text} />
+                  <Text style={[styles.settingsText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
                     Open device settings to allow notifications
                   </Text>
                 </Pressable>
@@ -161,8 +161,8 @@ export default function NotificationSettings({
                           style={[
                             styles.timeChip,
                             {
-                              backgroundColor: selected ? theme.accent : theme.backgroundCard,
-                              borderColor: selected ? theme.accent : theme.border,
+                              backgroundColor: selected ? theme.text : theme.backgroundCard,
+                              borderColor: selected ? theme.text : theme.border,
                             },
                           ]}
                         >

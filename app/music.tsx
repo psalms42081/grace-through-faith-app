@@ -11,10 +11,10 @@ import {
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useTheme } from "@/hooks/useTheme";
 import { RADIO_STATIONS, RADIO_CATEGORIES, type RadioStation } from "@/data/radio-stations";
+import { PathB } from "@/constants/colors";
 
 export default function MusicScreen() {
   const { theme, isDark } = useTheme();
@@ -89,18 +89,18 @@ export default function MusicScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad + (activeStation ? 100 : 40) }}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={["#C9933A", "#8B6914"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
+        <View
+          style={[
+            styles.heroCard,
+            { backgroundColor: theme.backgroundCard, borderWidth: 1, borderColor: theme.border },
+          ]}
         >
-          <Ionicons name="radio" size={44} color="rgba(255,255,255,0.9)" />
-          <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>Christian Radio</Text>
-          <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular" }]}>
+          <Ionicons name="radio" size={44} color={PathB.ink} />
+          <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold", color: PathB.ink }]}>Christian Radio</Text>
+          <Text style={[styles.heroDesc, { fontFamily: "Inter_400Regular", color: PathB.inkMuted }]}>
             Live streams from Adventist and Christian stations worldwide
           </Text>
-        </LinearGradient>
+        </View>
 
         <ScrollView
           horizontal
@@ -112,7 +112,7 @@ export default function MusicScreen() {
             onPress={() => setActiveFilter(null)}
             style={[
               styles.filterChip,
-              { backgroundColor: !activeFilter ? theme.accent : isDark ? theme.backgroundCard : "#F0EDE5" },
+              { backgroundColor: !activeFilter ? PathB.ink : isDark ? theme.backgroundCard : "#F0EDE5" },
             ]}
           >
             <Text style={[
@@ -126,7 +126,7 @@ export default function MusicScreen() {
               onPress={() => setActiveFilter(activeFilter === cat.id ? null : cat.id)}
               style={[
                 styles.filterChip,
-                { backgroundColor: activeFilter === cat.id ? theme.accent : isDark ? theme.backgroundCard : "#F0EDE5" },
+                { backgroundColor: activeFilter === cat.id ? PathB.ink : isDark ? theme.backgroundCard : "#F0EDE5" },
               ]}
             >
               <Ionicons
@@ -164,9 +164,9 @@ export default function MusicScreen() {
                   styles.stationCard,
                   {
                     backgroundColor: isCurrent
-                      ? theme.accent + "15"
+                      ? theme.backgroundSecondary
                       : isDark ? theme.backgroundCard : "#FFFDF6",
-                    borderColor: isCurrent ? theme.accent + "40" : "transparent",
+                    borderColor: isCurrent ? PathB.ink + "28" : "transparent",
                     borderWidth: isCurrent ? 1 : 0,
                     opacity: pressed ? 0.85 : 1,
                   },
@@ -183,15 +183,15 @@ export default function MusicScreen() {
                   <Text style={[styles.stationTagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
                     {station.tagline}
                   </Text>
-                  <Text style={[styles.stationCountry, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[styles.stationCountry, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                     {station.country}
                   </Text>
                 </View>
                 <View style={styles.playBtnWrap}>
                   {isThisBuffering ? (
-                    <ActivityIndicator size="small" color={theme.accent} />
+                    <ActivityIndicator size="small" color={PathB.ink} />
                   ) : (
-                    <View style={[styles.playBtn, { backgroundColor: isThisPlaying ? theme.accent : station.color + "20" }]}>
+                    <View style={[styles.playBtn, { backgroundColor: isThisPlaying ? PathB.ink : station.color + "20" }]}>
                       <Ionicons
                         name={isThisPlaying ? "pause" : "play"}
                         size={18}
@@ -211,7 +211,7 @@ export default function MusicScreen() {
           styles.nowPlaying,
           {
             backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
-            borderTopColor: theme.accent + "30",
+            borderTopColor: theme.border,
             paddingBottom: bottomPad + 8,
           },
         ]}>
@@ -231,7 +231,7 @@ export default function MusicScreen() {
           ) : null}
           <Pressable
             onPress={() => isPlaying ? player.pause() : player.play()}
-            style={[styles.nowPlayingBtn, { backgroundColor: theme.accent }]}
+            style={[styles.nowPlayingBtn, { backgroundColor: PathB.coral }]}
             hitSlop={8}
           >
             <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#fff" />

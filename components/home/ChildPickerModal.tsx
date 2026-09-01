@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { apiRequest } from "@/lib/query-client";
 import { useToast } from "@/contexts/ToastContext";
 import type { AgeGroup } from "@/context/KidsModeContext";
+import { displayInitials } from "@/lib/user-initials";
 
 const AGE_TIERS: { value: AgeGroup; label: string; ages: string }[] = [
   { value: "little_lambs", label: "Little Lambs", ages: "Ages 3-6" },
@@ -110,7 +111,7 @@ export default function ChildPickerModal({
               {children.map((child) => {
                 const tierInfo = AGE_TIERS.find((t) => t.value === child.ageGroup) || AGE_TIERS[0];
                 const isLast = child.id === lastActiveChildId;
-                const initials = child.name.charAt(0).toUpperCase();
+                const initials = displayInitials(child.name);
                 return (
                   <Pressable
                     key={child.id}

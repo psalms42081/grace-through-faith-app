@@ -21,9 +21,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/contexts/ToastContext";
 import StudyDepthSelector, { DepthBadge } from "@/components/StudyDepthSelector";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
+import { PathB } from "@/constants/colors";
 
-const GOLD = "#C9933A";
-const BG_DARK = "#050507";
+const SABBATH_GOLD = "#D4A245"; // sun glyph only — not chrome
 
 const THEOLOGICAL_FRAMES = [
   {
@@ -81,7 +81,7 @@ const PHASE_CONFIGS: Record<SabbathPhase, PhaseConfig> = {
   "sabbath-morning": {
     label: "Sabbath Morning",
     icon: "sunny-outline",
-    color: "#D4A245",
+    color: SABBATH_GOLD,
     subtitle: "Worship & Study",
   },
   afternoon: {
@@ -99,7 +99,7 @@ const PHASE_CONFIGS: Record<SabbathPhase, PhaseConfig> = {
   outside: {
     label: "Preparing",
     icon: "time-outline",
-    color: GOLD,
+    color: PathB.inkMuted,
     subtitle: "Awaiting Sacred Time",
   },
 };
@@ -229,7 +229,7 @@ function PhaseIndicator({ currentPhase }: { currentPhase: SabbathPhase }) {
                 <View
                   style={[
                     phaseStyles.connector,
-                    { backgroundColor: isPast || isActive ? GOLD + "50" : "#1E1F24" },
+                    { backgroundColor: isPast || isActive ? PathB.ink + "28" : PathB.ink + "12" },
                   ]}
                 />
               )}
@@ -271,7 +271,7 @@ function PhaseIndicator({ currentPhase }: { currentPhase: SabbathPhase }) {
             color={PHASE_CONFIGS[currentPhase].color}
           />
           <View style={{ flex: 1 }}>
-            <Text style={[phaseStyles.bannerTitle, { color: PHASE_CONFIGS[currentPhase].color }]}>
+            <Text style={[phaseStyles.bannerTitle, { color: PathB.ink }]}>
               {PHASE_CONFIGS[currentPhase].label}
             </Text>
             <Text style={phaseStyles.bannerSubtitle}>
@@ -286,8 +286,8 @@ function PhaseIndicator({ currentPhase }: { currentPhase: SabbathPhase }) {
 
 function PhaseContentCard({ item, phaseColor }: { item: PhaseContentItem; phaseColor: string }) {
   return (
-    <View style={[cardStyles.card, { borderColor: phaseColor + "20", backgroundColor: phaseColor + "08" }]}>
-      <View style={[cardStyles.iconWrap, { backgroundColor: phaseColor + "1A" }]}>
+    <View style={[cardStyles.card, { borderColor: PathB.ink + "14", backgroundColor: "#FFFFFF" }]}>
+      <View style={[cardStyles.iconWrap, { backgroundColor: PathB.ink + "0F" }]}>
         <Ionicons name={item.icon} size={20} color={phaseColor} />
       </View>
       <Text style={cardStyles.title}>{item.title}</Text>
@@ -421,19 +421,19 @@ export default function SabbathExperienceScreen() {
       >
         <PhaseIndicator currentPhase={currentPhase} />
 
-        <Text style={[styles.sectionTitle, { color: theme.accent }]}>
+        <Text style={[styles.sectionTitle, { color: PathB.ink }]}>
           Sacred Time
         </Text>
         <View
           style={[
             styles.framingCard,
             {
-              borderColor: theme.accent + "25",
-              backgroundColor: theme.accent + "08",
+              borderColor: theme.border,
+              backgroundColor: theme.backgroundCard,
             },
           ]}
         >
-          <Text style={[styles.themeLabel, { color: theme.accent }]}>
+          <Text style={[styles.themeLabel, { color: PathB.coralInk }]}>
             {frame.theme}
           </Text>
           <Text style={[styles.framingText, { color: theme.text }]}>
@@ -444,7 +444,7 @@ export default function SabbathExperienceScreen() {
           </Text>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: phaseConfig.color, marginTop: 32 }]}>
+        <Text style={[styles.sectionTitle, { color: PathB.ink, marginTop: 32 }]}>
           {phaseConfig.label}
         </Text>
         <Text style={[styles.phaseSubtitle, { color: theme.textSecondary }]}>
@@ -460,17 +460,17 @@ export default function SabbathExperienceScreen() {
             style={({ pressed }) => [
               styles.quickLink,
               {
-                backgroundColor: phaseConfig.color + "15",
-                borderColor: phaseConfig.color + "30",
+                backgroundColor: theme.backgroundCard,
+                borderColor: theme.border,
                 opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
-            <Ionicons name="school-outline" size={20} color={phaseConfig.color} />
-            <Text style={[styles.quickLinkText, { color: phaseConfig.color }]}>
+            <Ionicons name="school-outline" size={20} color={PathB.ink} />
+            <Text style={[styles.quickLinkText, { color: PathB.ink }]}>
               Open Sabbath School Study
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={phaseConfig.color} />
+            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
           </Pressable>
         )}
 
@@ -510,7 +510,7 @@ export default function SabbathExperienceScreen() {
           style={({ pressed }) => [
             styles.saveButton,
             {
-              backgroundColor: theme.accent,
+              backgroundColor: PathB.coral,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
@@ -543,10 +543,10 @@ export default function SabbathExperienceScreen() {
               <View
                 style={[
                   styles.pathwayIcon,
-                  { backgroundColor: theme.accent + "1F" },
+                  { backgroundColor: PathB.ink + "0F" },
                 ]}
               >
-                <Ionicons name={pathway.icon} size={20} color={theme.accent} />
+                <Ionicons name={pathway.icon} size={20} color={PathB.ink} />
               </View>
               <Text style={[styles.pathwayLabel, { color: theme.text }]}>
                 {pathway.label}
@@ -559,7 +559,7 @@ export default function SabbathExperienceScreen() {
         {(closingReflectionActive || currentPhase === "closing") && (
           <>
             <Text
-              style={[styles.sectionTitle, { color: theme.accent, marginTop: 32 }]}
+              style={[styles.sectionTitle, { color: PathB.ink, marginTop: 32 }]}
             >
               Sabbath Farewell
             </Text>
@@ -567,8 +567,8 @@ export default function SabbathExperienceScreen() {
               style={[
                 styles.closingCard,
                 {
-                  borderColor: theme.accent + "30",
-                  backgroundColor: theme.accent + "0A",
+                  borderColor: theme.border,
+                  backgroundColor: theme.backgroundCard,
                 },
               ]}
             >
@@ -580,7 +580,7 @@ export default function SabbathExperienceScreen() {
                   styles.closingInput,
                   {
                     backgroundColor: theme.backgroundCard,
-                    borderColor: theme.accent + "40",
+                    borderColor: theme.border,
                     color: theme.text,
                     fontFamily: "Inter_400Regular",
                   },
@@ -599,7 +599,7 @@ export default function SabbathExperienceScreen() {
                 style={({ pressed }) => [
                   styles.saveButton,
                   {
-                    backgroundColor: theme.accent,
+                    backgroundColor: PathB.coral,
                     opacity: pressed ? 0.85 : 1,
                     marginTop: 8,
                   },
@@ -689,18 +689,18 @@ const cardStyles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontFamily: "Lora_700Bold",
-    color: "#F0EBE0",
+    color: PathB.ink,
   },
   text: {
     fontSize: 14,
     lineHeight: 22,
     fontFamily: "Inter_400Regular",
-    color: "#9A8E7A",
+    color: PathB.inkMuted,
   },
   ref: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: "#5C5549",
+    color: PathB.inkMuted,
     marginTop: 2,
   },
 });

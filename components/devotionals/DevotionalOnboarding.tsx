@@ -35,7 +35,7 @@ const CATEGORIES: {
     label: "Foundations",
     description: "Core biblical truths for new and returning believers",
     icon: "compass-outline",
-    color: "#D4A245",
+    color: "#C77A2B",
   },
   {
     key: "thematic",

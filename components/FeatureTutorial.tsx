@@ -371,7 +371,9 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
           entering={FadeInDown.delay(300).duration(500)}
           style={[modalStyles.bottomSection, { paddingBottom: Math.max(bottomPad, 16) + 8 }]}
         >
-          <ProgressDots current={currentStep} total={steps.length} />
+          {steps.length > 1 ? (
+            <ProgressDots current={currentStep} total={steps.length} />
+          ) : null}
           <View style={modalStyles.buttonRow}>
             {isLastStep ? (
               <Pressable
@@ -405,11 +407,13 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
               </Pressable>
             )}
           </View>
-          <View style={modalStyles.stepCounter}>
-            <Text style={[modalStyles.stepCounterText, { fontFamily: "Inter_400Regular" }]}>
-              {currentStep + 1} of {steps.length}
-            </Text>
-          </View>
+          {steps.length > 1 ? (
+            <View style={modalStyles.stepCounter}>
+              <Text style={[modalStyles.stepCounterText, { fontFamily: "Inter_400Regular" }]}>
+                {currentStep + 1} of {steps.length}
+              </Text>
+            </View>
+          ) : null}
         </Animated.View>
       </View>
     </Modal>

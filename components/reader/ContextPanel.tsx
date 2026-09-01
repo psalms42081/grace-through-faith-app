@@ -21,6 +21,7 @@ import Animated, {
 import { queryClient } from "@/lib/query-client";
 import Colors, { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
+import { displayInitials } from "@/lib/user-initials";
 
 interface ChapterContext {
   locations: { name: string; modernName: string; latitude: number; longitude: number; significance: string; type: string }[];
@@ -259,7 +260,7 @@ export default function ContextPanel({
                   >
                     <View style={[contextStyles.avatarCircle, { backgroundColor: "rgba(31,26,18,0.08)" }]}>
                       <Text style={[contextStyles.avatarText, { color: PathB.ink, fontFamily: "Inter_700Bold" }]}>
-                        {fig.name.charAt(0)}
+                        {displayInitials(fig.name)}
                       </Text>
                     </View>
                     <View style={contextStyles.contextItemInfo}>

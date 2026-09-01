@@ -1,3 +1,5 @@
+import { displayInitials } from "@/lib/user-initials";
+
 const SPEAKER_COLORS: Record<string, string> = {
   "Joel Osteen": "#4A90D9",
   "Joyce Meyer": "#9B59B6",
@@ -66,13 +68,7 @@ export function getSpeakerInitials(name: string): string {
   if (name === "VeggieTales") return "VT";
   if (name.includes(" - ")) {
     const mainName = name.split(" - ")[0];
-    return getInitials(mainName);
+    return displayInitials(mainName);
   }
-  return getInitials(name);
-}
-
-function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  return displayInitials(name);
 }

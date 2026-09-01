@@ -40,7 +40,7 @@ const CATEGORIES = [
   { id: "personal", label: "Personal", icon: "person" as const, color: "#5B86E5" },
   { id: "family", label: "Family", icon: "people" as const, color: "#E8456B" },
   { id: "health", label: "Health", icon: "fitness" as const, color: "#2E7D32" },
-  { id: "world", label: "World", icon: "globe" as const, color: "#C9933A" },
+  { id: "world", label: "World", icon: "globe" as const, color: "#3A6FA8" },
   { id: "praise", label: "Praise", icon: "musical-notes" as const, color: "#8B5CF6" },
 ];
 
@@ -181,7 +181,7 @@ export default function PrayerJournalScreen() {
               onPress={() => setFilter(f)}
               style={[
                 styles.filterBtn,
-                filter === f && { backgroundColor: theme.accentInk },
+                filter === f && { backgroundColor: theme.accent },
               ]}
               testID={`filter-${f}`}
             >

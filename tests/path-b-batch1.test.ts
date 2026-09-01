@@ -47,12 +47,12 @@ describe("Path B sweep Batch 1", () => {
     assert.doesNotMatch(chapter, /const GOLD/);
   });
 
-  it("does not flip Colors.light.accent; Kids gold and Sabbath gold stay", () => {
-    assert.equal(Colors.light.accent, "#C9933A");
-    assert.equal(Colors.light.tabIconSelected, "#C9933A");
+  it("Batch 4 flipped Colors.light.accent to coral; Kids gold stays; Sabbath chrome inherits coral", () => {
+    assert.equal(Colors.light.accent, PathB.coral);
+    assert.equal(Colors.light.tabIconSelected, PathB.coral);
     assert.equal(PathB.coral, "#E8604C");
     assert.equal(KidsColors.light.starGold, "#F5A623");
-    assert.equal(getSabbathTheme(Colors.light, false).accent, "#D4A245");
-    assert.equal(getSabbathTheme(Colors.dark, true).accent, "#D4A245");
+    assert.equal(getSabbathTheme(Colors.light, false).accent, PathB.coral);
+    assert.equal(getSabbathTheme(Colors.dark, true).accent, Colors.dark.accent);
   });
 });
