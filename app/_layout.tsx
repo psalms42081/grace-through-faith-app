@@ -156,6 +156,7 @@ function RootLayoutNav() {
       <Stack.Screen name="church-connect" options={{ headerShown: false }} />
       <Stack.Screen name="church/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="bible-group/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="bible-group-live/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
       <Stack.Screen name="parent-controls" options={{ headerShown: false }} />
       <Stack.Screen name="study-path/[id]" options={{ headerShown: false }} />

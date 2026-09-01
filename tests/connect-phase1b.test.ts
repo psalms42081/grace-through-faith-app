@@ -154,6 +154,11 @@ describe("group home reuses SS day reader", () => {
     assert.doesNotMatch(screen, /#C9933A/);
     assert.match(screen, /bible-group-regen-code/);
     assert.match(screen, /Remove member/);
+    assert.match(screen, /\/\(tabs\)\/profile/);
+    assert.match(screen, /GroupHeader/);
+    assert.match(screen, /Go live/);
+    assert.match(screen, /Live now · Join/);
+    assert.match(screen, /Share with the group/);
   });
 });
 

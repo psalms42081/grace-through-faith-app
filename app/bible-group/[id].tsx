@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -70,6 +71,18 @@ type GroupDetail = {
   posts: Post[];
 };
 
+type LiveSession = {
+  id: string;
+  groupId: string;
+  startedBy: string;
+  startedAt: string;
+  endedAt: string | null;
+  roomName: string;
+  lastHeartbeatAt: string;
+};
+
+type LiveResponse = { session: LiveSession | null };
+
 type SsCurrent = {
   quarterly: { quarterCode?: string } | null;
   currentLesson: {
@@ -81,12 +94,30 @@ type SsCurrent = {
   todayDayNumber: number | null;
 };
 
+function goToProfileGroups() {
+  router.replace("/(tabs)/profile" as any);
+}
+
+function GroupHeader({ title }: { title: string }) {
+  return (
+    <View style={s.header}>
+      <Pressable onPress={goToProfileGroups} style={s.backBtn} testID="bible-group-back">
+        <Ionicons name="arrow-back" size={22} color={C.ink} />
+      </Pressable>
+      <Text style={s.title} numberOfLines={2}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 export default function BibleGroupHomeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { userId, isAuthenticated } = useAuth();
+  const { isKidsMode } = useKidsMode();
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
@@ -101,6 +132,18 @@ export default function BibleGroupHomeScreen() {
     },
     enabled: isAuthenticated && !!id,
   });
+
+  const { data: liveData } = useQuery<LiveResponse>({
+    queryKey: ["/api/bible-groups", id, "live"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/bible-groups/${id}/live`);
+      return res.json();
+    },
+    enabled: isAuthenticated && !!id && !isKidsMode,
+    refetchInterval: 15_000,
+  });
+
+  const liveSession = liveData?.session ?? null;
 
   const curriculum = data?.group.curriculum === "inverse" ? "inverse" : "adult";
   const { data: ssData } = useQuery<SsCurrent>({
@@ -191,33 +234,80 @@ export default function BibleGroupHomeScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/bible-groups"] });
-      router.back();
+      goToProfileGroups();
     },
     onError: (err: any) => {
       showToast(err?.message || "Could not archive this group", "error");
     },
   });
 
+  const startLiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/bible-groups/${id}/live/start`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/bible-groups", id, "live"] });
+      router.push(`/bible-group-live/${id}` as any);
+    },
+    onError: (err: any) => {
+      showToast(err?.message || "Could not start the room", "error");
+    },
+  });
+
+  const endLiveMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/bible-groups/${id}/live/end`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/bible-groups", id, "live"] });
+    },
+    onError: (err: any) => {
+      showToast(err?.message || "Could not end the room", "error");
+    },
+  });
+
   const isHost = data?.group.role === "host";
+  const showLiveUi = !isKidsMode;
+
+  useEffect(() => {
+    if (!showLiveUi || !isHost || !liveSession || !id) return;
+    const ping = () => {
+      apiRequest("POST", `/api/bible-groups/${id}/live/heartbeat`).catch(() => {});
+    };
+    ping();
+    const timer = setInterval(ping, 60_000);
+    return () => clearInterval(timer);
+  }, [showLiveUi, isHost, liveSession?.id, id]);
+
   const continueLabel = continueDay
-    ? weekdayNameForSabbathSchoolDay(continueDay)
+    ? weekdayNameForSabbathSchoolDay({
+        dayNumber: continueDay.dayNumber,
+        date: continueDay.date ?? null,
+      })
     : "this week's lesson";
 
   if (!isAuthenticated) {
     return (
-      <View style={[s.center, { backgroundColor: C.surface, paddingTop: topPad }]}>
-        <Text style={[s.muted, { color: C.inkMuted }]}>Sign in to open this group.</Text>
-        <Pressable style={s.coralBtn} onPress={() => router.push("/(auth)/login" as any)}>
-          <Text style={s.coralBtnText}>Sign in</Text>
-        </Pressable>
+      <View style={[s.page, { paddingTop: topPad + 8 }]}>
+        <GroupHeader title="Group" />
+        <View style={s.centerFill}>
+          <Text style={[s.muted, { color: C.inkMuted }]}>Sign in to open this group.</Text>
+          <Pressable style={s.coralBtn} onPress={() => router.push("/(auth)/login" as any)}>
+            <Text style={s.coralBtnText}>Sign in</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
 
   if (isLoading || !data) {
     return (
-      <View style={[s.center, { backgroundColor: C.surface }]}>
-        <ActivityIndicator color={C.coral} />
+      <View style={[s.page, { paddingTop: topPad + 8 }]}>
+        <GroupHeader title="Group" />
+        <View style={s.centerFill}>
+          <ActivityIndicator color={C.coral} />
+        </View>
       </View>
     );
   }
@@ -231,14 +321,7 @@ export default function BibleGroupHomeScreen() {
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: bottomPad + 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={s.header}>
-          <Pressable onPress={() => router.back()} style={s.backBtn} testID="bible-group-back">
-            <Ionicons name="arrow-back" size={22} color={C.ink} />
-          </Pressable>
-          <Text style={s.title} numberOfLines={2}>
-            {data.group.name}
-          </Text>
-        </View>
+        <GroupHeader title={data.group.name} />
 
         <View style={s.card}>
           <Text style={s.eyebrow}>INVITE CODE</Text>
@@ -284,7 +367,45 @@ export default function BibleGroupHomeScreen() {
               : "This week's lesson"}
           </Text>
           <Text style={s.lessonMeta}>Open {continueLabel} in Sabbath School</Text>
+          {showLiveUi && liveSession && (
+            <Pressable
+              onPress={() => router.push(`/bible-group-live/${id}` as any)}
+              testID="bible-group-join-live"
+              style={s.liveNowRow}
+            >
+              <Text style={s.liveNowText}>Live now · Join</Text>
+            </Pressable>
+          )}
         </Pressable>
+
+        {showLiveUi && isHost && (
+          <Pressable
+            style={[s.outlineBtn, (startLiveMutation.isPending || endLiveMutation.isPending) && { opacity: 0.55 }]}
+            disabled={startLiveMutation.isPending || endLiveMutation.isPending}
+            onPress={() => {
+              if (liveSession) {
+                const endRoom = () => endLiveMutation.mutate();
+                if (Platform.OS === "web") {
+                  if (typeof confirm === "function" && confirm("End this room for everyone?")) endRoom();
+                } else {
+                  Alert.alert("End room", "End this room for everyone?", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "End room", style: "destructive", onPress: endRoom },
+                  ]);
+                }
+              } else {
+                startLiveMutation.mutate();
+              }
+            }}
+            testID={liveSession ? "bible-group-end-live" : "bible-group-go-live"}
+          >
+            {startLiveMutation.isPending || endLiveMutation.isPending ? (
+              <ActivityIndicator color={C.coralInk} />
+            ) : (
+              <Text style={s.outlineBtnText}>{liveSession ? "End room" : "Go live"}</Text>
+            )}
+          </Pressable>
+        )}
 
         <View style={s.card} testID="bible-group-members">
           <Text style={s.sectionLabel}>Members</Text>
@@ -380,7 +501,9 @@ export default function BibleGroupHomeScreen() {
 }
 
 const s = StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.surface },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 24 },
+  centerFill: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 24 },
   header: { paddingHorizontal: 20, marginBottom: 16 },
   backBtn: {
     width: 40,
@@ -437,6 +560,19 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   lessonMeta: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.inkMuted },
+  liveNowRow: { marginTop: 10, alignSelf: "flex-start" },
+  liveNowText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.coralInk },
+  outlineBtn: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: C.coral,
+    backgroundColor: "transparent",
+  },
+  outlineBtnText: { color: C.coralInk, fontFamily: "Inter_600SemiBold", fontSize: 15 },
   sectionLabel: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",

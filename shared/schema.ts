@@ -1735,6 +1735,38 @@ export const bibleSmallGroupPosts = pgTable(
 
 export type BibleSmallGroupPost = typeof bibleSmallGroupPosts.$inferSelect;
 
+export const bibleSmallGroupLiveSessions = pgTable(
+  "bible_small_group_live_session",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id")
+      .notNull()
+      .references(() => bibleSmallGroups.id, { onDelete: "cascade" }),
+    startedBy: varchar("started_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    roomName: text("room_name").notNull(),
+    lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    groupIdx: index("bible_small_group_live_session_group_idx").on(table.groupId),
+    activeGroupUniq: uniqueIndex(
+      "bible_small_group_live_session_active_group_uniq",
+    )
+      .on(table.groupId)
+      .where(sql`${table.endedAt} IS NULL`),
+  }),
+);
+
+export type BibleSmallGroupLiveSession =
+  typeof bibleSmallGroupLiveSessions.$inferSelect;
+
 // ─── LIVE STREAMING ──────────────────────────────────────────────────────────
 
 export const liveSessions = pgTable(

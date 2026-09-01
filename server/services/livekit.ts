@@ -4,7 +4,7 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
 
-function isConfigured(): boolean {
+export function isLiveKitConfigured(): boolean {
   return !!(LIVEKIT_API_KEY && LIVEKIT_API_SECRET && LIVEKIT_URL);
 }
 
@@ -54,12 +54,20 @@ export async function deleteLiveKitRoom(roomName: string): Promise<void> {
   }
 }
 
+export type LiveKitTokenOptions = {
+  /** Stable participant identity. Prayer-group callers omit this. */
+  identity?: string;
+};
+
 export async function generateToken(
   roomName: string,
   participantName: string,
-  isHost: boolean = false
+  isHost: boolean = false,
+  options?: LiveKitTokenOptions
 ): Promise<string> {
-  const identity = `${participantName.replace(/[^a-zA-Z0-9_-]/g, "_")}_${Date.now().toString(36)}`;
+  const identity =
+    options?.identity ||
+    `${participantName.replace(/[^a-zA-Z0-9_-]/g, "_")}_${Date.now().toString(36)}`;
 
   if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
     throw new Error("LiveKit credentials are not configured.");
@@ -70,6 +78,8 @@ export async function generateToken(
     ttl: "6h",
   });
 
+  // canPublish: true already covers camera and microphone. Optional identity
+  // is the only extension; prayer_groups callers keep the previous 3-arg form.
   token.addGrant({
     room: roomName,
     roomJoin: true,

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Group room</title>
+<!--SERVER_INJECTED_CONFIG-->
+<script src="/api/streams/livekit-client.umd.js"></script>
+<link rel="preload" as="script" href="/api/bible-groups/live-room-client.js">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #FBF7EE; color: #1F1A12; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #top {
+    padding: 12px 16px 10px;
+    background: #FBF7EE;
+    border-bottom: 1px solid #E7E0D2;
+  }
+  #group-name { font-size: 16px; font-weight: 700; color: #1F1A12; }
+  #lesson-title { font-size: 13px; color: #6B6660; margin-top: 2px; }
+  #notice {
+    display: none;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #6B6660;
+    background: #FFFBF0;
+  }
+  #notice.show { display: block; }
+
+  #preview {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    gap: 16px;
+  }
+  #preview.hidden { display: none; }
+  #preview-video-wrap {
+    width: min(100%, 420px);
+    aspect-ratio: 3 / 4;
+    background: #1F1A12;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  #preview-video-wrap video {
+    width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
+  }
+  #preview-placeholder {
+    position: absolute; inset: 0;
+    display: none; align-items: center; justify-content: center;
+    color: #FBF7EE; font-size: 28px; font-weight: 700;
+  }
+  #preview-actions { display: flex; gap: 12px; align-items: center; }
+  .pill {
+    min-width: 48px; height: 48px; border-radius: 24px; border: 1.5px solid #E8604C;
+    background: #fff; color: #C24431; font-size: 14px; font-weight: 600;
+    padding: 0 16px; cursor: pointer;
+  }
+  .pill.off { border-color: #E7E0D2; color: #6B6660; }
+  #btn-join {
+    background: #E8604C; color: #fff; border: none;
+    height: 48px; border-radius: 12px; padding: 0 28px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+
+  #room { flex: 1; display: none; flex-direction: column; min-height: 0; }
+  #room.show { display: flex; }
+  #stage { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #1F1A12; }
+  #spotlight { flex: 1; min-height: 0; }
+  #strip {
+    display: none; flex-direction: row; gap: 6px; padding: 6px;
+    overflow-x: auto; height: 112px; background: #16150F;
+  }
+  #strip.show { display: flex; }
+  #grid {
+    flex: 1; display: grid; gap: 4px; padding: 4px; min-height: 0;
+    grid-template-columns: 1fr;
+  }
+  #grid.two { grid-template-columns: 1fr 1fr; }
+  #grid.four { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+  .tile {
+    position: relative; background: #2A241C; border-radius: 12px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid transparent;
+  }
+  .tile.speaking { border-color: #E8604C; }
+  .tile video { width: 100%; height: 100%; object-fit: cover; }
+  .tile .name {
+    position: absolute; bottom: 8px; left: 8px;
+    background: rgba(31,26,18,0.7); color: #FBF7EE;
+    padding: 3px 10px; border-radius: 6px; font-size: 12px;
+  }
+  .tile .icons {
+    position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;
+  }
+  .tile .badge {
+    width: 26px; height: 26px; border-radius: 13px;
+    background: rgba(31,26,18,0.7); color: #FBF7EE;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: #C24431;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700;
+  }
+
+  #controls {
+    display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px 20px; background: #FBF7EE; border-top: 1px solid #E7E0D2;
+  }
+  .ctrl {
+    height: 48px; min-width: 48px; border-radius: 24px; border: 1.5px solid #E7E0D2;
+    background: #fff; color: #1F1A12; padding: 0 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .ctrl.on { border-color: #E8604C; color: #C24431; }
+  .ctrl.leave { background: #1F1A12; color: #FBF7EE; border-color: #1F1A12; }
+  .ctrl.end { background: #fff; color: #C24431; border-color: #E8604C; }
+  .ctrl.hidden { display: none; }
+
+  #status {
+    position: absolute; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; background: #FBF7EE; z-index: 20;
+    color: #6B6660; font-size: 14px; gap: 12px;
+  }
+  #status.show { display: flex; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="group-name"></div>
+    <div id="lesson-title"></div>
+  </div>
+  <div id="notice"></div>
+  <div id="status"></div>
+
+  <div id="preview">
+    <div id="preview-video-wrap">
+      <video id="preview-video" autoplay muted playsinline></video>
+      <div id="preview-placeholder">?</div>
+    </div>
+    <div id="preview-actions">
+      <button class="pill on" id="btn-preview-mic">Mic</button>
+      <button class="pill on" id="btn-preview-cam">Camera</button>
+      <button class="pill" id="btn-preview-flip">Flip</button>
+    </div>
+    <button id="btn-join">Join</button>
+  </div>
+
+  <div id="room">
+    <div id="stage">
+      <div id="spotlight"></div>
+      <div id="strip"></div>
+      <div id="grid"></div>
+    </div>
+    <div id="controls">
+      <button class="ctrl on" id="btn-mic">Mic</button>
+      <button class="ctrl on" id="btn-cam">Camera</button>
+      <button class="ctrl" id="btn-flip">Flip</button>
+      <button class="ctrl leave" id="btn-leave">Leave</button>
+      <button class="ctrl end hidden" id="btn-end">End room</button>
+    </div>
+  </div>
+</div>
+<script src="/api/bible-groups/live-room-client.js"></script>
+</body>
+</html>
