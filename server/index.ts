@@ -510,6 +510,13 @@ function setupErrorHandler(app: express.Application) {
       }
 
       try {
+        const { initOdbRefresh } = await import("./services/odb-refresh");
+        initOdbRefresh();
+      } catch (err) {
+        console.error("[ODB] refresh init failed:", err);
+      }
+
+      try {
         const { db: startupDb } = await import("./db");
         const { kidsStoryScenes } = await import("../shared/schema");
         const { eq } = await import("drizzle-orm");

@@ -49,7 +49,8 @@ import newsRoutes from "./routes/news";
 import egwRoutes from "./routes/egw";
 import demoRoutes from "./routes/demo";
 import youtubeRoutes from "./routes/youtube";
-import odbRoutes from "./routes/odb";
+import { createOdbRouter } from "./routes/odb";
+import { createDefaultOdbStore } from "./odb-store";
 import bibleGroupRoutes from "./routes/bible-groups";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -170,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/egw", egwRoutes);
   app.use("/api/demo", demoRoutes);
   app.use(youtubeRoutes);
-  app.use(odbRoutes);
+  app.use(createOdbRouter(createDefaultOdbStore()));
   app.use(bibleGroupRoutes);
 
   recoverStuckHeyGenJobs().catch((err) => {

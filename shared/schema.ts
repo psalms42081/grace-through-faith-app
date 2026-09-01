@@ -8,6 +8,7 @@ import {
   jsonb,
   timestamp,
   check,
+  date,
   index,
   uniqueIndex,
   uuid,
@@ -2720,3 +2721,27 @@ export const egwChapters = pgTable(
 
 export type EgwChapter = typeof egwChapters.$inferSelect;
 export type InsertEgwChapter = typeof egwChapters.$inferInsert;
+
+// ─── OUR DAILY BREAD (persisted WP listing; request path never hits odb.org) ─
+
+export const odbPosts = pgTable("odb_posts", {
+  date: date("date", { mode: "string" }).primaryKey(),
+  title: text("title").notNull(),
+  author: text("author").notNull().default(""),
+  scriptureRef: text("scripture_ref").notNull().default(""),
+  readingRef: text("reading_ref").notNull().default(""),
+  bodyText: text("body_text").notNull().default(""),
+  verse: text("verse").notNull().default(""),
+  thought: text("thought").notNull().default(""),
+  response: text("response").notNull().default(""),
+  insights: text("insights").notNull().default(""),
+  insightsAuthor: text("insights_author").notNull().default(""),
+  bibleInAYear: text("bible_in_a_year").notNull().default(""),
+  sourceUrl: text("source_url").notNull().default(""),
+  imageUrl: text("image_url"),
+  sourceId: integer("source_id"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type OdbPost = typeof odbPosts.$inferSelect;
+export type InsertOdbPost = typeof odbPosts.$inferInsert;

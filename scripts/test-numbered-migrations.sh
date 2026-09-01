@@ -74,12 +74,12 @@ day_count_before="$(scalar "SELECT count(*) FROM devotional_day")"
 echo "=== Repeat deployment: all migrations skip and data remains intact ==="
 npx tsx scripts/prepare-devotional-catalog.ts
 
-if [ "$(scalar "SELECT count(*) FROM app_sql_migration")" -ne 9 ]; then
-  echo "Expected exactly nine numbered migrations in the ledger" >&2
+if [ "$(scalar "SELECT count(*) FROM app_sql_migration")" -ne 12 ]; then
+  echo "Expected exactly twelve numbered migrations in the ledger" >&2
   exit 1
 fi
 
-if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 9 ]; then
+if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 12 ]; then
   echo "Fresh database should apply every numbered migration rather than baseline one" >&2
   exit 1
 fi
@@ -109,8 +109,8 @@ if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 
   exit 1
 fi
 
-if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 7 ]; then
-  echo "Expected existing schema adoption to apply migrations 0001, 0002, 0004, 0005, 0006, 0007, and 0008" >&2
+if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 10 ]; then
+  echo "Expected existing schema adoption to apply migrations 0001, 0002, 0004, 0005, 0006, 0007, 0008, 0009, 0010, and 0011" >&2
   exit 1
 fi
 

@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
-import { isOdbTodayCacheFresh, pickPublishedForDate } from "../odb-select";
+import {
+  ODB_DEFAULT_TIME_ZONE,
+  odbDateKeyFromTimeZone,
+  pickPublishedForDate,
+} from "../odb-select";
+import { mapWpPost, rowToOdbJson } from "../odb-map";
+
+const repoRoot = path.resolve(process.cwd());
 
 describe("ODB published-day selection", () => {
   const posts = [
@@ -35,35 +44,59 @@ describe("ODB published-day selection", () => {
     assert.equal(pickPublishedForDate([{ date: "2026-09-02" }], "2026-09-01"), null);
     assert.equal(pickPublishedForDate([], "2026-09-01"), null);
   });
+});
 
-  it("rechecks today's date every 15 minutes even after an Aug 31 match", () => {
-    const now = Date.parse("2026-09-02T00:00:00+10:00");
-    const exactAug31 = {
-      todayDateKey: "2026-08-31",
-      today: { date: "2026-08-31" },
-      ts: now - 60 * 1000,
-    };
-    assert.equal(isOdbTodayCacheFresh(exactAug31, "2026-09-02", now), false);
+describe("ODB WP mapping", () => {
+  it("maps listing posts to body_text fields used by /api/odb/today", () => {
+    const row = mapWpPost({
+      id: 99,
+      title: { rendered: "Christ in Me" },
+      date: "2026-08-31T00:00:00",
+      author_name: "ODB",
+      verse: "<p>Galatians 2:20</p>",
+      passage: "<a href=\"https://biblegateway.com/?search=Galatians+2%3A20\">Gal 2:20</a>",
+      content: { rendered: "<p>Body &amp; hope</p>" },
+      link: "https://odb.org/2026/08/31/christ-in-me",
+    });
+    assert.equal(row?.date, "2026-08-31");
+    assert.equal(row?.bodyText, "Body & hope");
+    assert.equal(row?.scriptureRef, "Galatians 2:20");
+    const json = rowToOdbJson(row!);
+    assert.equal(json.content, "Body & hope");
+    assert.equal(json.verseRef, "Galatians 2:20");
+    assert.equal(json.url, "https://odb.org/2026/08/31/christ-in-me");
+  });
+});
 
-    const fallbackForSep2 = {
-      todayDateKey: "2026-09-02",
-      today: { date: "2026-08-31" },
-      ts: now - 16 * 60 * 1000,
-    };
-    assert.equal(isOdbTodayCacheFresh(fallbackForSep2, "2026-09-02", now), false);
+describe("ODB today timezone", () => {
+  it("defaults to Australia/Melbourne when no timeZone is provided", () => {
+    assert.equal(ODB_DEFAULT_TIME_ZONE, "Australia/Melbourne");
+    const instant = new Date("2025-12-31T14:30:00.000Z");
+    assert.equal(odbDateKeyFromTimeZone(undefined, instant), "2026-01-01");
+    assert.equal(odbDateKeyFromTimeZone("", instant), "2026-01-01");
+  });
 
-    const recentCheck = {
-      todayDateKey: "2026-09-02",
-      today: { date: "2026-09-02" },
-      ts: now - 5 * 60 * 1000,
-    };
-    assert.equal(isOdbTodayCacheFresh(recentCheck, "2026-09-02", now), true);
+  it("honors ?timeZone= when provided", () => {
+    const instant = new Date("2025-12-31T14:30:00.000Z");
+    assert.equal(odbDateKeyFromTimeZone("UTC", instant), "2025-12-31");
+    assert.equal(odbDateKeyFromTimeZone("America/New_York", instant), "2025-12-31");
+  });
+});
 
-    const exactButStale = {
-      todayDateKey: "2026-09-02",
-      today: { date: "2026-09-02" },
-      ts: now - 24 * 60 * 60 * 1000,
-    };
-    assert.equal(isOdbTodayCacheFresh(exactButStale, "2026-09-02", now), false);
+describe("migration 0011 odb_posts", () => {
+  it("is the numbered 0011 file with a date primary key", () => {
+    const migrationsDir = path.join(repoRoot, "migrations");
+    const files0011 = readdirSync(migrationsDir).filter((f) => f.startsWith("0011_"));
+    assert.deepEqual(files0011, ["0011_odb_posts.sql"]);
+    assert.equal(existsSync(path.join(migrationsDir, "0011_odb_posts.sql")), true);
+    const sql = readFileSync(path.join(migrationsDir, "0011_odb_posts.sql"), "utf8");
+    assert.match(sql, /CREATE TABLE IF NOT EXISTS "public"\."odb_posts"/);
+    assert.match(sql, /"date" date PRIMARY KEY/);
+    assert.doesNotMatch(sql, /timestamptz PRIMARY KEY/);
+    assert.match(sql, /body_text/);
+    assert.match(sql, /scripture_ref/);
+    assert.match(sql, /reading_ref/);
+    assert.match(sql, /source_url/);
+    assert.match(sql, /fetched_at" timestamptz/);
   });
 });

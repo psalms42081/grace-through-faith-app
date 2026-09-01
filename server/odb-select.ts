@@ -1,9 +1,22 @@
+import { getCalendarDate, normalizeTimeZone } from "../shared/calendar-date";
+
 export type DatedPost = { date: string };
 
-export const ODB_UPSTREAM_RECHECK_MS = 15 * 60 * 1000;
+export const ODB_DEFAULT_TIME_ZONE = "Australia/Melbourne";
 
 function dayKey(value: string): string {
   return (value || "").slice(0, 10);
+}
+
+export function odbDateKeyFromTimeZone(
+  timeZone: unknown,
+  now = new Date(),
+): string {
+  const raw = Array.isArray(timeZone) ? timeZone[0] : timeZone;
+  if (raw == null || raw === "") {
+    return getCalendarDate(now, ODB_DEFAULT_TIME_ZONE).dateKey;
+  }
+  return getCalendarDate(now, normalizeTimeZone(raw)).dateKey;
 }
 
 export function pickPublishedForDate<T extends DatedPost>(
@@ -23,18 +36,3 @@ export function pickPublishedForDate<T extends DatedPost>(
   if (exact) return { post: exact, exact: true };
   return { post: eligible[0], exact: false };
 }
-
-/** True only when we already checked this calendar day within the 15-minute window. */
-export function isOdbTodayCacheFresh(
-  cache: {
-    todayDateKey: string;
-    today?: { date?: string };
-    ts: number;
-  },
-  dateKey: string,
-  now = Date.now(),
-): boolean {
-  if (cache.todayDateKey !== dateKey) return false;
-  return now - cache.ts < ODB_UPSTREAM_RECHECK_MS;
-}
-
