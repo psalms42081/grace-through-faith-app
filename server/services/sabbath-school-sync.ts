@@ -14,10 +14,15 @@ import {
   normalizeSabbathSchoolAudioUrl,
 } from "./sabbath-school-audio-metadata";
 import { sabbathSchoolDateAtUtcMidnight } from "./sabbath-school-date";
+import {
+  SABBATH_SCHOOL_TRACKS,
+  SYNCED_SABBATH_SCHOOL_TRACKS,
+  type SabbathSchoolTrackId,
+} from "../../lib/sabbath-school-tracks";
 
 const BASE_URL = "https://sabbath-school.adventech.io/api/v2";
 
-type CurriculumType = "adult" | "inverse";
+type CurriculumType = SabbathSchoolTrackId;
 
 function getCurrentQuarterCode(): string {
   const now = new Date();
@@ -29,10 +34,10 @@ function getCurrentQuarterCode(): string {
 
 function getQuarterCodesForAllCurriculums(): Array<{ code: string; type: CurriculumType }> {
   const base = getCurrentQuarterCode();
-  return [
-    { code: base, type: "adult" },
-    { code: `${base}-cq`, type: "inverse" },
-  ];
+  return SYNCED_SABBATH_SCHOOL_TRACKS.map((type) => ({
+    code: `${base}${SABBATH_SCHOOL_TRACKS[type].adventechSuffix}`,
+    type,
+  }));
 }
 
 function getPreviousQuarterCode(code: string): string {

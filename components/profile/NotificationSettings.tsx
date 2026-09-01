@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Switch, Pressable, StyleSheet, Platform, Alert } from "react-native";
+import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import {
@@ -124,12 +124,10 @@ export default function NotificationSettings({
                 <Text style={[styles.toggleLabel, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                   Enable daily reading reminder
                 </Text>
-                <Switch
+                <PathBSwitch
                   value={enabled}
                   onValueChange={handleToggle}
                   disabled={loading}
-                  trackColor={{ false: theme.border, true: theme.accent + "60" }}
-                  thumbColor={enabled ? theme.accent : "#ccc"}
                   testID="reminder-toggle"
                 />
               </View>

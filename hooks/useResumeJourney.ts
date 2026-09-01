@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 
 const RESUME_CACHE_KEY = "@grace-through-faith/resume-item";
 
@@ -73,6 +74,7 @@ function getStageLabel(progression: any): string {
 
 export function useResumeJourney(): { item: ResumeItem | null; loading: boolean; refresh: () => void } {
   const { userId } = useAuth();
+  const { selectedTrack } = useSabbathSchoolTrack();
   const [localProgress, setLocalProgress] = useState<{
     gcProgress: { viewedNodes: string[]; lastPhase: string } | null;
     prophecyViewed: string[] | null;
@@ -124,7 +126,7 @@ export function useResumeJourney(): { item: ResumeItem | null; loading: boolean;
     currentLesson: { title: string; lessonNumber: number } | null;
     completedDays: number;
   }>({
-    queryKey: [`/api/sabbath-school/current?userId=${userId}`],
+    queryKey: [`/api/sabbath-school/current?userId=${userId}&curriculum=${selectedTrack}`],
     staleTime: 30_000,
   });
 

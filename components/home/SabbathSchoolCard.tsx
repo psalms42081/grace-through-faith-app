@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { useTheme } from "@/hooks/useTheme";
 
 type SabbathSchoolCurrentResponse = {
@@ -30,9 +31,10 @@ const CARD_BG_IMAGE = require("@/assets/home-cards/sabbath-school.png");
 export default function SabbathSchoolCard() {
   const { theme } = useTheme();
   const { userId } = useAuth();
+  const { selectedTrack } = useSabbathSchoolTrack();
 
   const { data, isLoading, isError } = useQuery<SabbathSchoolCurrentResponse>({
-    queryKey: [`/api/sabbath-school/current?userId=${userId}`],
+    queryKey: [`/api/sabbath-school/current?userId=${userId}&curriculum=${selectedTrack}`],
   });
 
   const isSaturday = new Date().getDay() === 6;

@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { HV2, F } from "@/components/home-v2/theme";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
@@ -36,6 +37,7 @@ const SS2 = {
 export default function SabbathSchoolVideoScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { selectedTrack } = useSabbathSchoolTrack();
   const [clock, setClock] = useState(() => new Date());
   const isTabContained = useSabbathSchoolTabContainment("sabbath-school-video");
   const localDateKey = useMemo(() => getHomeLocalDay(clock).dateKey, [clock]);
@@ -44,11 +46,6 @@ export default function SabbathSchoolVideoScreen() {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
-
-  const { data: userPrefs } = useQuery<{ preferredCurriculum?: string | null }>({
-    queryKey: ["/api/user/preferences"],
-  });
-  const selectedCurriculum = userPrefs?.preferredCurriculum === "inverse" ? "inverse" : "adult";
 
   const { data, isLoading } = useQuery<{
     currentLesson: {
@@ -62,14 +59,14 @@ export default function SabbathSchoolVideoScreen() {
     queryKey: [
       "sabbath-school-current",
       userId,
-      selectedCurriculum,
+      selectedTrack,
       localDateKey,
     ],
     queryFn: async () => {
       const response = await apiRequest(
         "GET",
         withDeviceTimeZone(
-          `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedCurriculum}`,
+          `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedTrack}`,
         ),
       );
       return response.json();

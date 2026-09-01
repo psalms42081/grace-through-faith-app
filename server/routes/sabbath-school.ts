@@ -27,6 +27,11 @@ import {
   normalizeSabbathSchoolTimeZone,
 } from "../services/sabbath-school-date";
 import { createDayTutorRouter } from "./sabbath-school-tutor";
+import {
+  parseSabbathSchoolTrackId,
+  tracksFromAvailableIds,
+  type SabbathSchoolTrackId,
+} from "../../lib/sabbath-school-tracks";
 
 const router = Router();
 
@@ -170,11 +175,48 @@ async function findCompanionsForQuarterly(quarterlyId: string) {
   return map;
 }
 
+router.get("/api/sabbath-school/tracks", async (_req, res) => {
+  try {
+    const rows = await db
+      .selectDistinct({
+        curriculumType: sabbathSchoolQuarterlies.curriculumType,
+      })
+      .from(sabbathSchoolQuarterlies)
+      .innerJoin(
+        sabbathSchoolLessons,
+        eq(sabbathSchoolLessons.quarterlyId, sabbathSchoolQuarterlies.id),
+      )
+      .innerJoin(
+        sabbathSchoolDays,
+        eq(sabbathSchoolDays.lessonId, sabbathSchoolLessons.id),
+      )
+      .where(
+        and(
+          eq(sabbathSchoolQuarterlies.language, "en"),
+          sql`coalesce(${sabbathSchoolDays.contentMarkdown}, '') <> ''`,
+        ),
+      );
+
+    const availableIds = rows.map((row) => row.curriculumType);
+    const tracks = tracksFromAvailableIds(availableIds).map((track) => ({
+      id: track.id,
+      shortLabel: track.shortLabel,
+      pickerLabel: track.pickerLabel,
+    }));
+
+    return res.json({ tracks });
+  } catch (err) {
+    console.error("Sabbath School tracks error:", err);
+    return res.status(500).json({ error: "Failed to fetch Sabbath School tracks" });
+  }
+});
+
 router.get("/api/sabbath-school/current", async (req, res) => {
   try {
     const userId = extractUserId(req);
-    const curriculumParam = String(req.query.curriculum || "adult").toLowerCase();
-    const curriculum: "adult" | "inverse" = curriculumParam === "inverse" ? "inverse" : "adult";
+    const curriculum: SabbathSchoolTrackId = parseSabbathSchoolTrackId(
+      req.query.curriculum,
+    );
     const timeZone = normalizeSabbathSchoolTimeZone(req.query.timeZone);
     const now = new Date();
 
@@ -394,9 +436,20 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
 
 router.get("/api/sabbath-school/quarters", async (req, res) => {
   try {
+    const curriculum = req.query.curriculum
+      ? parseSabbathSchoolTrackId(req.query.curriculum)
+      : null;
     const quarters = await db
       .select()
       .from(sabbathSchoolQuarterlies)
+      .where(
+        curriculum
+          ? and(
+              eq(sabbathSchoolQuarterlies.language, "en"),
+              eq(sabbathSchoolQuarterlies.curriculumType, curriculum),
+            )
+          : eq(sabbathSchoolQuarterlies.language, "en"),
+      )
       .orderBy(desc(sabbathSchoolQuarterlies.quarterCode));
 
     return res.json({ quarters });

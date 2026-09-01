@@ -41,6 +41,7 @@ import {
   buildSabbathSchoolTabRoute,
   SABBATH_SCHOOL_TAB_ROOT,
 } from "@/lib/sabbath-school-route-containment";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -54,6 +55,7 @@ export default function HomeV2Screen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { userId, user } = useAuth();
+  const { selectedTrack } = useSabbathSchoolTrack();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
@@ -242,11 +244,14 @@ export default function HomeV2Screen() {
       userId,
       deviceTimeZone,
       localDay.dateKey,
+      selectedTrack,
     ],
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
-        withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+        withDeviceTimeZone(
+          `/api/sabbath-school/current?userId=${userId}&curriculum=${selectedTrack}`,
+        ),
       );
       return res.json();
     },

@@ -36,6 +36,7 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { useToast } from "@/contexts/ToastContext";
 import { useSabbath } from "@/lib/sabbath";
 import SpiritualRings from "@/components/SpiritualRings";
@@ -1389,6 +1390,7 @@ function AdultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId, user } = useAuth();
+  const { selectedTrack } = useSabbathSchoolTrack();
   const sabbath = useSabbath();
   const { t } = useTranslation();
   const { translation: bibleTranslation } = useBibleTranslation();
@@ -1560,7 +1562,7 @@ function AdultHomeScreen() {
     companion: { id: string; slug: string; title: string; description: string | null } | null;
   }>({
     queryKey: [
-      withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
+      withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}&curriculum=${selectedTrack}`),
     ],
   });
 

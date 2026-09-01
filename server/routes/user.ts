@@ -267,7 +267,7 @@ router.put("/api/user/preferences", requireAuth, async (req, res) => {
     }
     if (req.body.preferredCurriculum !== undefined) {
       const val = String(req.body.preferredCurriculum).toLowerCase();
-      const valid = ["adult", "inverse"];
+      const valid = ["adult", "inverse", "cornerstone"];
       updates.preferredCurriculum = valid.includes(val) ? val : "adult";
     }
     if (Object.keys(updates).length === 0) {

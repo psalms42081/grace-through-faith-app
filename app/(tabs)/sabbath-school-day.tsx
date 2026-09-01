@@ -30,7 +30,6 @@ import {
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { buildStudyTutorRoute } from "@/lib/sabbath-school-tutor";
-import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   buildSabbathSchoolDayNavigator,
   buildSabbathSchoolDayRoute,
@@ -485,9 +484,15 @@ export default function SabbathSchoolDayScreen() {
         queryKey: [queryPath],
       });
       queryClient.invalidateQueries({
-        queryKey: [
-          withDeviceTimeZone(`/api/sabbath-school/current?userId=${userId}`),
-        ],
+        predicate: (query) => {
+          const head = query.queryKey[0];
+          return (
+            typeof head === "string" &&
+            (head === "sabbath-school-current" ||
+              head === "home-sabbath-school-current" ||
+              head.includes("/api/sabbath-school/current"))
+          );
+        },
       });
     },
   });
