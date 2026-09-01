@@ -71,6 +71,37 @@ function goToProfile() {
   router.replace("/(tabs)/profile" as any);
 }
 
+type TrackOwner = "preview" | "room";
+
+type HeldLiveTracks = {
+  groupId: string;
+  tracks: any[];
+  owner: TrackOwner;
+  facingUser: boolean;
+};
+
+/**
+ * Survives preview→room phase changes, React Strict Mode remounts, and
+ * WebLiveRoom unmount while Join has already taken the tracks.
+ * Preview unmount must not stop() tracks the room now owns.
+ */
+let heldLiveTracks: HeldLiveTracks | null = null;
+let liveRoomMounts = 0;
+/** In-flight createLocalTracks. Join must await this instead of starting a second getUserMedia. */
+let acquirePromise: Promise<any[]> | null = null;
+
+const TALL_TILE_MIN_PX = 240;
+const STRIP_TILE_PX = 96;
+
+function mediaReadyState(track: any): string {
+  return track?.mediaStreamTrack?.readyState ?? "unknown";
+}
+
+function tracksInclude(held: any[] | undefined, tracks: any[]): boolean {
+  if (!held?.length) return false;
+  return tracks.some((t) => held.includes(t));
+}
+
 function stopLocalTracks(tracks: any[], reason: string) {
   if (!tracks.length) return;
   console.log("[bible-group-live] preview stream stopped", reason, tracks.map((t) => t.kind));
@@ -81,12 +112,119 @@ function stopLocalTracks(tracks: any[], reason: string) {
   });
 }
 
+function stopOrphanTracks(tracks: any[], reason: string) {
+  if (!tracks.length) return;
+  if (heldLiveTracks?.owner === "room" && tracksInclude(heldLiveTracks.tracks, tracks)) {
+    console.log("[bible-group-live] skip stop, room owns tracks", reason);
+    return;
+  }
+  stopLocalTracks(tracks, reason);
+}
+
+function adoptPreviewTracks(groupId: string, tracks: any[], facingUser: boolean) {
+  if (heldLiveTracks?.owner === "room" && heldLiveTracks.groupId === groupId) {
+    stopOrphanTracks(tracks, "room already owns camera");
+    return;
+  }
+  if (heldLiveTracks?.owner === "preview" && !tracksInclude(heldLiveTracks.tracks, tracks)) {
+    stopLocalTracks(heldLiveTracks.tracks, "replace preview tracks");
+  }
+  heldLiveTracks = { groupId, tracks, owner: "preview", facingUser };
+}
+
+function transferHeldToRoom(groupId: string): any[] {
+  if (!heldLiveTracks || heldLiveTracks.groupId !== groupId) return [];
+  heldLiveTracks.owner = "room";
+  return heldLiveTracks.tracks.slice();
+}
+
+function currentTrackOwner(): TrackOwner | "none" {
+  return heldLiveTracks?.owner ?? "none";
+}
+
+function heldVideoTrack(): any | undefined {
+  return heldLiveTracks?.tracks.find((t) => t.kind === "video");
+}
+
+function heldAudioTrack(): any | undefined {
+  return heldLiveTracks?.tracks.find((t) => t.kind === "audio");
+}
+
+function disableStopOnMute(tracks: any[]) {
+  tracks.forEach((t) => {
+    try {
+      t.stopOnMute = false;
+    } catch {}
+  });
+}
+
+async function restartFacingOnHeld(facingUser: boolean) {
+  const video = heldVideoTrack();
+  if (!video?.restartTrack) return;
+  await video.restartTrack({ facingMode: facingUser ? "user" : "environment" });
+  if (heldLiveTracks) heldLiveTracks.facingUser = facingUser;
+}
+
+/**
+ * Exactly one getUserMedia/createLocalTracks per session.
+ * Reuses held tracks (including owner === "room") and coalesces concurrent callers.
+ */
+async function acquireOnce(lk: any, groupId: string, facingUser: boolean): Promise<any[]> {
+  if (heldLiveTracks?.groupId === groupId && heldLiveTracks.tracks.length) {
+    if (heldLiveTracks.owner !== "room" && heldLiveTracks.facingUser !== facingUser) {
+      await restartFacingOnHeld(facingUser);
+    }
+    return heldLiveTracks.tracks;
+  }
+  if (acquirePromise) return acquirePromise;
+  acquirePromise = (async () => {
+    console.log("[bible-group-live] acquiring local tracks (once)");
+    const tracks = await lk.createLocalTracks({
+      audio: true,
+      video: {
+        facingMode: facingUser ? "user" : "environment",
+        resolution: lk.VideoPresets.h360.resolution,
+      },
+    });
+    disableStopOnMute(tracks);
+    adoptPreviewTracks(groupId, tracks, facingUser);
+    return tracks;
+  })().finally(() => {
+    acquirePromise = null;
+  });
+  return acquirePromise;
+}
+
+function releasePreviewOnIdleUnmount() {
+  if (liveRoomMounts > 0) return;
+  if (heldLiveTracks?.owner === "preview") {
+    stopLocalTracks(heldLiveTracks.tracks, "unmount preview");
+    heldLiveTracks = null;
+  }
+}
+
 function detachLocalTracks(tracks: any[]) {
   tracks.forEach((t) => {
     try {
       t.detach().forEach((el: HTMLElement) => el.remove());
     } catch {}
   });
+}
+
+function ensureHostHasSize(host: HTMLElement, minHeight: number) {
+  host.style.position = "absolute";
+  host.style.top = "0";
+  host.style.left = "0";
+  host.style.right = "0";
+  host.style.bottom = "0";
+  host.style.width = "100%";
+  host.style.height = "100%";
+  host.style.minHeight = `${minHeight}px`;
+  host.style.minWidth = "120px";
+  const rect = host.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) {
+    host.style.height = `${minHeight}px`;
+  }
 }
 
 /** Mobile Chrome will not paint local video unless autoplay + playsinline + muted are all set. */
@@ -100,22 +238,41 @@ function prepareAttachedVideo(el: HTMLVideoElement, isLocal: boolean, facingUser
   el.setAttribute("webkit-playsinline", "");
   el.style.width = "100%";
   el.style.height = "100%";
+  el.style.minHeight = "100%";
   el.style.objectFit = "cover";
   el.style.position = "absolute";
-  el.style.inset = "0";
+  el.style.top = "0";
+  el.style.left = "0";
+  el.style.right = "0";
+  el.style.bottom = "0";
   if (isLocal && facingUser) el.style.transform = "scaleX(-1)";
   else el.style.transform = "";
   void el.play().catch(() => {});
 }
 
-function attachTrackToHost(track: any, hostId: string, isLocal: boolean, facingUser: boolean) {
+function attachTrackToHost(
+  track: any,
+  hostId: string,
+  isLocal: boolean,
+  facingUser: boolean,
+  onLocalVideo?: (el: HTMLVideoElement) => void,
+  attempt = 0,
+) {
   if (typeof document === "undefined") return;
   if (isLocal && track.kind === "audio") return;
   const host = document.getElementById(hostId);
   if (!host) {
-    console.log("[bible-group-live] track attach skipped, host missing", hostId, track.kind);
+    if (attempt < 40) {
+      requestAnimationFrame(() =>
+        attachTrackToHost(track, hostId, isLocal, facingUser, onLocalVideo, attempt + 1),
+      );
+    } else {
+      console.log("[bible-group-live] track attach skipped, host missing", hostId, track.kind);
+    }
     return;
   }
+  const minHeight = host.getAttribute("data-tall") === "1" ? TALL_TILE_MIN_PX : STRIP_TILE_PX;
+  ensureHostHasSize(host, minHeight);
   const existing = host.querySelector(`[data-track-kind="${track.kind}"]`);
   if (existing) existing.remove();
   let el: HTMLMediaElement;
@@ -130,6 +287,7 @@ function attachTrackToHost(track: any, hostId: string, isLocal: boolean, facingU
     video.setAttribute("webkit-playsinline", "");
     el = track.attach(video);
     prepareAttachedVideo(el as HTMLVideoElement, isLocal, facingUser);
+    if (isLocal) onLocalVideo?.(el as HTMLVideoElement);
   } else {
     el = track.attach();
     el.style.display = "none";
@@ -141,7 +299,21 @@ function attachTrackToHost(track: any, hostId: string, isLocal: boolean, facingU
     sid: track.sid,
     isLocal,
     hostId,
+    hostSize: `${host.clientWidth}x${host.clientHeight}`,
+    readyState: mediaReadyState(track),
   });
+}
+
+function readDebugFlag(param: unknown): boolean {
+  const raw = Array.isArray(param) ? param[0] : param;
+  if (raw === "1" || raw === "true") return true;
+  if (typeof window === "undefined") return false;
+  try {
+    const q = new URLSearchParams(window.location.search).get("debug");
+    return q === "1" || q === "true";
+  } catch {
+    return false;
+  }
 }
 
 function WebLiveRoom({
@@ -149,6 +321,7 @@ function WebLiveRoom({
   groupName,
   lessonTitle,
   isHost,
+  debugEnabled,
   onLeave,
   onEndRoom,
 }: {
@@ -156,6 +329,7 @@ function WebLiveRoom({
   groupName: string;
   lessonTitle: string;
   isHost: boolean;
+  debugEnabled: boolean;
   onLeave: () => void;
   onEndRoom: () => void;
 }) {
@@ -165,17 +339,29 @@ function WebLiveRoom({
   const joiningRef = useRef(false);
   const attachedRef = useRef<Map<string, { track: any; isLocal: boolean }[]>>(new Map());
   const previewVideoRef = useRef<any>(null);
+  const localVideoElRef = useRef<HTMLVideoElement | null>(null);
+  const lastErrorRef = useRef<string>("");
   const [phase, setPhase] = useState<"preview" | "connecting" | "in-room">("preview");
   const [notice, setNotice] = useState<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const [facingUser, setFacingUser] = useState(true);
   const [tiles, setTiles] = useState<TileInfo[]>([]);
+  const [debugLines, setDebugLines] = useState<string[]>([]);
   const [showFlip] = useState(() => {
     if (Platform.OS !== "web") return true;
     if (typeof window === "undefined") return false;
     return window.matchMedia?.("(pointer: coarse)").matches ?? false;
   });
+
+  const setLastError = useCallback((msg: string) => {
+    lastErrorRef.current = msg;
+    setNotice(msg);
+  }, []);
+
+  const onLocalVideo = useCallback((el: HTMLVideoElement) => {
+    localVideoElRef.current = el;
+  }, []);
 
   const rememberTrack = useCallback((identity: string, track: any, isLocal: boolean) => {
     const list = attachedRef.current.get(identity) ?? [];
@@ -225,11 +411,17 @@ function WebLiveRoom({
   );
 
   useEffect(() => {
+    liveRoomMounts += 1;
     return () => {
+      liveRoomMounts -= 1;
       const room = roomRef.current;
-      if (room) room.disconnect().catch(() => {});
-      stopLocalTracks(previewTracksRef.current, "unmount");
+      roomRef.current = null;
       previewTracksRef.current = [];
+      queueMicrotask(() => {
+        if (liveRoomMounts > 0) return;
+        if (room) room.disconnect().catch(() => {});
+        releasePreviewOnIdleUnmount();
+      });
     };
   }, []);
 
@@ -238,56 +430,88 @@ function WebLiveRoom({
     tiles.forEach((tile) => {
       const rows = attachedRef.current.get(tile.identity) ?? [];
       rows.forEach(({ track, isLocal }) => {
-        attachTrackToHost(track, `media-${tile.identity}`, isLocal, facingUser);
+        attachTrackToHost(track, `media-${tile.identity}`, isLocal, facingUser, onLocalVideo);
       });
     });
-  }, [tiles, facingUser, phase]);
+  }, [tiles, facingUser, phase, onLocalVideo]);
+
+  useEffect(() => {
+    if (!debugEnabled) return;
+    const tick = () => {
+      const room = roomRef.current;
+      const identity = room?.localParticipant?.identity;
+      const rows = identity ? attachedRef.current.get(identity) ?? [] : [];
+      const videoTrack =
+        rows.find((r) => r.track?.kind === "video")?.track ||
+        previewTracksRef.current.find((t) => t.kind === "video") ||
+        heldLiveTracks?.tracks.find((t) => t.kind === "video");
+      const pub = room?.localParticipant?.getTrackPublication?.(lkRef.current?.Track?.Source?.Camera);
+      const el = localVideoElRef.current;
+      const pubState = pub
+        ? `${pub.muted ? "muted" : "unmuted"}/${pub.trackSid ? "published" : "no-sid"}`
+        : phase === "in-room"
+          ? "no-publication"
+          : "preview";
+      setDebugLines([
+        `readyState ${mediaReadyState(videoTrack)}`,
+        `track.muted ${videoTrack?.isMuted ?? videoTrack?.muted ?? "n/a"}`,
+        `publication ${pubState}`,
+        `video ${el ? `${el.videoWidth}×${el.videoHeight}` : "no-el"}`,
+        `paused ${el ? String(el.paused) : "n/a"}`,
+        `host ${el?.parentElement ? `${el.parentElement.clientWidth}×${el.parentElement.clientHeight}` : "n/a"}`,
+        `error ${lastErrorRef.current || "none"}`,
+        `owner ${heldLiveTracks?.owner ?? "none"} phase ${phase}`,
+      ]);
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [debugEnabled, phase, tiles, camEnabled]);
 
   useEffect(() => {
     let cancelled = false;
+    function attachPreview(tracks: any[]) {
+      previewTracksRef.current = tracks;
+      const video = tracks.find((t: any) => t.kind === "video");
+      if (video && previewVideoRef.current) {
+        const el = video.attach() as HTMLVideoElement;
+        prepareAttachedVideo(el, true, facingUser);
+        el.style.position = "relative";
+        el.style.inset = "";
+        el.style.minHeight = "240px";
+        previewVideoRef.current.innerHTML = "";
+        previewVideoRef.current.appendChild(el);
+        localVideoElRef.current = el;
+      }
+    }
     async function startPreview() {
+      if (currentTrackOwner() === "room") return;
       try {
         const lk = await import("livekit-client");
-        if (cancelled) return;
+        if (cancelled || currentTrackOwner() === "room") return;
         lkRef.current = lk;
-        const tracks = await lk.createLocalTracks({
-          audio: true,
-          video: {
-            facingMode: facingUser ? "user" : "environment",
-            resolution: lk.VideoPresets.h360.resolution,
-          },
-        });
-        if (cancelled || joiningRef.current) {
-          stopLocalTracks(tracks, cancelled ? "preview cancelled" : "join already started");
-          return;
-        }
-        previewTracksRef.current = tracks;
+        const tracks = await acquireOnce(lk, groupId, facingUser);
+        if (currentTrackOwner() === "room") return;
+        if (cancelled && joiningRef.current) return;
+        attachPreview(tracks);
         console.log(
-          "[bible-group-live] preview stream created",
-          tracks.map((t: any) => ({ kind: t.kind, sid: t.sid })),
+          "[bible-group-live] preview stream ready",
+          tracks.map((t: any) => ({ kind: t.kind, sid: t.sid, readyState: mediaReadyState(t) })),
         );
-        const video = tracks.find((t: any) => t.kind === "video");
-        if (video && previewVideoRef.current) {
-          const el = video.attach() as HTMLVideoElement;
-          prepareAttachedVideo(el, true, facingUser);
-          el.style.position = "relative";
-          el.style.inset = "";
-          previewVideoRef.current.innerHTML = "";
-          previewVideoRef.current.appendChild(el);
-        }
-      } catch {
+      } catch (err: any) {
+        lastErrorRef.current = err?.message || "Could not start camera";
+        if (heldLiveTracks?.tracks.length || currentTrackOwner() === "room") return;
         try {
           const lk = lkRef.current || (await import("livekit-client"));
+          if (heldLiveTracks?.tracks.length || acquirePromise) return;
           const audioOnly = await lk.createLocalTracks({ audio: true, video: false });
-          if (cancelled || joiningRef.current) {
-            stopLocalTracks(audioOnly, cancelled ? "preview cancelled" : "join already started");
+          if (currentTrackOwner() === "room" || joiningRef.current) {
+            stopOrphanTracks(audioOnly, "join already started");
             return;
           }
-          previewTracksRef.current = audioOnly;
-          console.log(
-            "[bible-group-live] preview stream created",
-            audioOnly.map((t: any) => ({ kind: t.kind, sid: t.sid })),
-          );
+          disableStopOnMute(audioOnly);
+          adoptPreviewTracks(groupId, audioOnly, facingUser);
+          attachPreview(audioOnly);
           setCamEnabled(false);
           setNotice("Camera is off. You can still join.");
         } catch {
@@ -301,27 +525,42 @@ function WebLiveRoom({
     if (phase === "preview") startPreview();
     return () => {
       cancelled = true;
-      if (phase === "preview" && !joiningRef.current) {
-        stopLocalTracks(previewTracksRef.current, "preview effect cleanup");
-        previewTracksRef.current = [];
-      }
+      // Do not stop() here. Phase change to connecting, Strict Mode remount,
+      // and Join handoff all unmount this effect while the room still needs the tracks.
     };
-    // Recreate preview when flipping before join.
+    // Recreate preview only when returning to preview for this group — never on facingUser
+    // (flip uses restartTrack on the existing capture).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, facingUser]);
+  }, [phase, groupId]);
 
   const joinRoom = useCallback(async () => {
     joiningRef.current = true;
-    const tracksToPublish = previewTracksRef.current.slice();
-    detachLocalTracks(tracksToPublish);
-    previewTracksRef.current = [];
     setPhase("connecting");
-
     try {
-      const tokenRes = await apiRequest("POST", `/api/bible-groups/${groupId}/live/token`);
-      const body: TokenResponse = await tokenRes.json();
       const lk = lkRef.current || (await import("livekit-client"));
       lkRef.current = lk;
+      if (acquirePromise) {
+        try {
+          await acquirePromise;
+        } catch {}
+      }
+      if (!heldLiveTracks?.tracks.length) {
+        await acquireOnce(lk, groupId, facingUser);
+      }
+      const tracksToPublish = transferHeldToRoom(groupId);
+      detachLocalTracks(tracksToPublish);
+      previewTracksRef.current = [];
+
+      if (!tracksToPublish.length) {
+        joiningRef.current = false;
+        lastErrorRef.current = "No camera/mic tracks to publish";
+        setNotice("Camera is not ready. Wait a moment and try Join again.");
+        setPhase("preview");
+        return;
+      }
+
+      const tokenRes = await apiRequest("POST", `/api/bible-groups/${groupId}/live/token`);
+      const body: TokenResponse = await tokenRes.json();
       const speakingIds = new Set<string>();
       const room = new lk.Room({
         adaptiveStream: true,
@@ -346,13 +585,11 @@ function WebLiveRoom({
         console.log("[bible-group-live] local track published", {
           kind: track?.kind ?? pub.kind,
           sid: track?.sid ?? pub.trackSid,
+          readyState: mediaReadyState(track),
         });
         if (track) {
           rememberTrack(room.localParticipant.identity, track, true);
-          attachTrackToHost(track, `media-${room.localParticipant.identity}`, true, facingUser);
-          setTimeout(() => {
-            attachTrackToHost(track, `media-${room.localParticipant.identity}`, true, facingUser);
-          }, 50);
+          attachTrackToHost(track, `media-${room.localParticipant.identity}`, true, facingUser, onLocalVideo);
         }
         refresh();
       });
@@ -373,6 +610,7 @@ function WebLiveRoom({
         refresh();
       });
       room.on(lk.RoomEvent.Disconnected, () => {
+        if (heldLiveTracks?.owner === "room") heldLiveTracks = null;
         onLeave();
       });
 
@@ -383,30 +621,19 @@ function WebLiveRoom({
         localSid: room.localParticipant?.sid,
       });
 
-      if (tracksToPublish.length > 0) {
-        for (const track of tracksToPublish) {
-          const publishVideo = track.kind === "video" && camEnabled;
-          const publishAudio = track.kind === "audio" && micEnabled;
-          if (publishVideo || publishAudio) {
-            await room.localParticipant.publishTrack(track);
-          } else {
-            stopLocalTracks([track], `${track.kind} disabled at join`);
-          }
-        }
-      } else {
-        try {
-          await room.localParticipant.setMicrophoneEnabled(micEnabled);
-        } catch {
-          setMicEnabled(false);
-          setNotice("Microphone is off. You can still stay in the room.");
-        }
-        try {
-          await room.localParticipant.setCameraEnabled(camEnabled, {
-            facingMode: facingUser ? "user" : "environment",
-          });
-        } catch {
-          setCamEnabled(false);
-          setNotice((prev) => prev || "Camera is off. You can still stay in the room.");
+      for (const track of tracksToPublish) {
+        const publishVideo = track.kind === "video" && camEnabled;
+        const publishAudio = track.kind === "audio" && micEnabled;
+        if (publishVideo || publishAudio) {
+          await room.localParticipant.publishTrack(track);
+        } else if (track.kind === "video") {
+          try {
+            await track.mute();
+          } catch {}
+        } else if (track.kind === "audio") {
+          try {
+            await track.mute();
+          } catch {}
         }
       }
 
@@ -418,7 +645,10 @@ function WebLiveRoom({
         await roomRef.current?.disconnect();
       } catch {}
       roomRef.current = null;
-      stopLocalTracks(tracksToPublish, "join failed");
+      if (heldLiveTracks?.owner === "room") {
+        heldLiveTracks.owner = "preview";
+      }
+      lastErrorRef.current = err?.message || "Could not join the room.";
       setNotice(err?.message || "Could not join the room.");
       setPhase("preview");
     }
@@ -430,6 +660,7 @@ function WebLiveRoom({
     groupId,
     micEnabled,
     onLeave,
+    onLocalVideo,
     rememberTrack,
   ]);
 
@@ -437,7 +668,8 @@ function WebLiveRoom({
     const next = !micEnabled;
     setMicEnabled(next);
     const room = roomRef.current;
-    if (phase === "preview") {
+    const audio = heldAudioTrack();
+    if (phase === "preview" || !room) {
       previewTracksRef.current.forEach((t) => {
         if (t.kind === "audio") {
           if (next) t.unmute();
@@ -446,9 +678,15 @@ function WebLiveRoom({
       });
       return;
     }
-    if (!room) return;
     try {
-      await room.localParticipant.setMicrophoneEnabled(next);
+      if (audio) {
+        if (next) await audio.unmute();
+        else await audio.mute();
+      } else {
+        const pub = room.localParticipant.getTrackPublication(lkRef.current?.Track?.Source?.Microphone);
+        if (next) await pub?.unmute();
+        else await pub?.mute();
+      }
     } catch {
       setMicEnabled(!next);
       setNotice("Microphone could not be changed.");
@@ -459,7 +697,8 @@ function WebLiveRoom({
     const next = !camEnabled;
     setCamEnabled(next);
     const room = roomRef.current;
-    if (phase === "preview") {
+    const video = heldVideoTrack();
+    if (phase === "preview" || !room) {
       previewTracksRef.current.forEach((t) => {
         if (t.kind === "video") {
           if (next) t.unmute();
@@ -468,41 +707,42 @@ function WebLiveRoom({
       });
       return;
     }
-    if (!room) return;
     try {
-      await room.localParticipant.setCameraEnabled(next, {
-        facingMode: facingUser ? "user" : "environment",
-      });
-    } catch {
+      if (video) {
+        if (next) await video.unmute();
+        else await video.mute();
+      } else {
+        const pub = room.localParticipant.getTrackPublication(lkRef.current?.Track?.Source?.Camera);
+        if (!pub?.track) throw new Error("no camera track");
+        if (next) await pub.unmute();
+        else await pub.mute();
+      }
+    } catch (err: any) {
       setCamEnabled(!next);
-      setNotice("Camera could not be changed.");
+      lastErrorRef.current = err?.message || "Camera could not be changed.";
+      setLastError("Camera could not be changed.");
     }
-  }, [camEnabled, facingUser, phase]);
+  }, [camEnabled, phase, setLastError]);
 
   const flipCamera = useCallback(async () => {
     const nextFacing = !facingUser;
-    setFacingUser(nextFacing);
-    const room = roomRef.current;
-    if (phase !== "in-room" || !room) return;
     try {
-      const pub = room.localParticipant.getTrackPublication(
-        lkRef.current?.Track.Source.Camera,
-      );
-      if (pub?.track?.restartTrack) {
-        await pub.track.restartTrack({ facingMode: nextFacing ? "user" : "environment" });
-      } else {
-        await room.localParticipant.setCameraEnabled(false);
-        await room.localParticipant.setCameraEnabled(true, {
-          facingMode: nextFacing ? "user" : "environment",
-        });
+      await restartFacingOnHeld(nextFacing);
+      setFacingUser(nextFacing);
+      const video = heldVideoTrack();
+      const el = localVideoElRef.current;
+      if (el && video) {
+        el.style.transform = nextFacing ? "scaleX(-1)" : "";
       }
-    } catch {
-      setNotice("Could not flip the camera.");
+    } catch (err: any) {
+      lastErrorRef.current = err?.message || "Could not flip the camera.";
+      setLastError("Could not flip the camera.");
     }
-  }, [facingUser, phase]);
+  }, [facingUser, setLastError]);
 
   const leave = useCallback(() => {
     const room = roomRef.current;
+    if (heldLiveTracks?.owner === "room") heldLiveTracks = null;
     if (room) room.disconnect().catch(() => {});
     onLeave();
   }, [onLeave]);
@@ -524,17 +764,29 @@ function WebLiveRoom({
         background: C.tile,
         borderRadius: 12,
         overflow: "hidden",
-        minHeight: tall ? 220 : 120,
+        minHeight: tall ? TALL_TILE_MIN_PX : STRIP_TILE_PX,
         flex: tall ? 1 : undefined,
-        width: tall ? "100%" : 96,
-        height: tall ? undefined : 96,
+        width: tall ? "100%" : STRIP_TILE_PX,
+        height: tall ? "100%" : STRIP_TILE_PX,
         border: tile.speaking ? `2px solid ${C.coral}` : "2px solid transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <div id={`media-${tile.identity}`} style={{ position: "absolute", inset: 0 }} />
+      <div
+        id={`media-${tile.identity}`}
+        data-tall={tall ? "1" : "0"}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          minHeight: tall ? TALL_TILE_MIN_PX : STRIP_TILE_PX,
+          minWidth: 1,
+        }}
+      />
       {tile.cameraOff && (
         <div
           style={{
@@ -604,6 +856,15 @@ function WebLiveRoom({
         </Text>
       </View>
       {notice ? <Text style={s.notice}>{notice}</Text> : null}
+      {debugEnabled ? (
+        <View style={s.debugStrip} testID="bible-group-live-debug">
+          {debugLines.map((line, i) => (
+            <Text key={i} style={s.debugText}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       {phase !== "in-room" ? (
         <View style={s.previewWrap}>
@@ -611,6 +872,8 @@ function WebLiveRoom({
             ref={previewVideoRef}
             style={{
               width: "100%",
+              height: "100%",
+              minHeight: 320,
               maxWidth: 420,
               aspectRatio: "3 / 4",
               background: C.stage,
@@ -648,10 +911,12 @@ function WebLiveRoom({
           )}
         </View>
       ) : (
-        <View style={{ flex: 1, backgroundColor: C.stage }}>
+        <View style={{ flex: 1, height: "100%", minHeight: TALL_TILE_MIN_PX, backgroundColor: C.stage }}>
           {useSpotlight ? (
             <>
-              <View style={{ flex: 1, padding: 4 }}>{spotlightTile ? renderTile(spotlightTile, true) : null}</View>
+              <View style={{ flex: 1, height: "100%", minHeight: TALL_TILE_MIN_PX, padding: 4 }}>
+                {spotlightTile ? renderTile(spotlightTile, true) : null}
+              </View>
               <ScrollView horizontal style={{ maxHeight: 112 }} contentContainerStyle={{ gap: 6, padding: 6 }}>
                 {stripTiles.map((tile) => renderTile(tile, false))}
               </ScrollView>
@@ -663,9 +928,11 @@ function WebLiveRoom({
                 display: "grid",
                 gap: 4,
                 padding: 4,
+                width: "100%",
+                height: "100%",
+                minHeight: TALL_TILE_MIN_PX,
                 gridTemplateColumns: tiles.length > 1 ? "1fr 1fr" : "1fr",
-                gridAutoRows: "1fr",
-                minHeight: 0,
+                gridAutoRows: "minmax(240px, 1fr)",
               }}
             >
               {gridTiles.map((tile) => renderTile(tile, true))}
@@ -708,7 +975,8 @@ function WebLiveRoom({
 }
 
 export default function BibleGroupLiveScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, debug } = useLocalSearchParams<{ id: string; debug?: string | string[] }>();
+  const debugEnabled = readDebugFlag(debug);
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { isAuthenticated, token, user } = useAuth();
@@ -843,6 +1111,7 @@ export default function BibleGroupLiveScreen() {
   const roomUrl = new URL(joinApiPath(getApiUrl(), `/api/bible-groups/${id}/room`));
   if (token) roomUrl.searchParams.set("accessToken", token);
   roomUrl.searchParams.set("displayName", user?.displayName || "Member");
+  if (debugEnabled) roomUrl.searchParams.set("debug", "1");
 
   return (
     <View style={[s.page, { paddingTop: topPad }]}>
@@ -852,6 +1121,7 @@ export default function BibleGroupLiveScreen() {
           groupName={data.group.name}
           lessonTitle={lessonTitle}
           isHost={!!isHost}
+          debugEnabled={debugEnabled}
           onLeave={leaveToGroup}
           onEndRoom={() => endMutation.mutate()}
         />
@@ -940,6 +1210,17 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: C.inkMuted,
+  },
+  debugStrip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#16150F",
+  },
+  debugText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#E7E0D2",
+    lineHeight: 16,
   },
   muted: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.inkMuted, textAlign: "center" },
   previewWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20, gap: 16 },

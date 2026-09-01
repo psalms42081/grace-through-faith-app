@@ -10,6 +10,7 @@
   var groupName = document.getElementById("group-name");
   var lessonTitle = document.getElementById("lesson-title");
   var notice = document.getElementById("notice");
+  var debugStrip = document.getElementById("debug-strip");
   var statusEl = document.getElementById("status");
   var preview = document.getElementById("preview");
   var previewVideo = document.getElementById("preview-video");
@@ -39,8 +40,23 @@
   }
 
   function showNotice(text) {
+    lastError = text || lastError;
     notice.textContent = text;
     notice.classList.add("show");
+  }
+
+  function mediaReadyState(track) {
+    return track && track.mediaStreamTrack ? track.mediaStreamTrack.readyState : "unknown";
+  }
+
+  function ensureHostSize(host, minHeight) {
+    host.style.position = "absolute";
+    host.style.top = "0";
+    host.style.left = "0";
+    host.style.width = "100%";
+    host.style.height = "100%";
+    host.style.minHeight = (minHeight || 240) + "px";
+    host.style.minWidth = "1px";
   }
 
   function setStatus(text) {
@@ -65,6 +81,15 @@
   var createLocalTracks = LivekitClient.createLocalTracks;
 
   var previewTracks = [];
+  var trackOwner = "preview";
+  var lastError = "";
+  var localVideoEl = null;
+  var acquireOnceStarted = false;
+  var debugOn = false;
+  try {
+    var q = new URLSearchParams(window.location.search).get("debug");
+    debugOn = q === "1" || q === "true";
+  } catch (e) {}
   var micEnabled = true;
   var camEnabled = true;
   var facing = "user";
@@ -84,14 +109,25 @@
   }
 
   async function startPreview() {
+    if (trackOwner === "room") return;
+    if (previewTracks.length) return;
+    if (acquireOnceStarted) return;
+    acquireOnceStarted = true;
     try {
       previewTracks = await createLocalTracks({
         audio: true,
         video: { facingMode: facing, resolution: VideoPresets.h360.resolution },
       });
+      previewTracks.forEach(function (t) {
+        try { t.stopOnMute = false; } catch (e) {}
+      });
     } catch (err) {
+      lastError = err && err.message ? err.message : "Could not start camera";
       try {
         previewTracks = await createLocalTracks({ audio: true, video: false });
+        previewTracks.forEach(function (t) {
+          try { t.stopOnMute = false; } catch (e) {}
+        });
         camEnabled = false;
         showNotice("Camera is off. You can still join.");
       } catch (err2) {
@@ -103,7 +139,7 @@
     }
 
     console.log("[bible-group-live] preview stream created", previewTracks.map(function (t) {
-      return { kind: t.kind, sid: t.sid };
+      return { kind: t.kind, sid: t.sid, readyState: mediaReadyState(t) };
     }));
 
     var videoTrack = previewTracks.find(function (t) { return t.kind === "video"; });
@@ -118,9 +154,11 @@
       el.id = "preview-video";
       el.style.width = "100%";
       el.style.height = "100%";
+      el.style.minHeight = "240px";
       el.style.objectFit = "cover";
       el.style.transform = facing === "user" ? "scaleX(-1)" : "";
       previewVideo = el;
+      localVideoEl = el;
       previewPlaceholder.style.display = "none";
     } else {
       previewVideo.style.display = "none";
@@ -132,6 +170,10 @@
   }
 
   function stopPreview() {
+    if (trackOwner === "room") {
+      console.log("[bible-group-live] skip stop, room owns tracks");
+      return;
+    }
     if (previewTracks.length) {
       console.log("[bible-group-live] preview stream stopped", "preview reset", previewTracks.map(function (t) {
         return t.kind;
@@ -168,8 +210,16 @@
 
   btnPreviewFlip.addEventListener("click", async function () {
     facing = facing === "user" ? "environment" : "user";
-    stopPreview();
-    await startPreview();
+    var videoTrack = previewTracks.find(function (t) { return t.kind === "video"; });
+    try {
+      if (videoTrack && videoTrack.restartTrack) {
+        await videoTrack.restartTrack({ facingMode: facing });
+        if (previewVideo) previewVideo.style.transform = facing === "user" ? "scaleX(-1)" : "";
+      }
+    } catch (e) {
+      facing = facing === "user" ? "environment" : "user";
+      showNotice("Could not flip the camera.");
+    }
   });
 
   function mediaHost(tile) {
@@ -177,9 +227,10 @@
     if (!host) {
       host = document.createElement("div");
       host.className = "media";
-      host.style.cssText = "position:absolute;inset:0;";
       tile.insertBefore(host, tile.firstChild);
     }
+    var inStrip = tile.parentElement && tile.parentElement.id === "strip";
+    ensureHostSize(host, inStrip ? 96 : 240);
     return host;
   }
 
@@ -251,12 +302,23 @@
       var el = track.attach(video);
       el.style.width = "100%";
       el.style.height = "100%";
+      el.style.minHeight = "100%";
       el.style.objectFit = "cover";
+      el.style.position = "absolute";
+      el.style.top = "0";
+      el.style.left = "0";
       if (isLocal) el.style.transform = facing === "user" ? "scaleX(-1)" : "";
       host.appendChild(el);
       try { el.play(); } catch (e) {}
+      if (isLocal) localVideoEl = el;
       if (avatar) avatar.style.display = "none";
-      console.log("[bible-group-live] track attached", { kind: track.kind, sid: track.sid, isLocal: isLocal });
+      console.log("[bible-group-live] track attached", {
+        kind: track.kind,
+        sid: track.sid,
+        isLocal: isLocal,
+        readyState: mediaReadyState(track),
+        hostSize: host.clientWidth + "x" + host.clientHeight,
+      });
     } else if (track.kind === "audio") {
       host.querySelectorAll("audio").forEach(function (a) { a.remove(); });
       var audio = track.attach();
@@ -352,8 +414,9 @@
     });
     getOrCreateTile(room.localParticipant.identity, room.localParticipant.name, grid);
 
+    trackOwner = "room";
     var tracksToPublish = previewTracks.slice();
-    previewTracks = [];
+    previewTracks = tracksToPublish;
     tracksToPublish.forEach(function (t) {
       try {
         t.detach().forEach(function (el) { el.remove(); });
@@ -368,24 +431,12 @@
         if (publishVideo || publishAudio) {
           await room.localParticipant.publishTrack(track);
         } else {
-          try { track.stop(); } catch (e) {}
+          try { await track.mute(); } catch (e) {}
         }
       }
     } else {
-      try {
-        await room.localParticipant.setMicrophoneEnabled(micEnabled);
-      } catch (e) {
-        micEnabled = false;
-        showNotice("Microphone is off. You can still stay in the room.");
-      }
-      try {
-        await room.localParticipant.setCameraEnabled(camEnabled, { facingMode: facing });
-      } catch (e) {
-        camEnabled = false;
-        if (!notice.classList.contains("show")) {
-          showNotice("Camera is off. You can still stay in the room.");
-        }
-      }
+      lastError = "No camera/mic tracks to publish";
+      showNotice("Camera is not ready. Leave and try again.");
     }
 
     preview.classList.add("hidden");
@@ -404,7 +455,9 @@
     try {
       await connect();
     } catch (err) {
-      setStatus("Could not join. " + (err && err.message ? err.message : ""));
+      trackOwner = "preview";
+      lastError = err && err.message ? err.message : "";
+      setStatus("Could not join. " + lastError);
       btnJoin.disabled = false;
     }
   });
@@ -413,7 +466,11 @@
     if (!room) return;
     try {
       micEnabled = !micEnabled;
-      await room.localParticipant.setMicrophoneEnabled(micEnabled);
+      var audio = previewTracks.find(function (t) { return t.kind === "audio"; });
+      if (audio) {
+        if (micEnabled) await audio.unmute();
+        else await audio.mute();
+      }
       btnMic.classList.toggle("on", micEnabled);
     } catch (e) {
       micEnabled = !micEnabled;
@@ -425,7 +482,13 @@
     if (!room) return;
     try {
       camEnabled = !camEnabled;
-      await room.localParticipant.setCameraEnabled(camEnabled, { facingMode: facing });
+      var video = previewTracks.find(function (t) { return t.kind === "video"; });
+      if (video) {
+        if (camEnabled) await video.unmute();
+        else await video.mute();
+      } else {
+        throw new Error("no camera track");
+      }
       btnCam.classList.toggle("on", camEnabled);
     } catch (e) {
       camEnabled = !camEnabled;
@@ -435,16 +498,17 @@
 
   btnFlip.addEventListener("click", async function () {
     if (!room) return;
-    facing = facing === "user" ? "environment" : "user";
+    var next = facing === "user" ? "environment" : "user";
     try {
+      var video = previewTracks.find(function (t) { return t.kind === "video"; });
       var pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
-      if (pub && pub.track && pub.track.restartTrack) {
-        await pub.track.restartTrack({ facingMode: facing });
-      } else {
-        await room.localParticipant.setCameraEnabled(false);
-        await room.localParticipant.setCameraEnabled(true, { facingMode: facing });
-      }
+      var track = video || (pub && pub.track);
+      if (!track || !track.restartTrack) throw new Error("no camera track");
+      await track.restartTrack({ facingMode: next });
+      facing = next;
+      if (localVideoEl) localVideoEl.style.transform = facing === "user" ? "scaleX(-1)" : "";
     } catch (e) {
+      lastError = e && e.message ? e.message : "Could not flip the camera.";
       showNotice("Could not flip the camera.");
     }
   });
@@ -462,6 +526,34 @@
     }
     postToApp({ type: "end_room" });
   });
+
+  function refreshDebug() {
+    if (!debugOn || !debugStrip) return;
+    debugStrip.classList.add("show");
+    var video = previewTracks.find(function (t) { return t.kind === "video"; });
+    var pub = room && room.localParticipant
+      ? room.localParticipant.getTrackPublication(Track.Source.Camera)
+      : null;
+    var el = localVideoEl;
+    var pubState = pub
+      ? (pub.muted ? "muted" : "unmuted") + "/" + (pub.trackSid ? "published" : "no-sid")
+      : (room ? "no-publication" : "preview");
+    var host = el && el.parentElement
+      ? el.parentElement.clientWidth + "×" + el.parentElement.clientHeight
+      : "n/a";
+    debugStrip.textContent = [
+      "readyState " + mediaReadyState(video),
+      "track.muted " + (video ? String(video.isMuted != null ? video.isMuted : video.muted) : "n/a"),
+      "publication " + pubState,
+      "video " + (el ? el.videoWidth + "×" + el.videoHeight : "no-el"),
+      "paused " + (el ? String(el.paused) : "n/a"),
+      "host " + host,
+      "error " + (lastError || "none"),
+      "owner " + trackOwner,
+    ].join("\n");
+  }
+
+  if (debugOn) setInterval(refreshDebug, 500);
 
   startPreview();
 })();
