@@ -1,4 +1,5 @@
 import { logSecurityPosture } from "./env";
+import { liveKitCspConnectSrc } from "./livekit-csp";
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
@@ -393,7 +394,7 @@ function setupErrorHandler(app: express.Application) {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-        connectSrc: ["'self'", "wss://creator-zrsltrcv.livekit.cloud", "https://creator-zrsltrcv.livekit.cloud", "https://www.youtube.com", "https://*.tile.openstreetmap.org"],
+        connectSrc: ["'self'", ...liveKitCspConnectSrc(), "https://www.youtube.com", "https://*.tile.openstreetmap.org"],
         mediaSrc: ["'self'", "blob:", "https://res.cloudinary.com"],
         workerSrc: ["'self'", "blob:"],
         imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.tile.openstreetmap.org", "https://res.cloudinary.com"],

@@ -1,10 +1,10 @@
 import OpenAI from "openai";
 import { getTimeout } from "./services/api-client";
 import { withAIConcurrency } from "./services/ai-semaphore";
+import { openaiClientOptions } from "./openai-env";
 
 const _openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  ...openaiClientOptions(),
   timeout: getTimeout("openai"),
 });
 

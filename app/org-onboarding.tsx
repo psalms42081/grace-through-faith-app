@@ -111,10 +111,15 @@ export default function OrgOnboardingScreen() {
             <View style={s.iconWrap}>
               <Ionicons name="people" size={56} color="#C9933A" />
             </View>
-            <Text style={s.title}>Join or Register a Church</Text>
+            <Text style={s.title}>Join or Register an Organization</Text>
             <Text style={s.subtitle}>
-              Connect with your church family for shared devotions, prayer groups, and community features.
+              Use a join code for congregation membership, member lists, and conference tools. This is separate from setting My Church in the Adventist directory.
             </Text>
+
+            <Pressable style={s.directoryLink} onPress={() => router.push("/church-connect" as any)}>
+              <Ionicons name="search-outline" size={18} color="#C9933A" />
+              <Text style={s.directoryLinkText}>Looking for a local church? Find it in the directory</Text>
+            </Pressable>
 
             <Pressable style={s.optionCard} onPress={() => setStep("join")}>
               <Ionicons name="enter-outline" size={28} color="#C9933A" />
@@ -249,7 +254,22 @@ const s = StyleSheet.create({
     color: "#888",
     textAlign: "center",
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 16,
+  },
+  directoryLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 24,
+    paddingVertical: 8,
+  },
+  directoryLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#C9933A",
+    textAlign: "center",
+    flexShrink: 1,
   },
   optionCard: {
     flexDirection: "row",

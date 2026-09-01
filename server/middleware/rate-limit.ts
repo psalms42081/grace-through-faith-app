@@ -36,3 +36,13 @@ export const authLimiter = rateLimit({
   keyGenerator: (req: any) => req.ip || "unknown",
   validate: { keyGeneratorIpFallback: false },
 });
+
+export const churchSubmissionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: "Too many church submissions. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: safeKeyGenerator,
+  validate: { keyGeneratorIpFallback: false },
+});

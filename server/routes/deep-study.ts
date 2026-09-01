@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { openaiClientOptions } from "../openai-env";
 import { withSdaLens } from "../services/sda-lens";
 import {
   buildTopicReflectionRequest,
@@ -369,8 +370,7 @@ router.get("/api/topic-reflection/:topicId", aiGenerationLimiter, async (req, re
     }
 
     const client = new (await import("openai")).default({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
     });
 
     const response = await client.chat.completions.create(
@@ -494,8 +494,7 @@ router.get("/api/passage-sections", aiGenerationLimiter, async (req, res) => {
 
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
     });
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -719,8 +718,7 @@ router.get("/api/ai/explain", aiGenerationLimiter, async (req, res) => {
     }
 
     const client = new (await import("openai")).default({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
     });
 
     const response = await client.chat.completions.create(
@@ -791,8 +789,7 @@ router.get("/api/ai/cross-references", aiGenerationLimiter, async (req, res) => 
     }
 
     const client = new (await import("openai")).default({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
     });
 
     const response = await client.chat.completions.create({

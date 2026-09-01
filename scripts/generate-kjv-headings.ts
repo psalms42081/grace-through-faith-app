@@ -10,6 +10,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import OpenAI from "openai";
+import { getOpenAIApiKey, openaiClientOptions } from "../server/openai-env";
 import { SDA_LENS_VERSION, withSdaLens } from "../server/services/sda-lens";
 
 export const HEADING_SCHEMA_VERSION = "kjv-headings-v1";
@@ -177,7 +178,7 @@ You create original, concise, descriptive headings and structural paragraph brea
 
 async function main() {
   if (!fs.existsSync(SOURCE_PATH)) throw new Error("data/kjv.json is required and is never modified");
-  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is required for generation");
+  if (!getOpenAIApiKey()) throw new Error("OPENAI_API_KEY (or legacy AI_INTEGRATIONS_OPENAI_API_KEY) is required for generation");
   const source: SourceBook[] = JSON.parse(fs.readFileSync(SOURCE_PATH, "utf8"));
   const prior: HeadingCorpus = fs.existsSync(PROGRESS_PATH) ? JSON.parse(fs.readFileSync(PROGRESS_PATH, "utf8")) : { schemaVersion: HEADING_SCHEMA_VERSION, lensVersion: SDA_LENS_VERSION, chapters: [] };
   const expected = source.flatMap((book) => book.chapters.map((chapter) => ({ book: book.book, chapter })));
@@ -190,7 +191,7 @@ async function main() {
   const pending = expected.filter((item) => !completed.has(chapterKey(item.book, Number(item.chapter.chapter))));
   const batches: typeof pending[] = [];
   for (let i = 0; i < pending.length; i += BATCH_SIZE) batches.push(pending.slice(i, i + BATCH_SIZE));
-  const client = new OpenAI({ apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY, baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL, timeout: 120000 });
+  const client = new OpenAI({ ...openaiClientOptions(), timeout: 120000 });
   let cursor = 0;
   let fatalError: unknown;
   async function worker() {

@@ -1,6 +1,10 @@
 import { db } from "../server/db";
 import { sdaChurches } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import {
+  insertSdaChurchesIgnoreDuplicates,
+  isVerifiedStreetAddress,
+  sdaChurchNaturalKey,
+} from "./insert-sda-churches";
 
 interface ChurchSeed {
   name: string;
@@ -12041,49 +12045,27 @@ const GLOBAL_CHURCHES: ChurchSeed[] = [
 
 export async function seedGlobalChurches() {
   try {
-    const auChurches = GLOBAL_CHURCHES.filter(
-      (c) => c.country === "Australia"
-    );
-    if (auChurches.length > 0) {
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(sdaChurches)
-          .where(eq(sdaChurches.country, "Australia"));
-        for (let i = 0; i < auChurches.length; i += 100) {
-          const batch = auChurches.slice(i, i + 100).map((c) => ({
-            name: c.name,
-            address: c.address,
-            city: c.city,
-            state: c.state,
-            country: c.country,
-            lat: c.lat,
-            lng: c.lng,
-            serviceTimes: c.serviceTimes,
-            contactPhone: c.contactPhone,
-            contactEmail: c.contactEmail,
-            website: c.website,
-            pastorName: c.pastorName,
-            membershipSize: c.membershipSize,
-          }));
-          await tx.insert(sdaChurches).values(batch);
-        }
-      });
-      console.log(`Refreshed ${auChurches.length} Australian churches with official data.`);
-    }
+    // Curated global list only. source=curated-global.
+    // verified=true when address ≠ city and looks like a street (street word or digit);
+    // "Contact Conference Office" placeholders stay unverified.
+    // ON CONFLICT DO NOTHING on (name, address, city, country). No wipe-and-replace.
+    const existing = await db
+      .select({
+        name: sdaChurches.name,
+        address: sdaChurches.address,
+        city: sdaChurches.city,
+        country: sdaChurches.country,
+      })
+      .from(sdaChurches);
+    const existingKeys = new Set(existing.map(sdaChurchNaturalKey));
 
-    const existing = await db.select({ name: sdaChurches.name, country: sdaChurches.country }).from(sdaChurches);
-    const existingKeys = new Set(
-      existing.map((c) => `${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
+    const toInsert = GLOBAL_CHURCHES.filter(
+      (c) => !existingKeys.has(sdaChurchNaturalKey(c)),
     );
 
-    const nonAuNew = GLOBAL_CHURCHES.filter(
-      (c) => c.country !== "Australia" &&
-             !existingKeys.has(`${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
-    );
-
-    if (nonAuNew.length > 0) {
-      for (let i = 0; i < nonAuNew.length; i += 100) {
-        const batch = nonAuNew.slice(i, i + 100).map((c) => ({
+    if (toInsert.length > 0) {
+      for (let i = 0; i < toInsert.length; i += 100) {
+        const batch = toInsert.slice(i, i + 100).map((c) => ({
           name: c.name,
           address: c.address,
           city: c.city,
@@ -12097,15 +12079,20 @@ export async function seedGlobalChurches() {
           website: c.website,
           pastorName: c.pastorName,
           membershipSize: c.membershipSize,
+          source: "curated-global" as const,
+          verified: isVerifiedStreetAddress(c.address, c.city),
         }));
-        await db.insert(sdaChurches).values(batch);
+        await insertSdaChurchesIgnoreDuplicates(db, batch);
       }
-      console.log(`Seeded ${nonAuNew.length} additional churches.`);
+      console.log(`Seeded ${toInsert.length} additional curated-global churches.`);
+    } else {
+      console.log("No new curated-global churches to seed.");
     }
 
     const total = await db.select({ name: sdaChurches.name }).from(sdaChurches);
     console.log(`Church database: ${total.length} total churches.`);
   } catch (err) {
     console.error("Error seeding churches:", err);
+    throw err;
   }
 }

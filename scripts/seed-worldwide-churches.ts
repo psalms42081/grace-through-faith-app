@@ -1,5 +1,9 @@
 import { db } from "../server/db";
 import { sdaChurches } from "../shared/schema";
+import {
+  insertSdaChurchesIgnoreDuplicates,
+  sdaChurchNaturalKey,
+} from "./insert-sda-churches";
 
 interface ChurchSeed {
   name: string;
@@ -682,17 +686,23 @@ const WORLDWIDE_CHURCHES: ChurchSeed[] = [
 
 export async function seedWorldwideChurches() {
   try {
+    // Regional curated list. source=curated-worldwide, verified=false.
+    // Overlaps seed-global-churches.ts on 2 exact (name, address, city, country) rows;
+    // ON CONFLICT DO NOTHING on that unique key. No wipe-and-replace.
     console.log(`Starting worldwide church seed with ${WORLDWIDE_CHURCHES.length} churches...`);
 
     const existing = await db
-      .select({ name: sdaChurches.name, country: sdaChurches.country })
+      .select({
+        name: sdaChurches.name,
+        address: sdaChurches.address,
+        city: sdaChurches.city,
+        country: sdaChurches.country,
+      })
       .from(sdaChurches);
-    const existingKeys = new Set(
-      existing.map((c) => `${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
-    );
+    const existingKeys = new Set(existing.map(sdaChurchNaturalKey));
 
     const newChurches = WORLDWIDE_CHURCHES.filter(
-      (c) => !existingKeys.has(`${c.name.toLowerCase()}::${c.country.toLowerCase()}`)
+      (c) => !existingKeys.has(sdaChurchNaturalKey(c)),
     );
 
     console.log(`Found ${existing.length} existing churches. ${newChurches.length} new churches to insert.`);
@@ -718,8 +728,10 @@ export async function seedWorldwideChurches() {
         website: c.website,
         pastorName: c.pastorName,
         membershipSize: c.membershipSize,
+        source: "curated-worldwide" as const,
+        verified: false,
       }));
-      await db.insert(sdaChurches).values(batch);
+      await insertSdaChurchesIgnoreDuplicates(db, batch);
       inserted += batch.length;
       console.log(`Inserted batch ${Math.floor(i / 100) + 1}: ${inserted}/${newChurches.length} churches`);
     }
@@ -728,7 +740,17 @@ export async function seedWorldwideChurches() {
     console.log(`Worldwide church seed complete. Total churches in database: ${total.length}`);
   } catch (err) {
     console.error("Error seeding worldwide churches:", err);
+    throw err;
   }
 }
 
-seedWorldwideChurches().then(() => process.exit(0)).catch(() => process.exit(1));
+const scriptPath = (process.argv[1] ?? "").replace(/\\/g, "/");
+const isMain =
+  scriptPath.endsWith("seed-worldwide-churches.ts") ||
+  scriptPath.endsWith("seed-worldwide-churches.js");
+
+if (isMain) {
+  seedWorldwideChurches()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+}

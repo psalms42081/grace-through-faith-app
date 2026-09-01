@@ -10,6 +10,9 @@ import {
   Platform,
   Linking,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import ChurchMap from "@/components/ChurchMap";
 import EmptyState from "@/components/ui/EmptyState";
+import { apiRequest } from "@/lib/query-client";
 
 interface Church {
   id: string;
@@ -62,7 +66,14 @@ export default function ChurchConnectScreen() {
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "granted" | "denied">("idle");
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(50);
+  const [showTellUs, setShowTellUs] = useState(false);
+  const [tellName, setTellName] = useState("");
+  const [tellCity, setTellCity] = useState("");
+  const [tellCountry, setTellCountry] = useState("");
+  const [tellAddress, setTellAddress] = useState("");
+  const [tellSubmitting, setTellSubmitting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -86,8 +97,11 @@ export default function ChurchConnectScreen() {
     return `/api/churches${qs ? `?${qs}` : ""}`;
   }, [userLat, userLng, debouncedSearch, radiusKm]);
 
+  const canQuery = (userLat != null && userLng != null) || !!debouncedSearch;
+
   const { data: churches, isLoading } = useQuery<Church[]>({
     queryKey: [buildQueryKey()],
+    enabled: canQuery,
   });
 
   useEffect(() => {
@@ -167,6 +181,99 @@ export default function ChurchConnectScreen() {
   };
 
   const churchList = churches || [];
+  const needsCitySearch = !canQuery && locationStatus === "denied";
+  const waitingForLocation = !canQuery && locationStatus !== "denied";
+
+  const focusCitySearch = () => {
+    searchInputRef.current?.focus();
+  };
+
+  const openTellUs = () => {
+    setTellCity(searchCity.trim());
+    setShowTellUs(true);
+  };
+
+  const submitTellUs = async () => {
+    if (!tellName.trim() || !tellCity.trim() || !tellCountry.trim()) {
+      Alert.alert("Missing details", "Please enter the church name, city, and country.");
+      return;
+    }
+    setTellSubmitting(true);
+    try {
+      await apiRequest("POST", "/api/churches/submissions", {
+        name: tellName.trim(),
+        city: tellCity.trim(),
+        country: tellCountry.trim(),
+        address: tellAddress.trim() || undefined,
+      });
+      setShowTellUs(false);
+      setTellName("");
+      setTellCountry("");
+      setTellAddress("");
+      Alert.alert("Thank you", "We'll review this and add it if we can verify it. It will not appear in the directory until then.");
+    } catch {
+      Alert.alert("Could not send", "Please try again in a moment.");
+    } finally {
+      setTellSubmitting(false);
+    }
+  };
+
+  const directoryLink = (
+    <Pressable
+      onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
+      style={[s.directoryFooter, { borderColor: theme.border }]}
+    >
+      <Ionicons name="globe-outline" size={16} color={theme.accent} />
+      <Text style={[s.directoryFooterText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+        Search full Adventist Directory
+      </Text>
+      <Ionicons name="open-outline" size={14} color={theme.accent} />
+    </Pressable>
+  );
+
+  const tellUsEndState = (
+    <View style={s.tellUsWrap}>
+      <Pressable
+        onPress={openTellUs}
+        style={[s.tellUsBtn, { borderColor: theme.border }]}
+        testID="church-connect-tell-us"
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.accent} />
+        <Text style={[s.tellUsBtnText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+          Can't find your church? Tell us
+        </Text>
+      </Pressable>
+      {directoryLink}
+    </View>
+  );
+
+  const noResultsEmpty = (
+    <View style={s.cityPromptWrap} testID="church-connect-no-results">
+      <EmptyState
+        appearance={isDark ? "dark" : "light"}
+        icon="business-outline"
+        title={debouncedSearch ? "No churches found" : "No churches found nearby"}
+        description={debouncedSearch ? "Try a different city, suburb, or church name" : "Try a different search or expand your radius"}
+        actionLabel="Can't find your church? Tell us"
+        onAction={openTellUs}
+        testID="church-connect-tell-us-empty"
+      />
+      {directoryLink}
+    </View>
+  );
+
+  const citySearchPrompt = (
+    <View style={s.cityPromptWrap} testID="church-connect-city-prompt">
+      <EmptyState
+        appearance={isDark ? "dark" : "light"}
+        icon="search-outline"
+        title="Search by city or suburb"
+        description="Location isn't available, so we can't list nearby churches. Type a city or suburb above — we don't invent results."
+        actionLabel="Type a city or suburb"
+        onAction={focusCitySearch}
+      />
+    </View>
+  );
 
   const renderChurchCard = ({ item }: { item: Church }) => (
     <Pressable
@@ -240,11 +347,13 @@ export default function ChurchConnectScreen() {
       <View style={[s.searchRow, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", borderColor: theme.border }]}>
         <Ionicons name="search" size={18} color={theme.textMuted} />
         <TextInput
+          ref={searchInputRef}
           style={[s.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
-          placeholder="Search by name, city, or country..."
+          placeholder="Search by city, suburb, or church name..."
           placeholderTextColor={theme.textMuted}
           value={searchCity}
           onChangeText={setSearchCity}
+          testID="church-connect-city-search"
         />
         {searchCity ? (
           <Pressable onPress={() => setSearchCity("")}>
@@ -290,7 +399,7 @@ export default function ChurchConnectScreen() {
         <Pressable onPress={requestLocation} style={[s.locBanner, { backgroundColor: theme.accent + "12" }]}>
           <Ionicons name="navigate" size={16} color={theme.accent} />
           <Text style={[s.locBannerText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-            Enable location to find nearby churches
+            Location isn't available. Search by city or suburb, or tap to retry location.
           </Text>
         </Pressable>
       ) : locationStatus === "loading" ? (
@@ -303,6 +412,15 @@ export default function ChurchConnectScreen() {
       ) : null}
 
       {viewMode === "map" ? (
+        waitingForLocation ? (
+          <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+        ) : needsCitySearch ? (
+          citySearchPrompt
+        ) : isLoading ? (
+          <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+        ) : churchList.length === 0 ? (
+          noResultsEmpty
+        ) : (
         <View style={s.mapContainer}>
           <ChurchMap
             churches={churchList}
@@ -348,40 +466,104 @@ export default function ChurchConnectScreen() {
             </View>
           ) : null}
         </View>
+        )
       ) : (
         <>
-          {isLoading ? (
+          {waitingForLocation ? (
+            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+          ) : needsCitySearch ? (
+            citySearchPrompt
+          ) : isLoading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
           ) : churchList.length === 0 ? (
-            <EmptyState appearance="dark"
-              icon="business-outline"
-              title="No churches found nearby"
-              description="Try a different search or expand your radius"
-              actionLabel="Search Adventist Directory"
-              onAction={() => Linking.openURL("https://www.adventistdirectory.org")}
-            />
+            noResultsEmpty
           ) : (
             <FlatList
               data={churchList}
               keyExtractor={(item) => item.id}
               renderItem={renderChurchCard}
               contentContainerStyle={{ padding: 16, paddingBottom: bottomPad + 24 }}
-              ListFooterComponent={
-                <Pressable
-                  onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
-                  style={[s.directoryFooter, { borderColor: theme.border }]}
-                >
-                  <Ionicons name="globe-outline" size={16} color={theme.accent} />
-                  <Text style={[s.directoryFooterText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
-                    Search full Adventist Directory
-                  </Text>
-                  <Ionicons name="open-outline" size={14} color={theme.accent} />
-                </Pressable>
-              }
+              ListFooterComponent={tellUsEndState}
             />
           )}
         </>
       )}
+
+      <Modal visible={showTellUs} transparent animationType="fade" onRequestClose={() => setShowTellUs(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={s.modalOverlay}
+        >
+          <Pressable style={s.modalBackdrop} onPress={() => !tellSubmitting && setShowTellUs(false)} />
+          <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
+            <View style={[s.modalCard, { backgroundColor: theme.backgroundCard }]}>
+              <Text style={[s.modalTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+                Can't find your church? Tell us
+              </Text>
+              <Text style={[s.modalHint, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                We'll review what you send. It will not appear in the directory until it is verified.
+              </Text>
+              <TextInput
+                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                placeholder="Church name"
+                placeholderTextColor={theme.textMuted}
+                value={tellName}
+                onChangeText={setTellName}
+                testID="church-connect-tell-name"
+              />
+              <TextInput
+                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                placeholder="City"
+                placeholderTextColor={theme.textMuted}
+                value={tellCity}
+                onChangeText={setTellCity}
+                testID="church-connect-tell-city"
+              />
+              <TextInput
+                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                placeholder="Country"
+                placeholderTextColor={theme.textMuted}
+                value={tellCountry}
+                onChangeText={setTellCountry}
+                testID="church-connect-tell-country"
+              />
+              <TextInput
+                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                placeholder="Address (optional)"
+                placeholderTextColor={theme.textMuted}
+                value={tellAddress}
+                onChangeText={setTellAddress}
+                testID="church-connect-tell-address"
+              />
+              <View style={s.modalActions}>
+                <Pressable
+                  onPress={() => setShowTellUs(false)}
+                  disabled={tellSubmitting}
+                  style={[s.modalActionBtn, { borderColor: theme.border }]}
+                >
+                  <Text style={[s.modalActionText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={submitTellUs}
+                  disabled={tellSubmitting}
+                  style={[s.modalActionBtn, { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                  testID="church-connect-tell-submit"
+                >
+                  {tellSubmitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={[s.modalActionText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+                      Send
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -420,7 +602,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
   },
-  locBannerText: { fontSize: 13 },
+  locBannerText: { fontSize: 13, flex: 1 },
+  cityPromptWrap: { flex: 1, paddingHorizontal: 8, paddingTop: 24 },
   mapContainer: { flex: 1, marginTop: 10, marginHorizontal: 16, marginBottom: 16, borderRadius: 16, overflow: "hidden" },
   mapCardOverlay: { position: "absolute", bottom: 12, left: 12, right: 12 },
   mapCard: { borderRadius: 14, padding: 14, gap: 2 },
@@ -464,6 +647,46 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
   },
   directoryFooterText: { fontSize: 13 },
+  tellUsWrap: { marginTop: 6 },
+  tellUsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  tellUsBtnText: { fontSize: 14 },
+  modalOverlay: { flex: 1, justifyContent: "center" },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalScroll: { flexGrow: 1, justifyContent: "center", padding: 24 },
+  modalCard: { borderRadius: 16, padding: 20, gap: 10 },
+  modalTitle: { fontSize: 20 },
+  modalHint: { fontSize: 13, lineHeight: 19, marginBottom: 4 },
+  modalInput: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    borderWidth: 1,
+    fontFamily: "Inter_400Regular",
+  },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 6 },
+  modalActionBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 44,
+  },
+  modalActionText: { fontSize: 14 },
   directionsBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -3,11 +3,11 @@ import { withSdaLens } from "./sda-lens";
 import { buildSabbathSchoolTutorRequest } from "./sensitive-ai-prompts";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
+import { openaiClientOptions } from "../openai-env";
 
 function createOpenAIClient(): OpenAI {
   const client = new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    ...openaiClientOptions(),
     timeout: getTimeout("openai"),
   });
 

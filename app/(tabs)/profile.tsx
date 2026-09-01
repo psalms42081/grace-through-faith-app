@@ -140,6 +140,23 @@ function ProfileScreenInner() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: myChurchData, isLoading: myChurchLoading } = useQuery<{
+    church: {
+      id: string;
+      name: string;
+      address: string;
+      city: string;
+      state: string | null;
+      country: string;
+    } | null;
+  }>({
+    queryKey: ["/api/me/church"],
+    enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+  const claimedChurch = myChurchData?.church ?? null;
+
   const isConference = myOrgData?.organization?.type === "conference";
   const isPastorOrElder = myOrgData?.role === "pastor" || myOrgData?.role === "elder";
 
@@ -421,13 +438,78 @@ function ProfileScreenInner() {
       <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
 
       {isAuthenticated && (
+        <View style={st.sectionPad} testID="profile-my-church-section">
+          <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            My Church & Groups
+          </Text>
+          {myChurchLoading ? (
+            <ActivityIndicator color="#C9933A" style={{ marginVertical: 16 }} />
+          ) : claimedChurch ? (
+            <View
+              style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}
+              testID="profile-my-church-set"
+            >
+              <Pressable
+                onPress={() => router.push(`/church/${claimedChurch.id}` as any)}
+                style={st.orgHeader}
+              >
+                <Ionicons name="business-outline" size={24} color="#C9933A" />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[st.orgName, { color: theme.text }]}>{claimedChurch.name}</Text>
+                  <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                    {claimedChurch.city}{claimedChurch.state ? `, ${claimedChurch.state}` : ""}, {claimedChurch.country}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+              </Pressable>
+              <Pressable
+                style={[st.orgJoinBtn, { marginTop: 14 }]}
+                onPress={() => router.push("/church-connect" as any)}
+              >
+                <Ionicons name="search-outline" size={18} color="#C9933A" />
+                <Text style={st.orgJoinBtnText}>Find a different church</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View
+              style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}
+              testID="profile-my-church-empty"
+            >
+              <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
+                You haven't set a church yet.
+              </Text>
+              <Pressable
+                style={st.orgJoinBtn}
+                onPress={() => router.push("/church-connect" as any)}
+              >
+                <Ionicons name="search-outline" size={18} color="#C9933A" />
+                <Text style={st.orgJoinBtnText}>Find a church</Text>
+              </Pressable>
+            </View>
+          )}
+          <View
+            style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6", marginTop: 12 }]}
+            testID="profile-groups-placeholder"
+          >
+            <View style={st.orgHeader}>
+              <Ionicons name="people-outline" size={24} color="#C9933A" />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[st.orgName, { color: theme.text }]}>Groups</Text>
+                <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                  Small groups coming soon
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {isAuthenticated && !orgLoading && (myOrgData?.organization || isLeader) && (
         <View style={st.sectionPad}>
           <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
-            {isConference ? "My Conference" : "My Church"}
+            {isConference ? "My Conference" : "Church organization"}
           </Text>
-          {orgLoading ? (
-            <ActivityIndicator color="#C9933A" style={{ marginVertical: 16 }} />
-          ) : myOrgData?.organization ? (
+          {myOrgData?.organization ? (
             <>
               <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
                 <View style={st.orgHeader}>
@@ -473,7 +555,7 @@ function ProfileScreenInner() {
               {isConference && (
                 <View style={{ marginTop: 20 }}>
                   <View style={st.confChurchesHeader}>
-                    <Text style={[st.confChurchesTitle, { color: theme.text }]}>My Churches</Text>
+                    <Text style={[st.confChurchesTitle, { color: theme.text }]}>Congregations</Text>
                     {isPastorOrElder && (
                       <Pressable onPress={() => setShowAddChurch(!showAddChurch)}>
                         <Ionicons name={showAddChurch ? "close-circle-outline" : "add-circle-outline"} size={24} color="#C9933A" />
@@ -536,20 +618,20 @@ function ProfileScreenInner() {
                 </View>
               )}
             </>
-          ) : (
+          ) : isLeader ? (
             <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
               <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
-                You're not part of a church yet.
+                No church organization yet. Join with a code or register one for members and join codes — this is separate from My Church above.
               </Text>
               <Pressable
                 style={st.orgJoinBtn}
                 onPress={() => router.push("/org-onboarding" as any)}
               >
                 <Ionicons name="add-circle-outline" size={18} color="#C9933A" />
-                <Text style={st.orgJoinBtnText}>Join or Register a Church</Text>
+                <Text style={st.orgJoinBtnText}>Join or register an organization</Text>
               </Pressable>
             </View>
-          )}
+          ) : null}
         </View>
       )}
 
@@ -577,7 +659,7 @@ function ProfileScreenInner() {
               style={{ flex: 1, backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
             >
               <Ionicons name="add-circle-outline" size={16} color="#fff" />
-              <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Set Up Church</Text>
+              <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Set Up Org</Text>
             </Pressable>
           </View>
         </View>
@@ -589,7 +671,7 @@ function ProfileScreenInner() {
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#C9933A20", alignItems: "center", justifyContent: "center" }}>
               <Ionicons name="home" size={20} color="#C9933A" />
             </View>
-            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Set Up Your Church</Text>
+            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Set Up Your Organization</Text>
           </View>
           <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
             Your leader access is approved! Create your church organization to manage members and share a join code with your congregation.
@@ -599,7 +681,7 @@ function ProfileScreenInner() {
             style={{ backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
           >
             <Ionicons name="add-circle-outline" size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Create Your Church</Text>
+            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Create Organization</Text>
           </Pressable>
         </View>
       )}

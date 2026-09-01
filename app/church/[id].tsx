@@ -12,9 +12,12 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import ChurchMap from "@/components/ChurchMap";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/query-client";
+import { useToast } from "@/contexts/ToastContext";
 
 interface Church {
   id: string;
@@ -39,10 +42,34 @@ export default function ChurchDetailScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const { isAuthenticated } = useAuth();
+  const { showToast } = useToast();
+  const qc = useQueryClient();
 
   const { data: church, isLoading } = useQuery<Church>({
     queryKey: [`/api/churches/${id}`],
     enabled: !!id,
+  });
+
+  const { data: myChurchData } = useQuery<{ church: Church | null }>({
+    queryKey: ["/api/me/church"],
+    enabled: isAuthenticated,
+    staleTime: 0,
+  });
+  const isMyChurch = !!church && myChurchData?.church?.id === church.id;
+
+  const claimMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/churches/${id}/claim`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/me/church"] });
+      showToast("This is now your church.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.message || "Could not set your church", "error");
+    },
   });
 
   const openDirections = () => {
@@ -105,6 +132,44 @@ export default function ChurchDetailScreen() {
           <Text style={[s.churchLocation, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             {church.city}{church.state ? `, ${church.state}` : ""}, {church.country}
           </Text>
+        </View>
+
+        <View style={s.claimWrap}>
+          {!isAuthenticated ? (
+            <Pressable
+              onPress={() => router.push("/(auth)/login" as any)}
+              style={[s.claimBtnOutline, { borderColor: theme.accent }]}
+              testID="church-detail-claim"
+            >
+              <Ionicons name="log-in-outline" size={18} color={theme.accent} />
+              <Text style={[s.claimBtnOutlineText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                Sign in to set as My Church
+              </Text>
+            </Pressable>
+          ) : isMyChurch ? (
+            <View style={[s.claimedBanner, { backgroundColor: theme.accent + "18", borderColor: theme.accent }]} testID="church-detail-claimed">
+              <Ionicons name="checkmark-circle" size={18} color={theme.accent} />
+              <Text style={[s.claimedText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                This is your church
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => claimMutation.mutate()}
+              disabled={claimMutation.isPending}
+              style={[s.claimBtn, { backgroundColor: theme.accent, opacity: claimMutation.isPending ? 0.7 : 1 }]}
+              testID="church-detail-claim"
+            >
+              {claimMutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="home" size={18} color="#fff" />
+                  <Text style={[s.claimBtnText, { fontFamily: "Inter_600SemiBold" }]}>Set as My Church</Text>
+                </>
+              )}
+            </Pressable>
+          )}
         </View>
 
         {serviceTimesList.length > 0 ? (
@@ -207,6 +272,36 @@ const s = StyleSheet.create({
   churchIcon: { width: 56, height: 56, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   churchName: { fontSize: 22, textAlign: "center" },
   churchLocation: { fontSize: 14, textAlign: "center" },
+  claimWrap: { marginHorizontal: 16, marginBottom: 12 },
+  claimBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  claimBtnText: { color: "#fff", fontSize: 15 },
+  claimBtnOutline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  claimBtnOutlineText: { fontSize: 15 },
+  claimedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  claimedText: { fontSize: 15 },
   section: {
     marginHorizontal: 16,
     marginBottom: 12,

@@ -62,7 +62,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { seedBeliefsWave2 } = await import("./seed-beliefs-wave2");
     const { seedBeliefsWave3 } = await import("./seed-beliefs-wave3");
     const { seedBeliefsWave4 } = await import("./seed-beliefs-wave4");
-    const { seedGlobalChurches } = await import("../scripts/seed-global-churches");
 
     seedBibleBooks(db).catch((err) => {
       console.error("Bible books seed error:", err);
@@ -86,10 +85,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     seedBeliefsWave4(db).catch((err) => {
       console.error("Wave 4 beliefs seed error:", err);
-    });
-
-    seedGlobalChurches().catch((err) => {
-      console.error("Global churches seed error:", err);
     });
 
     const { seedResources } = await import("./seed-resources");

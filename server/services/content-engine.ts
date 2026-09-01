@@ -3,6 +3,7 @@ import { withSdaLens } from "./sda-lens";
 import { z } from "zod";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
+import { openaiClientOptions } from "../openai-env";
 import { db } from "../db";
 import {
   resources,
@@ -50,8 +51,7 @@ const COMPANION_PROMPT_VERSION = "v3.0";
 
 function createOpenAIClient(): OpenAI {
   const client = new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    ...openaiClientOptions(),
     timeout: getTimeout("openai"),
   });
 

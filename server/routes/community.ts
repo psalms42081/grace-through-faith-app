@@ -26,6 +26,8 @@ import { Router } from "express";
   import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
   import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
+  import { churchDirectoryQueryReady, recordChurchSubmission, verifiedDirectoryWhere } from "../services/church-directory";
+  import { churchSubmissionLimiter } from "../middleware/rate-limit";
 
   const router = Router();
 
@@ -776,11 +778,16 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
       if (!whereClause) {
         return res.json([]);
       }
-      const rows = await db.select().from(sdaChurches).where(whereClause);
+      const rows = await db
+        .select()
+        .from(sdaChurches)
+        .where(and(verifiedDirectoryWhere(), whereClause));
       return res.json(rows);
     }
 
-    let allChurches = await db.select().from(sdaChurches);
+    if (!churchDirectoryQueryReady({ lat, lng, city })) {
+      return res.json([]);
+    }
 
     if (lat && lng) {
       const userLat = parseFloat(lat);
@@ -802,7 +809,11 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       };
 
-      const withDist = allChurches.map((c) => ({
+      const verifiedChurches = await db
+        .select()
+        .from(sdaChurches)
+        .where(verifiedDirectoryWhere());
+      const withDist = verifiedChurches.map((c) => ({
         ...c,
         distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)),
       }));
@@ -819,15 +830,108 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/api/churches/submissions", optionalAuth, churchSubmissionLimiter, async (req, res) => {
+  try {
+    const name = typeof req.body?.name === "string" ? req.body.name : "";
+    const city = typeof req.body?.city === "string" ? req.body.city : "";
+    const country = typeof req.body?.country === "string" ? req.body.country : "";
+    const address = typeof req.body?.address === "string" ? req.body.address : null;
+    if (!name.trim() || !city.trim() || !country.trim()) {
+      return res.status(400).json({ error: "name, city, and country are required" });
+    }
+    const submission = await recordChurchSubmission(db, {
+      name,
+      city,
+      country,
+      address,
+      userId: req.authUserId ?? null,
+    });
+    return res.status(201).json({ submission });
+  } catch (err) {
+    console.error("Church submission error:", err);
+    return res.status(500).json({ error: "Failed to submit church" });
+  }
+});
+
 router.get("/api/churches/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
-    const [church] = await db.select().from(sdaChurches).where(eq(sdaChurches.id, id));
+    const [church] = await db
+      .select()
+      .from(sdaChurches)
+      .where(and(eq(sdaChurches.id, id), verifiedDirectoryWhere()));
     if (!church) return res.status(404).json({ error: "Church not found" });
     return res.json(church);
   } catch (err) {
     console.error("Church detail error:", err);
     return res.status(500).json({ error: "Failed to get church details" });
+  }
+});
+
+async function loadClaimedChurch(userId: string) {
+  const [user] = await db
+    .select({ sdaChurchId: users.sdaChurchId })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!user?.sdaChurchId) return null;
+  const [church] = await db
+    .select()
+    .from(sdaChurches)
+    .where(and(eq(sdaChurches.id, user.sdaChurchId), verifiedDirectoryWhere()));
+  return church ?? null;
+}
+
+async function claimDirectoryChurch(userId: string, churchId: string) {
+  const [church] = await db
+    .select()
+    .from(sdaChurches)
+    .where(and(eq(sdaChurches.id, churchId), verifiedDirectoryWhere()));
+  if (!church) return { status: 404 as const, error: "Church not found" };
+  await db.update(users).set({ sdaChurchId: church.id }).where(eq(users.id, userId));
+  return { status: 200 as const, church };
+}
+
+router.get("/api/me/church", requireAuth, async (req, res) => {
+  try {
+    const church = await loadClaimedChurch(req.authUserId!);
+    return res.json({ church });
+  } catch (err) {
+    console.error("My church get error:", err);
+    return res.status(500).json({ error: "Failed to load your church" });
+  }
+});
+
+router.put("/api/me/church", requireAuth, async (req, res) => {
+  try {
+    const churchId = typeof req.body?.churchId === "string" ? req.body.churchId.trim() : "";
+    if (!churchId) return res.status(400).json({ error: "churchId is required" });
+    const result = await claimDirectoryChurch(req.authUserId!, churchId);
+    if (result.status !== 200) return res.status(result.status).json({ error: result.error });
+    return res.json({ church: result.church });
+  } catch (err) {
+    console.error("My church set error:", err);
+    return res.status(500).json({ error: "Failed to set your church" });
+  }
+});
+
+router.delete("/api/me/church", requireAuth, async (req, res) => {
+  try {
+    await db.update(users).set({ sdaChurchId: null }).where(eq(users.id, req.authUserId!));
+    return res.json({ church: null });
+  } catch (err) {
+    console.error("My church clear error:", err);
+    return res.status(500).json({ error: "Failed to clear your church" });
+  }
+});
+
+router.post("/api/churches/:id/claim", requireAuth, async (req, res) => {
+  try {
+    const result = await claimDirectoryChurch(req.authUserId!, String(req.params.id));
+    if (result.status !== 200) return res.status(result.status).json({ error: result.error });
+    return res.json({ church: result.church });
+  } catch (err) {
+    console.error("Church claim error:", err);
+    return res.status(500).json({ error: "Failed to set your church" });
   }
 });
 

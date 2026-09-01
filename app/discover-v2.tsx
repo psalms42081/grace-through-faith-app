@@ -462,6 +462,19 @@ export default function DiscoverV2Screen() {
               </LinearGradient>
             </View>
 
+            {/* ---- Connect — directory church finder ---- */}
+            <View style={[s.section, { marginTop: 18 }]}>
+              <StudyRow
+                icon="business-outline"
+                tint="#FFF0D9"
+                ink="#8A5A10"
+                title="Connect"
+                sub="Find a local Adventist church"
+                onPress={() => router.push("/church-connect" as any)}
+                testID="discover-connect-row"
+              />
+            </View>
+
             {/* ---- Browse Topics — the Signposts grid (§A.2.3, centrepiece) ---- */}
             <View
               style={s.section}

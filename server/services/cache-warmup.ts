@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { openaiClientOptions } from "../openai-env";
 import {
   contextCards,
   applicationTemplates,
@@ -119,8 +120,7 @@ async function warmPassageSections(bookId: number, chapter: number, bookName: st
 
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    ...openaiClientOptions(),
   });
 
   const completion = await client.chat.completions.create({

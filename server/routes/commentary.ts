@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { openaiClientOptions } from "../openai-env";
 import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
@@ -78,8 +79,7 @@ async function generateEgwInsight(bookName: string, chapter: number): Promise<st
     const { getTimeout } = await import("../services/api-client");
     const { withAIConcurrency } = await import("../services/ai-semaphore");
     const client = new OpenAI({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
       timeout: getTimeout("openai"),
     });
     const resp = await withAIConcurrency(() => client.chat.completions.create({
@@ -110,8 +110,7 @@ async function generatePioneerInsight(pioneer: typeof ADVENTIST_PIONEERS[number]
     const { getTimeout } = await import("../services/api-client");
     const { withAIConcurrency } = await import("../services/ai-semaphore");
     const client = new OpenAI({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
       timeout: getTimeout("openai"),
     });
     const resp = await withAIConcurrency(() => client.chat.completions.create({

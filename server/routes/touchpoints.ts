@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { openaiClientOptions } from "../openai-env";
 import { getCalendarDayIndex } from "../../shared/calendar-date";
 import { SDA_LENS_VERSION } from "../services/sda-lens";
 import {
@@ -269,8 +270,7 @@ router.post("/api/touchpoints/:topicId/bible-study", aiGenerationLimiter, async 
     }
 
     const client = new (await import("openai")).default({
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      ...openaiClientOptions(),
     });
 
     let studyContent: ReturnType<typeof attachCanonicalScripture> | undefined;

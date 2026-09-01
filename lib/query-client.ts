@@ -72,9 +72,6 @@ export function getApiUrl(): string {
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
-    if (__DEV__ && window.location.hostname.endsWith(".replit.dev")) {
-      return `https://${window.location.hostname}:5000/`;
-    }
     return window.location.origin + "/";
   }
 

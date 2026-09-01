@@ -1,8 +1,12 @@
 import { z } from "zod";
+import { getOpenAIApiKey } from "./openai-env";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().optional(),
+  // Legacy Replit aliases — still accepted; prefer OPENAI_* above.
   AI_INTEGRATIONS_OPENAI_API_KEY: z.string().optional(),
   AI_INTEGRATIONS_OPENAI_BASE_URL: z.string().optional(),
   ELEVENLABS_API_KEY: z.string().optional(),
@@ -43,7 +47,7 @@ export function logSecurityPosture() {
   console.log(`[security] JWT_SECRET: configured (${env.JWT_SECRET.length} chars)`);
   console.log(`[security] Password reset: ${env.ALLOW_INSECURE_PASSWORD_RESET === "true" ? "ENABLED (insecure)" : "DISABLED (safe)"}`);
   console.log(`[security] Startup seeds: ${env.RUN_STARTUP_SEEDS === "true" ? "WILL RUN" : "skipped"}`);
-  console.log(`[security] OpenAI API: ${env.AI_INTEGRATIONS_OPENAI_API_KEY ? "configured" : "not configured"}`);
+  console.log(`[security] OpenAI API: ${getOpenAIApiKey() ? "configured" : "not configured"}`);
   console.log(`[security] ElevenLabs TTS: ${env.ELEVENLABS_API_KEY ? "configured" : "not configured"}`);
   console.log(`[security] LiveKit: ${env.LIVEKIT_API_KEY ? "configured" : "not configured"}`);
 }

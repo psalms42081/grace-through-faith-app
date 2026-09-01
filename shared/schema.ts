@@ -44,6 +44,8 @@ export const users = pgTable("users", {
   organizationType: varchar("organization_type", { length: 12 }),
   hierarchyNodeId: varchar("hierarchy_node_id"),
   ageGroup: varchar("age_group", { length: 16 }),
+  /** Claimed Adventist directory church (`sda_church.id`). Profile "My Church". */
+  sdaChurchId: varchar("sda_church_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1608,15 +1610,36 @@ export const sdaChurches = pgTable(
     website: text("website"),
     pastorName: text("pastor_name"),
     membershipSize: varchar("membership_size", { length: 20 }),
+    source: varchar("source").default("unknown").notNull(),
+    verified: boolean("verified").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
     cityIdx: index("church_city_idx").on(table.city),
     countryIdx: index("church_country_idx").on(table.country),
+    nameAddressCityCountryUniq: uniqueIndex(
+      "sda_church_name_address_city_country_uniq",
+    ).on(table.name, table.address, table.city, table.country),
   })
 );
 
 export type SdaChurch = typeof sdaChurches.$inferSelect;
+
+/** User-reported churches missing from the verified directory. Never auto-inserted into sda_church. */
+export const churchSubmissions = pgTable("church_submissions", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  country: text("country").notNull(),
+  address: text("address"),
+  userId: varchar("user_id"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ChurchSubmission = typeof churchSubmissions.$inferSelect;
 
 // ─── LIVE STREAMING ──────────────────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { openaiClientOptions } from "../server/openai-env";
 import { db } from "../server/db";
 import {
   formationModules,
@@ -20,8 +21,7 @@ const LANGUAGES: Record<string, string> = {
 
 function createOpenAIClient(): OpenAI {
   return new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    ...openaiClientOptions(),
     timeout: 60000,
   });
 }
