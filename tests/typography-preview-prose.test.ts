@@ -82,13 +82,20 @@ describe("splitLeadingWord", () => {
 });
 
 describe("typography preview source contracts", () => {
-  it("versions persisted React Query cache to structure-v3 so stale passages refetch", () => {
+  it("versions persisted React Query cache to structure-v5 so stale passages refetch", () => {
     const qc = readFileSync(new URL("../lib/query-client.ts", import.meta.url), "utf8");
     const layout = readFileSync(new URL("../app/_layout.tsx", import.meta.url), "utf8");
-    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v3"/);
+    const scripture = readFileSync(new URL("../server/services/scripture-service.ts", import.meta.url), "utf8");
+    const kjvStructure = readFileSync(new URL("../server/services/kjv-structure.ts", import.meta.url), "utf8");
+    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5"/);
     assert.match(qc, /grace-through-faith-cache-v11-\$\{QUERY_PERSIST_BUSTER\}/);
     assert.match(qc, /"grace-through-faith-cache-v10"/);
+    assert.match(qc, /"grace-through-faith-cache-v11-structure-v3"/);
+    assert.match(qc, /"grace-through-faith-cache-v11-structure-v4"/);
     assert.match(layout, /buster: QUERY_PERSIST_BUSTER/);
+    assert.match(scripture, /apibible-\$\{KJV_STRUCTURE_VERSION\}-/);
+    assert.match(scripture, /\$\{KJV_STRUCTURE_VERSION\}\|/);
+    assert.match(kjvStructure, /KJV_STRUCTURE_VERSION = "structure-v5"/);
   });
 
   it("promotes new typography by default and keeps verse-block behind a rollback flag", () => {
@@ -139,5 +146,18 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(prose, /bodyLine \* 0\.72/);
     assert.match(prose, /testID="reader-typography-prose"/);
     assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
+  });
+
+  it("renders qa acrostic headings smaller than s1 and LORD in small caps", () => {
+    const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const runs = readFileSync(new URL("../components/reader/VerseTextRuns.tsx", import.meta.url), "utf8");
+    assert.match(prose, /heading\.kind === "qa"/);
+    assert.match(prose, /headingQa/);
+    assert.match(prose, /VerseTextRuns/);
+    assert.match(reader, /providerHeadingQa/);
+    assert.match(reader, /VerseTextRuns text=\{v\.text\}/);
+    assert.match(runs, /fontVariant: \["small-caps"\]/);
+    assert.match(runs, /splitDivineNameRuns/);
   });
 });

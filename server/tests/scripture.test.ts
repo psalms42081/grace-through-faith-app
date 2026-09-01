@@ -181,11 +181,71 @@ describe("API.Bible provider chapter structure", () => {
     assert.equal(magnificat.verses[1].text, "and my invented spirit rejoices\nin the mock savior.");
     assert.equal(magnificat.verses[2].text.includes("invented humility"), true);
   });
+
+  it("treats qa acrostic letters as headings in Psalm 119 and Lamentations", () => {
+    const psalm119 = parseApiBibleChapter(
+      [
+        '<p class="qa">Aleph</p>',
+        '<p class="q"><span class="v" data-number="1">1</span>Blessed are the mock walkers,</p>',
+        '<p class="q">who walk according to the law of the <span class="nd">LORD</span>.</p>',
+        '<p class="qa">Beth</p>',
+        '<p class="q"><span class="v" data-number="9">9</span>How can a mock youth stay on course?</p>',
+      ].join(""),
+      19, 119, "NIV"
+    );
+    assert.deepEqual(psalm119.providerContent?.headings, [
+      { text: "Aleph", kind: "qa", beforeVerse: 1 },
+      { text: "Beth", kind: "qa", beforeVerse: 9 },
+    ]);
+    assert.equal(
+      psalm119.verses[0].text,
+      "Blessed are the mock walkers,\nwho walk according to the law of the LORD."
+    );
+    assert.doesNotMatch(psalm119.verses[0].text, /LORD \./);
+
+    const lamentations = parseApiBibleChapter(
+      [
+        '<p class="qa">Aleph</p>',
+        '<p class="q"><span class="v" data-number="1">1</span>How deserted lies the mock city,</p>',
+        '<p class="q">once so invented among the nations!</p>',
+        '<p class="qa">Beth</p>',
+        '<p class="q"><span class="v" data-number="2">2</span>Bitterly she weeps at mock night,</p>',
+      ].join(""),
+      25, 1, "NIV"
+    );
+    assert.deepEqual(lamentations.providerContent?.headings, [
+      { text: "Aleph", kind: "qa", beforeVerse: 1 },
+      { text: "Beth", kind: "qa", beforeVerse: 2 },
+    ]);
+    assert.ok(lamentations.verses[0].text.includes("once so invented among the nations"));
+    assert.ok(lamentations.verses[1].text.includes("Bitterly she weeps"));
+  });
+
+  it("renders nd divine-name spans as LORD with no inserted whitespace", () => {
+    const psalm23 = parseApiBibleChapter(
+      [
+        '<p class="q"><span class="v" data-number="1">1</span>The <span class="nd">LORD</span> is my mock shepherd,</p>',
+        '<p class="q">I lack nothing invented.</p>',
+      ].join(""),
+      19, 23, "NIV"
+    );
+    assert.equal(psalm23.verses[0].text, "The LORD is my mock shepherd,\nI lack nothing invented.");
+
+    const genesis2 = parseApiBibleChapter(
+      '<p class="p"><span class="v" data-number="4">4</span>This is the mock account of the heavens and the earth when they were created, when the <span class="nd">Lord</span> God made the earth and the heavens.</p>',
+      1, 2, "NIV"
+    );
+    assert.equal(
+      genesis2.verses[0].text,
+      "This is the mock account of the heavens and the earth when they were created, when the LORD God made the earth and the heavens."
+    );
+    assert.doesNotMatch(genesis2.verses[0].text, /the  LORD/);
+  });
 });
 
 describe("isApiBibleTitleClass", () => {
   it("accepts genuine title classes only", () => {
-    for (const cls of ["s", "s1", "s2", "ms", "ms1", "mt", "mt1", "d", "r"]) {
+    for (const cls of ["s", "s1", "s2", "ms", "ms1", "mt", "mt1", "d", "r", "qa", "qa1"]) {
       assert.equal(isApiBibleTitleClass(cls), true, cls);
     }
   });
@@ -194,6 +254,7 @@ describe("isApiBibleTitleClass", () => {
     for (const cls of ["q", "q1", "q2", "m", "pi", "pi1", "li", "li1", "p", "nb"]) {
       assert.equal(isApiBibleTitleClass(cls), false, cls);
     }
+    assert.equal(isApiBibleTitleClass("qac"), false);
   });
 });
 
@@ -208,6 +269,19 @@ describe("provider heading response and reader contract", () => {
     const reader = readFileSync("app/read/[bookId]/[chapter].tsx", "utf8");
     assert.match(reader, /data\?\.providerContent\?\.headings/);
     assert.match(reader, /providerParagraphStarts\.has\(v\.verse\)/);
+    assert.match(reader, /Do not infer headings from KJV verse text/);
+    assert.doesNotMatch(reader, /inventHeading|inferHeading|headingFromVerse/);
+  });
+
+  it("attaches local KJV providerContent on the same path as API.Bible", () => {
+    const scripture = readFileSync("server/services/scripture-service.ts", "utf8");
+    const structure = readFileSync("server/services/kjv-structure.ts", "utf8");
+    assert.match(scripture, /withKjvProviderContent/);
+    assert.match(scripture, /translationAbbr === "KJV"/);
+    assert.match(scripture, /providerContent: kjv\.providerContent/);
+    assert.match(structure, /KJV_STRUCTURE_VERSION = "structure-v5"/);
+    assert.match(structure, /isKjvReaderPoetryBook/);
+    assert.doesNotMatch(structure, /"Isaiah"|"Daniel"|"Jeremiah"/);
   });
 
   it("keeps verse-block layout behind the internal rollback flag", () => {

@@ -6,7 +6,11 @@
  */
 export const POETRY_SCHEMA_VERSION = "kjv-poetry-lines-v1";
 
-/** Wisdom/poetry books plus the prophets (poetic sections appear as 2+ lines). */
+/**
+ * Books whose generated punctuation lineation may exist on disk.
+ * Prophets are generated for review only — they are not wired to the reader
+ * (colon-splitting over-lineates narrative prose such as Daniel 2 and 7).
+ */
 export const POETRY_SOURCE_BOOKS = [
   "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Lamentations",
   "Isaiah", "Jeremiah", "Ezekiel", "Daniel",
@@ -14,7 +18,13 @@ export const POETRY_SOURCE_BOOKS = [
   "Zephaniah", "Haggai", "Zechariah", "Malachi",
 ] as const;
 
+/** Wisdom/poetry books actually attached to KJV reader verse text. */
+export const KJV_READER_POETRY_BOOKS = [
+  "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Lamentations",
+] as const;
+
 export type PoetrySourceBook = (typeof POETRY_SOURCE_BOOKS)[number];
+export type KjvReaderPoetryBook = (typeof KJV_READER_POETRY_BOOKS)[number];
 
 export interface PoetryLine {
   text: string;
@@ -45,6 +55,10 @@ const CLAUSE_SPLIT = /(?<=[;:!?])\s+(?=\S)/;
 
 export function isPoetrySourceBook(book: string): boolean {
   return (POETRY_SOURCE_BOOKS as readonly string[]).includes(book);
+}
+
+export function isKjvReaderPoetryBook(book: string): boolean {
+  return (KJV_READER_POETRY_BOOKS as readonly string[]).includes(book);
 }
 
 function isSelahToken(part: string): boolean {

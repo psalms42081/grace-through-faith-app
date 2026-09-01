@@ -9,15 +9,21 @@
   "verses": 31102,
   "sections": 4283,
   "headingSequencePatch": {
-    "at": "2026-08-31T00:36:11.316Z",
+    "at": "2026-09-01T03:53:47.829Z",
     "chapters": [
       "Matthew 5",
       "Matthew 6",
       "Matthew 7",
       "Luke 6",
       "John 14",
-      "Revelation 14"
+      "Revelation 14",
+      "Psalms 119"
     ],
-    "note": "Independent re-outline of sequence-flagged chapters only; remainder of Task #76 corpus unchanged."
+    "note": "Independent re-outline of sequence-flagged chapters plus Psalm 119 letter titles; remainder of heading ranges unchanged."
+  },
+  "paragraphRegen": {
+    "at": "2026-09-01T03:53:47.830Z",
+    "hardMaxVerses": 8,
+    "note": "Whole-corpus sense-unit paragraphs; section headings unchanged except the headingSequencePatch chapters."
   }
 }

@@ -36,7 +36,7 @@
     "test:verse-map-generation": "tsx tests/verse-map-generation.test.ts",
     "generate:kjv-headings": "tsx scripts/generate-kjv-headings.ts",
     "generate:kjv-poetry-lines": "tsx scripts/generate-kjv-poetry-lines.ts",
-    "test:kjv-headings": "tsx --test tests/kjv-headings-generation.test.ts tests/kjv-heading-sequence.test.ts",
+    "test:kjv-headings": "tsx --test tests/kjv-headings-generation.test.ts tests/kjv-heading-sequence.test.ts tests/kjv-structure.test.ts",
     "test:kjv-poetry-lines": "tsx --test tests/kjv-poetry-lines.test.ts",
     "start": "npx expo start",
     "typecheck": "tsc --noEmit",

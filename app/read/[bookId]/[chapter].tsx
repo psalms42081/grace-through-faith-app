@@ -27,6 +27,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
+import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
+import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -116,7 +118,7 @@ interface PassageResponse {
   verses: Verse[];
   /** API.Bible-only source structure; local KJV responses do not include this. */
   providerContent?: {
-    headings?: { text: string; beforeVerse?: number }[];
+    headings?: { text: string; beforeVerse?: number; kind?: "qa" }[];
     paragraphs?: { verseStart: number; verseEnd: number }[];
   };
 }
@@ -945,10 +947,13 @@ export default function VerseReaderScreen() {
   // Do not infer headings from KJV verse text. These maps are populated only
   // when the provider explicitly returned its own chapter structure.
   const providerHeadings = useMemo(() => {
-    const byVerse = new Map<number, string[]>();
+    const byVerse = new Map<number, ReaderHeading[]>();
     for (const heading of data?.providerContent?.headings ?? []) {
       if (heading.beforeVerse && heading.text) {
-        byVerse.set(heading.beforeVerse, [...(byVerse.get(heading.beforeVerse) ?? []), heading.text]);
+        byVerse.set(heading.beforeVerse, [
+          ...(byVerse.get(heading.beforeVerse) ?? []),
+          { text: heading.text, kind: heading.kind },
+        ]);
       }
     }
     return byVerse;
@@ -1388,10 +1393,14 @@ export default function VerseReaderScreen() {
                       {(providerHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
                         <Text
                           key={`${v.id}-heading-${headingIndex}`}
-                          style={[styles.providerHeading, { color: textColor }]}
+                          style={[
+                            styles.providerHeading,
+                            heading.kind === "qa" && styles.providerHeadingQa,
+                            { color: textColor },
+                          ]}
                           accessibilityRole="header"
                         >
-                          {heading}
+                          {heading.text}
                         </Text>
                       ))}
                     <Pressable
@@ -1413,7 +1422,7 @@ export default function VerseReaderScreen() {
                         <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
                           {v.verse}{"\u00a0"}
                         </Text>
-                        {v.text}
+                        <VerseTextRuns text={v.text} />
                         {isBookmarked && (
                           <Text style={{ color: RV2_INK_MUTED, fontSize: 10 }}> ◆</Text>
                         )}
@@ -1545,7 +1554,7 @@ export default function VerseReaderScreen() {
                             <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
                               {v.verse}{"\u00a0"}
                             </Text>
-                            {v.text}
+                            <VerseTextRuns text={v.text} />
                           </Text>
                         </View>
                       ))
@@ -2205,6 +2214,10 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_700Bold",
     marginTop: 20,
     marginBottom: 6,
+  },
+  providerHeadingQa: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   quietRowText: {
     flex: 1,

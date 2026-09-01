@@ -10,6 +10,10 @@
         "paragraphs": [
           {
             "startVerse": 1,
+            "endVerse": 2
+          },
+          {
+            "startVerse": 3,
             "endVerse": 5
           }
         ]
@@ -21,6 +25,10 @@
         "paragraphs": [
           {
             "startVerse": 6,
+            "endVerse": 8
+          },
+          {
+            "startVerse": 9,
             "endVerse": 10
           }
         ]
@@ -65,6 +73,14 @@
         "paragraphs": [
           {
             "startVerse": 24,
+            "endVerse": 25
+          },
+          {
+            "startVerse": 26,
+            "endVerse": 28
+          },
+          {
+            "startVerse": 29,
             "endVerse": 31
           }
         ]
@@ -93,18 +109,22 @@
     "chapter": 5,
     "sections": [
       {
-        "heading": "Who Belongs in the Kingdom He Describes",
+        "heading": "The Beatitudes",
         "startVerse": 1,
         "endVerse": 12,
         "paragraphs": [
           {
             "startVerse": 1,
+            "endVerse": 8
+          },
+          {
+            "startVerse": 9,
             "endVerse": 12
           }
         ]
       },
       {
-        "heading": "How His Followers Season and Light the World",
+        "heading": "A City Set on a Hill",
         "startVerse": 13,
         "endVerse": 16,
         "paragraphs": [
@@ -115,34 +135,46 @@
         ]
       },
       {
-        "heading": "A Righteousness Deeper Than the Scribes'",
+        "heading": "He Came to Fulfil the Law",
         "startVerse": 17,
         "endVerse": 26,
         "paragraphs": [
           {
             "startVerse": 17,
+            "endVerse": 21
+          },
+          {
+            "startVerse": 22,
             "endVerse": 26
           }
         ]
       },
       {
-        "heading": "Purity, Covenant Faithfulness, and Honest Speech",
+        "heading": "The Heart, the Hand, and the Word",
         "startVerse": 27,
         "endVerse": 37,
         "paragraphs": [
           {
             "startVerse": 27,
+            "endVerse": 31
+          },
+          {
+            "startVerse": 32,
             "endVerse": 37
           }
         ]
       },
       {
-        "heading": "Refusing Revenge, Loving the Hostile",
+        "heading": "Do Good to Them That Hate You",
         "startVerse": 38,
         "endVerse": 48,
         "paragraphs": [
           {
             "startVerse": 38,
+            "endVerse": 43
+          },
+          {
+            "startVerse": 44,
             "endVerse": 48
           }
         ]
@@ -182,6 +214,10 @@
         "paragraphs": [
           {
             "startVerse": 6,
+            "endVerse": 8
+          },
+          {
+            "startVerse": 9,
             "endVerse": 12
           }
         ]

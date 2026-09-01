@@ -23,15 +23,18 @@ export function groupVersesByParagraphStarts<T extends { verse: number }>(
   return groups;
 }
 
+/** Reader heading; `qa` is the USFM acrostic letter (Psalm 119, Lamentations). */
+export type ReaderHeading = { text: string; kind?: "qa" };
+
 /** Break a paragraph run when a later verse has provider headings (block-level). */
-export function splitParagraphGroupAtHeadings<T extends { verse: number }>(
+export function splitParagraphGroupAtHeadings<T extends { verse: number }, H = string>(
   group: T[],
-  headingsByVerse: Map<number, string[]>,
-): { headings: string[]; verses: T[] }[] {
+  headingsByVerse: Map<number, H[]>,
+): { headings: H[]; verses: T[] }[] {
   if (!group.length) return [];
-  const runs: { headings: string[]; verses: T[] }[] = [];
+  const runs: { headings: H[]; verses: T[] }[] = [];
   let verses: T[] = [];
-  let headings: string[] = headingsByVerse.get(group[0].verse) ?? [];
+  let headings: H[] = headingsByVerse.get(group[0].verse) ?? [];
   for (const verse of group) {
     const nextHeadings = headingsByVerse.get(verse.verse) ?? [];
     if (verses.length > 0 && nextHeadings.length > 0) {

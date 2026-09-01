@@ -1,6 +1,6 @@
 {
-  "note": "NOT WIRED. Existing Task #76 corpus (sequence-flagged chapters independently re-outlined). Poetry is KJV-punctuation lineation, comparable in shape to API.Bible q-lines, not NIV breaks. Spot-check these chapters; do not ship until you approve.",
-  "howToOpen": "In Cursor: Ctrl+P (Quick Open), type kjv-headings.review.json, Enter. Or File > Open File and choose data/kjv-headings.review.json. Each chapter has sections (headings) and poetry (verse lines, or null when the book is outside the poetry/prophets set).",
+  "note": "WIRED. Local KJV chapters attach headings and paragraphs as providerContent. Poetry line-breaks are applied only for Job, Psalms, Proverbs, Ecclesiastes, Song of Solomon, and Lamentations — prophets stay prose.",
+  "howToOpen": "In Cursor: Ctrl+P (Quick Open), type kjv-headings.review.json, Enter. Or File > Open File and choose data/kjv-headings.review.json. Each chapter has sections (headings) and poetry (verse lines, or null when the book is outside the six poetic books).",
   "schemaVersion": "kjv-headings-v1",
   "poetrySchemaVersion": "kjv-poetry-lines-v1",
   "lensVersion": "sda-v2",
@@ -13,7 +13,8 @@
       "Matthew 7",
       "Luke 6",
       "John 14",
-      "Revelation 14"
+      "Revelation 14",
+      "Psalms 119"
     ],
     "regenerationReasons": {
       "Matthew 5": "Sermon outline tracked the NIV/ESV package (Beatitudes, Salt and Light, Fulfillment of the Law, then the antitheses in that order).",
@@ -21,7 +22,8 @@
       "Matthew 7": "Ordered NIV sermon titles (Judging Others, Ask Seek Knock, Narrow Gate, False Prophets, Wise and Foolish Builders) with only extra splits.",
       "Luke 6": "Four consecutive NIV sermon titles: Love for Enemies, Judging Others, A Tree and Its Fruit, The Wise and Foolish Builders.",
       "John 14": "Opened with NIV's exact 'Jesus Comforts His Disciples' and followed that farewell-discourse set.",
-      "Revelation 14": "Three-part set aligned with NIV/ESV (The Lamb and the 144,000 / Three Angels / Harvest of the Earth)."
+      "Revelation 14": "Three-part set aligned with NIV/ESV (The Lamb and the 144,000 / Three Angels / Harvest of the Earth).",
+      "Psalms 119": "Stanza titles were essay-like and repeated; KJV prints the Hebrew letter over each eight-verse stanza."
     },
     "remainingFlags": [],
     "standard": "No chapter's full heading sequence should match a specific published edition's set. Consecutive runs of 4+ published titles are also flagged. Distinctive publisher packages that were a near-miss on exact match were regenerated after editorial review."
@@ -38,6 +40,10 @@
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 2
+            },
+            {
+              "startVerse": 3,
               "endVerse": 5
             }
           ]
@@ -49,6 +55,10 @@
           "paragraphs": [
             {
               "startVerse": 6,
+              "endVerse": 8
+            },
+            {
+              "startVerse": 9,
               "endVerse": 10
             }
           ]
@@ -93,6 +103,14 @@
           "paragraphs": [
             {
               "startVerse": 24,
+              "endVerse": 25
+            },
+            {
+              "startVerse": 26,
+              "endVerse": 28
+            },
+            {
+              "startVerse": 29,
               "endVerse": 31
             }
           ]
@@ -102,21 +120,130 @@
     },
     {
       "book": "Psalms",
+      "chapter": 23,
+      "sections": [
+        {
+          "heading": "The Lord as Shepherd",
+          "startVerse": 1,
+          "endVerse": 6,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 6
+            }
+          ]
+        }
+      ],
+      "poetry": [
+        {
+          "verse": 1,
+          "lines": [
+            {
+              "text": "The LORD is my shepherd;",
+              "indent": 0
+            },
+            {
+              "text": "I shall not want.",
+              "indent": 1
+            }
+          ]
+        },
+        {
+          "verse": 2,
+          "lines": [
+            {
+              "text": "He maketh me to lie down in green pastures:",
+              "indent": 0
+            },
+            {
+              "text": "he leadeth me beside the still waters.",
+              "indent": 1
+            }
+          ]
+        },
+        {
+          "verse": 3,
+          "lines": [
+            {
+              "text": "He restoreth my soul:",
+              "indent": 0
+            },
+            {
+              "text": "he leadeth me in the paths of righteousness for his name’s sake.",
+              "indent": 1
+            }
+          ]
+        },
+        {
+          "verse": 4,
+          "lines": [
+            {
+              "text": "Yea, though I walk through the valley of the shadow of death, I will fear no evil:",
+              "indent": 0
+            },
+            {
+              "text": "for thou art with me;",
+              "indent": 1
+            },
+            {
+              "text": "thy rod and thy staff they comfort me.",
+              "indent": 0
+            }
+          ]
+        },
+        {
+          "verse": 5,
+          "lines": [
+            {
+              "text": "Thou preparest a table before me in the presence of mine enemies:",
+              "indent": 0
+            },
+            {
+              "text": "thou anointest my head with oil;",
+              "indent": 1
+            },
+            {
+              "text": "my cup runneth over.",
+              "indent": 0
+            }
+          ]
+        },
+        {
+          "verse": 6,
+          "lines": [
+            {
+              "text": "Surely goodness and mercy shall follow me all the days of my life:",
+              "indent": 0
+            },
+            {
+              "text": "and I will dwell in the house of the LORD for ever.",
+              "indent": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "book": "Psalms",
       "chapter": 119,
       "sections": [
         {
-          "heading": "Blessings of Obedience",
+          "heading": "Aleph — Walking in the Law of the LORD",
           "startVerse": 1,
           "endVerse": 8,
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 5
+            },
+            {
+              "startVerse": 6,
               "endVerse": 8
             }
           ]
         },
         {
-          "heading": "Desire for God's Word",
+          "heading": "Beth — Hiding the Word in the Heart",
           "startVerse": 9,
           "endVerse": 16,
           "paragraphs": [
@@ -127,7 +254,7 @@
           ]
         },
         {
-          "heading": "Seeking Understanding and Guidance",
+          "heading": "Gimel — A Stranger Seeking Understanding",
           "startVerse": 17,
           "endVerse": 24,
           "paragraphs": [
@@ -138,7 +265,7 @@
           ]
         },
         {
-          "heading": "Longing for God's Judgments",
+          "heading": "Daleth — Raised from the Dust",
           "startVerse": 25,
           "endVerse": 32,
           "paragraphs": [
@@ -149,7 +276,7 @@
           ]
         },
         {
-          "heading": "Pleading for Help and Deliverance",
+          "heading": "He — Teach Me the Way of Thy Statutes",
           "startVerse": 33,
           "endVerse": 40,
           "paragraphs": [
@@ -160,7 +287,7 @@
           ]
         },
         {
-          "heading": "Affliction and Hope in God's Word",
+          "heading": "Vau — Mercies and Liberty to Speak",
           "startVerse": 41,
           "endVerse": 48,
           "paragraphs": [
@@ -171,7 +298,7 @@
           ]
         },
         {
-          "heading": "Faithfulness Amidst Trials",
+          "heading": "Zain — Comfort in the Night",
           "startVerse": 49,
           "endVerse": 56,
           "paragraphs": [
@@ -182,7 +309,7 @@
           ]
         },
         {
-          "heading": "The Goodness of God's Law",
+          "heading": "Cheth — The LORD My Portion",
           "startVerse": 57,
           "endVerse": 64,
           "paragraphs": [
@@ -193,7 +320,7 @@
           ]
         },
         {
-          "heading": "Affliction and Learning from God's Word",
+          "heading": "Teth — Good to Have Been Afflicted",
           "startVerse": 65,
           "endVerse": 72,
           "paragraphs": [
@@ -204,7 +331,7 @@
           ]
         },
         {
-          "heading": "Hope and Comfort in God's Promises",
+          "heading": "Jod — Made and Fashioned by Thy Hands",
           "startVerse": 73,
           "endVerse": 80,
           "paragraphs": [
@@ -215,7 +342,7 @@
           ]
         },
         {
-          "heading": "Crying Out for Salvation",
+          "heading": "Caph — Fainting for Salvation",
           "startVerse": 81,
           "endVerse": 88,
           "paragraphs": [
@@ -226,7 +353,7 @@
           ]
         },
         {
-          "heading": "The Eternal Nature of God's Word",
+          "heading": "Lamed — The Word Settled Forever",
           "startVerse": 89,
           "endVerse": 96,
           "paragraphs": [
@@ -237,7 +364,7 @@
           ]
         },
         {
-          "heading": "The Value of God's Law",
+          "heading": "Mem — Sweeter Than Honey",
           "startVerse": 97,
           "endVerse": 104,
           "paragraphs": [
@@ -248,7 +375,7 @@
           ]
         },
         {
-          "heading": "Commitment to Obey God's Judgments",
+          "heading": "Nun — A Lamp unto My Feet",
           "startVerse": 105,
           "endVerse": 112,
           "paragraphs": [
@@ -259,7 +386,7 @@
           ]
         },
         {
-          "heading": "Pleading for Help and Deliverance",
+          "heading": "Samech — A Hiding Place from the Proud",
           "startVerse": 113,
           "endVerse": 120,
           "paragraphs": [
@@ -270,18 +397,22 @@
           ]
         },
         {
-          "heading": "Seeking Justice and Understanding",
+          "heading": "Ain — Time for the LORD to Work",
           "startVerse": 121,
           "endVerse": 128,
           "paragraphs": [
             {
               "startVerse": 121,
+              "endVerse": 126
+            },
+            {
+              "startVerse": 127,
               "endVerse": 128
             }
           ]
         },
         {
-          "heading": "Longing for God's Word and Deliverance",
+          "heading": "Pe — Wonderful Testimonies",
           "startVerse": 129,
           "endVerse": 136,
           "paragraphs": [
@@ -292,7 +423,7 @@
           ]
         },
         {
-          "heading": "Righteousness and Faithfulness of God",
+          "heading": "Tzaddi — Everlasting Righteousness",
           "startVerse": 137,
           "endVerse": 144,
           "paragraphs": [
@@ -303,7 +434,7 @@
           ]
         },
         {
-          "heading": "Crying Out for Help and Deliverance",
+          "heading": "Koph — Crying with the Whole Heart",
           "startVerse": 145,
           "endVerse": 152,
           "paragraphs": [
@@ -314,7 +445,7 @@
           ]
         },
         {
-          "heading": "The Fate of the Wicked",
+          "heading": "Resh — Quickened by Thy Word",
           "startVerse": 153,
           "endVerse": 160,
           "paragraphs": [
@@ -325,7 +456,7 @@
           ]
         },
         {
-          "heading": "Rejoicing in God's Word",
+          "heading": "Schin — Great Peace for Those Who Love Thy Law",
           "startVerse": 161,
           "endVerse": 168,
           "paragraphs": [
@@ -336,7 +467,7 @@
           ]
         },
         {
-          "heading": "Longing for Salvation and Deliverance",
+          "heading": "Tau — The Lost Sheep Found",
           "startVerse": 169,
           "endVerse": 176,
           "paragraphs": [
@@ -2419,18 +2550,22 @@
       "chapter": 5,
       "sections": [
         {
-          "heading": "Who Belongs in the Kingdom He Describes",
+          "heading": "The Beatitudes",
           "startVerse": 1,
           "endVerse": 12,
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 8
+            },
+            {
+              "startVerse": 9,
               "endVerse": 12
             }
           ]
         },
         {
-          "heading": "How His Followers Season and Light the World",
+          "heading": "A City Set on a Hill",
           "startVerse": 13,
           "endVerse": 16,
           "paragraphs": [
@@ -2441,34 +2576,46 @@
           ]
         },
         {
-          "heading": "A Righteousness Deeper Than the Scribes'",
+          "heading": "He Came to Fulfil the Law",
           "startVerse": 17,
           "endVerse": 26,
           "paragraphs": [
             {
               "startVerse": 17,
+              "endVerse": 21
+            },
+            {
+              "startVerse": 22,
               "endVerse": 26
             }
           ]
         },
         {
-          "heading": "Purity, Covenant Faithfulness, and Honest Speech",
+          "heading": "The Heart, the Hand, and the Word",
           "startVerse": 27,
           "endVerse": 37,
           "paragraphs": [
             {
               "startVerse": 27,
+              "endVerse": 31
+            },
+            {
+              "startVerse": 32,
               "endVerse": 37
             }
           ]
         },
         {
-          "heading": "Refusing Revenge, Loving the Hostile",
+          "heading": "Do Good to Them That Hate You",
           "startVerse": 38,
           "endVerse": 48,
           "paragraphs": [
             {
               "startVerse": 38,
+              "endVerse": 43
+            },
+            {
+              "startVerse": 44,
               "endVerse": 48
             }
           ]
@@ -2481,34 +2628,62 @@
       "chapter": 6,
       "sections": [
         {
-          "heading": "Alms, Prayer, and Fasting Done in Secret",
+          "heading": "Your Father Who Sees in Secret",
           "startVerse": 1,
           "endVerse": 18,
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 1
+            },
+            {
+              "startVerse": 2,
+              "endVerse": 4
+            },
+            {
+              "startVerse": 5,
+              "endVerse": 8
+            },
+            {
+              "startVerse": 9,
+              "endVerse": 13
+            },
+            {
+              "startVerse": 14,
+              "endVerse": 15
+            },
+            {
+              "startVerse": 16,
               "endVerse": 18
             }
           ]
         },
         {
-          "heading": "Treasure, the Single Eye, and One Master",
+          "heading": "One Treasure and One Master",
           "startVerse": 19,
           "endVerse": 24,
           "paragraphs": [
             {
               "startVerse": 19,
+              "endVerse": 22
+            },
+            {
+              "startVerse": 23,
               "endVerse": 24
             }
           ]
         },
         {
-          "heading": "Why the Anxious Heart Need Not Fear",
+          "heading": "Take No Thought for Tomorrow",
           "startVerse": 25,
           "endVerse": 34,
           "paragraphs": [
             {
               "startVerse": 25,
+              "endVerse": 30
+            },
+            {
+              "startVerse": 31,
               "endVerse": 34
             }
           ]
@@ -2521,7 +2696,7 @@
       "chapter": 7,
       "sections": [
         {
-          "heading": "The Beam in Your Own Eye",
+          "heading": "The Mote and the Beam",
           "startVerse": 1,
           "endVerse": 6,
           "paragraphs": [
@@ -2532,7 +2707,7 @@
           ]
         },
         {
-          "heading": "Ask the Father; Do as You Would Be Done By",
+          "heading": "A Father's Gifts and the Golden Rule",
           "startVerse": 7,
           "endVerse": 12,
           "paragraphs": [
@@ -2543,24 +2718,111 @@
           ]
         },
         {
-          "heading": "Two Ways, Two Trees, Two Houses",
+          "heading": "The Narrow Gate and a House on Rock",
           "startVerse": 13,
           "endVerse": 27,
           "paragraphs": [
             {
               "startVerse": 13,
+              "endVerse": 19
+            },
+            {
+              "startVerse": 20,
+              "endVerse": 23
+            },
+            {
+              "startVerse": 24,
               "endVerse": 27
             }
           ]
         },
         {
-          "heading": "A Teacher Unlike Their Scribes",
+          "heading": "The People Were Astonished",
           "startVerse": 28,
           "endVerse": 29,
           "paragraphs": [
             {
               "startVerse": 28,
               "endVerse": 29
+            }
+          ]
+        }
+      ],
+      "poetry": null
+    },
+    {
+      "book": "Luke",
+      "chapter": 6,
+      "sections": [
+        {
+          "heading": "Sabbath in the Fields and the Synagogue",
+          "startVerse": 1,
+          "endVerse": 11,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 4
+            },
+            {
+              "startVerse": 5,
+              "endVerse": 8
+            },
+            {
+              "startVerse": 9,
+              "endVerse": 11
+            }
+          ]
+        },
+        {
+          "heading": "He Chooses the Twelve",
+          "startVerse": 12,
+          "endVerse": 16,
+          "paragraphs": [
+            {
+              "startVerse": 12,
+              "endVerse": 16
+            }
+          ]
+        },
+        {
+          "heading": "Blessings and Woes on the Plain",
+          "startVerse": 17,
+          "endVerse": 36,
+          "paragraphs": [
+            {
+              "startVerse": 17,
+              "endVerse": 23
+            },
+            {
+              "startVerse": 24,
+              "endVerse": 30
+            },
+            {
+              "startVerse": 31,
+              "endVerse": 34
+            },
+            {
+              "startVerse": 35,
+              "endVerse": 36
+            }
+          ]
+        },
+        {
+          "heading": "A Good Measure and a House on the Rock",
+          "startVerse": 37,
+          "endVerse": 49,
+          "paragraphs": [
+            {
+              "startVerse": 37,
+              "endVerse": 38
+            },
+            {
+              "startVerse": 39,
+              "endVerse": 42
+            },
+            {
+              "startVerse": 43,
+              "endVerse": 49
             }
           ]
         }
@@ -2578,6 +2840,18 @@
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 2
+            },
+            {
+              "startVerse": 3,
+              "endVerse": 4
+            },
+            {
+              "startVerse": 5,
+              "endVerse": 8
+            },
+            {
+              "startVerse": 9,
               "endVerse": 10
             }
           ]
@@ -2589,6 +2863,14 @@
           "paragraphs": [
             {
               "startVerse": 11,
+              "endVerse": 15
+            },
+            {
+              "startVerse": 16,
+              "endVerse": 19
+            },
+            {
+              "startVerse": 20,
               "endVerse": 21
             }
           ]
@@ -2600,7 +2882,78 @@
           "paragraphs": [
             {
               "startVerse": 22,
+              "endVerse": 24
+            },
+            {
+              "startVerse": 25,
+              "endVerse": 26
+            },
+            {
+              "startVerse": 27,
+              "endVerse": 33
+            },
+            {
+              "startVerse": 34,
               "endVerse": 36
+            }
+          ]
+        }
+      ],
+      "poetry": null
+    },
+    {
+      "book": "John",
+      "chapter": 14,
+      "sections": [
+        {
+          "heading": "In My Father's House",
+          "startVerse": 1,
+          "endVerse": 4,
+          "paragraphs": [
+            {
+              "startVerse": 1,
+              "endVerse": 4
+            }
+          ]
+        },
+        {
+          "heading": "The Way to the Father",
+          "startVerse": 5,
+          "endVerse": 14,
+          "paragraphs": [
+            {
+              "startVerse": 5,
+              "endVerse": 7
+            },
+            {
+              "startVerse": 8,
+              "endVerse": 14
+            }
+          ]
+        },
+        {
+          "heading": "The Comforter Will Come",
+          "startVerse": 15,
+          "endVerse": 26,
+          "paragraphs": [
+            {
+              "startVerse": 15,
+              "endVerse": 21
+            },
+            {
+              "startVerse": 22,
+              "endVerse": 26
+            }
+          ]
+        },
+        {
+          "heading": "Peace I Leave With You",
+          "startVerse": 27,
+          "endVerse": 31,
+          "paragraphs": [
+            {
+              "startVerse": 27,
+              "endVerse": 31
             }
           ]
         }
@@ -2618,6 +2971,22 @@
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 2
+            },
+            {
+              "startVerse": 3,
+              "endVerse": 4
+            },
+            {
+              "startVerse": 5,
+              "endVerse": 6
+            },
+            {
+              "startVerse": 7,
+              "endVerse": 9
+            },
+            {
+              "startVerse": 10,
               "endVerse": 13
             }
           ]
@@ -2629,6 +2998,14 @@
           "paragraphs": [
             {
               "startVerse": 14,
+              "endVerse": 15
+            },
+            {
+              "startVerse": 16,
+              "endVerse": 18
+            },
+            {
+              "startVerse": 19,
               "endVerse": 23
             }
           ]
@@ -2640,6 +3017,26 @@
           "paragraphs": [
             {
               "startVerse": 24,
+              "endVerse": 25
+            },
+            {
+              "startVerse": 26,
+              "endVerse": 30
+            },
+            {
+              "startVerse": 31,
+              "endVerse": 35
+            },
+            {
+              "startVerse": 36,
+              "endVerse": 38
+            },
+            {
+              "startVerse": 39,
+              "endVerse": 43
+            },
+            {
+              "startVerse": 44,
               "endVerse": 45
             }
           ]
@@ -2651,578 +3048,16 @@
           "paragraphs": [
             {
               "startVerse": 46,
+              "endVerse": 47
+            },
+            {
+              "startVerse": 48,
               "endVerse": 49
             }
           ]
         }
       ],
-      "poetry": [
-        {
-          "verse": 1,
-          "lines": [
-            {
-              "text": "And in the second year of the reign of Nebuchadnezzar Nebuchadnezzar dreamed dreams, wherewith his spirit was troubled, and his sleep brake from him.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 2,
-          "lines": [
-            {
-              "text": "Then the king commanded to call the magicians, and the astrologers, and the sorcerers, and the Chaldeans, for to shew the king his dreams. So they came and stood before the king.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 3,
-          "lines": [
-            {
-              "text": "And the king said unto them, I have dreamed a dream, and my spirit was troubled to know the dream.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 4,
-          "lines": [
-            {
-              "text": "Then spake the Chaldeans to the king in Syriack, O king, live for ever:",
-              "indent": 0
-            },
-            {
-              "text": "tell thy servants the dream, and we will shew the interpretation.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 5,
-          "lines": [
-            {
-              "text": "The king answered and said to the Chaldeans, The thing is gone from me:",
-              "indent": 0
-            },
-            {
-              "text": "if ye will not make known unto me the dream, with the interpretation thereof, ye shall be cut in pieces, and your houses shall be made a dunghill.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 6,
-          "lines": [
-            {
-              "text": "But if ye shew the dream, and the interpretation thereof, ye shall receive of me gifts and rewards and great honour:",
-              "indent": 0
-            },
-            {
-              "text": "therefore shew me the dream, and the interpretation thereof.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 7,
-          "lines": [
-            {
-              "text": "They answered again and said, Let the king tell his servants the dream, and we will shew the interpretation of it.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 8,
-          "lines": [
-            {
-              "text": "The king answered and said, I know of certainty that ye would gain the time, because ye see the thing is gone from me.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 9,
-          "lines": [
-            {
-              "text": "But if ye will not make known unto me the dream, there is but one decree for you:",
-              "indent": 0
-            },
-            {
-              "text": "for ye have prepared lying and corrupt words to speak before me, till the time be changed:",
-              "indent": 1
-            },
-            {
-              "text": "therefore tell me the dream, and I shall know that ye can shew me the interpretation thereof.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 10,
-          "lines": [
-            {
-              "text": "The Chaldeans answered before the king, and said, There is not a man upon the earth that can shew the king’s matter:",
-              "indent": 0
-            },
-            {
-              "text": "therefore there is no king, lord, nor ruler, that asked such things at any magician, or astrologer, or Chaldean.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 11,
-          "lines": [
-            {
-              "text": "And it is a rare thing that the king requireth, and there is none other that can shew it before the king, except the gods, whose dwelling is not with flesh.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 12,
-          "lines": [
-            {
-              "text": "For this cause the king was angry and very furious, and commanded to destroy all the wise men of Babylon.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 13,
-          "lines": [
-            {
-              "text": "And the decree went forth that the wise men should be slain;",
-              "indent": 0
-            },
-            {
-              "text": "and they sought Daniel and his fellows to be slain.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 14,
-          "lines": [
-            {
-              "text": "Then Daniel answered with counsel and wisdom to Arioch the captain of the king’s guard, which was gone forth to slay the wise men of Babylon:",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 15,
-          "lines": [
-            {
-              "text": "He answered and said to Arioch the king’s captain, Why is the decree so hasty from the king?",
-              "indent": 0
-            },
-            {
-              "text": "Then Arioch made the thing known to Daniel.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 16,
-          "lines": [
-            {
-              "text": "Then Daniel went in, and desired of the king that he would give him time, and that he would shew the king the interpretation.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 17,
-          "lines": [
-            {
-              "text": "Then Daniel went to his house, and made the thing known to Hananiah, Mishael, and Azariah, his companions:",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 18,
-          "lines": [
-            {
-              "text": "That they would desire mercies of the God of heaven concerning this secret;",
-              "indent": 0
-            },
-            {
-              "text": "that Daniel and his fellows should not perish with the rest of the wise men of Babylon.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 19,
-          "lines": [
-            {
-              "text": "Then was the secret revealed unto Daniel in a night vision. Then Daniel blessed the God of heaven.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 20,
-          "lines": [
-            {
-              "text": "Daniel answered and said, Blessed be the name of God for ever and ever:",
-              "indent": 0
-            },
-            {
-              "text": "for wisdom and might are his:",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 21,
-          "lines": [
-            {
-              "text": "And he changeth the times and the seasons:",
-              "indent": 0
-            },
-            {
-              "text": "he removeth kings, and setteth up kings:",
-              "indent": 1
-            },
-            {
-              "text": "he giveth wisdom unto the wise, and knowledge to them that know understanding:",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 22,
-          "lines": [
-            {
-              "text": "He revealeth the deep and secret things:",
-              "indent": 0
-            },
-            {
-              "text": "he knoweth what is in the darkness, and the light dwelleth with him.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 23,
-          "lines": [
-            {
-              "text": "I thank thee, and praise thee, O thou God of my fathers, who hast given me wisdom and might, and hast made known unto me now what we desired of thee:",
-              "indent": 0
-            },
-            {
-              "text": "for thou hast now made known unto us the king’s matter.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 24,
-          "lines": [
-            {
-              "text": "Therefore Daniel went in unto Arioch, whom the king had ordained to destroy the wise men of Babylon:",
-              "indent": 0
-            },
-            {
-              "text": "he went and said thus unto him;",
-              "indent": 1
-            },
-            {
-              "text": "Destroy not the wise men of Babylon:",
-              "indent": 0
-            },
-            {
-              "text": "bring me in before the king, and I will shew unto the king the interpretation.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 25,
-          "lines": [
-            {
-              "text": "Then Arioch brought in Daniel before the king in haste, and said thus unto him, I have found a man of the captives of Judah, that will make known unto the king the interpretation.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 26,
-          "lines": [
-            {
-              "text": "The king answered and said to Daniel, whose name was Belteshazzar, Art thou able to make known unto me the dream which I have seen, and the interpretation thereof?",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 27,
-          "lines": [
-            {
-              "text": "Daniel answered in the presence of the king, and said, The secret which the king hath demanded cannot the wise men, the astrologers, the magicians, the soothsayers, shew unto the king;",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 28,
-          "lines": [
-            {
-              "text": "But there is a God in heaven that revealeth secrets, and maketh known to the king Nebuchadnezzar what shall be in the latter days. Thy dream, and the visions of thy head upon thy bed, are these;",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 29,
-          "lines": [
-            {
-              "text": "As for thee, O king, thy thoughts came into thy mind upon thy bed, what should come to pass hereafter:",
-              "indent": 0
-            },
-            {
-              "text": "and he that revealeth secrets maketh known to thee what shall come to pass.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 30,
-          "lines": [
-            {
-              "text": "But as for me, this secret is not revealed to me for any wisdom that I have more than any living, but for their sakes that shall make known the interpretation to the king, and that thou mightest know the thoughts of thy heart.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 31,
-          "lines": [
-            {
-              "text": "Thou, O king, sawest, and behold a great image. This great image, whose brightness was excellent, stood before thee;",
-              "indent": 0
-            },
-            {
-              "text": "and the form thereof was terrible.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 32,
-          "lines": [
-            {
-              "text": "This image’s head was of fine gold, his breast and his arms of silver, his belly and his thighs of brass,",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 33,
-          "lines": [
-            {
-              "text": "His legs of iron, his feet part of iron and part of clay.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 34,
-          "lines": [
-            {
-              "text": "Thou sawest till that a stone was cut out without hands, which smote the image upon his feet that were of iron and clay, and brake them to pieces.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 35,
-          "lines": [
-            {
-              "text": "Then was the iron, the clay, the brass, the silver, and the gold, broken to pieces together, and became like the chaff of the summer threshingfloors;",
-              "indent": 0
-            },
-            {
-              "text": "and the wind carried them away, that no place was found for them:",
-              "indent": 1
-            },
-            {
-              "text": "and the stone that smote the image became a great mountain, and filled the whole earth.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 36,
-          "lines": [
-            {
-              "text": "This is the dream;",
-              "indent": 0
-            },
-            {
-              "text": "and we will tell the interpretation thereof before the king.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 37,
-          "lines": [
-            {
-              "text": "Thou, O king, art a king of kings:",
-              "indent": 0
-            },
-            {
-              "text": "for the God of heaven hath given thee a kingdom, power, and strength, and glory.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 38,
-          "lines": [
-            {
-              "text": "And wheresoever the children of men dwell, the beasts of the field and the fowls of the heaven hath he given into thine hand, and hath made thee ruler over them all. Thou art this head of gold.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 39,
-          "lines": [
-            {
-              "text": "And after thee shall arise another kingdom inferior to thee, and another third kingdom of brass, which shall bear rule over all the earth.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 40,
-          "lines": [
-            {
-              "text": "And the fourth kingdom shall be strong as iron:",
-              "indent": 0
-            },
-            {
-              "text": "forasmuch as iron breaketh in pieces and subdueth all things:",
-              "indent": 1
-            },
-            {
-              "text": "and as iron that breaketh all these, shall it break in pieces and bruise.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 41,
-          "lines": [
-            {
-              "text": "And whereas thou sawest the feet and toes, part of potters’ clay, and part of iron, the kingdom shall be divided;",
-              "indent": 0
-            },
-            {
-              "text": "but there shall be in it of the strength of the iron, forasmuch as thou sawest the iron mixed with miry clay.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 42,
-          "lines": [
-            {
-              "text": "And as the toes of the feet were part of iron, and part of clay, so the kingdom shall be partly strong, and partly broken.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 43,
-          "lines": [
-            {
-              "text": "And whereas thou sawest iron mixed with miry clay, they shall mingle themselves with the seed of men:",
-              "indent": 0
-            },
-            {
-              "text": "but they shall not cleave one to another, even as iron is not mixed with clay.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 44,
-          "lines": [
-            {
-              "text": "And in the days of these kings shall the God of heaven set up a kingdom, which shall never be destroyed:",
-              "indent": 0
-            },
-            {
-              "text": "and the kingdom shall not be left to other people, but it shall break in pieces and consume all these kingdoms, and it shall stand for ever.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 45,
-          "lines": [
-            {
-              "text": "Forasmuch as thou sawest that the stone was cut out of the mountain without hands, and that it brake in pieces the iron, the brass, the clay, the silver, and the gold;",
-              "indent": 0
-            },
-            {
-              "text": "the great God hath made known to the king what shall come to pass hereafter:",
-              "indent": 1
-            },
-            {
-              "text": "and the dream is certain, and the interpretation thereof sure.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 46,
-          "lines": [
-            {
-              "text": "Then the king Nebuchadnezzar fell upon his face, and worshipped Daniel, and commanded that they should offer an oblation and sweet odours unto him.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 47,
-          "lines": [
-            {
-              "text": "The king answered unto Daniel, and said, Of a truth it is, that your God is a God of gods, and a Lord of kings, and a revealer of secrets, seeing thou couldest reveal this secret.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 48,
-          "lines": [
-            {
-              "text": "Then the king made Daniel a great man, and gave him many great gifts, and made him ruler over the whole province of Babylon, and chief of the governors over all the wise men of Babylon.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 49,
-          "lines": [
-            {
-              "text": "Then Daniel requested of the king, and he set Shadrach, Meshach, and Abednego, over the affairs of the province of Babylon:",
-              "indent": 0
-            },
-            {
-              "text": "but Daniel sat in the gate of the king.",
-              "indent": 1
-            }
-          ]
-        }
-      ]
+      "poetry": null
     },
     {
       "book": "Daniel",
@@ -3235,6 +3070,10 @@
           "paragraphs": [
             {
               "startVerse": 1,
+              "endVerse": 5
+            },
+            {
+              "startVerse": 6,
               "endVerse": 8
             }
           ]
@@ -3257,357 +3096,20 @@
           "paragraphs": [
             {
               "startVerse": 15,
+              "endVerse": 18
+            },
+            {
+              "startVerse": 19,
+              "endVerse": 25
+            },
+            {
+              "startVerse": 26,
               "endVerse": 28
             }
           ]
         }
       ],
-      "poetry": [
-        {
-          "verse": 1,
-          "lines": [
-            {
-              "text": "In the first year of Belshazzar king of Babylon Daniel had a dream and visions of his head upon his bed:",
-              "indent": 0
-            },
-            {
-              "text": "then he wrote the dream, and told the sum of the matters.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 2,
-          "lines": [
-            {
-              "text": "Daniel spake and said, I saw in my vision by night, and, behold, the four winds of the heaven strove upon the great sea.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 3,
-          "lines": [
-            {
-              "text": "And four great beasts came up from the sea, diverse one from another.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 4,
-          "lines": [
-            {
-              "text": "The first was like a lion, and had eagle’s wings:",
-              "indent": 0
-            },
-            {
-              "text": "I beheld till the wings thereof were plucked, and it was lifted up from the earth, and made stand upon the feet as a man, and a man’s heart was given to it.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 5,
-          "lines": [
-            {
-              "text": "And behold another beast, a second, like to a bear, and it raised up itself on one side, and it had three ribs in the mouth of it between the teeth of it:",
-              "indent": 0
-            },
-            {
-              "text": "and they said thus unto it, Arise, devour much flesh.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 6,
-          "lines": [
-            {
-              "text": "After this I beheld, and lo another, like a leopard, which had upon the back of it four wings of a fowl;",
-              "indent": 0
-            },
-            {
-              "text": "the beast had also four heads;",
-              "indent": 1
-            },
-            {
-              "text": "and dominion was given to it.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 7,
-          "lines": [
-            {
-              "text": "After this I saw in the night visions, and behold a fourth beast, dreadful and terrible, and strong exceedingly;",
-              "indent": 0
-            },
-            {
-              "text": "and it had great iron teeth:",
-              "indent": 1
-            },
-            {
-              "text": "it devoured and brake in pieces, and stamped the residue with the feet of it:",
-              "indent": 0
-            },
-            {
-              "text": "and it was diverse from all the beasts that were before it;",
-              "indent": 1
-            },
-            {
-              "text": "and it had ten horns.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 8,
-          "lines": [
-            {
-              "text": "I considered the horns, and, behold, there came up among them another little horn, before whom there were three of the first horns plucked up by the roots:",
-              "indent": 0
-            },
-            {
-              "text": "and, behold, in this horn were eyes like the eyes of man, and a mouth speaking great things.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 9,
-          "lines": [
-            {
-              "text": "I beheld till the thrones were cast down, and the Ancient of days did sit, whose garment was white as snow, and the hair of his head like the pure wool:",
-              "indent": 0
-            },
-            {
-              "text": "his throne was like the fiery flame, and his wheels as burning fire.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 10,
-          "lines": [
-            {
-              "text": "A fiery stream issued and came forth from before him:",
-              "indent": 0
-            },
-            {
-              "text": "thousand thousands ministered unto him, and ten thousand times ten thousand stood before him:",
-              "indent": 1
-            },
-            {
-              "text": "the judgment was set, and the books were opened.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 11,
-          "lines": [
-            {
-              "text": "I beheld then because of the voice of the great words which the horn spake:",
-              "indent": 0
-            },
-            {
-              "text": "I beheld even till the beast was slain, and his body destroyed, and given to the burning flame.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 12,
-          "lines": [
-            {
-              "text": "As concerning the rest of the beasts, they had their dominion taken away:",
-              "indent": 0
-            },
-            {
-              "text": "yet their lives were prolonged for a season and time.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 13,
-          "lines": [
-            {
-              "text": "I saw in the night visions, and, behold, one like the Son of man came with the clouds of heaven, and came to the Ancient of days, and they brought him near before him.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 14,
-          "lines": [
-            {
-              "text": "And there was given him dominion, and glory, and a kingdom, that all people, nations, and languages, should serve him:",
-              "indent": 0
-            },
-            {
-              "text": "his dominion is an everlasting dominion, which shall not pass away, and his kingdom that which shall not be destroyed.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 15,
-          "lines": [
-            {
-              "text": "I Daniel was grieved in my spirit in the midst of my body, and the visions of my head troubled me.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 16,
-          "lines": [
-            {
-              "text": "I came near unto one of them that stood by, and asked him the truth of all this. So he told me, and made me know the interpretation of the things.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 17,
-          "lines": [
-            {
-              "text": "These great beasts, which are four, are four kings, which shall arise out of the earth.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 18,
-          "lines": [
-            {
-              "text": "But the saints of the most High shall take the kingdom, and possess the kingdom for ever, even for ever and ever.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 19,
-          "lines": [
-            {
-              "text": "Then I would know the truth of the fourth beast, which was diverse from all the others, exceeding dreadful, whose teeth were of iron, and his nails of brass;",
-              "indent": 0
-            },
-            {
-              "text": "which devoured, brake in pieces, and stamped the residue with his feet;",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 20,
-          "lines": [
-            {
-              "text": "And of the ten horns that were in his head, and of the other which came up, and before whom three fell;",
-              "indent": 0
-            },
-            {
-              "text": "even of that horn that had eyes, and a mouth that spake very great things, whose look was more stout than his fellows.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 21,
-          "lines": [
-            {
-              "text": "I beheld, and the same horn made war with the saints, and prevailed against them;",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 22,
-          "lines": [
-            {
-              "text": "Until the Ancient of days came, and judgment was given to the saints of the most High;",
-              "indent": 0
-            },
-            {
-              "text": "and the time came that the saints possessed the kingdom.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 23,
-          "lines": [
-            {
-              "text": "Thus he said, The fourth beast shall be the fourth kingdom upon earth, which shall be diverse from all kingdoms, and shall devour the whole earth, and shall tread it down, and break it in pieces.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 24,
-          "lines": [
-            {
-              "text": "And the ten horns out of this kingdom are ten kings that shall arise:",
-              "indent": 0
-            },
-            {
-              "text": "and another shall rise after them;",
-              "indent": 1
-            },
-            {
-              "text": "and he shall be diverse from the first, and he shall subdue three kings.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 25,
-          "lines": [
-            {
-              "text": "And he shall speak great words against the most High, and shall wear out the saints of the most High, and think to change times and laws:",
-              "indent": 0
-            },
-            {
-              "text": "and they shall be given into his hand until a time and times and the dividing of time.",
-              "indent": 1
-            }
-          ]
-        },
-        {
-          "verse": 26,
-          "lines": [
-            {
-              "text": "But the judgment shall sit, and they shall take away his dominion, to consume and to destroy it unto the end.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 27,
-          "lines": [
-            {
-              "text": "And the kingdom and dominion, and the greatness of the kingdom under the whole heaven, shall be given to the people of the saints of the most High, whose kingdom is an everlasting kingdom, and all dominions shall serve and obey him.",
-              "indent": 0
-            }
-          ]
-        },
-        {
-          "verse": 28,
-          "lines": [
-            {
-              "text": "Hitherto is the end of the matter. As for me Daniel, my cogitations much troubled me, and my countenance changed in me:",
-              "indent": 0
-            },
-            {
-              "text": "but I kept the matter in my heart.",
-              "indent": 1
-            }
-          ]
-        }
-      ]
+      "poetry": null
     },
     {
       "book": "Revelation",
@@ -3727,7 +3229,7 @@
       "chapter": 14,
       "sections": [
         {
-          "heading": "A New Song Before the Throne",
+          "heading": "The Lamb on Mount Sion",
           "startVerse": 1,
           "endVerse": 5,
           "paragraphs": [
@@ -3738,29 +3240,29 @@
           ]
         },
         {
-          "heading": "Mid-Heaven Proclamations of Gospel and Fall",
+          "heading": "The Three Angels' Messages",
           "startVerse": 6,
-          "endVerse": 8,
+          "endVerse": 12,
           "paragraphs": [
             {
               "startVerse": 6,
-              "endVerse": 8
+              "endVerse": 12
             }
           ]
         },
         {
-          "heading": "The Mark Refused, the Saints' Patience",
-          "startVerse": 9,
+          "heading": "Blessed Are the Dead in the Lord",
+          "startVerse": 13,
           "endVerse": 13,
           "paragraphs": [
             {
-              "startVerse": 9,
+              "startVerse": 13,
               "endVerse": 13
             }
           ]
         },
         {
-          "heading": "The Earth's Two Reapings",
+          "heading": "One Like the Son of Man Reaps",
           "startVerse": 14,
           "endVerse": 20,
           "paragraphs": [

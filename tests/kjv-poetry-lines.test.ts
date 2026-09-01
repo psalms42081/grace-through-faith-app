@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { splitKjvPoetryLines, poetryChapterFromSource } from "../scripts/kjv-poetry-lines";
+import { splitKjvPoetryLines, poetryChapterFromSource, KJV_READER_POETRY_BOOKS, isKjvReaderPoetryBook } from "../scripts/kjv-poetry-lines";
 
 test("splits KJV semicolon and colon clauses into q / q2-shaped lines", () => {
   assert.deepEqual(
@@ -63,4 +63,16 @@ test("poetryChapterFromSource preserves verse order from KJV-shaped source", () 
   assert.equal(chapter.chapter, 23);
   assert.deepEqual(chapter.verses.map((verse) => verse.verse), [1, 2]);
   assert.equal(chapter.verses[0]!.lines.length, 2);
+});
+
+test("reader poetry is limited to the six poetic books; prophets stay unwired", () => {
+  assert.deepEqual([...KJV_READER_POETRY_BOOKS], [
+    "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Lamentations",
+  ]);
+  for (const book of KJV_READER_POETRY_BOOKS) {
+    assert.equal(isKjvReaderPoetryBook(book), true);
+  }
+  for (const book of ["Isaiah", "Jeremiah", "Ezekiel", "Daniel", "Hosea", "Amos", "Micah", "Habakkuk"]) {
+    assert.equal(isKjvReaderPoetryBook(book), false, book);
+  }
 });

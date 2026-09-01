@@ -149,8 +149,8 @@ export const getQueryFn: <T>(options: {
 
 const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
-/** Must match server `buildEditionCacheKey` / `apibible-structure-v3` parse. */
-export const QUERY_PERSIST_BUSTER = "structure-v3";
+/** Must match server `buildEditionCacheKey` / `apibible-structure-v5` parse. */
+export const QUERY_PERSIST_BUSTER = "structure-v5";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -181,6 +181,8 @@ const OLD_CACHE_KEYS = [
   "grace-through-faith-cache-v8",
   "grace-through-faith-cache-v9",
   "grace-through-faith-cache-v10",
+  "grace-through-faith-cache-v11-structure-v3",
+  "grace-through-faith-cache-v11-structure-v4",
 ];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 

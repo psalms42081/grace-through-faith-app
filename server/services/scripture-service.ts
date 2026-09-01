@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { db } from "../db";
 import { bibleBooks, bibleVerses, bibleTranslations } from "../../shared/schema";
 import { eq, and, ilike } from "drizzle-orm";
+import { withKjvProviderContent, KJV_STRUCTURE_VERSION } from "./kjv-structure";
 
 // ─── Book maps ────────────────────────────────────────────────────────────────
 
@@ -174,7 +175,7 @@ export function buildApiBibleCacheKey(
   // Titles and poetry line-breaks are part of the provider chapter
   // representation. Version this key so an in-process entry fetched under
   // an older parser (poetry-as-heading) cannot hide the corrected shape.
-  return `apibible-structure-v3-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
+  return `apibible-${KJV_STRUCTURE_VERSION}-${translationAbbr}-${bibleId}-${bookId}-${chapterNum}`;
 }
 
 export function buildNltCacheKey(bookId: number, chapterNum: number): string {
@@ -209,7 +210,7 @@ export function buildEditionCacheKey(translationAbbr: string, bibleId: string): 
   const abbr = translationAbbr.toUpperCase().trim().slice(0, 4);
   const hash = createHash("sha256")
     // This also invalidates persistent rows whose JSON only contained verses.
-    .update("structure-v3|" + translationAbbr.toUpperCase().trim() + "|" + bibleId)
+    .update(`${KJV_STRUCTURE_VERSION}|` + translationAbbr.toUpperCase().trim() + "|" + bibleId)
     .digest("hex")
     .slice(0, 6);
   return abbr + hash;
@@ -702,6 +703,8 @@ export interface ProviderHeading {
   text: string;
   /** The first verse following this heading, when the provider supplies one. */
   beforeVerse?: number;
+  /** USFM qa acrostic letter headings (Psalm 119, Lamentations). */
+  kind?: "qa";
 }
 
 export interface ProviderParagraph {
@@ -716,7 +719,7 @@ export interface ProviderChapterStructure {
 
 export interface ApiBibleChapterData {
   verses: any[];
-  /** Present only for API.Bible responses; local editions deliberately omit it. */
+  /** Present for API.Bible responses and local KJV (headings/paragraphs). */
   providerContent?: ProviderChapterStructure;
 }
 
@@ -746,7 +749,7 @@ export function apiBibleBlockClass(attrs: string): string {
 
 /** Genuine titles only — never q/m/pi/li poetry or continuation. */
 export function isApiBibleTitleClass(cls: string): boolean {
-  return /^(?:s\d*|ms\d*|mt\d*|d|r)$/i.test(cls);
+  return /^(?:s\d*|ms\d*|mt\d*|d|r|qa\d*)$/i.test(cls);
 }
 
 function apiBiblePlainText(value: string): string {
@@ -755,8 +758,13 @@ function apiBiblePlainText(value: string): string {
       /<span\b(?=[^>]*\bclass=["'][^"']*\bv\b[^"']*["'])(?=[^>]*\bdata-number=["'](\d+)["'])[^>]*>[\s\S]*?<\/span>/gi,
       "[$1]"
     )
+    // Divine name: keep LORD inline with surrounding punctuation (no inserted spaces).
+    .replace(
+      /<span\b(?=[^>]*\bclass=["'][^"']*\bnd\b[^"']*["'])[^>]*>[\s\S]*?<\/span>/gi,
+      "LORD"
+    )
     .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
+    .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
@@ -814,7 +822,9 @@ export function parseApiBibleChapter(
     // Titles only from genuine title classes. Unnumbered q/m/pi/li (poetry
     // and prose continuations) stay on the preceding verse — never headings.
     if (isHeading && !hasVerseNum) {
-      pendingHeadings.push({ text: trimmed });
+      pendingHeadings.push(
+        /^qa\d*$/i.test(cls) ? { text: trimmed, kind: "qa" } : { text: trimmed }
+      );
       continue;
     }
     if (!hasVerseNum) {
@@ -1261,7 +1271,7 @@ export interface ResolvedScripture {
   book: ResolvedBook;
   chapter: number;
   verses: any[];
-  /** Provider-only presentation metadata. Omitted for database/local chapters. */
+  /** Provider presentation metadata. Local KJV and API.Bible chapters include it. */
   providerContent?: ProviderChapterStructure;
   /** True when the verses came from the DB/provider cache */
   cached: boolean;
@@ -1454,6 +1464,23 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
       )
     )
     .orderBy(bibleVerses.verse);
+
+  if (translationAbbr === "KJV") {
+    const kjv = withKjvProviderContent(bookName, chapterNum, verses);
+    return {
+      book: bookRecord,
+      chapter: chapterNum,
+      verses: kjv.verses,
+      providerContent: kjv.providerContent,
+      cached: false,
+      meta: {
+        translation: translationRecord[0].abbreviation,
+        translationName: translationRecord[0].name,
+        source: "db",
+        provider: "local",
+      },
+    };
+  }
 
   return {
     book: bookRecord,

@@ -5,7 +5,9 @@ import {
   groupVersesByParagraphStarts,
   splitLeadingWord,
   splitParagraphGroupAtHeadings,
+  type ReaderHeading,
 } from "@/lib/group-verses-by-paragraph";
+import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 
 export interface PreviewVerse {
   id: string;
@@ -29,7 +31,7 @@ export function TypographyPreviewProse({
   chapterNum,
 }: {
   verses: PreviewVerse[];
-  headingsByVerse: Map<number, string[]>;
+  headingsByVerse: Map<number, ReaderHeading[]>;
   paragraphStarts: Set<number>;
   fontScale: number;
   getHighlightBg: (verseId: string, verseNum: number, index: number) => string;
@@ -61,10 +63,10 @@ export function TypographyPreviewProse({
               {run.headings.map((heading, headingIndex) => (
                 <Text
                   key={`${lead.id}-heading-${headingIndex}`}
-                  style={s.heading}
+                  style={[s.heading, heading.kind === "qa" && s.headingQa]}
                   accessibilityRole="header"
                 >
-                  {heading}
+                  {heading.text}
                 </Text>
               ))}
               <Text style={[s.body, { fontSize: bodySize, lineHeight: bodyLine }]}>
@@ -97,15 +99,15 @@ export function TypographyPreviewProse({
                         {v.verse}
                       </Text>
                       {"\u00a0"}
-                      {firstWord}
-                      {remainder}
+                      <VerseTextRuns text={firstWord} />
+                      <VerseTextRuns text={remainder} />
                       {lines.slice(1).map((line, lineIndex) => (
                         <Text
                           key={`${v.id}-ln${lineIndex + 1}`}
                           style={s.poetryContinue}
                         >
                           {"\n\u2003"}
-                          {line}
+                          <VerseTextRuns text={line} />
                         </Text>
                       ))}
                       {isBookmarked ? <Text style={s.bookmarkMark}> ◆</Text> : null}
@@ -136,6 +138,10 @@ const s = StyleSheet.create({
     color: "#1F1A12",
     marginTop: 4,
     marginBottom: 8,
+  },
+  headingQa: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   body: {
     fontFamily: "Lora_400Regular",

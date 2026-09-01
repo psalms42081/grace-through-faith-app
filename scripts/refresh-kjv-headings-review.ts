@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { HeadingCorpus } from "./generate-kjv-headings";
-import { isPoetrySourceBook, type PoetryCorpus } from "./kjv-poetry-lines";
+import { isKjvReaderPoetryBook, type PoetryCorpus } from "./kjv-poetry-lines";
 
 const ROOT = process.cwd();
 const HEADINGS_PATH = path.join(ROOT, "data", "kjv-headings.generated.json");
@@ -16,11 +16,14 @@ const REVIEW_PATH = path.join(ROOT, "data", "kjv-headings.review.json");
 
 const SPOT_CHECK: [string, number][] = [
   ["Genesis", 1],
+  ["Psalms", 23],
   ["Psalms", 119],
   ["Matthew", 5],
   ["Matthew", 6],
   ["Matthew", 7],
+  ["Luke", 6],
   ["John", 3],
+  ["John", 14],
   ["Daniel", 2],
   ["Daniel", 7],
   ["Revelation", 12],
@@ -51,12 +54,12 @@ function main() {
       book,
       chapter,
       sections: heading.sections,
-      poetry: isPoetrySourceBook(book) ? poetryChapter?.verses ?? [] : null,
+      poetry: isKjvReaderPoetryBook(book) ? poetryChapter?.verses ?? [] : null,
     };
   });
   atomicJson(REVIEW_PATH, {
-    note: "NOT WIRED. Existing Task #76 corpus (sequence-flagged chapters independently re-outlined). Poetry is KJV-punctuation lineation, comparable in shape to API.Bible q-lines, not NIV breaks. Spot-check these chapters; do not ship until you approve.",
-    howToOpen: "In Cursor: Ctrl+P (Quick Open), type kjv-headings.review.json, Enter. Or File > Open File and choose data/kjv-headings.review.json. Each chapter has sections (headings) and poetry (verse lines, or null when the book is outside the poetry/prophets set).",
+    note: "WIRED. Local KJV chapters attach headings and paragraphs as providerContent. Poetry line-breaks are applied only for Job, Psalms, Proverbs, Ecclesiastes, Song of Solomon, and Lamentations — prophets stay prose.",
+    howToOpen: "In Cursor: Ctrl+P (Quick Open), type kjv-headings.review.json, Enter. Or File > Open File and choose data/kjv-headings.review.json. Each chapter has sections (headings) and poetry (verse lines, or null when the book is outside the six poetic books).",
     schemaVersion: headings.schemaVersion,
     poetrySchemaVersion: poetry.schemaVersion,
     lensVersion: headings.lensVersion,

@@ -1,79 +1,15 @@
 {
-  "note": "NOT WIRED. Sequence screen against published heading sets. Generic single titles are allowed.",
+  "note": "Headings and paragraphs are wired through local KJV providerContent. Sequence screen against published heading sets. Generic single titles are allowed.",
   "standard": "No chapter's full heading sequence should match a specific published edition's set. Consecutive runs of 4+ published titles are also flagged. Distinctive publisher packages that were a near-miss on exact match were regenerated after editorial review.",
-  "priorFlags": [
-    {
-      "book": "Matthew",
-      "chapter": 6,
-      "reason": "consecutive run of 4 published titles",
-      "edition": "NIV",
-      "ours": [
-        "Giving to the Needy: True Generosity",
-        "Prayer: The Lord's Prayer",
-        "Fasting: A Private Act of Worship",
-        "Treasures in Heaven: Priorities in Life",
-        "The Eye: A Window to the Soul",
-        "Serving Two Masters: God vs. Wealth",
-        "Do Not Worry: Trust in God's Provision"
-      ],
-      "published": [
-        "Giving to the Needy",
-        "Prayer",
-        "Fasting",
-        "Treasures in Heaven",
-        "Do Not Worry"
-      ]
-    },
-    {
-      "book": "Luke",
-      "chapter": 6,
-      "reason": "same-length sequence is aligned with a published set",
-      "edition": "NIV",
-      "ours": [
-        "Jesus is Lord of the Sabbath",
-        "Jesus Heals on the Sabbath",
-        "The Twelve Apostles Chosen",
-        "The Beatitudes and Woes",
-        "Love for Enemies",
-        "Judging Others",
-        "A Tree and Its Fruit",
-        "The Wise and Foolish Builders"
-      ],
-      "published": [
-        "Lord of the Sabbath",
-        "The Man With a Withered Hand",
-        "The Twelve Apostles",
-        "Blessings and Woes",
-        "Love for Enemies",
-        "Judging Others",
-        "A Tree and Its Fruit",
-        "The Wise and Foolish Builders"
-      ]
-    },
-    {
-      "book": "Revelation",
-      "chapter": 14,
-      "reason": "same-length sequence is aligned with a published set",
-      "edition": "ESV",
-      "ours": [
-        "The Lamb and the 144,000",
-        "The Three Angels' Messages",
-        "The Harvest of the Earth"
-      ],
-      "published": [
-        "The Lamb and the 144,000",
-        "The Messages of the Three Angels",
-        "The Harvest of the Earth"
-      ]
-    }
-  ],
+  "priorFlags": [],
   "regenerated": [
     "Matthew 5",
     "Matthew 6",
     "Matthew 7",
     "Luke 6",
     "John 14",
-    "Revelation 14"
+    "Revelation 14",
+    "Psalms 119"
   ],
   "regenerationReasons": {
     "Matthew 5": "Sermon outline tracked the NIV/ESV package (Beatitudes, Salt and Light, Fulfillment of the Law, then the antitheses in that order).",
@@ -81,7 +17,8 @@
     "Matthew 7": "Ordered NIV sermon titles (Judging Others, Ask Seek Knock, Narrow Gate, False Prophets, Wise and Foolish Builders) with only extra splits.",
     "Luke 6": "Four consecutive NIV sermon titles: Love for Enemies, Judging Others, A Tree and Its Fruit, The Wise and Foolish Builders.",
     "John 14": "Opened with NIV's exact 'Jesus Comforts His Disciples' and followed that farewell-discourse set.",
-    "Revelation 14": "Three-part set aligned with NIV/ESV (The Lamb and the 144,000 / Three Angels / Harvest of the Earth)."
+    "Revelation 14": "Three-part set aligned with NIV/ESV (The Lamb and the 144,000 / Three Angels / Harvest of the Earth).",
+    "Psalms 119": "Stanza titles were essay-like and repeated; KJV prints the Hebrew letter over each eight-verse stanza."
   },
   "remainingFlags": []
 }
